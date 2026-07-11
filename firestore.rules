@@ -1,0 +1,119 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function myUser() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function myRole() {
+      return myUser().role;
+    }
+
+    function isParent() {
+      return isSignedIn() && myRole() == 'parent';
+    }
+
+    function isStaff() {
+      return isSignedIn() && myRole() != 'parent';
+    }
+
+    function isParentOf(studentId) {
+      return isParent() && studentId in myUser().studentIds;
+    }
+
+    // Users can read their own profile, or any profile if they're staff
+    // (e.g. admin user management).
+    //
+    // Self-service create is only for parents (first phone sign-in) - staff
+    // accounts are created server-side by the createStaffAccount Cloud
+    // Function via the Admin SDK, which bypasses these rules entirely. This
+    // restriction stops a client from self-assigning a staff role by
+    // calling Firebase Auth directly and writing its own profile doc.
+    //
+    // The only client updates ever allowed are: a signed-in user flipping
+    // their own mustChangePassword flag to false (after setting a new
+    // password to replace an admin-issued temporary one), or a parent
+    // growing their own studentIds list (redeeming another family access
+    // code for a sibling). Nothing else (role, shrinking studentIds, etc.)
+    // is client-editable.
+    match /users/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isStaff());
+      allow create: if isSignedIn() && request.auth.uid == uid && request.resource.data.role == 'parent';
+      allow update: if isSignedIn() && request.auth.uid == uid && (
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mustChangePassword']) &&
+         request.resource.data.mustChangePassword == false) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['studentIds']) &&
+         resource.data.role == 'parent' &&
+         request.resource.data.studentIds.size() > resource.data.studentIds.size())
+      );
+      allow delete: if false;
+    }
+
+    // Family access codes link one code to one or more students (siblings).
+    // A parent must be able to resolve a code before they've signed in, so
+    // direct-by-ID reads are public - but the collection can't be listed or
+    // enumerated without already knowing a code. Only staff can create/
+    // regenerate codes.
+    match /parent_access_codes/{code} {
+      allow get: if true;
+      allow list: if isStaff();
+      allow write: if isStaff();
+    }
+
+    // Students are readable by any staff member, or by the parent(s)
+    // linked to that student via users/{uid}.studentIds.
+    match /students/{studentId} {
+      allow read: if isStaff() || isParentOf(studentId);
+      allow write: if isStaff();
+    }
+
+    // Per-student records: parents can read only their own children's
+    // records; staff can read and write everything. No client writes for
+    // parents.
+    function isStudentRecordReadable() {
+      return isStaff() || isParentOf(resource.data.studentId);
+    }
+
+    match /academic_records/{docId} {
+      allow read: if isStudentRecordReadable();
+      allow write: if isStaff();
+    }
+    match /attendance_records/{docId} {
+      allow read: if isStudentRecordReadable();
+      allow write: if isStaff();
+    }
+    match /fees/{docId} {
+      allow read: if isStudentRecordReadable();
+      allow write: if isStaff();
+    }
+    match /payments/{docId} {
+      allow read: if isStudentRecordReadable();
+      // Parents may record a new payment for their own child; only staff
+      // may modify/delete existing payment history.
+      allow create: if isStaff() || isParentOf(request.resource.data.studentId);
+      allow update, delete: if isStaff();
+    }
+    match /health_visits/{docId} {
+      allow read: if isStudentRecordReadable();
+      allow write: if isStaff();
+    }
+    match /library_books/{docId} {
+      allow read: if isStudentRecordReadable();
+      allow write: if isStaff();
+    }
+    match /discipline_incidents/{docId} {
+      allow read: if isStudentRecordReadable();
+      allow write: if isStaff();
+    }
+    match /transport/{docId} {
+      allow read: if isStudentRecordReadable();
+      allow write: if isStaff();
+    }
+  }
+}

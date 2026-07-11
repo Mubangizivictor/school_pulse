@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>API_KEY</key>
+	<string>AIzaSyB8NUAbNZt6Zx_nJa_G6ndc6jyVTcYsqX8</string>
+	<key>GCM_SENDER_ID</key>
+	<string>925585407650</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.example.schoolPulse</string>
+	<key>PROJECT_ID</key>
+	<string>school-pulse-3d95b</string>
+	<key>STORAGE_BUCKET</key>
+	<string>school-pulse-3d95b.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:925585407650:ios:7fd13d46681d5a449461fb</string>
+</dict>
+</plist>

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "925585407650",
+    "project_id": "school-pulse-3d95b",
+    "storage_bucket": "school-pulse-3d95b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:925585407650:android:671a08de8f49ea1d9461fb",
+        "android_client_info": {
+          "package_name": "com.example.school_pulse"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCDNtLTprFYZ8gX6-oABoVwiLsKCZck0-8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

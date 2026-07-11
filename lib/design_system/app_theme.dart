@@ -7,12 +7,16 @@ class SemanticColors extends ThemeExtension<SemanticColors> {
   final Color warning;
   final Color error;
   final Color info;
+  final Color primaryBlue;
+  final Color errorRed;
 
   const SemanticColors({
     required this.success,
     required this.warning,
     required this.error,
     required this.info,
+    required this.primaryBlue,
+    required this.errorRed,
   });
 
   @override
@@ -21,12 +25,16 @@ class SemanticColors extends ThemeExtension<SemanticColors> {
     Color? warning,
     Color? error,
     Color? info,
+    Color? primaryBlue,
+    Color? errorRed,
   }) {
     return SemanticColors(
       success: success ?? this.success,
       warning: warning ?? this.warning,
       error: error ?? this.error,
       info: info ?? this.info,
+      primaryBlue: primaryBlue ?? this.primaryBlue,
+      errorRed: errorRed ?? this.errorRed,
     );
   }
 
@@ -38,6 +46,8 @@ class SemanticColors extends ThemeExtension<SemanticColors> {
       warning: Color.lerp(warning, other.warning, t)!,
       error: Color.lerp(error, other.error, t)!,
       info: Color.lerp(info, other.info, t)!,
+      primaryBlue: Color.lerp(primaryBlue, other.primaryBlue, t)!,
+      errorRed: Color.lerp(errorRed, other.errorRed, t)!,
     );
   }
 
@@ -46,13 +56,17 @@ class SemanticColors extends ThemeExtension<SemanticColors> {
     warning: Color(0xFFED6C02),
     error: Color(0xFFC62828),
     info: Color(0xFF1976D2),
+    primaryBlue: Color(0xFF1F3864),
+    errorRed: Color(0xFFC62828),
   );
 
   static const dark = SemanticColors(
     success: Color(0xFF5FB463),
-    warning: Color(0xFFA733FF), // Adjusted from prompt's "Amber" for dark mode contrast if needed, but keeping prompt's #FFA733 mostly
+    warning: Color(0xFFA733FF), 
     error: Color(0xFFE5605A),
     info: Color(0xFF64B5F6),
+    primaryBlue: Color(0xFF5B7FB5),
+    errorRed: Color(0xFFE5605A),
   );
 }
 
@@ -75,18 +89,40 @@ class AppTheme {
       colorScheme: colorScheme,
       textTheme: GoogleFonts.interTextTheme(ThemeData.light().textTheme),
       extensions: [SemanticColors.light],
-      scaffoldBackgroundColor: colorScheme.surface,
+      scaffoldBackgroundColor: const Color(0xFFF8F9FA),
       appBarTheme: AppBarTheme(
-        backgroundColor: colorScheme.primary,
-        foregroundColor: colorScheme.onPrimary,
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1A1A1A),
         elevation: 0,
+        centerTitle: false,
+        titleTextStyle: GoogleFonts.inter(
+          color: const Color(0xFF1A1A1A),
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+        iconTheme: const IconThemeData(color: Color(0xFF1A1A1A)),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: Colors.white,
+        selectedColor: colorScheme.primary.withValues(alpha: 0.1),
+        labelStyle: const TextStyle(fontSize: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        side: const BorderSide(color: Color(0xFFF1F3F4)),
+      ),
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: Colors.white,
+        selectedItemColor: colorScheme.primary,
+        unselectedItemColor: const Color(0xFF666666),
+        selectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        unselectedLabelStyle: const TextStyle(fontSize: 12),
+        elevation: 8,
       ),
     );
   }
 
   static ThemeData get dark {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF1F3864), // Seed can stay same
+      seedColor: const Color(0xFF1F3864),
       primary: const Color(0xFF5B7FB5),
       secondary: const Color(0xFFD4AF52),
       surface: const Color(0xFF1C1F23),
@@ -102,11 +138,32 @@ class AppTheme {
       colorScheme: colorScheme,
       textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
       extensions: [SemanticColors.dark],
-      scaffoldBackgroundColor: colorScheme.surface,
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF1F3864), // Deep navy for large surfaces in dark mode
+      scaffoldBackgroundColor: const Color(0xFF121212),
+      appBarTheme: AppBarTheme(
+        backgroundColor: const Color(0xFF1E1E1E),
         foregroundColor: Colors.white,
         elevation: 0,
+        centerTitle: false,
+        titleTextStyle: GoogleFonts.inter(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: const Color(0xFF2C2C2C),
+        selectedColor: colorScheme.primary.withValues(alpha: 0.2),
+        labelStyle: const TextStyle(fontSize: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        side: BorderSide.none,
+      ),
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: const Color(0xFF1E1E1E),
+        selectedItemColor: colorScheme.primary,
+        unselectedItemColor: const Color(0xFF999999),
+        selectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        unselectedLabelStyle: const TextStyle(fontSize: 12),
+        elevation: 8,
       ),
     );
   }
