@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 
 class VisitorLogScreen extends StatelessWidget {
@@ -34,11 +35,11 @@ class VisitorLogScreen extends StatelessWidget {
   Widget _buildVisitorStats(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: DashboardStatCard(title: 'Active Visitors', value: 8, icon: Icons.meeting_room, color: Colors.blue, trend: 'Currently on premises')),
+        const Expanded(child: DashboardStatCard(title: 'Active Visitors', value: 8, icon: Icons.meeting_room, color: Colors.blue, trend: 'Currently on premises')),
         const SizedBox(width: 16),
-        Expanded(child: DashboardStatCard(title: 'Total Today', value: 24, icon: Icons.people_outline, color: Colors.green, trend: '+4 from yesterday')),
+        const Expanded(child: DashboardStatCard(title: 'Total Today', value: 24, icon: Icons.people_outline, color: Colors.green, trend: '+4 from yesterday')),
         const SizedBox(width: 16),
-        Expanded(child: DashboardStatCard(title: 'Avg. Stay', value: 45, suffix: ' min', icon: Icons.timer, color: Colors.orange, trend: 'Last 30 days')),
+        const Expanded(child: DashboardStatCard(title: 'Avg. Stay', value: 45, suffix: ' min', icon: Icons.timer, color: Colors.orange, trend: 'Last 30 days')),
       ],
     );
   }
@@ -87,10 +88,10 @@ class VisitorLogScreen extends StatelessWidget {
               return DataRow(cells: [
                 DataCell(Text(visitors[index % 4], style: const TextStyle(fontWeight: FontWeight.bold))),
                 DataCell(Text(purposes[index % 4])),
-                DataCell(Text('09:20 AM')),
+                DataCell(const Text('09:20 AM')),
                 DataCell(isActive 
-                  ? StatusBadge(label: 'On Premises', color: Colors.blue) 
-                  : Text('10:45 AM')
+                  ? const StatusBadge(label: 'On Premises', color: Colors.blue) 
+                  : const Text('10:45 AM')
                 ),
                 DataCell(Text('+256 701 234 5${index}6')),
                 DataCell(
@@ -111,14 +112,14 @@ class VisitorLogScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('New Visitor Entry'),
-        content: Column(
+        content: const Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const TextField(decoration: InputDecoration(labelText: 'Full Name')),
-            const SizedBox(height: 16),
-            const TextField(decoration: InputDecoration(labelText: 'Contact Number')),
-            const SizedBox(height: 16),
-            const TextField(decoration: InputDecoration(labelText: 'Purpose of Visit')),
+            TextField(decoration: InputDecoration(labelText: 'Full Name')),
+            SizedBox(height: 16),
+            TextField(decoration: InputDecoration(labelText: 'Contact Number')),
+            SizedBox(height: 16),
+            TextField(decoration: InputDecoration(labelText: 'Purpose of Visit')),
           ],
         ),
         actions: [
