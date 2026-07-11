@@ -1,6 +1,4 @@
-import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/app_components.dart';
-import 'package:intl/intl.dart';
 
 class VisitorLogScreen extends StatelessWidget {
   const VisitorLogScreen({super.key});

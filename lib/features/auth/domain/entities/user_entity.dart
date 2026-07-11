@@ -12,6 +12,7 @@ class UserEntity extends Equatable {
   final String? photoUrl;
   final List<String> studentIds;
   final bool isActive;
+  final bool mustChangePassword;
 
   const UserEntity({
     required this.id,
@@ -21,8 +22,8 @@ class UserEntity extends Equatable {
     required this.role,
     this.photoUrl,
     this.studentIds = const [],
-    this.mustChangePassword = false,
     this.isActive = true,
+    this.mustChangePassword = false,
   });
 
   @override

@@ -159,6 +159,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           role: existing.role,
           photoUrl: existing.photoUrl,
           studentIds: updated,
+          isActive: existing.isActive,
           mustChangePassword: existing.mustChangePassword,
         );
       }

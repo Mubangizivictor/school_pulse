@@ -7,6 +7,7 @@ import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/usecases/create_staff_account.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
 import 'package:school_pulse/features/student/domain/entities/parent_access_code.dart';
+import 'package:school_pulse/features/auth/domain/usecases/toggle_staff_status.dart';
 import 'package:school_pulse/features/student/domain/usecases/get_all_students.dart';
 import 'package:school_pulse/features/student/domain/usecases/manage_parent_access_codes.dart';
 import 'package:school_pulse/injection_container.dart' as di;
@@ -265,7 +266,7 @@ class _StaffTabState extends State<_StaffTab> {
                               DataColumn(label: Text('Actions')),
                             ],
                             rows: filteredStaff.map((member) => DataRow(
-                              color: member.isActive ? null : WidgetStateProperty.all(Theme.of(context).colorScheme.errorContainer.withOpacity(0.05)),
+                            color: member.isActive ? null : WidgetStateProperty.all(Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.05)),
                               cells: [
                                 DataCell(Row(
                                   children: [
