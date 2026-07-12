@@ -4,9 +4,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../models/system_config.dart';
 
+import 'package:school_pulse/firebase_options.dart';
+
 class SystemConfigRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  // Explicitly initialize with the bucket from options to avoid mismatch on hot-restart
+  final FirebaseStorage _storage = FirebaseStorage.instanceFor(
+    bucket: DefaultFirebaseOptions.currentPlatform.storageBucket,
+  );
 
   SystemConfig _defaultConfig() {
     final now = DateTime.now();

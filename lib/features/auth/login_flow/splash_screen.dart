@@ -119,11 +119,11 @@ class _SplashScreenState extends State<SplashScreen>
       }
 
       // 3. Go to school-specific splash screen
-      debugPrint('SplashScreen: Navigating to branded school splash');
+      debugPrint('SplashScreen: Navigating to branded school splash for user: ${user.id}');
       context.go('/school-splash', extra: user);
-    } else {
+    } else if (authState is AuthUnauthenticated || authState is AuthFailureState) {
       // AuthUnauthenticated or AuthFailureState
-      debugPrint('SplashScreen: Unauthenticated. Navigating to welcome');
+      debugPrint('SplashScreen: Unauthenticated or Failure. Navigating to welcome');
       context.go('/welcome');
     }
   }
@@ -145,7 +145,9 @@ class _SplashScreenState extends State<SplashScreen>
       listeners: [
         BlocListener<AuthBloc, AuthState>(
           listener: (context, state) {
-            if (state is AuthAuthenticated || state is AuthUnauthenticated) {
+            if (state is AuthAuthenticated || 
+                state is AuthUnauthenticated || 
+                state is AuthFailureState) {
               _navigateToNextIfReady();
             }
           },

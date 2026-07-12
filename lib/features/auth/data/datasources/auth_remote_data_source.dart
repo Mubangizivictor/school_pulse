@@ -160,49 +160,6 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     throw const AuthFailure('No profile found for this account. Contact your school administrator.');
   }
 
-  /// Reads users/{uid}. Phone auth is self-service for parents, so if this
-  /// is their first sign-in a new parent profile is created for them.
-  /// [linkedStudentIds] (from a family access code, which can cover
-  /// multiple siblings) are merged into whatever the parent already has.
-  Future<UserModel> _getOrCreateParentUser(
-    String uid, {
-    String? phoneNumber,
-    List<String>? linkedStudentIds,
-  }) async {
-    final doc = await firestore.collection('users').doc(uid).get();
-    if (doc.exists) {
-      final existing = UserModel.fromJson({...doc.data()!, 'id': doc.id});
-      final newIds = (linkedStudentIds ?? const []).where((id) => !existing.studentIds.contains(id));
-      if (newIds.isNotEmpty) {
-        final updated = [...existing.studentIds, ...newIds];
-        await firestore.collection('users').doc(uid).update({'studentIds': updated});
-        return UserModel(
-          id: existing.id,
-          name: existing.name,
-          email: existing.email,
-          phoneNumber: existing.phoneNumber,
-          role: existing.role,
-          photoUrl: existing.photoUrl,
-          studentIds: updated,
-          isActive: existing.isActive,
-          mustChangePassword: existing.mustChangePassword,
-        );
-      }
-      return existing;
-    }
-
-    final newUser = UserModel(
-      id: uid,
-      name: '',
-      email: '',
-      phoneNumber: phoneNumber,
-      role: UserRole.parent,
-      studentIds: linkedStudentIds ?? const [],
-    );
-    await firestore.collection('users').doc(uid).set(newUser.toJson());
-    return newUser;
-  }
-
   @override
   Future<String> createStaffAccount({
     required String name,

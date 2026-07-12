@@ -92,11 +92,11 @@ class _SchoolSplashScreenState extends State<SchoolSplashScreen>
 
     _mainController.forward();
 
-    // Check if config is already loaded from the watch started in main.dart
+    // Check if config is already loaded or in error from the watch started in main.dart
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         final state = context.read<SystemConfigBloc>().state;
-        if (state is SystemConfigLoaded) {
+        if (state is SystemConfigLoaded || state is SystemConfigError) {
           _scheduleNavigation();
         }
       }
@@ -107,9 +107,15 @@ class _SchoolSplashScreenState extends State<SchoolSplashScreen>
   void _scheduleNavigation() {
     if (_navigationScheduled) return;
     _navigationScheduled = true;
+    
+    debugPrint('SchoolSplashScreen: Scheduling navigation to home...');
+    
     // Wait for animation + a small delay for branding impact
     Future.delayed(const Duration(milliseconds: 3000), () {
-      if (mounted) _navigateToHome();
+      if (mounted) {
+        debugPrint('SchoolSplashScreen: Navigating now.');
+        _navigateToHome();
+      }
     });
   }
 
@@ -132,7 +138,7 @@ class _SchoolSplashScreenState extends State<SchoolSplashScreen>
   Widget build(BuildContext context) {
     return BlocListener<SystemConfigBloc, SystemConfigState>(
       listener: (context, state) {
-        if (state is SystemConfigLoaded) {
+        if (state is SystemConfigLoaded || state is SystemConfigError) {
           _scheduleNavigation();
         }
       },
@@ -140,8 +146,11 @@ class _SchoolSplashScreenState extends State<SchoolSplashScreen>
         backgroundColor: Theme.of(context).colorScheme.surface,
         body: BlocBuilder<SystemConfigBloc, SystemConfigState>(
           builder: (context, state) {
-            if (state is SystemConfigLoaded) {
-              final config = state.config;
+            final config = state is SystemConfigLoaded 
+                ? state.config 
+                : (state is SystemConfigError ? state.config : null);
+
+            if (config != null) {
               return Center(
                 child: Padding(
                   padding: const EdgeInsets.all(32.0),

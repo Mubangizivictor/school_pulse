@@ -135,16 +135,6 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
         ));
   }
 
-  void _routeToRoleDashboard(UserRole role) {
-    // Check platform access
-    if (!PlatformAccess.isAllowedOnCurrentPlatform(role)) {
-      context.go('/platform-blocked?role=${role.name}');
-      return;
-    }
-
-    context.go(UserRoleRouting.dashboardPath(role));
-  }
-
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<AuthBloc, AuthState>(
