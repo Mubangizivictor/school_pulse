@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/auth/login_flow/welcome_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/parent_login_screens.dart';
 import 'package:school_pulse/features/auth/login_flow/staff_login_screens.dart';
