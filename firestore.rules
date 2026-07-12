@@ -115,5 +115,91 @@ service cloud.firestore {
       allow read: if isStudentRecordReadable();
       allow write: if isStaff();
     }
+
+    // Attendance collection (new)
+    match /attendance/{docId} {
+      allow read: if isStaff() || isParentOf(resource.data.studentId);
+      allow write: if isStaff();
+    }
+
+    // Attendance logs/summaries
+    match /attendance_logs/{docId} {
+      allow read: if isStaff();
+      allow write: if isStaff();
+    }
+
+    // School statistics for Dean/Admin dashboards
+    match /school_stats/{docId} {
+      allow read: if isStaff();
+      allow write: if isStaff();
+    }
+
+    // Per-user FCM device tokens - staff need read access so
+    // NotificationService.sendDirectNotification can resolve another
+    // user's tokens when pushing a direct alert; only the owner may write.
+    match /users/{uid}/tokens/{tokenId} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isStaff());
+      allow write: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Broadcast/direct notifications (NotificationService) and per-student
+    // alerts (health/academic/discipline) share this collection.
+    match /alerts/{alertId} {
+      allow read: if isStaff() ||
+        (resource.data.studentId != null && isParentOf(resource.data.studentId));
+      allow create, update, delete: if isStaff();
+    }
+
+    // Front-desk visitor log and appointment scheduling.
+    match /visitors/{id} {
+      allow read, write: if isStaff();
+    }
+    match /appointments/{id} {
+      allow read, write: if isStaff();
+    }
+
+    // Immutable system activity feed - only ever appended to, never edited.
+    match /audit_logs/{id} {
+      allow read: if isStaff();
+      allow create: if isStaff();
+      allow update, delete: if false;
+    }
+
+    // School-wide configuration, plus its archived-term history.
+    match /config/{configId} {
+      allow read, write: if isStaff();
+      match /history/{historyId} {
+        allow read, create: if isStaff();
+        allow update, delete: if false;
+      }
+    }
+
+    // School structure management (Admin > School Structure).
+    match /classes/{id} {
+      allow read, write: if isStaff();
+    }
+    match /departments/{id} {
+      allow read, write: if isStaff();
+    }
+
+    // Staff clock-in/out records for the attendance monitor.
+    match /staff_attendance/{id} {
+      allow read, write: if isStaff();
+    }
+
+    // Outbound delivery queues - a Cloud Function (Admin SDK, bypasses
+    // rules) drains these, so clients may enqueue but never read them back.
+    match /broadcast_queue/{id} {
+      allow create: if isStaff();
+      allow read, update, delete: if false;
+    }
+    match /sms_queue/{id} {
+      allow create: if isStaff();
+      allow read, update, delete: if false;
+    }
+    match /notification_queue/{id} {
+      allow create: if isStaff();
+      allow read, update, delete: if false;
+    }
   }
 }

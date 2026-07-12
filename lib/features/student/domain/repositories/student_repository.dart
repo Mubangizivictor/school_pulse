@@ -11,5 +11,7 @@ abstract class StudentRepository {
   Future<Either<Failure, String>> createAccessCode({required List<String> studentIds, String? parentName});
   Future<Either<Failure, String>> regenerateAccessCode(String oldCode);
   Future<Either<Failure, void>> toggleAccessCodeStatus(String code, bool isActive);
+  Future<Either<Failure, void>> deleteAccessCode(String code);
+  Future<Either<Failure, void>> updateAccessCode(ParentAccessCode code);
   Future<Either<Failure, void>> createStudent(Student student);
 }

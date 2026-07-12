@@ -22,10 +22,10 @@ class StaffShell extends StatelessWidget {
     final isAdmin = _isAdmin(context);
 
     if (isAdmin) {
-      if (location.startsWith('/staff/admin') && !location.contains('users')) return 0;
       if (location.contains('users')) return 1;
       if (location.startsWith('/staff/messages')) return 2;
-      if (location.startsWith('/staff/more')) return 3;
+      if (location.contains('config')) return 3;
+      if (location.startsWith('/staff/admin')) return 0;
     } else {
       if (location.startsWith('/staff/dashboard')) return 0;
       if (location.startsWith('/staff/attendance')) return 1;
@@ -43,7 +43,7 @@ class StaffShell extends StatelessWidget {
         case 0: context.go('/staff/admin'); break;
         case 1: context.go('/staff/admin/users'); break;
         case 2: context.go('/staff/messages'); break;
-        case 3: context.go('/staff/more'); break;
+        case 3: context.go('/staff/admin/config'); break;
       }
     } else {
       switch (index) {

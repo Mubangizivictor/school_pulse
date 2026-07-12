@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -26,6 +27,7 @@ class AdminSeeder {
         'role': 'schoolAdmin',
         'studentIds': [],
         'mustChangePassword': false,
+        'isActive': true,
         'createdAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
       debugPrint("✅ Admin seeded.");
@@ -64,23 +66,60 @@ class AdminSeeder {
       }
       debugPrint("✅ Parent Access Codes seeded.");
 
-      // 4. Seed some Staff (Firestore profiles only)
-      // Note: Real staff need Auth accounts created via Admin panel, 
-      // but we seed profiles so they show up in the Admin list.
+      // 4. Seed Staff (Real Auth Accounts)
       final staff = [
-        {'id': 'st1', 'name': 'Mr. Okot John', 'email': 'teacher@school.ug', 'role': 'classTeacher', 'mustChangePassword': true},
-        {'id': 'st2', 'name': 'Ms. Nalule Jane', 'email': 'bursar@school.ug', 'role': 'bursar', 'mustChangePassword': true},
-        {'id': 'st3', 'name': 'Dr. Musoke Peter', 'email': 'nurse@school.ug', 'role': 'nurse', 'mustChangePassword': true},
+        {'name': 'Mr. Okot John', 'email': 'teacher@school.ug', 'role': 'classTeacher'},
+        {'name': 'Ms. Nalule Jane', 'email': 'bursar@school.ug', 'role': 'bursar'},
+        {'name': 'Dr. Musoke Peter', 'email': 'nurse@school.ug', 'role': 'nurse'},
       ];
 
       for (var st in staff) {
-        await FirebaseFirestore.instance.collection('users').doc(st['id'] as String).set({
-          ...st,
-          'studentIds': [],
-          'createdAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
+        try {
+          final existingStaff = await FirebaseFirestore.instance
+              .collection('users')
+              .where('email', isEqualTo: st['email'])
+              .get();
+
+          if (existingStaff.docs.isNotEmpty) {
+            debugPrint("⏩ Staff ${st['email']} already exists. Skipping Auth creation.");
+            continue;
+          }
+
+          final tempAppName = 'seed_app_${st['role']}';
+          FirebaseApp tempApp;
+          try {
+             tempApp = Firebase.app(tempAppName);
+          } catch (_) {
+             tempApp = await Firebase.initializeApp(
+              name: tempAppName,
+              options: Firebase.app().options,
+            );
+          }
+          
+          final tempAuth = FirebaseAuth.instanceFor(app: tempApp);
+          late UserCredential cred;
+          try {
+            cred = await tempAuth.signInWithEmailAndPassword(email: st['email']!, password: "Test@123");
+          } catch (_) {
+            cred = await tempAuth.createUserWithEmailAndPassword(email: st['email']!, password: "Test@123");
+          }
+
+          await FirebaseFirestore.instance.collection('users').doc(cred.user!.uid).set({
+            'id': cred.user!.uid,
+            'name': st['name'],
+            'email': st['email'],
+            'role': st['role'],
+            'isActive': true,
+            'mustChangePassword': true,
+            'studentIds': [],
+            'createdAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+          await tempApp.delete();
+        } catch (e) {
+          debugPrint("⚠️ Skipping staff seed for ${st['email']}: $e");
+        }
       }
-      debugPrint("✅ Staff profiles seeded.");
+      debugPrint("✅ Staff seeded.");
 
       debugPrint("🏁 FULL SEEDING COMPLETE!");
     } catch (e) {

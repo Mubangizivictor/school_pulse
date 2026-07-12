@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:school_pulse/core/enums/student_status.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_event.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_state.dart';
-import 'package:school_pulse/mock_data/mock_models.dart';
 
 class TeacherAttendanceScreen extends StatefulWidget {
   const TeacherAttendanceScreen({super.key});
@@ -36,7 +37,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.history),
-            onPressed: () {},
+            onPressed: () => context.go('/staff/attendance/history'),
           ),
         ],
       ),

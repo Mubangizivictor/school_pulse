@@ -151,9 +151,9 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
       listener: (context, state) {
         if (state is AuthAuthenticated) {
           if (state.user.mustChangePassword) {
-            context.go('/staff/set-password', extra: state.user.role);
+            context.go('/auth/force-setup', extra: state.user);
           } else {
-            _routeToRoleDashboard(state.user.role);
+            context.go('/school-splash', extra: state.user);
           }
         } else if (state is AuthFailureState) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));

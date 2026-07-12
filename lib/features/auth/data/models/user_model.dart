@@ -8,9 +8,11 @@ class UserModel extends UserEntity {
     super.phoneNumber,
     required super.role,
     super.photoUrl,
-    super.studentIds,
-    super.mustChangePassword,
-    super.isActive,
+    super.studentIds = const [],
+    super.assignedClass,
+    super.subjects,
+    super.mustChangePassword = false,
+    super.isActive = true,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -25,6 +27,12 @@ class UserModel extends UserEntity {
       ),
       photoUrl: json['photoUrl'],
       studentIds: List<String>.from(json['studentIds'] ?? const []),
+      assignedClass: json['assignedClass'],
+      subjects: json['subjects'] != null
+          ? (json['subjects'] as List)
+              .map((i) => SubjectAssignment.fromJson(i))
+              .toList()
+          : null,
       mustChangePassword: json['mustChangePassword'] ?? false,
       isActive: json['isActive'] ?? true,
     );
@@ -39,6 +47,8 @@ class UserModel extends UserEntity {
       'role': role.name,
       'photoUrl': photoUrl,
       'studentIds': studentIds,
+      'assignedClass': assignedClass,
+      'subjects': subjects?.map((e) => e.toJson()).toList(),
       'mustChangePassword': mustChangePassword,
       'isActive': isActive,
     };
@@ -53,6 +63,8 @@ class UserModel extends UserEntity {
       role: entity.role,
       photoUrl: entity.photoUrl,
       studentIds: entity.studentIds,
+      assignedClass: entity.assignedClass,
+      subjects: entity.subjects,
       mustChangePassword: entity.mustChangePassword,
       isActive: entity.isActive,
     );

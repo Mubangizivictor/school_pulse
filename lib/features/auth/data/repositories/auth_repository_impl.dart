@@ -1,6 +1,7 @@
 import 'package:dartz/dartz.dart';
 import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/features/auth/data/datasources/auth_remote_data_source.dart';
+import 'package:school_pulse/features/auth/data/models/user_model.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/repositories/auth_repository.dart';
 
@@ -22,10 +23,18 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, String>> loginWithPhone(String phoneNumber) async {
+  Future<Either<Failure, UserEntity>> loginParent({
+    required String code,
+    required String phoneNumber,
+    required String pin,
+  }) async {
     try {
-      final verificationId = await remoteDataSource.loginWithPhone(phoneNumber);
-      return Right(verificationId);
+      final userModel = await remoteDataSource.loginParent(
+        code: code,
+        phoneNumber: phoneNumber,
+        pin: pin,
+      );
+      return Right(userModel);
     } on AuthFailure catch (e) {
       return Left(e);
     } catch (e) {
@@ -34,10 +43,10 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, UserEntity>> verifyOtp(String verificationId, String smsCode, {List<String>? linkedStudentIds}) async {
+  Future<Either<Failure, void>> completeParentPinSetup(String code, String newPin) async {
     try {
-      final userModel = await remoteDataSource.verifyOtp(verificationId, smsCode, linkedStudentIds: linkedStudentIds);
-      return Right(userModel);
+      await remoteDataSource.completeParentPinSetup(code, newPin);
+      return const Right(null);
     } on AuthFailure catch (e) {
       return Left(e);
     } catch (e) {
@@ -71,6 +80,8 @@ class AuthRepositoryImpl implements AuthRepository {
     required String email,
     required UserRole role,
     required String password,
+    String? assignedClass,
+    List<SubjectAssignment>? subjects,
   }) async {
     try {
       final temporaryPassword = await remoteDataSource.createStaffAccount(
@@ -78,6 +89,8 @@ class AuthRepositoryImpl implements AuthRepository {
         email: email,
         role: role,
         password: password,
+        assignedClass: assignedClass,
+        subjects: subjects,
       );
       return Right(temporaryPassword);
     } on AuthFailure catch (e) {
@@ -113,6 +126,26 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Either<Failure, void>> toggleStaffActiveStatus(String userId, bool isActive) async {
     try {
       await remoteDataSource.toggleStaffActiveStatus(userId, isActive);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> updateStaffMember(UserEntity user) async {
+    try {
+      await remoteDataSource.updateStaffMember(UserModel.fromEntity(user));
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteStaffMember(String userId) async {
+    try {
+      await remoteDataSource.deleteStaffMember(userId);
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString()));

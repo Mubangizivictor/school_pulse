@@ -4,6 +4,7 @@ import '../../domain/entities/student.dart';
 import '../../domain/entities/parent_access_code.dart';
 import '../../domain/repositories/student_repository.dart';
 import '../datasources/student_remote_data_source.dart';
+import '../models/parent_access_code_model.dart';
 import '../models/student_model.dart';
 
 class StudentRepositoryImpl implements StudentRepository {
@@ -94,6 +95,32 @@ class StudentRepositoryImpl implements StudentRepository {
   Future<Either<Failure, void>> toggleAccessCodeStatus(String code, bool isActive) async {
     try {
       await remoteDataSource.toggleAccessCodeStatus(code, isActive);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure());
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteAccessCode(String code) async {
+    try {
+      await remoteDataSource.deleteAccessCode(code);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure());
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> updateAccessCode(ParentAccessCode code) async {
+    try {
+      await remoteDataSource.updateAccessCode(ParentAccessCodeModel(
+        code: code.code,
+        studentIds: code.studentIds,
+        studentNames: code.studentNames,
+        parentName: code.parentName,
+        isActive: code.isActive,
+      ));
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure());

@@ -4,33 +4,41 @@ import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
+import 'package:school_pulse/features/dean/presentation/bloc/dean_event.dart';
+import 'package:school_pulse/features/dean/presentation/bloc/dean_state.dart';
+import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
+import 'package:school_pulse/injection_container.dart';
 
 class DeanDashboardScreen extends StatelessWidget {
   const DeanDashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
-      body: CustomScrollView(
-        slivers: [
-          _buildAppBar(context),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildGreeting(context),
-                  const SizedBox(height: 32),
-                  _buildActionGrid(context),
-                  const SizedBox(height: 32),
-                  _buildAcademicsOverview(context),
-                ],
+    return BlocProvider(
+      create: (context) => sl<DeanBloc>()..add(DeanStatsRequested()),
+      child: Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
+        body: CustomScrollView(
+          slivers: [
+            _buildAppBar(context),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildGreeting(context),
+                    const SizedBox(height: 32),
+                    _buildActionGrid(context),
+                    const SizedBox(height: 32),
+                    _buildAcademicsOverview(context),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -42,7 +50,7 @@ class DeanDashboardScreen extends StatelessWidget {
       backgroundColor: Theme.of(context).colorScheme.surface,
       title: const Text('Dean of Studies Console', style: TextStyle(fontWeight: FontWeight.bold)),
       actions: [
-        IconButton(icon: const Icon(Icons.notifications_none_outlined), onPressed: () {}),
+        const NotificationBellButton(),
         const SizedBox(width: 16),
         const CircleAvatar(radius: 18, child: Icon(Icons.person)),
         const SizedBox(width: 24),
@@ -88,26 +96,40 @@ class DeanDashboardScreen extends StatelessWidget {
   }
 
   Widget _buildAcademicsOverview(BuildContext context) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Academic Overview', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-          const SizedBox(height: 24),
-          const Row(
-            children: [
-              _Metric(label: 'Avg. Attendance', value: '94%'),
-              _Metric(label: 'Syllabus Coverage', value: '68%'),
-              _Metric(label: 'Pending Results', value: '4 Classes'),
-            ],
-          ),
-          const SizedBox(height: 32),
-          const Text('Recent Department Updates', style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          _DepartmentUpdate(dept: 'Science', update: 'Physics syllabus completed for S4', time: '2h ago'),
-          _DepartmentUpdate(dept: 'Mathematics', update: 'Termly tests scores uploaded', time: 'Yesterday'),
-        ],
-      ),
+    return BlocBuilder<DeanBloc, DeanState>(
+      builder: (context, state) {
+        if (state is DeanLoading) {
+          return const AppCard(child: Center(child: CircularProgressIndicator()));
+        }
+        if (state is DeanError) {
+          return AppCard(child: Text('Error: ${state.message}'));
+        }
+        if (state is DeanLoaded) {
+          final stats = state.stats;
+          return AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Academic Overview', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    _Metric(label: 'Total Students', value: stats.totalStudents.toString()),
+                    _Metric(label: 'Syllabus Coverage', value: '${(stats.syllabusCoverage * 100).toInt()}%'),
+                    _Metric(label: 'Avg Performance', value: '${(stats.averagePerformance * 100).toInt()}%'),
+                  ],
+                ),
+                const SizedBox(height: 32),
+                const Text('Recent Department Updates', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                const _DepartmentUpdate(dept: 'Science', update: 'Physics syllabus completed for S4', time: '2h ago'),
+                const _DepartmentUpdate(dept: 'Mathematics', update: 'Termly tests scores uploaded', time: 'Yesterday'),
+              ],
+            ),
+          );
+        }
+        return const SizedBox.shrink();
+      },
     );
   }
 }
@@ -167,7 +189,7 @@ class _Metric extends StatelessWidget {
       child: Column(
         children: [
           Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          Text(label, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
         ],
       ),
     );
@@ -190,7 +212,7 @@ class _DepartmentUpdate extends StatelessWidget {
           Text('[$dept]', style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary, fontSize: 12)),
           const SizedBox(width: 8),
           Expanded(child: Text(update, style: const TextStyle(fontSize: 13))),
-          Text(time, style: TextStyle(color: Colors.grey, fontSize: 11)),
+          Text(time, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11)),
         ],
       ),
     );

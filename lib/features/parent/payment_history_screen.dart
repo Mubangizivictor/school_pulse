@@ -107,10 +107,10 @@ class PaymentHistoryScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildDetailRow('Reference', payment.reference),
-            _buildDetailRow('Date', DateFormatter.format(payment.date)),
-            _buildDetailRow('Method', payment.method),
-            _buildDetailRow('Amount', CurrencyFormatter.format(payment.amount)),
+            _buildDetailRow(context, 'Reference', payment.reference),
+            _buildDetailRow(context, 'Date', DateFormatter.format(payment.date)),
+            _buildDetailRow(context, 'Method', payment.method),
+            _buildDetailRow(context, 'Amount', CurrencyFormatter.format(payment.amount)),
             const Divider(),
             Text('Status: Successful',
                 style: TextStyle(color: semanticColors.success, fontWeight: FontWeight.bold)),
@@ -130,13 +130,13 @@ class PaymentHistoryScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(BuildContext context, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.grey)),
+          Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
         ],
       ),

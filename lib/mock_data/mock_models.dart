@@ -1,6 +1,5 @@
-export 'package:school_pulse/features/student/domain/entities/student.dart';
+import 'package:school_pulse/core/enums/student_status.dart';
 
-enum StudentStatus { present, absent, late }
 enum FeeStatus { paid, due, overdue }
 enum Severity { info, success, warning, error }
 

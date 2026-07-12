@@ -2,7 +2,7 @@ import 'package:dartz/dartz.dart';
 import 'package:equatable/equatable.dart';
 import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/usecases/usecase.dart';
-import 'package:school_pulse/core/user_roles.dart';
+import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/repositories/auth_repository.dart';
 
 /// Creates a staff Firebase Auth account + Firestore profile via the
@@ -20,6 +20,8 @@ class CreateStaffAccount implements UseCase<String, CreateStaffAccountParams> {
       email: params.email,
       role: params.role,
       password: params.password,
+      assignedClass: params.assignedClass,
+      subjects: params.subjects,
     );
   }
 }
@@ -29,14 +31,18 @@ class CreateStaffAccountParams extends Equatable {
   final String email;
   final UserRole role;
   final String password;
+  final String? assignedClass;
+  final List<SubjectAssignment>? subjects;
 
   const CreateStaffAccountParams({
     required this.name,
     required this.email,
     required this.role,
     required this.password,
+    this.assignedClass,
+    this.subjects,
   });
 
   @override
-  List<Object?> get props => [name, email, role, password];
+  List<Object?> get props => [name, email, role, password, assignedClass, subjects];
 }

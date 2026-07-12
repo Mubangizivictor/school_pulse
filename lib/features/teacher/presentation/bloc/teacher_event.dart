@@ -9,6 +9,8 @@ abstract class TeacherEvent extends Equatable {
 
 class TeacherDashboardRequested extends TeacherEvent {}
 
+class TeacherAttendanceHistoryRequested extends TeacherEvent {}
+
 class TeacherAttendanceRequested extends TeacherEvent {
   final String className;
 

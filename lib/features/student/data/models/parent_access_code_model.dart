@@ -6,7 +6,10 @@ class ParentAccessCodeModel extends ParentAccessCode {
     required super.studentIds,
     required super.studentNames,
     super.parentName,
-    super.isActive,
+    super.phoneNumber,
+    super.pin,
+    super.mustChangePin = true,
+    super.isActive = true,
   });
 
   factory ParentAccessCodeModel.fromFirestore(Map<String, dynamic> json, String code) {
@@ -15,6 +18,9 @@ class ParentAccessCodeModel extends ParentAccessCode {
       studentIds: List<String>.from(json['studentIds'] ?? const []),
       studentNames: List<String>.from(json['studentNames'] ?? const []),
       parentName: json['parentName'] as String?,
+      phoneNumber: json['phoneNumber'] as String?,
+      pin: json['pin'] as String?,
+      mustChangePin: json['mustChangePin'] ?? true,
       isActive: json['isActive'] ?? true,
     );
   }
@@ -24,6 +30,9 @@ class ParentAccessCodeModel extends ParentAccessCode {
       'studentIds': studentIds,
       'studentNames': studentNames,
       'parentName': parentName,
+      'phoneNumber': phoneNumber,
+      'pin': pin,
+      'mustChangePin': mustChangePin,
       'isActive': isActive,
     };
   }

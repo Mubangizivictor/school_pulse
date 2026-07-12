@@ -17,6 +17,8 @@ abstract class StudentRemoteDataSource {
   Future<String> createAccessCode({required List<String> studentIds, String? parentName});
   Future<String> regenerateAccessCode(String oldCode);
   Future<void> toggleAccessCodeStatus(String code, bool isActive);
+  Future<void> updateAccessCode(ParentAccessCodeModel code);
+  Future<void> deleteAccessCode(String code);
   Future<void> createStudent(StudentModel student);
 }
 
@@ -89,6 +91,16 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
   @override
   Future<void> toggleAccessCodeStatus(String code, bool isActive) async {
     await firestore.collection('parent_access_codes').doc(code).update({'isActive': isActive});
+  }
+
+  @override
+  Future<void> updateAccessCode(ParentAccessCodeModel code) async {
+    await firestore.collection('parent_access_codes').doc(code.code).update(code.toFirestore());
+  }
+
+  @override
+  Future<void> deleteAccessCode(String code) async {
+    await firestore.collection('parent_access_codes').doc(code).delete();
   }
 
   Future<String> _writeNewCode({

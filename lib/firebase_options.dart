@@ -52,7 +52,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '925585407650',
     projectId: 'school-pulse-3d95b',
     authDomain: 'school-pulse-3d95b.firebaseapp.com',
-    storageBucket: 'school-pulse-3d95b.firebasestorage.app',
+    storageBucket: 'school-pulse-3d95b.appspot.com',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
@@ -60,7 +60,7 @@ class DefaultFirebaseOptions {
     appId: '1:925585407650:android:671a08de8f49ea1d9461fb',
     messagingSenderId: '925585407650',
     projectId: 'school-pulse-3d95b',
-    storageBucket: 'school-pulse-3d95b.firebasestorage.app',
+    storageBucket: 'school-pulse-3d95b.appspot.com',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
@@ -68,7 +68,7 @@ class DefaultFirebaseOptions {
     appId: '1:925585407650:ios:7fd13d46681d5a449461fb',
     messagingSenderId: '925585407650',
     projectId: 'school-pulse-3d95b',
-    storageBucket: 'school-pulse-3d95b.firebasestorage.app',
+    storageBucket: 'school-pulse-3d95b.appspot.com',
     iosBundleId: 'com.example.schoolPulse',
   );
 }

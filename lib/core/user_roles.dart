@@ -22,6 +22,7 @@ enum UserRole {
   gamesMaster,
   cateringManager,
   religiousLeader,
+  receptionist,
 }
 
 class PlatformAccess {
@@ -70,6 +71,7 @@ class UserRoleDisplay {
       case UserRole.gamesMaster: return 'Games Master';
       case UserRole.cateringManager: return 'Catering Manager';
       case UserRole.religiousLeader: return 'Religious Leader';
+      case UserRole.receptionist: return 'Receptionist';
     }
   }
 
@@ -81,6 +83,28 @@ class UserRoleDisplay {
     UserRole.headTeacher,
     UserRole.schoolAdmin,
   ];
+}
+
+/// Maps a staff role to the broadcast target-group labels used by
+/// BroadcastSmsScreen, so the notification center can find broadcasts
+/// addressed to this user's group(s) via a `targets` array-contains query.
+class NotificationGroups {
+  static const teacherRoles = [UserRole.classTeacher, UserRole.subjectTeacher];
+  static const adminRoles = [
+    UserRole.schoolAdmin,
+    UserRole.director,
+    UserRole.headTeacher,
+    UserRole.deputyHead,
+    UserRole.bursar,
+  ];
+
+  static List<String> forRole(UserRole role) {
+    if (role == UserRole.parent) return const ['Parents'];
+    final groups = <String>['All Staff'];
+    if (teacherRoles.contains(role)) groups.add('Teachers Only');
+    if (adminRoles.contains(role)) groups.add('Bursars & Admin');
+    return groups;
+  }
 }
 
 class UserRoleRouting {
@@ -100,11 +124,29 @@ class UserRoleRouting {
       case UserRole.schoolAdmin:
       case UserRole.director:
       case UserRole.headTeacher:
+      case UserRole.deputyHead:
         return '/staff/admin';
       case UserRole.deanOfStudies:
+      case UserRole.examsOfficer:
         return '/staff/dean';
+      case UserRole.boardingMatron:
+        return '/staff/matron';
+      case UserRole.transportCoordinator:
+        return '/staff/transport';
+      case UserRole.guidanceDiscipline:
+        return '/staff/discipline';
+      case UserRole.cateringManager:
+        return '/staff/catering';
+      case UserRole.gamesMaster:
+        return '/staff/games';
+      case UserRole.securityHead:
+        return '/staff/security';
       case UserRole.religiousLeader:
         return '/staff/religious-leader';
+      case UserRole.receptionist:
+        return '/staff/receptionist';
+      case UserRole.storeInventory:
+        return '/staff/inventory';
       default:
         return '/staff/dashboard';
     }

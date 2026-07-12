@@ -21,6 +21,11 @@ import 'package:school_pulse/features/notifications/presentation/bloc/notificati
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
 import 'package:school_pulse/features/gatekeeper/presentation/bloc/gatekeeper_bloc.dart';
 import 'package:school_pulse/features/receptionist/presentation/bloc/receptionist_bloc.dart';
+import 'package:school_pulse/features/admin/presentation/bloc/system_config_bloc.dart';
+import 'package:school_pulse/features/admin/presentation/bloc/system_config_event.dart';
+import 'package:school_pulse/features/admin/presentation/bloc/system_config_state.dart';
+import 'package:school_pulse/core/notification/notification_service.dart';
+import 'package:school_pulse/core/utils/admin_seeder.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,14 +33,18 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Auto-seed admin on first run. 
-  // You can comment this out after the first successful run.
-  // await AdminSeeder.seedAdmin();
+  await NotificationService().initialize();
+
+  await AdminSeeder.seedAdmin();
 
   await di.init();
+
+  final themeProvider = ThemeProvider();
+  await themeProvider.initialize();
+
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
+    ChangeNotifierProvider.value(
+      value: themeProvider,
       child: const SchoolPulseApp(),
     ),
   );
@@ -87,6 +96,9 @@ class SchoolPulseApp extends StatelessWidget {
         BlocProvider(
           create: (_) => di.sl<ReceptionistBloc>(),
         ),
+        BlocProvider(
+          create: (_) => di.sl<SystemConfigBloc>()..add(WatchSystemConfig()),
+        ),
       ],
       child: const SchoolPulseAppView(),
     );
@@ -98,17 +110,28 @@ class SchoolPulseAppView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeProvider>(
-      builder: (context, themeProvider, child) {
-        return MaterialApp.router(
-          title: 'School Pulse',
-          theme: AppTheme.light,
-          darkTheme: AppTheme.dark,
-          themeMode: themeProvider.themeMode,
-          routerConfig: router,
-          debugShowCheckedModeBanner: false,
-        );
+    return BlocListener<SystemConfigBloc, SystemConfigState>(
+      listener: (context, state) {
+        if (state is SystemConfigLoaded) {
+          context.read<ThemeProvider>().updateConfig(state.config);
+        }
       },
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          final config = themeProvider.config;
+          final primary = config?.primaryColor != null ? Color(int.parse(config!.primaryColor!)) : null;
+          final secondary = config?.secondaryColor != null ? Color(int.parse(config!.secondaryColor!)) : null;
+
+          return MaterialApp.router(
+            title: config?.schoolName ?? 'School Pulse',
+            theme: AppTheme.light(primary: primary, secondary: secondary),
+            darkTheme: AppTheme.dark(primary: primary, secondary: secondary),
+            themeMode: themeProvider.themeMode,
+            routerConfig: router,
+            debugShowCheckedModeBanner: false,
+          );
+        },
+      ),
     );
   }
 }

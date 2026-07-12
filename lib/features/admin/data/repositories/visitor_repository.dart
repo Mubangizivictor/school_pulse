@@ -15,6 +15,16 @@ class VisitorRepository {
             .toList());
   }
 
+  Future<List<Visitor>> getVisitorsOnce() async {
+    final snapshot = await _firestore
+        .collection('visitors')
+        .orderBy('checkIn', descending: true)
+        .get();
+    return snapshot.docs
+        .map((doc) => Visitor.fromMap(doc.data(), doc.id))
+        .toList();
+  }
+
   Future<void> addVisitor(Visitor visitor) async {
     await _firestore.collection('visitors').add(visitor.toMap());
   }

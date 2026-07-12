@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:school_pulse/design_system/app_components.dart';
+import 'package:fl_chart/fl_chart.dart';
+import '../../../../../design_system/app_components.dart';
 
 class SyllabusCoverageScreen extends StatefulWidget {
   const SyllabusCoverageScreen({super.key});
@@ -28,12 +29,14 @@ class _SyllabusCoverageScreenState extends State<SyllabusCoverageScreen> {
         children: [
           _buildFilters(),
           Expanded(
-            child: ListView.builder(
+            child: ListView(
               padding: const EdgeInsets.all(16),
-              itemCount: _subjects.length,
-              itemBuilder: (context, index) {
-                final subject = _subjects[index];
-                return Padding(
+              children: [
+                _buildSummaryChart(),
+                const SizedBox(height: 24),
+                const SectionHeader(title: 'Subject Breakdown'),
+                const SizedBox(height: 12),
+                ..._subjects.map((subject) => Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: ProgressCard(
                     title: subject['name'],
@@ -41,9 +44,50 @@ class _SyllabusCoverageScreenState extends State<SyllabusCoverageScreen> {
                     subtitle: '${subject['completed']}/${subject['topics']} topics completed • ${subject['teacher']}',
                     color: _getColorForCoverage(subject['coverage']),
                   ),
-                );
-              },
+                )),
+              ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryChart() {
+    return AppCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          const Text('Class Average Coverage', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 200,
+            child: PieChart(
+              PieChartData(
+                sectionsSpace: 0,
+                centerSpaceRadius: 60,
+                sections: [
+                  PieChartSectionData(
+                    color: Theme.of(context).colorScheme.primary,
+                    value: 65,
+                    title: '65%',
+                    radius: 20,
+                    titleStyle: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  PieChartSectionData(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    value: 35,
+                    title: '',
+                    radius: 15,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Target: 80% by Mid-Term',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.orange, fontWeight: FontWeight.bold),
           ),
         ],
       ),

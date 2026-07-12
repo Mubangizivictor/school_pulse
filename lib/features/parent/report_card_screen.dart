@@ -323,6 +323,6 @@ class _ReportCardScreenState extends State<ReportCardScreen> with SingleTickerPr
     if (grade.startsWith('C')) return semanticColors.warning;
     if (grade.startsWith('P')) return semanticColors.info;
     if (grade.startsWith('F')) return semanticColors.error;
-    return Colors.grey;
+    return Theme.of(context).colorScheme.outline;
   }
 }

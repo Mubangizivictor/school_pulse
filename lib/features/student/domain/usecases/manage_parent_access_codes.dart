@@ -40,3 +40,21 @@ class ToggleAccessCodeStatus {
     return await repository.toggleAccessCodeStatus(code, isActive);
   }
 }
+
+class DeleteAccessCode {
+  final StudentRepository repository;
+  DeleteAccessCode(this.repository);
+
+  Future<Either<Failure, void>> call(String code) async {
+    return await repository.deleteAccessCode(code);
+  }
+}
+
+class UpdateAccessCode {
+  final StudentRepository repository;
+  UpdateAccessCode(this.repository);
+
+  Future<Either<Failure, void>> call(ParentAccessCode code) async {
+    return await repository.updateAccessCode(code);
+  }
+}

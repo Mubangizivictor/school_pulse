@@ -34,6 +34,8 @@ import 'package:school_pulse/features/librarian/librarian_dashboard.dart';
 import 'package:school_pulse/features/gatekeeper/gatekeeper_dashboard.dart';
 import 'package:school_pulse/features/receptionist/receptionist_dashboard.dart';
 import 'package:school_pulse/features/matron/matron_dashboard.dart';
+import 'package:school_pulse/features/inventory/inventory_dashboard.dart';
+import 'package:school_pulse/features/teacher/attendance_history_screen.dart';
 import 'package:school_pulse/features/catering/presentation/catering_dashboard_screen.dart';
 import 'package:school_pulse/features/games/presentation/games_dashboard_screen.dart';
 import 'package:school_pulse/features/security/presentation/security_dashboard_screen.dart';
@@ -44,6 +46,7 @@ import 'package:school_pulse/features/dean/presentation/screens/curriculum/sylla
 import 'package:school_pulse/features/religion/presentation/religious_leader_dashboard_screen.dart';
 
 import 'package:school_pulse/features/auth/login_flow/splash_screen.dart';
+import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/admin/user_management_screen.dart';
 import 'package:school_pulse/features/admin/admin_dashboard_screen.dart';
 import 'package:school_pulse/features/admin/system_config_screen.dart';
@@ -51,6 +54,12 @@ import 'package:school_pulse/features/admin/school_structure_screen.dart';
 import 'package:school_pulse/features/admin/broadcast_sms_screen.dart';
 import 'package:school_pulse/features/admin/visitor_log_screen.dart';
 import 'package:school_pulse/features/admin/admin_staff_attendance_screen.dart';
+import 'package:school_pulse/features/admin/appointments_screen.dart';
+import 'package:school_pulse/features/admin/audit_log_screen.dart';
+import 'package:school_pulse/features/admin/broadcast_history_screen.dart';
+import 'package:school_pulse/features/notifications/presentation/staff_notification_center_screen.dart';
+
+import 'package:school_pulse/features/auth/login_flow/school_splash_screen.dart';
 
 final router = GoRouter(
   initialLocation: '/',
@@ -73,6 +82,10 @@ final router = GoRouter(
       path: '/welcome',
       builder: (context, state) => const WelcomeScreen(),
     ),
+      GoRoute(
+        path: '/school-splash',
+        builder: (context, state) => SchoolSplashScreen(user: state.extra as UserEntity),
+      ),
       GoRoute(
         path: '/parent/login/child-id',
         builder: (context, state) => const ChildIdScreen(),
@@ -100,8 +113,8 @@ final router = GoRouter(
         },
       ),
       GoRoute(
-        path: '/staff/set-password',
-        builder: (context, state) => ForceSetPasswordScreen(role: state.extra as UserRole?),
+        path: '/auth/force-setup',
+        builder: (context, state) => ForceSetPasswordScreen(user: state.extra as UserEntity?),
       ),
       GoRoute(
         path: '/platform-blocked',
@@ -220,6 +233,10 @@ final router = GoRouter(
             builder: (context, state) => const ReceptionistDashboardScreen(),
           ),
           GoRoute(
+            path: '/staff/inventory',
+            builder: (context, state) => const InventoryDashboardScreen(),
+          ),
+          GoRoute(
             path: '/staff/matron',
             builder: (context, state) => const MatronDashboardScreen(),
           ),
@@ -285,11 +302,33 @@ final router = GoRouter(
                 path: 'staff-attendance',
                 builder: (context, state) => const AdminStaffAttendanceScreen(),
               ),
+              GoRoute(
+                path: 'appointments',
+                builder: (context, state) => const AppointmentsScreen(),
+              ),
+              GoRoute(
+                path: 'audit-log',
+                builder: (context, state) => const AuditLogScreen(),
+              ),
+              GoRoute(
+                path: 'broadcast-history',
+                builder: (context, state) => const BroadcastHistoryScreen(),
+              ),
             ],
+          ),
+          GoRoute(
+            path: '/staff/notifications',
+            builder: (context, state) => const StaffNotificationCenterScreen(),
           ),
           GoRoute(
             path: '/staff/attendance',
             builder: (context, state) => const TeacherAttendanceScreen(),
+            routes: [
+              GoRoute(
+                path: 'history',
+                builder: (context, state) => const TeacherAttendanceHistoryScreen(),
+              ),
+            ],
           ),
           GoRoute(
             path: '/staff/marks',

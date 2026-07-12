@@ -19,24 +19,29 @@ class LoginWithEmailPressed extends AuthEvent {
   List<Object?> get props => [email, password];
 }
 
-class LoginWithPhonePressed extends AuthEvent {
+class LoginParentPressed extends AuthEvent {
+  final String code;
   final String phoneNumber;
+  final String pin;
 
-  const LoginWithPhonePressed({required this.phoneNumber});
+  const LoginParentPressed({
+    required this.code,
+    required this.phoneNumber,
+    required this.pin,
+  });
 
   @override
-  List<Object?> get props => [phoneNumber];
+  List<Object?> get props => [code, phoneNumber, pin];
 }
 
-class VerifyOtpPressed extends AuthEvent {
-  final String verificationId;
-  final String smsCode;
-  final List<String>? linkedStudentIds;
+class CompleteParentPinSetupRequested extends AuthEvent {
+  final String code;
+  final String newPin;
 
-  const VerifyOtpPressed({required this.verificationId, required this.smsCode, this.linkedStudentIds});
+  const CompleteParentPinSetupRequested({required this.code, required this.newPin});
 
   @override
-  List<Object?> get props => [verificationId, smsCode, linkedStudentIds];
+  List<Object?> get props => [code, newPin];
 }
 
 class LogoutPressed extends AuthEvent {}

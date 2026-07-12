@@ -8,6 +8,9 @@ class ParentAccessCode extends Equatable {
   final List<String> studentIds;
   final List<String> studentNames;
   final String? parentName;
+  final String? phoneNumber; // Added for verification
+  final String? pin; // Temporary or permanent PIN
+  final bool mustChangePin;
 
   final bool isActive;
 
@@ -16,9 +19,21 @@ class ParentAccessCode extends Equatable {
     required this.studentIds,
     required this.studentNames,
     this.parentName,
+    this.phoneNumber,
+    this.pin,
+    this.mustChangePin = true,
     this.isActive = true,
   });
 
   @override
-  List<Object?> get props => [code, studentIds, studentNames, parentName, isActive];
+  List<Object?> get props => [
+        code,
+        studentIds,
+        studentNames,
+        parentName,
+        phoneNumber,
+        pin,
+        mustChangePin,
+        isActive
+      ];
 }

@@ -107,7 +107,7 @@ class _ChildIdScreenState extends State<ChildIdScreen> {
             const SizedBox(height: 8),
             Text(
               "The school office gives you one code that covers all of your children.",
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 32),
             TextField(
@@ -151,27 +151,21 @@ class ParentVerifyScreen extends StatefulWidget {
 
 class _ParentVerifyScreenState extends State<ParentVerifyScreen> {
   final _phoneController = TextEditingController();
-  final _otpController = TextEditingController();
-  bool _otpSent = false;
-  String? _verificationId;
+  final _pinController = TextEditingController();
 
-  void _sendOtp() {
-    context.read<AuthBloc>().add(LoginWithPhonePressed(phoneNumber: _toE164(_phoneController.text)));
-  }
-
-  void _verifyOtp() {
-    if (_verificationId == null) return;
-    context.read<AuthBloc>().add(VerifyOtpPressed(
-          verificationId: _verificationId!,
-          smsCode: _otpController.text,
-          linkedStudentIds: widget.accessCode?.studentIds,
+  void _login() {
+    if (widget.accessCode == null) return;
+    context.read<AuthBloc>().add(LoginParentPressed(
+          code: widget.accessCode!.code,
+          phoneNumber: _toE164(_phoneController.text),
+          pin: _pinController.text,
         ));
   }
 
   @override
   void dispose() {
     _phoneController.dispose();
-    _otpController.dispose();
+    _pinController.dispose();
     super.dispose();
   }
 
@@ -182,13 +176,12 @@ class _ParentVerifyScreenState extends State<ParentVerifyScreen> {
 
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
-        if (state is AuthOtpSent) {
-          setState(() {
-            _otpSent = true;
-            _verificationId = state.verificationId;
-          });
-        } else if (state is AuthAuthenticated) {
-          context.go('/parent/home');
+        if (state is AuthAuthenticated) {
+          if (state.user.mustChangePassword) {
+            context.go('/auth/force-setup', extra: state.user);
+          } else {
+            context.go('/school-splash', extra: state.user);
+          }
         } else if (state is AuthFailureState) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
         }
@@ -211,22 +204,22 @@ class _ParentVerifyScreenState extends State<ParentVerifyScreen> {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    _otpSent ? Icons.lock_clock_outlined : Icons.phone_android,
+                    Icons.lock_person_outlined,
                     size: 36,
                     color: primaryColor,
                   ),
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  _otpSent ? "Enter verification code" : "Verify your phone number",
+                  "Parent Login",
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  _otpSent
-                      ? "We've sent a 6-digit code to your phone number."
-                      : "Enter your phone number to receive a verification code.",
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                  "Enter your registered phone number and PIN to continue.",
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  textAlign: TextAlign.center,
                 ),
                 if (widget.accessCode != null && widget.accessCode!.studentNames.isNotEmpty) ...[
                   const SizedBox(height: 12),
@@ -237,41 +230,34 @@ class _ParentVerifyScreenState extends State<ParentVerifyScreen> {
                   ),
                 ],
                 const SizedBox(height: 32),
-                if (!_otpSent) ...[
-                  TextField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(
-                      labelText: 'Phone Number',
-                      hintText: '07xx xxx xxx',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.phone),
-                    ),
+                TextField(
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone Number',
+                    hintText: '07xx xxx xxx',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.phone),
                   ),
-                  const SizedBox(height: 24),
-                  PrimaryButton(
-                    label: 'Send Code',
-                    isLoading: isLoading,
-                    onPressed: isLoading ? null : _sendOtp,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _pinController,
+                  keyboardType: TextInputType.number,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'PIN',
+                    hintText: 'Enter your 4 or 6 digit PIN',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.lock_outline),
                   ),
-                ] else ...[
-                  TextField(
-                    controller: _otpController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Verification Code',
-                      hintText: '123456',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.lock_clock),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  PrimaryButton(
-                    label: 'Verify & Login',
-                    isLoading: isLoading,
-                    onPressed: isLoading ? null : _verifyOtp,
-                  ),
-                ],
+                ),
+                const SizedBox(height: 24),
+                PrimaryButton(
+                  label: 'Login',
+                  isLoading: isLoading,
+                  onPressed: isLoading ? null : _login,
+                ),
               ],
             ),
           ),
@@ -319,7 +305,7 @@ class ParentUnlockScreen extends StatelessWidget {
                     height: 20,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.grey.shade300,
+                      color: Theme.of(context).colorScheme.outlineVariant,
                     ),
                   ),
                 )),

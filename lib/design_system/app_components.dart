@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:school_pulse/design_system/app_theme.dart';
 
 class Skeleton extends StatelessWidget {
   final double? height;
@@ -24,7 +25,7 @@ class Skeleton extends StatelessWidget {
         height: height,
         width: width,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? Colors.grey[850] : Colors.white,
           borderRadius: BorderRadius.circular(borderRadius),
         ),
       ),
@@ -77,6 +78,8 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GestureDetector(
       onTapDown: widget.onTap != null ? (_) => _controller.reverse() : null,
       onTapUp: widget.onTap != null ? (_) => _controller.forward() : null,
@@ -84,18 +87,37 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
       onTap: widget.onTap,
       child: ScaleTransition(
         scale: _scale,
-        child: Card(
-          elevation: 0,
+        child: Container(
           margin: widget.margin,
-          color: widget.color,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
+          decoration: BoxDecoration(
+            color: widget.color ?? (isDark ? Theme.of(context).colorScheme.surface : Colors.white),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark 
+                ? Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.1)
+                : Theme.of(context).dividerColor.withValues(alpha: 0.8),
+              width: 1,
+            ),
+            boxShadow: isDark ? [] : [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           clipBehavior: Clip.antiAlias,
-          child: Padding(
-            padding: widget.padding ?? const EdgeInsets.all(16.0),
-            child: widget.child,
+          // A Material ancestor here (rather than relying on whatever
+          // Scaffold happens to be further up the tree) is required so
+          // ListTile/InkWell children paint their background and ink
+          // splashes correctly instead of being hidden behind this
+          // Container's own opaque decoration.
+          child: Material(
+            type: MaterialType.transparency,
+            child: Padding(
+              padding: widget.padding ?? const EdgeInsets.all(16.0),
+              child: widget.child,
+            ),
           ),
         ),
       ),
@@ -118,25 +140,28 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withValues(alpha: isDark ? 0.15 : 0.08),
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: isDark ? 0.3 : 0.2), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 14, color: color),
+            Icon(icon, size: 12, color: color),
             const SizedBox(width: 4),
           ],
           Text(
-            label,
+            label.toUpperCase(),
             style: TextStyle(
-              color: color,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+              color: isDark ? Color.lerp(color, Colors.white, 0.4) : color,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.5,
             ),
           ),
         ],
@@ -218,32 +243,33 @@ class PrimaryButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final bool isLoading;
+  final IconData? icon;
 
   const PrimaryButton({
     super.key,
     required this.label,
     this.onPressed,
     this.isLoading = false,
+    this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (icon != null) {
+      return ElevatedButton.icon(
+        onPressed: isLoading ? null : onPressed,
+        icon: isLoading
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              )
+            : Icon(icon, size: 20),
+        label: Text(label),
+      );
+    }
     return ElevatedButton(
       onPressed: isLoading ? null : onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
-        minimumSize: const Size(double.infinity, 48),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        elevation: 0,
-      ).copyWith(
-        backgroundColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.disabled)) {
-            return Theme.of(context).colorScheme.primary.withValues(alpha: 0.5);
-          }
-          return Theme.of(context).colorScheme.primary;
-        }),
-      ),
       child: isLoading
           ? const SizedBox(
               height: 20,
@@ -269,16 +295,16 @@ class SecondaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton.icon(
+    if (icon != null) {
+      return OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 20),
+        label: Text(label),
+      );
+    }
+    return OutlinedButton(
       onPressed: onPressed,
-      icon: icon != null ? Icon(icon, size: 18) : const SizedBox.shrink(),
-      label: Text(label),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: Theme.of(context).colorScheme.primary,
-        side: BorderSide(color: Theme.of(context).colorScheme.primary),
-        minimumSize: const Size(double.infinity, 48),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
+      child: Text(label),
     );
   }
 }
@@ -561,55 +587,58 @@ class _DashboardStatCardState extends State<DashboardStatCard> with SingleTicker
 
   @override
   Widget build(BuildContext context) {
+    final semantic = Theme.of(context).extension<SemanticColors>()!;
     return AppCard(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              ScaleTransition(
-                scale: _iconAnimation,
-                child: RotationTransition(
-                  turns: Tween(begin: -0.1, end: 0.0).animate(_controller),
-                  child: Icon(widget.icon, color: widget.color, size: 24),
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: widget.color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: ScaleTransition(
+                  scale: _iconAnimation,
+                  child: RotationTransition(
+                    turns: Tween(begin: -0.1, end: 0.0).animate(_controller),
+                    child: Icon(widget.icon, color: widget.color, size: 18),
+                  ),
                 ),
               ),
               if (widget.trend != null)
                 FadeInSlide(
                   delay: const Duration(milliseconds: 400),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: (widget.isPositiveTrend ?? true ? Colors.green : Colors.red).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      widget.trend!,
-                      style: TextStyle(
-                        color: widget.isPositiveTrend ?? true ? Colors.green : Colors.red,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                  child: StatusBadge(
+                    label: widget.trend!,
+                    color: widget.isPositiveTrend ?? true ? semantic.success : semantic.error,
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           AnimatedNumberText(
             value: widget.value,
             suffix: widget.suffix,
             decimalPlaces: widget.decimalPlaces,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 20,
+                  letterSpacing: -0.5,
                 ),
           ),
+          const SizedBox(height: 2),
           Text(
             widget.title,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w500,
                 ),
           ),
         ],
@@ -663,13 +692,19 @@ class ProgressCard extends StatelessWidget {
 }
 
 class PerformanceBarChart extends StatelessWidget {
-  final Map<String, double> data; // Label to percentage (0-100)
+  final Map<String, double> data; // Label to value; bars scale relative to maxValue
   final Color? color;
+  final String title;
+  final double maxValue;
+  final bool showPercentSign;
 
   const PerformanceBarChart({
     super.key,
     required this.data,
     this.color,
+    this.title = 'Subject Performance',
+    this.maxValue = 100,
+    this.showPercentSign = true,
   });
 
   @override
@@ -679,7 +714,7 @@ class PerformanceBarChart extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Subject Performance', style: TextStyle(fontWeight: FontWeight.bold)),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 24),
           SizedBox(
             height: 150,
@@ -690,11 +725,14 @@ class PerformanceBarChart extends StatelessWidget {
                 return Column(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Text('${entry.value.round()}%', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    Text(
+                      '${entry.value.round()}${showPercentSign ? '%' : ''}',
+                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
                     const SizedBox(height: 4),
                     Container(
                       width: 24,
-                      height: 100 * (entry.value / 100),
+                      height: 100 * (entry.value / maxValue),
                       decoration: BoxDecoration(
                         color: activeColor,
                         borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),

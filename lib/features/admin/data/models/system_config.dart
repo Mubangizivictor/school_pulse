@@ -1,6 +1,9 @@
 class SystemConfig {
   final String schoolName;
   final String schoolMotto;
+  final String? schoolLogoUrl;
+  final String? primaryColor;
+  final String? secondaryColor;
   final String currentTerm;
   final String academicYear;
   final DateTime termStart;
@@ -12,6 +15,9 @@ class SystemConfig {
   SystemConfig({
     required this.schoolName,
     required this.schoolMotto,
+    this.schoolLogoUrl,
+    this.primaryColor,
+    this.secondaryColor,
     required this.currentTerm,
     required this.academicYear,
     required this.termStart,
@@ -25,6 +31,9 @@ class SystemConfig {
     return {
       'schoolName': schoolName,
       'schoolMotto': schoolMotto,
+      'schoolLogoUrl': schoolLogoUrl,
+      'primaryColor': primaryColor,
+      'secondaryColor': secondaryColor,
       'currentTerm': currentTerm,
       'academicYear': academicYear,
       'termStart': termStart.toIso8601String(),
@@ -39,6 +48,9 @@ class SystemConfig {
     return SystemConfig(
       schoolName: map['schoolName'] ?? '',
       schoolMotto: map['schoolMotto'] ?? '',
+      schoolLogoUrl: map['schoolLogoUrl'],
+      primaryColor: map['primaryColor'],
+      secondaryColor: map['secondaryColor'],
       currentTerm: map['currentTerm'] ?? '',
       academicYear: map['academicYear'] ?? '',
       termStart: DateTime.parse(map['termStart'] ?? DateTime.now().toIso8601String()),
@@ -46,6 +58,36 @@ class SystemConfig {
       mfaEnabled: map['mfaEnabled'] ?? false,
       smsGatewayStatus: map['smsGatewayStatus'] ?? 'Disconnected',
       smsCredits: map['smsCredits'] ?? 0,
+    );
+  }
+
+  SystemConfig copyWith({
+    String? schoolName,
+    String? schoolMotto,
+    String? schoolLogoUrl,
+    String? primaryColor,
+    String? secondaryColor,
+    String? currentTerm,
+    String? academicYear,
+    DateTime? termStart,
+    DateTime? termEnd,
+    bool? mfaEnabled,
+    String? smsGatewayStatus,
+    int? smsCredits,
+  }) {
+    return SystemConfig(
+      schoolName: schoolName ?? this.schoolName,
+      schoolMotto: schoolMotto ?? this.schoolMotto,
+      schoolLogoUrl: schoolLogoUrl ?? this.schoolLogoUrl,
+      primaryColor: primaryColor ?? this.primaryColor,
+      secondaryColor: secondaryColor ?? this.secondaryColor,
+      currentTerm: currentTerm ?? this.currentTerm,
+      academicYear: academicYear ?? this.academicYear,
+      termStart: termStart ?? this.termStart,
+      termEnd: termEnd ?? this.termEnd,
+      mfaEnabled: mfaEnabled ?? this.mfaEnabled,
+      smsGatewayStatus: smsGatewayStatus ?? this.smsGatewayStatus,
+      smsCredits: smsCredits ?? this.smsCredits,
     );
   }
 }

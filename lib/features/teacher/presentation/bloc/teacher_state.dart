@@ -1,4 +1,6 @@
 import 'package:equatable/equatable.dart';
+import '../../domain/entities/teacher_dashboard_stats.dart';
+import '../../domain/usecases/get_attendance_history.dart';
 
 abstract class TeacherState extends Equatable {
   const TeacherState();
@@ -8,6 +10,7 @@ abstract class TeacherState extends Equatable {
 }
 
 class TeacherInitial extends TeacherState {}
+
 
 class TeacherLoading extends TeacherState {}
 
@@ -37,21 +40,6 @@ class TeacherLoaded extends TeacherState {
         activeNotifications,
         classProgress,
       ];
-}
-
-class ClassProgress extends Equatable {
-  final String title;
-  final double progress;
-  final String subtitle;
-
-  const ClassProgress({
-    required this.title,
-    required this.progress,
-    required this.subtitle,
-  });
-
-  @override
-  List<Object?> get props => [title, progress, subtitle];
 }
 
 class TeacherError extends TeacherState {
@@ -91,6 +79,15 @@ class TeacherMarksEntryLoaded extends TeacherState {
 
   @override
   List<Object?> get props => [students, selectedClass, selectedSubject, selectedAssessment];
+}
+
+class TeacherAttendanceHistoryLoaded extends TeacherState {
+  final List<AttendanceHistoryRecord> history;
+
+  const TeacherAttendanceHistoryLoaded(this.history);
+
+  @override
+  List<Object?> get props => [history];
 }
 
 class TeacherStudent extends Equatable {

@@ -1,3 +1,5 @@
+import 'package:school_pulse/features/student/domain/entities/student.dart';
+import 'package:school_pulse/core/enums/student_status.dart';
 import 'mock_models.dart';
 
 class MockData {
