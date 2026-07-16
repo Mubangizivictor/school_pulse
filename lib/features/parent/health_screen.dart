@@ -35,8 +35,6 @@ class _HealthScreenState extends State<HealthScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
-
     return Scaffold(
       appBar: const StudentAppBar(title: 'Health & Wellness'),
       body: BlocListener<SelectedStudentBloc, SelectedStudentState>(
@@ -47,7 +45,7 @@ class _HealthScreenState extends State<HealthScreen> {
         },
         child: BlocBuilder<HealthBloc, HealthState>(
           builder: (context, state) {
-            if (state is HealthLoading) {
+            if (state is HealthLoading || state is HealthInitial) {
               return ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
@@ -62,37 +60,19 @@ class _HealthScreenState extends State<HealthScreen> {
                 ],
               );
             } else if (state is HealthError) {
-              return Center(child: Text(state.message));
+              return EmptyState(
+                icon: Icons.cloud_off,
+                title: 'Could not load health records',
+                message: state.message,
+                ctaLabel: 'Retry',
+                onCtaPressed: _fetchData,
+              );
             } else if (state is HealthLoaded) {
               final visits = state.visits;
-              final studentState = context.read<SelectedStudentBloc>().state;
-              final bool hasAllergies = studentState is SelectedStudentLoaded && studentState.student.id == 's1';
 
               return ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  if (hasAllergies)
-                    FadeInSlide(
-                      child: AppCard(
-                        child: Row(
-                          children: [
-                            Icon(Icons.warning_amber_rounded, color: semanticColors.warning, size: 32),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Allergies & Conditions',
-                                      style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-                                  Text('Peanuts, Penicillin',
-                                      style: TextStyle(color: semanticColors.error, fontWeight: FontWeight.w600)),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                   const FadeInSlide(
                     delay: Duration(milliseconds: 100),
                     child: SectionHeader(title: 'Nurse Visits'),

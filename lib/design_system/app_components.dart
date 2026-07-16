@@ -621,15 +621,19 @@ class _DashboardStatCardState extends State<DashboardStatCard> with SingleTicker
             ],
           ),
           const SizedBox(height: 10),
-          AnimatedNumberText(
-            value: widget.value,
-            suffix: widget.suffix,
-            decimalPlaces: widget.decimalPlaces,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 20,
-                  letterSpacing: -0.5,
-                ),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: AnimatedNumberText(
+              value: widget.value,
+              suffix: widget.suffix,
+              decimalPlaces: widget.decimalPlaces,
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 20,
+                    letterSpacing: -0.5,
+                  ),
+            ),
           ),
           const SizedBox(height: 2),
           Text(
@@ -718,34 +722,42 @@ class PerformanceBarChart extends StatelessWidget {
           const SizedBox(height: 24),
           SizedBox(
             height: 150,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: data.entries.map((entry) {
-                return Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Text(
-                      '${entry.value.round()}${showPercentSign ? '%' : ''}',
-                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: data.entries.map((entry) {
+                  final fraction = maxValue <= 0
+                      ? 0.0
+                      : (entry.value / maxValue).clamp(0.0, 1.0);
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          '${entry.value.round()}${showPercentSign ? '%' : ''}',
+                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          width: 24,
+                          height: 100 * fraction,
+                          decoration: BoxDecoration(
+                            color: activeColor,
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          entry.key.length > 3 ? entry.key.substring(0, 3) : entry.key,
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Container(
-                      width: 24,
-                      height: 100 * (entry.value / maxValue),
-                      decoration: BoxDecoration(
-                        color: activeColor,
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      entry.key.substring(0, 3),
-                      style: Theme.of(context).textTheme.labelSmall,
-                    ),
-                  ],
-                );
-              }).toList(),
+                  );
+                }).toList(),
+              ),
             ),
           ),
         ],
@@ -787,11 +799,15 @@ class QuickActionGrid extends StatelessWidget {
                 ),
                 child: Icon(item.icon, color: item.color),
               ),
-              const SizedBox(height: 8),
-              Text(
-                item.label,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+              const SizedBox(height: 6),
+              Flexible(
+                child: Text(
+                  item.label,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+                ),
               ),
             ],
           ),
@@ -834,11 +850,15 @@ class SectionHeader extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
           ),
           if (actionLabel != null)
             TextButton(

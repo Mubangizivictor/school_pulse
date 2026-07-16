@@ -8,6 +8,16 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
 
   NotificationsBloc({required this.getAlerts}) : super(NotificationsInitial()) {
     on<FetchAlerts>(_onFetchAlerts);
+    on<DismissAlert>(_onDismissAlert);
+  }
+
+  void _onDismissAlert(DismissAlert event, Emitter<NotificationsState> emit) {
+    final current = state;
+    if (current is NotificationsLoaded) {
+      emit(NotificationsLoaded(
+        current.alerts.where((a) => a.id != event.alertId).toList(),
+      ));
+    }
   }
 
   Future<void> _onFetchAlerts(

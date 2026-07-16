@@ -26,12 +26,19 @@ class StudentAppBar extends StatelessWidget implements PreferredSizeWidget {
             children: [
               Text(
                 title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              Text(studentName, style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                studentName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             ],
           ),
           actions: [

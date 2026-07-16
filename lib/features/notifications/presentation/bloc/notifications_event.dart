@@ -14,3 +14,11 @@ class FetchAlerts extends NotificationsEvent {
   @override
   List<Object> get props => [studentIds];
 }
+
+class DismissAlert extends NotificationsEvent {
+  final String alertId;
+  const DismissAlert(this.alertId);
+
+  @override
+  List<Object> get props => [alertId];
+}

@@ -45,7 +45,7 @@ class _TransportScreenState extends State<TransportScreen> {
         },
         child: BlocBuilder<TransportBloc, TransportState>(
           builder: (context, state) {
-            if (state is TransportLoading) {
+            if (state is TransportLoading || state is TransportInitial) {
               return ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
@@ -57,7 +57,13 @@ class _TransportScreenState extends State<TransportScreen> {
                 ],
               );
             } else if (state is TransportError) {
-              return Center(child: Text(state.message));
+              return EmptyState(
+                icon: Icons.no_transfer_outlined,
+                title: 'No transport info',
+                message: state.message,
+                ctaLabel: 'Retry',
+                onCtaPressed: _fetchData,
+              );
             } else if (state is TransportLoaded) {
               final transport = state.info;
 
@@ -66,7 +72,6 @@ class _TransportScreenState extends State<TransportScreen> {
                 children: [
                   FadeInSlide(
                     child: AppCard(
-                      onTap: () {},
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -186,12 +191,19 @@ class _TransportScreenState extends State<TransportScreen> {
       children: [
         Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: Theme.of(context).textTheme.bodySmall),
-            Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
-          ],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                value,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
         ),
       ],
     );

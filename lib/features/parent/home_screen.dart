@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/parent/widgets/student_app_bar.dart';
+import 'package:school_pulse/features/academic/domain/entities/attendance_record.dart';
+import 'package:school_pulse/features/academic/presentation/bloc/academic_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/finance/domain/entities/fee_item.dart';
+import 'package:school_pulse/features/finance/presentation/bloc/finance_bloc.dart';
+import 'package:school_pulse/features/finance/presentation/bloc/finance_event.dart';
+import 'package:school_pulse/features/finance/presentation/bloc/finance_state.dart';
 import 'package:school_pulse/features/student/presentation/bloc/selected_student_bloc.dart';
 import 'package:school_pulse/features/student/presentation/bloc/selected_student_event.dart';
 import 'package:school_pulse/features/student/presentation/bloc/selected_student_state.dart';
@@ -18,8 +25,48 @@ import 'package:school_pulse/features/notifications/presentation/bloc/notificati
 import 'package:school_pulse/features/notifications/presentation/bloc/notifications_state.dart';
 import 'package:school_pulse/features/notifications/domain/entities/alert.dart';
 
-class ParentHomeScreen extends StatelessWidget {
+class ParentHomeScreen extends StatefulWidget {
   const ParentHomeScreen({super.key});
+
+  @override
+  State<ParentHomeScreen> createState() => _ParentHomeScreenState();
+}
+
+class _ParentHomeScreenState extends State<ParentHomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final selected = context.read<SelectedStudentBloc>().state;
+      if (selected is SelectedStudentLoaded) {
+        _fetchStudentData(selected.student.id);
+      }
+    });
+  }
+
+  void _fetchStudentData(String studentId) {
+    context
+        .read<AcademicBloc>()
+        .add(GetAcademicRecordsRequested(studentId: studentId));
+    context
+        .read<AcademicBloc>()
+        .add(GetAttendanceRecordsRequested(studentId: studentId));
+    context.read<FinanceBloc>().add(FetchFees(studentId));
+  }
+
+  Future<void> _refresh() async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      context.read<StudentsBloc>().add(FetchStudents(authState.user.studentIds));
+      context
+          .read<NotificationsBloc>()
+          .add(FetchAlerts(authState.user.studentIds));
+    }
+    final selected = context.read<SelectedStudentBloc>().state;
+    if (selected is SelectedStudentLoaded) {
+      _fetchStudentData(selected.student.id);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,203 +92,214 @@ class ParentHomeScreen extends StatelessWidget {
             }
 
             if (studentsState is StudentsError) {
-              return Scaffold(body: Center(child: Text(studentsState.message)));
+              return Scaffold(
+                body: EmptyState(
+                  icon: Icons.cloud_off,
+                  title: 'Could not load students',
+                  message: studentsState.message,
+                  ctaLabel: 'Retry',
+                  onCtaPressed: () => context
+                      .read<StudentsBloc>()
+                      .add(FetchStudents(authState.user.studentIds)),
+                ),
+              );
             }
 
             final myStudents = (studentsState as StudentsLoaded).students;
 
-            return BlocBuilder<SelectedStudentBloc, SelectedStudentState>(
-              builder: (context, studentState) {
-                // Initializing selected student if not already done
-                if (studentState is SelectedStudentInitial) {
-                  if (myStudents.isNotEmpty) {
-                    context.read<SelectedStudentBloc>().add(
-                      SelectStudent(myStudents.first),
-                    );
-                    return const Scaffold(body: _HomeSkeleton());
-                  }
+            return BlocListener<SelectedStudentBloc, SelectedStudentState>(
+              listener: (context, state) {
+                if (state is SelectedStudentLoaded) {
+                  _fetchStudentData(state.student.id);
                 }
+              },
+              child: BlocBuilder<SelectedStudentBloc, SelectedStudentState>(
+                builder: (context, studentState) {
+                  // Initializing selected student if not already done
+                  if (studentState is SelectedStudentInitial) {
+                    if (myStudents.isNotEmpty) {
+                      context.read<SelectedStudentBloc>().add(
+                        SelectStudent(myStudents.first),
+                      );
+                      return const Scaffold(body: _HomeSkeleton());
+                    }
+                  }
 
-                if (studentState is! SelectedStudentLoaded) {
-                  return const Scaffold(
-                    body: Center(
-                      child: EmptyState(
-                        title: 'No Student Selected',
-                        message: 'Select a student to view their profile.',
-                        icon: Icons.person_off,
+                  if (studentState is! SelectedStudentLoaded) {
+                    return const Scaffold(
+                      body: Center(
+                        child: EmptyState(
+                          title: 'No Student Selected',
+                          message: 'Select a student to view their profile.',
+                          icon: Icons.person_off,
+                        ),
+                      ),
+                    );
+                  }
+
+                  final selectedStudent = studentState.student;
+
+                  return Scaffold(
+                    appBar: const StudentAppBar(
+                      title: 'School Pulse',
+                    ),
+                    body: RefreshIndicator(
+                      onRefresh: _refresh,
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          if (myStudents.length > 1) ...[
+                            FadeInSlide(
+                              delay: const Duration(milliseconds: 100),
+                              child: _buildStudentTabs(
+                                context,
+                                myStudents,
+                                selectedStudent.id,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                          ] else ...[
+                            FadeInSlide(
+                              delay: const Duration(milliseconds: 100),
+                              child: _buildHeader(context, selectedStudent),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
+                          FadeInSlide(
+                            delay: const Duration(milliseconds: 300),
+                            child: QuickActionGrid(
+                              items: [
+                                QuickActionItem(
+                                  label: 'Academics',
+                                  icon: Icons.school_outlined,
+                                  color: Theme.of(context).colorScheme.primary,
+                                  onTap: () => context.push('/parent/academics'),
+                                ),
+                                QuickActionItem(
+                                  label: 'Fees',
+                                  icon: Icons.account_balance_wallet_outlined,
+                                  color: Theme.of(context).colorScheme.secondary,
+                                  onTap: () => context.push('/parent/fees'),
+                                ),
+                                QuickActionItem(
+                                  label: 'Health',
+                                  icon: Icons.health_and_safety_outlined,
+                                  color: semanticColors.info,
+                                  onTap: () => context.push('/parent/health'),
+                                ),
+                                QuickActionItem(
+                                  label: 'Transport',
+                                  icon: Icons.directions_bus_outlined,
+                                  color: semanticColors.warning,
+                                  onTap: () => context.push('/parent/transport'),
+                                ),
+                                QuickActionItem(
+                                  label: 'Library',
+                                  icon: Icons.library_books_outlined,
+                                  color: Theme.of(context).colorScheme.tertiary,
+                                  onTap: () => context.push('/parent/library'),
+                                ),
+                                QuickActionItem(
+                                  label: 'Discipline',
+                                  icon: Icons.gavel_outlined,
+                                  color: semanticColors.error,
+                                  onTap: () => context.push('/parent/discipline'),
+                                ),
+                                QuickActionItem(
+                                  label: 'Messages',
+                                  icon: Icons.chat_bubble_outline,
+                                  color: Colors.blueAccent,
+                                  onTap: () => context.push('/parent/messages'),
+                                ),
+                                QuickActionItem(
+                                  label: 'Profile',
+                                  icon: Icons.person_outline,
+                                  color: Colors.grey,
+                                  onTap: () => context.push('/parent/profile'),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          BlocBuilder<NotificationsBloc, NotificationsState>(
+                            builder: (context, notificationsState) {
+                              if (notificationsState is NotificationsInitial) {
+                                final ids =
+                                    myStudents.map((s) => s.id).toList();
+                                context.read<NotificationsBloc>().add(
+                                  FetchAlerts(ids),
+                                );
+                                return const SizedBox.shrink();
+                              }
+                              if (notificationsState is! NotificationsLoaded) {
+                                return const SizedBox.shrink();
+                              }
+                              return Column(
+                                children: notificationsState.alerts
+                                    .asMap()
+                                    .entries
+                                    .map((entry) {
+                                      final index = entry.key;
+                                      final alert = entry.value;
+                                      return FadeInSlide(
+                                        delay: Duration(
+                                          milliseconds: 400 + (index * 100),
+                                        ),
+                                        child: AlertBanner(
+                                          title: alert.title,
+                                          message: alert.message,
+                                          color: _getAlertColor(
+                                            alert.severity,
+                                            semanticColors,
+                                          ),
+                                          icon: _getAlertIcon(alert.severity),
+                                          onDismiss: () => context
+                                              .read<NotificationsBloc>()
+                                              .add(DismissAlert(alert.id)),
+                                        ),
+                                      );
+                                    })
+                                    .toList(),
+                              );
+                            },
+                          ),
+                          const FadeInSlide(
+                            delay: Duration(milliseconds: 500),
+                            child: SectionHeader(title: 'Overview'),
+                          ),
+                          FadeInSlide(
+                            delay: const Duration(milliseconds: 600),
+                            child: _buildStudentSummary(
+                              context,
+                              selectedStudent,
+                              semanticColors,
+                            ),
+                          ),
+                          FadeInSlide(
+                            delay: const Duration(milliseconds: 700),
+                            child: SectionHeader(
+                              title: 'Recent Activity',
+                              actionLabel: 'See All',
+                              onActionPressed: () =>
+                                  context.push('/parent/notifications'),
+                            ),
+                          ),
+                          FadeInSlide(
+                            delay: const Duration(milliseconds: 800),
+                            child: _buildRecentActivity(
+                              context,
+                              selectedStudent,
+                              semanticColors,
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                        ],
                       ),
                     ),
                   );
-                }
-
-                final selectedStudent = studentState.student;
-
-                return Scaffold(
-                  appBar: const StudentAppBar(
-                    title: 'School Pulse',
-                  ),
-                  body: ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      if (myStudents.length > 1) ...[
-                        FadeInSlide(
-                          delay: const Duration(milliseconds: 100),
-                          child: _buildStudentTabs(
-                            context,
-                            myStudents,
-                            selectedStudent.id,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                      ] else ...[
-                        FadeInSlide(
-                          delay: const Duration(milliseconds: 100),
-                          child: _buildHeader(context, selectedStudent),
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-                      FadeInSlide(
-                        delay: const Duration(milliseconds: 300),
-                        child: QuickActionGrid(
-                          items: [
-                            QuickActionItem(
-                              label: 'Academics',
-                              icon: Icons.school_outlined,
-                              color: Theme.of(context).colorScheme.primary,
-                              onTap: () => context.push('/parent/academics'),
-                            ),
-                            QuickActionItem(
-                              label: 'Fees',
-                              icon: Icons.account_balance_wallet_outlined,
-                              color: Theme.of(context).colorScheme.secondary,
-                              onTap: () => context.push('/parent/fees'),
-                            ),
-                            QuickActionItem(
-                              label: 'Health',
-                              icon: Icons.health_and_safety_outlined,
-                              color: semanticColors.info,
-                              onTap: () => context.push('/parent/health'),
-                            ),
-                            QuickActionItem(
-                              label: 'Transport',
-                              icon: Icons.directions_bus_outlined,
-                              color: semanticColors.warning,
-                              onTap: () => context.push('/parent/transport'),
-                            ),
-                            QuickActionItem(
-                              label: 'Library',
-                              icon: Icons.library_books_outlined,
-                              color: Theme.of(context).colorScheme.tertiary,
-                              onTap: () => context.push('/parent/library'),
-                            ),
-                            QuickActionItem(
-                              label: 'Discipline',
-                              icon: Icons.gavel_outlined,
-                              color: semanticColors.error,
-                              onTap: () => context.push('/parent/discipline'),
-                            ),
-                            QuickActionItem(
-                              label: 'Messages',
-                              icon: Icons.chat_bubble_outline,
-                              color: Colors.blueAccent,
-                              onTap: () => context.push('/parent/messages'),
-                            ),
-                            QuickActionItem(
-                              label: 'Profile',
-                              icon: Icons.person_outline,
-                              color: Colors.grey,
-                              onTap: () => context.push('/parent/profile'),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      BlocBuilder<NotificationsBloc, NotificationsState>(
-                        builder: (context, notificationsState) {
-                          if (notificationsState is NotificationsInitial) {
-                            final ids = myStudents.map((s) => s.id).toList();
-                            context.read<NotificationsBloc>().add(
-                              FetchAlerts(ids),
-                            );
-                            return const SizedBox.shrink();
-                          }
-                          if (notificationsState is! NotificationsLoaded) {
-                            return const SizedBox.shrink();
-                          }
-                          return Column(
-                            children: notificationsState.alerts
-                                .asMap()
-                                .entries
-                                .map((entry) {
-                                  final index = entry.key;
-                                  final alert = entry.value;
-                                  return FadeInSlide(
-                                    delay: Duration(
-                                      milliseconds: 400 + (index * 100),
-                                    ),
-                                    child: AlertBanner(
-                                      title: alert.title,
-                                      message: alert.message,
-                                      color: _getAlertColor(
-                                        alert.severity,
-                                        semanticColors,
-                                      ),
-                                      icon: _getAlertIcon(alert.severity),
-                                      onDismiss: () {},
-                                    ),
-                                  );
-                                })
-                                .toList(),
-                          );
-                        },
-                      ),
-                      const FadeInSlide(
-                        delay: Duration(milliseconds: 500),
-                        child: SectionHeader(title: 'Overview'),
-                      ),
-                      FadeInSlide(
-                        delay: const Duration(milliseconds: 600),
-                        child: _buildStudentSummary(
-                          context,
-                          selectedStudent,
-                          semanticColors,
-                        ),
-                      ),
-                      FadeInSlide(
-                        delay: const Duration(milliseconds: 700),
-                        child: SectionHeader(
-                          title: 'Recent Activity',
-                          actionLabel: 'See All',
-                          onActionPressed: () {},
-                        ),
-                      ),
-                      FadeInSlide(
-                        delay: const Duration(milliseconds: 800),
-                        child: _buildActivityItem(
-                          context,
-                          icon: Icons.check_circle_outline,
-                          iconColor: semanticColors.success,
-                          title: 'Attendance Marked',
-                          subtitle: '${selectedStudent.name} is present today',
-                          time: '2 hours ago',
-                        ),
-                      ),
-                      FadeInSlide(
-                        delay: const Duration(milliseconds: 900),
-                        child: _buildActivityItem(
-                          context,
-                          icon: Icons.assignment_outlined,
-                          iconColor: Theme.of(context).colorScheme.secondary,
-                          title: 'New Marks Posted',
-                          subtitle: 'Mathematics: 85% (Mid-term Assessment)',
-                          time: 'Yesterday',
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                    ],
-                  ),
-                );
-              },
+                },
+              ),
             );
           },
         );
@@ -299,6 +357,8 @@ class ParentHomeScreen extends StatelessWidget {
               ),
               Text(
                 student.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -319,34 +379,135 @@ class ParentHomeScreen extends StatelessWidget {
     Student student,
     SemanticColors colors,
   ) {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: DashboardStatCard(
-              title: 'Attendance',
-              value: 94,
-              suffix: '%',
-              icon: Icons.calendar_today,
-              color: colors.success,
-              trend: 'Above avg',
+    return BlocBuilder<AcademicBloc, AcademicState>(
+      builder: (context, academicState) {
+        return BlocBuilder<FinanceBloc, FinanceState>(
+          builder: (context, financeState) {
+            double attendanceRate = 0;
+            String? attendanceTrend;
+            if (academicState is AcademicLoaded &&
+                academicState.attendanceRecords.isNotEmpty) {
+              final records = academicState.attendanceRecords;
+              final presentCount = records
+                  .where((r) => r.status == StudentStatus.present)
+                  .length;
+              attendanceRate = presentCount / records.length * 100;
+              attendanceTrend = attendanceRate >= 90 ? 'On track' : 'Watch';
+            }
+
+            double feeBalance = 0;
+            String? feeTrend;
+            if (financeState is FinanceLoaded) {
+              feeBalance = financeState.fees
+                  .where((f) => f.status != FeeStatus.paid)
+                  .fold<double>(0, (sum, f) => sum + f.amount);
+              feeTrend = feeBalance > 0 ? 'Unpaid' : 'Cleared';
+            }
+
+            return IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: DashboardStatCard(
+                      title: 'Attendance',
+                      value: attendanceRate,
+                      suffix: '%',
+                      icon: Icons.calendar_today,
+                      color: colors.success,
+                      trend: attendanceTrend,
+                      isPositiveTrend: attendanceRate >= 90,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: DashboardStatCard(
+                      title: 'Fee Balance (UGX)',
+                      value: feeBalance,
+                      icon: Icons.payments_outlined,
+                      color: feeBalance > 0 ? colors.warning : colors.success,
+                      trend: feeTrend,
+                      isPositiveTrend: feeBalance <= 0,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildRecentActivity(
+    BuildContext context,
+    Student student,
+    SemanticColors colors,
+  ) {
+    return BlocBuilder<AcademicBloc, AcademicState>(
+      builder: (context, state) {
+        if (state is! AcademicLoaded ||
+            (state.attendanceRecords.isEmpty && state.academicRecords.isEmpty)) {
+          return AppCard(
+            child: Row(
+              children: [
+                Icon(Icons.history,
+                    color: Theme.of(context).disabledColor, size: 24),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    'No recent activity yet',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).hintColor,
+                        ),
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: DashboardStatCard(
-              title: 'Fee Balance',
-              value: 400,
-              suffix: 'k',
-              icon: Icons.payments_outlined,
-              color: colors.warning,
-              trend: 'Due 15th',
-              isPositiveTrend: false,
+          );
+        }
+
+        final items = <Widget>[];
+
+        if (state.attendanceRecords.isNotEmpty) {
+          final latest = state.attendanceRecords
+              .reduce((a, b) => a.date.isAfter(b.date) ? a : b);
+          final statusLabel = switch (latest.status) {
+            StudentStatus.present => 'was present',
+            StudentStatus.absent => 'was absent',
+            StudentStatus.late => 'arrived late',
+          };
+          items.add(_buildActivityItem(
+            context,
+            icon: latest.status == StudentStatus.present
+                ? Icons.check_circle_outline
+                : Icons.event_busy_outlined,
+            iconColor: latest.status == StudentStatus.present
+                ? colors.success
+                : colors.warning,
+            title: 'Attendance',
+            subtitle: '${student.name.split(' ').first} $statusLabel',
+            time: DateFormat('d MMM').format(latest.date),
+          ));
+        }
+
+        if (state.academicRecords.isNotEmpty) {
+          final record = state.academicRecords.first;
+          items.add(Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: _buildActivityItem(
+              context,
+              icon: Icons.assignment_outlined,
+              iconColor: Theme.of(context).colorScheme.secondary,
+              title: 'Marks Posted',
+              subtitle: '${record.subject}: ${record.score.round()}%',
+              time: '${record.term} ${record.year}',
             ),
-          ),
-        ],
-      ),
+          ));
+        }
+
+        return Column(children: items);
+      },
     );
   }
 
@@ -379,10 +540,16 @@ class ParentHomeScreen extends StatelessWidget {
                   title,
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-                Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  subtitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ],
             ),
           ),
+          const SizedBox(width: 8),
           Text(time, style: Theme.of(context).textTheme.labelSmall),
         ],
       ),

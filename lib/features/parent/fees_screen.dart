@@ -63,7 +63,7 @@ class _FeesScreenState extends State<FeesScreen> with SingleTickerProviderStateM
         },
         child: BlocBuilder<FinanceBloc, FinanceState>(
           builder: (context, state) {
-            if (state is FinanceLoading) {
+            if (state is FinanceLoading || state is FinanceInitial) {
               return ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
@@ -78,7 +78,13 @@ class _FeesScreenState extends State<FeesScreen> with SingleTickerProviderStateM
                 ],
               );
             } else if (state is FinanceError) {
-              return Center(child: Text(state.message));
+              return EmptyState(
+                icon: Icons.cloud_off,
+                title: 'Could not load fees',
+                message: state.message,
+                ctaLabel: 'Retry',
+                onCtaPressed: _fetchData,
+              );
             } else if (state is FinanceLoaded) {
               final feeItems = state.fees;
               final totalBalance = feeItems
@@ -95,7 +101,6 @@ class _FeesScreenState extends State<FeesScreen> with SingleTickerProviderStateM
                     FadeInSlide(
                       duration: const Duration(milliseconds: 600),
                       child: AppCard(
-                        onTap: () {},
                         child: Column(
                           children: [
                             Text('Current Balance', style: Theme.of(context).textTheme.bodyMedium),
@@ -170,7 +175,6 @@ class _FeesScreenState extends State<FeesScreen> with SingleTickerProviderStateM
     }
 
     return AppCard(
-      onTap: () {},
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
