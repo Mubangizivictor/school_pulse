@@ -81,6 +81,15 @@ class TeacherMarksEntryLoaded extends TeacherState {
   List<Object?> get props => [students, selectedClass, selectedSubject, selectedAssessment];
 }
 
+class TeacherMarksSubmitSuccess extends TeacherState {
+  final int savedCount;
+
+  const TeacherMarksSubmitSuccess(this.savedCount);
+
+  @override
+  List<Object?> get props => [savedCount];
+}
+
 class TeacherAttendanceHistoryLoaded extends TeacherState {
   final List<AttendanceHistoryRecord> history;
 

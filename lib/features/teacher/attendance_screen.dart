@@ -20,6 +20,7 @@ class TeacherAttendanceScreen extends StatefulWidget {
 class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
   String _selectedClass = 'Primary 4';
   String _searchQuery = '';
+  bool _hasClasses = true;
   final Map<String, StudentStatus> _attendance = {};
   List<TeacherStudent> _students = [];
 
@@ -41,7 +42,11 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
       if (distinctClasses.isNotEmpty) {
         _selectedClass = distinctClasses.first;
         context.read<TeacherBloc>().add(TeacherAttendanceRequested(_selectedClass));
+      } else {
+        _hasClasses = false;
       }
+    } else {
+      _hasClasses = false;
     }
   }
 
@@ -85,7 +90,18 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
         },
         builder: (context, state) {
           final isLoading = state is TeacherLoading;
-          
+
+          if (!_hasClasses) {
+            return const EmptyState(
+              icon: Icons.class_outlined,
+              title: 'No classes assigned',
+              message:
+                  'Your account has no class or subject assignments, so there '
+                  'is no register to take. Ask your school admin to assign '
+                  'you a class.',
+            );
+          }
+
           if (isLoading && _students.isEmpty) {
             return const _AttendanceSkeleton();
           }

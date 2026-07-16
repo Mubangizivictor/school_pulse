@@ -49,6 +49,30 @@ class TeacherMarksEntryRequested extends TeacherEvent {
   List<Object?> get props => [className, subject, assessment];
 }
 
+class TeacherMarksSubmitted extends TeacherEvent {
+  final String className;
+  final String subject;
+  final String assessment;
+  final String term;
+  final String year;
+
+  /// studentId -> score (0-100)
+  final Map<String, double> marks;
+
+  const TeacherMarksSubmitted({
+    required this.className,
+    required this.subject,
+    required this.assessment,
+    required this.term,
+    required this.year,
+    required this.marks,
+  });
+
+  @override
+  List<Object?> get props =>
+      [className, subject, assessment, term, year, marks];
+}
+
 class TeacherAttendanceSubmitted extends TeacherEvent {
   final String className;
   final Map<String, String> attendance; // studentId -> status

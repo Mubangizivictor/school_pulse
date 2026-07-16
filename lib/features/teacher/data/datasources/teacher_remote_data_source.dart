@@ -10,8 +10,29 @@ abstract class TeacherRemoteDataSource {
     required DateTime date,
     required Map<String, String> attendance,
   });
+  Future<void> submitMarks({
+    required String className,
+    required String subject,
+    required String assessment,
+    required String term,
+    required String year,
+    required Map<String, double> marks,
+  });
   Future<List<AttendanceHistoryRecord>> getAttendanceHistory(String teacherId);
   Future<TeacherDashboardStats> getTeacherDashboardStats(String teacherId);
+}
+
+/// UCE-style aggregate grade for a percentage score.
+String gradeForScore(double score) {
+  if (score >= 85) return 'D1';
+  if (score >= 75) return 'D2';
+  if (score >= 65) return 'C3';
+  if (score >= 60) return 'C4';
+  if (score >= 55) return 'C5';
+  if (score >= 50) return 'C6';
+  if (score >= 45) return 'P7';
+  if (score >= 40) return 'P8';
+  return 'F9';
 }
 
 class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
@@ -44,18 +65,75 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
     required Map<String, String> attendance,
   }) async {
     final dateStr = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-    
-    // We store attendance in a subcollection or a dedicated top-level collection
-    // Let's use a top-level collection 'attendance' for better scalability
+
+    // 'attendance_records' is the collection the parent app reads, so the
+    // register a teacher submits here is what parents see. One doc per
+    // student per day keeps re-submissions idempotent.
     final batch = firestore.batch();
-    
+
     attendance.forEach((studentId, status) {
-      final docRef = firestore.collection('attendance').doc('${studentId}_$dateStr');
+      final docRef = firestore
+          .collection('attendance_records')
+          .doc('${studentId}_$dateStr');
       batch.set(docRef, {
         'studentId': studentId,
         'className': className,
         'date': Timestamp.fromDate(date),
         'status': status,
+        'note': '',
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    });
+
+    // Per-class daily summary that the attendance history screen lists.
+    final presentCount =
+        attendance.values.where((s) => s == 'present').length;
+    final logRef =
+        firestore.collection('attendance_logs').doc('${className}_$dateStr');
+    batch.set(logRef, {
+      'className': className,
+      'date': Timestamp.fromDate(date),
+      'presentCount': presentCount,
+      'totalCount': attendance.length,
+      'status': 'Submitted',
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    await batch.commit();
+  }
+
+  @override
+  Future<void> submitMarks({
+    required String className,
+    required String subject,
+    required String assessment,
+    required String term,
+    required String year,
+    required Map<String, double> marks,
+  }) async {
+    // One doc per student/subject/term/year/assessment so a teacher can
+    // correct marks by re-submitting. Written to 'academic_records', the
+    // collection the parent academics and report card screens read.
+    final batch = firestore.batch();
+    final slug = [subject, term, year, assessment]
+        .join('_')
+        .replaceAll(RegExp(r'\s+'), '-');
+
+    marks.forEach((studentId, score) {
+      final docRef = firestore
+          .collection('academic_records')
+          .doc('${studentId}_$slug');
+      batch.set(docRef, {
+        'studentId': studentId,
+        'className': className,
+        'subject': subject,
+        'score': score,
+        'grade': gradeForScore(score),
+        'term': term,
+        'year': year,
+        'assessment': assessment,
+        'teacherRemark': '',
+        'trend': 0,
         'updatedAt': FieldValue.serverTimestamp(),
       });
     });

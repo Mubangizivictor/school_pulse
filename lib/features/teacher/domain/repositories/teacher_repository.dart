@@ -14,6 +14,15 @@ abstract class TeacherRepository {
     required Map<String, StudentStatus> attendance,
   });
 
+  Future<Either<Failure, void>> submitMarks({
+    required String className,
+    required String subject,
+    required String assessment,
+    required String term,
+    required String year,
+    required Map<String, double> marks,
+  });
+
   Future<Either<Failure, List<AttendanceHistoryRecord>>> getAttendanceHistory(String teacherId);
 
   Future<Either<Failure, TeacherDashboardStats>> getTeacherDashboardStats(String teacherId);

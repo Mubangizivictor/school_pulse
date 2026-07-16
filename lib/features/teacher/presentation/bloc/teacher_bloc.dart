@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/core/enums/student_status.dart';
 import 'package:school_pulse/features/teacher/domain/usecases/get_students_by_class.dart';
 import 'package:school_pulse/features/teacher/domain/usecases/submit_attendance.dart';
+import 'package:school_pulse/features/teacher/domain/usecases/submit_marks.dart';
 import 'package:school_pulse/features/teacher/domain/usecases/get_attendance_history.dart';
 import 'package:school_pulse/features/teacher/domain/usecases/get_teacher_dashboard_stats.dart';
 import 'teacher_event.dart';
@@ -10,12 +11,14 @@ import 'teacher_state.dart';
 class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
   final GetStudentsByClass getStudentsByClass;
   final SubmitAttendance submitAttendance;
+  final SubmitMarks submitMarks;
   final GetAttendanceHistory getAttendanceHistory;
   final GetTeacherDashboardStats getTeacherDashboardStats;
 
   TeacherBloc({
     required this.getStudentsByClass,
     required this.submitAttendance,
+    required this.submitMarks,
     required this.getAttendanceHistory,
     required this.getTeacherDashboardStats,
   }) : super(TeacherInitial()) {
@@ -23,7 +26,36 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
     on<TeacherAttendanceRequested>(_onTeacherAttendanceRequested);
     on<TeacherAttendanceSubmitted>(_onTeacherAttendanceSubmitted);
     on<TeacherMarksEntryRequested>(_onTeacherMarksEntryRequested);
+    on<TeacherMarksSubmitted>(_onTeacherMarksSubmitted);
     on<TeacherAttendanceHistoryRequested>(_onTeacherAttendanceHistoryRequested);
+  }
+
+  Future<void> _onTeacherMarksSubmitted(
+    TeacherMarksSubmitted event,
+    Emitter<TeacherState> emit,
+  ) async {
+    emit(TeacherLoading());
+
+    final result = await submitMarks(MarksParams(
+      className: event.className,
+      subject: event.subject,
+      assessment: event.assessment,
+      term: event.term,
+      year: event.year,
+      marks: event.marks,
+    ));
+
+    result.fold(
+      (failure) => emit(TeacherError(failure.message)),
+      (_) {
+        emit(TeacherMarksSubmitSuccess(event.marks.length));
+        add(TeacherMarksEntryRequested(
+          className: event.className,
+          subject: event.subject,
+          assessment: event.assessment,
+        ));
+      },
+    );
   }
 
   Future<void> _onTeacherAttendanceHistoryRequested(

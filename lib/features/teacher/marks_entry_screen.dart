@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
@@ -18,6 +20,9 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
   String? _selectedClass;
   String? _selectedSubject;
   String _selectedAssessment = 'Mid-term Exam';
+  bool _hasClasses = true;
+  List<TeacherStudent> _students = [];
+  final Map<String, TextEditingController> _controllers = {};
 
   @override
   void initState() {
@@ -32,11 +37,23 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
         _selectedClass = user.assignedClass;
         _selectedSubject = 'General';
       }
-      
+
       if (_selectedClass != null && _selectedSubject != null) {
         _requestMarks();
+      } else {
+        _hasClasses = false;
       }
+    } else {
+      _hasClasses = false;
     }
+  }
+
+  @override
+  void dispose() {
+    for (final controller in _controllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
   }
 
   void _requestMarks() {
@@ -48,24 +65,103 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
         ));
   }
 
+  TextEditingController _controllerFor(String studentId) {
+    return _controllers.putIfAbsent(studentId, TextEditingController.new);
+  }
+
+  void _submitMarks() {
+    final marks = <String, double>{};
+    for (final student in _students) {
+      final text = _controllers[student.id]?.text.trim() ?? '';
+      if (text.isEmpty) continue;
+      final score = double.tryParse(text);
+      if (score == null || score < 0 || score > 100) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Invalid mark "$text" for ${student.name}. '
+              'Marks must be between 0 and 100.',
+            ),
+          ),
+        );
+        return;
+      }
+      marks[student.id] = score;
+    }
+
+    if (marks.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter at least one mark before saving.')),
+      );
+      return;
+    }
+
+    final config = context.read<ThemeProvider>().config;
+    final term = config?.currentTerm ?? 'Term 1';
+    final year = config?.academicYear ?? DateTime.now().year.toString();
+
+    context.read<TeacherBloc>().add(TeacherMarksSubmitted(
+          className: _selectedClass!,
+          subject: _selectedSubject!,
+          assessment: _selectedAssessment,
+          term: term,
+          year: year,
+          marks: marks,
+        ));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Enter Marks'),
       ),
-      body: BlocBuilder<TeacherBloc, TeacherState>(
+      body: BlocConsumer<TeacherBloc, TeacherState>(
+        listener: (context, state) {
+          if (state is TeacherMarksEntryLoaded) {
+            setState(() => _students = state.students);
+          }
+          if (state is TeacherMarksSubmitSuccess) {
+            for (final controller in _controllers.values) {
+              controller.clear();
+            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                    'Saved marks for ${state.savedCount} student${state.savedCount == 1 ? '' : 's'}'),
+                backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        },
         builder: (context, state) {
-          if (state is TeacherLoading) {
+          if (!_hasClasses) {
+            return const EmptyState(
+              icon: Icons.class_outlined,
+              title: 'No classes assigned',
+              message:
+                  'Your account has no class or subject assignments. Ask your '
+                  'school admin to assign you a class before entering marks.',
+            );
+          }
+
+          if (state is TeacherLoading && _students.isEmpty) {
             return const _MarksEntrySkeleton();
           }
 
-          if (state is TeacherError) {
-            return Center(child: Text(state.message));
+          if (state is TeacherError && _students.isEmpty) {
+            return EmptyState(
+              icon: Icons.cloud_off,
+              title: 'Could not load students',
+              message: state.message,
+              ctaLabel: 'Retry',
+              onCtaPressed: _requestMarks,
+            );
           }
 
-          if (state is TeacherMarksEntryLoaded) {
-            final students = state.students;
+          if (_students.isNotEmpty) {
+            final isLoading = state is TeacherLoading;
 
             return Column(
               children: [
@@ -73,13 +169,12 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
                 Expanded(
                   child: ListView.builder(
                     padding: const EdgeInsets.all(16),
-                    itemCount: students.length,
+                    itemCount: _students.length,
                     itemBuilder: (context, index) {
-                      final student = students[index];
+                      final student = _students[index];
                       return FadeInSlide(
                         delay: Duration(milliseconds: index * 50),
                         child: AppCard(
-                          onTap: () {}, // Enable scale animation
                           margin: const EdgeInsets.only(bottom: 12),
                           padding: const EdgeInsets.all(12),
                           child: Row(
@@ -89,6 +184,8 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
                               Expanded(
                                 child: Text(
                                   student.name,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(fontWeight: FontWeight.bold),
                                 ),
                               ),
@@ -96,8 +193,13 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
                               SizedBox(
                                 width: 80,
                                 child: TextField(
+                                  controller: _controllerFor(student.id),
                                   keyboardType: TextInputType.number,
                                   textAlign: TextAlign.center,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                    LengthLimitingTextInputFormatter(3),
+                                  ],
                                   decoration: InputDecoration(
                                     hintText: '0-100',
                                     contentPadding: const EdgeInsets.symmetric(vertical: 8),
@@ -112,12 +214,12 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
                     },
                   ),
                 ),
-                _buildSubmitBar(),
+                _buildSubmitBar(isLoading),
               ],
             );
           }
 
-          return const SizedBox.shrink();
+          return const _MarksEntrySkeleton();
         },
       ),
     );
@@ -157,6 +259,7 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
             onChanged: (v) {
               setState(() {
                 _selectedClass = v!;
+                _students = [];
                 // Update subjects for the new class
                 final classSubjects = user.subjects?.where((s) => s.className == v).map((s) => s.subjectName).toList() ?? [];
                 _selectedSubject = classSubjects.isNotEmpty ? classSubjects.first : 'General';
@@ -189,7 +292,7 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
     );
   }
 
-  Widget _buildSubmitBar() {
+  Widget _buildSubmitBar(bool isLoading) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -204,11 +307,8 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
       ),
       child: PrimaryButton(
         label: 'Save Marks',
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Marks saved as draft')),
-          );
-        },
+        isLoading: isLoading,
+        onPressed: isLoading ? null : _submitMarks,
       ),
     );
   }

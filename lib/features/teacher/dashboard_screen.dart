@@ -41,12 +41,25 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       ),
       body: BlocBuilder<TeacherBloc, TeacherState>(
         builder: (context, state) {
-          if (state is TeacherLoading) {
+          if (state is TeacherLoading || state is TeacherInitial) {
             return const _TeacherDashboardSkeleton();
           }
 
           if (state is TeacherError) {
-            return Center(child: Text(state.message));
+            return EmptyState(
+              icon: Icons.cloud_off,
+              title: 'Could not load dashboard',
+              message: state.message,
+              ctaLabel: 'Retry',
+              onCtaPressed: () {
+                final authState = context.read<AuthBloc>().state;
+                if (authState is AuthAuthenticated) {
+                  context
+                      .read<TeacherBloc>()
+                      .add(TeacherDashboardRequested(authState.user.id));
+                }
+              },
+            );
           }
 
           if (state is TeacherLoaded) {
@@ -61,10 +74,21 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 padding: const EdgeInsets.all(16),
                 children: [
                   FadeInSlide(
-                    child: Text(
-                      'Hello, ${context.select((AuthBloc bloc) => (bloc.state as AuthAuthenticated).user.name)}',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-                    ),
+                    child: Builder(builder: (context) {
+                      final authState = context.watch<AuthBloc>().state;
+                      final name = authState is AuthAuthenticated
+                          ? authState.user.name
+                          : '';
+                      return Text(
+                        'Hello, $name',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      );
+                    }),
                   ),
                   const SizedBox(height: 8),
                   FadeInSlide(
@@ -94,8 +118,6 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                           suffix: '/${state.totalStudents}',
                           icon: Icons.people_outline,
                           color: Theme.of(context).colorScheme.primary,
-                          trend: '+2',
-                          isPositiveTrend: true,
                         ),
                       ),
                       FadeInSlide(
@@ -179,19 +201,19 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                       FadeInSlide(
                         delay: const Duration(milliseconds: 1200),
                         child: _QuickAction(
-                          label: 'Lesson Plan',
-                          icon: Icons.menu_book,
+                          label: 'Attendance History',
+                          icon: Icons.history,
                           color: semanticColors.success,
-                          onTap: () {},
+                          onTap: () => context.push('/staff/attendance/history'),
                         ),
                       ),
                       FadeInSlide(
                         delay: const Duration(milliseconds: 1300),
                         child: _QuickAction(
-                          label: 'Send Broadcast',
-                          icon: Icons.campaign,
+                          label: 'Notifications',
+                          icon: Icons.notifications_outlined,
                           color: Theme.of(context).colorScheme.secondary,
-                          onTap: () {},
+                          onTap: () => context.push('/staff/notifications'),
                         ),
                       ),
                     ],

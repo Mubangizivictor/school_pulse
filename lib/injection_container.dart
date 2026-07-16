@@ -68,6 +68,7 @@ import 'package:school_pulse/features/notifications/data/datasources/notificatio
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
 import 'package:school_pulse/features/teacher/domain/usecases/get_students_by_class.dart';
 import 'package:school_pulse/features/teacher/domain/usecases/submit_attendance.dart';
+import 'package:school_pulse/features/teacher/domain/usecases/submit_marks.dart';
 import 'package:school_pulse/features/teacher/domain/usecases/get_attendance_history.dart';
 import 'package:school_pulse/features/teacher/domain/usecases/get_teacher_dashboard_stats.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/teacher_repository.dart';
@@ -333,6 +334,7 @@ Future<void> init() async {
     () => TeacherBloc(
       getStudentsByClass: sl(),
       submitAttendance: sl(),
+      submitMarks: sl(),
       getAttendanceHistory: sl(),
       getTeacherDashboardStats: sl(),
     ),
@@ -341,6 +343,7 @@ Future<void> init() async {
   // Use cases
   sl.registerLazySingleton(() => GetStudentsByClass(sl()));
   sl.registerLazySingleton(() => SubmitAttendance(sl()));
+  sl.registerLazySingleton(() => SubmitMarks(sl()));
   sl.registerLazySingleton(() => GetAttendanceHistory(sl()));
   sl.registerLazySingleton(() => GetTeacherDashboardStats(sl()));
 

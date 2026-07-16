@@ -41,6 +41,30 @@ class TeacherRepositoryImpl implements TeacherRepository {
   }
 
   @override
+  Future<Either<Failure, void>> submitMarks({
+    required String className,
+    required String subject,
+    required String assessment,
+    required String term,
+    required String year,
+    required Map<String, double> marks,
+  }) async {
+    try {
+      await remoteDataSource.submitMarks(
+        className: className,
+        subject: subject,
+        assessment: assessment,
+        term: term,
+        year: year,
+        marks: marks,
+      );
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, List<AttendanceHistoryRecord>>> getAttendanceHistory(String teacherId) async {
     try {
       final history = await remoteDataSource.getAttendanceHistory(teacherId);
