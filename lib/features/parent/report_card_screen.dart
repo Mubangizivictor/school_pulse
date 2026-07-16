@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/academic/presentation/bloc/academic_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/student/presentation/bloc/selected_student_bloc.dart';
+import 'package:school_pulse/features/student/presentation/bloc/selected_student_state.dart';
 import 'package:school_pulse/features/parent/widgets/student_app_bar.dart';
 
 class ReportCardScreen extends StatefulWidget {
@@ -17,7 +20,8 @@ class ReportCardScreen extends StatefulWidget {
 class _ReportCardScreenState extends State<ReportCardScreen> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
-  String? _selectedTerm = 'Term 2 2023';
+  late List<String> _termOptions;
+  String? _selectedTerm;
 
   @override
   void initState() {
@@ -28,25 +32,53 @@ class _ReportCardScreenState extends State<ReportCardScreen> with SingleTickerPr
     );
     _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
-    
+
+    _termOptions = _buildTermOptions();
+    _selectedTerm = _termOptions.first;
     _loadRecords();
+  }
+
+  /// "Term N YYYY" options for the configured academic year (falling back to
+  /// the current calendar year) plus the previous year.
+  List<String> _buildTermOptions() {
+    final config = context.read<ThemeProvider>().config;
+    final currentYear =
+        int.tryParse(config?.academicYear ?? '') ?? DateTime.now().year;
+    final currentTerm = config?.currentTerm ?? 'Term 1';
+
+    final options = <String>['$currentTerm $currentYear'];
+    for (var term = 3; term >= 1; term--) {
+      final candidate = 'Term $term $currentYear';
+      if (!options.contains(candidate)) options.add(candidate);
+    }
+    for (var term = 3; term >= 1; term--) {
+      options.add('Term $term ${currentYear - 1}');
+    }
+    return options;
   }
 
   void _loadRecords() {
     final authState = context.read<AuthBloc>().state;
-    if (authState is AuthAuthenticated) {
-      // For now, assuming first student if multiple. 
-      // In a real app, we'd use a SelectedStudentBloc or pass the ID.
-      final studentId = authState.user.studentIds.first;
-      final termParts = _selectedTerm?.split(' ');
-      context.read<AcademicBloc>().add(
-        GetAcademicRecordsRequested(
-          studentId: studentId,
-          term: termParts?[0],
-          year: termParts?[2],
-        ),
-      );
-    }
+    if (authState is! AuthAuthenticated) return;
+
+    final selectedState = context.read<SelectedStudentBloc>().state;
+    final studentId = selectedState is SelectedStudentLoaded
+        ? selectedState.student.id
+        : authState.user.studentIds.firstOrNull;
+    if (studentId == null) return;
+
+    // _selectedTerm looks like "Term 2 2026": the first two words are the
+    // term as stored in Firestore, the last one is the year.
+    final termParts = _selectedTerm?.split(' ');
+    context.read<AcademicBloc>().add(
+      GetAcademicRecordsRequested(
+        studentId: studentId,
+        term: termParts != null && termParts.length >= 3
+            ? '${termParts[0]} ${termParts[1]}'
+            : null,
+        year: termParts != null && termParts.length >= 3 ? termParts[2] : null,
+      ),
+    );
   }
 
   @override
@@ -65,7 +97,7 @@ class _ReportCardScreenState extends State<ReportCardScreen> with SingleTickerPr
             icon: const Icon(Icons.share_outlined),
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Generating PDF...')),
+                const SnackBar(content: Text('PDF export is coming soon.')),
               );
             },
           ),
@@ -73,10 +105,16 @@ class _ReportCardScreenState extends State<ReportCardScreen> with SingleTickerPr
       ),
       body: BlocBuilder<AcademicBloc, AcademicState>(
         builder: (context, state) {
-          if (state is AcademicLoading) {
+          if (state is AcademicLoading || state is AcademicInitial) {
             return const Center(child: CircularProgressIndicator());
           } else if (state is AcademicError) {
-            return Center(child: Text(state.message));
+            return EmptyState(
+              icon: Icons.cloud_off,
+              title: 'Could not load report card',
+              message: state.message,
+              ctaLabel: 'Retry',
+              onCtaPressed: _loadRecords,
+            );
           } else if (state is AcademicLoaded) {
             final records = state.academicRecords;
             final averageScore = records.isEmpty
@@ -118,7 +156,6 @@ class _ReportCardScreenState extends State<ReportCardScreen> with SingleTickerPr
                                 return FadeInSlide(
                                   delay: Duration(milliseconds: 300 + (index * 100)),
                                   child: AppCard(
-                                    onTap: () {}, // For the scale animation
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
@@ -219,18 +256,6 @@ class _ReportCardScreenState extends State<ReportCardScreen> with SingleTickerPr
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    FadeInSlide(
-                      delay: const Duration(milliseconds: 400),
-                      child: _buildRemarkSection(context, 'Class Teacher Remark',
-                          'Samuel is a hard-working student who shows great interest in Science. He should focus more on his handwriting.'),
-                    ),
-                    const SizedBox(height: 16),
-                    FadeInSlide(
-                      delay: const Duration(milliseconds: 600),
-                      child: _buildRemarkSection(context, 'Head Teacher Remark',
-                          'A very good performance. Keep the momentum for the next term.'),
-                    ),
                   ],
                 ),
               ),
@@ -243,35 +268,16 @@ class _ReportCardScreenState extends State<ReportCardScreen> with SingleTickerPr
   }
 
   Widget _buildSummaryHeader(BuildContext context, double average) {
-    return Row(
-      children: [
-        Expanded(
-          child: FadeInSlide(
-            delay: const Duration(milliseconds: 100),
-            child: DashboardStatCard(
-              title: 'Average Score',
-              value: average,
-              suffix: '%',
-              decimalPlaces: 1,
-              icon: Icons.auto_graph,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: FadeInSlide(
-            delay: const Duration(milliseconds: 200),
-            child: DashboardStatCard(
-              title: 'Class Position',
-              value: 4,
-              suffix: '/45',
-              icon: Icons.emoji_events_outlined,
-              color: Theme.of(context).colorScheme.secondary,
-            ),
-          ),
-        ),
-      ],
+    return FadeInSlide(
+      delay: const Duration(milliseconds: 100),
+      child: DashboardStatCard(
+        title: 'Average Score',
+        value: average,
+        suffix: '%',
+        decimalPlaces: 1,
+        icon: Icons.auto_graph,
+        color: Theme.of(context).colorScheme.primary,
+      ),
     );
   }
 
@@ -287,7 +293,7 @@ class _ReportCardScreenState extends State<ReportCardScreen> with SingleTickerPr
               value: _selectedTerm,
               isExpanded: true,
               underline: const SizedBox(),
-              items: ['Term 2 2023', 'Term 1 2023', 'Term 3 2022'].map((String value) {
+              items: _termOptions.map((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
                   child: Text(value),
@@ -301,19 +307,6 @@ class _ReportCardScreenState extends State<ReportCardScreen> with SingleTickerPr
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildRemarkSection(BuildContext context, String title, String remark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        AppCard(
-          child: Text(remark, style: const TextStyle(fontStyle: FontStyle.italic)),
-        ),
-      ],
     );
   }
 

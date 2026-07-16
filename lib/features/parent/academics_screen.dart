@@ -68,7 +68,7 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
       appBar: const StudentAppBar(title: 'Academics'),
       body: BlocBuilder<AcademicBloc, AcademicState>(
         builder: (context, state) {
-          if (state is AcademicLoading) {
+          if (state is AcademicLoading || state is AcademicInitial) {
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
@@ -85,7 +85,13 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
               ],
             );
           } else if (state is AcademicError) {
-            return Center(child: Text(state.message));
+            return EmptyState(
+              icon: Icons.cloud_off,
+              title: 'Could not load academics',
+              message: state.message,
+              ctaLabel: 'Retry',
+              onCtaPressed: _loadData,
+            );
           } else if (state is AcademicLoaded) {
             final records = state.academicRecords;
             final attendance = state.attendanceRecords;
@@ -117,8 +123,6 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
                     delay: const Duration(milliseconds: 300),
                     child: SectionHeader(
                       title: 'Subject Marks',
-                      actionLabel: 'Details',
-                      onActionPressed: () {},
                     ),
                   ),
                   ...records.asMap().entries.map((entry) {
@@ -153,7 +157,6 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
 
   Widget _buildSummaryCard(BuildContext context, double avg, double attendance) {
     return AppCard(
-      onTap: () {},
       child: Column(
         children: [
           Row(
@@ -161,7 +164,6 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
             children: [
               _buildStat('Average', avg, context, suffix: '%', decimalPlaces: 1),
               _buildStat('Attendance', attendance, context, suffix: '%'),
-              _buildStat('Rank', 4, context, prefix: '', suffix: '/42'),
             ],
           ),
           const Divider(height: 32),
@@ -209,7 +211,6 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
 
   Widget _buildSubjectRow(BuildContext context, dynamic record) {
     return AppCard(
-      onTap: () {},
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
@@ -249,7 +250,6 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
     // Show last 14 days
     return AppCard(
-      onTap: () {},
       child: Wrap(
         spacing: 8,
         runSpacing: 8,

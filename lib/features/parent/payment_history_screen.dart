@@ -4,12 +4,36 @@ import 'package:school_pulse/core/utils.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/finance/presentation/bloc/finance_bloc.dart';
+import 'package:school_pulse/features/finance/presentation/bloc/finance_event.dart';
 import 'package:school_pulse/features/finance/presentation/bloc/finance_state.dart';
 import 'package:school_pulse/features/finance/domain/entities/payment_record.dart';
+import 'package:school_pulse/features/student/presentation/bloc/selected_student_bloc.dart';
+import 'package:school_pulse/features/student/presentation/bloc/selected_student_state.dart';
 import 'package:school_pulse/features/parent/widgets/student_app_bar.dart';
 
-class PaymentHistoryScreen extends StatelessWidget {
+class PaymentHistoryScreen extends StatefulWidget {
   const PaymentHistoryScreen({super.key});
+
+  @override
+  State<PaymentHistoryScreen> createState() => _PaymentHistoryScreenState();
+}
+
+class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _fetchData();
+  }
+
+  void _fetchData() {
+    final financeState = context.read<FinanceBloc>().state;
+    if (financeState is! FinanceLoaded) {
+      final studentState = context.read<SelectedStudentBloc>().state;
+      if (studentState is SelectedStudentLoaded) {
+        context.read<FinanceBloc>().add(FetchFees(studentState.student.id));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,10 +41,16 @@ class PaymentHistoryScreen extends StatelessWidget {
       appBar: const StudentAppBar(title: 'Payment History'),
       body: BlocBuilder<FinanceBloc, FinanceState>(
         builder: (context, state) {
-          if (state is FinanceLoading) {
+          if (state is FinanceLoading || state is FinanceInitial) {
             return const Center(child: CircularProgressIndicator());
           } else if (state is FinanceError) {
-            return Center(child: Text(state.message));
+            return EmptyState(
+              icon: Icons.cloud_off,
+              title: 'Could not load payments',
+              message: state.message,
+              ctaLabel: 'Retry',
+              onCtaPressed: _fetchData,
+            );
           } else if (state is FinanceLoaded) {
             final payments = state.paymentHistory;
             
@@ -120,10 +150,6 @@ class PaymentHistoryScreen extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Close'),
-          ),
-          ElevatedButton(
-            onPressed: () {},
-            child: const Text('Download PDF'),
           ),
         ],
       ),
