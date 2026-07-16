@@ -44,10 +44,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
         },
         child: BlocBuilder<LibraryBloc, LibraryState>(
           builder: (context, state) {
-            if (state is LibraryLoading) {
+            if (state is LibraryLoading || state is LibraryInitial) {
               return const Center(child: CircularProgressIndicator());
             } else if (state is LibraryError) {
-              return Center(child: Text(state.message));
+              return EmptyState(
+                icon: Icons.cloud_off,
+                title: 'Could not load library records',
+                message: state.message,
+                ctaLabel: 'Retry',
+                onCtaPressed: _fetchData,
+              );
             } else if (state is LibraryLoaded) {
               final books = state.books;
               final currentBooks = books.where((b) => !b.isReturned).toList();
@@ -123,7 +129,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
 
     return AppCard(
-      onTap: () {},
       child: Row(
         children: [
           Container(

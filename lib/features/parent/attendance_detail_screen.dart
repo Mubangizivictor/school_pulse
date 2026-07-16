@@ -5,11 +5,35 @@ import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/academic/domain/entities/attendance_record.dart';
 import 'package:school_pulse/features/academic/presentation/bloc/academic_bloc.dart';
+import 'package:school_pulse/features/student/presentation/bloc/selected_student_bloc.dart';
+import 'package:school_pulse/features/student/presentation/bloc/selected_student_state.dart';
 
 import 'package:school_pulse/features/parent/widgets/student_app_bar.dart';
 
-class AttendanceDetailScreen extends StatelessWidget {
+class AttendanceDetailScreen extends StatefulWidget {
   const AttendanceDetailScreen({super.key});
+
+  @override
+  State<AttendanceDetailScreen> createState() => _AttendanceDetailScreenState();
+}
+
+class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    if (context.read<AcademicBloc>().state is! AcademicLoaded) {
+      _fetchData();
+    }
+  }
+
+  void _fetchData() {
+    final studentState = context.read<SelectedStudentBloc>().state;
+    if (studentState is SelectedStudentLoaded) {
+      context.read<AcademicBloc>().add(
+            GetAttendanceRecordsRequested(studentId: studentState.student.id),
+          );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,10 +41,16 @@ class AttendanceDetailScreen extends StatelessWidget {
       appBar: const StudentAppBar(title: 'Attendance History'),
       body: BlocBuilder<AcademicBloc, AcademicState>(
         builder: (context, state) {
-          if (state is AcademicLoading) {
+          if (state is AcademicLoading || state is AcademicInitial) {
             return const Center(child: CircularProgressIndicator());
           } else if (state is AcademicError) {
-            return Center(child: Text(state.message));
+            return EmptyState(
+              icon: Icons.cloud_off,
+              title: 'Could not load attendance',
+              message: state.message,
+              ctaLabel: 'Retry',
+              onCtaPressed: _fetchData,
+            );
           } else if (state is AcademicLoaded) {
             final records = state.attendanceRecords;
             final semanticColors = Theme.of(context).extension<SemanticColors>()!;
@@ -34,7 +64,6 @@ class AttendanceDetailScreen extends StatelessWidget {
               children: [
                 FadeInSlide(
                   child: AppCard(
-                    onTap: () {},
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [

@@ -46,7 +46,17 @@ class NotificationsScreen extends StatelessWidget {
               }
 
               if (notificationsState is NotificationsError) {
-                return Center(child: Text(notificationsState.message));
+                return EmptyState(
+                  icon: Icons.cloud_off,
+                  title: 'Could not load notifications',
+                  message: notificationsState.message,
+                  ctaLabel: 'Retry',
+                  onCtaPressed: () {
+                    final ids =
+                        studentsState.students.map((s) => s.id).toList();
+                    context.read<NotificationsBloc>().add(FetchAlerts(ids));
+                  },
+                );
               }
 
               final alerts = (notificationsState as NotificationsLoaded).alerts;
@@ -69,7 +79,6 @@ class NotificationsScreen extends StatelessWidget {
                   return FadeInSlide(
                     delay: Duration(milliseconds: index * 100),
                     child: AppCard(
-                      onTap: () {},
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(16),
                       child: Row(
@@ -93,12 +102,16 @@ class NotificationsScreen extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(
-                                      alert.title,
-                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                    Expanded(
+                                      child: Text(
+                                        alert.title,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                      ),
                                     ),
+                                    const SizedBox(width: 8),
                                     Text(
                                       DateFormatter.relative(alert.timestamp),
                                       style: Theme.of(context).textTheme.labelSmall,

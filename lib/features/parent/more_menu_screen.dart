@@ -60,7 +60,7 @@ class MoreMenuScreen extends StatelessWidget {
               _MenuTile(
                 icon: Icons.settings_outlined,
                 title: 'Settings',
-                onTap: () {},
+                onTap: () => context.push('/parent/profile'),
               ),
             ],
           ),
@@ -72,12 +72,18 @@ class MoreMenuScreen extends StatelessWidget {
               _MenuTile(
                 icon: Icons.help_outline,
                 title: 'Help Center',
-                onTap: () {},
+                onTap: () => _showHelpDialog(context),
               ),
               _MenuTile(
                 icon: Icons.info_outline,
                 title: 'About School Pulse',
-                onTap: () {},
+                onTap: () => showAboutDialog(
+                  context: context,
+                  applicationName: 'School Pulse',
+                  applicationVersion: '1.0.0',
+                  applicationLegalese:
+                      'A school management platform for Uganda.',
+                ),
               ),
             ],
           ),
@@ -93,9 +99,30 @@ class MoreMenuScreen extends StatelessWidget {
           const SizedBox(height: 16),
           Center(
             child: Text(
-              'Version 1.0.0 (Build 12)',
+              'Version 1.0.0',
               style: Theme.of(context).textTheme.labelSmall,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showHelpDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Help Center'),
+        content: const Text(
+          'For help with your account or the app, please contact your '
+          'school\'s administration office. They can reset access codes, '
+          'update your contact details, and answer questions about fees, '
+          'academics, and other records shown in this app.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
           ),
         ],
       ),

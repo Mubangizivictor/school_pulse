@@ -73,11 +73,6 @@ class ProfileScreen extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 32),
-                const SecondaryButton(
-                  label: 'Reset Password',
-                  onPressed: null,
-                  icon: Icons.lock_reset,
-                ),
               ],
             ),
           ),
@@ -177,9 +172,14 @@ class _InfoRow extends StatelessWidget {
                 color: Theme.of(context).colorScheme.outline,
               ),
         ),
-        Text(
-          value,
-          style: const TextStyle(fontWeight: FontWeight.w500),
+        const SizedBox(width: 16),
+        Flexible(
+          child: Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w500),
+          ),
         ),
       ],
     );
