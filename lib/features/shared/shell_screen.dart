@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 
 class StaffShell extends StatelessWidget {

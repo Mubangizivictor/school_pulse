@@ -6,6 +6,7 @@ import 'package:school_pulse/features/admin/presentation/bloc/admin_dashboard_bl
 import 'package:school_pulse/features/admin/presentation/bloc/admin_dashboard_event.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/admin_dashboard_state.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 import 'package:school_pulse/features/admin/admin_search_delegate.dart';
