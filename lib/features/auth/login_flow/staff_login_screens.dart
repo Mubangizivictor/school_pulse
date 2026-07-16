@@ -128,6 +128,13 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
   void _handleLogin() {
     context.read<AuthBloc>().add(LoginWithEmailPressed(
           email: _emailController.text.trim(),
@@ -181,6 +188,8 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
                     const SizedBox(height: 32),
                     TextField(
                       controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      autocorrect: false,
                       decoration: const InputDecoration(
                         labelText: 'Email Address',
                         border: OutlineInputBorder(),

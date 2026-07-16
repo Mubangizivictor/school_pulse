@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -101,7 +103,12 @@ class _SchoolSplashScreenState extends State<SchoolSplashScreen>
         }
       }
     });
+
+    // Never strand the user here if the config stream doesn't settle.
+    _fallbackTimer = Timer(const Duration(seconds: 6), _scheduleNavigation);
   }
+
+  Timer? _fallbackTimer;
 
   bool _navigationScheduled = false;
   void _scheduleNavigation() {
@@ -121,6 +128,7 @@ class _SchoolSplashScreenState extends State<SchoolSplashScreen>
 
   @override
   void dispose() {
+    _fallbackTimer?.cancel();
     _mainController.dispose();
     super.dispose();
   }

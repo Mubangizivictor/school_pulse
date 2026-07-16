@@ -123,9 +123,24 @@ class _ChildIdScreenState extends State<ChildIdScreen> {
             ),
             const SizedBox(height: 8),
             TextButton(
-              onPressed: () {
-                // Show contact dialog
-              },
+              onPressed: () => showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Getting an Access Code'),
+                  content: const Text(
+                    'Parent access codes are issued by the school office. '
+                    'Visit or call your school\'s administration and ask them '
+                    'to register you as a parent — they will give you a code '
+                    'that covers all of your children at the school.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Close'),
+                    ),
+                  ],
+                ),
+              ),
               child: const Text("Don't have this code? Contact your school office."),
             ),
             const SizedBox(height: 24),
@@ -267,62 +282,3 @@ class _ParentVerifyScreenState extends State<ParentVerifyScreen> {
   }
 }
 
-class ParentUnlockScreen extends StatelessWidget {
-  const ParentUnlockScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocListener<AuthBloc, AuthState>(
-      listener: (context, state) {
-        if (state is AuthAuthenticated) {
-          context.go('/parent/home');
-        } else if (state is AuthUnauthenticated) {
-          context.go('/welcome');
-        }
-      },
-      child: Scaffold(
-        body: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.lock_outline, size: 64, color: Theme.of(context).extension<SemanticColors>()?.primaryBlue),
-              const SizedBox(height: 24),
-              Text(
-                "Welcome Back",
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const Text("Enter your PIN to unlock"),
-              const SizedBox(height: 48),
-              // Mock PIN entry
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(4, (index) => Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Container(
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Theme.of(context).colorScheme.outlineVariant,
-                    ),
-                  ),
-                )),
-              ),
-              const SizedBox(height: 48),
-              PrimaryButton(
-                label: 'Unlock with Biometrics',
-                onPressed: () => context.read<AuthBloc>().add(AuthCheckRequested()),
-              ),
-              TextButton(
-                onPressed: () => context.go('/welcome'),
-                child: const Text("Not you? Switch account"),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

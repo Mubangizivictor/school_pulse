@@ -39,6 +39,16 @@ class StaffShell extends StatelessWidget {
     return 0;
   }
 
+  /// The signed-in user's own dashboard, so a bursar's Home tab doesn't land
+  /// on the teacher dashboard.
+  String _homePath(BuildContext context) {
+    final state = context.read<AuthBloc>().state;
+    if (state is AuthAuthenticated) {
+      return UserRoleRouting.dashboardPath(state.user.role);
+    }
+    return '/staff/dashboard';
+  }
+
   void _onItemTapped(int index, BuildContext context) {
     final isAdmin = _isAdmin(context);
     if (isAdmin) {
@@ -50,7 +60,7 @@ class StaffShell extends StatelessWidget {
       }
     } else {
       switch (index) {
-        case 0: context.go('/staff/dashboard'); break;
+        case 0: context.go(_homePath(context)); break;
         case 1: context.go('/staff/attendance'); break;
         case 2: context.go('/staff/marks'); break;
         case 3: context.go('/staff/messages'); break;
@@ -143,7 +153,7 @@ class StaffShell extends StatelessWidget {
                 ),
               ),
             ),
-          const VerticalDivider(thickness: 1, width: 1),
+          if (!isMobile) const VerticalDivider(thickness: 1, width: 1),
           Expanded(child: child),
         ],
       ),

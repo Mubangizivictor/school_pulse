@@ -89,10 +89,6 @@ final router = GoRouter(
         builder: (context, state) => ParentVerifyScreen(accessCode: state.extra as ParentAccessCode?),
       ),
       GoRoute(
-        path: '/parent/login/unlock',
-        builder: (context, state) => const ParentUnlockScreen(),
-      ),
-      GoRoute(
         path: '/staff/login/role',
         builder: (context, state) => const StaffRolePickerScreen(),
       ),

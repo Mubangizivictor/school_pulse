@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -25,10 +27,25 @@ class _SplashScreenState extends State<SplashScreen>
 
   bool _animationFinished = false;
   bool _isNavigating = false;
+  Timer? _fallbackTimer;
 
   @override
   void initState() {
     super.initState();
+
+    // If auth/config never settle (e.g. first launch while offline), don't
+    // strand the user on the splash screen forever.
+    _fallbackTimer = Timer(const Duration(seconds: 10), () {
+      if (_isNavigating || !mounted) return;
+      debugPrint('SplashScreen: Timed out waiting for state — proceeding.');
+      _isNavigating = true;
+      final authState = context.read<AuthBloc>().state;
+      if (authState is AuthAuthenticated) {
+        context.go('/school-splash', extra: authState.user);
+      } else {
+        context.go('/welcome');
+      }
+    });
 
     _iconController = AnimationController(
       vsync: this,
@@ -114,6 +131,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
+    _fallbackTimer?.cancel();
     _iconController.dispose();
     _pulseController.dispose();
     super.dispose();
