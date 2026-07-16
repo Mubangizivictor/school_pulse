@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
+import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
@@ -56,6 +58,27 @@ class StaffShell extends StatelessWidget {
     }
   }
 
+  void _handleLogout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to log out?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              context.read<AuthBloc>().add(LogoutPressed());
+              Navigator.pop(context);
+              context.go('/welcome');
+            },
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 600;
@@ -78,6 +101,9 @@ class StaffShell extends StatelessWidget {
 
     final destinations = isAdmin ? adminDestinations : teacherDestinations;
 
+    final config = context.watch<ThemeProvider>().config;
+    final logoUrl = config?.schoolLogoUrl;
+
     return Scaffold(
       body: Row(
         children: [
@@ -89,13 +115,32 @@ class StaffShell extends StatelessWidget {
               labelType: NavigationRailLabelType.none,
               leading: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Image.asset('assets/logo.png', height: 40, errorBuilder: (context, error, stackTrace) => const Icon(Icons.bolt, color: Colors.blue, size: 32)),
+                child: logoUrl != null && logoUrl.isNotEmpty
+                    ? Image.network(
+                        logoUrl,
+                        height: 40,
+                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.bolt, color: Colors.blue, size: 32),
+                      )
+                    : const Icon(Icons.bolt, color: Colors.blue, size: 32),
               ),
               destinations: destinations.map((d) => NavigationRailDestination(
                 icon: d.icon,
                 selectedIcon: d.selectedIcon,
                 label: Text(d.label),
               )).toList(),
+              trailing: Expanded(
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 24),
+                    child: IconButton(
+                      icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+                      onPressed: () => _handleLogout(context),
+                      tooltip: 'Logout',
+                    ),
+                  ),
+                ),
+              ),
             ),
           const VerticalDivider(thickness: 1, width: 1),
           Expanded(child: child),

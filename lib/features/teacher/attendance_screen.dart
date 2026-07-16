@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:school_pulse/core/enums/student_status.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_event.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_state.dart';
@@ -24,7 +26,23 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<TeacherBloc>().add(TeacherAttendanceRequested(_selectedClass));
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      final user = authState.user;
+      final classes = <String>[];
+      if (user.assignedClass != null) {
+        classes.add(user.assignedClass!);
+      }
+      if (user.subjects != null) {
+        classes.addAll(user.subjects!.map((s) => s.className));
+      }
+
+      final distinctClasses = classes.toSet().toList();
+      if (distinctClasses.isNotEmpty) {
+        _selectedClass = distinctClasses.first;
+        context.read<TeacherBloc>().add(TeacherAttendanceRequested(_selectedClass));
+      }
+    }
   }
 
   @override
@@ -183,6 +201,18 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
   }
 
   Widget _buildClassSelector() {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthAuthenticated) return const SizedBox.shrink();
+
+    final user = authState.user;
+    final classes = <String>{};
+    if (user.assignedClass != null) classes.add(user.assignedClass!);
+    if (user.subjects != null) {
+      classes.addAll(user.subjects!.map((s) => s.className));
+    }
+
+    if (classes.isEmpty) return const SizedBox.shrink();
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -196,23 +226,27 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
           const Text('Class:', style: TextStyle(fontWeight: FontWeight.w500)),
           const SizedBox(width: 12),
           Expanded(
-            child: SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'Primary 4', label: Text('P.4')),
-                ButtonSegment(value: 'Primary 2', label: Text('P.2')),
-                ButtonSegment(value: 'Primary 6', label: Text('P.6')),
-              ],
-              selected: {_selectedClass},
-              onSelectionChanged: (newSelection) {
-                if (newSelection.first != _selectedClass) {
-                  setState(() {
-                    _selectedClass = newSelection.first;
-                    _students = []; // Clear current list to show skeleton
-                    _attendance.clear();
-                    context.read<TeacherBloc>().add(TeacherAttendanceRequested(_selectedClass));
-                  });
-                }
-              },
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SegmentedButton<String>(
+                segments: classes.map((c) {
+                  return ButtonSegment(
+                    value: c,
+                    label: Text(c.replaceAll('Primary ', 'P.')),
+                  );
+                }).toList(),
+                selected: {_selectedClass},
+                onSelectionChanged: (newSelection) {
+                  if (newSelection.first != _selectedClass) {
+                    setState(() {
+                      _selectedClass = newSelection.first;
+                      _students = []; // Clear current list to show skeleton
+                      _attendance.clear();
+                      context.read<TeacherBloc>().add(TeacherAttendanceRequested(_selectedClass));
+                    });
+                  }
+                },
+              ),
             ),
           ),
         ],

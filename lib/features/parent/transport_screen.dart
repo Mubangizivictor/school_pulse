@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/transport/presentation/bloc/transport_bloc.dart';
@@ -159,6 +160,15 @@ class _TransportScreenState extends State<TransportScreen> {
                           ),
                         ),
                       ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  FadeInSlide(
+                    delay: const Duration(milliseconds: 300),
+                    child: SecondaryButton(
+                      label: 'Contact Transport Coordinator',
+                      icon: Icons.chat_bubble_outline,
+                      onPressed: () => context.push('/parent/messages'),
                     ),
                   ),
                 ],

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_event.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_state.dart';
@@ -13,20 +15,35 @@ class MarksEntryScreen extends StatefulWidget {
 }
 
 class _MarksEntryScreenState extends State<MarksEntryScreen> {
-  String _selectedClass = 'Primary 4';
-  String _selectedSubject = 'Mathematics';
+  String? _selectedClass;
+  String? _selectedSubject;
   String _selectedAssessment = 'Mid-term Exam';
 
   @override
   void initState() {
     super.initState();
-    _requestMarks();
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      final user = authState.user;
+      if (user.subjects != null && user.subjects!.isNotEmpty) {
+        _selectedClass = user.subjects!.first.className;
+        _selectedSubject = user.subjects!.first.subjectName;
+      } else if (user.assignedClass != null) {
+        _selectedClass = user.assignedClass;
+        _selectedSubject = 'General';
+      }
+      
+      if (_selectedClass != null && _selectedSubject != null) {
+        _requestMarks();
+      }
+    }
   }
 
   void _requestMarks() {
+    if (_selectedClass == null || _selectedSubject == null) return;
     context.read<TeacherBloc>().add(TeacherMarksEntryRequested(
-          className: _selectedClass,
-          subject: _selectedSubject,
+          className: _selectedClass!,
+          subject: _selectedSubject!,
           assessment: _selectedAssessment,
         ));
   }
@@ -107,6 +124,24 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
   }
 
   Widget _buildSelectors() {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthAuthenticated) return const SizedBox.shrink();
+
+    final user = authState.user;
+    final classes = <String>{};
+    if (user.assignedClass != null) classes.add(user.assignedClass!);
+    if (user.subjects != null) {
+      classes.addAll(user.subjects!.map((s) => s.className));
+    }
+
+    final subjects = <String>{};
+    if (user.subjects != null) {
+      subjects.addAll(user.subjects!
+          .where((s) => s.className == _selectedClass)
+          .map((s) => s.subjectName));
+    }
+    if (subjects.isEmpty) subjects.add('General');
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -117,18 +152,23 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
         children: [
           _DropdownRow(
             label: 'Class',
-            value: _selectedClass,
-            items: const ['Primary 4', 'Primary 2', 'Primary 6'],
+            value: _selectedClass ?? '',
+            items: classes.toList(),
             onChanged: (v) {
-              setState(() => _selectedClass = v!);
+              setState(() {
+                _selectedClass = v!;
+                // Update subjects for the new class
+                final classSubjects = user.subjects?.where((s) => s.className == v).map((s) => s.subjectName).toList() ?? [];
+                _selectedSubject = classSubjects.isNotEmpty ? classSubjects.first : 'General';
+              });
               _requestMarks();
             },
           ),
           const SizedBox(height: 12),
           _DropdownRow(
             label: 'Subject',
-            value: _selectedSubject,
-            items: const ['Mathematics', 'English', 'Science', 'SST'],
+            value: _selectedSubject ?? '',
+            items: subjects.toList(),
             onChanged: (v) {
               setState(() => _selectedSubject = v!);
               _requestMarks();

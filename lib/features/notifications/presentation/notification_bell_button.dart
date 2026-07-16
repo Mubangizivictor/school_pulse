@@ -25,7 +25,9 @@ class NotificationBellButton extends StatelessWidget {
       );
     }
     final uid = authState.user.id;
-    final groups = NotificationGroups.forRole(authState.user.role);
+    final role = authState.user.role;
+    final groups = NotificationGroups.forRole(role);
+    final notificationRoute = role == UserRole.parent ? '/parent/notifications' : '/staff/notifications';
 
     return StreamBuilder<List<StaffAlert>>(
       stream: StaffAlertsRepository().watchAllForUser(uid: uid, groups: groups),
@@ -36,7 +38,7 @@ class NotificationBellButton extends StatelessWidget {
           children: [
             IconButton(
               icon: const Icon(Icons.notifications_none_outlined),
-              onPressed: () => context.push('/staff/notifications'),
+              onPressed: () => context.push(notificationRoute),
               style: backgroundColor != null ? IconButton.styleFrom(backgroundColor: backgroundColor) : null,
             ),
             if (unread > 0)

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/core/utils.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
@@ -114,6 +115,15 @@ class _HealthScreenState extends State<HealthScreen> {
                         child: _buildVisitCard(context, visit),
                       );
                     }),
+                  const SizedBox(height: 16),
+                  FadeInSlide(
+                    delay: const Duration(milliseconds: 500),
+                    child: SecondaryButton(
+                      label: 'Contact School Nurse',
+                      icon: Icons.chat_bubble_outline,
+                      onPressed: () => context.push('/parent/messages'),
+                    ),
+                  ),
                 ],
               );
             }

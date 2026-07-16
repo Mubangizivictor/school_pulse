@@ -91,11 +91,6 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
       return;
     }
     
-    if (!PlatformAccess.isAllowedOnCurrentPlatform(widget.user!.role)) {
-      context.go('/platform-blocked?role=${widget.user!.role.name}');
-      return;
-    }
-    
     context.go('/school-splash', extra: widget.user);
   }
 

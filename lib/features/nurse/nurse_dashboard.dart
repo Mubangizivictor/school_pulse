@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/core/utils.dart';
@@ -20,6 +21,10 @@ class NurseDashboardScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Sick Bay Portal'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.message_outlined),
+            onPressed: () => context.push('/staff/messages'),
+          ),
           IconButton(icon: const Icon(Icons.add_box_outlined), onPressed: () {}),
         ],
       ),
@@ -101,6 +106,17 @@ class NurseDashboardScreen extends StatelessWidget {
                         _VisitDetail(label: 'Treatment', value: visit.treatment),
                         const SizedBox(height: 8),
                         _VisitDetail(label: 'Medication', value: visit.medication),
+                        const Divider(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton.icon(
+                              onPressed: () => context.push('/staff/messages'),
+                              icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                              label: const Text('Message Parent/Teacher'),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   );

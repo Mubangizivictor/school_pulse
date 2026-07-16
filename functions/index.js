@@ -35,7 +35,7 @@ exports.createStaffAccount = onCall(async (request) => {
     throw new HttpsError("unauthenticated", "You must be signed in.");
   }
 
-  const { name, email, role } = request.data || {};
+  const { name, email, role, assignedClass, subjects } = request.data || {};
   if (typeof name !== "string" || !name.trim()) {
     throw new HttpsError("invalid-argument", "Name is required.");
   }
@@ -70,15 +70,25 @@ exports.createStaffAccount = onCall(async (request) => {
     throw new HttpsError("internal", err.message || "Failed to create the account.");
   }
 
-  await admin.firestore().collection("users").doc(userRecord.uid).set({
-    name: name.trim(),
-    email: email.trim(),
-    role,
-    studentIds: [],
-    mustChangePassword: true,
-    createdBy: auth.uid,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
+  try {
+    await admin.firestore().collection("users").doc(userRecord.uid).set({
+      name: name.trim(),
+      email: email.trim(),
+      role,
+      studentIds: [],
+      mustChangePassword: true,
+      createdBy: auth.uid,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      ...(assignedClass ? { assignedClass } : {}),
+      ...(Array.isArray(subjects) ? { subjects } : {}),
+    });
+  } catch (err) {
+    // Don't leave an orphaned Auth user with no matching profile doc - a
+    // retry with the same email would otherwise permanently fail with
+    // already-exists with no way for the admin to recover.
+    await admin.auth().deleteUser(userRecord.uid).catch(() => {});
+    throw new HttpsError("internal", err.message || "Failed to save the staff profile.");
+  }
 
   return { uid: userRecord.uid, temporaryPassword };
 });

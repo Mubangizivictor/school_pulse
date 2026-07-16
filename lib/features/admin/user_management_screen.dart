@@ -520,10 +520,10 @@ class _StaffTabState extends State<_StaffTab> {
                   ),
                   child: Row(
                     children: [
-                      Expanded(child: Text(passwordController.text, style: const TextStyle(fontFamily: 'monospace'))),
+                      Expanded(child: Text(tempPassword, style: const TextStyle(fontFamily: 'monospace'))),
                       IconButton(
                         icon: const Icon(Icons.copy, size: 18),
-                        onPressed: () => Clipboard.setData(ClipboardData(text: passwordController.text)),
+                        onPressed: () => Clipboard.setData(ClipboardData(text: tempPassword)),
                       ),
                     ],
                   ),
@@ -852,9 +852,21 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
 
   Future<void> _editCode(ParentAccessCode code) async {
     final studentsResult = await di.sl<GetAllStudents>()();
+    final codesResult = await di.sl<GetAllAccessCodes>()();
+    
     if (!mounted) return;
-    if (studentsResult.isLeft()) return;
+    if (studentsResult.isLeft() || codesResult.isLeft()) return;
+    
     final allStudents = studentsResult.getOrElse(() => []);
+    final allCodes = codesResult.getOrElse(() => []);
+
+    // Map student IDs to their current parent count
+    final studentParentCounts = <String, int>{};
+    for (final c in allCodes) {
+      for (final studentId in c.studentIds) {
+        studentParentCounts[studentId] = (studentParentCounts[studentId] ?? 0) + 1;
+      }
+    }
 
     final selectedStudentIds = List<String>.from(code.studentIds);
     final parentNameController = TextEditingController(text: code.parentName);
@@ -882,10 +894,16 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
                     itemCount: allStudents.length,
                     itemBuilder: (context, index) {
                       final s = allStudents[index];
+                      final currentCount = studentParentCounts[s.id] ?? 0;
+                      final isAlreadyInThisCode = selectedStudentIds.contains(s.id);
+                      // Can add if not already in this code AND total parents < 2
+                      final canAdd = isAlreadyInThisCode || currentCount < 2;
+
                       return CheckboxListTile(
                         title: Text(s.name),
-                        subtitle: Text(s.className),
-                        value: selectedStudentIds.contains(s.id),
+                        subtitle: Text('${s.className} • $currentCount parents linked'),
+                        value: isAlreadyInThisCode,
+                        enabled: canAdd,
                         onChanged: (val) {
                           setDialogState(() {
                             if (val == true) {
@@ -921,6 +939,9 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
         studentNames: updatedStudents.map((s) => s.name).toList(),
         parentName: parentNameController.text.isEmpty ? null : parentNameController.text,
         isActive: code.isActive,
+        phoneNumber: code.phoneNumber,
+        pin: code.pin,
+        mustChangePin: code.mustChangePin,
       );
       await di.sl<UpdateAccessCode>()(updated);
       _refresh();
@@ -929,9 +950,21 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
 
   Future<void> _generateNewCode() async {
     final studentsResult = await di.sl<GetAllStudents>()();
+    final codesResult = await di.sl<GetAllAccessCodes>()();
+    
     if (!mounted) return;
-    if (studentsResult.isLeft()) return;
+    if (studentsResult.isLeft() || codesResult.isLeft()) return;
+    
     final allStudents = studentsResult.getOrElse(() => []);
+    final allCodes = codesResult.getOrElse(() => []);
+
+    // Map student IDs to their current parent count
+    final studentParentCounts = <String, int>{};
+    for (final c in allCodes) {
+      for (final studentId in c.studentIds) {
+        studentParentCounts[studentId] = (studentParentCounts[studentId] ?? 0) + 1;
+      }
+    }
 
     final selectedStudentIds = <String>[];
     final parentNameController = TextEditingController();
@@ -986,11 +1019,20 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
                         itemCount: filteredStudents.length,
                         itemBuilder: (context, index) {
                           final s = filteredStudents[index];
+                          final currentCount = studentParentCounts[s.id] ?? 0;
+                          final canAdd = currentCount < 2;
+
                           return CheckboxListTile(
                             title: Text(s.name, style: const TextStyle(fontSize: 14)),
-                            subtitle: Text(s.className, style: const TextStyle(fontSize: 12)),
+                            subtitle: Text('${s.className} • $currentCount/2 parents',
+                              style: TextStyle(
+                                fontSize: 12, 
+                                color: currentCount >= 2 ? Colors.red : null,
+                                fontWeight: currentCount >= 2 ? FontWeight.bold : null,
+                              )),
                             value: selectedStudentIds.contains(s.id),
                             dense: true,
+                            enabled: canAdd || selectedStudentIds.contains(s.id),
                             onChanged: (val) {
                               setDialogState(() {
                                 if (val == true) {

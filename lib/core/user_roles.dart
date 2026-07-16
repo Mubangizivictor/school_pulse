@@ -25,28 +25,6 @@ enum UserRole {
   receptionist,
 }
 
-class PlatformAccess {
-  static bool isAllowedOnCurrentPlatform(UserRole role) {
-    if (kIsWeb) {
-      // Parent is restricted to Mobile only
-      if (role == UserRole.parent) return false;
-      return true;
-    } else {
-      // Mobile Build: Everyone is allowed to use the mobile app
-      return true;
-    }
-  }
-
-  static String getBlockedMessage(UserRole role) {
-    if (role == UserRole.parent) {
-      return 'Parent access is only available on the mobile app. Please download the app to continue.';
-    }
-    return '${_roleDisplayName(role)} accounts are managed from the web app — please sign in at portal.schoolpulse.ug on a computer or tablet browser.';
-  }
-
-  static String _roleDisplayName(UserRole role) => UserRoleDisplay.name(role);
-}
-
 class UserRoleDisplay {
   static String name(UserRole role) {
     switch (role) {

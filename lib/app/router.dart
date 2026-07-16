@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/features/auth/login_flow/welcome_screen.dart';
@@ -48,6 +47,8 @@ import 'package:school_pulse/features/auth/login_flow/splash_screen.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/admin/user_management_screen.dart';
 import 'package:school_pulse/features/admin/admin_dashboard_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/features/admin/system_config_screen.dart';
 import 'package:school_pulse/features/admin/school_structure_screen.dart';
 import 'package:school_pulse/features/admin/broadcast_sms_screen.dart';
@@ -63,13 +64,6 @@ import 'package:school_pulse/features/auth/login_flow/school_splash_screen.dart'
 final router = GoRouter(
   initialLocation: '/',
   redirect: (context, state) {
-    final path = state.uri.path;
-    
-    // Global platform guards
-    if (path.startsWith('/parent') && kIsWeb) {
-      return '/platform-blocked?role=parent';
-    }
-    
     return null;
   },
   routes: [
@@ -116,16 +110,8 @@ final router = GoRouter(
         builder: (context, state) => ForceSetPasswordScreen(user: state.extra as UserEntity?),
       ),
       GoRoute(
-        path: '/platform-blocked',
-        builder: (context, state) {
-          final roleName = state.uri.queryParameters['role'];
-          final role = UserRole.values.firstWhere((r) => r.name == roleName, orElse: () => UserRole.parent);
-          return PlatformBlockedScreen(role: role);
-        },
-      ),
-      GoRoute(
         path: '/login',
-        redirect: (context, state) => kIsWeb ? '/staff/login/role' : '/welcome',
+        redirect: (context, state) => '/welcome',
       ),
       ShellRoute(
         builder: (context, state, child) {
@@ -380,9 +366,32 @@ class ParentShell extends StatelessWidget {
     }
   }
 
+  void _handleLogout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to log out?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              context.read<AuthBloc>().add(LogoutPressed());
+              Navigator.pop(context);
+              context.go('/welcome');
+            },
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 600;
+    final config = context.watch<ThemeProvider>().config;
+    final logoUrl = config?.schoolLogoUrl;
 
     return Scaffold(
       body: Row(
@@ -392,6 +401,16 @@ class ParentShell extends StatelessWidget {
               selectedIndex: _calculateSelectedIndex(context),
               onDestinationSelected: (idx) => _onItemTapped(idx, context),
               labelType: NavigationRailLabelType.all,
+              leading: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: logoUrl != null && logoUrl.isNotEmpty
+                    ? Image.network(
+                        logoUrl,
+                        height: 40,
+                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.school, color: Colors.blue, size: 32),
+                      )
+                    : const Icon(Icons.school, color: Colors.blue, size: 32),
+              ),
               destinations: const [
                 NavigationRailDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: Text('Home')),
                 NavigationRailDestination(icon: Icon(Icons.school_outlined), selectedIcon: Icon(Icons.school), label: Text('Academics')),
@@ -399,6 +418,19 @@ class ParentShell extends StatelessWidget {
                 NavigationRailDestination(icon: Icon(Icons.message_outlined), selectedIcon: Icon(Icons.message), label: Text('Messages')),
                 NavigationRailDestination(icon: Icon(Icons.more_horiz), label: Text('More')),
               ],
+              trailing: Expanded(
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 24),
+                    child: IconButton(
+                      icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+                      onPressed: () => _handleLogout(context),
+                      tooltip: 'Logout',
+                    ),
+                  ),
+                ),
+              ),
             ),
           Expanded(child: child),
         ],

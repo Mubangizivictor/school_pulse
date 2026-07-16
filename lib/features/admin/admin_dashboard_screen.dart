@@ -897,6 +897,27 @@ class _NoticeItem extends StatelessWidget {
 }
 
 class _AdminProfileToggle extends StatelessWidget {
+  void _handleLogout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to log out?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              context.read<AuthBloc>().add(LogoutPressed());
+              Navigator.pop(context);
+              context.go('/welcome');
+            },
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 600;
@@ -904,34 +925,65 @@ class _AdminProfileToggle extends StatelessWidget {
       builder: (context, state) {
         final initials = (state is AuthAuthenticated) ? state.user.name[0] : 'A';
         final roleName = (state is AuthAuthenticated) ? UserRoleDisplay.name(state.user.role) : 'Admin';
-        return Container(
-          padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircleAvatar(
-                radius: 12, 
-                backgroundColor: Theme.of(context).colorScheme.primary, 
-                child: Text(initials, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))
+        
+        return PopupMenuButton<String>(
+          offset: const Offset(0, 40),
+          onSelected: (value) {
+            if (value == 'logout') {
+              _handleLogout(context);
+            }
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'profile',
+              child: Row(
+                children: [
+                  Icon(Icons.person_outline, size: 20),
+                  SizedBox(width: 8),
+                  Text('My Profile'),
+                ],
               ),
-              if (!isMobile) ...[
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    roleName, 
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+            ),
+            const PopupMenuItem(
+              value: 'logout',
+              child: Row(
+                children: [
+                  Icon(Icons.logout, size: 20, color: Colors.red),
+                  SizedBox(width: 8),
+                  Text('Logout', style: TextStyle(color: Colors.red)),
+                ],
+              ),
+            ),
+          ],
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircleAvatar(
+                  radius: 12, 
+                  backgroundColor: Theme.of(context).colorScheme.primary, 
+                  child: Text(initials, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))
                 ),
-                const Icon(Icons.arrow_drop_down, size: 16),
+                if (!isMobile) ...[
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      roleName, 
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const Icon(Icons.arrow_drop_down, size: 16),
+                ],
               ],
-            ],
+            ),
           ),
         );
       },

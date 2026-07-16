@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_event.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_state.dart';
@@ -19,7 +22,10 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<TeacherBloc>().add(TeacherDashboardRequested());
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      context.read<TeacherBloc>().add(TeacherDashboardRequested(authState.user.id));
+    }
   }
 
   @override
@@ -29,8 +35,8 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Staff Portal'),
-        actions: [
-          IconButton(icon: const Icon(Icons.notifications_none), onPressed: () {}),
+        actions: const [
+          NotificationBellButton(),
         ],
       ),
       body: BlocBuilder<TeacherBloc, TeacherState>(
@@ -46,14 +52,17 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
           if (state is TeacherLoaded) {
             return RefreshIndicator(
               onRefresh: () async {
-                context.read<TeacherBloc>().add(TeacherDashboardRequested());
+                final authState = context.read<AuthBloc>().state;
+                if (authState is AuthAuthenticated) {
+                  context.read<TeacherBloc>().add(TeacherDashboardRequested(authState.user.id));
+                }
               },
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
                   FadeInSlide(
                     child: Text(
-                      'Hello, Teacher Sarah',
+                      'Hello, ${context.select((AuthBloc bloc) => (bloc.state as AuthAuthenticated).user.name)}',
                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
                     ),
                   ),

@@ -113,6 +113,12 @@ class _FeesScreenState extends State<FeesScreen> with SingleTickerProviderStateM
                               label: 'Pay Now',
                               onPressed: () => context.push('/parent/fees/pay'),
                             ),
+                            const SizedBox(height: 12),
+                            SecondaryButton(
+                              label: 'Query Balance',
+                              icon: Icons.chat_bubble_outline,
+                              onPressed: () => context.push('/parent/messages'),
+                            ),
                           ],
                         ),
                       ),

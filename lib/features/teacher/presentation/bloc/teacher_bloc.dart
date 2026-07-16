@@ -31,8 +31,7 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
     Emitter<TeacherState> emit,
   ) async {
     emit(TeacherLoading());
-    // For now passing a mock teacher ID
-    final result = await getAttendanceHistory('current_teacher_id');
+    final result = await getAttendanceHistory(event.teacherId);
     
     result.fold(
       (failure) => emit(TeacherError(failure.message)),
@@ -72,7 +71,7 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
   ) async {
     emit(TeacherLoading());
     
-    final result = await getTeacherDashboardStats('current_teacher_id');
+    final result = await getTeacherDashboardStats(event.teacherId);
     
     result.fold(
       (failure) => emit(TeacherError(failure.message)),
@@ -108,23 +107,16 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
     Emitter<TeacherState> emit,
   ) async {
     emit(TeacherLoading());
-    try {
-      // TODO: Transition to real repository call
-      await Future.delayed(const Duration(seconds: 1));
-      final students = [
-        const TeacherStudent(id: '1', name: 'John Doe', studentId: 'STU001', className: 'Primary 4'),
-        const TeacherStudent(id: '2', name: 'Jane Smith', studentId: 'STU002', className: 'Primary 4'),
-        const TeacherStudent(id: '3', name: 'James Bond', studentId: 'STU003', className: 'Primary 4'),
-        const TeacherStudent(id: '4', name: 'Alice Cooper', studentId: 'STU004', className: 'Primary 4'),
-      ];
-      emit(TeacherMarksEntryLoaded(
+    final result = await getStudentsByClass(event.className);
+    
+    result.fold(
+      (failure) => emit(TeacherError(failure.message)),
+      (students) => emit(TeacherMarksEntryLoaded(
         students: students,
         selectedClass: event.className,
         selectedSubject: event.subject,
         selectedAssessment: event.assessment,
-      ));
-    } catch (e) {
-      emit(TeacherError(e.toString()));
-    }
+      )),
+    );
   }
 }

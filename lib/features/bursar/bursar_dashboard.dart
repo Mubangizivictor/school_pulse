@@ -8,6 +8,7 @@ import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/student/domain/usecases/get_all_students.dart';
 import 'package:school_pulse/features/finance/presentation/bloc/finance_bloc.dart';
 import 'package:school_pulse/features/finance/presentation/bloc/finance_state.dart';
+import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 
 class BursarDashboardScreen extends StatelessWidget {
   const BursarDashboardScreen({super.key});
@@ -19,9 +20,9 @@ class BursarDashboardScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Bursar Portal'),
-        actions: [
-          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.notifications_none), onPressed: () {}),
+        actions: const [
+          IconButton(icon: Icon(Icons.search), onPressed: null),
+          NotificationBellButton(),
         ],
       ),
       body: FutureBuilder<List<Student>>(

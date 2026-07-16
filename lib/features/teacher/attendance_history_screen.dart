@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_event.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_state.dart';
@@ -18,7 +20,10 @@ class _TeacherAttendanceHistoryScreenState extends State<TeacherAttendanceHistor
   @override
   void initState() {
     super.initState();
-    context.read<TeacherBloc>().add(TeacherAttendanceHistoryRequested());
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      context.read<TeacherBloc>().add(TeacherAttendanceHistoryRequested(authState.user.id));
+    }
   }
 
   @override

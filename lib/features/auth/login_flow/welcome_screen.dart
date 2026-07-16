@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/design_system/app_components.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -54,6 +55,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
   Widget build(BuildContext context) {
     final semanticColors = Theme.of(context).extension<SemanticColors>();
     final primaryColor = semanticColors?.primaryBlue ?? Theme.of(context).colorScheme.primary;
+    final config = context.watch<ThemeProvider>().config;
+    final logoUrl = config?.schoolLogoUrl;
 
     return Scaffold(
       body: Container(
@@ -89,7 +92,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
                   child: Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: primaryColor.withValues(alpha: 0.1),
+                      color: logoUrl != null && logoUrl.isNotEmpty ? Colors.white : primaryColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
@@ -99,18 +102,30 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
                         ),
                       ],
                     ),
-                    child: Icon(
-                      Icons.school,
-                      size: 80,
-                      color: primaryColor,
-                    ),
+                    child: logoUrl != null && logoUrl.isNotEmpty
+                        ? Image.network(
+                            logoUrl,
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) => Icon(
+                              Icons.school,
+                              size: 80,
+                              color: primaryColor,
+                            ),
+                          )
+                        : Icon(
+                            Icons.school,
+                            size: 80,
+                            color: primaryColor,
+                          ),
                   ),
                 ),
                 const SizedBox(height: 24),
                 FadeInSlide(
                   delay: const Duration(milliseconds: 800),
                   child: Text(
-                    'School Pulse',
+                    config?.schoolName ?? 'School Pulse',
                     style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                           color: primaryColor,
                           fontWeight: FontWeight.bold,
@@ -121,7 +136,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
                 FadeInSlide(
                   delay: const Duration(milliseconds: 1000),
                   child: Text(
-                    'Precision in Education Management',
+                    config?.schoolMotto ?? 'Precision in Education Management',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context).colorScheme.outline,
                           fontStyle: FontStyle.italic,
@@ -129,18 +144,16 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
                   ),
                 ),
                 const SizedBox(height: 64),
-                if (!kIsWeb) ...[
-                  FadeInSlide(
-                    delay: const Duration(milliseconds: 1200),
-                    child: _RoleCard(
-                      title: "I'm a Parent",
-                      subtitle: "Check grades, fees & attendance",
-                      icon: Icons.family_restroom,
-                      onTap: () => context.push('/parent/login/child-id'),
-                    ),
+                FadeInSlide(
+                  delay: const Duration(milliseconds: 1200),
+                  child: _RoleCard(
+                    title: "I'm a Parent",
+                    subtitle: "Check grades, fees & attendance",
+                    icon: Icons.family_restroom,
+                    onTap: () => context.push('/parent/login/child-id'),
                   ),
-                  const SizedBox(height: 16),
-                ],
+                ),
+                const SizedBox(height: 16),
                 FadeInSlide(
                   delay: const Duration(milliseconds: 1400),
                   child: _RoleCard(

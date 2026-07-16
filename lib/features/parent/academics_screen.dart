@@ -165,10 +165,24 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
             ],
           ),
           const Divider(height: 32),
-          SecondaryButton(
-            label: 'View Term Report Card',
-            onPressed: () => context.push('/parent/academics/report-card'),
-            icon: Icons.assignment,
+          Row(
+            children: [
+              Expanded(
+                child: SecondaryButton(
+                  label: 'Report Card',
+                  onPressed: () => context.push('/parent/academics/report-card'),
+                  icon: Icons.assignment_outlined,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SecondaryButton(
+                  label: 'Contact Teacher',
+                  onPressed: () => context.push('/parent/messages'),
+                  icon: Icons.chat_bubble_outline,
+                ),
+              ),
+            ],
           ),
         ],
       ),

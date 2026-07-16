@@ -7,9 +7,23 @@ abstract class TeacherEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class TeacherDashboardRequested extends TeacherEvent {}
+class TeacherDashboardRequested extends TeacherEvent {
+  final String teacherId;
 
-class TeacherAttendanceHistoryRequested extends TeacherEvent {}
+  const TeacherDashboardRequested(this.teacherId);
+
+  @override
+  List<Object?> get props => [teacherId];
+}
+
+class TeacherAttendanceHistoryRequested extends TeacherEvent {
+  final String teacherId;
+
+  const TeacherAttendanceHistoryRequested(this.teacherId);
+
+  @override
+  List<Object?> get props => [teacherId];
+}
 
 class TeacherAttendanceRequested extends TeacherEvent {
   final String className;

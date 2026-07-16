@@ -77,20 +77,8 @@ class ParentHomeScreen extends StatelessWidget {
                 final selectedStudent = studentState.student;
 
                 return Scaffold(
-                  appBar: StudentAppBar(
+                  appBar: const StudentAppBar(
                     title: 'School Pulse',
-                    actions: [
-                      IconButton(
-                        icon: const Icon(Icons.search),
-                        onPressed: () {
-                          // TODO: Implement search
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.notifications_none),
-                        onPressed: () => context.push('/parent/notifications'),
-                      ),
-                    ],
                   ),
                   body: ListView(
                     padding: const EdgeInsets.all(16),
@@ -139,6 +127,30 @@ class ParentHomeScreen extends StatelessWidget {
                               icon: Icons.directions_bus_outlined,
                               color: semanticColors.warning,
                               onTap: () => context.push('/parent/transport'),
+                            ),
+                            QuickActionItem(
+                              label: 'Library',
+                              icon: Icons.library_books_outlined,
+                              color: Theme.of(context).colorScheme.tertiary,
+                              onTap: () => context.push('/parent/library'),
+                            ),
+                            QuickActionItem(
+                              label: 'Discipline',
+                              icon: Icons.gavel_outlined,
+                              color: semanticColors.error,
+                              onTap: () => context.push('/parent/discipline'),
+                            ),
+                            QuickActionItem(
+                              label: 'Messages',
+                              icon: Icons.chat_bubble_outline,
+                              color: Colors.blueAccent,
+                              onTap: () => context.push('/parent/messages'),
+                            ),
+                            QuickActionItem(
+                              label: 'Profile',
+                              icon: Icons.person_outline,
+                              color: Colors.grey,
+                              onTap: () => context.push('/parent/profile'),
                             ),
                           ],
                         ),

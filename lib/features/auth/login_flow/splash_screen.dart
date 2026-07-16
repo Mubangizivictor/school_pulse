@@ -104,21 +104,6 @@ class _SplashScreenState extends State<SplashScreen>
     if (authState is AuthAuthenticated) {
       final user = authState.user;
 
-      // 1. Check platform access first
-      if (!PlatformAccess.isAllowedOnCurrentPlatform(user.role)) {
-        debugPrint('SplashScreen: Platform access blocked for role: ${user.role}');
-        context.go('/platform-blocked?role=${user.role.name}');
-        return;
-      }
-
-      // 2. Check if password/PIN change is forced
-      if (user.mustChangePassword) {
-        debugPrint('SplashScreen: Forced password change required');
-        context.go('/auth/force-setup', extra: user);
-        return;
-      }
-
-      // 3. Go to school-specific splash screen
       debugPrint('SplashScreen: Navigating to branded school splash for user: ${user.id}');
       context.go('/school-splash', extra: user);
     } else if (authState is AuthUnauthenticated || authState is AuthFailureState) {
