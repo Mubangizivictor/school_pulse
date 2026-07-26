@@ -103,8 +103,9 @@ class UserRoleRouting {
       case UserRole.deputyHead:
         return '/staff/admin';
       case UserRole.deanOfStudies:
-      case UserRole.examsOfficer:
         return '/staff/dean';
+      case UserRole.examsOfficer:
+        return '/staff/exams';
       case UserRole.boardingMatron:
         return '/staff/matron';
       case UserRole.transportCoordinator:

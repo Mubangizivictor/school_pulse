@@ -2,23 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/injection_container.dart';
 import 'bloc/exams_bloc.dart';
 import 'bloc/exams_event.dart';
 import 'bloc/exams_state.dart';
 
-class ExamsDashboardScreen extends StatefulWidget {
+class ExamsDashboardScreen extends StatelessWidget {
   const ExamsDashboardScreen({super.key});
 
   @override
-  State<ExamsDashboardScreen> createState() => _ExamsDashboardScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => sl<ExamsBloc>()..add(ExamsDashboardRequested()),
+      child: const _ExamsDashboardView(),
+    );
+  }
 }
 
-class _ExamsDashboardScreenState extends State<ExamsDashboardScreen> {
-  @override
-  void initState() {
-    super.initState();
-    context.read<ExamsBloc>().add(ExamsDashboardRequested());
-  }
+class _ExamsDashboardView extends StatelessWidget {
+  const _ExamsDashboardView();
 
   @override
   Widget build(BuildContext context) {

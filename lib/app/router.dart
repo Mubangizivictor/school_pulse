@@ -43,6 +43,7 @@ import 'package:school_pulse/features/discipline/presentation/discipline_dashboa
 import 'package:school_pulse/features/dean/presentation/screens/dean_dashboard_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/curriculum/syllabus_coverage_screen.dart';
 import 'package:school_pulse/features/religion/presentation/religious_leader_dashboard_screen.dart';
+import 'package:school_pulse/features/exams/presentation/exams_dashboard_screen.dart';
 
 import 'package:school_pulse/features/auth/login_flow/splash_screen.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
@@ -255,6 +256,10 @@ final router = GoRouter(
           GoRoute(
             path: '/staff/religious-leader',
             builder: (context, state) => const ReligiousLeaderDashboardScreen(),
+          ),
+          GoRoute(
+            path: '/staff/exams',
+            builder: (context, state) => const ExamsDashboardScreen(),
           ),
           GoRoute(
             path: '/staff/admin',
