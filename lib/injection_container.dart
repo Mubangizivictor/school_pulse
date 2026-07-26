@@ -4,6 +4,13 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get_it/get_it.dart';
 import 'package:school_pulse/features/admin/data/repositories/visitor_repository.dart';
+import 'package:school_pulse/features/inventory/domain/usecases/get_inventory_items.dart';
+import 'package:school_pulse/features/inventory/domain/usecases/get_recent_movements.dart';
+import 'package:school_pulse/features/inventory/domain/usecases/add_stock.dart';
+import 'package:school_pulse/features/inventory/domain/usecases/issue_item.dart';
+import 'package:school_pulse/features/inventory/domain/repositories/inventory_repository.dart';
+import 'package:school_pulse/features/inventory/data/repositories/inventory_repository_impl.dart';
+import 'package:school_pulse/features/inventory/data/datasources/inventory_remote_data_source.dart';
 import 'package:school_pulse/features/admin/domain/usecases/get_admin_dashboard_stats.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/admin_dashboard_bloc.dart';
 import 'package:school_pulse/features/auth/data/datasources/auth_remote_data_source.dart';
@@ -518,6 +525,18 @@ Future<void> init() async {
   //! System Config
   sl.registerFactory(() => SystemConfigBloc(repository: sl()));
   sl.registerLazySingleton(() => SystemConfigRepository());
+
+  //! Features - Inventory
+  sl.registerLazySingleton(() => GetInventoryItems(sl()));
+  sl.registerLazySingleton(() => GetRecentMovements(sl()));
+  sl.registerLazySingleton(() => AddStock(sl()));
+  sl.registerLazySingleton(() => IssueItem(sl()));
+  sl.registerLazySingleton<InventoryRepository>(
+    () => InventoryRepositoryImpl(remoteDataSource: sl()),
+  );
+  sl.registerLazySingleton<InventoryRemoteDataSource>(
+    () => InventoryRemoteDataSourceImpl(firestore: sl()),
+  );
 
   //! External
   sl.registerLazySingleton(() => FirebaseAuth.instance);
