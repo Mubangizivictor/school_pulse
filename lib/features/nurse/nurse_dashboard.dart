@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
@@ -7,11 +6,47 @@ import 'package:school_pulse/core/utils.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/student/domain/usecases/get_all_students.dart';
-import 'package:school_pulse/features/health/presentation/bloc/health_bloc.dart';
-import 'package:school_pulse/features/health/presentation/bloc/health_state.dart';
+import 'package:school_pulse/features/health/domain/entities/health_visit.dart';
+import 'package:school_pulse/features/health/domain/usecases/get_all_health_visits.dart';
+import 'package:school_pulse/features/health/domain/usecases/log_health_visit.dart';
 
-class NurseDashboardScreen extends StatelessWidget {
+class _HealthSnapshot {
+  final List<Student> students;
+  final List<HealthVisit> visits;
+
+  const _HealthSnapshot({required this.students, required this.visits});
+}
+
+class NurseDashboardScreen extends StatefulWidget {
   const NurseDashboardScreen({super.key});
+
+  @override
+  State<NurseDashboardScreen> createState() => _NurseDashboardScreenState();
+}
+
+class _NurseDashboardScreenState extends State<NurseDashboardScreen> {
+  late Future<_HealthSnapshot> _snapshotFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _snapshotFuture = _loadSnapshot();
+  }
+
+  void _reload() {
+    setState(() => _snapshotFuture = _loadSnapshot());
+  }
+
+  Future<_HealthSnapshot> _loadSnapshot() async {
+    final results = await Future.wait([
+      di.sl<GetAllStudents>()().then((r) => r.getOrElse(() => const <Student>[])),
+      di.sl<GetAllHealthVisits>()().then((r) => r.getOrElse(() => const <HealthVisit>[])),
+    ]);
+    return _HealthSnapshot(
+      students: results[0] as List<Student>,
+      visits: results[1] as List<HealthVisit>,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,55 +60,67 @@ class NurseDashboardScreen extends StatelessWidget {
             icon: const Icon(Icons.message_outlined),
             onPressed: () => context.push('/staff/messages'),
           ),
-          IconButton(icon: const Icon(Icons.add_box_outlined), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.add_box_outlined),
+            onPressed: () => _showNewVisitDialog(context),
+          ),
         ],
       ),
-      body: FutureBuilder<List<Student>>(
-        future: di.sl<GetAllStudents>()().then((r) => r.getOrElse(() => const [])),
-        builder: (context, studentsSnapshot) {
-          final studentsById = {for (final s in studentsSnapshot.data ?? const <Student>[]) s.id: s};
-          return BlocBuilder<HealthBloc, HealthState>(
-        builder: (context, state) {
+      body: FutureBuilder<_HealthSnapshot>(
+        future: _snapshotFuture,
+        builder: (context, snapshot) {
+          final data = snapshot.data;
+          final isLoading = snapshot.connectionState == ConnectionState.waiting;
+          final studentsById = {for (final s in data?.students ?? const <Student>[]) s.id: s};
+          final visits = data?.visits ?? const <HealthVisit>[];
+          final now = DateTime.now();
+          final today = visits.where((v) => v.date.year == now.year && v.date.month == now.month && v.date.day == now.day).toList();
+          final thisWeek = visits.where((v) => now.difference(v.date).inDays < 7).toList();
+
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              _buildHealthStats(context, semanticColors, state),
-              const SizedBox(height: 24),
-              const SectionHeader(title: 'Quick Actions'),
-              QuickActionGrid(
-                items: [
-                  QuickActionItem(
-                    label: 'New Visit',
-                    icon: Icons.add_moderator,
-                    color: semanticColors.error,
-                    onTap: () {},
-                  ),
-                  QuickActionItem(
-                    label: 'Inventory',
-                    icon: Icons.medication_liquid,
-                    color: semanticColors.info,
-                    onTap: () {},
-                  ),
-                  QuickActionItem(
-                    label: 'Health Log',
-                    icon: Icons.history_edu,
-                    color: semanticColors.success,
-                    onTap: () {},
-                  ),
-                  QuickActionItem(
-                    label: 'Allergies',
-                    icon: Icons.warning_amber,
-                    color: semanticColors.warning,
-                    onTap: () {},
-                  ),
-                ],
-              ),
+              if (isLoading)
+                const Row(
+                  children: [
+                    Expanded(child: Skeleton(height: 100)),
+                    SizedBox(width: 12),
+                    Expanded(child: Skeleton(height: 100)),
+                  ],
+                )
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: DashboardStatCard(
+                        title: 'Visits Today',
+                        value: today.length.toDouble(),
+                        icon: Icons.medical_services_outlined,
+                        color: semanticColors.info,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: DashboardStatCard(
+                        title: 'This Week',
+                        value: thisWeek.length.toDouble(),
+                        icon: Icons.calendar_view_week_outlined,
+                        color: semanticColors.warning,
+                      ),
+                    ),
+                  ],
+                ),
               const SizedBox(height: 24),
               const SectionHeader(title: 'Recent Visits'),
-              if (state is HealthLoading)
+              if (isLoading)
                 ...List.generate(3, (index) => const _VisitSkeleton())
-              else if (state is HealthLoaded)
-                ...state.visits.map((visit) {
+              else if (visits.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: Text('No health visits recorded yet.')),
+                )
+              else
+                ...visits.take(10).map((visit) {
                   final studentName = studentsById[visit.studentId]?.name ?? 'Unknown Student';
                   return AppCard(
                     margin: const EdgeInsets.only(bottom: 12),
@@ -120,69 +167,72 @@ class NurseDashboardScreen extends StatelessWidget {
                       ],
                     ),
                   );
-                })
-              else if (state is HealthError)
-                Center(child: Text(state.message))
-              else
-                const Center(child: Text('Start by fetching health visits')),
-              const SizedBox(height: 16),
-              const SectionHeader(title: 'Medical Alerts'),
-              AppCard(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Icon(Icons.warning_amber_rounded, color: semanticColors.error),
-                    const SizedBox(width: 16),
-                    const Expanded(
-                      child: Text(
-                        '3 Students with known allergies in P.4 today.',
-                        style: TextStyle(fontWeight: FontWeight.w500),
-                      ),
-                    ),
-                    TextButton(onPressed: () {}, child: const Text('View')),
-                  ],
-                ),
-              ),
+                }),
             ],
-          );
-            },
           );
         },
       ),
     );
   }
 
-  Widget _buildHealthStats(BuildContext context, SemanticColors colors, HealthState state) {
-    if (state is HealthLoading) {
-      return const Row(
-        children: [
-          Expanded(child: Skeleton(height: 100)),
-          SizedBox(width: 12),
-          Expanded(child: Skeleton(height: 100)),
-        ],
+  void _showNewVisitDialog(BuildContext context) {
+    _snapshotFuture.then((data) {
+      if (!context.mounted) return;
+      final students = data.students;
+      if (students.isEmpty) return;
+
+      final reasonController = TextEditingController();
+      final treatmentController = TextEditingController();
+      final medicationController = TextEditingController();
+      String selectedStudentId = students.first.id;
+
+      showDialog(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (dialogContext, setDialogState) => AlertDialog(
+            title: const Text('New Sick Bay Visit'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedStudentId,
+                    decoration: const InputDecoration(labelText: 'Student'),
+                    items: students.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
+                    onChanged: (value) => setDialogState(() => selectedStudentId = value ?? selectedStudentId),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(controller: reasonController, decoration: const InputDecoration(labelText: 'Reason')),
+                  const SizedBox(height: 16),
+                  TextField(controller: treatmentController, decoration: const InputDecoration(labelText: 'Treatment')),
+                  const SizedBox(height: 16),
+                  TextField(controller: medicationController, decoration: const InputDecoration(labelText: 'Medication')),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+              FilledButton(
+                onPressed: () async {
+                  if (reasonController.text.trim().isEmpty) return;
+                  await di.sl<LogHealthVisit>()(HealthVisit(
+                    id: '',
+                    studentId: selectedStudentId,
+                    date: DateTime.now(),
+                    reason: reasonController.text.trim(),
+                    treatment: treatmentController.text.trim(),
+                    medication: medicationController.text.trim(),
+                  ));
+                  if (dialogContext.mounted) Navigator.pop(dialogContext);
+                  _reload();
+                },
+                child: const Text('Log Visit'),
+              ),
+            ],
+          ),
+        ),
       );
-    }
-    return Row(
-      children: [
-        Expanded(
-          child: DashboardStatCard(
-            title: 'Visits Today',
-            value: 8,
-            icon: Icons.medical_services_outlined,
-            color: colors.info,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: DashboardStatCard(
-            title: 'Resting',
-            value: 2,
-            icon: Icons.bed_outlined,
-            color: colors.warning,
-          ),
-        ),
-      ],
-    );
+    });
   }
 }
 

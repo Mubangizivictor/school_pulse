@@ -35,6 +35,8 @@ import 'package:school_pulse/features/finance/data/repositories/finance_reposito
 import 'package:school_pulse/features/finance/data/datasources/finance_remote_data_source.dart';
 import 'package:school_pulse/features/health/presentation/bloc/health_bloc.dart';
 import 'package:school_pulse/features/health/domain/usecases/get_health_visits.dart';
+import 'package:school_pulse/features/health/domain/usecases/get_all_health_visits.dart';
+import 'package:school_pulse/features/health/domain/usecases/log_health_visit.dart';
 import 'package:school_pulse/features/health/domain/repositories/health_repository.dart';
 import 'package:school_pulse/features/health/data/repositories/health_repository_impl.dart';
 import 'package:school_pulse/features/health/data/datasources/health_remote_data_source.dart';
@@ -227,6 +229,8 @@ Future<void> init() async {
 
   // Use cases
   sl.registerLazySingleton(() => GetHealthVisits(sl()));
+  sl.registerLazySingleton(() => GetAllHealthVisits(sl()));
+  sl.registerLazySingleton(() => LogHealthVisit(sl()));
 
   // Repository
   sl.registerLazySingleton<HealthRepository>(
