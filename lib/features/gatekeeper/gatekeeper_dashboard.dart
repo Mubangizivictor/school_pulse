@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/gatekeeper/presentation/bloc/gatekeeper_bloc.dart';
+import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 import 'package:school_pulse/features/gatekeeper/presentation/bloc/gatekeeper_event.dart';
 import 'package:school_pulse/features/gatekeeper/presentation/bloc/gatekeeper_state.dart';
 
@@ -29,7 +30,7 @@ class _GatekeeperDashboardScreenState extends State<GatekeeperDashboardScreen> {
       appBar: AppBar(
         title: const Text('Gatekeeper Portal'),
         actions: [
-          IconButton(icon: const Icon(Icons.notifications_none), onPressed: () {}),
+          const NotificationBellButton(),
         ],
       ),
       body: BlocBuilder<GatekeeperBloc, GatekeeperState>(

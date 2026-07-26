@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 import 'package:school_pulse/features/receptionist/presentation/bloc/receptionist_bloc.dart';
 import 'package:school_pulse/features/receptionist/presentation/bloc/receptionist_event.dart';
 import 'package:school_pulse/features/receptionist/presentation/bloc/receptionist_state.dart';
@@ -29,7 +30,7 @@ class _ReceptionistDashboardScreenState extends State<ReceptionistDashboardScree
       appBar: AppBar(
         title: const Text('Receptionist Portal'),
         actions: [
-          IconButton(icon: const Icon(Icons.notifications_none), onPressed: () {}),
+          const NotificationBellButton(),
         ],
       ),
       body: BlocBuilder<ReceptionistBloc, ReceptionistState>(

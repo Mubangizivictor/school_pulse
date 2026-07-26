@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 import 'bloc/games_bloc.dart';
 import 'bloc/games_event.dart';
 import 'bloc/games_state.dart';
@@ -28,7 +29,7 @@ class _GamesDashboardScreenState extends State<GamesDashboardScreen> {
       appBar: AppBar(
         title: const Text('Games Portal'),
         actions: [
-          IconButton(icon: const Icon(Icons.notifications_none), onPressed: () {}),
+          const NotificationBellButton(),
         ],
       ),
       body: BlocBuilder<GamesBloc, GamesState>(
