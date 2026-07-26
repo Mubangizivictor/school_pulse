@@ -8,3 +8,18 @@ abstract class ReceptionistEvent extends Equatable {
 }
 
 class ReceptionistDashboardRequested extends ReceptionistEvent {}
+
+class ScheduleAppointmentRequested extends ReceptionistEvent {
+  final String visitorName;
+  final String purpose;
+  final DateTime time;
+
+  const ScheduleAppointmentRequested({
+    required this.visitorName,
+    required this.purpose,
+    required this.time,
+  });
+
+  @override
+  List<Object?> get props => [visitorName, purpose, time];
+}

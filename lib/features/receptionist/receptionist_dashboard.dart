@@ -135,13 +135,7 @@ class _ReceptionistDashboardScreenState extends State<ReceptionistDashboardScree
                         label: 'Schedule Meeting',
                         icon: Icons.add_task,
                         color: semanticColors.info,
-                        onTap: () {},
-                      ),
-                      _QuickAction(
-                        label: 'Inquiry Log',
-                        icon: Icons.description_outlined,
-                        color: semanticColors.success,
-                        onTap: () {},
+                        onTap: () => _showScheduleMeetingDialog(context),
                       ),
                     ],
                   ),
@@ -151,6 +145,55 @@ class _ReceptionistDashboardScreenState extends State<ReceptionistDashboardScree
           }
           return const SizedBox.shrink();
         },
+      ),
+    );
+  }
+
+  Future<void> _showScheduleMeetingDialog(BuildContext context) async {
+    final nameController = TextEditingController();
+    final purposeController = TextEditingController();
+    final bloc = context.read<ReceptionistBloc>();
+
+    final date = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (date == null || !context.mounted) return;
+
+    final time = await showTimePicker(context: context, initialTime: TimeOfDay.now());
+    if (time == null || !context.mounted) return;
+
+    final scheduledTime = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Schedule Meeting'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Visitor Name')),
+            const SizedBox(height: 16),
+            TextField(controller: purposeController, decoration: const InputDecoration(labelText: 'Purpose')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () {
+              if (nameController.text.trim().isEmpty) return;
+              bloc.add(ScheduleAppointmentRequested(
+                visitorName: nameController.text.trim(),
+                purpose: purposeController.text.trim().isEmpty ? 'General visit' : purposeController.text.trim(),
+                time: scheduledTime,
+              ));
+              Navigator.pop(dialogContext);
+            },
+            child: const Text('Schedule'),
+          ),
+        ],
       ),
     );
   }

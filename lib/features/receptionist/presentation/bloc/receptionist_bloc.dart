@@ -8,6 +8,7 @@ class ReceptionistBloc extends Bloc<ReceptionistEvent, ReceptionistState> {
 
   ReceptionistBloc({required this.repository}) : super(ReceptionistInitial()) {
     on<ReceptionistDashboardRequested>(_onReceptionistDashboardRequested);
+    on<ScheduleAppointmentRequested>(_onScheduleAppointmentRequested);
   }
 
   Future<void> _onReceptionistDashboardRequested(
@@ -19,6 +20,24 @@ class ReceptionistBloc extends Bloc<ReceptionistEvent, ReceptionistState> {
     result.fold(
       (failure) => emit(ReceptionistError(failure.message)),
       (data) => emit(data),
+    );
+  }
+
+  Future<void> _onScheduleAppointmentRequested(
+    ScheduleAppointmentRequested event,
+    Emitter<ReceptionistState> emit,
+  ) async {
+    final appointment = Appointment(
+      id: '',
+      visitorName: event.visitorName,
+      purpose: event.purpose,
+      time: event.time,
+      status: 'Scheduled',
+    );
+    final result = await repository.scheduleAppointment(appointment);
+    await result.fold(
+      (failure) async => emit(ReceptionistError(failure.message)),
+      (_) async => _onReceptionistDashboardRequested(ReceptionistDashboardRequested(), emit),
     );
   }
 }
