@@ -48,4 +48,24 @@ class FinanceRepositoryImpl implements FinanceRepository {
       return Left(ServerFailure());
     }
   }
+
+  @override
+  Future<Either<Failure, List<FeeItem>>> getAllFees() async {
+    try {
+      final remoteFees = await remoteDataSource.getAllFees();
+      return Right(remoteFees);
+    } catch (e) {
+      return Left(ServerFailure());
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<PaymentRecord>>> getAllPaymentHistory() async {
+    try {
+      final remoteHistory = await remoteDataSource.getAllPaymentHistory();
+      return Right(remoteHistory);
+    } catch (e) {
+      return Left(ServerFailure());
+    }
+  }
 }

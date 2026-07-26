@@ -6,6 +6,8 @@ abstract class FinanceRemoteDataSource {
   Future<List<FeeItemModel>> getFees(String studentId);
   Future<List<PaymentRecordModel>> getPaymentHistory(String studentId);
   Future<void> processPayment(PaymentRecordModel payment);
+  Future<List<FeeItemModel>> getAllFees();
+  Future<List<PaymentRecordModel>> getAllPaymentHistory();
 }
 
 class FinanceRemoteDataSourceImpl implements FinanceRemoteDataSource {
@@ -35,5 +37,20 @@ class FinanceRemoteDataSourceImpl implements FinanceRemoteDataSource {
   @override
   Future<void> processPayment(PaymentRecordModel payment) async {
     await firestore.collection('payments').add(payment.toFirestore());
+  }
+
+  @override
+  Future<List<FeeItemModel>> getAllFees() async {
+    final snapshot = await firestore.collection('fees').get();
+    return snapshot.docs.map((doc) => FeeItemModel.fromFirestore(doc)).toList();
+  }
+
+  @override
+  Future<List<PaymentRecordModel>> getAllPaymentHistory() async {
+    final snapshot = await firestore
+        .collection('payments')
+        .orderBy('date', descending: true)
+        .get();
+    return snapshot.docs.map((doc) => PaymentRecordModel.fromFirestore(doc)).toList();
   }
 }

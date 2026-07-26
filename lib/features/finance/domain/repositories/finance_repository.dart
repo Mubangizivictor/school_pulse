@@ -7,4 +7,6 @@ abstract class FinanceRepository {
   Future<Either<Failure, List<FeeItem>>> getFees(String studentId);
   Future<Either<Failure, List<PaymentRecord>>> getPaymentHistory(String studentId);
   Future<Either<Failure, void>> processPayment(PaymentRecord payment);
+  Future<Either<Failure, List<FeeItem>>> getAllFees();
+  Future<Either<Failure, List<PaymentRecord>>> getAllPaymentHistory();
 }

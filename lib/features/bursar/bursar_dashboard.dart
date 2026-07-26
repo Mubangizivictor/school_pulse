@@ -1,17 +1,39 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/core/utils.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/student/domain/usecases/get_all_students.dart';
-import 'package:school_pulse/features/finance/presentation/bloc/finance_bloc.dart';
-import 'package:school_pulse/features/finance/presentation/bloc/finance_state.dart';
+import 'package:school_pulse/features/finance/domain/entities/fee_item.dart';
+import 'package:school_pulse/features/finance/domain/entities/payment_record.dart';
+import 'package:school_pulse/features/finance/domain/usecases/get_all_fees.dart';
+import 'package:school_pulse/features/finance/domain/usecases/get_all_payment_history.dart';
 import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
+
+class _BursarFinanceSnapshot {
+  final List<Student> students;
+  final List<FeeItem> fees;
+  final List<PaymentRecord> payments;
+
+  const _BursarFinanceSnapshot({required this.students, required this.fees, required this.payments});
+}
 
 class BursarDashboardScreen extends StatelessWidget {
   const BursarDashboardScreen({super.key});
+
+  Future<_BursarFinanceSnapshot> _loadSnapshot() async {
+    final results = await Future.wait([
+      di.sl<GetAllStudents>()().then((r) => r.getOrElse(() => const <Student>[])),
+      di.sl<GetAllFees>()().then((r) => r.getOrElse(() => const <FeeItem>[])),
+      di.sl<GetAllPaymentHistory>()().then((r) => r.getOrElse(() => const <PaymentRecord>[])),
+    ]);
+    return _BursarFinanceSnapshot(
+      students: results[0] as List<Student>,
+      fees: results[1] as List<FeeItem>,
+      payments: results[2] as List<PaymentRecord>,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,16 +47,17 @@ class BursarDashboardScreen extends StatelessWidget {
           NotificationBellButton(),
         ],
       ),
-      body: FutureBuilder<List<Student>>(
-        future: di.sl<GetAllStudents>()().then((r) => r.getOrElse(() => const [])),
-        builder: (context, studentsSnapshot) {
-          final studentsById = {for (final s in studentsSnapshot.data ?? const <Student>[]) s.id: s};
-          return BlocBuilder<FinanceBloc, FinanceState>(
-        builder: (context, state) {
+      body: FutureBuilder<_BursarFinanceSnapshot>(
+        future: _loadSnapshot(),
+        builder: (context, snapshot) {
+          final data = snapshot.data;
+          final isLoading = snapshot.connectionState == ConnectionState.waiting;
+          final studentsById = {for (final s in data?.students ?? const <Student>[]) s.id: s};
+
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              _buildFinancialSummary(context, semanticColors, state),
+              _buildFinancialSummary(context, semanticColors, data, isLoading),
               const SizedBox(height: 24),
               const SectionHeader(title: 'Quick Actions'),
               QuickActionGrid(
@@ -66,24 +89,24 @@ class BursarDashboardScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 24),
-              if (state is FinanceLoading)
+              if (isLoading)
                 const Skeleton(height: 80)
               else
-                ProgressCard(
-                  title: 'Fee Collection Target',
-                  progress: 124.5 / 180,
-                  subtitle: 'UGX 124.5M of 180M collected (69%)',
-                  color: semanticColors.success,
-                ),
+                _buildCollectionProgress(context, semanticColors, data),
               const SizedBox(height: 24),
               const SectionHeader(title: 'Recent Transactions', actionLabel: 'View All'),
-              if (state is FinanceLoading)
+              if (isLoading)
                 ...List.generate(3, (index) => const Padding(
                   padding: EdgeInsets.only(bottom: 8),
                   child: Skeleton(height: 60),
                 ))
-              else if (state is FinanceLoaded)
-                ...state.paymentHistory.take(3).map((record) {
+              else if (data != null && data.payments.isEmpty)
+                const AppCard(
+                  padding: EdgeInsets.all(16),
+                  child: Text('No transactions recorded yet.'),
+                )
+              else if (data != null)
+                ...data.payments.take(3).map((record) {
                   final studentName = studentsById[record.studentId]?.name ?? 'Unknown Student';
                   return AppCard(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -118,17 +141,33 @@ class BursarDashboardScreen extends StatelessWidget {
                 }),
             ],
           );
-            },
-          );
         },
       ),
     );
   }
 
-  Widget _buildFinancialSummary(BuildContext context, SemanticColors colors, FinanceState state) {
-    if (state is FinanceLoading) {
+  Widget _buildCollectionProgress(BuildContext context, SemanticColors semanticColors, _BursarFinanceSnapshot? data) {
+    final target = data?.fees.fold<double>(0, (sum, fee) => sum + fee.amount) ?? 0;
+    final collected = data?.payments.fold<double>(0, (sum, p) => sum + p.amount) ?? 0;
+    final progress = target > 0 ? (collected / target).clamp(0.0, 1.0) : 0.0;
+    final percent = (progress * 100).round();
+
+    return ProgressCard(
+      title: 'Fee Collection Target',
+      progress: progress,
+      subtitle: '${CurrencyFormatter.ugx(collected)} of ${CurrencyFormatter.ugx(target)} collected ($percent%)',
+      color: semanticColors.success,
+    );
+  }
+
+  Widget _buildFinancialSummary(BuildContext context, SemanticColors colors, _BursarFinanceSnapshot? data, bool isLoading) {
+    if (isLoading) {
       return const Skeleton(height: 180);
     }
+
+    final target = data?.fees.fold<double>(0, (sum, fee) => sum + fee.amount) ?? 0;
+    final collected = data?.payments.fold<double>(0, (sum, p) => sum + p.amount) ?? 0;
+    final outstanding = (target - collected).clamp(0, double.infinity);
 
     return AppCard(
       padding: const EdgeInsets.all(20),
@@ -140,7 +179,7 @@ class BursarDashboardScreen extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            CurrencyFormatter.ugx(124500000), // Mock total
+            CurrencyFormatter.ugx(collected),
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.primary,
@@ -152,7 +191,7 @@ class BursarDashboardScreen extends StatelessWidget {
               Expanded(
                 child: _SummaryItem(
                   label: 'Target',
-                  value: '180M',
+                  value: CurrencyFormatter.ugx(target),
                   color: colors.info,
                 ),
               ),
@@ -160,7 +199,7 @@ class BursarDashboardScreen extends StatelessWidget {
               Expanded(
                 child: _SummaryItem(
                   label: 'Outstanding',
-                  value: '55.5M',
+                  value: CurrencyFormatter.ugx(outstanding.toDouble()),
                   color: colors.error,
                 ),
               ),

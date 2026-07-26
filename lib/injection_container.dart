@@ -27,6 +27,8 @@ import 'package:school_pulse/features/academic/data/datasources/academic_remote_
 import 'package:school_pulse/features/finance/presentation/bloc/finance_bloc.dart';
 import 'package:school_pulse/features/finance/domain/usecases/get_fees.dart';
 import 'package:school_pulse/features/finance/domain/usecases/get_payment_history.dart';
+import 'package:school_pulse/features/finance/domain/usecases/get_all_fees.dart';
+import 'package:school_pulse/features/finance/domain/usecases/get_all_payment_history.dart';
 import 'package:school_pulse/features/finance/domain/repositories/finance_repository.dart';
 import 'package:school_pulse/features/finance/data/repositories/finance_repository_impl.dart';
 import 'package:school_pulse/features/finance/data/datasources/finance_remote_data_source.dart';
@@ -200,6 +202,8 @@ Future<void> init() async {
   // Use cases
   sl.registerLazySingleton(() => GetFees(sl()));
   sl.registerLazySingleton(() => GetPaymentHistory(sl()));
+  sl.registerLazySingleton(() => GetAllFees(sl()));
+  sl.registerLazySingleton(() => GetAllPaymentHistory(sl()));
 
   // Repository
   sl.registerLazySingleton<FinanceRepository>(
