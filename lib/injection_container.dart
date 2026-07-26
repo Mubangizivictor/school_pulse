@@ -4,6 +4,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get_it/get_it.dart';
 import 'package:school_pulse/features/admin/data/repositories/visitor_repository.dart';
+import 'package:school_pulse/features/admin/data/repositories/subscription_repository.dart';
 import 'package:school_pulse/features/calendar/domain/usecases/get_upcoming_events.dart';
 import 'package:school_pulse/features/calendar/domain/usecases/add_event.dart';
 import 'package:school_pulse/features/calendar/domain/repositories/calendar_repository.dart';
@@ -531,6 +532,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => AuditRepository());
   sl.registerLazySingleton(() => SchoolStructureRepository());
   sl.registerLazySingleton(() => StaffAttendanceRepository());
+  sl.registerLazySingleton(() => SubscriptionRepository());
 
   //! System Config
   sl.registerFactory(() => SystemConfigBloc(repository: sl()));

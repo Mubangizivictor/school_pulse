@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
@@ -475,11 +476,12 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
             ),
           ),
           const Divider(),
-          const ListTile(
-            leading: Icon(Icons.payment_outlined),
-            title: Text('Payment Provider (Flutterwave)'),
-            subtitle: Text('Not yet integrated - contact support to enable online payments'),
-            trailing: Switch(value: false, onChanged: null),
+          ListTile(
+            leading: const Icon(Icons.payment_outlined),
+            title: const Text('Subscription & Billing'),
+            subtitle: const Text('MTN Mobile Money & Airtel Money - view plan, renew, payment history'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/staff/admin/subscription'),
           ),
         ],
       ),
@@ -537,20 +539,14 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
           const Text('Security & Access Control', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 20),
           CheckboxListTile(
-            title: const Text('Enforce Multi-Factor Authentication (MFA)'),
-            subtitle: const Text('Require MFA for all staff with Admin/Bursar roles'),
-            value: _mfaEnabled, 
+            title: const Text('Require MFA for Admin/Bursar roles'),
+            subtitle: const Text('Saved as school policy - not yet enforced automatically at login'),
+            value: _mfaEnabled,
             onChanged: (v) {
               setState(() {
                 _mfaEnabled = v ?? false;
               });
             },
-          ),
-          CheckboxListTile(
-            title: const Text('Restrict Login by IP Range'),
-            subtitle: const Text('Limit staff logins to school network only'),
-            value: false, 
-            onChanged: (v) {},
           ),
         ],
       ),

@@ -30,10 +30,18 @@ class NotificationService {
         print('User granted permission');
       }
 
-      // Get the token for this device
-      String? token = await _fcm.getToken();
-      if (token != null) {
-        await _saveTokenToDatabase(token);
+      // Get the token for this device. iOS simulators have no APNs token,
+      // so getToken() throws there - that's expected, not a failure worth
+      // taking the whole app down over.
+      try {
+        String? token = await _fcm.getToken();
+        if (token != null) {
+          await _saveTokenToDatabase(token);
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('Skipping FCM token (expected on simulators): $e');
+        }
       }
     }
 
@@ -45,8 +53,14 @@ class NotificationService {
     // have nothing to attach it to yet.
     _authSub ??= _auth.authStateChanges().listen((user) async {
       if (user != null) {
-        final token = await _fcm.getToken();
-        if (token != null) await _saveTokenToDatabase(token);
+        try {
+          final token = await _fcm.getToken();
+          if (token != null) await _saveTokenToDatabase(token);
+        } catch (e) {
+          if (kDebugMode) {
+            print('Skipping FCM token (expected on simulators): $e');
+          }
+        }
       }
     });
 

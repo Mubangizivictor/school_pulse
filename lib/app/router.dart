@@ -64,6 +64,7 @@ import 'package:school_pulse/features/admin/admin_staff_attendance_screen.dart';
 import 'package:school_pulse/features/admin/appointments_screen.dart';
 import 'package:school_pulse/features/admin/audit_log_screen.dart';
 import 'package:school_pulse/features/admin/broadcast_history_screen.dart';
+import 'package:school_pulse/features/admin/subscription_screen.dart';
 import 'package:school_pulse/features/notifications/presentation/staff_notification_center_screen.dart';
 
 import 'package:school_pulse/features/auth/login_flow/school_splash_screen.dart';
@@ -305,6 +306,10 @@ final router = GoRouter(
               GoRoute(
                 path: 'broadcast-history',
                 builder: (context, state) => const BroadcastHistoryScreen(),
+              ),
+              GoRoute(
+                path: 'subscription',
+                builder: (context, state) => const SubscriptionScreen(),
               ),
             ],
           ),
