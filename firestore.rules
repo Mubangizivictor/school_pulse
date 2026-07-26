@@ -143,10 +143,15 @@ service cloud.firestore {
     }
 
     // Broadcast/direct notifications (NotificationService) and per-student
-    // alerts (health/academic/discipline) share this collection.
+    // alerts (health/academic/discipline) share this collection. The
+    // userId clause covers sendDirectNotification's 1:1 messages (staff-to-
+    // staff works today; staff-to-parent additionally needs the parent to
+    // hold a real Firebase Auth session, which they currently don't - see
+    // the loginParent() TODO).
     match /alerts/{alertId} {
       allow read: if isStaff() ||
-        (resource.data.studentId != null && isParentOf(resource.data.studentId));
+        (resource.data.studentId != null && isParentOf(resource.data.studentId)) ||
+        (resource.data.userId != null && isSignedIn() && resource.data.userId == request.auth.uid);
       allow create, update, delete: if isStaff();
     }
 

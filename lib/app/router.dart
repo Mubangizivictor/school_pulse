@@ -6,6 +6,9 @@ import 'package:school_pulse/features/auth/login_flow/staff_login_screens.dart';
 import 'package:school_pulse/features/auth/login_flow/force_set_password_screen.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/core/user_roles.dart';
+import 'package:school_pulse/features/admin/admin_messages_screen.dart';
 import 'package:school_pulse/features/student/domain/entities/parent_access_code.dart';
 import 'package:school_pulse/features/parent/home_screen.dart';
 import 'package:school_pulse/features/parent/academics_screen.dart';
@@ -333,7 +336,12 @@ final router = GoRouter(
           ),
           GoRoute(
             path: '/staff/messages',
-            builder: (context, state) => const MessagesScreen(), // Reusing Messages Screen
+            builder: (context, state) {
+              final authState = context.read<AuthBloc>().state;
+              final isAdmin = authState is AuthAuthenticated &&
+                  UserRoleDisplay.adminRoles.contains(authState.user.role);
+              return isAdmin ? const AdminMessagesScreen() : const MessagesScreen();
+            },
           ),
           GoRoute(
             path: '/staff/more',
