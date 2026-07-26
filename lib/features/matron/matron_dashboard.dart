@@ -92,15 +92,6 @@ class _MatronDashboardScreenState extends State<MatronDashboardScreen> {
                           color: semanticColors.warning,
                         ),
                       ),
-                      FadeInSlide(
-                        delay: const Duration(milliseconds: 400),
-                        child: DashboardStatCard(
-                          title: 'Sick Bay',
-                          value: 2,
-                          icon: Icons.medical_services_outlined,
-                          color: semanticColors.error,
-                        ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -144,11 +135,6 @@ class _MatronDashboardScreenState extends State<MatronDashboardScreen> {
                           ),
                         ),
                       )),
-                  const SizedBox(height: 24),
-                  PrimaryButton(
-                    label: 'Night Roll Call',
-                    onPressed: () {},
-                  ),
                 ],
               ),
             );

@@ -120,11 +120,6 @@ class _GamesDashboardScreenState extends State<GamesDashboardScreen> {
                       ),
                     );
                   }),
-                  const SizedBox(height: 24),
-                  PrimaryButton(
-                    label: 'Issue Equipment',
-                    onPressed: () {},
-                  ),
                   const SizedBox(height: 32),
                 ],
               ),
