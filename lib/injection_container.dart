@@ -45,6 +45,9 @@ import 'package:school_pulse/features/transport/data/repositories/transport_repo
 import 'package:school_pulse/features/transport/data/datasources/transport_remote_data_source.dart';
 import 'package:school_pulse/features/library/presentation/bloc/library_bloc.dart';
 import 'package:school_pulse/features/library/domain/usecases/get_borrowed_books.dart';
+import 'package:school_pulse/features/library/domain/usecases/get_all_borrowed_books.dart';
+import 'package:school_pulse/features/library/domain/usecases/issue_book.dart';
+import 'package:school_pulse/features/library/domain/usecases/return_book.dart';
 import 'package:school_pulse/features/library/domain/repositories/library_repository.dart';
 import 'package:school_pulse/features/library/data/repositories/library_repository_impl.dart';
 import 'package:school_pulse/features/library/data/datasources/library_remote_data_source.dart';
@@ -258,6 +261,9 @@ Future<void> init() async {
 
   // Use cases
   sl.registerLazySingleton(() => GetBorrowedBooks(sl()));
+  sl.registerLazySingleton(() => GetAllBorrowedBooks(sl()));
+  sl.registerLazySingleton(() => IssueBook(sl()));
+  sl.registerLazySingleton(() => ReturnBook(sl()));
 
   // Repository
   sl.registerLazySingleton<LibraryRepository>(

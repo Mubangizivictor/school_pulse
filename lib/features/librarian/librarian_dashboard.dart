@@ -1,16 +1,54 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/core/utils.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/student/domain/usecases/get_all_students.dart';
-import 'package:school_pulse/features/library/presentation/bloc/library_bloc.dart';
-import 'package:school_pulse/features/library/presentation/bloc/library_state.dart';
+import 'package:school_pulse/features/library/domain/entities/library_book.dart';
+import 'package:school_pulse/features/library/domain/usecases/get_all_borrowed_books.dart';
+import 'package:school_pulse/features/library/domain/usecases/issue_book.dart';
+import 'package:school_pulse/features/library/domain/usecases/return_book.dart';
+import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 
-class LibrarianDashboardScreen extends StatelessWidget {
+class _LibrarySnapshot {
+  final List<Student> students;
+  final List<LibraryBook> books;
+
+  const _LibrarySnapshot({required this.students, required this.books});
+}
+
+class LibrarianDashboardScreen extends StatefulWidget {
   const LibrarianDashboardScreen({super.key});
+
+  @override
+  State<LibrarianDashboardScreen> createState() => _LibrarianDashboardScreenState();
+}
+
+class _LibrarianDashboardScreenState extends State<LibrarianDashboardScreen> {
+  late Future<_LibrarySnapshot> _snapshotFuture;
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _snapshotFuture = _loadSnapshot();
+  }
+
+  void _reload() {
+    setState(() => _snapshotFuture = _loadSnapshot());
+  }
+
+  Future<_LibrarySnapshot> _loadSnapshot() async {
+    final results = await Future.wait([
+      di.sl<GetAllStudents>()().then((r) => r.getOrElse(() => const <Student>[])),
+      di.sl<GetAllBorrowedBooks>()().then((r) => r.getOrElse(() => const <LibraryBook>[])),
+    ]);
+    return _LibrarySnapshot(
+      students: results[0] as List<Student>,
+      books: results[1] as List<LibraryBook>,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,20 +58,56 @@ class LibrarianDashboardScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Library Portal'),
         actions: [
-          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.qr_code_scanner), onPressed: () {}),
+          const NotificationBellButton(),
         ],
       ),
-      body: FutureBuilder<List<Student>>(
-        future: di.sl<GetAllStudents>()().then((r) => r.getOrElse(() => const [])),
-        builder: (context, studentsSnapshot) {
-          final studentsById = {for (final s in studentsSnapshot.data ?? const <Student>[]) s.id: s};
-          return BlocBuilder<LibraryBloc, LibraryState>(
-        builder: (context, state) {
+      body: FutureBuilder<_LibrarySnapshot>(
+        future: _snapshotFuture,
+        builder: (context, snapshot) {
+          final data = snapshot.data;
+          final isLoading = snapshot.connectionState == ConnectionState.waiting;
+          final studentsById = {for (final s in data?.students ?? const <Student>[]) s.id: s};
+          final books = data?.books ?? const <LibraryBook>[];
+          final overdue = books.where((b) => !b.isReturned && b.dueDate.isBefore(DateTime.now())).where((b) {
+            if (_searchQuery.isEmpty) return true;
+            final student = studentsById[b.studentId];
+            final haystack = '${b.title} ${b.author} ${student?.name ?? ''}'.toLowerCase();
+            return haystack.contains(_searchQuery.toLowerCase());
+          }).toList();
+
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              _buildLibraryStats(context, semanticColors, state),
+              if (isLoading)
+                const Row(
+                  children: [
+                    Expanded(child: Skeleton(height: 100)),
+                    SizedBox(width: 12),
+                    Expanded(child: Skeleton(height: 100)),
+                  ],
+                )
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: DashboardStatCard(
+                        title: 'Currently Issued',
+                        value: books.where((b) => !b.isReturned).length.toDouble(),
+                        icon: Icons.upload_file,
+                        color: semanticColors.info,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: DashboardStatCard(
+                        title: 'Overdue Total',
+                        value: books.where((b) => !b.isReturned && b.dueDate.isBefore(DateTime.now())).length.toDouble(),
+                        icon: Icons.running_with_errors,
+                        color: semanticColors.error,
+                      ),
+                    ),
+                  ],
+                ),
               const SizedBox(height: 24),
               const SectionHeader(title: 'Quick Actions'),
               QuickActionGrid(
@@ -42,37 +116,45 @@ class LibrarianDashboardScreen extends StatelessWidget {
                     label: 'Issue',
                     icon: Icons.outbox,
                     color: semanticColors.info,
-                    onTap: () {},
+                    onTap: () => _showIssueBookDialog(context, data),
                   ),
                   QuickActionItem(
                     label: 'Return',
                     icon: Icons.move_to_inbox,
                     color: semanticColors.success,
-                    onTap: () {},
+                    onTap: () => _showReturnBookSheet(context, data),
                   ),
                   QuickActionItem(
                     label: 'Inventory',
                     icon: Icons.inventory_2_outlined,
                     color: semanticColors.warning,
-                    onTap: () {},
-                  ),
-                  QuickActionItem(
-                    label: 'Search',
-                    icon: Icons.search,
-                    color: Theme.of(context).colorScheme.secondary,
-                    onTap: () {},
+                    onTap: () => _showInventorySheet(context, data),
                   ),
                 ],
               ),
               const SizedBox(height: 24),
+              TextField(
+                decoration: const InputDecoration(
+                  hintText: 'Search overdue books by title, author, or student...',
+                  prefixIcon: Icon(Icons.search),
+                  isDense: true,
+                ),
+                onChanged: (value) => setState(() => _searchQuery = value.trim()),
+              ),
+              const SizedBox(height: 16),
               const SectionHeader(title: 'Overdue Books'),
-              if (state is LibraryLoading)
+              if (isLoading)
                 ...List.generate(3, (index) => const Padding(
                   padding: EdgeInsets.only(bottom: 12),
                   child: Skeleton(height: 100),
                 ))
-              else if (state is LibraryLoaded)
-                ...state.books.where((b) => !b.isReturned && b.dueDate.isBefore(DateTime.now())).map((book) {
+              else if (overdue.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: Text('No overdue books.')),
+                )
+              else
+                ...overdue.map((book) {
                   final student = studentsById[book.studentId];
                   final studentName = student?.name ?? 'Unknown Student';
                   final studentClass = student?.className ?? '';
@@ -123,6 +205,113 @@ class LibrarianDashboardScreen extends StatelessWidget {
                 }),
             ],
           );
+        },
+      ),
+    );
+  }
+
+  void _showIssueBookDialog(BuildContext context, _LibrarySnapshot? data) {
+    final students = data?.students ?? const <Student>[];
+    if (students.isEmpty) return;
+
+    final titleController = TextEditingController();
+    final authorController = TextEditingController();
+    String selectedStudentId = students.first.id;
+    DateTime dueDate = DateTime.now().add(const Duration(days: 14));
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Issue Book'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: selectedStudentId,
+                decoration: const InputDecoration(labelText: 'Student'),
+                items: students.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
+                onChanged: (value) => setDialogState(() => selectedStudentId = value ?? selectedStudentId),
+              ),
+              const SizedBox(height: 16),
+              TextField(controller: titleController, decoration: const InputDecoration(labelText: 'Book Title')),
+              const SizedBox(height: 16),
+              TextField(controller: authorController, decoration: const InputDecoration(labelText: 'Author')),
+              const SizedBox(height: 16),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Due Date'),
+                subtitle: Text(DateFormatter.format(dueDate)),
+                trailing: const Icon(Icons.calendar_today, size: 18),
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: dialogContext,
+                    initialDate: dueDate,
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 180)),
+                  );
+                  if (picked != null) setDialogState(() => dueDate = picked);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () async {
+                if (titleController.text.trim().isEmpty) return;
+                await di.sl<IssueBook>()(LibraryBook(
+                  id: '',
+                  studentId: selectedStudentId,
+                  title: titleController.text.trim(),
+                  author: authorController.text.trim().isEmpty ? 'Unknown' : authorController.text.trim(),
+                  dueDate: dueDate,
+                ));
+                if (dialogContext.mounted) Navigator.pop(dialogContext);
+                _reload();
+              },
+              child: const Text('Issue'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showReturnBookSheet(BuildContext context, _LibrarySnapshot? data) {
+    final books = data?.books.where((b) => !b.isReturned).toList() ?? [];
+    final studentsById = {for (final s in data?.students ?? const <Student>[]) s.id: s};
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        expand: false,
+        builder: (sheetContext, scrollController) {
+          if (books.isEmpty) {
+            return const Center(child: Text('No books currently issued.'));
+          }
+          return ListView.separated(
+            controller: scrollController,
+            padding: const EdgeInsets.all(16),
+            itemCount: books.length,
+            separatorBuilder: (_, _) => const Divider(),
+            itemBuilder: (context, index) {
+              final book = books[index];
+              final studentName = studentsById[book.studentId]?.name ?? 'Unknown Student';
+              return ListTile(
+                title: Text(book.title),
+                subtitle: Text('Held by $studentName'),
+                trailing: FilledButton(
+                  onPressed: () async {
+                    await di.sl<ReturnBook>()(book.id);
+                    if (sheetContext.mounted) Navigator.pop(sheetContext);
+                    _reload();
+                  },
+                  child: const Text('Return'),
+                ),
+              );
             },
           );
         },
@@ -130,36 +319,40 @@ class LibrarianDashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLibraryStats(BuildContext context, SemanticColors colors, LibraryState state) {
-    if (state is LibraryLoading) {
-      return const Row(
-        children: [
-          Expanded(child: Skeleton(height: 100)),
-          SizedBox(width: 12),
-          Expanded(child: Skeleton(height: 100)),
-        ],
-      );
-    }
-    return Row(
-      children: [
-        Expanded(
-          child: DashboardStatCard(
-            title: 'Issued Today',
-            value: 24,
-            icon: Icons.upload_file,
-            color: colors.info,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: DashboardStatCard(
-            title: 'Overdue Total',
-            value: 15,
-            icon: Icons.running_with_errors,
-            color: colors.error,
-          ),
-        ),
-      ],
+  void _showInventorySheet(BuildContext context, _LibrarySnapshot? data) {
+    final books = data?.books ?? const <LibraryBook>[];
+    final studentsById = {for (final s in data?.students ?? const <Student>[]) s.id: s};
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        expand: false,
+        builder: (sheetContext, scrollController) {
+          if (books.isEmpty) {
+            return const Center(child: Text('No library records yet.'));
+          }
+          return ListView.separated(
+            controller: scrollController,
+            padding: const EdgeInsets.all(16),
+            itemCount: books.length,
+            separatorBuilder: (_, _) => const Divider(),
+            itemBuilder: (context, index) {
+              final book = books[index];
+              final studentName = studentsById[book.studentId]?.name ?? 'Unknown Student';
+              return ListTile(
+                title: Text(book.title),
+                subtitle: Text('By ${book.author} • $studentName'),
+                trailing: StatusBadge(
+                  label: book.isReturned ? 'Returned' : 'Issued',
+                  color: book.isReturned ? Theme.of(context).colorScheme.outline : Theme.of(context).colorScheme.primary,
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }
