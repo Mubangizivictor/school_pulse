@@ -10,6 +10,7 @@ import 'package:school_pulse/features/inventory/domain/usecases/get_recent_movem
 import 'package:school_pulse/features/inventory/domain/usecases/add_stock.dart';
 import 'package:school_pulse/features/inventory/domain/usecases/issue_item.dart';
 import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
+import 'package:school_pulse/features/inventory/presentation/screens/procurement_screen.dart';
 
 class _InventorySnapshot {
   final List<InventoryItem> items;
@@ -150,6 +151,15 @@ class _InventoryDashboardScreenState extends State<InventoryDashboardScreen> {
                     icon: Icons.assignment_turned_in_outlined,
                     color: semanticColors.success,
                     onTap: () => _showAuditSheet(context, items),
+                  ),
+                  _QuickAction(
+                    label: 'Procurement',
+                    icon: Icons.shopping_basket_outlined,
+                    color: Colors.deepPurple,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ProcurementScreen()),
+                    ),
                   ),
                 ],
               ),

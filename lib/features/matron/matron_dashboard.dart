@@ -6,6 +6,8 @@ import 'package:school_pulse/features/notifications/presentation/notification_be
 import 'package:school_pulse/features/matron/presentation/bloc/matron_bloc.dart';
 import 'package:school_pulse/features/matron/presentation/bloc/matron_event.dart';
 import 'package:school_pulse/features/matron/presentation/bloc/matron_state.dart';
+import 'package:school_pulse/features/matron/presentation/screens/dorm_allocation_screen.dart';
+import 'package:school_pulse/features/matron/presentation/screens/night_attendance_screen.dart';
 
 class MatronDashboardScreen extends StatefulWidget {
   const MatronDashboardScreen({super.key});
@@ -97,6 +99,31 @@ class _MatronDashboardScreenState extends State<MatronDashboardScreen> {
                   const SizedBox(height: 24),
                   const SectionHeader(title: 'Dormitories'),
                   const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      _QuickAction(
+                        label: 'Allocation',
+                        icon: Icons.assignment_ind_outlined,
+                        color: Theme.of(context).colorScheme.primary,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const DormAllocationScreen()),
+                        ),
+                      ),
+                      _QuickAction(
+                        label: 'Night Roll Call',
+                        icon: Icons.nightlight_round,
+                        color: Colors.indigo,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const NightAttendanceScreen()),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
                   ...state.dormitories.map((dorm) => FadeInSlide(
                         child: AppCard(
                           margin: const EdgeInsets.only(bottom: 12),
@@ -141,6 +168,48 @@ class _MatronDashboardScreenState extends State<MatronDashboardScreen> {
           }
           return const SizedBox.shrink();
         },
+      ),
+    );
+  }
+}
+
+class _QuickAction extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _QuickAction({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: (MediaQuery.of(context).size.width - 44) / 2,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: color),
+            ),
+          ],
+        ),
       ),
     );
   }

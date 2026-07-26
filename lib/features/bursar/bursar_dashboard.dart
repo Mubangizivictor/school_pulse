@@ -11,6 +11,7 @@ import 'package:school_pulse/features/finance/domain/usecases/get_all_fees.dart'
 import 'package:school_pulse/features/finance/domain/usecases/get_all_payment_history.dart';
 import 'package:school_pulse/features/finance/domain/usecases/process_payment.dart';
 import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
+import 'package:school_pulse/features/finance/presentation/screens/payroll_screen.dart';
 
 class _BursarFinanceSnapshot {
   final List<Student> students;
@@ -91,6 +92,15 @@ class _BursarDashboardScreenState extends State<BursarDashboardScreen> {
                     icon: Icons.person_off_outlined,
                     color: semanticColors.error,
                     onTap: () => _showDebtorsSheet(context, data),
+                  ),
+                  QuickActionItem(
+                    label: 'Payroll',
+                    icon: Icons.account_balance_wallet,
+                    color: Colors.purple,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const PayrollScreen()),
+                    ),
                   ),
                 ],
               ),

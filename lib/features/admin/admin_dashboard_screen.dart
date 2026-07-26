@@ -15,6 +15,9 @@ import 'package:school_pulse/features/admin/data/repositories/visitor_repository
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/injection_container.dart' as di;
+import 'package:school_pulse/features/inventory/presentation/screens/procurement_screen.dart';
+import 'package:school_pulse/features/shared/presentation/screens/asset_management_screen.dart';
+import 'package:school_pulse/features/shared/presentation/screens/maintenance_screen.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
@@ -440,6 +443,33 @@ class AdminDashboardScreen extends StatelessWidget {
                 label: 'System Config', 
                 color: Colors.grey, 
                 onTap: () => context.go('/staff/admin/config'),
+              ),
+              _AdminShortcut(
+                icon: Icons.account_balance, 
+                label: 'Assets', 
+                color: Colors.indigo, 
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AssetManagementScreen()),
+                ),
+              ),
+              _AdminShortcut(
+                icon: Icons.build_circle, 
+                label: 'Maintenance', 
+                color: Colors.orange, 
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const MaintenanceScreen()),
+                ),
+              ),
+              _AdminShortcut(
+                icon: Icons.approval, 
+                label: 'Procurements', 
+                color: Colors.deepPurple, 
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ProcurementScreen(isAdminView: true)),
+                ),
               ),
             ],
           ),

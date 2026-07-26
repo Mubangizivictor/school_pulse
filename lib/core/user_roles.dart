@@ -21,6 +21,7 @@ enum UserRole {
   cateringManager,
   religiousLeader,
   receptionist,
+  hrOfficer,
 }
 
 class UserRoleDisplay {
@@ -48,6 +49,7 @@ class UserRoleDisplay {
       case UserRole.cateringManager: return 'Catering Manager';
       case UserRole.religiousLeader: return 'Religious Leader';
       case UserRole.receptionist: return 'Receptionist';
+      case UserRole.hrOfficer: return 'HR Officer';
     }
   }
 
@@ -58,6 +60,7 @@ class UserRoleDisplay {
     UserRole.director,
     UserRole.headTeacher,
     UserRole.schoolAdmin,
+    UserRole.hrOfficer,
   ];
 }
 
@@ -124,6 +127,8 @@ class UserRoleRouting {
         return '/staff/receptionist';
       case UserRole.storeInventory:
         return '/staff/inventory';
+      case UserRole.hrOfficer:
+        return '/staff/hr';
       default:
         return '/staff/dashboard';
     }
