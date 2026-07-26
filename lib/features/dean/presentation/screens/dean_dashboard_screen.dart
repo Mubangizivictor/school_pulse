@@ -83,14 +83,17 @@ class DeanDashboardScreen extends StatelessWidget {
       childAspectRatio: 2.5,
       children: [
         _DeanActionCard(
-          icon: Icons.menu_book, 
-          label: 'Curriculum & Syllabi', 
+          icon: Icons.menu_book,
+          label: 'Curriculum & Syllabi',
           color: Colors.blue,
           onTap: () => GoRouter.of(context).go('/staff/dean/curriculum'),
         ),
-        _DeanActionCard(icon: Icons.event_note, label: 'Academic Calendar', color: Colors.orange),
-        _DeanActionCard(icon: Icons.analytics, label: 'Performance Analytics', color: Colors.purple),
-        _DeanActionCard(icon: Icons.assignment, label: 'Exams & Assessment', color: Colors.green),
+        _DeanActionCard(
+          icon: Icons.assignment,
+          label: 'Exams & Assessment',
+          color: Colors.green,
+          onTap: () => GoRouter.of(context).push('/staff/exams'),
+        ),
       ],
     );
   }
