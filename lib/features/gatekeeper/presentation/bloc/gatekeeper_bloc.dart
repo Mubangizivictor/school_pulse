@@ -8,6 +8,7 @@ class GatekeeperBloc extends Bloc<GatekeeperEvent, GatekeeperState> {
 
   GatekeeperBloc({required this.repository}) : super(GatekeeperInitial()) {
     on<GatekeeperDashboardRequested>(_onGatekeeperDashboardRequested);
+    on<LogVisitorEntry>(_onLogVisitorEntry);
   }
 
   Future<void> _onGatekeeperDashboardRequested(
@@ -19,6 +20,24 @@ class GatekeeperBloc extends Bloc<GatekeeperEvent, GatekeeperState> {
     result.fold(
       (failure) => emit(GatekeeperError(failure.message)),
       (data) => emit(data),
+    );
+  }
+
+  Future<void> _onLogVisitorEntry(
+    LogVisitorEntry event,
+    Emitter<GatekeeperState> emit,
+  ) async {
+    final visitor = VisitorLog(
+      id: '',
+      name: event.visitorName,
+      purpose: event.purpose,
+      entryTime: DateTime.now(),
+      status: 'Checked In',
+    );
+    final result = await repository.logVisitor(visitor);
+    await result.fold(
+      (failure) async => emit(GatekeeperError(failure.message)),
+      (_) async => _onGatekeeperDashboardRequested(GatekeeperDashboardRequested(), emit),
     );
   }
 }

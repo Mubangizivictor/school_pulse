@@ -147,7 +147,7 @@ class _GatekeeperDashboardScreenState extends State<GatekeeperDashboardScreen> {
                   const SizedBox(height: 24),
                   PrimaryButton(
                     label: 'New Visitor Entry',
-                    onPressed: () {},
+                    onPressed: () => _showNewVisitorDialog(context),
                   ),
                 ],
               ),
@@ -155,6 +155,49 @@ class _GatekeeperDashboardScreenState extends State<GatekeeperDashboardScreen> {
           }
           return const SizedBox.shrink();
         },
+      ),
+    );
+  }
+
+  void _showNewVisitorDialog(BuildContext context) {
+    final nameController = TextEditingController();
+    final purposeController = TextEditingController();
+    final contactController = TextEditingController();
+    final bloc = context.read<GatekeeperBloc>();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('New Visitor Entry'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Full Name')),
+            const SizedBox(height: 16),
+            TextField(
+              controller: contactController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(labelText: 'Contact Number'),
+            ),
+            const SizedBox(height: 16),
+            TextField(controller: purposeController, decoration: const InputDecoration(labelText: 'Purpose of Visit')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () {
+              if (nameController.text.trim().isEmpty) return;
+              bloc.add(LogVisitorEntry(
+                visitorName: nameController.text.trim(),
+                purpose: purposeController.text.trim().isEmpty ? 'General visit' : purposeController.text.trim(),
+                contact: contactController.text.trim(),
+              ));
+              Navigator.pop(dialogContext);
+            },
+            child: const Text('Log Entry'),
+          ),
+        ],
       ),
     );
   }
