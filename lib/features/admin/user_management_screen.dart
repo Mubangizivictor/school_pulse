@@ -609,14 +609,27 @@ class _StaffTabState extends State<_StaffTab> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    member.name.isEmpty ? member.email : member.name, 
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          member.name.isEmpty ? member.email : member.name,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            decoration: member.isActive ? null : TextDecoration.lineThrough,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      if (!member.isActive) ...[
+                                        const SizedBox(width: 8),
+                                        StatusBadge(label: 'Disabled', color: Theme.of(context).colorScheme.outline),
+                                      ],
+                                    ],
                                   ),
                                   Text(
-                                    UserRoleDisplay.name(member.role), 
+                                    UserRoleDisplay.name(member.role),
                                     style: Theme.of(context).textTheme.bodySmall,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
