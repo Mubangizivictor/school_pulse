@@ -208,8 +208,11 @@ class AppTheme {
       chipTheme: ChipThemeData(
         backgroundColor: Colors.white,
         selectedColor: colorScheme.primary.withValues(alpha: 0.1),
-        labelStyle: const TextStyle(fontSize: 12),
-        secondaryLabelStyle: const TextStyle(fontSize: 12),
+        // Explicit color, not just fontSize - without it FilterChip falls
+        // back to the ambient DefaultTextStyle (white here), rendering
+        // invisible white-on-white text whenever a chip is unselected.
+        labelStyle: TextStyle(fontSize: 12, color: colorScheme.onSurface),
+        secondaryLabelStyle: TextStyle(fontSize: 12, color: colorScheme.onSurface),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         side: const BorderSide(color: Color(0xFFF1F3F4)),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -356,8 +359,8 @@ class AppTheme {
       chipTheme: ChipThemeData(
         backgroundColor: const Color(0xFF2C3138),
         selectedColor: colorScheme.primary.withValues(alpha: 0.2),
-        labelStyle: const TextStyle(fontSize: 12),
-        secondaryLabelStyle: const TextStyle(fontSize: 12),
+        labelStyle: TextStyle(fontSize: 12, color: colorScheme.onSurface),
+        secondaryLabelStyle: TextStyle(fontSize: 12, color: colorScheme.onSurface),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         side: BorderSide.none,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
