@@ -9,6 +9,7 @@ import 'package:school_pulse/features/finance/domain/entities/fee_item.dart';
 import 'package:school_pulse/features/finance/domain/entities/payment_record.dart';
 import 'package:school_pulse/features/finance/domain/usecases/get_all_fees.dart';
 import 'package:school_pulse/features/finance/domain/usecases/get_all_payment_history.dart';
+import 'package:school_pulse/features/finance/domain/usecases/process_payment.dart';
 import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 
 class _BursarFinanceSnapshot {
@@ -19,8 +20,25 @@ class _BursarFinanceSnapshot {
   const _BursarFinanceSnapshot({required this.students, required this.fees, required this.payments});
 }
 
-class BursarDashboardScreen extends StatelessWidget {
+class BursarDashboardScreen extends StatefulWidget {
   const BursarDashboardScreen({super.key});
+
+  @override
+  State<BursarDashboardScreen> createState() => _BursarDashboardScreenState();
+}
+
+class _BursarDashboardScreenState extends State<BursarDashboardScreen> {
+  late Future<_BursarFinanceSnapshot> _snapshotFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _snapshotFuture = _loadSnapshot();
+  }
+
+  void _reload() {
+    setState(() => _snapshotFuture = _loadSnapshot());
+  }
 
   Future<_BursarFinanceSnapshot> _loadSnapshot() async {
     final results = await Future.wait([
@@ -48,7 +66,7 @@ class BursarDashboardScreen extends StatelessWidget {
         ],
       ),
       body: FutureBuilder<_BursarFinanceSnapshot>(
-        future: _loadSnapshot(),
+        future: _snapshotFuture,
         builder: (context, snapshot) {
           final data = snapshot.data;
           final isLoading = snapshot.connectionState == ConnectionState.waiting;
@@ -66,25 +84,13 @@ class BursarDashboardScreen extends StatelessWidget {
                     label: 'Collect',
                     icon: Icons.add_card,
                     color: semanticColors.info,
-                    onTap: () {},
-                  ),
-                  QuickActionItem(
-                    label: 'Receipt',
-                    icon: Icons.receipt_long,
-                    color: semanticColors.success,
-                    onTap: () {},
+                    onTap: () => _showCollectPaymentDialog(context, data),
                   ),
                   QuickActionItem(
                     label: 'Debtors',
                     icon: Icons.person_off_outlined,
                     color: semanticColors.error,
-                    onTap: () {},
-                  ),
-                  QuickActionItem(
-                    label: 'Reports',
-                    icon: Icons.assessment_outlined,
-                    color: semanticColors.warning,
-                    onTap: () {},
+                    onTap: () => _showDebtorsSheet(context, data),
                   ),
                 ],
               ),
@@ -140,6 +146,124 @@ class BursarDashboardScreen extends StatelessWidget {
                   );
                 }),
             ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showCollectPaymentDialog(BuildContext context, _BursarFinanceSnapshot? data) {
+    final students = data?.students ?? const <Student>[];
+    if (students.isEmpty) return;
+
+    final amountController = TextEditingController();
+    String? selectedStudentId = students.first.id;
+    String method = 'Cash';
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Collect Payment'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: selectedStudentId,
+                decoration: const InputDecoration(labelText: 'Student'),
+                items: students
+                    .map((s) => DropdownMenuItem(value: s.id, child: Text(s.name)))
+                    .toList(),
+                onChanged: (value) => setDialogState(() => selectedStudentId = value),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: amountController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Amount (UGX)'),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: method,
+                decoration: const InputDecoration(labelText: 'Method'),
+                items: const [
+                  DropdownMenuItem(value: 'Cash', child: Text('Cash')),
+                  DropdownMenuItem(value: 'Mobile Money', child: Text('Mobile Money')),
+                  DropdownMenuItem(value: 'Bank Transfer', child: Text('Bank Transfer')),
+                ],
+                onChanged: (value) => setDialogState(() => method = value ?? 'Cash'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () async {
+                final amount = double.tryParse(amountController.text.trim());
+                if (amount == null || amount <= 0 || selectedStudentId == null) return;
+                await di.sl<ProcessPayment>()(PaymentRecord(
+                  id: '',
+                  studentId: selectedStudentId!,
+                  amount: amount,
+                  date: DateTime.now(),
+                  method: method,
+                  reference: 'Collected by bursar',
+                ));
+                if (dialogContext.mounted) Navigator.pop(dialogContext);
+                _reload();
+              },
+              child: const Text('Collect'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDebtorsSheet(BuildContext context, _BursarFinanceSnapshot? data) {
+    final students = data?.students ?? const <Student>[];
+    final fees = data?.fees ?? const <FeeItem>[];
+    final payments = data?.payments ?? const <PaymentRecord>[];
+
+    final owedByStudent = <String, double>{};
+    for (final fee in fees) {
+      owedByStudent[fee.studentId] = (owedByStudent[fee.studentId] ?? 0) + fee.amount;
+    }
+    for (final payment in payments) {
+      owedByStudent[payment.studentId] = (owedByStudent[payment.studentId] ?? 0) - payment.amount;
+    }
+    final debtors = owedByStudent.entries.where((e) => e.value > 0).toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        expand: false,
+        builder: (sheetContext, scrollController) {
+          if (debtors.isEmpty) {
+            return const Center(child: Text('No outstanding balances.'));
+          }
+          return ListView.separated(
+            controller: scrollController,
+            padding: const EdgeInsets.all(16),
+            itemCount: debtors.length,
+            separatorBuilder: (_, _) => const Divider(),
+            itemBuilder: (context, index) {
+              final entry = debtors[index];
+              final name = students.firstWhere(
+                (s) => s.id == entry.key,
+                orElse: () => Student(id: entry.key, name: 'Unknown Student', className: '', studentId: ''),
+              ).name;
+              return ListTile(
+                title: Text(name),
+                trailing: Text(
+                  CurrencyFormatter.ugx(entry.value),
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+                ),
+              );
+            },
           );
         },
       ),
