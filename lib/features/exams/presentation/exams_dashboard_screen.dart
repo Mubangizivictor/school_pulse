@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/injection_container.dart';
+import 'package:go_router/go_router.dart';
+import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 import 'bloc/exams_bloc.dart';
 import 'bloc/exams_event.dart';
 import 'bloc/exams_state.dart';
@@ -30,7 +32,7 @@ class _ExamsDashboardView extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Exams Portal'),
         actions: [
-          IconButton(icon: const Icon(Icons.notifications_none), onPressed: () {}),
+          const NotificationBellButton(),
         ],
       ),
       body: BlocBuilder<ExamsBloc, ExamsState>(
@@ -120,17 +122,9 @@ class _ExamsDashboardView extends StatelessWidget {
                       children: [
                         Expanded(
                           child: OutlinedButton.icon(
-                            onPressed: () {},
+                            onPressed: () => context.push('/staff/marks'),
                             icon: const Icon(Icons.upload_file),
                             label: const Text('Upload Marks'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () {},
-                            icon: const Icon(Icons.print),
-                            label: const Text('Report Cards'),
                           ),
                         ),
                       ],

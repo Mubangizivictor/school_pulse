@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 
 class InventoryDashboardScreen extends StatelessWidget {
   const InventoryDashboardScreen({super.key});
@@ -13,7 +14,7 @@ class InventoryDashboardScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Store & Inventory'),
         actions: [
-          IconButton(icon: const Icon(Icons.notifications_none), onPressed: () {}),
+          const NotificationBellButton(),
         ],
       ),
       body: ListView(

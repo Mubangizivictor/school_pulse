@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 import 'bloc/transport_coordinator_bloc.dart';
 import 'bloc/transport_coordinator_event.dart';
 import 'bloc/transport_coordinator_state.dart';
@@ -28,7 +29,7 @@ class _TransportCoordinatorDashboardScreenState extends State<TransportCoordinat
       appBar: AppBar(
         title: const Text('Transport Portal'),
         actions: [
-          IconButton(icon: const Icon(Icons.notifications_none), onPressed: () {}),
+          const NotificationBellButton(),
         ],
       ),
       body: BlocBuilder<TransportCoordinatorBloc, TransportCoordinatorState>(
@@ -131,14 +132,6 @@ class _TransportCoordinatorDashboardScreenState extends State<TransportCoordinat
                       ),
                     );
                   }),
-                  const SizedBox(height: 24),
-                  FadeInSlide(
-                    delay: const Duration(milliseconds: 700),
-                    child: PrimaryButton(
-                      label: 'Assign New Route',
-                      onPressed: () {},
-                    ),
-                  ),
                   const SizedBox(height: 32),
                 ],
               ),
