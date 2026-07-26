@@ -18,6 +18,7 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
   final _titleController = TextEditingController();
   final Set<String> _selectedRecipients = {'Parents'};
   final Set<String> _selectedChannels = {'Push'}; // Default to Push
+  final Set<String> _selectedClasses = {};
   bool _isScheduled = false;
   DateTime? _scheduledDateTime;
 
@@ -284,9 +285,19 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
       return;
     }
 
+    if (_selectedRecipients.contains('Specific Class Parents') && _selectedClasses.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Select at least one class to target.')),
+      );
+      return;
+    }
+
     final title = _titleController.text.isEmpty ? 'School Announcement' : _titleController.text;
     final body = _messageController.text;
-    final targets = _selectedRecipients.toList();
+    final targets = [
+      ..._selectedRecipients.where((r) => r != 'Specific Class Parents'),
+      ..._selectedClasses.map((c) => 'Class:$c'),
+    ];
     final isSms = _selectedChannels.contains('SMS');
     final isPush = _selectedChannels.contains('Push');
     final scheduleDate = _isScheduled ? _scheduledDateTime : null;
@@ -334,6 +345,7 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
         setState(() {
           _isScheduled = false;
           _scheduledDateTime = null;
+          _selectedClasses.clear();
         });
       }
     } catch (e) {
@@ -408,8 +420,14 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
               children: ['P.1', 'P.2', 'P.3', 'P.4', 'P.5', 'P.6', 'P.7'].map((c) {
                 return ChoiceChip(
                   label: Text(c, style: const TextStyle(fontSize: 12)),
-                  selected: false,
-                  onSelected: (v) {},
+                  selected: _selectedClasses.contains(c),
+                  onSelected: (v) => setState(() {
+                    if (v) {
+                      _selectedClasses.add(c);
+                    } else {
+                      _selectedClasses.remove(c);
+                    }
+                  }),
                 );
               }).toList(),
             ),
