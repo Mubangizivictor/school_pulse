@@ -27,6 +27,11 @@ import 'package:school_pulse/features/teacher/dashboard_screen.dart';
 import 'package:school_pulse/features/teacher/attendance_screen.dart';
 import 'package:school_pulse/features/teacher/marks_entry_screen.dart';
 import 'package:school_pulse/features/teacher/staff_more_screen.dart';
+import 'package:school_pulse/features/teacher/staff_profile_screen.dart';
+import 'package:school_pulse/features/teacher/security_settings_screen.dart';
+import 'package:school_pulse/features/teacher/class_analytics_screen.dart';
+import 'package:school_pulse/features/calendar/presentation/school_calendar_screen.dart';
+import 'package:school_pulse/features/lesson_plans/presentation/lesson_plans_screen.dart';
 import 'package:school_pulse/features/bursar/bursar_dashboard.dart';
 import 'package:school_pulse/features/nurse/nurse_dashboard.dart';
 import 'package:school_pulse/features/librarian/librarian_dashboard.dart';
@@ -328,6 +333,26 @@ final router = GoRouter(
           GoRoute(
             path: '/staff/more',
             builder: (context, state) => const StaffMoreScreen(),
+          ),
+          GoRoute(
+            path: '/staff/profile',
+            builder: (context, state) => const StaffProfileScreen(),
+          ),
+          GoRoute(
+            path: '/staff/security-settings',
+            builder: (context, state) => const SecuritySettingsScreen(),
+          ),
+          GoRoute(
+            path: '/staff/class-analytics',
+            builder: (context, state) => const ClassAnalyticsScreen(),
+          ),
+          GoRoute(
+            path: '/staff/calendar',
+            builder: (context, state) => const SchoolCalendarScreen(),
+          ),
+          GoRoute(
+            path: '/staff/lesson-plans',
+            builder: (context, state) => const LessonPlansScreen(),
           ),
         ],
       ),

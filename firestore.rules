@@ -224,6 +224,15 @@ service cloud.firestore {
     match /inventory_movements/{id} {
       allow read, write: if isStaff();
     }
+    match /school_events/{id} {
+      allow read, write: if isStaff();
+    }
+    // Each teacher's own lesson plans; any staff can read (e.g. dean review).
+    match /lesson_plans/{id} {
+      allow read: if isStaff();
+      allow create: if isStaff() && request.resource.data.teacherId == request.auth.uid;
+      allow update, delete: if isStaff() && resource.data.teacherId == request.auth.uid;
+    }
 
     // Outbound delivery queues - a Cloud Function (Admin SDK, bypasses
     // rules) drains these, so clients may enqueue but never read them back.

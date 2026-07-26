@@ -23,17 +23,17 @@ class StaffMoreScreen extends StatelessWidget {
                 _MenuTile(
                   icon: Icons.menu_book_outlined,
                   title: 'Lesson Plans',
-                  onTap: () {},
+                  onTap: () => context.push('/staff/lesson-plans'),
                 ),
                 _MenuTile(
                   icon: Icons.analytics_outlined,
                   title: 'Class Analytics',
-                  onTap: () {},
+                  onTap: () => context.push('/staff/class-analytics'),
                 ),
                 _MenuTile(
                   icon: Icons.event_note_outlined,
                   title: 'School Calendar',
-                  onTap: () {},
+                  onTap: () => context.push('/staff/calendar'),
                 ),
               ],
             ),
@@ -48,17 +48,12 @@ class StaffMoreScreen extends StatelessWidget {
                 _MenuTile(
                   icon: Icons.person_outline,
                   title: 'My Profile',
-                  onTap: () {},
-                ),
-                _MenuTile(
-                  icon: Icons.description_outlined,
-                  title: 'Payslips',
-                  onTap: () {},
+                  onTap: () => context.push('/staff/profile'),
                 ),
                 _MenuTile(
                   icon: Icons.lock_outline,
                   title: 'Security Settings',
-                  onTap: () {},
+                  onTap: () => context.push('/staff/security-settings'),
                 ),
               ],
             ),

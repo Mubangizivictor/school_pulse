@@ -4,6 +4,16 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get_it/get_it.dart';
 import 'package:school_pulse/features/admin/data/repositories/visitor_repository.dart';
+import 'package:school_pulse/features/calendar/domain/usecases/get_upcoming_events.dart';
+import 'package:school_pulse/features/calendar/domain/usecases/add_event.dart';
+import 'package:school_pulse/features/calendar/domain/repositories/calendar_repository.dart';
+import 'package:school_pulse/features/calendar/data/repositories/calendar_repository_impl.dart';
+import 'package:school_pulse/features/calendar/data/datasources/calendar_remote_data_source.dart';
+import 'package:school_pulse/features/lesson_plans/domain/usecases/get_lesson_plans.dart';
+import 'package:school_pulse/features/lesson_plans/domain/usecases/add_lesson_plan.dart';
+import 'package:school_pulse/features/lesson_plans/domain/repositories/lesson_plans_repository.dart';
+import 'package:school_pulse/features/lesson_plans/data/repositories/lesson_plans_repository_impl.dart';
+import 'package:school_pulse/features/lesson_plans/data/datasources/lesson_plans_remote_data_source.dart';
 import 'package:school_pulse/features/inventory/domain/usecases/get_inventory_items.dart';
 import 'package:school_pulse/features/inventory/domain/usecases/get_recent_movements.dart';
 import 'package:school_pulse/features/inventory/domain/usecases/add_stock.dart';
@@ -525,6 +535,26 @@ Future<void> init() async {
   //! System Config
   sl.registerFactory(() => SystemConfigBloc(repository: sl()));
   sl.registerLazySingleton(() => SystemConfigRepository());
+
+  //! Features - Calendar
+  sl.registerLazySingleton(() => GetUpcomingEvents(sl()));
+  sl.registerLazySingleton(() => AddEvent(sl()));
+  sl.registerLazySingleton<CalendarRepository>(
+    () => CalendarRepositoryImpl(remoteDataSource: sl()),
+  );
+  sl.registerLazySingleton<CalendarRemoteDataSource>(
+    () => CalendarRemoteDataSourceImpl(firestore: sl()),
+  );
+
+  //! Features - Lesson Plans
+  sl.registerLazySingleton(() => GetLessonPlans(sl()));
+  sl.registerLazySingleton(() => AddLessonPlan(sl()));
+  sl.registerLazySingleton<LessonPlansRepository>(
+    () => LessonPlansRepositoryImpl(remoteDataSource: sl()),
+  );
+  sl.registerLazySingleton<LessonPlansRemoteDataSource>(
+    () => LessonPlansRemoteDataSourceImpl(firestore: sl()),
+  );
 
   //! Features - Inventory
   sl.registerLazySingleton(() => GetInventoryItems(sl()));
