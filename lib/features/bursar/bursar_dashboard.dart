@@ -100,7 +100,13 @@ class _BursarDashboardScreenState extends State<BursarDashboardScreen> {
               else
                 _buildCollectionProgress(context, semanticColors, data),
               const SizedBox(height: 24),
-              const SectionHeader(title: 'Recent Transactions', actionLabel: 'View All'),
+              SectionHeader(
+                title: 'Recent Transactions',
+                actionLabel: (data != null && data.payments.isNotEmpty) ? 'View All' : null,
+                onActionPressed: (data != null && data.payments.isNotEmpty)
+                    ? () => _showAllTransactionsSheet(context, data, studentsById, semanticColors)
+                    : null,
+              ),
               if (isLoading)
                 ...List.generate(3, (index) => const Padding(
                   padding: EdgeInsets.only(bottom: 8),
@@ -112,39 +118,12 @@ class _BursarDashboardScreenState extends State<BursarDashboardScreen> {
                   child: Text('No transactions recorded yet.'),
                 )
               else if (data != null)
-                ...data.payments.take(3).map((record) {
-                  final studentName = studentsById[record.studentId]?.name ?? 'Unknown Student';
-                  return AppCard(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: semanticColors.success.withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(Icons.arrow_downward, color: semanticColors.success, size: 20),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(studentName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              Text(record.method, style: Theme.of(context).textTheme.labelSmall),
-                            ],
-                          ),
-                        ),
-                        Text(
-                          CurrencyFormatter.ugx(record.amount),
-                          style: TextStyle(fontWeight: FontWeight.bold, color: semanticColors.success),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
+                ...data.payments.take(3).map((record) => _TransactionTile(
+                      record: record,
+                      studentName: studentsById[record.studentId]?.name ?? 'Unknown Student',
+                      semanticColors: semanticColors,
+                      onTap: () => _showReceiptDialog(context, record, studentsById[record.studentId]?.name ?? 'Unknown Student'),
+                    )),
             ],
           );
         },
@@ -330,6 +309,131 @@ class _BursarDashboardScreenState extends State<BursarDashboardScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  void _showReceiptDialog(BuildContext context, PaymentRecord record, String studentName) {
+    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Receipt Details'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _receiptRow(context, 'Student', studentName),
+            _receiptRow(context, 'Reference', record.reference),
+            _receiptRow(context, 'Date', DateFormatter.format(record.date)),
+            _receiptRow(context, 'Method', record.method),
+            _receiptRow(context, 'Amount', CurrencyFormatter.ugx(record.amount)),
+            const Divider(),
+            Text('Status: Successful', style: TextStyle(color: semanticColors.success, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close')),
+        ],
+      ),
+    );
+  }
+
+  Widget _receiptRow(BuildContext context, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          Flexible(child: Text(value, textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.bold))),
+        ],
+      ),
+    );
+  }
+
+  void _showAllTransactionsSheet(
+    BuildContext context,
+    _BursarFinanceSnapshot data,
+    Map<String, Student> studentsById,
+    SemanticColors semanticColors,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        expand: false,
+        builder: (sheetContext, scrollController) => ListView.separated(
+          controller: scrollController,
+          padding: const EdgeInsets.all(16),
+          itemCount: data.payments.length,
+          separatorBuilder: (_, _) => const SizedBox(height: 8),
+          itemBuilder: (context, index) {
+            final record = data.payments[index];
+            final studentName = studentsById[record.studentId]?.name ?? 'Unknown Student';
+            return _TransactionTile(
+              record: record,
+              studentName: studentName,
+              semanticColors: semanticColors,
+              onTap: () => _showReceiptDialog(context, record, studentName),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _TransactionTile extends StatelessWidget {
+  final PaymentRecord record;
+  final String studentName;
+  final SemanticColors semanticColors;
+  final VoidCallback onTap;
+
+  const _TransactionTile({
+    required this.record,
+    required this.studentName,
+    required this.semanticColors,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: AppCard(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        margin: const EdgeInsets.only(bottom: 8),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: semanticColors.success.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.arrow_downward, color: semanticColors.success, size: 20),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(studentName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(record.method, style: Theme.of(context).textTheme.labelSmall),
+                ],
+              ),
+            ),
+            Text(
+              CurrencyFormatter.ugx(record.amount),
+              style: TextStyle(fontWeight: FontWeight.bold, color: semanticColors.success),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.chevron_right, size: 18, color: Theme.of(context).colorScheme.outline),
+          ],
+        ),
       ),
     );
   }
