@@ -187,6 +187,38 @@ service cloud.firestore {
       allow read, write: if isStaff();
     }
 
+    // Per-role dashboard summary docs (e.g. stats/attendance_summary,
+    // stats/security_summary) read by gatekeeper/security/transport/matron/
+    // catering/games/exams dashboards.
+    match /stats/{docId} {
+      allow read, write: if isStaff();
+    }
+
+    // Gatekeeper's own entry/exit log, separate from the front-desk
+    // `visitors` collection above.
+    match /visitor_logs/{id} {
+      allow read, write: if isStaff();
+    }
+
+    match /bus_routes/{id} {
+      allow read, write: if isStaff();
+    }
+    match /dormitories/{id} {
+      allow read, write: if isStaff();
+    }
+    match /meal_plans/{id} {
+      allow read, write: if isStaff();
+    }
+    match /security_alerts/{id} {
+      allow read, write: if isStaff();
+    }
+    match /sports_fixtures/{id} {
+      allow read, write: if isStaff();
+    }
+    match /exams/{id} {
+      allow read, write: if isStaff();
+    }
+
     // Outbound delivery queues - a Cloud Function (Admin SDK, bypasses
     // rules) drains these, so clients may enqueue but never read them back.
     match /broadcast_queue/{id} {
