@@ -512,18 +512,34 @@ class AdminDashboardScreen extends StatelessWidget {
                 ),
               ),
               const Divider(height: 1),
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: (state is AdminDashboardLoaded && state.recentLogs.isNotEmpty) 
-                    ? state.recentLogs.length 
-                    : 5,
-                separatorBuilder: (context, index) => const Divider(height: 1),
-                itemBuilder: (context, index) {
-                  if (state is AdminDashboardLoaded && state.recentLogs.isNotEmpty) {
+              if (state is AdminDashboardLoading || state is AdminDashboardInitial)
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: List.generate(3, (index) => const Padding(
+                      padding: EdgeInsets.only(bottom: 8),
+                      child: Skeleton(height: 48),
+                    )),
+                  ),
+                )
+              else if (state is AdminDashboardLoaded && state.recentLogs.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Text(
+                    'No recent activity yet.',
+                    style: TextStyle(color: Theme.of(context).colorScheme.outline),
+                  ),
+                )
+              else if (state is AdminDashboardLoaded)
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: state.recentLogs.length,
+                  separatorBuilder: (context, index) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
                     final log = state.recentLogs[index];
                     final color = Color(int.parse(log.colorHex, radix: 16));
-                    
+
                     return ListTile(
                       leading: Container(
                         padding: const EdgeInsets.all(8),
@@ -534,30 +550,8 @@ class AdminDashboardScreen extends StatelessWidget {
                       subtitle: Text(log.description, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.outline)),
                       trailing: Text(_formatTimestamp(log.timestamp), style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.outline)),
                     );
-                  }
-                  
-                  // Fallback/Mock data while loading or if empty
-                  final logs = [
-                    {'title': 'New Staff Account', 'desc': 'Mrs. Namono assigned to P.4 Blue', 'time': '10m ago', 'icon': Icons.person_add, 'color': Colors.blue},
-                    {'title': 'Parent Access', 'desc': 'Family: Mugisha regenerated codes', 'time': '2h ago', 'icon': Icons.vpn_key, 'color': Colors.teal},
-                    {'title': 'SMS Broadcast', 'desc': 'Term 3 fees reminder sent to 450 parents', 'time': '3h ago', 'icon': Icons.send, 'color': Colors.purple},
-                    {'title': 'Security Alert', 'desc': 'Unauthorized login attempt from 192.168.1.1', 'time': '5h ago', 'icon': Icons.gpp_maybe, 'color': Colors.red},
-                    {'title': 'Inventory Update', 'desc': '200 new textbooks logged by Librarian', 'time': 'Yesterday', 'icon': Icons.inventory_2, 'color': Colors.orange},
-                  ];
-                  final log = logs[index];
-                  final color = log['color'] as Color;
-                  return ListTile(
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
-                      child: Icon(log['icon'] as IconData, size: 16, color: color),
-                    ),
-                    title: Text(log['title'] as String, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                    subtitle: Text(log['desc'] as String, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.outline)),
-                    trailing: Text(log['time'] as String, style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.outline)),
-                  );
-                },
-              ),
+                  },
+                ),
             ],
           ),
         );
