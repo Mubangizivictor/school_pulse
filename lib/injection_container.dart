@@ -51,6 +51,7 @@ import 'package:school_pulse/features/library/data/datasources/library_remote_da
 import 'package:school_pulse/features/discipline/presentation/bloc/discipline_bloc.dart';
 import 'package:school_pulse/features/discipline/domain/usecases/get_discipline_incidents.dart';
 import 'package:school_pulse/features/discipline/domain/usecases/get_recent_discipline_incidents.dart';
+import 'package:school_pulse/features/discipline/domain/usecases/log_discipline_incident.dart';
 import 'package:school_pulse/features/discipline/domain/repositories/discipline_repository.dart';
 import 'package:school_pulse/features/discipline/data/repositories/discipline_repository_impl.dart';
 import 'package:school_pulse/features/discipline/data/datasources/discipline_remote_data_source.dart';
@@ -274,12 +275,14 @@ Future<void> init() async {
     () => DisciplineBloc(
       getDisciplineIncidents: sl(),
       getRecentDisciplineIncidents: sl(),
+      logDisciplineIncident: sl(),
     ),
   );
 
   // Use cases
   sl.registerLazySingleton(() => GetDisciplineIncidents(sl()));
   sl.registerLazySingleton(() => GetRecentDisciplineIncidents(sl()));
+  sl.registerLazySingleton(() => LogDisciplineIncident(sl()));
 
   // Repository
   sl.registerLazySingleton<DisciplineRepository>(

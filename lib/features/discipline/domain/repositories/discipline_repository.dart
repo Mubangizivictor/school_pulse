@@ -5,4 +5,5 @@ import '../entities/discipline_incident.dart';
 abstract class DisciplineRepository {
   Future<Either<Failure, List<DisciplineIncident>>> getDisciplineIncidents(String studentId);
   Future<Either<Failure, List<DisciplineIncident>>> getRecentDisciplineIncidents();
+  Future<Either<Failure, void>> logIncident(DisciplineIncident incident);
 }

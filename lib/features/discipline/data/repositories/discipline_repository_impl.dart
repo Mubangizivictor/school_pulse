@@ -3,6 +3,7 @@ import '../../../../core/error/failures.dart';
 import '../../domain/entities/discipline_incident.dart';
 import '../../domain/repositories/discipline_repository.dart';
 import '../datasources/discipline_remote_data_source.dart';
+import '../models/discipline_incident_model.dart';
 
 class DisciplineRepositoryImpl implements DisciplineRepository {
   final DisciplineRemoteDataSource remoteDataSource;
@@ -24,6 +25,25 @@ class DisciplineRepositoryImpl implements DisciplineRepository {
     try {
       final remoteIncidents = await remoteDataSource.getRecentDisciplineIncidents();
       return Right(remoteIncidents);
+    } catch (e) {
+      return Left(ServerFailure());
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> logIncident(DisciplineIncident incident) async {
+    try {
+      final model = DisciplineIncidentModel(
+        id: incident.id,
+        studentId: incident.studentId,
+        date: incident.date,
+        description: incident.description,
+        severity: incident.severity,
+        resolution: incident.resolution,
+        counselingNotes: incident.counselingNotes,
+      );
+      await remoteDataSource.logIncident(model);
+      return const Right(null);
     } catch (e) {
       return Left(ServerFailure());
     }

@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../domain/entities/discipline_incident.dart';
 
 abstract class DisciplineEvent extends Equatable {
   const DisciplineEvent();
@@ -17,3 +18,18 @@ class LoadDisciplineIncidents extends DisciplineEvent {
 }
 
 class LoadRecentIncidents extends DisciplineEvent {}
+
+class LogIncidentRequested extends DisciplineEvent {
+  final String studentId;
+  final String description;
+  final Severity severity;
+
+  const LogIncidentRequested({
+    required this.studentId,
+    required this.description,
+    required this.severity,
+  });
+
+  @override
+  List<Object> get props => [studentId, description, severity];
+}

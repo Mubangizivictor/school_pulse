@@ -4,6 +4,7 @@ import '../models/discipline_incident_model.dart';
 abstract class DisciplineRemoteDataSource {
   Future<List<DisciplineIncidentModel>> getDisciplineIncidents(String studentId);
   Future<List<DisciplineIncidentModel>> getRecentDisciplineIncidents();
+  Future<void> logIncident(DisciplineIncidentModel incident);
 }
 
 class DisciplineRemoteDataSourceImpl implements DisciplineRemoteDataSource {
@@ -29,5 +30,10 @@ class DisciplineRemoteDataSourceImpl implements DisciplineRemoteDataSource {
         .limit(20)
         .get();
     return snapshot.docs.map((doc) => DisciplineIncidentModel.fromFirestore(doc)).toList();
+  }
+
+  @override
+  Future<void> logIncident(DisciplineIncidentModel incident) async {
+    await firestore.collection('discipline_incidents').add(incident.toFirestore());
   }
 }
