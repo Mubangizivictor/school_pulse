@@ -9,6 +9,7 @@ import 'package:school_pulse/firebase_options.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/academic/presentation/bloc/academic_bloc.dart';
 import 'package:school_pulse/features/finance/presentation/bloc/finance_bloc.dart';
 import 'package:school_pulse/features/health/presentation/bloc/health_bloc.dart';
@@ -158,12 +159,24 @@ class SchoolPulseAppView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<SystemConfigBloc, SystemConfigState>(
-      listener: (context, state) {
-        if (state is SystemConfigLoaded) {
-          context.read<ThemeProvider>().updateConfig(state.config);
-        }
-      },
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<SystemConfigBloc, SystemConfigState>(
+          listener: (context, state) {
+            if (state is SystemConfigLoaded) {
+              context.read<ThemeProvider>().updateConfig(state.config);
+            }
+          },
+        ),
+        BlocListener<AuthBloc, AuthState>(
+          listener: (context, state) {
+            if (state is AuthAuthenticated) {
+              // Sync FCM token whenever a user authenticates
+              NotificationService().syncToken(state.user.id);
+            }
+          },
+        ),
+      ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
           final config = themeProvider.config;

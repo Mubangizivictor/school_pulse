@@ -10,10 +10,10 @@ class MatronRepositoryImpl implements MatronRepository {
   MatronRepositoryImpl({required this.remoteDataSource});
 
   @override
-  Future<Either<Failure, MatronLoaded>> getDashboardData() async {
+  Future<Either<Failure, MatronLoaded>> getDashboardData({String? gender}) async {
     try {
-      final dormitories = await remoteDataSource.getDormitoriesStatus();
-      final stats = await remoteDataSource.getAttendanceStats();
+      final dormitories = await remoteDataSource.getDormitoriesStatus(gender: gender);
+      final stats = await remoteDataSource.getAttendanceStats(gender: gender);
       
       return Right(MatronLoaded(
         dormitories: dormitories,
@@ -27,9 +27,9 @@ class MatronRepositoryImpl implements MatronRepository {
   }
 
   @override
-  Future<Either<Failure, List<Student>>> getUnallocatedStudents() async {
+  Future<Either<Failure, List<Student>>> getUnallocatedStudents({String? gender}) async {
     try {
-      final students = await remoteDataSource.getUnallocatedStudents();
+      final students = await remoteDataSource.getUnallocatedStudents(gender: gender);
       return Right(students);
     } catch (e) {
       return Left(ServerFailure(e.toString()));

@@ -35,8 +35,9 @@ class NotificationService {
       // taking the whole app down over.
       try {
         String? token = await _fcm.getToken();
-        if (token != null) {
-          await _saveTokenToDatabase(token);
+        final uid = _auth.currentUser?.uid;
+        if (token != null && uid != null) {
+          await _saveTokenToDatabase(uid, token);
         }
       } catch (e) {
         if (kDebugMode) {
@@ -46,21 +47,17 @@ class NotificationService {
     }
 
     // Listen for token refreshes
-    _fcm.onTokenRefresh.listen(_saveTokenToDatabase);
+    _fcm.onTokenRefresh.listen((token) {
+      final uid = _auth.currentUser?.uid;
+      if (uid != null) _saveTokenToDatabase(uid, token);
+    });
 
     // Re-sync the token once a user actually signs in - initialize() runs at
     // app startup, often before login, so the first getToken() above may
     // have nothing to attach it to yet.
     _authSub ??= _auth.authStateChanges().listen((user) async {
       if (user != null) {
-        try {
-          final token = await _fcm.getToken();
-          if (token != null) await _saveTokenToDatabase(token);
-        } catch (e) {
-          if (kDebugMode) {
-            print('Skipping FCM token (expected on simulators): $e');
-          }
-        }
+        syncToken(user.uid);
       }
     });
 
@@ -84,13 +81,32 @@ class NotificationService {
     });
   }
 
+  /// Manually sync the FCM token for a specific user ID.
+  /// Used for both Firebase Auth users and "virtual" parent users.
+  Future<void> syncToken(String uid) async {
+    try {
+      String? token = await _fcm.getToken();
+      if (token != null) {
+        await _saveTokenToDatabase(uid, token);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error syncing FCM token for $uid: $e');
+      }
+    }
+  }
+
+  /// Manually trigger a local notification for testing purposes
+  Future<void> testLocalNotification() async {
+    await LocalNotificationService.show(
+      title: "Test Notification",
+      body: "This is a test notification from School Pulse",
+    );
+  }
+
   /// Tokens are stored per-user so sendDirectNotification (which reads
-  /// users/{uid}/tokens) can actually find them - a token saved before
-  /// login has no uid to attach to yet, so it's simply skipped and will be
-  /// retried by the auth-state listener above once the user signs in.
-  Future<void> _saveTokenToDatabase(String token) async {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) return;
+  /// users/{uid}/tokens) can actually find them.
+  Future<void> _saveTokenToDatabase(String uid, String token) async {
     await _firestore
         .collection('users')
         .doc(uid)
@@ -192,5 +208,11 @@ class NotificationService {
 }
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Handle background message
+  if (kDebugMode) {
+    print("Handling a background message: ${message.messageId}");
+    print('Message data: ${message.data}');
+    if (message.notification != null) {
+      print('Message notification: ${message.notification?.title}');
+    }
+  }
 }

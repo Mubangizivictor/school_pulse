@@ -18,7 +18,7 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> with Sing
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -31,6 +31,7 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> with Sing
           controller: _tabController,
           tabs: const [
             Tab(text: 'Classes & Streams'),
+            Tab(text: 'Subjects'),
             Tab(text: 'Staff Departments'),
           ],
         ),
@@ -39,6 +40,7 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> with Sing
         controller: _tabController,
         children: [
           _buildClassesTab(),
+          _buildSubjectsTab(),
           _buildDepartmentsTab(),
         ],
       ),
@@ -143,6 +145,88 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> with Sing
                                 visualDensity: VisualDensity.compact,
                               ),
                             ],
+                          ),
+                        );
+                      },
+                    ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildSubjectsTab() {
+    return StreamBuilder<List<SchoolSubject>>(
+      stream: _repository.watchSubjects(),
+      builder: (context, snapshot) {
+        final subjects = snapshot.data ?? const [];
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isMobile = constraints.maxWidth < 600;
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Subjects Taught at This School',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      FilledButton.icon(
+                        onPressed: () => _showSubjectDialog(context),
+                        icon: const Icon(Icons.add),
+                        label: Text(isMobile ? 'Add' : 'Add Subject'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  if (snapshot.connectionState == ConnectionState.waiting)
+                    const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
+                  else if (subjects.isEmpty)
+                    const EmptyState(
+                      icon: Icons.menu_book_outlined,
+                      title: 'No subjects yet',
+                      message: 'Register the subjects taught at this school so they can be assigned to subject teachers.',
+                    )
+                  else
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: subjects.length,
+                      separatorBuilder: (context, index) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final s = subjects[index];
+                        return AppCard(
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: CircleAvatar(
+                              radius: 20,
+                              child: Text(s.name.isNotEmpty ? s.name[0] : '?', style: const TextStyle(fontSize: 14)),
+                            ),
+                            title: Text(s.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit_outlined, size: 18),
+                                  onPressed: () => _showSubjectDialog(context, existing: s),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, size: 18),
+                                  onPressed: () => _repository.deleteSubject(s.id),
+                                ),
+                              ],
+                            ),
                           ),
                         );
                       },
@@ -279,6 +363,38 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> with Sing
               if (dialogContext.mounted) Navigator.pop(dialogContext);
             },
             child: Text(existing == null ? 'Add Class' : 'Save Changes'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSubjectDialog(BuildContext context, {SchoolSubject? existing}) {
+    final nameController = TextEditingController(text: existing?.name ?? '');
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(existing == null ? 'Add Subject' : 'Edit Subject'),
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(labelText: 'Subject Name (e.g. Mathematics)'),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () async {
+              if (nameController.text.trim().isEmpty) return;
+              final subject = SchoolSubject(id: existing?.id ?? '', name: nameController.text.trim());
+              if (existing == null) {
+                await _repository.addSubject(subject);
+              } else {
+                await _repository.updateSubject(subject);
+              }
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
+            },
+            child: Text(existing == null ? 'Add Subject' : 'Save Changes'),
           ),
         ],
       ),

@@ -25,6 +25,20 @@ class SchoolClass {
       );
 }
 
+class SchoolSubject {
+  final String id;
+  final String name;
+
+  SchoolSubject({required this.id, required this.name});
+
+  Map<String, dynamic> toMap() => {'name': name};
+
+  factory SchoolSubject.fromMap(Map<String, dynamic> map, String id) => SchoolSubject(
+        id: id,
+        name: map['name'] ?? '',
+      );
+}
+
 class Department {
   final String id;
   final String name;

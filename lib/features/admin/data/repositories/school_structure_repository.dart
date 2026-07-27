@@ -20,6 +20,26 @@ class SchoolStructureRepository {
     return _firestore.collection('classes').doc(schoolClass.id).update(schoolClass.toMap());
   }
 
+  Stream<List<SchoolSubject>> watchSubjects() {
+    return _firestore
+        .collection('subjects')
+        .orderBy('name')
+        .snapshots()
+        .map((s) => s.docs.map((d) => SchoolSubject.fromMap(d.data(), d.id)).toList());
+  }
+
+  Future<void> addSubject(SchoolSubject subject) {
+    return _firestore.collection('subjects').add(subject.toMap());
+  }
+
+  Future<void> updateSubject(SchoolSubject subject) {
+    return _firestore.collection('subjects').doc(subject.id).update(subject.toMap());
+  }
+
+  Future<void> deleteSubject(String id) {
+    return _firestore.collection('subjects').doc(id).delete();
+  }
+
   Stream<List<Department>> watchDepartments() {
     return _firestore
         .collection('departments')

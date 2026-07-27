@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:school_pulse/core/usecases/usecase.dart';
@@ -12,27 +13,10 @@ import 'package:school_pulse/features/student/domain/entities/parent_access_code
 import 'package:school_pulse/features/auth/domain/usecases/toggle_staff_status.dart';
 import 'package:school_pulse/features/student/domain/usecases/get_all_students.dart';
 import 'package:school_pulse/features/student/domain/usecases/manage_parent_access_codes.dart';
+import 'package:school_pulse/features/admin/data/models/school_class.dart';
+import 'package:school_pulse/features/admin/data/repositories/school_structure_repository.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 import 'package:go_router/go_router.dart';
-
-const List<String> schoolClasses = [
-  'Primary 1',
-  'Primary 2',
-  'Primary 3',
-  'Primary 4',
-  'Primary 5',
-  'Primary 6',
-  'Primary 7'
-];
-const List<String> schoolSubjects = [
-  'Mathematics',
-  'English',
-  'Science',
-  'SST',
-  'Religious Education',
-  'Physical Education',
-  'Art & Craft'
-];
 
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({super.key});
@@ -43,6 +27,7 @@ class UserManagementScreen extends StatefulWidget {
 
 class _UserManagementScreenState extends State<UserManagementScreen> with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  bool _appliedDeepLinkTab = false;
 
   @override
   void initState() {
@@ -53,6 +38,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // Only honor the ?tab= deep link once, on first build - otherwise any
+    // rebuild (e.g. after editing/deactivating/deleting a parent code) would
+    // re-read the URL and snap the user back to tab 0.
+    if (_appliedDeepLinkTab) return;
+    _appliedDeepLinkTab = true;
     final uri = GoRouterState.of(context).uri;
     final tabIndex = int.tryParse(uri.queryParameters['tab'] ?? '0') ?? 0;
     if (tabIndex >= 0 && tabIndex < 2) {
@@ -102,12 +92,31 @@ class _StaffTab extends StatefulWidget {
 class _StaffTabState extends State<_StaffTab> {
   late Future<List<UserEntity>> _future;
   String _searchQuery = '';
-  bool _showDisabled = false;
+  String _statusFilter = 'Active'; // 'Active', 'Disabled', 'All'
+
+  final _structureRepository = di.sl<SchoolStructureRepository>();
+  List<String> _classNames = [];
+  List<String> _subjectNames = [];
+  StreamSubscription<List<SchoolClass>>? _classesSub;
+  StreamSubscription<List<SchoolSubject>>? _subjectsSub;
 
   @override
   void initState() {
     super.initState();
     _future = _load();
+    _classesSub = _structureRepository.watchClasses().listen((classes) {
+      setState(() => _classNames = classes.map((c) => c.name).toList());
+    });
+    _subjectsSub = _structureRepository.watchSubjects().listen((subjects) {
+      setState(() => _subjectNames = subjects.map((s) => s.name).toList());
+    });
+  }
+
+  @override
+  void dispose() {
+    _classesSub?.cancel();
+    _subjectsSub?.cancel();
+    super.dispose();
   }
 
   Future<List<UserEntity>> _load() async {
@@ -123,11 +132,27 @@ class _StaffTabState extends State<_StaffTab> {
   }
 
   Future<void> _toggleStatus(UserEntity member) async {
+    final reasonController = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(member.isActive ? 'Disable Account' : 'Enable Account'),
-        content: Text('Are you sure you want to ${member.isActive ? 'disable' : 'enable'} access for ${member.name}?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Are you sure you want to ${member.isActive ? 'disable' : 'enable'} access for ${member.name}?'),
+            if (member.isActive) ...[
+              const SizedBox(height: 16),
+              TextField(
+                controller: reasonController,
+                decoration: const InputDecoration(
+                  labelText: 'Reason for deactivation',
+                  hintText: 'e.g., Staff left school, Suspended',
+                ),
+              ),
+            ],
+          ],
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           TextButton(
@@ -139,7 +164,11 @@ class _StaffTabState extends State<_StaffTab> {
     );
 
     if (confirmed == true) {
-      await di.sl<ToggleStaffStatus>()(member.id, !member.isActive);
+      await di.sl<ToggleStaffStatus>()(
+        member.id, 
+        !member.isActive,
+        reason: member.isActive ? reasonController.text.trim() : null,
+      );
       _refresh();
     }
   }
@@ -169,7 +198,7 @@ class _StaffTabState extends State<_StaffTab> {
   Future<void> _editStaff(UserEntity member) async {
     final nameController = TextEditingController(text: member.name);
     final emailController = TextEditingController(text: member.email);
-    UserRole selectedRole = member.role;
+    Set<UserRole> selectedRoles = member.roles.toSet();
     String? assignedClass = member.assignedClass;
     List<SubjectAssignment> subjects = List.from(member.subjects ?? []);
 
@@ -192,31 +221,51 @@ class _StaffTabState extends State<_StaffTab> {
                   const SizedBox(height: 16),
                   TextField(controller: emailController, decoration: const InputDecoration(labelText: 'Email Address')),
                   const SizedBox(height: 16),
-                  DropdownButtonFormField<UserRole>(
-                    initialValue: selectedRole,
-                    decoration: const InputDecoration(labelText: 'System Role'),
-                    items: roles.map((role) => DropdownMenuItem(value: role, child: Text(UserRoleDisplay.name(role)))).toList(),
-                    onChanged: (role) {
-                      setDialogState(() {
-                        selectedRole = role ?? selectedRole;
-                        if (selectedRole == UserRole.classTeacher) {
-                          assignedClass ??= schoolClasses.first;
-                        } else if (selectedRole == UserRole.subjectTeacher) {
-                          // keep existing subjects if any
-                        }
-                      });
-                    },
+                  const Text('System Roles (select all that apply)', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    'One login can hold several roles - e.g. Class Teacher + Subject Teacher + Discipline Head.',
+                    style: TextStyle(fontSize: 12),
                   ),
-                  if (selectedRole == UserRole.classTeacher) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: roles.map((role) {
+                      final selected = selectedRoles.contains(role);
+                      return FilterChip(
+                        label: Text(UserRoleDisplay.name(role)),
+                        selected: selected,
+                        onSelected: (val) {
+                          setDialogState(() {
+                            if (val) {
+                              selectedRoles.add(role);
+                              if (role == UserRole.classTeacher && _classNames.isNotEmpty) {
+                                assignedClass ??= _classNames.first;
+                              }
+                            } else {
+                              selectedRoles.remove(role);
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  if (selectedRoles.contains(UserRole.classTeacher)) ...[
                     const SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      initialValue: assignedClass,
-                      decoration: const InputDecoration(labelText: 'Assigned Class'),
-                      items: schoolClasses.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                      onChanged: (val) => setDialogState(() => assignedClass = val),
-                    ),
+                    if (_classNames.isEmpty)
+                      const Text(
+                        'No classes registered yet. Add classes in School Structure first.',
+                        style: TextStyle(fontSize: 12, color: Colors.red),
+                      )
+                    else
+                      DropdownButtonFormField<String>(
+                        initialValue: assignedClass,
+                        decoration: const InputDecoration(labelText: 'Assigned Class'),
+                        items: _classNames.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                        onChanged: (val) => setDialogState(() => assignedClass = val),
+                      ),
                   ],
-                  if (selectedRole == UserRole.subjectTeacher) ...[
+                  if (selectedRoles.contains(UserRole.subjectTeacher)) ...[
                     const SizedBox(height: 24),
                     const Text('Subject Assignments', style: TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
@@ -250,7 +299,7 @@ class _StaffTabState extends State<_StaffTab> {
           actions: [
             TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
             FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
+              onPressed: selectedRoles.isEmpty ? null : () => Navigator.pop(dialogContext, true),
               child: const Text('Save Changes'),
             ),
           ],
@@ -263,14 +312,15 @@ class _StaffTabState extends State<_StaffTab> {
         id: member.id,
         name: nameController.text.trim(),
         email: emailController.text.trim(),
-        role: selectedRole,
-        assignedClass: selectedRole == UserRole.classTeacher ? assignedClass : null,
-        subjects: selectedRole == UserRole.subjectTeacher ? subjects : null,
+        roles: selectedRoles.toList(),
+        assignedClass: selectedRoles.contains(UserRole.classTeacher) ? assignedClass : null,
+        subjects: selectedRoles.contains(UserRole.subjectTeacher) ? subjects : null,
         isActive: member.isActive,
         mustChangePassword: member.mustChangePassword,
         studentIds: member.studentIds,
         phoneNumber: member.phoneNumber,
         photoUrl: member.photoUrl,
+        deactivationReason: member.deactivationReason,
       );
       await di.sl<UpdateStaffMember>()(updated);
       _refresh();
@@ -278,8 +328,23 @@ class _StaffTabState extends State<_StaffTab> {
   }
 
   Future<SubjectAssignment?> _showAddSubjectDialog(BuildContext context) async {
-    String selectedSub = schoolSubjects.first;
-    String selectedCls = schoolClasses.first;
+    if (_subjectNames.isEmpty || _classNames.isEmpty) {
+      return showDialog<SubjectAssignment>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Nothing to assign yet'),
+          content: const Text(
+            'Register at least one class and one subject in School Structure before assigning a subject teacher.',
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
+          ],
+        ),
+      );
+    }
+
+    String selectedSub = _subjectNames.first;
+    String selectedCls = _classNames.first;
 
     return showDialog<SubjectAssignment>(
       context: context,
@@ -292,14 +357,14 @@ class _StaffTabState extends State<_StaffTab> {
               DropdownButtonFormField<String>(
                 initialValue: selectedSub,
                 decoration: const InputDecoration(labelText: 'Subject'),
-                items: schoolSubjects.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                items: _subjectNames.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
                 onChanged: (val) => setState(() => selectedSub = val!),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: selectedCls,
                 decoration: const InputDecoration(labelText: 'Class'),
-                items: schoolClasses.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                items: _classNames.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                 onChanged: (val) => setState(() => selectedCls = val!),
               ),
             ],
@@ -320,7 +385,7 @@ class _StaffTabState extends State<_StaffTab> {
     final nameController = TextEditingController();
     final emailController = TextEditingController();
     final passwordController = TextEditingController();
-    UserRole selectedRole = UserRole.classTeacher;
+    Set<UserRole> selectedRoles = {UserRole.classTeacher};
     String? assignedClass;
     List<SubjectAssignment> subjects = [];
 
@@ -390,35 +455,54 @@ class _StaffTabState extends State<_StaffTab> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  DropdownButtonFormField<UserRole>(
-                    initialValue: selectedRole,
-                    decoration: const InputDecoration(
-                      labelText: 'System Role',
-                      prefixIcon: Icon(Icons.badge_outlined),
-                    ),
-                    items: roles.map((role) => DropdownMenuItem(value: role, child: Text(UserRoleDisplay.name(role)))).toList(),
-                    onChanged: (role) {
-                      setDialogState(() {
-                        selectedRole = role ?? selectedRole;
-                        if (selectedRole == UserRole.classTeacher) {
-                          assignedClass ??= schoolClasses.first;
-                        }
-                      });
-                    },
+                  const Text('System Roles (select all that apply)', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    'One login can hold several roles - e.g. Class Teacher + Subject Teacher + Discipline Head.',
+                    style: TextStyle(fontSize: 12),
                   ),
-                  if (selectedRole == UserRole.classTeacher) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: roles.map((role) {
+                      final selected = selectedRoles.contains(role);
+                      return FilterChip(
+                        label: Text(UserRoleDisplay.name(role)),
+                        selected: selected,
+                        onSelected: (val) {
+                          setDialogState(() {
+                            if (val) {
+                              selectedRoles.add(role);
+                              if (role == UserRole.classTeacher && _classNames.isNotEmpty) {
+                                assignedClass ??= _classNames.first;
+                              }
+                            } else {
+                              selectedRoles.remove(role);
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  if (selectedRoles.contains(UserRole.classTeacher)) ...[
                     const SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      initialValue: assignedClass,
-                      decoration: const InputDecoration(
-                        labelText: 'Assigned Class',
-                        prefixIcon: Icon(Icons.meeting_room_outlined),
+                    if (_classNames.isEmpty)
+                      const Text(
+                        'No classes registered yet. Add classes in School Structure first.',
+                        style: TextStyle(fontSize: 12, color: Colors.red),
+                      )
+                    else
+                      DropdownButtonFormField<String>(
+                        initialValue: assignedClass,
+                        decoration: const InputDecoration(
+                          labelText: 'Assigned Class',
+                          prefixIcon: Icon(Icons.meeting_room_outlined),
+                        ),
+                        items: _classNames.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                        onChanged: (val) => setDialogState(() => assignedClass = val),
                       ),
-                      items: schoolClasses.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                      onChanged: (val) => setDialogState(() => assignedClass = val),
-                    ),
                   ],
-                  if (selectedRole == UserRole.subjectTeacher) ...[
+                  if (selectedRoles.contains(UserRole.subjectTeacher)) ...[
                     const SizedBox(height: 24),
                     const Text('Subject Assignments', style: TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
@@ -453,7 +537,10 @@ class _StaffTabState extends State<_StaffTab> {
             TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
             FilledButton(
               onPressed: () {
-                if (nameController.text.isEmpty || emailController.text.isEmpty || passwordController.text.isEmpty) {
+                if (nameController.text.isEmpty ||
+                    emailController.text.isEmpty ||
+                    passwordController.text.isEmpty ||
+                    selectedRoles.isEmpty) {
                   return;
                 }
                 Navigator.pop(dialogContext, true);
@@ -479,10 +566,10 @@ class _StaffTabState extends State<_StaffTab> {
     final createResult = await di.sl<CreateStaffAccount>()(CreateStaffAccountParams(
       email: emailController.text.trim(),
       name: nameController.text.trim(),
-      role: selectedRole,
+      roles: selectedRoles.toList(),
       password: passwordController.text.trim(),
-      assignedClass: selectedRole == UserRole.classTeacher ? assignedClass : null,
-      subjects: selectedRole == UserRole.subjectTeacher ? subjects : null,
+      assignedClass: selectedRoles.contains(UserRole.classTeacher) ? assignedClass : null,
+      subjects: selectedRoles.contains(UserRole.subjectTeacher) ? subjects : null,
     ));
 
     if (!mounted) return;
@@ -560,7 +647,16 @@ class _StaffTabState extends State<_StaffTab> {
           final filteredStaff = staff.where((s) {
             final matchesSearch = s.name.toLowerCase().contains(_searchQuery.toLowerCase()) || 
                                  s.email.toLowerCase().contains(_searchQuery.toLowerCase());
-            final matchesStatus = _showDisabled ? true : s.isActive;
+            
+            bool matchesStatus;
+            if (_statusFilter == 'Active') {
+              matchesStatus = s.isActive;
+            } else if (_statusFilter == 'Disabled') {
+              matchesStatus = !s.isActive;
+            } else {
+              matchesStatus = true;
+            }
+            
             return matchesSearch && matchesStatus;
           }).toList();
 
@@ -568,25 +664,48 @@ class _StaffTabState extends State<_StaffTab> {
             children: [
               Padding(
                 padding: EdgeInsets.all(isMobile ? 16.0 : 24.0),
-                child: Row(
+                child: Column(
                   children: [
-                    Expanded(
-                      child: TextField(
-                        decoration: InputDecoration(
-                          hintText: isMobile ? 'Search...' : 'Search staff by name or email...',
-                          prefixIcon: const Icon(Icons.search),
-                          filled: true,
-                          fillColor: Theme.of(context).colorScheme.surface,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            decoration: InputDecoration(
+                              hintText: isMobile ? 'Search...' : 'Search staff by name or email...',
+                              prefixIcon: const Icon(Icons.search),
+                              filled: true,
+                              fillColor: Theme.of(context).colorScheme.surface,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                            ),
+                            onChanged: (value) => setState(() => _searchQuery = value),
+                          ),
                         ),
-                        onChanged: (value) => setState(() => _searchQuery = value),
-                      ),
+                      ],
                     ),
-                    const SizedBox(width: 16),
-                    FilterChip(
-                      label: Text(isMobile ? 'Disabled' : 'Show Disabled'),
-                      selected: _showDisabled,
-                      onSelected: (val) => setState(() => _showDisabled = val),
+                    const SizedBox(height: 12),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          ChoiceChip(
+                            label: const Text('Active'),
+                            selected: _statusFilter == 'Active',
+                            onSelected: (val) => setState(() => _statusFilter = 'Active'),
+                          ),
+                          const SizedBox(width: 8),
+                          ChoiceChip(
+                            label: const Text('Disabled'),
+                            selected: _statusFilter == 'Disabled',
+                            onSelected: (val) => setState(() => _statusFilter = 'Disabled'),
+                          ),
+                          const SizedBox(width: 8),
+                          ChoiceChip(
+                            label: const Text('All'),
+                            selected: _statusFilter == 'All',
+                            onSelected: (val) => setState(() => _statusFilter = 'All'),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -798,7 +917,7 @@ class _ParentCodesTab extends StatefulWidget {
 class _ParentCodesTabState extends State<_ParentCodesTab> {
   late Future<List<ParentAccessCode>> _future;
   String _searchQuery = '';
-  bool _showDisabled = false;
+  String _statusFilter = 'Active'; // 'Active', 'Inactive', 'All'
 
   @override
   void initState() {
@@ -819,11 +938,28 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
   }
 
   Future<void> _toggleStatus(ParentAccessCode code) async {
+    final reasonController = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(code.isActive ? 'Deactivate Code' : 'Restore Code'),
-        content: Text('Are you sure you want to ${code.isActive ? 'deactivate' : 'restore'} the access code ${code.code}? ${code.isActive ? 'Parents using this code will lose access.' : ''}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Are you sure you want to ${code.isActive ? 'deactivate' : 'restore'} the access code ${code.code}? ${code.isActive ? 'Parents using this code will lose access.' : ''}'),
+            if (code.isActive) ...[
+              const SizedBox(height: 16),
+              TextField(
+                controller: reasonController,
+                decoration: const InputDecoration(
+                  labelText: 'Reason for deactivation',
+                  hintText: 'e.g., Unpaid fees, Misuse',
+                ),
+              ),
+            ],
+          ],
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           TextButton(
@@ -836,7 +972,11 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
     );
 
     if (confirmed == true) {
-      await di.sl<ToggleAccessCodeStatus>()(code.code, !code.isActive);
+      await di.sl<ToggleAccessCodeStatus>()(
+        code.code, 
+        !code.isActive,
+        reason: code.isActive ? reasonController.text.trim() : null,
+      );
       _refresh();
     }
   }
@@ -909,12 +1049,12 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
                       final s = allStudents[index];
                       final currentCount = studentParentCounts[s.id] ?? 0;
                       final isAlreadyInThisCode = selectedStudentIds.contains(s.id);
-                      // Can add if not already in this code AND total parents < 2
-                      final canAdd = isAlreadyInThisCode || currentCount < 2;
+                      // Can add if not already in this code AND total parents < 1
+                      final canAdd = isAlreadyInThisCode || currentCount < 1;
 
                       return CheckboxListTile(
                         title: Text(s.name),
-                        subtitle: Text('${s.className} • $currentCount parents linked'),
+                        subtitle: Text('${s.className} • ${currentCount > 0 ? "Already linked to a parent" : "Available"}'),
                         value: isAlreadyInThisCode,
                         enabled: canAdd,
                         onChanged: (val) {
@@ -955,6 +1095,7 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
         phoneNumber: code.phoneNumber,
         pin: code.pin,
         mustChangePin: code.mustChangePin,
+        deactivationReason: code.deactivationReason,
       );
       await di.sl<UpdateAccessCode>()(updated);
       _refresh();
@@ -1033,15 +1174,15 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
                         itemBuilder: (context, index) {
                           final s = filteredStudents[index];
                           final currentCount = studentParentCounts[s.id] ?? 0;
-                          final canAdd = currentCount < 2;
+                          final canAdd = currentCount < 1;
 
                           return CheckboxListTile(
                             title: Text(s.name, style: const TextStyle(fontSize: 14)),
-                            subtitle: Text('${s.className} • $currentCount/2 parents',
+                            subtitle: Text('${s.className} • ${currentCount >= 1 ? "Parent already assigned" : "Available"}',
                               style: TextStyle(
                                 fontSize: 12, 
-                                color: currentCount >= 2 ? Colors.red : null,
-                                fontWeight: currentCount >= 2 ? FontWeight.bold : null,
+                                color: currentCount >= 1 ? Colors.red : null,
+                                fontWeight: currentCount >= 1 ? FontWeight.bold : null,
                               )),
                             value: selectedStudentIds.contains(s.id),
                             dense: true,
@@ -1178,7 +1319,15 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
             final matchesSearch = (c.parentName?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false) || 
                                  c.code.toLowerCase().contains(_searchQuery.toLowerCase()) ||
                                  c.studentNames.any((n) => n.toLowerCase().contains(_searchQuery.toLowerCase()));
-            final matchesStatus = _showDisabled ? true : c.isActive;
+            
+            bool matchesStatus;
+            if (_statusFilter == 'Active') {
+              matchesStatus = c.isActive;
+            } else if (_statusFilter == 'Inactive') {
+              matchesStatus = !c.isActive;
+            } else {
+              matchesStatus = true;
+            }
             return matchesSearch && matchesStatus;
           }).toList();
 
@@ -1186,25 +1335,48 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
             children: [
               Padding(
                 padding: EdgeInsets.all(isMobile ? 16.0 : 24.0),
-                child: Row(
+                child: Column(
                   children: [
-                    Expanded(
-                      child: TextField(
-                        decoration: InputDecoration(
-                          hintText: isMobile ? 'Search codes...' : 'Search by parent name, code, or student...',
-                          prefixIcon: const Icon(Icons.search),
-                          filled: true,
-                          fillColor: Theme.of(context).colorScheme.surface,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            decoration: InputDecoration(
+                              hintText: isMobile ? 'Search codes...' : 'Search by parent name, code, or student...',
+                              prefixIcon: const Icon(Icons.search),
+                              filled: true,
+                              fillColor: Theme.of(context).colorScheme.surface,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                            ),
+                            onChanged: (value) => setState(() => _searchQuery = value),
+                          ),
                         ),
-                        onChanged: (value) => setState(() => _searchQuery = value),
-                      ),
+                      ],
                     ),
-                    const SizedBox(width: 16),
-                    FilterChip(
-                      label: Text(isMobile ? 'Inactive' : 'Show Inactive'),
-                      selected: _showDisabled,
-                      onSelected: (val) => setState(() => _showDisabled = val),
+                    const SizedBox(height: 12),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          ChoiceChip(
+                            label: const Text('Active'),
+                            selected: _statusFilter == 'Active',
+                            onSelected: (val) => setState(() => _statusFilter = 'Active'),
+                          ),
+                          const SizedBox(width: 8),
+                          ChoiceChip(
+                            label: const Text('Inactive'),
+                            selected: _statusFilter == 'Inactive',
+                            onSelected: (val) => setState(() => _statusFilter = 'Inactive'),
+                          ),
+                          const SizedBox(width: 8),
+                          ChoiceChip(
+                            label: const Text('All'),
+                            selected: _statusFilter == 'All',
+                            onSelected: (val) => setState(() => _statusFilter = 'All'),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -1276,6 +1448,11 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
                     icon: const Icon(Icons.edit_outlined, size: 18),
                     tooltip: 'Edit Code',
                     onPressed: () => _editCode(code),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.error),
+                    tooltip: 'Delete Code',
+                    onPressed: () => _deleteCode(code),
                   ),
                 ] else
                   IconButton(

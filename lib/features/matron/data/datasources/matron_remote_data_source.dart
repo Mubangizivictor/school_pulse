@@ -3,9 +3,9 @@ import '../../domain/repositories/matron_repository.dart';
 import '../../presentation/bloc/matron_state.dart';
 
 abstract class MatronRemoteDataSource {
-  Future<List<DormitoryStatus>> getDormitoriesStatus();
-  Future<Map<String, int>> getAttendanceStats();
-  Future<List<Student>> getUnallocatedStudents();
+  Future<List<DormitoryStatus>> getDormitoriesStatus({String? gender});
+  Future<Map<String, int>> getAttendanceStats({String? gender});
+  Future<List<Student>> getUnallocatedStudents({String? gender});
   Future<void> allocateStudent(String studentId, String dormitoryId);
   Future<List<Student>> getDormitoryStudents(String dormitoryId);
   Future<void> submitNightAttendance(String dormitoryId, Map<String, bool> attendance);
@@ -17,8 +17,10 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
   MatronRemoteDataSourceImpl({required this.firestore});
 
   @override
-  Future<List<DormitoryStatus>> getDormitoriesStatus() async {
-    final snapshot = await firestore.collection('dormitories').get();
+  Future<List<DormitoryStatus>> getDormitoriesStatus({String? gender}) async {
+    Query<Map<String, dynamic>> query = firestore.collection('dormitories');
+    if (gender != null) query = query.where('gender', isEqualTo: gender);
+    final snapshot = await query.get();
     return snapshot.docs.map((doc) {
       final data = doc.data();
       final capacity = data['capacity'] ?? 0;
@@ -40,24 +42,58 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
   }
 
   @override
-  Future<Map<String, int>> getAttendanceStats() async {
-    final doc = await firestore.collection('stats').doc('attendance_summary').get();
-    final data = doc.data() ?? {};
+  Future<Map<String, int>> getAttendanceStats({String? gender}) async {
+    Query<Map<String, dynamic>> boarderQuery =
+        firestore.collection('students').where('isBoarder', isEqualTo: true);
+    if (gender != null) boarderQuery = boarderQuery.where('gender', isEqualTo: gender);
+    final boarders = await boarderQuery.get();
+    final boarderIds = boarders.docs.map((d) => d.id).toList();
+    final totalStudents = boarderIds.length;
+
+    if (boarderIds.isEmpty) {
+      return {'totalStudents': 0, 'studentsPresent': 0, 'studentsOnLeave': 0};
+    }
+
+    final latestRollCall = await firestore
+        .collection('attendance')
+        .orderBy(FieldPath.documentId, descending: true)
+        .limit(1)
+        .get();
+
+    if (latestRollCall.docs.isEmpty) {
+      return {'totalStudents': totalStudents, 'studentsPresent': totalStudents, 'studentsOnLeave': 0};
+    }
+
+    final latestDateId = latestRollCall.docs.first.id;
+    var present = 0;
+    for (var i = 0; i < boarderIds.length; i += 30) {
+      final chunk = boarderIds.sublist(i, i + 30 > boarderIds.length ? boarderIds.length : i + 30);
+      final rollCallSnap = await firestore
+          .collection('attendance')
+          .doc(latestDateId)
+          .collection('students')
+          .where(FieldPath.documentId, whereIn: chunk)
+          .where('isPresent', isEqualTo: true)
+          .get();
+      present += rollCallSnap.docs.length;
+    }
+
     return {
-      'totalStudents': data['totalStudents'] ?? 0,
-      'studentsPresent': data['studentsPresent'] ?? 0,
-      'studentsOnLeave': data['studentsOnLeave'] ?? 0,
+      'totalStudents': totalStudents,
+      'studentsPresent': present,
+      'studentsOnLeave': totalStudents - present,
     };
   }
 
   @override
-  Future<List<Student>> getUnallocatedStudents() async {
-    final snapshot = await firestore
+  Future<List<Student>> getUnallocatedStudents({String? gender}) async {
+    Query<Map<String, dynamic>> query = firestore
         .collection('students')
         .where('isBoarder', isEqualTo: true)
-        .where('dormitoryId', isNull: true)
-        .get();
-    
+        .where('dormitoryId', isNull: true);
+    if (gender != null) query = query.where('gender', isEqualTo: gender);
+    final snapshot = await query.get();
+
     return snapshot.docs.map((doc) => Student(
       id: doc.id,
       name: doc.data()['name'] ?? 'Unknown Student',
