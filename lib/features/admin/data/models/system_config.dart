@@ -2,6 +2,9 @@ class SystemConfig {
   final String schoolName;
   final String schoolMotto;
   final String? schoolLogoUrl;
+  final String? schoolAddress;
+  final String? schoolEmail;
+  final String? schoolPhone;
   final String? primaryColor;
   final String? secondaryColor;
   final String currentTerm;
@@ -16,6 +19,9 @@ class SystemConfig {
     required this.schoolName,
     required this.schoolMotto,
     this.schoolLogoUrl,
+    this.schoolAddress,
+    this.schoolEmail,
+    this.schoolPhone,
     this.primaryColor,
     this.secondaryColor,
     required this.currentTerm,
@@ -32,6 +38,9 @@ class SystemConfig {
       'schoolName': schoolName,
       'schoolMotto': schoolMotto,
       'schoolLogoUrl': schoolLogoUrl,
+      'schoolAddress': schoolAddress,
+      'schoolEmail': schoolEmail,
+      'schoolPhone': schoolPhone,
       'primaryColor': primaryColor,
       'secondaryColor': secondaryColor,
       'currentTerm': currentTerm,
@@ -49,6 +58,9 @@ class SystemConfig {
       schoolName: map['schoolName'] ?? '',
       schoolMotto: map['schoolMotto'] ?? '',
       schoolLogoUrl: map['schoolLogoUrl'],
+      schoolAddress: map['schoolAddress'],
+      schoolEmail: map['schoolEmail'],
+      schoolPhone: map['schoolPhone'],
       primaryColor: map['primaryColor'],
       secondaryColor: map['secondaryColor'],
       currentTerm: map['currentTerm'] ?? '',
@@ -65,6 +77,9 @@ class SystemConfig {
     String? schoolName,
     String? schoolMotto,
     String? schoolLogoUrl,
+    String? schoolAddress,
+    String? schoolEmail,
+    String? schoolPhone,
     String? primaryColor,
     String? secondaryColor,
     String? currentTerm,
@@ -79,6 +94,9 @@ class SystemConfig {
       schoolName: schoolName ?? this.schoolName,
       schoolMotto: schoolMotto ?? this.schoolMotto,
       schoolLogoUrl: schoolLogoUrl ?? this.schoolLogoUrl,
+      schoolAddress: schoolAddress ?? this.schoolAddress,
+      schoolEmail: schoolEmail ?? this.schoolEmail,
+      schoolPhone: schoolPhone ?? this.schoolPhone,
       primaryColor: primaryColor ?? this.primaryColor,
       secondaryColor: secondaryColor ?? this.secondaryColor,
       currentTerm: currentTerm ?? this.currentTerm,

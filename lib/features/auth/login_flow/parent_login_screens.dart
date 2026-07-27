@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lottie/lottie.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
@@ -90,14 +91,21 @@ class _ChildIdScreenState extends State<ChildIdScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: primaryColor.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+            Center(
+              child: Lottie.network(
+                'https://assets9.lottiefiles.com/packages/lf20_myejioos.json', // Example parent/family animation
+                height: 180,
+                repeat: true,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: primaryColor.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.badge_outlined, size: 36, color: primaryColor),
+                ),
               ),
-              child: Icon(Icons.badge_outlined, size: 36, color: primaryColor),
             ),
             const SizedBox(height: 24),
             Text(
@@ -216,14 +224,21 @@ class _ParentPhoneScreenState extends State<ParentPhoneScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: primaryColor.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+            Center(
+              child: Lottie.network(
+                'https://assets9.lottiefiles.com/private_files/lf30_gqzkc8b6.json', // Verification/Phone animation
+                height: 180,
+                repeat: true,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: primaryColor.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.phone_android_outlined, size: 36, color: primaryColor),
+                ),
               ),
-              child: Icon(Icons.phone_android_outlined, size: 36, color: primaryColor),
             ),
             const SizedBox(height: 24),
             Text(
@@ -344,17 +359,24 @@ class _ParentPinScreenState extends State<ParentPinScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: primaryColor.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    isFirstTime ? Icons.security_outlined : Icons.lock_person_outlined,
-                    size: 36,
-                    color: primaryColor,
+                Center(
+                  child: Lottie.network(
+                    'https://assets8.lottiefiles.com/packages/lf20_mkmptv89.json', // Security/PIN animation
+                    height: 180,
+                    repeat: true,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        color: primaryColor.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isFirstTime ? Icons.security_outlined : Icons.lock_person_outlined,
+                        size: 36,
+                        color: primaryColor,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),

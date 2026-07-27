@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lottie/lottie.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
@@ -180,7 +181,23 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Icon(Icons.lock, size: 64, color: Theme.of(context).extension<SemanticColors>()?.primaryBlue),
+                    Lottie.network(
+                      'https://assets10.lottiefiles.com/packages/lf20_hzfmxsqx.json', // Example school/building animation
+                      height: 150,
+                      repeat: true,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primaryContainer,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.lock_person_rounded,
+                          size: 64,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 24),
                     Text(
                       "Staff Credentials",

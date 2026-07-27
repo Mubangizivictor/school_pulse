@@ -213,12 +213,15 @@ Future<void> init() async {
     () => AcademicBloc(
       getAcademicRecords: sl(),
       getAttendanceRecords: sl(),
+      getReportCards: sl(),
     ),
   );
 
   // Use cases
   sl.registerLazySingleton(() => GetAcademicRecords(sl()));
   sl.registerLazySingleton(() => GetAttendanceRecords(sl()));
+  sl.registerLazySingleton(() => GetReportCards(sl()));
+  sl.registerLazySingleton(() => SignReportCard(sl()));
 
   // Repository
   sl.registerLazySingleton<AcademicRepository>(

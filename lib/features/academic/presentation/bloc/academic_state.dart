@@ -42,3 +42,12 @@ class AcademicError extends AcademicState {
   @override
   List<Object?> get props => [message];
 }
+
+class AcademicReportCardLoaded extends AcademicState {
+  final ReportCard? reportCard;
+
+  const AcademicReportCardLoaded(this.reportCard);
+
+  @override
+  List<Object?> get props => [reportCard];
+}

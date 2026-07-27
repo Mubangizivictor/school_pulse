@@ -36,3 +36,18 @@ class GetAttendanceRecordsRequested extends AcademicEvent {
   @override
   List<Object?> get props => [studentId, startDate, endDate];
 }
+
+class GetReportCardRequested extends AcademicEvent {
+  final String studentId;
+  final String term;
+  final String year;
+
+  const GetReportCardRequested({
+    required this.studentId,
+    required this.term,
+    required this.year,
+  });
+
+  @override
+  List<Object?> get props => [studentId, term, year];
+}

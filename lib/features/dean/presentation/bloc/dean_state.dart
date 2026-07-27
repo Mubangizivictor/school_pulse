@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import '../../domain/entities/dean_dashboard_stats.dart';
+import '../../domain/entities/dean_stats.dart';
 import '../../../academic/domain/entities/report_card.dart';
 
 abstract class DeanState extends Equatable {
@@ -14,7 +14,7 @@ class DeanInitial extends DeanState {}
 class DeanLoading extends DeanState {}
 
 class DeanLoaded extends DeanState {
-  final DeanDashboardStats stats;
+  final DeanStats stats;
 
   const DeanLoaded(this.stats);
 

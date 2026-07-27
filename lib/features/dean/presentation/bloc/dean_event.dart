@@ -29,13 +29,15 @@ class DeanReportCardsRequested extends DeanEvent {
 
 class DeanSignReportCardRequested extends DeanEvent {
   final String reportCardId;
-  final String deanId;
+  final String signerId;
+  final bool isHeadTeacher;
 
   const DeanSignReportCardRequested({
     required this.reportCardId,
-    required this.deanId,
+    required this.signerId,
+    this.isHeadTeacher = false,
   });
 
   @override
-  List<Object?> get props => [reportCardId, deanId];
+  List<Object?> get props => [reportCardId, signerId, isHeadTeacher];
 }

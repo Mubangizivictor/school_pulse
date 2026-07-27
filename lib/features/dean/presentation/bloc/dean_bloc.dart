@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/usecases/usecase.dart';
+import '../../../academic/domain/entities/report_card.dart';
 import '../../../academic/domain/usecases/manage_report_cards.dart';
 import '../../domain/usecases/get_dean_stats.dart';
 import 'dean_event.dart';
@@ -58,15 +59,17 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
     emit(DeanLoading());
     final result = await signReportCard(SignReportParams(
       reportCardId: event.reportCardId,
-      signerId: event.deanId,
-      isHeadTeacher: false,
+      signerId: event.signerId,
+      isHeadTeacher: event.isHeadTeacher,
     ));
 
     result.fold(
       (failure) => emit(DeanError(failure.message)),
       (_) {
         emit(const DeanOperationSuccess('Report card signed successfully'));
-        add(const DeanReportCardsRequested()); // Refresh the list
+        add(DeanReportCardsRequested(
+          status: event.isHeadTeacher ? ReportCardStatus.deanSigned : ReportCardStatus.pending
+        ));
       },
     );
   }

@@ -150,7 +150,7 @@ class _ReportCardTile extends StatelessWidget {
                 onPressed: () {
                   context.read<DeanBloc>().add(DeanSignReportCardRequested(
                         reportCardId: report.id,
-                        deanId: deanId,
+                        signerId: deanId,
                       ));
                 },
                 child: const Text('Sign Off'),

@@ -24,6 +24,9 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
   late TextEditingController _nameController;
   late TextEditingController _mottoController;
   late TextEditingController _logoUrlController;
+  late TextEditingController _addressController;
+  late TextEditingController _emailController;
+  late TextEditingController _phoneController;
   late TextEditingController _termController;
   late TextEditingController _yearController;
   Color? _primaryColor;
@@ -38,6 +41,9 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
     _nameController = TextEditingController();
     _mottoController = TextEditingController();
     _logoUrlController = TextEditingController();
+    _addressController = TextEditingController();
+    _emailController = TextEditingController();
+    _phoneController = TextEditingController();
     _termController = TextEditingController();
     _yearController = TextEditingController();
 
@@ -55,6 +61,9 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
     _nameController.dispose();
     _mottoController.dispose();
     _logoUrlController.dispose();
+    _addressController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
     _termController.dispose();
     _yearController.dispose();
     super.dispose();
@@ -64,6 +73,9 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
     _nameController.text = config.schoolName;
     _mottoController.text = config.schoolMotto;
     _logoUrlController.text = config.schoolLogoUrl ?? '';
+    _addressController.text = config.schoolAddress ?? '';
+    _emailController.text = config.schoolEmail ?? '';
+    _phoneController.text = config.schoolPhone ?? '';
     _termController.text = config.currentTerm;
     _yearController.text = config.academicYear;
     _primaryColor = config.primaryColor != null ? Color(int.parse(config.primaryColor!)) : null;
@@ -145,6 +157,8 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
                   children: [
                     _buildSchoolIdentitySection(context, config, state),
                     const SizedBox(height: 24),
+                    _buildContactInfoSection(context),
+                    const SizedBox(height: 24),
                     _buildThemeSection(context),
                     const SizedBox(height: 24),
                     _buildAcademicCalendarSection(context),
@@ -183,6 +197,9 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
         schoolName: _nameController.text,
         schoolMotto: _mottoController.text,
         schoolLogoUrl: _logoUrlController.text.isEmpty ? oldConfig.schoolLogoUrl : _logoUrlController.text,
+        schoolAddress: _addressController.text,
+        schoolEmail: _emailController.text,
+        schoolPhone: _phoneController.text,
         primaryColor: _primaryColor?.toARGB32().toString(),
         secondaryColor: _secondaryColor?.toARGB32().toString(),
         currentTerm: _termController.text,
@@ -195,6 +212,55 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
       );
       context.read<SystemConfigBloc>().add(UpdateSystemConfig(newConfig));
     }
+  }
+
+  Widget _buildContactInfoSection(BuildContext context) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Contact Information', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 20),
+          TextFormField(
+            controller: _addressController,
+            decoration: const InputDecoration(
+              labelText: 'School Address',
+              hintText: 'e.g. Plot 12, Wampewo Avenue, Kampala',
+              prefixIcon: Icon(Icons.location_on_outlined),
+            ),
+            maxLines: 2,
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _emailController,
+                  decoration: const InputDecoration(
+                    labelText: 'School Email',
+                    hintText: 'info@school.com',
+                    prefixIcon: Icon(Icons.email_outlined),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: TextFormField(
+                  controller: _phoneController,
+                  decoration: const InputDecoration(
+                    labelText: 'School Phone',
+                    hintText: '+256 700 000000',
+                    prefixIcon: Icon(Icons.phone_outlined),
+                  ),
+                  keyboardType: TextInputType.phone,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildSchoolIdentitySection(BuildContext context, SystemConfig config, SystemConfigState state) {
