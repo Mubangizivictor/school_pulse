@@ -548,10 +548,18 @@ Future<void> init() async {
 
   //! Features - Dean
   // Bloc
-  sl.registerFactory(() => DeanBloc(getDeanStats: sl()));
+  sl.registerFactory(
+    () => DeanBloc(
+      getDeanStats: sl(),
+      getReportCards: sl(),
+      signReportCard: sl(),
+    ),
+  );
 
   // Use cases
   sl.registerLazySingleton(() => GetDeanStats(sl()));
+  sl.registerLazySingleton(() => GetReportCards(sl()));
+  sl.registerLazySingleton(() => SignReportCard(sl()));
 
   // Repository
   sl.registerLazySingleton<DeanRepository>(

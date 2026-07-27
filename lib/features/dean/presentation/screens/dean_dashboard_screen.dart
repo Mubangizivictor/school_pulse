@@ -89,6 +89,12 @@ class DeanDashboardScreen extends StatelessWidget {
           onTap: () => GoRouter.of(context).go('/staff/dean/curriculum'),
         ),
         _DeanActionCard(
+          icon: Icons.assignment_turned_in,
+          label: 'Report Approvals',
+          color: Colors.orange,
+          onTap: () => GoRouter.of(context).push('/staff/dean/approvals/reports'),
+        ),
+        _DeanActionCard(
           icon: Icons.assignment,
           label: 'Exams & Assessment',
           color: Colors.green,
