@@ -20,6 +20,14 @@ class LibraryLoaded extends LibraryState {
   List<Object> get props => [books];
 }
 
+class BookActionSuccess extends LibraryState {
+  final String message;
+  const BookActionSuccess(this.message);
+
+  @override
+  List<Object> get props => [message];
+}
+
 class LibraryError extends LibraryState {
   final String message;
   const LibraryError(this.message);

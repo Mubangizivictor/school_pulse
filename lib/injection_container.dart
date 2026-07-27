@@ -22,6 +22,7 @@ import 'package:school_pulse/features/inventory/domain/usecases/issue_item.dart'
 import 'package:school_pulse/features/inventory/domain/repositories/inventory_repository.dart';
 import 'package:school_pulse/features/inventory/data/repositories/inventory_repository_impl.dart';
 import 'package:school_pulse/features/inventory/data/datasources/inventory_remote_data_source.dart';
+import 'package:school_pulse/features/inventory/presentation/bloc/inventory_bloc.dart';
 import 'package:school_pulse/features/admin/domain/usecases/get_admin_dashboard_stats.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/admin_dashboard_bloc.dart';
 import 'package:school_pulse/features/auth/data/datasources/auth_remote_data_source.dart';
@@ -142,6 +143,16 @@ import 'package:school_pulse/features/admin/data/repositories/audit_repository.d
 import 'package:school_pulse/features/admin/data/repositories/school_structure_repository.dart';
 import 'package:school_pulse/features/admin/data/repositories/staff_attendance_repository.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/system_config_bloc.dart';
+import 'package:school_pulse/features/religion/presentation/bloc/religion_bloc.dart';
+import 'package:school_pulse/features/religion/domain/repositories/religion_repository.dart';
+import 'package:school_pulse/features/religion/data/repositories/religion_repository_impl.dart';
+import 'package:school_pulse/features/religion/data/datasources/religion_remote_data_source.dart';
+import 'package:school_pulse/features/hr/presentation/bloc/hr_bloc.dart';
+import 'package:school_pulse/features/hr/domain/repositories/hr_repository.dart';
+import 'package:school_pulse/features/hr/data/repositories/hr_repository_impl.dart';
+import 'package:school_pulse/features/hr/data/datasources/hr_remote_data_source.dart';
+import 'package:school_pulse/features/discipline/domain/usecases/log_counseling_session.dart';
+import 'package:school_pulse/features/discipline/domain/usecases/get_counseling_sessions.dart';
 import 'package:school_pulse/core/network/network_info.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 
@@ -279,7 +290,7 @@ Future<void> init() async {
 
   //! Features - Library
   // Bloc
-  sl.registerFactory(() => LibraryBloc(getBorrowedBooks: sl()));
+  sl.registerFactory(() => LibraryBloc(repository: sl()));
 
   // Use cases
   sl.registerLazySingleton(() => GetBorrowedBooks(sl()));
@@ -304,6 +315,8 @@ Future<void> init() async {
       getDisciplineIncidents: sl(),
       getRecentDisciplineIncidents: sl(),
       logDisciplineIncident: sl(),
+      getCounselingSessions: sl(),
+      logCounselingSession: sl(),
     ),
   );
 
@@ -311,6 +324,8 @@ Future<void> init() async {
   sl.registerLazySingleton(() => GetDisciplineIncidents(sl()));
   sl.registerLazySingleton(() => GetRecentDisciplineIncidents(sl()));
   sl.registerLazySingleton(() => LogDisciplineIncident(sl()));
+  sl.registerLazySingleton(() => GetCounselingSessions(sl()));
+  sl.registerLazySingleton(() => LogCounselingSession(sl()));
 
   // Repository
   sl.registerLazySingleton<DisciplineRepository>(
@@ -464,6 +479,20 @@ Future<void> init() async {
     () => GamesRemoteDataSourceImpl(firestore: sl()),
   );
 
+  //! Features - Religion
+  // Bloc
+  sl.registerFactory(() => ReligionBloc(repository: sl()));
+
+  // Repository
+  sl.registerLazySingleton<ReligionRepository>(
+    () => ReligionRepositoryImpl(remoteDataSource: sl()),
+  );
+
+  // Data sources
+  sl.registerLazySingleton<ReligionRemoteDataSource>(
+    () => ReligionRemoteDataSourceImpl(firestore: sl()),
+  );
+
   //! Features - Security
   // Bloc
   sl.registerFactory(() => SecurityBloc(repository: sl()));
@@ -559,6 +588,16 @@ Future<void> init() async {
   );
 
   //! Features - Inventory
+  // Bloc
+  sl.registerFactory(
+    () => InventoryBloc(
+      getInventoryItems: sl(),
+      getRecentMovements: sl(),
+      addStock: sl(),
+      issueItem: sl(),
+    ),
+  );
+
   sl.registerLazySingleton(() => GetInventoryItems(sl()));
   sl.registerLazySingleton(() => GetRecentMovements(sl()));
   sl.registerLazySingleton(() => AddStock(sl()));
@@ -568,6 +607,20 @@ Future<void> init() async {
   );
   sl.registerLazySingleton<InventoryRemoteDataSource>(
     () => InventoryRemoteDataSourceImpl(firestore: sl()),
+  );
+
+  //! Features - HR
+  // Bloc
+  sl.registerFactory(() => HrBloc(repository: sl()));
+
+  // Repository
+  sl.registerLazySingleton<HrRepository>(
+    () => HrRepositoryImpl(remoteDataSource: sl()),
+  );
+
+  // Data sources
+  sl.registerLazySingleton<HrRemoteDataSource>(
+    () => HrRemoteDataSourceImpl(firestore: sl()),
   );
 
   //! External

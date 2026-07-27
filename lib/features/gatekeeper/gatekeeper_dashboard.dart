@@ -105,6 +105,30 @@ class _GatekeeperDashboardScreenState extends State<GatekeeperDashboardScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
+                  const SectionHeader(title: 'Quick Actions'),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _ActionTile(
+                          icon: Icons.directions_car_outlined,
+                          label: 'Vehicle Log',
+                          color: Colors.blue,
+                          onTap: () => _showVehicleLogDialog(context),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _ActionTile(
+                          icon: Icons.logout,
+                          label: 'Check-out All',
+                          color: Colors.red,
+                          onTap: () {},
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
                   const SectionHeader(title: 'Recent Visitors'),
                   const SizedBox(height: 12),
                   ...state.recentVisitors.map((visitor) => FadeInSlide(
@@ -160,43 +184,58 @@ class _GatekeeperDashboardScreenState extends State<GatekeeperDashboardScreen> {
   }
 
   void _showNewVisitorDialog(BuildContext context) {
-    final nameController = TextEditingController();
-    final purposeController = TextEditingController();
-    final contactController = TextEditingController();
-    final bloc = context.read<GatekeeperBloc>();
+    // ...
+  }
 
+  void _showVehicleLogDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('New Visitor Entry'),
+        title: const Text('Vehicle Log'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Full Name')),
+            TextField(decoration: const InputDecoration(labelText: 'Plate Number')),
             const SizedBox(height: 16),
-            TextField(
-              controller: contactController,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: 'Contact Number'),
+            TextField(decoration: const InputDecoration(labelText: 'Driver Name')),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              items: const [
+                DropdownMenuItem(value: 'In', child: Text('Entry')),
+                DropdownMenuItem(value: 'Out', child: Text('Exit')),
+              ],
+              onChanged: (_) {},
+              decoration: const InputDecoration(labelText: 'Direction'),
             ),
-            const SizedBox(height: 16),
-            TextField(controller: purposeController, decoration: const InputDecoration(labelText: 'Purpose of Visit')),
           ],
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () {
-              if (nameController.text.trim().isEmpty) return;
-              bloc.add(LogVisitorEntry(
-                visitorName: nameController.text.trim(),
-                purpose: purposeController.text.trim().isEmpty ? 'General visit' : purposeController.text.trim(),
-                contact: contactController.text.trim(),
-              ));
-              Navigator.pop(dialogContext);
-            },
-            child: const Text('Log Entry'),
-          ),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Log Vehicle')),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ActionTile({required this.icon, required this.label, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
         ],
       ),
     );

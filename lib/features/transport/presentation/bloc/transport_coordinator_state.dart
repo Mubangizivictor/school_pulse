@@ -38,6 +38,7 @@ class TransportCoordinatorError extends TransportCoordinatorState {
 }
 
 class BusRoute extends Equatable {
+  final String id;
   final String name;
   final String busNumber;
   final String driver;
@@ -45,6 +46,7 @@ class BusRoute extends Equatable {
   final String status;
 
   const BusRoute({
+    required this.id,
     required this.name,
     required this.busNumber,
     required this.driver,
@@ -53,5 +55,13 @@ class BusRoute extends Equatable {
   });
 
   @override
-  List<Object?> get props => [name, busNumber, driver, studentCount, status];
+  List<Object?> get props => [id, name, busNumber, driver, studentCount, status];
+}
+
+class TripActionSuccess extends TransportCoordinatorState {
+  final String message;
+  const TripActionSuccess(this.message);
+
+  @override
+  List<Object?> get props => [message];
 }

@@ -1,54 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/core/utils.dart';
-import 'package:school_pulse/injection_container.dart' as di;
 import 'package:school_pulse/features/inventory/domain/entities/inventory_item.dart';
 import 'package:school_pulse/features/inventory/domain/entities/stock_movement.dart';
-import 'package:school_pulse/features/inventory/domain/usecases/get_inventory_items.dart';
-import 'package:school_pulse/features/inventory/domain/usecases/get_recent_movements.dart';
-import 'package:school_pulse/features/inventory/domain/usecases/add_stock.dart';
-import 'package:school_pulse/features/inventory/domain/usecases/issue_item.dart';
+import 'package:school_pulse/features/inventory/presentation/bloc/inventory_bloc.dart';
+import 'package:school_pulse/features/inventory/presentation/bloc/inventory_event.dart';
+import 'package:school_pulse/features/inventory/presentation/bloc/inventory_state.dart';
 import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 import 'package:school_pulse/features/inventory/presentation/screens/procurement_screen.dart';
 
-class _InventorySnapshot {
-  final List<InventoryItem> items;
-  final List<StockMovement> movements;
-
-  const _InventorySnapshot({required this.items, required this.movements});
-}
-
-class InventoryDashboardScreen extends StatefulWidget {
+class InventoryDashboardScreen extends StatelessWidget {
   const InventoryDashboardScreen({super.key});
-
-  @override
-  State<InventoryDashboardScreen> createState() => _InventoryDashboardScreenState();
-}
-
-class _InventoryDashboardScreenState extends State<InventoryDashboardScreen> {
-  late Future<_InventorySnapshot> _snapshotFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _snapshotFuture = _loadSnapshot();
-  }
-
-  void _reload() {
-    setState(() => _snapshotFuture = _loadSnapshot());
-  }
-
-  Future<_InventorySnapshot> _loadSnapshot() async {
-    final results = await Future.wait([
-      di.sl<GetInventoryItems>()().then((r) => r.getOrElse(() => const <InventoryItem>[])),
-      di.sl<GetRecentMovements>()().then((r) => r.getOrElse(() => const <StockMovement>[])),
-    ]);
-    return _InventorySnapshot(
-      items: results[0] as List<InventoryItem>,
-      movements: results[1] as List<StockMovement>,
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,110 +25,105 @@ class _InventoryDashboardScreenState extends State<InventoryDashboardScreen> {
           const NotificationBellButton(),
         ],
       ),
-      body: FutureBuilder<_InventorySnapshot>(
-        future: _snapshotFuture,
-        builder: (context, snapshot) {
-          final data = snapshot.data;
-          final isLoading = snapshot.connectionState == ConnectionState.waiting;
-          final items = data?.items ?? const <InventoryItem>[];
-          final movements = data?.movements ?? const <StockMovement>[];
+      body: BlocBuilder<InventoryBloc, InventoryState>(
+        builder: (context, state) {
+          if (state is InventoryLoading || state is InventoryInitial) {
+            return const _LoadingView();
+          }
 
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Text(
-                'Stock Overview',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 24),
-              if (isLoading)
-                const Row(
-                  children: [
-                    Expanded(child: Skeleton(height: 100)),
-                    SizedBox(width: 12),
-                    Expanded(child: Skeleton(height: 100)),
-                  ],
-                )
-              else
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 1.1,
-                  children: [
-                    DashboardStatCard(
-                      title: 'Low Stock Items',
-                      value: items.where((i) => i.isLowStock).length.toDouble(),
-                      icon: Icons.warning_amber_rounded,
-                      color: semanticColors.error,
-                    ),
-                    DashboardStatCard(
-                      title: 'Total Items',
-                      value: items.length.toDouble(),
-                      icon: Icons.inventory_2_outlined,
-                      color: semanticColors.info,
-                    ),
-                  ],
-                ),
-              const SizedBox(height: 24),
-              const SectionHeader(title: 'Recent Stock Movements'),
-              const SizedBox(height: 12),
-              if (isLoading)
-                ...List.generate(3, (index) => const Padding(
-                  padding: EdgeInsets.only(bottom: 12),
-                  child: Skeleton(height: 72),
-                ))
-              else if (movements.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  child: Text('No stock movements recorded yet.'),
-                )
-              else
-                ...movements.take(5).map((m) => _InventoryItemTile(
-                      name: m.itemName,
-                      status: m.type == StockMovementType.restock ? 'Restocked' : 'Issued',
-                      quantity: m.type == StockMovementType.restock ? '+${m.quantity}' : '-${m.quantity}',
-                      date: DateFormatter.relative(m.date),
-                      color: m.type == StockMovementType.restock ? semanticColors.success : semanticColors.warning,
-                    )),
-              const SizedBox(height: 24),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
+          if (state is InventoryError) {
+            return Center(child: Text(state.message));
+          }
+
+          if (state is InventoryLoaded) {
+            return RefreshIndicator(
+              onRefresh: () async => context.read<InventoryBloc>().add(LoadInventory()),
+              child: ListView(
+                padding: const EdgeInsets.all(16),
                 children: [
-                  _QuickAction(
-                    label: 'Add Stock',
-                    icon: Icons.add_box_outlined,
-                    color: Theme.of(context).colorScheme.primary,
-                    onTap: () => _showAddStockDialog(context, items),
+                  Text(
+                    'Stock Overview',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
                   ),
-                  _QuickAction(
-                    label: 'Issue Item',
-                    icon: Icons.outbox_outlined,
-                    color: semanticColors.info,
-                    onTap: () => _showIssueItemDialog(context, items),
+                  const SizedBox(height: 24),
+                  GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 1.1,
+                    children: [
+                      DashboardStatCard(
+                        title: 'Low Stock Items',
+                        value: state.items.where((i) => i.isLowStock).length.toDouble(),
+                        icon: Icons.warning_amber_rounded,
+                        color: semanticColors.error,
+                      ),
+                      DashboardStatCard(
+                        title: 'Total Items',
+                        value: state.items.length.toDouble(),
+                        icon: Icons.inventory_2_outlined,
+                        color: semanticColors.info,
+                      ),
+                    ],
                   ),
-                  _QuickAction(
-                    label: 'Inventory Audit',
-                    icon: Icons.assignment_turned_in_outlined,
-                    color: semanticColors.success,
-                    onTap: () => _showAuditSheet(context, items),
-                  ),
-                  _QuickAction(
-                    label: 'Procurement',
-                    icon: Icons.shopping_basket_outlined,
-                    color: Colors.deepPurple,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const ProcurementScreen()),
-                    ),
+                  const SizedBox(height: 24),
+                  const SectionHeader(title: 'Recent Stock Movements'),
+                  const SizedBox(height: 12),
+                  if (state.movements.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Text('No stock movements recorded yet.'),
+                    )
+                  else
+                    ...state.movements.take(5).map((m) => _InventoryItemTile(
+                          name: m.itemName,
+                          status: m.type == StockMovementType.restock ? 'Restocked' : 'Issued',
+                          quantity: m.type == StockMovementType.restock ? '+${m.quantity}' : '-${m.quantity}',
+                          date: DateFormatter.relative(m.date),
+                          color: m.type == StockMovementType.restock ? semanticColors.success : semanticColors.warning,
+                        )),
+                  const SizedBox(height: 24),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      _QuickAction(
+                        label: 'Add Stock',
+                        icon: Icons.add_box_outlined,
+                        color: Theme.of(context).colorScheme.primary,
+                        onTap: () => _showAddStockDialog(context, state.items),
+                      ),
+                      _QuickAction(
+                        label: 'Issue Item',
+                        icon: Icons.outbox_outlined,
+                        color: semanticColors.info,
+                        onTap: () => _showIssueItemDialog(context, state.items),
+                      ),
+                      _QuickAction(
+                        label: 'Inventory Audit',
+                        icon: Icons.assignment_turned_in_outlined,
+                        color: semanticColors.success,
+                        onTap: () => _showAuditSheet(context, state.items),
+                      ),
+                      _QuickAction(
+                        label: 'Procurement',
+                        icon: Icons.shopping_basket_outlined,
+                        color: Colors.deepPurple,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const ProcurementScreen()),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          );
+            );
+          }
+
+          return const SizedBox.shrink();
         },
       ),
     );
@@ -227,34 +186,33 @@ class _InventoryDashboardScreenState extends State<InventoryDashboardScreen> {
           actions: [
             TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
             FilledButton(
-              onPressed: () async {
+              onPressed: () {
                 final quantity = int.tryParse(quantityController.text.trim());
                 if (quantity == null || quantity <= 0) return;
 
                 if (isNewItem) {
                   if (nameController.text.trim().isEmpty) return;
-                  await di.sl<AddStock>()(
-                    itemId: '',
-                    itemName: nameController.text.trim(),
-                    category: categoryController.text.trim().isEmpty ? 'General' : categoryController.text.trim(),
-                    unit: unitController.text.trim().isEmpty ? 'Units' : unitController.text.trim(),
-                    lowStockThreshold: int.tryParse(thresholdController.text.trim()) ?? 5,
-                    quantity: quantity,
-                  );
+                  context.read<InventoryBloc>().add(AddStockRequested(
+                        itemId: '',
+                        itemName: nameController.text.trim(),
+                        category: categoryController.text.trim().isEmpty ? 'General' : categoryController.text.trim(),
+                        unit: unitController.text.trim().isEmpty ? 'Units' : unitController.text.trim(),
+                        lowStockThreshold: int.tryParse(thresholdController.text.trim()) ?? 5,
+                        quantity: quantity,
+                      ));
                 } else {
                   if (selectedItemId == null) return;
                   final item = items.firstWhere((i) => i.id == selectedItemId);
-                  await di.sl<AddStock>()(
-                    itemId: item.id,
-                    itemName: item.name,
-                    category: item.category,
-                    unit: item.unit,
-                    lowStockThreshold: item.lowStockThreshold,
-                    quantity: quantity,
-                  );
+                  context.read<InventoryBloc>().add(AddStockRequested(
+                        itemId: item.id,
+                        itemName: item.name,
+                        category: item.category,
+                        unit: item.unit,
+                        lowStockThreshold: item.lowStockThreshold,
+                        quantity: quantity,
+                      ));
                 }
-                if (dialogContext.mounted) Navigator.pop(dialogContext);
-                _reload();
+                Navigator.pop(dialogContext);
               },
               child: const Text('Add Stock'),
             ),
@@ -303,13 +261,16 @@ class _InventoryDashboardScreenState extends State<InventoryDashboardScreen> {
           actions: [
             TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
             FilledButton(
-              onPressed: () async {
+              onPressed: () {
                 final quantity = int.tryParse(quantityController.text.trim());
                 final item = items.firstWhere((i) => i.id == selectedItemId);
                 if (quantity == null || quantity <= 0 || quantity > item.quantity) return;
-                await di.sl<IssueItem>()(itemId: selectedItemId, quantity: quantity, note: noteController.text.trim());
-                if (dialogContext.mounted) Navigator.pop(dialogContext);
-                _reload();
+                context.read<InventoryBloc>().add(IssueItemRequested(
+                      itemId: selectedItemId,
+                      quantity: quantity,
+                      note: noteController.text.trim(),
+                    ));
+                Navigator.pop(dialogContext);
               },
               child: const Text('Issue'),
             ),
@@ -352,6 +313,35 @@ class _InventoryDashboardScreenState extends State<InventoryDashboardScreen> {
           );
         },
       ),
+    );
+  }
+}
+
+class _LoadingView extends StatelessWidget {
+  const _LoadingView();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const Skeleton(height: 30, width: 150),
+        const SizedBox(height: 24),
+        const Row(
+          children: [
+            Expanded(child: Skeleton(height: 100)),
+            SizedBox(width: 12),
+            Expanded(child: Skeleton(height: 100)),
+          ],
+        ),
+        const SizedBox(height: 24),
+        const Skeleton(height: 20, width: 180),
+        const SizedBox(height: 12),
+        ...List.generate(3, (index) => const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: Skeleton(height: 72),
+            )),
+      ],
     );
   }
 }

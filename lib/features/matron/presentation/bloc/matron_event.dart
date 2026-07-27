@@ -9,17 +9,39 @@ abstract class MatronEvent extends Equatable {
 
 class MatronDashboardRequested extends MatronEvent {}
 
-class UpdateDormitoryAttendance extends MatronEvent {
-  final String dormitoryName;
-  final String studentId;
-  final bool isPresent;
+class UnallocatedStudentsRequested extends MatronEvent {}
 
-  const UpdateDormitoryAttendance({
-    required this.dormitoryName,
+class AllocateStudentRequested extends MatronEvent {
+  final String studentId;
+  final String dormitoryId;
+
+  const AllocateStudentRequested({
     required this.studentId,
-    required this.isPresent,
+    required this.dormitoryId,
   });
 
   @override
-  List<Object?> get props => [dormitoryName, studentId, isPresent];
+  List<Object?> get props => [studentId, dormitoryId];
+}
+
+class DormitoryStudentsRequested extends MatronEvent {
+  final String dormitoryId;
+
+  const DormitoryStudentsRequested(this.dormitoryId);
+
+  @override
+  List<Object?> get props => [dormitoryId];
+}
+
+class SubmitNightAttendanceRequested extends MatronEvent {
+  final String dormitoryId;
+  final Map<String, bool> attendance;
+
+  const SubmitNightAttendanceRequested({
+    required this.dormitoryId,
+    required this.attendance,
+  });
+
+  @override
+  List<Object?> get props => [dormitoryId, attendance];
 }

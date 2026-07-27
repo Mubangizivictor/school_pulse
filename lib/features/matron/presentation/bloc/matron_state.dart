@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../domain/repositories/matron_repository.dart';
 
 abstract class MatronState extends Equatable {
   const MatronState();
@@ -28,13 +29,37 @@ class MatronLoaded extends MatronState {
   List<Object?> get props => [dormitories, totalStudents, studentsPresent, studentsOnLeave];
 }
 
+class UnallocatedStudentsLoaded extends MatronState {
+  final List<Student> students;
+
+  const UnallocatedStudentsLoaded(this.students);
+
+  @override
+  List<Object?> get props => [students];
+}
+
+class DormitoryStudentsLoaded extends MatronState {
+  final List<Student> students;
+
+  const DormitoryStudentsLoaded(this.students);
+
+  @override
+  List<Object?> get props => [students];
+}
+
+class AttendanceSubmittedSuccessfully extends MatronState {}
+
+class AllocationSuccessful extends MatronState {}
+
 class DormitoryStatus extends Equatable {
+  final String id;
   final String name;
   final int capacity;
   final int currentOccupants;
   final String status;
 
   const DormitoryStatus({
+    required this.id,
     required this.name,
     required this.capacity,
     required this.currentOccupants,
@@ -42,7 +67,7 @@ class DormitoryStatus extends Equatable {
   });
 
   @override
-  List<Object?> get props => [name, capacity, currentOccupants, status];
+  List<Object?> get props => [id, name, capacity, currentOccupants, status];
 }
 
 class MatronError extends MatronState {

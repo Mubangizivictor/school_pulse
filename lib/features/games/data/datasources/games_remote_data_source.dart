@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../presentation/bloc/games_state.dart';
+import '../models/games_models.dart';
 
 abstract class GamesRemoteDataSource {
-  Future<List<SportsFixture>> getUpcomingFixtures();
-  Future<Map<String, dynamic>> getGamesStats();
+  Future<List<SportsHouseModel>> getSportsHouses();
+  Future<List<SportsCompetitionModel>> getRecentCompetitions();
+  Future<void> updateHousePoints(String houseId, int points);
+  Future<void> createCompetition(SportsCompetitionModel competition);
 }
 
 class GamesRemoteDataSourceImpl implements GamesRemoteDataSource {
@@ -12,28 +14,30 @@ class GamesRemoteDataSourceImpl implements GamesRemoteDataSource {
   GamesRemoteDataSourceImpl({required this.firestore});
 
   @override
-  Future<List<SportsFixture>> getUpcomingFixtures() async {
-    final snapshot = await firestore
-        .collection('sports_fixtures')
-        .where('timestamp', isGreaterThanOrEqualTo: Timestamp.now())
-        .orderBy('timestamp')
-        .limit(10)
-        .get();
-
-    return snapshot.docs.map((doc) {
-      final data = doc.data();
-      return SportsFixture(
-        sport: data['sport'] ?? '',
-        opponent: data['opponent'] ?? '',
-        date: data['date'] ?? '',
-        venue: data['venue'] ?? '',
-      );
-    }).toList();
+  Future<List<SportsHouseModel>> getSportsHouses() async {
+    final snapshot = await firestore.collection('sports_houses').orderBy('totalPoints', descending: true).get();
+    return snapshot.docs.map((doc) => SportsHouseModel.fromJson(doc.data(), doc.id)).toList();
   }
 
   @override
-  Future<Map<String, dynamic>> getGamesStats() async {
-    final doc = await firestore.collection('stats').doc('games_summary').get();
-    return doc.data() ?? {};
+  Future<List<SportsCompetitionModel>> getRecentCompetitions() async {
+    final snapshot = await firestore
+        .collection('sports_competitions')
+        .orderBy('date', descending: true)
+        .limit(10)
+        .get();
+    return snapshot.docs.map((doc) => SportsCompetitionModel.fromJson(doc.data(), doc.id)).toList();
+  }
+
+  @override
+  Future<void> updateHousePoints(String houseId, int points) async {
+    await firestore.collection('sports_houses').doc(houseId).update({
+      'totalPoints': FieldValue.increment(points),
+    });
+  }
+
+  @override
+  Future<void> createCompetition(SportsCompetitionModel competition) async {
+    await firestore.collection('sports_competitions').add(competition.toJson());
   }
 }

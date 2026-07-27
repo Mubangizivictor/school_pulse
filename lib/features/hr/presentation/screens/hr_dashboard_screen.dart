@@ -1,3 +1,5 @@
+// ignore_for_file: unused_import
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
@@ -6,6 +8,10 @@ import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
+import 'package:school_pulse/features/hr/presentation/screens/leave_management_screen.dart';
+import 'package:school_pulse/features/hr/presentation/screens/staff_appraisals_screen.dart';
+import 'package:school_pulse/features/hr/presentation/screens/payroll_management_screen.dart';
 
 class HRDashboardScreen extends StatelessWidget {
   const HRDashboardScreen({super.key});
@@ -107,21 +113,30 @@ class HRDashboardScreen extends StatelessWidget {
           label: 'Leave Management',
           subtitle: 'Requests, approvals & balances',
           color: Colors.orange,
-          onTap: () {},
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const LeaveManagementScreen()),
+          ),
         ),
         _MenuTile(
           icon: Icons.trending_up,
           label: 'Appraisals',
           subtitle: 'Performance reviews & scores',
           color: Colors.purple,
-          onTap: () {},
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const StaffAppraisalsScreen()),
+          ),
         ),
         _MenuTile(
           icon: Icons.payments,
-          label: 'Salary History',
-          subtitle: 'Track pay changes & increments',
+          label: 'Payroll (PAYE/NSSF)',
+          subtitle: 'Uganda tax & social security',
           color: Colors.green,
-          onTap: () {},
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const PayrollManagementScreen()),
+          ),
         ),
         _MenuTile(
           icon: Icons.warning_amber,

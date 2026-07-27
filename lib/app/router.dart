@@ -44,7 +44,6 @@ import 'package:school_pulse/features/matron/matron_dashboard.dart';
 import 'package:school_pulse/features/inventory/inventory_dashboard.dart';
 import 'package:school_pulse/features/teacher/attendance_history_screen.dart';
 import 'package:school_pulse/features/catering/presentation/catering_dashboard_screen.dart';
-import 'package:school_pulse/features/games/presentation/games_dashboard_screen.dart';
 import 'package:school_pulse/features/security/presentation/security_dashboard_screen.dart';
 import 'package:school_pulse/features/transport/presentation/transport_coordinator_dashboard_screen.dart';
 import 'package:school_pulse/features/discipline/presentation/discipline_dashboard_screen.dart';
@@ -72,6 +71,8 @@ import 'package:school_pulse/features/admin/subscription_screen.dart';
 import 'package:school_pulse/features/notifications/presentation/staff_notification_center_screen.dart';
 
 import 'package:school_pulse/features/auth/login_flow/school_splash_screen.dart';
+
+import '../features/games/presentation/screens/games_dashboard_screen.dart';
 
 final router = GoRouter(
   initialLocation: '/',

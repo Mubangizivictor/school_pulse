@@ -90,6 +90,27 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
                     delay: Duration(milliseconds: 300),
                     child: SectionHeader(title: 'Meal Schedule'),
                   ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _showMealPlanningDialog(context),
+                          icon: const Icon(Icons.add),
+                          label: const Text('Add Meal'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {},
+                          icon: const Icon(Icons.edit_calendar),
+                          label: const Text('Bulk Plan'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
                   ...state.todayMeals.asMap().entries.map((entry) {
                     final index = entry.key;
                     final meal = entry.value;
@@ -132,6 +153,36 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
           }
           return const SizedBox.shrink();
         },
+      ),
+    );
+  }
+  void _showMealPlanningDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Add Scheduled Meal'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DropdownButtonFormField<String>(
+              items: const [
+                DropdownMenuItem(value: 'Breakfast', child: Text('Breakfast')),
+                DropdownMenuItem(value: 'Lunch', child: Text('Lunch')),
+                DropdownMenuItem(value: 'Dinner', child: Text('Dinner')),
+              ],
+              onChanged: (_) {},
+              decoration: const InputDecoration(labelText: 'Meal Type'),
+            ),
+            const SizedBox(height: 16),
+            TextField(decoration: const InputDecoration(labelText: 'Menu Description')),
+            const SizedBox(height: 16),
+            TextField(decoration: const InputDecoration(labelText: 'Time (e.g. 13:00)')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Schedule')),
+        ],
       ),
     );
   }

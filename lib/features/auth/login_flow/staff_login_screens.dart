@@ -34,9 +34,9 @@ class StaffRolePickerScreen extends StatelessWidget {
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 1.5,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 3.2,
               ),
               itemCount: roles.length,
               itemBuilder: (context, index) {
@@ -64,24 +64,34 @@ class _RoleTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
+      margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Theme.of(context).dividerColor),
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.5)),
       ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(_getIconForRole(role), color: Theme.of(context).extension<SemanticColors>()?.primaryBlue),
-            const SizedBox(height: 8),
-            Text(
-              _getDisplayName(role),
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
-            ),
-          ],
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            children: [
+              Icon(
+                _getIconForRole(role),
+                size: 20,
+                color: Theme.of(context).extension<SemanticColors>()?.primaryBlue,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _getDisplayName(role),
+                  style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -109,6 +119,8 @@ class _RoleTile extends StatelessWidget {
       case UserRole.gamesMaster: return Icons.sports_soccer;
       case UserRole.cateringManager: return Icons.restaurant;
       case UserRole.religiousLeader: return Icons.church;
+      case UserRole.receptionist: return Icons.support_agent;
+      case UserRole.hrOfficer: return Icons.badge;
       default: return Icons.person;
     }
   }

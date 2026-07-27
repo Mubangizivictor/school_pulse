@@ -1,10 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/discipline_incident_model.dart';
+import '../models/counseling_session_model.dart';
 
 abstract class DisciplineRemoteDataSource {
   Future<List<DisciplineIncidentModel>> getDisciplineIncidents(String studentId);
   Future<List<DisciplineIncidentModel>> getRecentDisciplineIncidents();
   Future<void> logIncident(DisciplineIncidentModel incident);
+  
+  Future<List<CounselingSessionModel>> getCounselingSessions();
+  Future<void> logCounselingSession(CounselingSessionModel session);
 }
 
 class DisciplineRemoteDataSourceImpl implements DisciplineRemoteDataSource {
@@ -35,5 +39,20 @@ class DisciplineRemoteDataSourceImpl implements DisciplineRemoteDataSource {
   @override
   Future<void> logIncident(DisciplineIncidentModel incident) async {
     await firestore.collection('discipline_incidents').add(incident.toFirestore());
+  }
+
+  @override
+  Future<List<CounselingSessionModel>> getCounselingSessions() async {
+    final snapshot = await firestore
+        .collection('counseling_sessions')
+        .orderBy('date', descending: true)
+        .limit(20)
+        .get();
+    return snapshot.docs.map((doc) => CounselingSessionModel.fromFirestore(doc)).toList();
+  }
+
+  @override
+  Future<void> logCounselingSession(CounselingSessionModel session) async {
+    await firestore.collection('counseling_sessions').add(session.toFirestore());
   }
 }

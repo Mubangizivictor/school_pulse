@@ -25,4 +25,44 @@ class MatronRepositoryImpl implements MatronRepository {
       return Left(ServerFailure(e.toString()));
     }
   }
+
+  @override
+  Future<Either<Failure, List<Student>>> getUnallocatedStudents() async {
+    try {
+      final students = await remoteDataSource.getUnallocatedStudents();
+      return Right(students);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> allocateStudent(String studentId, String dormitoryId) async {
+    try {
+      await remoteDataSource.allocateStudent(studentId, dormitoryId);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<Student>>> getDormitoryStudents(String dormitoryId) async {
+    try {
+      final students = await remoteDataSource.getDormitoryStudents(dormitoryId);
+      return Right(students);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> submitNightAttendance(String dormitoryId, Map<String, bool> attendance) async {
+    try {
+      await remoteDataSource.submitNightAttendance(dormitoryId, attendance);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
 }

@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../domain/entities/games_entities.dart';
 
 abstract class GamesState extends Equatable {
   const GamesState();
@@ -12,42 +13,39 @@ class GamesInitial extends GamesState {}
 class GamesLoading extends GamesState {}
 
 class GamesLoaded extends GamesState {
-  final List<SportsFixture> upcomingFixtures;
-  final int totalEquipment;
+  final List<SportsHouse> houses;
+  final List<SportsCompetition> competitions;
   final int activeTeams;
-  final String nextEvent;
+  final int totalEquipment;
+  final String? nextEvent;
+  final List<dynamic> upcomingFixtures;
 
   const GamesLoaded({
-    required this.upcomingFixtures,
-    required this.totalEquipment,
-    required this.activeTeams,
-    required this.nextEvent,
+    required this.houses,
+    required this.competitions,
+    this.activeTeams = 0,
+    this.totalEquipment = 0,
+    this.nextEvent,
+    this.upcomingFixtures = const [],
   });
 
   @override
-  List<Object?> get props => [upcomingFixtures, totalEquipment, activeTeams, nextEvent];
-}
-
-class SportsFixture extends Equatable {
-  final String sport;
-  final String opponent;
-  final String date;
-  final String venue;
-
-  const SportsFixture({
-    required this.sport,
-    required this.opponent,
-    required this.date,
-    required this.venue,
-  });
-
-  @override
-  List<Object?> get props => [sport, opponent, date, venue];
+  List<Object?> get props => [houses, competitions, activeTeams, totalEquipment, nextEvent, upcomingFixtures];
 }
 
 class GamesError extends GamesState {
   final String message;
+
   const GamesError(this.message);
+
+  @override
+  List<Object?> get props => [message];
+}
+
+class ActionSuccess extends GamesState {
+  final String message;
+
+  const ActionSuccess(this.message);
 
   @override
   List<Object?> get props => [message];

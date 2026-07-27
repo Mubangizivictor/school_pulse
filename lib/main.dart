@@ -21,6 +21,16 @@ import 'package:school_pulse/features/notifications/presentation/bloc/notificati
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
 import 'package:school_pulse/features/gatekeeper/presentation/bloc/gatekeeper_bloc.dart';
 import 'package:school_pulse/features/receptionist/presentation/bloc/receptionist_bloc.dart';
+import 'package:school_pulse/features/inventory/presentation/bloc/inventory_bloc.dart';
+import 'package:school_pulse/features/inventory/presentation/bloc/inventory_event.dart';
+import 'package:school_pulse/features/hr/presentation/bloc/hr_bloc.dart';
+import 'package:school_pulse/features/security/presentation/bloc/security_bloc.dart';
+import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
+import 'package:school_pulse/features/religion/presentation/bloc/religion_bloc.dart';
+import 'package:school_pulse/features/exams/presentation/bloc/exams_bloc.dart';
+import 'package:school_pulse/features/catering/presentation/bloc/catering_bloc.dart';
+import 'package:school_pulse/features/games/presentation/bloc/games_bloc.dart';
+import 'package:school_pulse/features/matron/presentation/bloc/matron_bloc.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/system_config_bloc.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/system_config_event.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/system_config_state.dart';
@@ -103,7 +113,34 @@ class SchoolPulseApp extends StatelessWidget {
           create: (_) => di.sl<GatekeeperBloc>(),
         ),
         BlocProvider(
+          create: (_) => di.sl<InventoryBloc>()..add(LoadInventory()),
+        ),
+        BlocProvider(
           create: (_) => di.sl<ReceptionistBloc>(),
+        ),
+        BlocProvider(
+          create: (_) => di.sl<SecurityBloc>(),
+        ),
+        BlocProvider(
+          create: (_) => di.sl<DeanBloc>(),
+        ),
+        BlocProvider(
+          create: (_) => di.sl<ReligionBloc>(),
+        ),
+        BlocProvider(
+          create: (_) => di.sl<ExamsBloc>(),
+        ),
+        BlocProvider(
+          create: (_) => di.sl<CateringBloc>(),
+        ),
+        BlocProvider(
+          create: (_) => di.sl<GamesBloc>(),
+        ),
+        BlocProvider(
+          create: (_) => di.sl<MatronBloc>(),
+        ),
+        BlocProvider(
+          create: (_) => di.sl<HrBloc>(),
         ),
         BlocProvider(
           create: (_) => di.sl<SystemConfigBloc>()..add(WatchSystemConfig()),

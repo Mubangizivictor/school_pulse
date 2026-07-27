@@ -14,3 +14,31 @@ class FetchBorrowedBooks extends LibraryEvent {
   @override
   List<Object> get props => [studentId];
 }
+
+class LoadLibraryBooks extends LibraryEvent {}
+
+class IssueBookRequested extends LibraryEvent {
+  final String studentId;
+  final String title;
+  final String author;
+  final DateTime dueDate;
+
+  const IssueBookRequested({
+    required this.studentId,
+    required this.title,
+    required this.author,
+    required this.dueDate,
+  });
+
+  @override
+  List<Object> get props => [studentId, title, author, dueDate];
+}
+
+class ReturnBookRequested extends LibraryEvent {
+  final String bookId;
+
+  const ReturnBookRequested(this.bookId);
+
+  @override
+  List<Object> get props => [bookId];
+}

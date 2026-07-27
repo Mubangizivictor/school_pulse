@@ -9,6 +9,7 @@ import 'package:school_pulse/features/student/domain/usecases/get_all_students.d
 import 'package:school_pulse/features/health/domain/entities/health_visit.dart';
 import 'package:school_pulse/features/health/domain/usecases/get_all_health_visits.dart';
 import 'package:school_pulse/features/health/domain/usecases/log_health_visit.dart';
+import 'package:school_pulse/features/nurse/presentation/screens/medicine_inventory_screen.dart';
 
 class _HealthSnapshot {
   final List<Student> students;
@@ -61,7 +62,15 @@ class _NurseDashboardScreenState extends State<NurseDashboardScreen> {
             onPressed: () => context.push('/staff/messages'),
           ),
           IconButton(
-            icon: const Icon(Icons.add_box_outlined),
+          icon: const Icon(Icons.inventory_2_outlined),
+          tooltip: 'Medicine Inventory',
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const MedicineInventoryScreen()),
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.add_box_outlined),
             onPressed: () => _showNewVisitDialog(context),
           ),
         ],

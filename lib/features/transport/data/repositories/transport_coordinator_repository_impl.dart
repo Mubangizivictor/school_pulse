@@ -25,4 +25,34 @@ class TransportCoordinatorRepositoryImpl implements TransportCoordinatorReposito
       return Left(ServerFailure(e.toString()));
     }
   }
+
+  @override
+  Future<Either<Failure, void>> startTrip(String routeId) async {
+    try {
+      await remoteDataSource.startTrip(routeId);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> endTrip(String routeId) async {
+    try {
+      await remoteDataSource.endTrip(routeId);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> logStudentPickup(String routeId, String studentId) async {
+    try {
+      await remoteDataSource.logStudentPickup(routeId, studentId);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
 }
