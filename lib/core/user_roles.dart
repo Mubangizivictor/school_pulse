@@ -14,7 +14,6 @@ enum UserRole {
   transportCoordinator,
   guidanceDiscipline,
   storeInventory,
-  examsOfficer,
   gatekeeper,
   securityHead,
   gamesMaster,
@@ -42,7 +41,6 @@ class UserRoleDisplay {
       case UserRole.transportCoordinator: return 'Transport';
       case UserRole.guidanceDiscipline: return 'Guidance & Discipline';
       case UserRole.storeInventory: return 'Store Inventory';
-      case UserRole.examsOfficer: return 'Exams Officer';
       case UserRole.gatekeeper: return 'Gatekeeper';
       case UserRole.securityHead: return 'Head of Security';
       case UserRole.gamesMaster: return 'Games Master';
@@ -53,14 +51,26 @@ class UserRoleDisplay {
     }
   }
 
-  /// Roles allowed to reach the /staff/admin screen and invite new staff -
-  /// mirrors the routing in StaffCredentialsScreen and the Cloud Function's
-  /// own server-side check.
+  /// Roles allowed to invite new staff - mirrors the Cloud Function's own
+  /// server-side ADMIN_ROLES check. Keep this in sync with functions/index.js;
+  /// a role here that the Cloud Function doesn't also allow will see an
+  /// "invite staff" UI that fails server-side.
   static const List<UserRole> adminRoles = [
     UserRole.director,
     UserRole.headTeacher,
     UserRole.schoolAdmin,
-    UserRole.hrOfficer,
+  ];
+
+  /// Roles whose home dashboard is the /staff/admin console (see
+  /// UserRoleRouting.dashboardPath) - used to pick the admin-shaped shell
+  /// nav/messaging instead of the per-role staff shell. Distinct from
+  /// [adminRoles]: Deputy Head shares the admin console UI but isn't
+  /// permitted to invite staff server-side.
+  static const List<UserRole> adminConsoleRoles = [
+    UserRole.director,
+    UserRole.headTeacher,
+    UserRole.schoolAdmin,
+    UserRole.deputyHead,
   ];
 }
 
@@ -107,8 +117,6 @@ class UserRoleRouting {
         return '/staff/admin';
       case UserRole.deanOfStudies:
         return '/staff/dean';
-      case UserRole.examsOfficer:
-        return '/staff/exams';
       case UserRole.boardingMatron:
         return '/staff/matron';
       case UserRole.transportCoordinator:

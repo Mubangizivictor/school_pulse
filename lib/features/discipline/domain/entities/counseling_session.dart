@@ -8,6 +8,7 @@ class CounselingSession extends Equatable {
   final String reason;
   final String notes;
   final String recommendations;
+  final String? linkedIncidentId;
 
   const CounselingSession({
     required this.id,
@@ -17,8 +18,10 @@ class CounselingSession extends Equatable {
     required this.reason,
     required this.notes,
     required this.recommendations,
+    this.linkedIncidentId,
   });
 
   @override
-  List<Object?> get props => [id, studentId, counselorId, date, reason, notes, recommendations];
+  List<Object?> get props =>
+      [id, studentId, counselorId, date, reason, notes, recommendations, linkedIncidentId];
 }

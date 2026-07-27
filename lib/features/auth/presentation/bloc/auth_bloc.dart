@@ -72,7 +72,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     ));
     result.fold(
       (failure) => emit(AuthFailureState(failure.message)),
-      (_) => add(AuthCheckRequested()), // Refresh auth state
+      (_) {
+        // Auto-login after setting PIN
+        add(LoginParentPressed(
+          code: event.code,
+          phoneNumber: event.phoneNumber,
+          pin: event.newPin,
+        ));
+      },
     );
   }
 

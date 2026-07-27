@@ -29,8 +29,21 @@ class CalendarRepositoryImpl implements CalendarRepository {
         description: event.description,
         date: event.date,
         createdBy: event.createdBy,
+        targetRoles: event.targetRoles,
+        type: event.type,
+        responsiblePerson: event.responsiblePerson,
       );
       await remoteDataSource.addEvent(model);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure());
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteEvent(String eventId) async {
+    try {
+      await remoteDataSource.deleteEvent(eventId);
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure());

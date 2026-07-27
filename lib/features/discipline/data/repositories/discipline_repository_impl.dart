@@ -43,6 +43,7 @@ class DisciplineRepositoryImpl implements DisciplineRepository {
         severity: incident.severity,
         resolution: incident.resolution,
         counselingNotes: incident.counselingNotes,
+        punishment: incident.punishment,
       );
       await remoteDataSource.logIncident(model);
       return const Right(null);
@@ -72,6 +73,7 @@ class DisciplineRepositoryImpl implements DisciplineRepository {
         reason: session.reason,
         notes: session.notes,
         recommendations: session.recommendations,
+        linkedIncidentId: session.linkedIncidentId,
       );
       await remoteDataSource.logCounselingSession(model);
       return const Right(null);

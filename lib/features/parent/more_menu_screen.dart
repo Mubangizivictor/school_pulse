@@ -21,6 +21,11 @@ class MoreMenuScreen extends StatelessWidget {
             'Services',
             [
               _MenuTile(
+                icon: Icons.calendar_month_outlined,
+                title: 'School Calendar',
+                onTap: () => context.push('/parent/calendar'),
+              ),
+              _MenuTile(
                 icon: Icons.health_and_safety_outlined,
                 title: 'Health',
                 onTap: () => context.push('/parent/health'),

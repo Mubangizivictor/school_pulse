@@ -21,6 +21,8 @@ import 'package:school_pulse/features/notifications/presentation/bloc/notificati
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
 import 'package:school_pulse/features/gatekeeper/presentation/bloc/gatekeeper_bloc.dart';
 import 'package:school_pulse/features/receptionist/presentation/bloc/receptionist_bloc.dart';
+import 'package:school_pulse/features/calendar/presentation/bloc/calendar_bloc.dart';
+import 'package:school_pulse/features/calendar/presentation/bloc/calendar_event.dart';
 import 'package:school_pulse/features/inventory/presentation/bloc/inventory_bloc.dart';
 import 'package:school_pulse/features/inventory/presentation/bloc/inventory_event.dart';
 import 'package:school_pulse/features/hr/presentation/bloc/hr_bloc.dart';
@@ -35,7 +37,6 @@ import 'package:school_pulse/features/admin/presentation/bloc/system_config_bloc
 import 'package:school_pulse/features/admin/presentation/bloc/system_config_event.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/system_config_state.dart';
 import 'package:school_pulse/core/notification/notification_service.dart';
-import 'package:school_pulse/core/utils/admin_seeder.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,8 +54,6 @@ void main() async {
   }
 
   await NotificationService().initialize();
-
-  await AdminSeeder.seedAdmin();
 
   await di.init();
 
@@ -105,6 +104,9 @@ class SchoolPulseApp extends StatelessWidget {
         ),
         BlocProvider(
           create: (_) => di.sl<NotificationsBloc>(),
+        ),
+        BlocProvider(
+          create: (_) => di.sl<CalendarBloc>()..add(LoadCalendarEvents()),
         ),
         BlocProvider(
           create: (_) => di.sl<TeacherBloc>(),

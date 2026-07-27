@@ -92,7 +92,7 @@ class HRDashboardScreen extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: 16,
       crossAxisSpacing: 16,
-      childAspectRatio: 1.2,
+      childAspectRatio: 1.0,
       children: [
         _MenuTile(
           icon: Icons.assignment_ind,

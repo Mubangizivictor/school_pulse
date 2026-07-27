@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class AdminSeeder {
-  static const String defaultPassword = "Password@123";
+  static const String defaultPassword = "Test@123";
 
   static Future<void> deleteAllData() async {
     final collections = [
@@ -62,8 +62,26 @@ class AdminSeeder {
 
       // 3. Seed Parent Access Codes
       final codes = [
-        {'code': 'KHA1234', 'studentIds': ['s1', 's4'], 'studentNames': ['Mugisha Samuel', 'Babirye Joy'], 'parentName': 'Mr. Kato Joseph'},
-        {'code': 'KHA5678', 'studentIds': ['s2'], 'studentNames': ['Nakamya Sarah'], 'parentName': 'Mrs. Namukasa Mary'},
+        {
+          'code': 'KHA1234',
+          'studentIds': ['s1', 's4'],
+          'studentNames': ['Mugisha Samuel', 'Babirye Joy'],
+          'parentName': 'Mr. Kato Joseph',
+          'phoneNumber': '0700000000',
+          'pin': '1234',
+          'mustChangePin': false,
+          'isActive': true,
+        },
+        {
+          'code': 'KHA5678',
+          'studentIds': ['s2'],
+          'studentNames': ['Nakamya Sarah'],
+          'parentName': 'Mrs. Namukasa Mary',
+          'phoneNumber': '0711111111',
+          'pin': '1234',
+          'mustChangePin': false,
+          'isActive': true,
+        },
       ];
 
       for (var c in codes) {
@@ -72,17 +90,26 @@ class AdminSeeder {
 
       // 4. Seed Staff Roles for testing different dashboards
       final staff = [
-        {'name': 'Mr. Okot John', 'email': 'teacher@school.ug', 'role': 'classTeacher'},
-        {'name': 'Ms. Nalule Jane', 'email': 'bursar@school.ug', 'role': 'bursar'},
-        {'name': 'Dr. Musoke Peter', 'email': 'nurse@school.ug', 'role': 'nurse'},
-        {'name': 'Mrs. Akello Mary', 'email': 'matron@school.ug', 'role': 'boardingMatron'},
-        {'name': 'Mr. Sseba John', 'email': 'dean@school.ug', 'role': 'deanOfStudies'},
-        {'name': 'Sheikh Juma', 'email': 'religion@school.ug', 'role': 'religiousLeader'},
-        {'name': 'Mr. Otim David', 'email': 'exams@school.ug', 'role': 'examsOfficer'},
-        {'name': 'Chef Kato', 'email': 'catering@school.ug', 'role': 'cateringManager'},
-        {'name': 'Coach Okello', 'email': 'games@school.ug', 'role': 'gamesMaster'},
-        {'name': 'Mr. Kateregga', 'email': 'security@school.ug', 'role': 'securityHead'},
-        {'name': 'Ms. Nabirye', 'email': 'hr@school.ug', 'role': 'hrOfficer'},
+        {'name': 'Mr. Byaruhanga Sam', 'email': 'director@gmail.com', 'role': 'director'},
+        {'name': 'Mrs. Nakiwala Grace', 'email': 'headteacher@gmail.com', 'role': 'headTeacher'},
+        {'name': 'Mr. Ssekandi Paul', 'email': 'deputyhead@gmail.com', 'role': 'deputyHead'},
+        {'name': 'Mr. Sseba John', 'email': 'dean@gmail.com', 'role': 'deanOfStudies'},
+        {'name': 'Ms. Nalule Jane', 'email': 'bursar@gmail.com', 'role': 'bursar'},
+        {'name': 'Mr. Okot John', 'email': 'teacher@gmail.com', 'role': 'classTeacher'},
+        {'name': 'Ms. Tumusiime Grace', 'email': 'subjectteacher@gmail.com', 'role': 'subjectTeacher'},
+        {'name': 'Mr. Wasswa Ivan', 'email': 'librarian@gmail.com', 'role': 'librarian'},
+        {'name': 'Dr. Musoke Peter', 'email': 'nurse@gmail.com', 'role': 'nurse'},
+        {'name': 'Mrs. Akello Mary', 'email': 'matron@gmail.com', 'role': 'boardingMatron'},
+        {'name': 'Mr. Mugabe Steven', 'email': 'transport@gmail.com', 'role': 'transportCoordinator'},
+        {'name': 'Ms. Namuli Ruth', 'email': 'discipline@gmail.com', 'role': 'guidanceDiscipline'},
+        {'name': 'Mr. Kigozi Frank', 'email': 'inventory@gmail.com', 'role': 'storeInventory'},
+        {'name': 'Mr. Lubega Tom', 'email': 'gatekeeper@gmail.com', 'role': 'gatekeeper'},
+        {'name': 'Mr. Kateregga', 'email': 'security@gmail.com', 'role': 'securityHead'},
+        {'name': 'Coach Okello', 'email': 'games@gmail.com', 'role': 'gamesMaster'},
+        {'name': 'Chef Kato', 'email': 'catering@gmail.com', 'role': 'cateringManager'},
+        {'name': 'Sheikh Juma', 'email': 'religion@gmail.com', 'role': 'religiousLeader'},
+        {'name': 'Ms. Nabirye', 'email': 'receptionist@gmail.com', 'role': 'receptionist'},
+        {'name': 'Ms. Nabirye Sarah', 'email': 'hr@gmail.com', 'role': 'hrOfficer'},
       ];
 
       for (var st in staff) {

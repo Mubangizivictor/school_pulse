@@ -36,12 +36,17 @@ class LoginParentPressed extends AuthEvent {
 
 class CompleteParentPinSetupRequested extends AuthEvent {
   final String code;
+  final String phoneNumber;
   final String newPin;
 
-  const CompleteParentPinSetupRequested({required this.code, required this.newPin});
+  const CompleteParentPinSetupRequested({
+    required this.code,
+    required this.phoneNumber,
+    required this.newPin,
+  });
 
   @override
-  List<Object?> get props => [code, newPin];
+  List<Object?> get props => [code, phoneNumber, newPin];
 }
 
 class LogoutPressed extends AuthEvent {}

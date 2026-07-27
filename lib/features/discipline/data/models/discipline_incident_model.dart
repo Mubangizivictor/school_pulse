@@ -10,6 +10,7 @@ class DisciplineIncidentModel extends DisciplineIncident {
     required super.severity,
     required super.resolution,
     required super.counselingNotes,
+    super.punishment,
   });
 
   factory DisciplineIncidentModel.fromFirestore(DocumentSnapshot doc) {
@@ -25,6 +26,7 @@ class DisciplineIncidentModel extends DisciplineIncident {
       ),
       resolution: data['resolution'] ?? '',
       counselingNotes: data['counselingNotes'] ?? '',
+      punishment: data['punishment'] ?? '',
     );
   }
 
@@ -36,6 +38,7 @@ class DisciplineIncidentModel extends DisciplineIncident {
       'severity': severity.name,
       'resolution': resolution,
       'counselingNotes': counselingNotes,
+      'punishment': punishment,
     };
   }
 }

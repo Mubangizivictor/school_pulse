@@ -183,7 +183,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                       FadeInSlide(
                         delay: const Duration(milliseconds: 1000),
                         child: _QuickAction(
-                          label: 'Take Attendance',
+                          label: 'Attendance',
                           icon: Icons.how_to_reg,
                           color: semanticColors.info,
                           onTap: () => context.push('/staff/attendance'),
@@ -201,19 +201,19 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                       FadeInSlide(
                         delay: const Duration(milliseconds: 1200),
                         child: _QuickAction(
-                          label: 'Attendance History',
-                          icon: Icons.history,
+                          label: 'Homework',
+                          icon: Icons.assignment_outlined,
                           color: semanticColors.success,
-                          onTap: () => context.push('/staff/attendance/history'),
+                          onTap: () => context.push('/staff/homework'),
                         ),
                       ),
                       FadeInSlide(
                         delay: const Duration(milliseconds: 1300),
                         child: _QuickAction(
-                          label: 'Notifications',
-                          icon: Icons.notifications_outlined,
+                          label: 'Analytics',
+                          icon: Icons.analytics_outlined,
                           color: Theme.of(context).colorScheme.secondary,
-                          onTap: () => context.push('/staff/notifications'),
+                          onTap: () => context.push('/staff/class-analytics'),
                         ),
                       ),
                     ],

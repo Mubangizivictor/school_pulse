@@ -10,6 +10,7 @@ class CounselingSessionModel extends CounselingSession {
     required super.reason,
     required super.notes,
     required super.recommendations,
+    super.linkedIncidentId,
   });
 
   factory CounselingSessionModel.fromFirestore(DocumentSnapshot doc) {
@@ -22,6 +23,7 @@ class CounselingSessionModel extends CounselingSession {
       reason: data['reason'] ?? '',
       notes: data['notes'] ?? '',
       recommendations: data['recommendations'] ?? '',
+      linkedIncidentId: data['linkedIncidentId'] as String?,
     );
   }
 
@@ -33,6 +35,7 @@ class CounselingSessionModel extends CounselingSession {
       'reason': reason,
       'notes': notes,
       'recommendations': recommendations,
+      'linkedIncidentId': linkedIncidentId,
     };
   }
 }

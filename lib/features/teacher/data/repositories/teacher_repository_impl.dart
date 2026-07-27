@@ -1,6 +1,8 @@
 import 'package:dartz/dartz.dart';
 import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/enums/student_status.dart';
+import 'package:school_pulse/features/teacher/domain/entities/homework.dart';
+import 'package:school_pulse/features/teacher/domain/entities/report_comment.dart';
 import 'package:school_pulse/features/teacher/data/datasources/teacher_remote_data_source.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/teacher_repository.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_state.dart';
@@ -79,6 +81,74 @@ class TeacherRepositoryImpl implements TeacherRepository {
     try {
       final stats = await remoteDataSource.getTeacherDashboardStats(teacherId);
       return Right(stats);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<Homework>>> getHomework(String teacherId) async {
+    try {
+      final homeworkList = await remoteDataSource.getHomework(teacherId);
+      return Right(homeworkList);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> createHomework(Homework homework) async {
+    try {
+      await remoteDataSource.createHomework(homework);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> updateHomework(Homework homework) async {
+    try {
+      await remoteDataSource.updateHomework(homework);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteHomework(String homeworkId) async {
+    try {
+      await remoteDataSource.deleteHomework(homeworkId);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<ReportComment>>> getReportComments({
+    required String className,
+    required String term,
+    required String year,
+  }) async {
+    try {
+      final comments = await remoteDataSource.getReportComments(
+        className: className,
+        term: term,
+        year: year,
+      );
+      return Right(comments);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> saveReportComment(ReportComment comment) async {
+    try {
+      await remoteDataSource.saveReportComment(comment);
+      return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }

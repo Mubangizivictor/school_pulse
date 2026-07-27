@@ -5,4 +5,5 @@ import '../entities/school_event.dart';
 abstract class CalendarRepository {
   Future<Either<Failure, List<SchoolEvent>>> getUpcomingEvents();
   Future<Either<Failure, void>> addEvent(SchoolEvent event);
+  Future<Either<Failure, void>> deleteEvent(String eventId);
 }

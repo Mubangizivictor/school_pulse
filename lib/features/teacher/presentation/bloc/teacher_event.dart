@@ -1,4 +1,6 @@
 import 'package:equatable/equatable.dart';
+import '../../domain/entities/homework.dart';
+import '../../domain/entities/report_comment.dart';
 
 abstract class TeacherEvent extends Equatable {
   const TeacherEvent();
@@ -84,4 +86,56 @@ class TeacherAttendanceSubmitted extends TeacherEvent {
 
   @override
   List<Object?> get props => [className, attendance];
+}
+
+// Homework Events
+class TeacherHomeworkRequested extends TeacherEvent {
+  final String teacherId;
+  const TeacherHomeworkRequested(this.teacherId);
+  @override
+  List<Object?> get props => [teacherId];
+}
+
+class TeacherHomeworkCreated extends TeacherEvent {
+  final Homework homework;
+  const TeacherHomeworkCreated(this.homework);
+  @override
+  List<Object?> get props => [homework];
+}
+
+class TeacherHomeworkUpdated extends TeacherEvent {
+  final Homework homework;
+  const TeacherHomeworkUpdated(this.homework);
+  @override
+  List<Object?> get props => [homework];
+}
+
+class TeacherHomeworkDeleted extends TeacherEvent {
+  final String homeworkId;
+  const TeacherHomeworkDeleted(this.homeworkId);
+  @override
+  List<Object?> get props => [homeworkId];
+}
+
+// Report Comment Events
+class TeacherReportCommentsRequested extends TeacherEvent {
+  final String className;
+  final String term;
+  final String year;
+
+  const TeacherReportCommentsRequested({
+    required this.className,
+    required this.term,
+    required this.year,
+  });
+
+  @override
+  List<Object?> get props => [className, term, year];
+}
+
+class TeacherReportCommentSaved extends TeacherEvent {
+  final ReportComment comment;
+  const TeacherReportCommentSaved(this.comment);
+  @override
+  List<Object?> get props => [comment];
 }

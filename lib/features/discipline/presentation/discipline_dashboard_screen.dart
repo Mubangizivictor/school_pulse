@@ -3,14 +3,32 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/design_system/searchable_picker.dart';
 import 'package:school_pulse/injection_container.dart' as di;
+import 'package:school_pulse/core/usecases/usecase.dart';
+import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/discipline/domain/entities/discipline_incident.dart';
 import 'package:school_pulse/features/discipline/domain/entities/counseling_session.dart';
 import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/student/domain/usecases/get_all_students.dart';
+import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'bloc/discipline_bloc.dart';
 import 'bloc/discipline_event.dart';
 import 'bloc/discipline_state.dart';
+
+/// Ways an incident can be closed out - shown as a structured "Punishment"
+/// choice rather than free text, so reports can be aggregated later.
+const List<String> kDisciplinaryActions = [
+  'Verbal Warning',
+  'Written Warning',
+  'Detention',
+  'Community Service',
+  'Parent Meeting',
+  'Suspension',
+  'Expulsion Referral',
+];
 
 class DisciplineDashboardScreen extends StatefulWidget {
   const DisciplineDashboardScreen({super.key});
@@ -21,12 +39,50 @@ class DisciplineDashboardScreen extends StatefulWidget {
 
 class _DisciplineDashboardScreenState extends State<DisciplineDashboardScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  List<Student> _students = [];
+  Map<String, String> _classTeacherByClassName = {};
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     context.read<DisciplineBloc>().add(LoadRecentIncidents());
+    _loadLookups();
+  }
+
+  Future<void> _loadLookups() async {
+    final studentsResult = await di.sl<GetAllStudents>()();
+    final staffResult = await di.sl<GetStaffMembers>()(NoParams());
+    if (!mounted) return;
+    setState(() {
+      _students = studentsResult.getOrElse(() => const []);
+      final staff = staffResult.getOrElse(() => const []);
+      _classTeacherByClassName = {
+        for (final member in staff)
+          if (member.role == UserRole.classTeacher && (member.assignedClass ?? '').isNotEmpty)
+            member.assignedClass!: member.name,
+      };
+    });
+  }
+
+  String _studentName(String studentId) {
+    for (final s in _students) {
+      if (s.id == studentId) return s.name;
+    }
+    return 'Unknown Student';
+  }
+
+  Student? _studentById(String studentId) {
+    for (final s in _students) {
+      if (s.id == studentId) return s;
+    }
+    return null;
+  }
+
+  String? _classTeacherFor(String studentId) {
+    final student = _studentById(studentId);
+    if (student == null) return null;
+    return _classTeacherByClassName[student.className];
   }
 
   @override
@@ -76,8 +132,17 @@ class _DisciplineDashboardScreenState extends State<DisciplineDashboardScreen> w
             return TabBarView(
               controller: _tabController,
               children: [
-                _IncidentsTab(state: state, semanticColors: semanticColors),
-                _CounselingTab(state: state),
+                _IncidentsTab(
+                  state: state,
+                  semanticColors: semanticColors,
+                  studentName: _studentName,
+                  classTeacherFor: _classTeacherFor,
+                  onStartCounseling: (studentId, incidentId) {
+                    _tabController.index = 1;
+                    _showLogCounselingDialog(context, initialStudentId: studentId, linkedIncidentId: incidentId);
+                  },
+                ),
+                _CounselingTab(state: state, studentName: _studentName),
               ],
             );
           }
@@ -110,35 +175,50 @@ class _DisciplineDashboardScreenState extends State<DisciplineDashboardScreen> w
             );
           }
           String selectedStudentId = students.first.id;
+          String? selectedPunishment;
 
           return StatefulBuilder(
             builder: (dialogContext, setDialogState) => AlertDialog(
               title: const Text('Log Incident'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedStudentId,
-                    decoration: const InputDecoration(labelText: 'Student'),
-                    items: students.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
-                    onChanged: (value) => setDialogState(() => selectedStudentId = value ?? selectedStudentId),
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<Severity>(
-                    initialValue: severity,
-                    decoration: const InputDecoration(labelText: 'Severity'),
-                    items: Severity.values
-                        .map((s) => DropdownMenuItem(value: s, child: Text(s.name.toUpperCase())))
-                        .toList(),
-                    onChanged: (value) => setDialogState(() => severity = value ?? severity),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: descriptionController,
-                    maxLines: 3,
-                    decoration: const InputDecoration(labelText: 'Description', alignLabelWithHint: true, border: OutlineInputBorder()),
-                  ),
-                ],
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SearchablePickerField<Student>(
+                      label: 'Student',
+                      value: students.firstWhere((s) => s.id == selectedStudentId),
+                      items: students,
+                      labelBuilder: (s) => s.name,
+                      subtitleBuilder: (s) => s.className,
+                      onChanged: (s) => setDialogState(() => selectedStudentId = s.id),
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<Severity>(
+                      initialValue: severity,
+                      decoration: const InputDecoration(labelText: 'Severity'),
+                      items: Severity.values
+                          .map((s) => DropdownMenuItem(value: s, child: Text(s.name.toUpperCase())))
+                          .toList(),
+                      onChanged: (value) => setDialogState(() => severity = value ?? severity),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: descriptionController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(labelText: 'Description', alignLabelWithHint: true, border: OutlineInputBorder()),
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String?>(
+                      initialValue: selectedPunishment,
+                      decoration: const InputDecoration(labelText: 'Punishment (optional - can decide later)'),
+                      items: [
+                        const DropdownMenuItem(value: null, child: Text('Not yet decided')),
+                        ...kDisciplinaryActions.map((a) => DropdownMenuItem(value: a, child: Text(a))),
+                      ],
+                      onChanged: (value) => setDialogState(() => selectedPunishment = value),
+                    ),
+                  ],
+                ),
               ),
               actions: [
                 TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
@@ -149,6 +229,7 @@ class _DisciplineDashboardScreenState extends State<DisciplineDashboardScreen> w
                       studentId: selectedStudentId,
                       description: descriptionController.text.trim(),
                       severity: severity,
+                      punishment: selectedPunishment ?? '',
                     ));
                     Navigator.pop(dialogContext);
                   },
@@ -162,8 +243,10 @@ class _DisciplineDashboardScreenState extends State<DisciplineDashboardScreen> w
     );
   }
 
-  void _showLogCounselingDialog(BuildContext context) {
+  void _showLogCounselingDialog(BuildContext context, {String? initialStudentId, String? linkedIncidentId}) {
     final bloc = context.read<DisciplineBloc>();
+    final authState = context.read<AuthBloc>().state;
+    final counselorId = authState is AuthAuthenticated ? authState.user.id : '';
     final reasonController = TextEditingController();
     final notesController = TextEditingController();
     final recommendationsController = TextEditingController();
@@ -184,20 +267,23 @@ class _DisciplineDashboardScreenState extends State<DisciplineDashboardScreen> w
               actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close'))],
             );
           }
-          String selectedStudentId = students.first.id;
+          String selectedStudentId =
+              students.any((s) => s.id == initialStudentId) ? initialStudentId! : students.first.id;
 
           return StatefulBuilder(
             builder: (dialogContext, setDialogState) => AlertDialog(
-              title: const Text('Log Counseling Session'),
+              title: Text(linkedIncidentId != null ? 'Log Counseling Session (from incident)' : 'Log Counseling Session'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    DropdownButtonFormField<String>(
-                      initialValue: selectedStudentId,
-                      decoration: const InputDecoration(labelText: 'Student'),
-                      items: students.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
-                      onChanged: (value) => setDialogState(() => selectedStudentId = value ?? selectedStudentId),
+                    SearchablePickerField<Student>(
+                      label: 'Student',
+                      value: students.firstWhere((s) => s.id == selectedStudentId),
+                      items: students,
+                      labelBuilder: (s) => s.name,
+                      subtitleBuilder: (s) => s.className,
+                      onChanged: (s) => setDialogState(() => selectedStudentId = s.id),
                     ),
                     const SizedBox(height: 16),
                     TextField(
@@ -225,9 +311,11 @@ class _DisciplineDashboardScreenState extends State<DisciplineDashboardScreen> w
                     if (reasonController.text.trim().isEmpty) return;
                     bloc.add(LogCounselingSessionRequested(
                       studentId: selectedStudentId,
+                      counselorId: counselorId,
                       reason: reasonController.text.trim(),
                       notes: notesController.text.trim(),
                       recommendations: recommendationsController.text.trim(),
+                      linkedIncidentId: linkedIncidentId,
                     ));
                     Navigator.pop(dialogContext);
                   },
@@ -245,8 +333,17 @@ class _DisciplineDashboardScreenState extends State<DisciplineDashboardScreen> w
 class _IncidentsTab extends StatelessWidget {
   final DisciplineLoaded state;
   final SemanticColors semanticColors;
+  final String Function(String studentId) studentName;
+  final String? Function(String studentId) classTeacherFor;
+  final void Function(String studentId, String incidentId) onStartCounseling;
 
-  const _IncidentsTab({required this.state, required this.semanticColors});
+  const _IncidentsTab({
+    required this.state,
+    required this.semanticColors,
+    required this.studentName,
+    required this.classTeacherFor,
+    required this.onStartCounseling,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -305,7 +402,7 @@ class _IncidentsTab extends StatelessWidget {
                           color: _getSeverityColor(incident.severity, semanticColors),
                         ),
                       ),
-                      title: Text('Student ID: ${incident.studentId}'),
+                      title: Text(studentName(incident.studentId)),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -330,31 +427,51 @@ class _IncidentsTab extends StatelessWidget {
   }
 
   void _showIncidentDetail(BuildContext context, DisciplineIncident incident) {
+    final teacher = classTeacherFor(incident.studentId);
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('Student ID: ${incident.studentId}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(DateFormat('MMM d, yyyy').format(incident.date), style: Theme.of(context).textTheme.bodySmall),
-            const SizedBox(height: 12),
-            Text(incident.description),
-            if (incident.resolution.isNotEmpty) ...[
+        title: Text(studentName(incident.studentId)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(DateFormat('MMM d, yyyy').format(incident.date), style: Theme.of(context).textTheme.bodySmall),
+              if (teacher != null) ...[
+                const SizedBox(height: 4),
+                Text('Class Teacher: $teacher', style: Theme.of(context).textTheme.bodySmall),
+              ],
               const SizedBox(height: 12),
-              Text('Resolution', style: Theme.of(context).textTheme.labelMedium),
-              Text(incident.resolution),
+              Text(incident.description),
+              if (incident.punishment.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text('Punishment', style: Theme.of(context).textTheme.labelMedium),
+                Text(incident.punishment),
+              ],
+              if (incident.resolution.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text('Resolution', style: Theme.of(context).textTheme.labelMedium),
+                Text(incident.resolution),
+              ],
+              if (incident.counselingNotes.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text('Counseling Notes', style: Theme.of(context).textTheme.labelMedium),
+                Text(incident.counselingNotes),
+              ],
             ],
-            if (incident.counselingNotes.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Text('Counseling Notes', style: Theme.of(context).textTheme.labelMedium),
-              Text(incident.counselingNotes),
-            ],
-          ],
+          ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close')),
+          FilledButton.icon(
+            icon: const Icon(Icons.psychology_outlined, size: 18),
+            label: const Text('Start Counseling'),
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              onStartCounseling(incident.studentId, incident.id);
+            },
+          ),
         ],
       ),
     );
@@ -372,8 +489,9 @@ class _IncidentsTab extends StatelessWidget {
 
 class _CounselingTab extends StatelessWidget {
   final DisciplineLoaded state;
+  final String Function(String studentId) studentName;
 
-  const _CounselingTab({required this.state});
+  const _CounselingTab({required this.state, required this.studentName});
 
   @override
   Widget build(BuildContext context) {
@@ -409,14 +527,14 @@ class _CounselingTab extends StatelessWidget {
                   delay: Duration(milliseconds: 100 + (index * 50)),
                   child: AppCard(
                     child: ListTile(
-                      leading: const CircleAvatar(
-                        child: Icon(Icons.person_outline),
+                      leading: CircleAvatar(
+                        child: Icon(session.linkedIncidentId != null ? Icons.link : Icons.person_outline),
                       ),
                       title: Text('Reason: ${session.reason}'),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Student: ${session.studentId}'),
+                          Text('Student: ${studentName(session.studentId)}'),
                           Text(
                             DateFormat('MMM d, yyyy').format(session.date),
                             style: Theme.of(context).textTheme.bodySmall,
@@ -438,23 +556,31 @@ class _CounselingTab extends StatelessWidget {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Counseling Session Detail'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Student ID: ${session.studentId}'),
-            Text(DateFormat('MMM d, yyyy').format(session.date), style: Theme.of(context).textTheme.bodySmall),
-            const SizedBox(height: 12),
-            Text('Reason:', style: Theme.of(context).textTheme.labelMedium),
-            Text(session.reason),
-            const SizedBox(height: 12),
-            Text('Notes:', style: Theme.of(context).textTheme.labelMedium),
-            Text(session.notes),
-            const SizedBox(height: 12),
-            Text('Recommendations:', style: Theme.of(context).textTheme.labelMedium),
-            Text(session.recommendations),
-          ],
+        title: Text(studentName(session.studentId)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(DateFormat('MMM d, yyyy').format(session.date), style: Theme.of(context).textTheme.bodySmall),
+              if (session.linkedIncidentId != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Linked to a discipline incident',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
+                ),
+              ],
+              const SizedBox(height: 12),
+              Text('Reason:', style: Theme.of(context).textTheme.labelMedium),
+              Text(session.reason),
+              const SizedBox(height: 12),
+              Text('Notes:', style: Theme.of(context).textTheme.labelMedium),
+              Text(session.notes),
+              const SizedBox(height: 12),
+              Text('Recommendations:', style: Theme.of(context).textTheme.labelMedium),
+              Text(session.recommendations),
+            ],
+          ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close')),

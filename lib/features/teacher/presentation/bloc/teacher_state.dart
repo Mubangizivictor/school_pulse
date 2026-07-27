@@ -1,6 +1,8 @@
 import 'package:equatable/equatable.dart';
 import '../../domain/entities/teacher_dashboard_stats.dart';
 import '../../domain/usecases/get_attendance_history.dart';
+import '../../domain/entities/homework.dart';
+import '../../domain/entities/report_comment.dart';
 
 abstract class TeacherState extends Equatable {
   const TeacherState();
@@ -97,6 +99,33 @@ class TeacherAttendanceHistoryLoaded extends TeacherState {
 
   @override
   List<Object?> get props => [history];
+}
+
+class TeacherHomeworkLoaded extends TeacherState {
+  final List<Homework> homeworkList;
+  const TeacherHomeworkLoaded(this.homeworkList);
+  @override
+  List<Object?> get props => [homeworkList];
+}
+
+class TeacherReportCommentsLoaded extends TeacherState {
+  final List<ReportComment> comments;
+  final List<TeacherStudent> students;
+
+  const TeacherReportCommentsLoaded({
+    required this.comments,
+    required this.students,
+  });
+
+  @override
+  List<Object?> get props => [comments, students];
+}
+
+class TeacherOperationSuccess extends TeacherState {
+  final String message;
+  const TeacherOperationSuccess(this.message);
+  @override
+  List<Object?> get props => [message];
 }
 
 class TeacherStudent extends Equatable {

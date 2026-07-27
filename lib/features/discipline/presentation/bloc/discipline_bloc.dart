@@ -57,6 +57,7 @@ class DisciplineBloc extends Bloc<DisciplineEvent, DisciplineState> {
         severity: event.severity,
         resolution: '',
         counselingNotes: '',
+        punishment: event.punishment,
       );
       final result = await logDisciplineIncident(incident);
       await result.fold(
@@ -80,11 +81,12 @@ class DisciplineBloc extends Bloc<DisciplineEvent, DisciplineState> {
       final session = CounselingSession(
         id: '',
         studentId: event.studentId,
-        counselorId: 'current_user_id', // Should be replaced with actual user ID
+        counselorId: event.counselorId,
         date: DateTime.now(),
         reason: event.reason,
         notes: event.notes,
         recommendations: event.recommendations,
+        linkedIncidentId: event.linkedIncidentId,
       );
       final result = await logCounselingSession(session);
       await result.fold(

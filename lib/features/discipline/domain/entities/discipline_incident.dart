@@ -10,6 +10,7 @@ class DisciplineIncident extends Equatable {
   final Severity severity;
   final String resolution;
   final String counselingNotes;
+  final String punishment;
 
   const DisciplineIncident({
     required this.id,
@@ -19,6 +20,7 @@ class DisciplineIncident extends Equatable {
     required this.severity,
     required this.resolution,
     required this.counselingNotes,
+    this.punishment = '',
   });
 
   @override
@@ -30,5 +32,6 @@ class DisciplineIncident extends Equatable {
         severity,
         resolution,
         counselingNotes,
+        punishment,
       ];
 }

@@ -113,7 +113,6 @@ class _RoleTile extends StatelessWidget {
       case UserRole.transportCoordinator: return Icons.directions_bus;
       case UserRole.guidanceDiscipline: return Icons.gavel;
       case UserRole.storeInventory: return Icons.inventory;
-      case UserRole.examsOfficer: return Icons.quiz;
       case UserRole.gatekeeper: return Icons.security;
       case UserRole.securityHead: return Icons.admin_panel_settings;
       case UserRole.gamesMaster: return Icons.sports_soccer;

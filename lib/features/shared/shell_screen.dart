@@ -15,27 +15,46 @@ class StaffShell extends StatelessWidget {
   bool _isAdmin(BuildContext context) {
     final state = context.read<AuthBloc>().state;
     if (state is AuthAuthenticated) {
-      return UserRoleDisplay.adminRoles.contains(state.user.role);
+      return UserRoleDisplay.adminConsoleRoles.contains(state.user.role);
+    }
+    return false;
+  }
+
+  /// Only classroom teachers have an "Attendance"/"Marks" tab - every other
+  /// operational role (bursar, nurse, HR, discipline, etc.) gets a simpler
+  /// Home/Messages/More nav instead of screens that don't apply to them.
+  static const List<UserRole> _teacherRoles = [UserRole.classTeacher, UserRole.subjectTeacher];
+
+  bool _isTeacher(BuildContext context) {
+    final state = context.read<AuthBloc>().state;
+    if (state is AuthAuthenticated) {
+      return _teacherRoles.contains(state.user.role);
     }
     return false;
   }
 
   int _calculateSelectedIndex(BuildContext context) {
     final String location = GoRouterState.of(context).uri.path;
-    final isAdmin = _isAdmin(context);
 
-    if (isAdmin) {
+    if (_isAdmin(context)) {
       if (location.contains('users')) return 1;
       if (location.startsWith('/staff/messages')) return 2;
       if (location.contains('config')) return 3;
       if (location.startsWith('/staff/admin')) return 0;
-    } else {
+      return 0;
+    }
+
+    if (_isTeacher(context)) {
       if (location.startsWith('/staff/dashboard')) return 0;
       if (location.startsWith('/staff/attendance')) return 1;
       if (location.startsWith('/staff/marks')) return 2;
       if (location.startsWith('/staff/messages')) return 3;
       if (location.startsWith('/staff/more')) return 4;
+      return 0;
     }
+
+    if (location.startsWith('/staff/messages')) return 1;
+    if (location.startsWith('/staff/more')) return 2;
     return 0;
   }
 
@@ -50,15 +69,17 @@ class StaffShell extends StatelessWidget {
   }
 
   void _onItemTapped(int index, BuildContext context) {
-    final isAdmin = _isAdmin(context);
-    if (isAdmin) {
+    if (_isAdmin(context)) {
       switch (index) {
         case 0: context.go('/staff/admin'); break;
         case 1: context.go('/staff/admin/users'); break;
         case 2: context.go('/staff/messages'); break;
         case 3: context.go('/staff/admin/config'); break;
       }
-    } else {
+      return;
+    }
+
+    if (_isTeacher(context)) {
       switch (index) {
         case 0: context.go(_homePath(context)); break;
         case 1: context.go('/staff/attendance'); break;
@@ -66,6 +87,13 @@ class StaffShell extends StatelessWidget {
         case 3: context.go('/staff/messages'); break;
         case 4: context.go('/staff/more'); break;
       }
+      return;
+    }
+
+    switch (index) {
+      case 0: context.go(_homePath(context)); break;
+      case 1: context.go('/staff/messages'); break;
+      case 2: context.go('/staff/more'); break;
     }
   }
 
@@ -94,6 +122,7 @@ class StaffShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 600;
     final isAdmin = _isAdmin(context);
+    final isTeacher = _isTeacher(context);
 
     final List<NavigationDestination> teacherDestinations = const [
       NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Home'),
@@ -110,7 +139,15 @@ class StaffShell extends StatelessWidget {
       NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: 'Settings'),
     ];
 
-    final destinations = isAdmin ? adminDestinations : teacherDestinations;
+    final List<NavigationDestination> operationalDestinations = const [
+      NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Home'),
+      NavigationDestination(icon: Icon(Icons.message_outlined), selectedIcon: Icon(Icons.message), label: 'Messages'),
+      NavigationDestination(icon: Icon(Icons.more_horiz), label: 'More'),
+    ];
+
+    final destinations = isAdmin
+        ? adminDestinations
+        : (isTeacher ? teacherDestinations : operationalDestinations);
 
     final config = context.watch<ThemeProvider>().config;
     final logoUrl = config?.schoolLogoUrl;

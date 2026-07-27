@@ -12,7 +12,7 @@ const STAFF_ROLES = [
   "director", "headTeacher", "deputyHead", "schoolAdmin", "bursar",
   "classTeacher", "subjectTeacher", "librarian", "nurse", "boardingMatron",
   "transportCoordinator", "guidanceDiscipline", "storeInventory",
-  "examsOfficer", "receptionist", "gatekeeper", "securityHead",
+  "receptionist", "gatekeeper", "securityHead",
   "gamesMaster", "cateringManager",
 ];
 

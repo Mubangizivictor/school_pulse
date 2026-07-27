@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 
 class StaffMoreScreen extends StatelessWidget {
   const StaffMoreScreen({super.key});
 
+  static const _teacherRoles = [UserRole.classTeacher, UserRole.subjectTeacher];
+
   @override
   Widget build(BuildContext context) {
+    final authState = context.watch<AuthBloc>().state;
+    final isTeacher = authState is AuthAuthenticated && _teacherRoles.contains(authState.user.role);
+
     return Scaffold(
       appBar: AppBar(title: const Text('More')),
       body: ListView(
@@ -18,18 +25,32 @@ class StaffMoreScreen extends StatelessWidget {
           FadeInSlide(
             child: _buildMenuSection(
               context,
-              'Teacher Tools',
+              isTeacher ? 'Teacher Tools' : 'Tools',
               [
-                _MenuTile(
-                  icon: Icons.menu_book_outlined,
-                  title: 'Lesson Plans',
-                  onTap: () => context.push('/staff/lesson-plans'),
-                ),
-                _MenuTile(
-                  icon: Icons.analytics_outlined,
-                  title: 'Class Analytics',
-                  onTap: () => context.push('/staff/class-analytics'),
-                ),
+                if (isTeacher)
+                  _MenuTile(
+                    icon: Icons.menu_book_outlined,
+                    title: 'Lesson Plans',
+                    onTap: () => context.push('/staff/lesson-plans'),
+                  ),
+                if (isTeacher)
+                  _MenuTile(
+                    icon: Icons.assignment_outlined,
+                    title: 'Homework & Assignments',
+                    onTap: () => context.push('/staff/homework'),
+                  ),
+                if (isTeacher)
+                  _MenuTile(
+                    icon: Icons.comment_bank_outlined,
+                    title: 'Report Comments',
+                    onTap: () => context.push('/staff/report-comments'),
+                  ),
+                if (isTeacher)
+                  _MenuTile(
+                    icon: Icons.analytics_outlined,
+                    title: 'Class Analytics',
+                    onTap: () => context.push('/staff/class-analytics'),
+                  ),
                 _MenuTile(
                   icon: Icons.event_note_outlined,
                   title: 'School Calendar',

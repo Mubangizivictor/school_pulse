@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/design_system/searchable_picker.dart';
 import 'package:school_pulse/core/utils.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 import 'package:school_pulse/features/student/domain/entities/student.dart';
@@ -204,11 +205,13 @@ class _NurseDashboardScreenState extends State<NurseDashboardScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedStudentId,
-                    decoration: const InputDecoration(labelText: 'Student'),
-                    items: students.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
-                    onChanged: (value) => setDialogState(() => selectedStudentId = value ?? selectedStudentId),
+                  SearchablePickerField<Student>(
+                    label: 'Student',
+                    value: students.firstWhere((s) => s.id == selectedStudentId),
+                    items: students,
+                    labelBuilder: (s) => s.name,
+                    subtitleBuilder: (s) => s.className,
+                    onChanged: (s) => setDialogState(() => selectedStudentId = s.id),
                   ),
                   const SizedBox(height: 16),
                   TextField(controller: reasonController, decoration: const InputDecoration(labelText: 'Reason')),

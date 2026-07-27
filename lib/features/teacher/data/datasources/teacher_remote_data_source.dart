@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../presentation/bloc/teacher_state.dart';
 import '../../domain/usecases/get_attendance_history.dart';
 import '../../domain/entities/teacher_dashboard_stats.dart';
+import '../../domain/entities/homework.dart';
+import '../../domain/entities/report_comment.dart';
 
 abstract class TeacherRemoteDataSource {
   Future<List<TeacherStudent>> getStudentsByClass(String className);
@@ -20,6 +22,20 @@ abstract class TeacherRemoteDataSource {
   });
   Future<List<AttendanceHistoryRecord>> getAttendanceHistory(String teacherId);
   Future<TeacherDashboardStats> getTeacherDashboardStats(String teacherId);
+
+  // Homework
+  Future<List<Homework>> getHomework(String teacherId);
+  Future<void> createHomework(Homework homework);
+  Future<void> updateHomework(Homework homework);
+  Future<void> deleteHomework(String homeworkId);
+
+  // Report Comments
+  Future<List<ReportComment>> getReportComments({
+    required String className,
+    required String term,
+    required String year,
+  });
+  Future<void> saveReportComment(ReportComment comment);
 }
 
 /// UCE-style aggregate grade for a percentage score.
@@ -196,5 +212,101 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
       activeNotifications: 0,
       classProgress: [],
     );
+  }
+
+  @override
+  Future<List<Homework>> getHomework(String teacherId) async {
+    final snapshot = await firestore
+        .collection('homework')
+        .where('teacherId', isEqualTo: teacherId)
+        .orderBy('dueDate', descending: false)
+        .get();
+
+    return snapshot.docs.map((doc) {
+      final data = doc.data();
+      return Homework(
+        id: doc.id,
+        title: data['title'] ?? '',
+        description: data['description'] ?? '',
+        className: data['className'] ?? '',
+        subject: data['subject'] ?? '',
+        dueDate: (data['dueDate'] as Timestamp).toDate(),
+        createdAt: (data['createdAt'] as Timestamp).toDate(),
+        teacherId: data['teacherId'] ?? '',
+        attachments: (data['attachments'] as List?)?.map((e) => e as String).toList(),
+      );
+    }).toList();
+  }
+
+  @override
+  Future<void> createHomework(Homework homework) async {
+    await firestore.collection('homework').add({
+      'title': homework.title,
+      'description': homework.description,
+      'className': homework.className,
+      'subject': homework.subject,
+      'dueDate': Timestamp.fromDate(homework.dueDate),
+      'createdAt': FieldValue.serverTimestamp(),
+      'teacherId': homework.teacherId,
+      'attachments': homework.attachments ?? [],
+    });
+  }
+
+  @override
+  Future<void> updateHomework(Homework homework) async {
+    await firestore.collection('homework').doc(homework.id).update({
+      'title': homework.title,
+      'description': homework.description,
+      'className': homework.className,
+      'subject': homework.subject,
+      'dueDate': Timestamp.fromDate(homework.dueDate),
+      'attachments': homework.attachments ?? [],
+    });
+  }
+
+  @override
+  Future<void> deleteHomework(String homeworkId) async {
+    await firestore.collection('homework').doc(homeworkId).delete();
+  }
+
+  @override
+  Future<List<ReportComment>> getReportComments({
+    required String className,
+    required String term,
+    required String year,
+  }) async {
+    final snapshot = await firestore
+        .collection('report_comments')
+        .where('className', isEqualTo: className)
+        .where('term', isEqualTo: term)
+        .where('year', isEqualTo: year)
+        .get();
+
+    return snapshot.docs.map((doc) {
+      final data = doc.data();
+      return ReportComment(
+        id: doc.id,
+        studentId: data['studentId'] ?? '',
+        term: data['term'] ?? '',
+        year: data['year'] ?? '',
+        comment: data['comment'] ?? '',
+        teacherId: data['teacherId'] ?? '',
+        updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+      );
+    }).toList();
+  }
+
+  @override
+  Future<void> saveReportComment(ReportComment comment) async {
+    final docId = '${comment.studentId}_${comment.term}_${comment.year}';
+    await firestore.collection('report_comments').doc(docId).set({
+      'studentId': comment.studentId,
+      'className': comment.className,
+      'term': comment.term,
+      'year': comment.year,
+      'comment': comment.comment,
+      'teacherId': comment.teacherId,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 }

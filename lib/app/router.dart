@@ -74,6 +74,9 @@ import 'package:school_pulse/features/auth/login_flow/school_splash_screen.dart'
 
 import '../features/games/presentation/screens/games_dashboard_screen.dart';
 
+import 'package:school_pulse/features/teacher/homework_screen.dart';
+import 'package:school_pulse/features/teacher/report_comments_screen.dart';
+
 final router = GoRouter(
   initialLocation: '/',
   redirect: (context, state) {
@@ -98,7 +101,17 @@ final router = GoRouter(
       ),
       GoRoute(
         path: '/parent/login/verify',
-        builder: (context, state) => ParentVerifyScreen(accessCode: state.extra as ParentAccessCode?),
+        builder: (context, state) => ParentPhoneScreen(accessCode: state.extra as ParentAccessCode?),
+      ),
+      GoRoute(
+        path: '/parent/login/pin',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          return ParentPinScreen(
+            accessCode: extra['accessCode'] as ParentAccessCode,
+            phoneNumber: extra['phoneNumber'] as String,
+          );
+        },
       ),
       GoRoute(
         path: '/staff/login/role',
@@ -190,6 +203,10 @@ final router = GoRouter(
           GoRoute(
             path: '/parent/notifications',
             builder: (context, state) => const NotificationsScreen(),
+          ),
+          GoRoute(
+            path: '/parent/calendar',
+            builder: (context, state) => const SchoolCalendarScreen(),
           ),
         ],
       ),
@@ -345,7 +362,7 @@ final router = GoRouter(
             builder: (context, state) {
               final authState = context.read<AuthBloc>().state;
               final isAdmin = authState is AuthAuthenticated &&
-                  UserRoleDisplay.adminRoles.contains(authState.user.role);
+                  UserRoleDisplay.adminConsoleRoles.contains(authState.user.role);
               return isAdmin ? const AdminMessagesScreen() : const MessagesScreen();
             },
           ),

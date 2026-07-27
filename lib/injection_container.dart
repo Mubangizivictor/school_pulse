@@ -5,8 +5,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get_it/get_it.dart';
 import 'package:school_pulse/features/admin/data/repositories/visitor_repository.dart';
 import 'package:school_pulse/features/admin/data/repositories/subscription_repository.dart';
+import 'package:school_pulse/features/calendar/presentation/bloc/calendar_bloc.dart';
 import 'package:school_pulse/features/calendar/domain/usecases/get_upcoming_events.dart';
 import 'package:school_pulse/features/calendar/domain/usecases/add_event.dart';
+import 'package:school_pulse/features/calendar/domain/usecases/delete_event.dart';
 import 'package:school_pulse/features/calendar/domain/repositories/calendar_repository.dart';
 import 'package:school_pulse/features/calendar/data/repositories/calendar_repository_impl.dart';
 import 'package:school_pulse/features/calendar/data/datasources/calendar_remote_data_source.dart';
@@ -153,6 +155,8 @@ import 'package:school_pulse/features/hr/data/repositories/hr_repository_impl.da
 import 'package:school_pulse/features/hr/data/datasources/hr_remote_data_source.dart';
 import 'package:school_pulse/features/discipline/domain/usecases/log_counseling_session.dart';
 import 'package:school_pulse/features/discipline/domain/usecases/get_counseling_sessions.dart';
+import 'package:school_pulse/features/teacher/domain/usecases/manage_homework.dart';
+import 'package:school_pulse/features/teacher/domain/usecases/manage_report_comments.dart';
 import 'package:school_pulse/core/network/network_info.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 
@@ -389,6 +393,12 @@ Future<void> init() async {
       submitMarks: sl(),
       getAttendanceHistory: sl(),
       getTeacherDashboardStats: sl(),
+      getHomework: sl(),
+      createHomework: sl(),
+      updateHomework: sl(),
+      deleteHomework: sl(),
+      getReportComments: sl(),
+      saveReportComment: sl(),
     ),
   );
 
@@ -398,6 +408,12 @@ Future<void> init() async {
   sl.registerLazySingleton(() => SubmitMarks(sl()));
   sl.registerLazySingleton(() => GetAttendanceHistory(sl()));
   sl.registerLazySingleton(() => GetTeacherDashboardStats(sl()));
+  sl.registerLazySingleton(() => GetHomework(sl()));
+  sl.registerLazySingleton(() => CreateHomework(sl()));
+  sl.registerLazySingleton(() => UpdateHomework(sl()));
+  sl.registerLazySingleton(() => DeleteHomework(sl()));
+  sl.registerLazySingleton(() => GetReportComments(sl()));
+  sl.registerLazySingleton(() => SaveReportComment(sl()));
 
   // Repository
   sl.registerLazySingleton<TeacherRepository>(
@@ -568,8 +584,16 @@ Future<void> init() async {
   sl.registerLazySingleton(() => SystemConfigRepository());
 
   //! Features - Calendar
+  sl.registerFactory(
+    () => CalendarBloc(
+      getUpcomingEvents: sl(),
+      addEvent: sl(),
+      deleteEvent: sl(),
+    ),
+  );
   sl.registerLazySingleton(() => GetUpcomingEvents(sl()));
   sl.registerLazySingleton(() => AddEvent(sl()));
+  sl.registerLazySingleton(() => DeleteEvent(sl()));
   sl.registerLazySingleton<CalendarRepository>(
     () => CalendarRepositoryImpl(remoteDataSource: sl()),
   );
