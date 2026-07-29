@@ -471,12 +471,6 @@ class AdminDashboardScreen extends StatelessWidget {
                   MaterialPageRoute(builder: (context) => const ProcurementScreen(isAdminView: true)),
                 ),
               ),
-              _AdminShortcut(
-                icon: Icons.assignment_turned_in, 
-                label: 'Report Approvals', 
-                color: Colors.green, 
-                onTap: () => context.go('/staff/admin/approvals/reports'),
-              ),
             ],
           ),
         ],

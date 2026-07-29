@@ -49,7 +49,6 @@ import 'package:school_pulse/features/transport/presentation/transport_coordinat
 import 'package:school_pulse/features/discipline/presentation/discipline_dashboard_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/dean_dashboard_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/curriculum/syllabus_coverage_screen.dart';
-import 'package:school_pulse/features/admin/presentation/screens/approvals/head_teacher_approval_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/approvals/report_approval_screen.dart';
 import 'package:school_pulse/features/religion/presentation/religious_leader_dashboard_screen.dart';
 import 'package:school_pulse/features/exams/presentation/exams_dashboard_screen.dart';
@@ -303,10 +302,6 @@ final router = GoRouter(
             path: '/staff/admin',
             builder: (context, state) => const AdminDashboardScreen(),
             routes: [
-              GoRoute(
-                path: 'approvals/reports',
-                builder: (context, state) => const HeadTeacherApprovalScreen(),
-              ),
               GoRoute(
                 path: 'users',
                 builder: (context, state) => const UserManagementScreen(),
