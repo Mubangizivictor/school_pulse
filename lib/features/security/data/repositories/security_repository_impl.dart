@@ -373,6 +373,7 @@ class SecurityRepositoryImpl implements SecurityRepository {
           allowedUserRoles: entity.allowedUserRoles,
           requiredVerificationMethods: entity.requiredVerificationMethods,
           schoolId: entity.schoolId,
+          cameraId: entity.cameraId,
         );
         await remoteDataSource.updateGate(model);
       }
@@ -427,6 +428,7 @@ class SecurityRepositoryImpl implements SecurityRepository {
           report: incident.report,
           status: incident.status,
           schoolId: incident.schoolId,
+          cameraId: incident.cameraId,
         ));
       }
       await localDataSource.markIncidentsAsSynced(unsyncedIncidents.map((e) => e.incidentId).toList());

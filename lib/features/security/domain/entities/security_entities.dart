@@ -10,6 +10,9 @@ class Gate extends Equatable {
   final List<String> allowedUserRoles;
   final List<String> requiredVerificationMethods;
   final String schoolId;
+  // CCTV integration readiness only (not implemented) - a future camera
+  // feed can be associated with this gate without another schema change.
+  final String? cameraId;
 
   const Gate({
     required this.id,
@@ -21,10 +24,11 @@ class Gate extends Equatable {
     required this.allowedUserRoles,
     required this.requiredVerificationMethods,
     required this.schoolId,
+    this.cameraId,
   });
 
   @override
-  List<Object?> get props => [id, name, type, location, assignedOfficerIds, operatingHours, allowedUserRoles, requiredVerificationMethods, schoolId];
+  List<Object?> get props => [id, name, type, location, assignedOfficerIds, operatingHours, allowedUserRoles, requiredVerificationMethods, schoolId, cameraId];
 }
 
 class SecurityIncident extends Equatable {
@@ -39,6 +43,9 @@ class SecurityIncident extends Equatable {
   final String report;
   final String status; // Pending, Investigating, Resolved
   final String schoolId;
+  // CCTV integration readiness only (not implemented) - lets a future phase
+  // attach the camera/footage reference that covers this incident.
+  final String? cameraId;
 
   const SecurityIncident({
     required this.id,
@@ -52,10 +59,11 @@ class SecurityIncident extends Equatable {
     required this.report,
     required this.status,
     required this.schoolId,
+    this.cameraId,
   });
 
   @override
-  List<Object?> get props => [id, type, description, timestamp, location, involvedPersonIds, photoUrls, reportedByOfficerId, report, status, schoolId];
+  List<Object?> get props => [id, type, description, timestamp, location, involvedPersonIds, photoUrls, reportedByOfficerId, report, status, schoolId, cameraId];
 }
 
 class StudentMovement extends Equatable {

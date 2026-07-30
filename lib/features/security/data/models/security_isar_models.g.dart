@@ -27,43 +27,48 @@ const GateIsarSchema = CollectionSchema(
       name: r'assignedOfficerIds',
       type: IsarType.stringList,
     ),
-    r'gateId': PropertySchema(
+    r'cameraId': PropertySchema(
       id: 2,
+      name: r'cameraId',
+      type: IsarType.string,
+    ),
+    r'gateId': PropertySchema(
+      id: 3,
       name: r'gateId',
       type: IsarType.string,
     ),
     r'isSynced': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'isSynced',
       type: IsarType.bool,
     ),
     r'location': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'location',
       type: IsarType.string,
     ),
     r'name': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'name',
       type: IsarType.string,
     ),
     r'operatingHoursJson': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'operatingHoursJson',
       type: IsarType.string,
     ),
     r'requiredVerificationMethods': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'requiredVerificationMethods',
       type: IsarType.stringList,
     ),
     r'schoolId': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'schoolId',
       type: IsarType.string,
     ),
     r'type': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'type',
       type: IsarType.string,
     )
@@ -129,6 +134,12 @@ int _gateIsarEstimateSize(
       bytesCount += value.length * 3;
     }
   }
+  {
+    final value = object.cameraId;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.gateId.length * 3;
   bytesCount += 3 + object.location.length * 3;
   bytesCount += 3 + object.name.length * 3;
@@ -153,14 +164,15 @@ void _gateIsarSerialize(
 ) {
   writer.writeStringList(offsets[0], object.allowedUserRoles);
   writer.writeStringList(offsets[1], object.assignedOfficerIds);
-  writer.writeString(offsets[2], object.gateId);
-  writer.writeBool(offsets[3], object.isSynced);
-  writer.writeString(offsets[4], object.location);
-  writer.writeString(offsets[5], object.name);
-  writer.writeString(offsets[6], object.operatingHoursJson);
-  writer.writeStringList(offsets[7], object.requiredVerificationMethods);
-  writer.writeString(offsets[8], object.schoolId);
-  writer.writeString(offsets[9], object.type);
+  writer.writeString(offsets[2], object.cameraId);
+  writer.writeString(offsets[3], object.gateId);
+  writer.writeBool(offsets[4], object.isSynced);
+  writer.writeString(offsets[5], object.location);
+  writer.writeString(offsets[6], object.name);
+  writer.writeString(offsets[7], object.operatingHoursJson);
+  writer.writeStringList(offsets[8], object.requiredVerificationMethods);
+  writer.writeString(offsets[9], object.schoolId);
+  writer.writeString(offsets[10], object.type);
 }
 
 GateIsar _gateIsarDeserialize(
@@ -172,15 +184,16 @@ GateIsar _gateIsarDeserialize(
   final object = GateIsar();
   object.allowedUserRoles = reader.readStringList(offsets[0]) ?? [];
   object.assignedOfficerIds = reader.readStringList(offsets[1]) ?? [];
-  object.gateId = reader.readString(offsets[2]);
+  object.cameraId = reader.readStringOrNull(offsets[2]);
+  object.gateId = reader.readString(offsets[3]);
   object.id = id;
-  object.isSynced = reader.readBool(offsets[3]);
-  object.location = reader.readString(offsets[4]);
-  object.name = reader.readString(offsets[5]);
-  object.operatingHoursJson = reader.readString(offsets[6]);
-  object.requiredVerificationMethods = reader.readStringList(offsets[7]) ?? [];
-  object.schoolId = reader.readString(offsets[8]);
-  object.type = reader.readString(offsets[9]);
+  object.isSynced = reader.readBool(offsets[4]);
+  object.location = reader.readString(offsets[5]);
+  object.name = reader.readString(offsets[6]);
+  object.operatingHoursJson = reader.readString(offsets[7]);
+  object.requiredVerificationMethods = reader.readStringList(offsets[8]) ?? [];
+  object.schoolId = reader.readString(offsets[9]);
+  object.type = reader.readString(offsets[10]);
   return object;
 }
 
@@ -196,20 +209,22 @@ P _gateIsarDeserializeProp<P>(
     case 1:
       return (reader.readStringList(offset) ?? []) as P;
     case 2:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 3:
-      return (reader.readBool(offset)) as P;
-    case 4:
       return (reader.readString(offset)) as P;
+    case 4:
+      return (reader.readBool(offset)) as P;
     case 5:
       return (reader.readString(offset)) as P;
     case 6:
       return (reader.readString(offset)) as P;
     case 7:
-      return (reader.readStringList(offset) ?? []) as P;
-    case 8:
       return (reader.readString(offset)) as P;
+    case 8:
+      return (reader.readStringList(offset) ?? []) as P;
     case 9:
+      return (reader.readString(offset)) as P;
+    case 10:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -900,6 +915,152 @@ extension GateIsarQueryFilter
         upper,
         includeUpper,
       );
+    });
+  }
+
+  QueryBuilder<GateIsar, GateIsar, QAfterFilterCondition> cameraIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'cameraId',
+      ));
+    });
+  }
+
+  QueryBuilder<GateIsar, GateIsar, QAfterFilterCondition> cameraIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'cameraId',
+      ));
+    });
+  }
+
+  QueryBuilder<GateIsar, GateIsar, QAfterFilterCondition> cameraIdEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'cameraId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<GateIsar, GateIsar, QAfterFilterCondition> cameraIdGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'cameraId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<GateIsar, GateIsar, QAfterFilterCondition> cameraIdLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'cameraId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<GateIsar, GateIsar, QAfterFilterCondition> cameraIdBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'cameraId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<GateIsar, GateIsar, QAfterFilterCondition> cameraIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'cameraId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<GateIsar, GateIsar, QAfterFilterCondition> cameraIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'cameraId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<GateIsar, GateIsar, QAfterFilterCondition> cameraIdContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'cameraId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<GateIsar, GateIsar, QAfterFilterCondition> cameraIdMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'cameraId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<GateIsar, GateIsar, QAfterFilterCondition> cameraIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'cameraId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<GateIsar, GateIsar, QAfterFilterCondition> cameraIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'cameraId',
+        value: '',
+      ));
     });
   }
 
@@ -1986,6 +2147,18 @@ extension GateIsarQueryLinks
     on QueryBuilder<GateIsar, GateIsar, QFilterCondition> {}
 
 extension GateIsarQuerySortBy on QueryBuilder<GateIsar, GateIsar, QSortBy> {
+  QueryBuilder<GateIsar, GateIsar, QAfterSortBy> sortByCameraId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cameraId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<GateIsar, GateIsar, QAfterSortBy> sortByCameraIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cameraId', Sort.desc);
+    });
+  }
+
   QueryBuilder<GateIsar, GateIsar, QAfterSortBy> sortByGateId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'gateId', Sort.asc);
@@ -2074,6 +2247,18 @@ extension GateIsarQuerySortBy on QueryBuilder<GateIsar, GateIsar, QSortBy> {
 
 extension GateIsarQuerySortThenBy
     on QueryBuilder<GateIsar, GateIsar, QSortThenBy> {
+  QueryBuilder<GateIsar, GateIsar, QAfterSortBy> thenByCameraId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cameraId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<GateIsar, GateIsar, QAfterSortBy> thenByCameraIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cameraId', Sort.desc);
+    });
+  }
+
   QueryBuilder<GateIsar, GateIsar, QAfterSortBy> thenByGateId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'gateId', Sort.asc);
@@ -2186,6 +2371,13 @@ extension GateIsarQueryWhereDistinct
     });
   }
 
+  QueryBuilder<GateIsar, GateIsar, QDistinct> distinctByCameraId(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'cameraId', caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<GateIsar, GateIsar, QDistinct> distinctByGateId(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -2265,6 +2457,12 @@ extension GateIsarQueryProperty
     });
   }
 
+  QueryBuilder<GateIsar, String?, QQueryOperations> cameraIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'cameraId');
+    });
+  }
+
   QueryBuilder<GateIsar, String, QQueryOperations> gateIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'gateId');
@@ -2328,63 +2526,68 @@ const SecurityIncidentIsarSchema = CollectionSchema(
   name: r'SecurityIncidentIsar',
   id: 8859738775266885274,
   properties: {
-    r'description': PropertySchema(
+    r'cameraId': PropertySchema(
       id: 0,
+      name: r'cameraId',
+      type: IsarType.string,
+    ),
+    r'description': PropertySchema(
+      id: 1,
       name: r'description',
       type: IsarType.string,
     ),
     r'incidentId': PropertySchema(
-      id: 1,
+      id: 2,
       name: r'incidentId',
       type: IsarType.string,
     ),
     r'involvedPersonIds': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'involvedPersonIds',
       type: IsarType.stringList,
     ),
     r'isSynced': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'isSynced',
       type: IsarType.bool,
     ),
     r'location': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'location',
       type: IsarType.string,
     ),
     r'photoUrls': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'photoUrls',
       type: IsarType.stringList,
     ),
     r'report': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'report',
       type: IsarType.string,
     ),
     r'reportedByOfficerId': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'reportedByOfficerId',
       type: IsarType.string,
     ),
     r'schoolId': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'schoolId',
       type: IsarType.string,
     ),
     r'status': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'status',
       type: IsarType.string,
     ),
     r'timestamp': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'timestamp',
       type: IsarType.dateTime,
     ),
     r'type': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'type',
       type: IsarType.string,
     )
@@ -2436,6 +2639,12 @@ int _securityIncidentIsarEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  {
+    final value = object.cameraId;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.description.length * 3;
   bytesCount += 3 + object.incidentId.length * 3;
   bytesCount += 3 + object.involvedPersonIds.length * 3;
@@ -2467,18 +2676,19 @@ void _securityIncidentIsarSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeString(offsets[0], object.description);
-  writer.writeString(offsets[1], object.incidentId);
-  writer.writeStringList(offsets[2], object.involvedPersonIds);
-  writer.writeBool(offsets[3], object.isSynced);
-  writer.writeString(offsets[4], object.location);
-  writer.writeStringList(offsets[5], object.photoUrls);
-  writer.writeString(offsets[6], object.report);
-  writer.writeString(offsets[7], object.reportedByOfficerId);
-  writer.writeString(offsets[8], object.schoolId);
-  writer.writeString(offsets[9], object.status);
-  writer.writeDateTime(offsets[10], object.timestamp);
-  writer.writeString(offsets[11], object.type);
+  writer.writeString(offsets[0], object.cameraId);
+  writer.writeString(offsets[1], object.description);
+  writer.writeString(offsets[2], object.incidentId);
+  writer.writeStringList(offsets[3], object.involvedPersonIds);
+  writer.writeBool(offsets[4], object.isSynced);
+  writer.writeString(offsets[5], object.location);
+  writer.writeStringList(offsets[6], object.photoUrls);
+  writer.writeString(offsets[7], object.report);
+  writer.writeString(offsets[8], object.reportedByOfficerId);
+  writer.writeString(offsets[9], object.schoolId);
+  writer.writeString(offsets[10], object.status);
+  writer.writeDateTime(offsets[11], object.timestamp);
+  writer.writeString(offsets[12], object.type);
 }
 
 SecurityIncidentIsar _securityIncidentIsarDeserialize(
@@ -2488,19 +2698,20 @@ SecurityIncidentIsar _securityIncidentIsarDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = SecurityIncidentIsar();
-  object.description = reader.readString(offsets[0]);
+  object.cameraId = reader.readStringOrNull(offsets[0]);
+  object.description = reader.readString(offsets[1]);
   object.id = id;
-  object.incidentId = reader.readString(offsets[1]);
-  object.involvedPersonIds = reader.readStringList(offsets[2]) ?? [];
-  object.isSynced = reader.readBool(offsets[3]);
-  object.location = reader.readString(offsets[4]);
-  object.photoUrls = reader.readStringList(offsets[5]) ?? [];
-  object.report = reader.readString(offsets[6]);
-  object.reportedByOfficerId = reader.readString(offsets[7]);
-  object.schoolId = reader.readString(offsets[8]);
-  object.status = reader.readString(offsets[9]);
-  object.timestamp = reader.readDateTime(offsets[10]);
-  object.type = reader.readString(offsets[11]);
+  object.incidentId = reader.readString(offsets[2]);
+  object.involvedPersonIds = reader.readStringList(offsets[3]) ?? [];
+  object.isSynced = reader.readBool(offsets[4]);
+  object.location = reader.readString(offsets[5]);
+  object.photoUrls = reader.readStringList(offsets[6]) ?? [];
+  object.report = reader.readString(offsets[7]);
+  object.reportedByOfficerId = reader.readString(offsets[8]);
+  object.schoolId = reader.readString(offsets[9]);
+  object.status = reader.readString(offsets[10]);
+  object.timestamp = reader.readDateTime(offsets[11]);
+  object.type = reader.readString(offsets[12]);
   return object;
 }
 
@@ -2512,19 +2723,19 @@ P _securityIncidentIsarDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 1:
       return (reader.readString(offset)) as P;
     case 2:
-      return (reader.readStringList(offset) ?? []) as P;
+      return (reader.readString(offset)) as P;
     case 3:
-      return (reader.readBool(offset)) as P;
-    case 4:
-      return (reader.readString(offset)) as P;
-    case 5:
       return (reader.readStringList(offset) ?? []) as P;
-    case 6:
+    case 4:
+      return (reader.readBool(offset)) as P;
+    case 5:
       return (reader.readString(offset)) as P;
+    case 6:
+      return (reader.readStringList(offset) ?? []) as P;
     case 7:
       return (reader.readString(offset)) as P;
     case 8:
@@ -2532,8 +2743,10 @@ P _securityIncidentIsarDeserializeProp<P>(
     case 9:
       return (reader.readString(offset)) as P;
     case 10:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 11:
+      return (reader.readDateTime(offset)) as P;
+    case 12:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -2784,6 +2997,162 @@ extension SecurityIncidentIsarQueryWhere
 
 extension SecurityIncidentIsarQueryFilter on QueryBuilder<SecurityIncidentIsar,
     SecurityIncidentIsar, QFilterCondition> {
+  QueryBuilder<SecurityIncidentIsar, SecurityIncidentIsar,
+      QAfterFilterCondition> cameraIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'cameraId',
+      ));
+    });
+  }
+
+  QueryBuilder<SecurityIncidentIsar, SecurityIncidentIsar,
+      QAfterFilterCondition> cameraIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'cameraId',
+      ));
+    });
+  }
+
+  QueryBuilder<SecurityIncidentIsar, SecurityIncidentIsar,
+      QAfterFilterCondition> cameraIdEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'cameraId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<SecurityIncidentIsar, SecurityIncidentIsar,
+      QAfterFilterCondition> cameraIdGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'cameraId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<SecurityIncidentIsar, SecurityIncidentIsar,
+      QAfterFilterCondition> cameraIdLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'cameraId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<SecurityIncidentIsar, SecurityIncidentIsar,
+      QAfterFilterCondition> cameraIdBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'cameraId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<SecurityIncidentIsar, SecurityIncidentIsar,
+      QAfterFilterCondition> cameraIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'cameraId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<SecurityIncidentIsar, SecurityIncidentIsar,
+      QAfterFilterCondition> cameraIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'cameraId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<SecurityIncidentIsar, SecurityIncidentIsar,
+          QAfterFilterCondition>
+      cameraIdContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'cameraId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<SecurityIncidentIsar, SecurityIncidentIsar,
+          QAfterFilterCondition>
+      cameraIdMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'cameraId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<SecurityIncidentIsar, SecurityIncidentIsar,
+      QAfterFilterCondition> cameraIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'cameraId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<SecurityIncidentIsar, SecurityIncidentIsar,
+      QAfterFilterCondition> cameraIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'cameraId',
+        value: '',
+      ));
+    });
+  }
+
   QueryBuilder<SecurityIncidentIsar, SecurityIncidentIsar,
       QAfterFilterCondition> descriptionEqualTo(
     String value, {
@@ -4476,6 +4845,20 @@ extension SecurityIncidentIsarQueryLinks on QueryBuilder<SecurityIncidentIsar,
 extension SecurityIncidentIsarQuerySortBy
     on QueryBuilder<SecurityIncidentIsar, SecurityIncidentIsar, QSortBy> {
   QueryBuilder<SecurityIncidentIsar, SecurityIncidentIsar, QAfterSortBy>
+      sortByCameraId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cameraId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<SecurityIncidentIsar, SecurityIncidentIsar, QAfterSortBy>
+      sortByCameraIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cameraId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<SecurityIncidentIsar, SecurityIncidentIsar, QAfterSortBy>
       sortByDescription() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'description', Sort.asc);
@@ -4618,6 +5001,20 @@ extension SecurityIncidentIsarQuerySortBy
 
 extension SecurityIncidentIsarQuerySortThenBy
     on QueryBuilder<SecurityIncidentIsar, SecurityIncidentIsar, QSortThenBy> {
+  QueryBuilder<SecurityIncidentIsar, SecurityIncidentIsar, QAfterSortBy>
+      thenByCameraId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cameraId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<SecurityIncidentIsar, SecurityIncidentIsar, QAfterSortBy>
+      thenByCameraIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'cameraId', Sort.desc);
+    });
+  }
+
   QueryBuilder<SecurityIncidentIsar, SecurityIncidentIsar, QAfterSortBy>
       thenByDescription() {
     return QueryBuilder.apply(this, (query) {
@@ -4776,6 +5173,13 @@ extension SecurityIncidentIsarQuerySortThenBy
 extension SecurityIncidentIsarQueryWhereDistinct
     on QueryBuilder<SecurityIncidentIsar, SecurityIncidentIsar, QDistinct> {
   QueryBuilder<SecurityIncidentIsar, SecurityIncidentIsar, QDistinct>
+      distinctByCameraId({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'cameraId', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<SecurityIncidentIsar, SecurityIncidentIsar, QDistinct>
       distinctByDescription({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'description', caseSensitive: caseSensitive);
@@ -4866,6 +5270,13 @@ extension SecurityIncidentIsarQueryProperty on QueryBuilder<
   QueryBuilder<SecurityIncidentIsar, int, QQueryOperations> idProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<SecurityIncidentIsar, String?, QQueryOperations>
+      cameraIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'cameraId');
     });
   }
 

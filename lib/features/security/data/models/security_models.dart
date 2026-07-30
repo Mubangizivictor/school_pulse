@@ -12,6 +12,7 @@ class GateModel extends Gate {
     required super.allowedUserRoles,
     required super.requiredVerificationMethods,
     required super.schoolId,
+    super.cameraId,
   });
 
   factory GateModel.fromFirestore(DocumentSnapshot doc) {
@@ -26,6 +27,7 @@ class GateModel extends Gate {
       allowedUserRoles: List<String>.from(data['allowedUserRoles'] ?? []),
       requiredVerificationMethods: List<String>.from(data['requiredVerificationMethods'] ?? []),
       schoolId: data['schoolId'] ?? '',
+      cameraId: data['cameraId'],
     );
   }
 
@@ -39,6 +41,7 @@ class GateModel extends Gate {
       'allowedUserRoles': allowedUserRoles,
       'requiredVerificationMethods': requiredVerificationMethods,
       'schoolId': schoolId,
+      'cameraId': cameraId,
     };
   }
 }
@@ -56,6 +59,7 @@ class SecurityIncidentModel extends SecurityIncident {
     required super.report,
     required super.status,
     required super.schoolId,
+    super.cameraId,
   });
 
   factory SecurityIncidentModel.fromFirestore(DocumentSnapshot doc) {
@@ -72,6 +76,7 @@ class SecurityIncidentModel extends SecurityIncident {
       report: data['report'] ?? '',
       status: data['status'] ?? '',
       schoolId: data['schoolId'] ?? '',
+      cameraId: data['cameraId'],
     );
   }
 
@@ -87,6 +92,7 @@ class SecurityIncidentModel extends SecurityIncident {
       'report': report,
       'status': status,
       'schoolId': schoolId,
+      'cameraId': cameraId,
     };
   }
 }

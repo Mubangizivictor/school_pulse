@@ -304,13 +304,39 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
         .collection('security_incidents')
         .where('timestamp', isGreaterThanOrEqualTo: DateTime.now().subtract(const Duration(hours: 24)))
         .get();
+    final pendingIncidents = await firestore
+        .collection('schools')
+        .doc(schoolId)
+        .collection('security_incidents')
+        .where('status', isEqualTo: 'Pending')
+        .get();
+    final activeEmergencies = await firestore
+        .collection('schools')
+        .doc(schoolId)
+        .collection('emergency_events')
+        .where('status', isEqualTo: 'Active')
+        .get();
+    // staff_attendance has no schoolId field to scope a count query by (see
+    // StaffAttendanceRepository) - deliberately not counted here to avoid
+    // leaking a cross-school number into this school's dashboard.
+    final staffMovementsToday = await firestore
+        .collection('schools')
+        .doc(schoolId)
+        .collection('staff_movements')
+        .where('direction', isEqualTo: 'In')
+        .where('timestamp', isGreaterThanOrEqualTo: DateTime.now().subtract(const Duration(hours: 24)))
+        .get();
 
     return {
       'activeGates': gates.docs.length,
       'studentsIn': studentsIn.docs.length,
       'studentsCheckedInToday': studentsIn.docs.length,
       'visitorsCurrentlyInside': visitorsIn.docs.length,
+      'staffInToday': staffMovementsToday.docs.length,
       'incidentsToday': incidentsToday.docs.length,
+      'pendingIncidents': pendingIncidents.docs.length,
+      'activeEmergencies': activeEmergencies.docs.length,
+      'peopleCurrentlyInside': studentsIn.docs.length + visitorsIn.docs.length + staffMovementsToday.docs.length,
     };
   }
 }

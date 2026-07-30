@@ -81,6 +81,7 @@ import 'package:school_pulse/features/security/presentation/screens/gate_managem
 import 'package:school_pulse/features/security/presentation/screens/lost_and_found_screen.dart';
 import 'package:school_pulse/features/security/presentation/screens/patrol_log_screen.dart';
 import 'package:school_pulse/features/security/presentation/screens/admin_security_settings_screen.dart';
+import 'package:school_pulse/features/security/presentation/screens/security_reports_screen.dart';
 import 'package:school_pulse/features/transport/presentation/transport_coordinator_dashboard_screen.dart';
 import 'package:school_pulse/features/discipline/presentation/discipline_dashboard_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/workload/teacher_workload_screen.dart';
@@ -452,6 +453,10 @@ final router = GoRouter(
             GoRoute(
               path: 'settings',
               builder: (context, state) => const AdminSecuritySettingsScreen(),
+            ),
+            GoRoute(
+              path: 'reports',
+              builder: (context, state) => const SecurityReportsScreen(),
             ),
             GoRoute(
               path: 'visitors',

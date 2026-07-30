@@ -21,6 +21,7 @@ class GateIsar {
   @Index()
   late String schoolId;
   late bool isSynced;
+  String? cameraId;
 
   GateIsar();
 
@@ -35,7 +36,8 @@ class GateIsar {
       ..allowedUserRoles = entity.allowedUserRoles
       ..requiredVerificationMethods = entity.requiredVerificationMethods
       ..schoolId = entity.schoolId
-      ..isSynced = isSynced;
+      ..isSynced = isSynced
+      ..cameraId = entity.cameraId;
   }
 
   Gate toEntity() {
@@ -57,6 +59,7 @@ class GateIsar {
       allowedUserRoles: allowedUserRoles,
       requiredVerificationMethods: requiredVerificationMethods,
       schoolId: schoolId,
+      cameraId: cameraId,
     );
   }
 }
@@ -80,6 +83,7 @@ class SecurityIncidentIsar {
   @Index()
   late String schoolId;
   late bool isSynced;
+  String? cameraId;
 
   SecurityIncidentIsar();
 
@@ -96,7 +100,8 @@ class SecurityIncidentIsar {
       ..report = entity.report
       ..status = entity.status
       ..schoolId = entity.schoolId
-      ..isSynced = isSynced;
+      ..isSynced = isSynced
+      ..cameraId = entity.cameraId;
   }
 
   SecurityIncident toEntity() {
@@ -112,6 +117,7 @@ class SecurityIncidentIsar {
       report: report,
       status: status,
       schoolId: schoolId,
+      cameraId: cameraId,
     );
   }
 }

@@ -88,6 +88,9 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
                 case 'settings':
                   context.push('/staff/security/settings');
                   break;
+                case 'reports':
+                  context.push('/staff/security/reports');
+                  break;
                 case 'report':
                   Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReportIncidentScreen()));
                   break;
@@ -100,6 +103,7 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
               PopupMenuItem(value: 'lost-and-found', child: Text('Lost & Found')),
               PopupMenuItem(value: 'patrols', child: Text('Security Patrols')),
               PopupMenuItem(value: 'settings', child: Text('Admin Security Settings')),
+              PopupMenuItem(value: 'reports', child: Text('Reports')),
               PopupMenuItem(value: 'report', child: Text('Report Incident to Admin')),
             ],
           ),
@@ -149,9 +153,9 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
                         child: FadeInSlide(
                           delay: const Duration(milliseconds: 100),
                           child: DashboardStatCard(
-                            title: 'Active Gates',
-                            value: (state.stats['activeGates'] ?? 0).toDouble(),
-                            icon: Icons.door_front_door_outlined,
+                            title: 'People Inside',
+                            value: (state.stats['peopleCurrentlyInside'] ?? 0).toDouble(),
+                            icon: Icons.groups_outlined,
                             color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
@@ -159,12 +163,40 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: FadeInSlide(
-                          delay: const Duration(milliseconds: 200),
+                          delay: const Duration(milliseconds: 150),
                           child: DashboardStatCard(
                             title: 'Students In',
                             value: (state.stats['studentsIn'] ?? 0).toDouble(),
                             icon: Icons.person_pin_circle_outlined,
                             color: semanticColors.success,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FadeInSlide(
+                          delay: const Duration(milliseconds: 200),
+                          child: DashboardStatCard(
+                            title: 'Visitors Inside',
+                            value: (state.stats['visitorsCurrentlyInside'] ?? 0).toDouble(),
+                            icon: Icons.badge_outlined,
+                            color: semanticColors.info,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FadeInSlide(
+                          delay: const Duration(milliseconds: 250),
+                          child: DashboardStatCard(
+                            title: 'Pending Incidents',
+                            value: (state.stats['pendingIncidents'] ?? 0).toDouble(),
+                            icon: Icons.report_gmailerrorred_outlined,
+                            color: semanticColors.warning,
                           ),
                         ),
                       ),
