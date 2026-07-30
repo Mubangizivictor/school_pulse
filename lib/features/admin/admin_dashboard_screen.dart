@@ -378,6 +378,12 @@ class AdminDashboardScreen extends StatelessWidget {
           onTap: () => context.go('/staff/admin/structure'),
         ),
         _AdminShortcut(
+          icon: Icons.how_to_reg_rounded,
+          label: 'Admissions',
+          color: Colors.green,
+          onTap: () => context.go('/staff/admin/admissions'),
+        ),
+        _AdminShortcut(
           icon: Icons.campaign_rounded,
           label: 'Broadcast',
           color: Colors.red,

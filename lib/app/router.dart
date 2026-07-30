@@ -128,6 +128,10 @@ import 'package:school_pulse/features/student/presentation/screens/student_more_
 import 'package:school_pulse/features/student/presentation/screens/student_profile_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/student_fees_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/student_timetable_screen.dart';
+import 'package:school_pulse/features/student/presentation/screens/admissions_list_screen.dart';
+import 'package:school_pulse/features/student/presentation/screens/admission_review_screen.dart';
+import 'package:school_pulse/features/student/presentation/screens/new_application_screen.dart';
+import 'package:school_pulse/features/student/domain/entities/admission_application.dart';
 
 import 'package:school_pulse/features/health/presentation/screens/student_health_profile_screen.dart';
 import 'package:school_pulse/features/health/presentation/screens/health_history_screen.dart';
@@ -681,6 +685,38 @@ final router = GoRouter(
             GoRoute(
               path: 'staff-attendance',
               builder: (context, state) => const AdminStaffAttendanceScreen(),
+            ),
+            GoRoute(
+              path: 'admissions',
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                const permitted = {
+                  UserRole.schoolAdmin,
+                  UserRole.director,
+                  UserRole.headTeacher,
+                  UserRole.deputyHead,
+                  UserRole.deanOfStudies,
+                  UserRole.receptionist,
+                  UserRole.hrOfficer,
+                };
+                if (!auth.user.roles.any(permitted.contains)) {
+                  return UserRoleRouting.dashboardPath(auth.user.role);
+                }
+                return null;
+              },
+              builder: (context, state) => const AdmissionsListScreen(),
+              routes: [
+                GoRoute(
+                  path: 'new',
+                  builder: (context, state) => NewApplicationScreen(schoolId: state.extra as String),
+                ),
+                GoRoute(
+                  path: 'review',
+                  builder: (context, state) =>
+                      AdmissionReviewScreen(application: state.extra as AdmissionApplication),
+                ),
+              ],
             ),
             GoRoute(
               path: 'appointments',
