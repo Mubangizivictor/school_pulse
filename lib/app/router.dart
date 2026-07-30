@@ -25,7 +25,6 @@ import 'package:school_pulse/features/structure/presentation/screens/assessment_
 import 'package:school_pulse/features/structure/presentation/screens/campus_facilities_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/operations_config_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/feature_toggles_screen.dart';
-import 'package:school_pulse/features/admin/visitor_log_screen.dart';
 import 'package:school_pulse/features/admin/admin_staff_attendance_screen.dart';
 import 'package:school_pulse/features/admin/appointments_screen.dart';
 import 'package:school_pulse/features/admin/audit_log_screen.dart';
@@ -428,6 +427,23 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/staff/security',
+          redirect: (context, state) {
+            final auth = context.read<AuthBloc>().state;
+            if (auth is! AuthAuthenticated) return '/welcome';
+            const permitted = {
+              UserRole.gatekeeper,
+              UserRole.securityHead,
+              UserRole.receptionist,
+              UserRole.schoolAdmin,
+              UserRole.director,
+              UserRole.headTeacher,
+              UserRole.deputyHead,
+            };
+            if (!auth.user.roles.any(permitted.contains)) {
+              return UserRoleRouting.dashboardPath(auth.user.role);
+            }
+            return null;
+          },
           builder: (context, state) => const SecurityDashboardScreen(),
           routes: [
             GoRoute(
@@ -649,10 +665,6 @@ final router = GoRouter(
                   builder: (context, state) => const FeatureTogglesScreen(),
                 ),
               ],
-            ),
-            GoRoute(
-              path: 'visitors',
-              builder: (context, state) => const VisitorLogScreen(),
             ),
             GoRoute(
               path: 'staff-attendance',

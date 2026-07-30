@@ -110,7 +110,7 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.qr_code_scanner),
-            onPressed: () => context.push('/staff/gatekeeper/visitors/scan'),
+            onPressed: () => context.push('/staff/security/visitors/scan'),
             tooltip: 'Scan QR to Check-out',
           ),
         ],
@@ -198,7 +198,7 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/staff/gatekeeper/visitors/new'),
+        onPressed: () => context.push('/staff/security/visitors/new'),
         label: const Text('New Visitor'),
         icon: const Icon(Icons.add),
       ),
@@ -334,7 +334,7 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
       itemBuilder: (context, index) {
         final visitor = visitors[index];
         return AppCard(
-          onTap: () => context.push('/staff/gatekeeper/visitors/details/${visitor.id}', extra: visitor),
+          onTap: () => context.push('/staff/security/visitors/details/${visitor.id}', extra: visitor),
           child: ListTile(
             leading: CircleAvatar(
               backgroundColor: visitor.status == VisitorStatus.checkedIn ? Colors.green : Colors.grey,

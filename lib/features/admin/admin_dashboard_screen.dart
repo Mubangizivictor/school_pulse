@@ -351,7 +351,7 @@ class AdminDashboardScreen extends StatelessWidget {
           icon: Icons.meeting_room_rounded,
           label: 'Visitors',
           color: Colors.purple,
-          onTap: () => context.go('/staff/admin/visitors'),
+          onTap: () => context.go('/staff/security/visitors'),
         ),
         _AdminShortcut(
           icon: Icons.calendar_month_rounded,
