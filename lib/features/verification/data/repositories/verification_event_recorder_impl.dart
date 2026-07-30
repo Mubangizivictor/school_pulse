@@ -52,12 +52,21 @@ class VerificationEventRecorderImpl implements VerificationEventRecorder {
         ..direction = direction
         ..timestamp = context.requestedAt
         ..deviceId = context.deviceId
-        ..isSynced = isConnected;
+        ..isSynced = false;
 
       await localDataSource.saveVerificationEvent(event);
 
       if (isConnected) {
-        await _pushEvent(schoolId, event);
+        try {
+          await _pushEvent(schoolId, event);
+          event.isSynced = true;
+          await localDataSource.saveVerificationEvent(event);
+        } catch (_) {
+          // The local record succeeded regardless - leave isSynced = false
+          // so syncPendingEvents retries it later, rather than failing the
+          // whole operation (and rather than marking it synced when it
+          // never actually reached Firestore).
+        }
       }
 
       return const Right(null);

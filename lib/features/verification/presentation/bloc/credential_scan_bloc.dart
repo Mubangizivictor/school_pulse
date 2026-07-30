@@ -38,7 +38,11 @@ class CredentialScanBloc extends Bloc<CredentialScanEvent, CredentialScanState> 
 
   Future<void> _onStop(StopCredentialScan event, Emitter<CredentialScanState> emit) async {
     await _teardownActive();
-    emit(state.copyWith(isScanning: false));
+    // A full reset, not copyWith(isScanning: false) - copyWith's
+    // `?? this.field` pattern can never null out activeKind/lastCredential,
+    // so stopping would otherwise leave a stale credential/kind behind for
+    // whatever starts scanning next.
+    emit(const CredentialScanState.initial());
   }
 
   void _onCaptured(CredentialCapturedByAdapter event, Emitter<CredentialScanState> emit) {

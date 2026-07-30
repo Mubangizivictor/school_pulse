@@ -50,16 +50,22 @@ class _VerificationScanScreenState extends State<VerificationScanScreen> {
     if (initial != null) {
       _sessionBloc.add(VerificationCredentialCaptured(credential: initial, context: widget.context));
     } else {
-      _scanBloc = di.sl<CredentialScanBloc>()
-        ..add(StartCredentialScan(kind: widget.liveKind!, context: widget.context))
-        ..stream.listen((state) {
-          if (state.lastCredential != null) {
-            _sessionBloc.add(VerificationCredentialCaptured(
-              credential: state.lastCredential!,
-              context: widget.context,
-            ));
-          }
-        });
+      final scanBloc = di.sl<CredentialScanBloc>();
+      _scanBloc = scanBloc;
+      scanBloc.add(StartCredentialScan(kind: widget.liveKind!, context: widget.context));
+      scanBloc.stream.listen((state) {
+        if (state.lastCredential == null) return;
+        // Stop the reader immediately - on Android, `nfc_manager`'s reader
+        // mode keeps firing for every subsequent tap (unlike iOS's
+        // invalidate-after-first-read), so without this a second tap while
+        // the operator is still looking at the first decision would
+        // silently overwrite it mid-confirmation.
+        scanBloc.add(const StopCredentialScan());
+        _sessionBloc.add(VerificationCredentialCaptured(
+          credential: state.lastCredential!,
+          context: widget.context,
+        ));
+      });
     }
   }
 

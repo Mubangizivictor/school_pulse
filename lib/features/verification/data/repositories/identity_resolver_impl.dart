@@ -68,7 +68,9 @@ class IdentityResolverImpl implements IdentityResolver {
     // in by hand - try student first since it's the overwhelmingly common
     // case for this method in the gate workflow.
     final studentResult = await _resolveStudentCode(code);
-    final resolved = studentResult.fold((_) => null, (identity) => identity);
+    if (studentResult.isLeft()) return studentResult;
+
+    final resolved = studentResult.getOrElse(() => const UnresolvedResolvedIdentity(reason: 'unknown_credential'));
     if (resolved is StudentResolvedIdentity) return Right(resolved);
 
     final staffResult = await getStaffMembers(NoParams());

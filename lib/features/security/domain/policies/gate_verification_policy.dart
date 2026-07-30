@@ -35,15 +35,10 @@ class GateVerificationPolicy implements VerificationPolicyEvaluator {
     required ResolvedIdentity identity,
     required VerificationContext context,
   }) async {
-    if (identity is UnresolvedResolvedIdentity) {
-      return Right(VerificationDecision(
-        outcome: VerificationOutcome.denied,
-        identity: identity,
-        message: _messageForUnresolvedReason(identity.reason),
-        reasonCode: identity.reason,
-      ));
-    }
-
+    // Permission is checked before identity resolution is even considered,
+    // so an operator who isn't authorized to scan at this gate never gets
+    // a decision - not even a generic "no match" one - regardless of what
+    // was scanned.
     final permissionResult = await permissionEvaluator.can(
       Permission.securityIdentityVerify,
       context.operatorUser,
@@ -62,6 +57,15 @@ class GateVerificationPolicy implements VerificationPolicyEvaluator {
         identity: identity,
         message: 'You are not authorized to verify identities at this gate.',
         reasonCode: 'NOT_AUTHORIZED',
+      ));
+    }
+
+    if (identity is UnresolvedResolvedIdentity) {
+      return Right(VerificationDecision(
+        outcome: VerificationOutcome.denied,
+        identity: identity,
+        message: _messageForUnresolvedReason(identity.reason),
+        reasonCode: identity.reason,
       ));
     }
 

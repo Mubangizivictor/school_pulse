@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
+import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/features/security/domain/entities/security_entities.dart';
 import 'package:school_pulse/features/security/domain/usecases/security_usecases.dart';
 import 'package:school_pulse/features/security/presentation/gatekeeper/gatekeeper_shared.dart';
@@ -100,55 +101,65 @@ class VerificationSessionBloc extends Bloc<VerificationSessionEvent, Verificatio
     final schoolId = gate.schoolId;
     final identity = current.decision.identity;
 
-    if (identity is StaffResolvedIdentity) {
-      await recordStaffMovement(StaffMovement(
-        id: const Uuid().v4(),
-        staffId: identity.id,
-        staffName: identity.name,
-        timestamp: DateTime.now(),
-        gateId: gate.id,
-        direction: event.direction,
-        verificationMethod: _verificationMethodLabel(current.credential),
-        officerId: operatorId,
-        schoolId: schoolId,
-      ));
-    } else if (identity is StudentResolvedIdentity) {
-      await recordStudentMovement(StudentMovement(
-        id: const Uuid().v4(),
-        studentId: identity.id,
-        studentName: identity.name,
-        className: identity.classId,
-        timestamp: DateTime.now(),
-        gateId: gate.id,
-        direction: event.direction,
-        movementType: movementType,
-        verificationMethod: _verificationMethodLabel(current.credential),
-        officerId: operatorId,
-        deviceId: deviceId,
-        schoolId: schoolId,
-      ));
-    } else if (identity is ParentPickupResolvedIdentity) {
-      await recordStudentMovement(StudentMovement(
-        id: const Uuid().v4(),
-        studentId: identity.childId,
-        studentName: identity.childName,
-        className: '',
-        timestamp: DateTime.now(),
-        gateId: gate.id,
-        direction: event.direction,
-        movementType: event.direction == 'Out' ? 'Authorized Pickup' : movementType,
-        verificationMethod: 'Parent Code Verification',
-        officerId: operatorId,
-        deviceId: deviceId,
-        schoolId: schoolId,
-        pickupDetails: {
-          'parentCode': identity.parentCode,
-          if (identity.parentName != null) 'parentName': identity.parentName,
-          if (identity.phoneNumber != null) 'phoneNumber': identity.phoneNumber,
-        },
-      ));
+    final movementResult = switch (identity) {
+      StaffResolvedIdentity() => await recordStaffMovement(StaffMovement(
+          id: const Uuid().v4(),
+          staffId: identity.id,
+          staffName: identity.name,
+          timestamp: DateTime.now(),
+          gateId: gate.id,
+          direction: event.direction,
+          verificationMethod: _verificationMethodLabel(current.credential),
+          officerId: operatorId,
+          schoolId: schoolId,
+        )),
+      StudentResolvedIdentity() => await recordStudentMovement(StudentMovement(
+          id: const Uuid().v4(),
+          studentId: identity.id,
+          studentName: identity.name,
+          className: identity.classId,
+          timestamp: DateTime.now(),
+          gateId: gate.id,
+          direction: event.direction,
+          movementType: movementType,
+          verificationMethod: _verificationMethodLabel(current.credential),
+          officerId: operatorId,
+          deviceId: deviceId,
+          schoolId: schoolId,
+        )),
+      ParentPickupResolvedIdentity() => await recordStudentMovement(StudentMovement(
+          id: const Uuid().v4(),
+          studentId: identity.childId,
+          studentName: identity.childName,
+          className: '',
+          timestamp: DateTime.now(),
+          gateId: gate.id,
+          direction: event.direction,
+          movementType: event.direction == 'Out' ? 'Authorized Pickup' : movementType,
+          verificationMethod: 'Parent Code Verification',
+          officerId: operatorId,
+          deviceId: deviceId,
+          schoolId: schoolId,
+          pickupDetails: {
+            'parentCode': identity.parentCode,
+            if (identity.parentName != null) 'parentName': identity.parentName,
+            if (identity.phoneNumber != null) 'phoneNumber': identity.phoneNumber,
+          },
+        )),
+      UnresolvedResolvedIdentity() => throw StateError('unreachable: allowed outcome implies a resolved identity'),
+    };
+
+    if (movementResult.isLeft()) {
+      await feedbackService.playError();
+      final message = movementResult.swap().getOrElse(() => const ServerFailure()).message;
+      emit(VerificationSessionError('Could not record movement: $message'));
+      return;
     }
 
+    // The movement is the record of truth and already succeeded above; the
+    // audit trail is best-effort on top of it (VerificationEventRecorder
+    // already retries via its own offline queue), so its result doesn't
+    // gate the success state the operator sees.
     await eventRecorder.record(
       decision: current.decision,
       context: current.context,
