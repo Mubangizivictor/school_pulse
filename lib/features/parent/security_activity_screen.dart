@@ -46,12 +46,12 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
     context.read<SecurityBloc>().add(
           WatchStudentMovementsRequested(authState.user.schoolId, studentId: studentId),
         );
-    _loadExtras(studentId);
+    _loadExtras(authState.user.schoolId, studentId);
   }
 
-  Future<void> _loadExtras(String studentId) async {
+  Future<void> _loadExtras(String schoolId, String studentId) async {
     setState(() => _isLoadingExtras = true);
-    final authorizationsResult = await di.sl<GetPickupAuthorizations>()(studentId);
+    final authorizationsResult = await di.sl<GetPickupAuthorizations>()(schoolId, studentId);
     final alertsResult = await di.sl<GetAlerts>()([studentId]);
     if (!mounted) return;
     setState(() {

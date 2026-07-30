@@ -116,7 +116,7 @@ class _StudentAuthorizationsViewState extends State<_StudentAuthorizationsView> 
 
   Future<void> _load() async {
     setState(() => _isLoading = true);
-    final result = await di.sl<GetPickupAuthorizations>()(widget.student.id);
+    final result = await di.sl<GetPickupAuthorizations>()(widget.schoolId, widget.student.id);
     if (!mounted) return;
     result.fold(
       (failure) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(failure.message))),

@@ -106,7 +106,7 @@ class GetSecurityDashboardStats {
 class GetPickupAuthorizations {
   final SecurityRepository repository;
   GetPickupAuthorizations(this.repository);
-  Future<Either<Failure, List<PickupAuthorization>>> call(String studentId) => repository.getPickupAuthorizations(studentId);
+  Future<Either<Failure, List<PickupAuthorization>>> call(String schoolId, String studentId) => repository.getPickupAuthorizations(schoolId, studentId);
 }
 
 class AddPickupAuthorization {

@@ -17,7 +17,7 @@ abstract class SecurityRepository {
   Stream<List<StaffMovement>> watchStaffMovements(String schoolId, {DateTime? date, String? gateId});
 
   // Pickup Management
-  Future<Either<Failure, List<PickupAuthorization>>> getPickupAuthorizations(String studentId);
+  Future<Either<Failure, List<PickupAuthorization>>> getPickupAuthorizations(String schoolId, String studentId);
   Future<Either<Failure, void>> addPickupAuthorization(PickupAuthorization authorization);
 
   // Incidents

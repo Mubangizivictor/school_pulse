@@ -140,11 +140,11 @@ class SecurityRepositoryImpl implements SecurityRepository {
   }
 
   @override
-  Future<Either<Failure, List<PickupAuthorization>>> getPickupAuthorizations(String studentId) async {
+  Future<Either<Failure, List<PickupAuthorization>>> getPickupAuthorizations(String schoolId, String studentId) async {
     try {
       final isConnected = await networkInfo.isConnected;
       if (isConnected) {
-        final results = await remoteDataSource.getPickupAuthorizations(studentId);
+        final results = await remoteDataSource.getPickupAuthorizations(schoolId, studentId);
         await localDataSource.cachePickupAuthorizations(
           studentId,
           results.map((r) => PickupAuthorizationIsar.fromEntity(r)).toList(),

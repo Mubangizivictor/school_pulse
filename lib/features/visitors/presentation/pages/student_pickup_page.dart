@@ -82,7 +82,7 @@ class _StudentPickupPageState extends State<StudentPickupPage> {
 
   Future<void> _loadAuthorizations(String studentId) async {
     setState(() => _isLoadingAuthorizations = true);
-    final result = await di.sl<GetPickupAuthorizations>()(studentId);
+    final result = await di.sl<GetPickupAuthorizations>()(_schoolId, studentId);
     if (!mounted) return;
     result.fold(
       (failure) => setState(() => _authorizations = []),

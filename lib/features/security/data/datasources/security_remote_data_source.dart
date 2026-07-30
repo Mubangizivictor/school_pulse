@@ -16,7 +16,7 @@ abstract class SecurityRemoteDataSource {
   Stream<List<StaffMovementModel>> watchStaffMovements(String schoolId, {DateTime? date, String? gateId});
 
   // Pickup Management
-  Future<List<PickupAuthorizationModel>> getPickupAuthorizations(String studentId);
+  Future<List<PickupAuthorizationModel>> getPickupAuthorizations(String schoolId, String studentId);
   Future<void> addPickupAuthorization(PickupAuthorizationModel authorization);
 
   // Incidents
@@ -153,9 +153,16 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
   }
 
   @override
-  Future<List<PickupAuthorizationModel>> getPickupAuthorizations(String studentId) async {
+  Future<List<PickupAuthorizationModel>> getPickupAuthorizations(String schoolId, String studentId) async {
+    // Firestore rejects a collection-group `list` query up front unless it
+    // can statically prove every possible result satisfies the security
+    // rule - a rule referencing resource.data.schoolId only "proves" if the
+    // query itself also filters on schoolId with a matching equality, so
+    // that filter is required here, not just for correctness but for the
+    // query to be permitted at all.
     final snapshot = await firestore
         .collectionGroup('pickup_authorizations')
+        .where('schoolId', isEqualTo: schoolId)
         .where('studentId', isEqualTo: studentId)
         .get();
     return snapshot.docs.map((doc) => PickupAuthorizationModel.fromFirestore(doc)).toList();
