@@ -210,6 +210,40 @@ void main() {
   );
 
   blocTest<VerificationSessionBloc, VerificationSessionState>(
+    'surfaces an error instead of a false "recorded" success when the movement write itself fails',
+    build: () {
+      when(() => identityResolver.resolve(any(), any())).thenAnswer((_) async => const Right(student));
+      when(() => policyEvaluator.evaluate(identity: any(named: 'identity'), context: any(named: 'context')))
+          .thenAnswer((_) async => const Right(VerificationDecision(
+                outcome: VerificationOutcome.allowed,
+                identity: student,
+                message: 'Identity verified.',
+                suggestedDirection: 'In',
+              )));
+      when(() => recordStudentMovement(any())).thenAnswer((_) async => const Left(ServerFailure('write failed')));
+      return buildBloc();
+    },
+    act: (bloc) async {
+      bloc.add(VerificationCredentialCaptured(credential: credential, context: context));
+      await Future.delayed(Duration.zero);
+      bloc.add(const VerificationDirectionConfirmed('In'));
+    },
+    skip: 2,
+    expect: () => [
+      const VerificationRecording(),
+      isA<VerificationSessionError>(),
+    ],
+    verify: (_) {
+      verifyNever(() => eventRecorder.record(
+            decision: any(named: 'decision'),
+            context: any(named: 'context'),
+            credential: any(named: 'credential'),
+            direction: any(named: 'direction'),
+          ));
+    },
+  );
+
+  blocTest<VerificationSessionBloc, VerificationSessionState>(
     'emits an error state and plays the error sound when the resolver fails',
     build: () {
       when(() => identityResolver.resolve(any(), any()))

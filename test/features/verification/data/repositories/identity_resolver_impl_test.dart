@@ -1,6 +1,7 @@
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/usecases/usecase.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
@@ -147,6 +148,16 @@ void main() {
       final identity = result.getOrElse(() => throw Exception());
       expect(identity, isA<StaffResolvedIdentity>());
       expect((identity as StaffResolvedIdentity).staffCode, 'ST-0001');
+    });
+
+    test('propagates a real repository failure instead of silently falling back to staff lookup', () async {
+      when(() => studentIdentityRepository.getStudentByUniqueId('SP-0001'))
+          .thenAnswer((_) async => const Left(CacheFailure('offline, no cached data')));
+
+      final result = await resolver.resolve(const ManualCodeScanCredential(code: 'SP-0001'), context);
+
+      expect(result.isLeft(), isTrue);
+      verifyNever(() => getStaffMembers(any()));
     });
   });
 

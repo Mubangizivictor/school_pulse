@@ -69,8 +69,10 @@ void main() {
     );
   });
 
-  test('denies immediately for an unresolved identity without checking permissions', () async {
+  test('checks permission even for an unresolved identity, then denies with the unresolved reason', () async {
     const unresolved = UnresolvedResolvedIdentity(reason: 'unknown_credential');
+    when(() => permissionEvaluator.can(Permission.securityIdentityVerify, operatorUser, gate: gate))
+        .thenAnswer((_) async => const Right(true));
 
     final result = await policy.evaluate(identity: unresolved, context: context);
 
@@ -78,7 +80,19 @@ void main() {
     final decision = result.getOrElse(() => throw Exception());
     expect(decision.outcome, VerificationOutcome.denied);
     expect(decision.reasonCode, 'unknown_credential');
-    verifyNever(() => permissionEvaluator.can(any(), any(), gate: any(named: 'gate')));
+    verify(() => permissionEvaluator.can(Permission.securityIdentityVerify, operatorUser, gate: gate)).called(1);
+  });
+
+  test('denies an unauthorized operator with NOT_AUTHORIZED even for an unresolved identity, never leaking the reason', () async {
+    const unresolved = UnresolvedResolvedIdentity(reason: 'unknown_credential');
+    when(() => permissionEvaluator.can(Permission.securityIdentityVerify, operatorUser, gate: gate))
+        .thenAnswer((_) async => const Right(false));
+
+    final result = await policy.evaluate(identity: unresolved, context: context);
+
+    final decision = result.getOrElse(() => throw Exception());
+    expect(decision.outcome, VerificationOutcome.denied);
+    expect(decision.reasonCode, 'NOT_AUTHORIZED');
   });
 
   test('denies when the operator lacks the security.identity.verify permission', () async {

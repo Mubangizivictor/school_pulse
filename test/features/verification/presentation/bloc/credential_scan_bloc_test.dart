@@ -100,16 +100,18 @@ void main() {
   );
 
   blocTest<CredentialScanBloc, CredentialScanState>(
-    'stops the active adapter when scanning is stopped',
+    'stopping fully resets state - isScanning, activeKind, and lastCredential all clear',
     build: () => CredentialScanBloc(adapters: {ScanCredentialKind.nfc: nfcAdapter}),
     act: (bloc) async {
       bloc.add(StartCredentialScan(kind: ScanCredentialKind.nfc, context: verificationContext));
       await Future.delayed(Duration.zero);
+      nfcController.add(NfcScanCredential(cardUid: 'UID123', scannedAt: DateTime.now()));
+      await Future.delayed(Duration.zero);
       bloc.add(const StopCredentialScan());
     },
-    skip: 1,
+    skip: 2,
     expect: () => [
-      isA<CredentialScanState>().having((s) => s.isScanning, 'isScanning', false),
+      const CredentialScanState.initial(),
     ],
     verify: (_) {
       verify(() => nfcAdapter.stop()).called(1);
