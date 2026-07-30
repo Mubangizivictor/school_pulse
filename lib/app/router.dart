@@ -103,6 +103,8 @@ import 'package:school_pulse/features/visitors/presentation/pages/visitor_dashbo
 import 'package:school_pulse/features/visitors/presentation/pages/visitor_check_in_screen.dart';
 import 'package:school_pulse/features/visitors/presentation/pages/visitor_scanner_screen.dart';
 import 'package:school_pulse/features/visitors/presentation/pages/visitor_details_screen.dart';
+import 'package:school_pulse/features/visitors/presentation/pages/student_pickup_page.dart';
+import 'package:school_pulse/features/security/presentation/screens/pickup_authorizations_screen.dart';
 import 'package:school_pulse/features/games/presentation/screens/games_dashboard_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/dean_dashboard_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/approvals/report_approval_screen.dart';
@@ -422,6 +424,14 @@ final router = GoRouter(
             GoRoute(
               path: 'gates',
               builder: (context, state) => const GateManagementScreen(),
+            ),
+            GoRoute(
+              path: 'pickup',
+              builder: (context, state) => const StudentPickupPage(),
+            ),
+            GoRoute(
+              path: 'pickup-authorizations',
+              builder: (context, state) => const PickupAuthorizationsScreen(),
             ),
             GoRoute(
               path: 'visitors',

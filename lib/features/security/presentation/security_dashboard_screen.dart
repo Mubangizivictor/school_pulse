@@ -146,15 +146,30 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
       appBar: AppBar(
         title: const Text('Security Portal'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.door_front_door_outlined),
-            tooltip: 'Manage Gates',
-            onPressed: () => context.push('/staff/security/gates'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.report_gmailerrorred_outlined),
-            tooltip: 'Report Incident to Admin',
-            onPressed: () => _showReportIncidentDialog(context),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              switch (value) {
+                case 'gates':
+                  context.push('/staff/security/gates');
+                  break;
+                case 'pickup':
+                  context.push('/staff/security/pickup');
+                  break;
+                case 'pickup-authorizations':
+                  context.push('/staff/security/pickup-authorizations');
+                  break;
+                case 'report':
+                  _showReportIncidentDialog(context);
+                  break;
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 'gates', child: Text('Manage Gates')),
+              PopupMenuItem(value: 'pickup', child: Text('Student Pickup')),
+              PopupMenuItem(value: 'pickup-authorizations', child: Text('Pickup Authorizations')),
+              PopupMenuItem(value: 'report', child: Text('Report Incident to Admin')),
+            ],
           ),
           const NotificationBellButton(),
         ],

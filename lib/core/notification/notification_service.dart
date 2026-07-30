@@ -308,6 +308,44 @@ class NotificationService {
       });
     }
   }
+
+  /// Sends a child-scoped alert (arrival, departure, pickup, security event)
+  /// to every linked parent. Writes a single `alerts` doc keyed by a
+  /// top-level `studentId` field - this is the shape
+  /// NotificationsRemoteDataSourceImpl._getStudentAlerts queries via
+  /// `where('studentId', whereIn: studentIds)`, so it's what actually
+  /// surfaces in the parent app's notification center. [sendDirectNotification]
+  /// (keyed by `userId`) does NOT satisfy that query.
+  Future<void> sendStudentAlert({
+    required String studentId,
+    required List<String> parentIds,
+    required String title,
+    required String body,
+    Map<String, dynamic>? data,
+  }) async {
+    await _firestore.collection('alerts').add({
+      'studentId': studentId,
+      'title': title,
+      'body': body,
+      'data': data,
+      'timestamp': FieldValue.serverTimestamp(),
+      'readBy': [],
+      'type': 'Security',
+    });
+
+    for (final parentId in parentIds) {
+      final tokensSnapshot = await _firestore.collection('users').doc(parentId).collection('tokens').get();
+      for (final doc in tokensSnapshot.docs) {
+        await _firestore.collection('notification_queue').add({
+          'token': doc.id,
+          'notification': {'title': title, 'body': body},
+          'data': {...?data, 'studentId': studentId},
+          'status': 'pending',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+    }
+  }
 }
 
 @pragma('vm:entry-point')
