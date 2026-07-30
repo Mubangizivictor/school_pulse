@@ -6,6 +6,8 @@ import '../bloc/super_admin_event.dart';
 import '../../domain/entities/payment.dart';
 import 'package:intl/intl.dart';
 import '../../../../design_system/app_components.dart';
+import '../responsive.dart';
+import '../widgets/super_admin_logout_button.dart';
 
 class BillingPage extends StatelessWidget {
   const BillingPage({super.key});
@@ -20,6 +22,7 @@ class BillingPage extends StatelessWidget {
             icon: const Icon(Icons.refresh),
             onPressed: () => context.read<SuperAdminBloc>().add(LoadSuperAdminDashboard()),
           ),
+          if (!isSuperAdminWide(context)) const SuperAdminLogoutButton(),
         ],
       ),
       body: BlocBuilder<SuperAdminBloc, SuperAdminState>(

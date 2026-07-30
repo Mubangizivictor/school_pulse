@@ -6,6 +6,7 @@ import '../../domain/entities/school.dart';
 import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_state.dart';
 import '../responsive.dart';
+import '../widgets/super_admin_logout_button.dart';
 import 'create_school_dialog.dart';
 import 'school_detail_screen.dart';
 
@@ -46,6 +47,7 @@ class _SchoolManagementScreenState extends State<SchoolManagementScreen> {
                     tooltip: 'Register New School',
                   ),
           ),
+          if (!isWide) const SuperAdminLogoutButton(),
         ],
       ),
       body: Column(

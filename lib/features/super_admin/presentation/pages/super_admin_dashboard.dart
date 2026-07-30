@@ -4,6 +4,7 @@ import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
 import '../bloc/super_admin_state.dart';
 import '../responsive.dart';
+import '../widgets/super_admin_logout_button.dart';
 import 'school_management_screen.dart';
 import 'subscription_plans_screen.dart';
 import 'audit_logs_screen.dart';
@@ -115,9 +116,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
             icon: Icons.logout,
             label: 'Sign Out',
             isSelected: false,
-            onTap: () {
-              // Sign out logic
-            },
+            onTap: () => handleSuperAdminLogout(context),
           ),
           const SizedBox(height: 16),
         ],
@@ -181,7 +180,10 @@ class SuperAdminOverview extends StatelessWidget {
 
         final stats = state.stats;
         return Scaffold(
-          appBar: AppBar(title: const Text('Platform Overview')),
+          appBar: AppBar(
+            title: const Text('Platform Overview'),
+            actions: isSuperAdminWide(context) ? null : const [SuperAdminLogoutButton()],
+          ),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(

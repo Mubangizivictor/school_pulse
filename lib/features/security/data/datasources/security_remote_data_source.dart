@@ -59,11 +59,17 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
 
   @override
   Future<void> createGate(GateModel gate) async {
+    // Uses the client-generated gate.id rather than an auto-id: the
+    // offline-first repository already cached this gate locally under that
+    // id before this call, so writing to a different Firestore-generated id
+    // here would leave the local cache with an orphaned duplicate row once
+    // watchGates' remote listener syncs the "real" doc back down.
     await firestore
         .collection('schools')
         .doc(gate.schoolId)
         .collection('gates')
-        .add(gate.toFirestore());
+        .doc(gate.id)
+        .set(gate.toFirestore());
   }
 
   @override
@@ -78,11 +84,16 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
 
   @override
   Future<void> recordStudentMovement(StudentMovementModel movement) async {
+    // Writes to movement.id (client-generated) rather than an auto-id: the
+    // offline-first repository already cached this movement locally under
+    // that id, so an auto-id here would leave a duplicate orphan row in the
+    // local cache once the remote listener syncs the "real" doc back down.
     await firestore
         .collection('schools')
         .doc(movement.schoolId)
         .collection('student_movements')
-        .add(movement.toFirestore());
+        .doc(movement.id)
+        .set(movement.toFirestore());
   }
 
   @override
@@ -116,7 +127,8 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
         .collection('schools')
         .doc(movement.schoolId)
         .collection('staff_movements')
-        .add(movement.toFirestore());
+        .doc(movement.id)
+        .set(movement.toFirestore());
   }
 
   @override
@@ -155,7 +167,8 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
         .collection('schools')
         .doc(authorization.schoolId)
         .collection('pickup_authorizations')
-        .add(authorization.toFirestore());
+        .doc(authorization.id)
+        .set(authorization.toFirestore());
   }
 
   @override
@@ -164,7 +177,8 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
         .collection('schools')
         .doc(incident.schoolId)
         .collection('security_incidents')
-        .add(incident.toFirestore());
+        .doc(incident.id)
+        .set(incident.toFirestore());
   }
 
   @override
@@ -197,7 +211,8 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
         .collection('schools')
         .doc(event.schoolId)
         .collection('emergency_events')
-        .add(event.toFirestore());
+        .doc(event.id)
+        .set(event.toFirestore());
   }
 
   @override
@@ -231,7 +246,8 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
         .collection('schools')
         .doc(patrol.schoolId)
         .collection('security_patrols')
-        .add(patrol.toFirestore());
+        .doc(patrol.id)
+        .set(patrol.toFirestore());
   }
 
   @override
@@ -251,7 +267,8 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
         .collection('schools')
         .doc(item.schoolId)
         .collection('lost_and_found')
-        .add(item.toFirestore());
+        .doc(item.id)
+        .set(item.toFirestore());
   }
 
   @override

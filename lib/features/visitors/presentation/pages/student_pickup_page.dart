@@ -125,7 +125,7 @@ class _StudentPickupPageState extends State<StudentPickupPage> {
     if (!mounted) return;
 
     final movement = StudentMovementModel(
-      id: '',
+      id: const Uuid().v4(),
       studentId: student.id,
       studentName: student.name,
       className: student.classId,

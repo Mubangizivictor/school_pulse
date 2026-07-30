@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:uuid/uuid.dart';
 import '../bloc/security_bloc.dart';
 import '../bloc/security_event.dart';
 import '../bloc/security_state.dart';
@@ -111,7 +112,7 @@ class _EmergencyProtocolDialogState extends State<EmergencyProtocolDialog> {
     setState(() => _isSubmitting = true);
 
     final event = EmergencyEventModel(
-      id: '',
+      id: const Uuid().v4(),
       type: _selectedType,
       startTime: DateTime.now(),
       description: _descriptionController.text.trim(),

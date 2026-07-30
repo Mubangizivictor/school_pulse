@@ -8,6 +8,7 @@ import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dar
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/injection_container.dart' as di;
+import 'package:uuid/uuid.dart';
 import '../../data/models/security_models.dart';
 import '../../domain/entities/security_entities.dart';
 import '../../domain/entities/verification_method.dart';
@@ -174,7 +175,7 @@ class _GateFormSheetState extends State<_GateFormSheet> {
   void _submit() {
     if (_nameController.text.trim().isEmpty || _locationController.text.trim().isEmpty) return;
     final gate = GateModel(
-      id: widget.existing?.id ?? '',
+      id: widget.existing?.id ?? const Uuid().v4(),
       name: _nameController.text.trim(),
       type: _type,
       location: _locationController.text.trim(),

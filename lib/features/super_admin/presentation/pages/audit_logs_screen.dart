@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
 import '../bloc/super_admin_state.dart';
+import '../responsive.dart';
+import '../widgets/super_admin_logout_button.dart';
 
 class AuditLogsScreen extends StatelessWidget {
   const AuditLogsScreen({super.key});
@@ -33,6 +35,7 @@ class AuditLogsScreen extends StatelessWidget {
             },
           ),
           const SizedBox(width: 16),
+          if (!isSuperAdminWide(context)) const SuperAdminLogoutButton(),
         ],
       ),
       body: BlocBuilder<SuperAdminBloc, SuperAdminState>(

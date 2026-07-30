@@ -15,6 +15,7 @@ import 'package:school_pulse/features/student/domain/usecases/resolve_parent_acc
 import 'package:school_pulse/features/student/domain/usecases/search_students.dart';
 import 'package:school_pulse/features/student_identity/domain/repositories/student_identity_repository.dart';
 import 'package:school_pulse/injection_container.dart' as di;
+import 'package:uuid/uuid.dart';
 import '../../data/models/security_models.dart';
 import '../../domain/entities/security_entities.dart';
 import '../../domain/entities/verification_method.dart';
@@ -216,7 +217,7 @@ class _VerificationWorkflowState extends State<VerificationWorkflow> {
 
     if (_resolvedStaff != null) {
       final movement = StaffMovementModel(
-        id: '',
+        id: const Uuid().v4(),
         staffId: _resolvedStaff!.id,
         staffName: _resolvedStaff!.name,
         timestamp: DateTime.now(),
@@ -229,7 +230,7 @@ class _VerificationWorkflowState extends State<VerificationWorkflow> {
       securityBloc.add(RecordStaffMovementRequested(movement));
     } else if (_resolvedStudent != null) {
       final movement = StudentMovementModel(
-        id: '',
+        id: const Uuid().v4(),
         studentId: _resolvedStudent!.id,
         studentName: _resolvedStudent!.name,
         className: _resolvedStudent!.classId,
@@ -245,7 +246,7 @@ class _VerificationWorkflowState extends State<VerificationWorkflow> {
       securityBloc.add(RecordStudentMovementRequested(movement));
     } else if (_resolvedParentCode != null && _selectedChildIdFromParentCode != null) {
       final movement = StudentMovementModel(
-        id: '',
+        id: const Uuid().v4(),
         studentId: _selectedChildIdFromParentCode!,
         studentName: _selectedChildNameFromParentCode ?? 'Student',
         className: '',

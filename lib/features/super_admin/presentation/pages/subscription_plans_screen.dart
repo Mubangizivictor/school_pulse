@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_state.dart';
 import '../responsive.dart';
+import '../widgets/super_admin_logout_button.dart';
 
 class SubscriptionPlansScreen extends StatelessWidget {
   const SubscriptionPlansScreen({super.key});
@@ -23,6 +24,7 @@ class SubscriptionPlansScreen extends StatelessWidget {
               label: const Text('New Plan'),
             ),
           ),
+          if (!isSuperAdminWide(context)) const SuperAdminLogoutButton(),
         ],
       ),
       body: BlocBuilder<SuperAdminBloc, SuperAdminState>(
