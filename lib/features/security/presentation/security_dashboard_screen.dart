@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
@@ -145,6 +146,11 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
       appBar: AppBar(
         title: const Text('Security Portal'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.door_front_door_outlined),
+            tooltip: 'Manage Gates',
+            onPressed: () => context.push('/staff/security/gates'),
+          ),
           IconButton(
             icon: const Icon(Icons.report_gmailerrorred_outlined),
             tooltip: 'Report Incident to Admin',

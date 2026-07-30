@@ -105,8 +105,11 @@ import 'package:school_pulse/features/student/domain/usecases/get_students_by_id
 import 'package:school_pulse/features/student/domain/usecases/get_all_students.dart';
 import 'package:school_pulse/features/student/domain/usecases/resolve_parent_access_code.dart';
 import 'package:school_pulse/features/student/domain/usecases/get_homework_for_student.dart';
+import 'package:school_pulse/features/student/domain/usecases/search_students.dart';
 import 'package:school_pulse/features/student/presentation/bloc/students_bloc.dart';
 import 'package:school_pulse/features/student/presentation/bloc/student_homework_bloc.dart';
+import 'package:school_pulse/features/student_identity/domain/repositories/student_identity_repository.dart';
+import 'package:school_pulse/features/student_identity/data/repositories/student_identity_repository_impl.dart';
 
 // Admin Dashboard
 import 'package:school_pulse/features/admin/domain/usecases/get_admin_dashboard_stats.dart';
@@ -511,6 +514,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => GetAllStudents(sl()));
   sl.registerLazySingleton(() => ResolveParentAccessCode(sl()));
   sl.registerLazySingleton(() => GetHomeworkForStudent(sl()));
+  sl.registerLazySingleton(() => SearchStudents(sl()));
 
   sl.registerLazySingleton<StudentRepository>(
     () => StudentRepositoryImpl(
@@ -525,6 +529,12 @@ Future<void> init() async {
 
   sl.registerLazySingleton(
     () => AdmissionService(sl(), initializeFinancials: sl()),
+  );
+
+  // Features - Student Identity (QR / ID card resolution, used by the
+  // security module's gate verification workflow)
+  sl.registerLazySingleton<StudentIdentityRepository>(
+    () => StudentIdentityRepositoryImpl(firestore: sl(), isar: sl()),
   );
 
   // Features - Auth

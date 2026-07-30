@@ -76,6 +76,7 @@ import 'package:school_pulse/features/patron/presentation/screens/discipline_man
 import 'package:school_pulse/features/teacher/attendance_history_screen.dart';
 import 'package:school_pulse/features/catering/presentation/catering_dashboard_screen.dart';
 import 'package:school_pulse/features/security/presentation/security_dashboard_screen.dart';
+import 'package:school_pulse/features/security/presentation/screens/gate_management_screen.dart';
 import 'package:school_pulse/features/transport/presentation/transport_coordinator_dashboard_screen.dart';
 import 'package:school_pulse/features/discipline/presentation/discipline_dashboard_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/workload/teacher_workload_screen.dart';
@@ -418,6 +419,10 @@ final router = GoRouter(
           path: '/staff/security',
           builder: (context, state) => const SecurityDashboardScreen(),
           routes: [
+            GoRoute(
+              path: 'gates',
+              builder: (context, state) => const GateManagementScreen(),
+            ),
             GoRoute(
               path: 'visitors',
               builder: (context, state) => const VisitorDashboardScreen(),
