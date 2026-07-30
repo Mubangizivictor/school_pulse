@@ -76,6 +76,7 @@ import 'package:school_pulse/features/patron/presentation/screens/discipline_man
 import 'package:school_pulse/features/teacher/attendance_history_screen.dart';
 import 'package:school_pulse/features/catering/presentation/catering_dashboard_screen.dart';
 import 'package:school_pulse/features/security/presentation/security_dashboard_screen.dart';
+import 'package:school_pulse/features/security/presentation/gatekeeper/gatekeeper_home_screen.dart';
 import 'package:school_pulse/features/security/presentation/screens/gate_management_screen.dart';
 import 'package:school_pulse/features/security/presentation/screens/lost_and_found_screen.dart';
 import 'package:school_pulse/features/security/presentation/screens/patrol_log_screen.dart';
@@ -444,7 +445,18 @@ final router = GoRouter(
             }
             return null;
           },
-          builder: (context, state) => const SecurityDashboardScreen(),
+          builder: (context, state) {
+            final auth = context.read<AuthBloc>().state;
+            final isGatekeeper = auth is AuthAuthenticated && auth.user.roles.contains(UserRole.gatekeeper) && !auth.user.roles.any({
+                  UserRole.securityHead,
+                  UserRole.receptionist,
+                  UserRole.schoolAdmin,
+                  UserRole.director,
+                  UserRole.headTeacher,
+                  UserRole.deputyHead,
+                }.contains);
+            return isGatekeeper ? const GatekeeperHomeScreen() : const SecurityDashboardScreen();
+          },
           routes: [
             GoRoute(
               path: 'gates',
