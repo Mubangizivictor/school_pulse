@@ -511,6 +511,16 @@ service cloud.firestore {
       allow read: if (isStaff() && isSameSchool(schoolId)) || isParentOf(resource.data.studentId);
       allow write: if isStaff() && isSameSchool(schoolId);
     }
+    // getPickupAuthorizations() reads via collectionGroup('pickup_authorizations')
+    // (it needs to look up a student's authorized pickup list without
+    // already knowing their schoolId) - the fixed-depth rule above only
+    // authorizes direct schools/{schoolId}/pickup_authorizations reads, not
+    // collection-group queries, which Firestore requires a {path=**}
+    // wildcard rule to enable. Uses resource.data.schoolId (every doc has
+    // one) instead of a path capture for the same tenant-isolation check.
+    match /{path=**}/pickup_authorizations/{id} {
+      allow read: if (isStaff() && isSameSchool(resource.data.schoolId)) || isParentOf(resource.data.studentId);
+    }
     match /schools/{schoolId}/configs/securitySettings {
       allow read: if isSameSchool(schoolId);
       allow write: if isSameSchool(schoolId) &&
