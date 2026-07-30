@@ -26,14 +26,29 @@ class RolePermissionDefaults {
     Permission.verificationDeviceManage,
   };
 
+  // Enrollment Permission (spec term) - never granted by job title alone,
+  // only through this role-default seed (or a future custom-role grant).
+  // Mirrors the doc's "Enrollment may only be performed by users with
+  // Enrollment Permission" requirement: School Admin, Headteacher, Deputy
+  // Head, Dean, Director, Receptionist, HR - the subset of that list that
+  // exists as a UserRole today (no dedicated Registrar/Admissions Officer
+  // role exists in this codebase yet).
+  static const Set<String> _admissionsPermissions = {
+    Permission.admissionApplicationCreate,
+    Permission.admissionApplicationReview,
+    Permission.admissionEnroll,
+  };
+
   static const Map<UserRole, Set<String>> defaults = {
     UserRole.gatekeeper: _gatekeeperPermissions,
-    UserRole.receptionist: _gatekeeperPermissions,
+    UserRole.receptionist: {..._gatekeeperPermissions, ..._admissionsPermissions},
     UserRole.securityHead: _securityLeadPermissions,
-    UserRole.schoolAdmin: _securityLeadPermissions,
-    UserRole.director: _securityLeadPermissions,
-    UserRole.headTeacher: _securityLeadPermissions,
-    UserRole.deputyHead: _securityLeadPermissions,
+    UserRole.schoolAdmin: {..._securityLeadPermissions, ..._admissionsPermissions},
+    UserRole.director: {..._securityLeadPermissions, ..._admissionsPermissions},
+    UserRole.headTeacher: {..._securityLeadPermissions, ..._admissionsPermissions},
+    UserRole.deputyHead: {..._securityLeadPermissions, ..._admissionsPermissions},
+    UserRole.deanOfStudies: _admissionsPermissions,
+    UserRole.hrOfficer: _admissionsPermissions,
   };
 
   static Set<String> permissionsFor(List<UserRole> roles) {

@@ -2,10 +2,10 @@
 /// verification system, declared upfront across every module the
 /// end-state spec covers so later phases never need a breaking rename.
 ///
-/// Only the `security.*`/`verification.*` subset has real enforcement and
-/// role-default wiring as of Phase 1 (Security/Gate). Every other ID here
-/// is inert until its own phase wires a `VerificationPolicyEvaluator` and
-/// `role_permission_defaults` entries for it.
+/// Only the `security.*`/`verification.*` (Phase 1, Security/Gate) and
+/// `admission.*` (Phase 2, Admissions) subsets have real enforcement and
+/// role-default wiring. Every other ID here is inert until its own phase
+/// wires enforcement and `role_permission_defaults` entries for it.
 class Permission {
   const Permission._();
 
@@ -56,6 +56,13 @@ class Permission {
   static const securityEntryRecord = 'security.entry.record';
   static const securityExitRecord = 'security.exit.record';
   static const securityOverride = 'security.override';
+
+  // Admissions / enrollment (enforced) - gates AdmissionBloc's
+  // EnrollStudentRequested handler, per the product requirement that
+  // enrollment is permission-based, never a hardcoded job-title check.
+  static const admissionApplicationCreate = 'admission.application.create';
+  static const admissionApplicationReview = 'admission.application.review';
+  static const admissionEnroll = 'admission.enroll';
 
   // Student data-visibility scoping
   static const studentBasicRead = 'student.basic.read';
