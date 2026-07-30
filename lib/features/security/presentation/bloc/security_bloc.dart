@@ -136,7 +136,7 @@ class SecurityBloc extends Bloc<SecurityEvent, SecurityState> {
 
   Future<void> _onWatchStudentMovements(WatchStudentMovementsRequested event, Emitter<SecurityState> emit) async {
     await _studentMovementsSubscription?.cancel();
-    _studentMovementsSubscription = watchStudentMovements(event.schoolId, date: event.date, gateId: event.gateId).listen(
+    _studentMovementsSubscription = watchStudentMovements(event.schoolId, date: event.date, gateId: event.gateId, studentId: event.studentId).listen(
       (movements) => add(_StudentMovementsUpdated(movements)),
     );
   }

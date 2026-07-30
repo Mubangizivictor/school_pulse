@@ -49,9 +49,10 @@ class WatchStudentMovementsRequested extends SecurityEvent {
   final String schoolId;
   final DateTime? date;
   final String? gateId;
-  const WatchStudentMovementsRequested(this.schoolId, {this.date, this.gateId});
+  final String? studentId;
+  const WatchStudentMovementsRequested(this.schoolId, {this.date, this.gateId, this.studentId});
   @override
-  List<Object?> get props => [schoolId, date, gateId];
+  List<Object?> get props => [schoolId, date, gateId, studentId];
 }
 
 // Staff Movement

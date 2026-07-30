@@ -50,6 +50,11 @@ class MoreMenuScreen extends StatelessWidget {
                 title: 'Boarding',
                 onTap: () => context.push('/parent/boarding'),
               ),
+              _MenuTile(
+                icon: Icons.security_outlined,
+                title: 'Security & Safety',
+                onTap: () => context.push('/parent/security'),
+              ),
             ],
           ),
           const SizedBox(height: 24),

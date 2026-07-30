@@ -48,6 +48,7 @@ import 'package:school_pulse/features/parent/profile_screen.dart';
 import 'package:school_pulse/features/parent/more_menu_screen.dart';
 import 'package:school_pulse/features/parent/notifications_screen.dart';
 import 'package:school_pulse/features/parent/boarding_screen.dart';
+import 'package:school_pulse/features/parent/security_activity_screen.dart';
 import 'package:school_pulse/features/shared/shell_screen.dart';
 import 'package:school_pulse/features/shared/presentation/staff_hub_screen.dart';
 import 'package:school_pulse/features/teacher/dashboard_screen.dart';
@@ -341,6 +342,10 @@ final router = GoRouter(
         GoRoute(
           path: '/parent/boarding',
           builder: (context, state) => const ParentBoardingScreen(),
+        ),
+        GoRoute(
+          path: '/parent/security',
+          builder: (context, state) => const SecurityActivityScreen(),
         ),
       ],
     ),
