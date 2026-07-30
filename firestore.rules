@@ -470,6 +470,53 @@ service cloud.firestore {
       allow write: if isStaff() && isSameSchool(schoolId);
     }
 
+    // Security Operations & Gate Management - gates, student/staff
+    // movements, incidents, emergencies, patrols, lost & found, and pickup
+    // authorizations. Real isSameSchool() tenant isolation (not just
+    // isStaff()) since this is safety-critical data, and
+    // pickup_authorizations is read client-side via a collectionGroup query
+    // that spans every school.
+    match /schools/{schoolId}/gates/{id} {
+      allow read: if isSameSchool(schoolId);
+      allow write: if isSameSchool(schoolId) &&
+        hasAnyRole(['securityHead', 'gatekeeper', 'schoolAdmin', 'director', 'headTeacher']);
+    }
+    // Movement logs are an append-only audit trail - never editable or
+    // deletable by a client, even a staff one, once written.
+    match /schools/{schoolId}/student_movements/{id} {
+      allow read: if (isStaff() && isSameSchool(schoolId)) ||
+        isParentOf(resource.data.studentId) || isMe(resource.data.studentId);
+      allow create: if isStaff() && isSameSchool(schoolId);
+      allow update, delete: if false;
+    }
+    match /schools/{schoolId}/staff_movements/{id} {
+      allow read, create: if isStaff() && isSameSchool(schoolId);
+      allow update, delete: if false;
+    }
+    match /schools/{schoolId}/security_incidents/{id} {
+      allow read, write: if isStaff() && isSameSchool(schoolId);
+    }
+    match /schools/{schoolId}/emergency_events/{id} {
+      allow read, write: if isStaff() && isSameSchool(schoolId);
+    }
+    match /schools/{schoolId}/security_patrols/{id} {
+      allow read, write: if isStaff() && isSameSchool(schoolId);
+    }
+    match /schools/{schoolId}/lost_and_found/{id} {
+      allow read, write: if isStaff() && isSameSchool(schoolId);
+    }
+    // Parents may read their own child's authorized-pickup list (surfaced
+    // in the parent app); only staff can create/edit entries.
+    match /schools/{schoolId}/pickup_authorizations/{id} {
+      allow read: if (isStaff() && isSameSchool(schoolId)) || isParentOf(resource.data.studentId);
+      allow write: if isStaff() && isSameSchool(schoolId);
+    }
+    match /schools/{schoolId}/configs/securitySettings {
+      allow read: if isSameSchool(schoolId);
+      allow write: if isSameSchool(schoolId) &&
+        hasAnyRole(['securityHead', 'schoolAdmin', 'director', 'headTeacher']);
+    }
+
     // Visitor Management enterprise collections - blacklist, pre-approval,
     // scheduled visits (host approval workflow) and gate-logged deliveries.
     // Same access model as `visitors` above.

@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/core/notification/notification_service.dart';
+import 'package:school_pulse/features/admin/data/repositories/audit_repository.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 import '../../domain/entities/security_entities.dart';
 import '../../domain/usecases/security_usecases.dart';
 import 'security_event.dart';
@@ -114,7 +116,15 @@ class SecurityBloc extends Bloc<SecurityEvent, SecurityState> {
     final result = await createGate(event.gate);
     result.fold(
       (failure) => emit(state.copyWith(feedback: SecurityFeedback(failure.message, isError: true))),
-      (_) => emit(state.copyWith(feedback: SecurityFeedback('Gate created successfully'))),
+      (_) {
+        emit(state.copyWith(feedback: SecurityFeedback('Gate created successfully')));
+        di.sl<AuditRepository>().logAction(
+              title: 'Gate created',
+              description: '${event.gate.name} (${event.gate.type}) was added to the security structure.',
+              iconName: 'door_front_door',
+              colorHex: '#2196F3',
+            );
+      },
     );
   }
 
@@ -122,7 +132,15 @@ class SecurityBloc extends Bloc<SecurityEvent, SecurityState> {
     final result = await updateGate(event.gate);
     result.fold(
       (failure) => emit(state.copyWith(feedback: SecurityFeedback(failure.message, isError: true))),
-      (_) => emit(state.copyWith(feedback: SecurityFeedback('Gate updated successfully'))),
+      (_) {
+        emit(state.copyWith(feedback: SecurityFeedback('Gate updated successfully')));
+        di.sl<AuditRepository>().logAction(
+              title: 'Gate updated',
+              description: '${event.gate.name} configuration was changed.',
+              iconName: 'door_front_door',
+              colorHex: '#2196F3',
+            );
+      },
     );
   }
 
@@ -160,7 +178,16 @@ class SecurityBloc extends Bloc<SecurityEvent, SecurityState> {
     final result = await reportIncident(event.incident);
     result.fold(
       (failure) => emit(state.copyWith(feedback: SecurityFeedback(failure.message, isError: true))),
-      (_) => emit(state.copyWith(feedback: SecurityFeedback('Incident reported'))),
+      (_) {
+        emit(state.copyWith(feedback: SecurityFeedback('Incident reported')));
+        di.sl<AuditRepository>().logAction(
+              title: 'Security incident reported',
+              description: '${event.incident.type} at ${event.incident.location}: ${event.incident.description}',
+              iconName: 'gavel',
+              colorHex: '#FF9800',
+              userId: event.incident.reportedByOfficerId,
+            );
+      },
     );
   }
 
@@ -189,6 +216,12 @@ class SecurityBloc extends Bloc<SecurityEvent, SecurityState> {
           title: event.event.type,
           body: event.event.description.isNotEmpty ? event.event.description : 'Emergency alert triggered - respond immediately.',
         );
+        di.sl<AuditRepository>().logAction(
+              title: 'EMERGENCY: ${event.event.type}',
+              description: event.event.description.isEmpty ? 'No description provided.' : event.event.description,
+              iconName: 'emergency',
+              colorHex: '#F44336',
+            );
       },
     );
   }
@@ -204,7 +237,15 @@ class SecurityBloc extends Bloc<SecurityEvent, SecurityState> {
     final result = await resolveEmergency(event.schoolId, event.emergencyId, event.endTime, event.actions);
     result.fold(
       (failure) => emit(state.copyWith(feedback: SecurityFeedback(failure.message, isError: true))),
-      (_) => emit(state.copyWith(feedback: SecurityFeedback('Emergency resolved'))),
+      (_) {
+        emit(state.copyWith(feedback: SecurityFeedback('Emergency resolved')));
+        di.sl<AuditRepository>().logAction(
+              title: 'Emergency resolved',
+              description: 'Response actions: ${event.actions.isEmpty ? 'none recorded' : event.actions.join('; ')}',
+              iconName: 'emergency',
+              colorHex: '#4CAF50',
+            );
+      },
     );
   }
 

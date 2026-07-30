@@ -85,6 +85,9 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
                 case 'patrols':
                   context.push('/staff/security/patrols');
                   break;
+                case 'settings':
+                  context.push('/staff/security/settings');
+                  break;
                 case 'report':
                   Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReportIncidentScreen()));
                   break;
@@ -96,6 +99,7 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
               PopupMenuItem(value: 'pickup-authorizations', child: Text('Pickup Authorizations')),
               PopupMenuItem(value: 'lost-and-found', child: Text('Lost & Found')),
               PopupMenuItem(value: 'patrols', child: Text('Security Patrols')),
+              PopupMenuItem(value: 'settings', child: Text('Admin Security Settings')),
               PopupMenuItem(value: 'report', child: Text('Report Incident to Admin')),
             ],
           ),

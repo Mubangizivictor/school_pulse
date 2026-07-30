@@ -104,7 +104,7 @@ class NotificationGroups {
     UserRole.bursar,
   ];
 
-  static const securityRoles = [UserRole.securityHead, UserRole.gatekeeper];
+  static const securityRoles = [UserRole.securityHead, UserRole.gatekeeper, UserRole.receptionist];
 
   static List<String> forRole(UserRole role) {
     if (role == UserRole.parent) return const ['Parents'];
