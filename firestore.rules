@@ -369,9 +369,12 @@ service cloud.firestore {
       allow delete: if isStaff();
     }
 
-    // Front-desk visitor log and appointment scheduling.
+    // Front-desk visitor log and appointment scheduling. Real isSameSchool()
+    // tenant isolation - client queries already filter by schoolId
+    // (VisitorRemoteDataSource.getVisitors), so this is safe to tighten.
     match /visitors/{id} {
-      allow read, write: if isStaff();
+      allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /appointments/{id} {
       allow read, write: if isStaff();
@@ -529,18 +532,23 @@ service cloud.firestore {
 
     // Visitor Management enterprise collections - blacklist, pre-approval,
     // scheduled visits (host approval workflow) and gate-logged deliveries.
-    // Same access model as `visitors` above.
+    // Same isSameSchool() tenant isolation as `visitors` above - client
+    // queries already filter by schoolId (VisitorRemoteDataSource).
     match /visitor_blacklist/{id} {
-      allow read, write: if isStaff();
+      allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /pre_approved_visitors/{id} {
-      allow read, write: if isStaff();
+      allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /scheduled_visits/{id} {
-      allow read, write: if isStaff();
+      allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /package_deliveries/{id} {
-      allow read, write: if isStaff();
+      allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
 
     // Immutable system activity feed - only ever appended to, never edited.
@@ -700,12 +708,6 @@ service cloud.firestore {
       allow read, write: if isStaff();
     }
 
-    // Gatekeeper's own entry/exit log, separate from the front-desk
-    // `visitors` collection above.
-    match /visitor_logs/{id} {
-      allow read, write: if isStaff();
-    }
-
     match /bus_routes/{id} {
       allow read: if isSignedIn();
       allow write: if isStaff();
@@ -718,9 +720,6 @@ service cloud.firestore {
       allow write: if isStaff();
     }
     match /meal_plans/{id} {
-      allow read, write: if isStaff();
-    }
-    match /security_alerts/{id} {
       allow read, write: if isStaff();
     }
     match /sports_fixtures/{id} {

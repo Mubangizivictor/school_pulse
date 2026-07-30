@@ -1007,6 +1007,7 @@ class AdminSeeder {
       // Admin Dashboard stats) reads from 'visitors' with checkIn/checkOut -
       // this used to write to a 'visitor_logs' collection nothing reads.
       await _db.collection('visitors').add({
+        'schoolId': demoSchoolId,
         'name': v['name'],
         'purpose': v['purpose'],
         'contact': '',
