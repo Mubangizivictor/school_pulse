@@ -108,6 +108,7 @@ import 'package:school_pulse/features/student/domain/usecases/get_homework_for_s
 import 'package:school_pulse/features/student/domain/usecases/search_students.dart';
 import 'package:school_pulse/features/student/presentation/bloc/students_bloc.dart';
 import 'package:school_pulse/features/student/presentation/bloc/student_homework_bloc.dart';
+import 'package:school_pulse/features/student/presentation/bloc/admission_bloc.dart';
 import 'package:school_pulse/features/student_identity/domain/repositories/student_identity_repository.dart';
 import 'package:school_pulse/features/student_identity/data/repositories/student_identity_repository_impl.dart';
 import 'package:school_pulse/features/student_identity/domain/services/id_generator_service.dart';
@@ -556,6 +557,10 @@ Future<void> init() async {
       identityRepository: sl(),
       initializeFinancials: sl(),
     ),
+  );
+
+  sl.registerFactory(
+    () => AdmissionBloc(admissionService: sl(), permissionEvaluator: sl()),
   );
 
   // Features - Student Identity (QR / ID card resolution, used by the
