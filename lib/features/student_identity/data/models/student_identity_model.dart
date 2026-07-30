@@ -6,6 +6,7 @@ class StudentIdentityModel extends StudentIdentity {
     required super.uniqueSystemId,
     required super.schoolStudentId,
     required super.qrCodeData,
+    super.nfcStatus,
   });
 
   factory StudentIdentityModel.fromFirestore(Map<String, dynamic> json) {
@@ -14,6 +15,7 @@ class StudentIdentityModel extends StudentIdentity {
       uniqueSystemId: json['uniqueSystemId'] as String,
       schoolStudentId: json['schoolStudentId'] as String,
       qrCodeData: json['qrCodeData'] as String,
+      nfcStatus: json['nfcStatus'] as String? ?? 'unassigned',
     );
   }
 
@@ -23,6 +25,7 @@ class StudentIdentityModel extends StudentIdentity {
       'uniqueSystemId': uniqueSystemId,
       'schoolStudentId': schoolStudentId,
       'qrCodeData': qrCodeData,
+      'nfcStatus': nfcStatus,
     };
   }
 }

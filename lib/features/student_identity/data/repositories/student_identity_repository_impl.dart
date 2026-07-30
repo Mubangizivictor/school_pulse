@@ -9,14 +9,17 @@ import '../../domain/entities/student_identity.dart';
 import '../../domain/repositories/student_identity_repository.dart';
 import '../models/student_identity_model.dart';
 import '../models/student_cache_isar.dart';
+import '../../domain/services/id_generator_service.dart';
 
 class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
   final FirebaseFirestore firestore;
   final Isar isar;
+  final IdGeneratorService idGenerator;
 
   StudentIdentityRepositoryImpl({
     required this.firestore,
     required this.isar,
+    required this.idGenerator,
   });
 
   @override
@@ -38,7 +41,11 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
   }
 
   @override
-  Future<Either<Failure, StudentIdentity>> generateStudentIdentity(Student student) async {
+  Future<Either<Failure, StudentIdentity>> generateStudentIdentity(
+    Student student, {
+    String? uniqueSystemId,
+    String? schoolStudentId,
+  }) async {
     try {
       // Check if identity already exists
       final existing = await firestore
@@ -50,22 +57,25 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
         return Right(StudentIdentityModel.fromFirestore(existing.docs.first.data()));
       }
 
-      // Generate IDs (This logic might be better in a service, but repository can coordinate)
-      // For this implementation, we'll assume the IDs are generated and passed or generated here.
-      // The prompt says "Automatically generate", so let's do it here if not exists.
-      
-      // In a real app, schoolStudentId sequence would come from a counter in Firestore.
-      // For now, we'll use a simplified version.
-      final uniqueSystemId = 'SP-STUDENT-${DateTime.now().millisecondsSinceEpoch.toRadixString(36)}';
-      final schoolPrefix = student.className.substring(0, min(2, student.className.length)).toUpperCase();
-      final year = DateTime.now().year;
-      final schoolStudentId = '$schoolPrefix-$year-${student.studentId}';
+      // Callers that already generated codes (e.g. AdmissionService, which
+      // must mint a studentCode before the student doc exists) pass them in
+      // so the Student record and its identity stay consistent. Otherwise
+      // fall back to generating them here.
+      final resolvedUniqueSystemId = uniqueSystemId ?? idGenerator.generateUniqueSystemId();
+      String resolvedSchoolStudentId;
+      if (schoolStudentId != null) {
+        resolvedSchoolStudentId = schoolStudentId;
+      } else {
+        final schoolPrefix = student.className.substring(0, min(2, student.className.length)).toUpperCase();
+        final year = DateTime.now().year;
+        resolvedSchoolStudentId = '$schoolPrefix-$year-${student.studentId}';
+      }
 
       final model = StudentIdentityModel(
         studentId: student.id,
-        uniqueSystemId: uniqueSystemId,
-        schoolStudentId: schoolStudentId,
-        qrCodeData: uniqueSystemId,
+        uniqueSystemId: resolvedUniqueSystemId,
+        schoolStudentId: resolvedSchoolStudentId,
+        qrCodeData: resolvedUniqueSystemId,
       );
 
       await firestore.collection('student_identities').add(model.toFirestore());
@@ -113,7 +123,7 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
               ..photoUrl = student.photoUrl
               ..className = student.className
               ..schoolStudentId = identity.schoolStudentId
-              ..schoolId = 'FIXME_SCHOOL_ID'; // Need to pass schoolId or get it from student
+              ..schoolId = student.schoolId;
               
             await isar.studentCacheIsars.put(cache);
           }

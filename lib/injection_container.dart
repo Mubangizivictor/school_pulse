@@ -110,6 +110,7 @@ import 'package:school_pulse/features/student/presentation/bloc/students_bloc.da
 import 'package:school_pulse/features/student/presentation/bloc/student_homework_bloc.dart';
 import 'package:school_pulse/features/student_identity/domain/repositories/student_identity_repository.dart';
 import 'package:school_pulse/features/student_identity/data/repositories/student_identity_repository_impl.dart';
+import 'package:school_pulse/features/student_identity/domain/services/id_generator_service.dart';
 
 // Admin Dashboard
 import 'package:school_pulse/features/admin/domain/usecases/get_admin_dashboard_stats.dart';
@@ -549,13 +550,20 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton(
-    () => AdmissionService(sl(), initializeFinancials: sl()),
+    () => AdmissionService(
+      sl(),
+      idGenerator: sl(),
+      identityRepository: sl(),
+      initializeFinancials: sl(),
+    ),
   );
 
   // Features - Student Identity (QR / ID card resolution, used by the
   // security module's gate verification workflow)
+  sl.registerLazySingleton(() => IdGeneratorService());
+
   sl.registerLazySingleton<StudentIdentityRepository>(
-    () => StudentIdentityRepositoryImpl(firestore: sl(), isar: sl()),
+    () => StudentIdentityRepositoryImpl(firestore: sl(), isar: sl(), idGenerator: sl()),
   );
 
   // Features - Auth

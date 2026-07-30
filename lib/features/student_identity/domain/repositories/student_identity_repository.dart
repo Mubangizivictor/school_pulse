@@ -5,7 +5,11 @@ import '../../../student/domain/entities/student.dart';
 
 abstract class StudentIdentityRepository {
   Future<Either<Failure, StudentIdentity>> getStudentIdentity(String studentId);
-  Future<Either<Failure, StudentIdentity>> generateStudentIdentity(Student student);
+  Future<Either<Failure, StudentIdentity>> generateStudentIdentity(
+    Student student, {
+    String? uniqueSystemId,
+    String? schoolStudentId,
+  });
   Future<Either<Failure, List<StudentIdentity>>> getSchoolIdentities(String schoolId);
   
   // Local caching
