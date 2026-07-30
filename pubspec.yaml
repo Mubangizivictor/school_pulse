@@ -54,6 +54,7 @@ dependencies:
   crypto: ^3.0.6
   url_launcher: ^6.3.1
   share_plus: ^10.1.4
+  nfc_manager: ^3.5.0
 
 dev_dependencies:
   flutter_test:

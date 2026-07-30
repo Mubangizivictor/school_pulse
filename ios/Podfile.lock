@@ -52,6 +52,8 @@ PODS:
     - nanopb/encode (= 3.30910.0)
   - nanopb/decode (3.30910.0)
   - nanopb/encode (3.30910.0)
+  - nfc_manager (0.0.1):
+    - Flutter
   - open_filex (0.0.2):
     - Flutter
   - printing (1.0.0):
@@ -63,6 +65,7 @@ DEPENDENCIES:
   - Flutter (from `Flutter`)
   - isar_flutter_libs (from `.symlinks/plugins/isar_flutter_libs/ios`)
   - mobile_scanner (from `.symlinks/plugins/mobile_scanner/ios`)
+  - nfc_manager (from `.symlinks/plugins/nfc_manager/ios`)
   - open_filex (from `.symlinks/plugins/open_filex/ios`)
   - printing (from `.symlinks/plugins/printing/ios`)
 
@@ -89,6 +92,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/isar_flutter_libs/ios"
   mobile_scanner:
     :path: ".symlinks/plugins/mobile_scanner/ios"
+  nfc_manager:
+    :path: ".symlinks/plugins/nfc_manager/ios"
   open_filex:
     :path: ".symlinks/plugins/open_filex/ios"
   printing:
@@ -109,6 +114,7 @@ SPEC CHECKSUMS:
   MLKitVision: 45e79d68845a2de77e2dd4d7f07947f0ed157b0e
   mobile_scanner: af8f71879eaba2bbcb4d86c6a462c3c0e7f23036
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
+  nfc_manager: 9c40fe22528ab871ca11e52ea8b95790e9d92ca2
   open_filex: 432f3cd11432da3e39f47fcc0df2b1603854eff1
   printing: 54ff03f28fe9ba3aa93358afb80a8595a071dd07
   PromisesObjC: 752c3227f599e3467650e47ea36f433eeb10c273

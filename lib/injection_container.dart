@@ -299,12 +299,33 @@ import 'package:school_pulse/features/library/domain/usecases/issue_book.dart';
 import 'package:school_pulse/features/library/domain/usecases/return_book.dart';
 
 import 'package:school_pulse/features/biometrics/domain/repositories/biometric_repository.dart';
+import 'package:school_pulse/features/biometrics/domain/repositories/biometric_device_service.dart';
 import 'package:school_pulse/features/biometrics/data/repositories/biometric_repository_impl.dart';
 import 'package:school_pulse/features/biometrics/data/datasources/biometric_remote_data_source.dart';
 import 'package:school_pulse/features/biometrics/data/datasources/biometric_local_data_source.dart';
+import 'package:school_pulse/features/biometrics/data/datasources/mock_biometric_device_service.dart';
 import 'package:school_pulse/features/biometrics/domain/usecases/biometric_usecases.dart';
 import 'package:school_pulse/features/biometrics/presentation/bloc/biometrics_bloc.dart';
 import 'package:school_pulse/features/biometrics/data/models/biometric_template_isar.dart';
+
+import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source.dart';
+import 'package:school_pulse/features/verification/data/models/verification_isar_models.dart';
+import 'package:school_pulse/features/verification/data/repositories/identity_resolver_impl.dart';
+import 'package:school_pulse/features/verification/data/repositories/permission_evaluator_impl.dart';
+import 'package:school_pulse/features/verification/data/repositories/verification_event_recorder_impl.dart';
+import 'package:school_pulse/features/verification/domain/repositories/identity_resolver.dart';
+import 'package:school_pulse/features/verification/domain/repositories/permission_evaluator.dart';
+import 'package:school_pulse/features/verification/domain/repositories/verification_event_recorder.dart';
+import 'package:school_pulse/features/verification/domain/repositories/verification_policy_evaluator.dart';
+import 'package:school_pulse/features/verification/domain/services/verification_feedback_service.dart';
+import 'package:school_pulse/features/verification/presentation/services/haptic_verification_feedback_service.dart';
+import 'package:school_pulse/features/verification/presentation/adapters/qr_credential_reader_adapter.dart';
+import 'package:school_pulse/features/verification/presentation/adapters/fingerprint_credential_reader_adapter.dart';
+import 'package:school_pulse/features/verification/presentation/bloc/verification_session_bloc.dart';
+import 'package:school_pulse/features/verification/presentation/bloc/credential_scan_bloc.dart';
+import 'package:school_pulse/features/verification/domain/repositories/credential_reader_adapter.dart';
+import 'package:school_pulse/core/services/nfc/nfc_credential_reader_adapter.dart';
+import 'package:school_pulse/features/security/domain/policies/gate_verification_policy.dart';
 
 final sl = GetIt.instance;
 
@@ -1063,6 +1084,63 @@ Future<void> init() async {
     () => BiometricLocalDataSourceImpl(sl()),
   );
 
+  // `VerifyFingerprint`/`EnrollFingerprint` already depended on this but it
+  // was never registered - pre-existing gap, would throw as soon as either
+  // usecase was resolved. Fixed here since `IdentityResolverImpl` (Phase 1
+  // verification engine) is the first thing that forces `VerifyFingerprint`
+  // to actually resolve.
+  sl.registerLazySingleton<BiometricDeviceService>(() => MockBiometricDeviceService());
+
+  // Features - Verification (shared verification engine, Phase 1: Security/Gate)
+  sl.registerFactory(
+    () => VerificationSessionBloc(
+      identityResolver: sl(),
+      policyEvaluator: sl(),
+      eventRecorder: sl(),
+      feedbackService: sl(),
+      recordStudentMovement: sl(),
+      recordStaffMovement: sl(),
+    ),
+  );
+
+  sl.registerFactory(
+    () => CredentialScanBloc(adapters: {
+      ScanCredentialKind.qr: sl<QrCredentialReaderAdapter>(),
+      ScanCredentialKind.nfc: sl<NfcCredentialReaderAdapter>(),
+      ScanCredentialKind.fingerprint: sl<FingerprintCredentialReaderAdapter>(),
+    }),
+  );
+
+  sl.registerLazySingleton<IdentityResolver>(
+    () => IdentityResolverImpl(
+      studentIdentityRepository: sl(),
+      getStaffMembers: sl(),
+      resolveParentAccessCode: sl(),
+      verifyFingerprint: sl(),
+      localDataSource: sl(),
+    ),
+  );
+
+  sl.registerLazySingleton<PermissionEvaluator>(
+    () => PermissionEvaluatorImpl(localDataSource: sl()),
+  );
+
+  sl.registerLazySingleton<VerificationPolicyEvaluator>(
+    () => GateVerificationPolicy(permissionEvaluator: sl(), securityRepository: sl()),
+  );
+
+  sl.registerLazySingleton<VerificationEventRecorder>(
+    () => VerificationEventRecorderImpl(localDataSource: sl(), firestore: sl(), networkInfo: sl()),
+  );
+
+  sl.registerLazySingleton<VerificationFeedbackService>(() => HapticVerificationFeedbackService());
+
+  sl.registerLazySingleton<VerificationLocalDataSource>(() => VerificationLocalDataSourceImpl(sl()));
+
+  sl.registerLazySingleton(() => QrCredentialReaderAdapter());
+  sl.registerLazySingleton(() => NfcCredentialReaderAdapter());
+  sl.registerLazySingleton(() => FingerprintCredentialReaderAdapter(sl()));
+
   //! Printer Service
   sl.registerLazySingleton<PrinterService>(() => ThermalPrinterService());
 
@@ -1108,6 +1186,11 @@ Future<void> init() async {
     LibraryBorrowingIsarSchema,
     LibraryReservationIsarSchema,
     MealRecordIsarSchema,
+    CachedCredentialIsarSchema,
+    RevokedCredentialIsarSchema,
+    VerificationEventIsarSchema,
+    AuthorizedDeviceIsarSchema,
+    OperatorPermissionSnapshotIsarSchema,
   ], directory: dir.path);
   sl.registerLazySingleton(() => isar);
 
