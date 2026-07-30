@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 
 class VisitorBlacklist extends Equatable {
   final String id;
+  final String schoolId;
   final String visitorId;
   final String fullName;
   final String phone;
@@ -11,6 +12,7 @@ class VisitorBlacklist extends Equatable {
 
   const VisitorBlacklist({
     required this.id,
+    required this.schoolId,
     required this.visitorId,
     required this.fullName,
     required this.phone,
@@ -20,5 +22,5 @@ class VisitorBlacklist extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, visitorId, fullName, phone, reason, dateAdded, addedBy];
+  List<Object?> get props => [id, schoolId, visitorId, fullName, phone, reason, dateAdded, addedBy];
 }

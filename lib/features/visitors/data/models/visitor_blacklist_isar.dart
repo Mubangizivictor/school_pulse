@@ -10,6 +10,9 @@ class VisitorBlacklistIsar {
   @Index(unique: true, replace: true)
   late String blacklistId;
 
+  @Index()
+  late String schoolId;
+
   late String visitorId;
   late String fullName;
   late String phone;
@@ -22,6 +25,7 @@ class VisitorBlacklistIsar {
   factory VisitorBlacklistIsar.fromEntity(VisitorBlacklist entity) {
     return VisitorBlacklistIsar()
       ..blacklistId = entity.id
+      ..schoolId = entity.schoolId
       ..visitorId = entity.visitorId
       ..fullName = entity.fullName
       ..phone = entity.phone
@@ -33,6 +37,7 @@ class VisitorBlacklistIsar {
   VisitorBlacklist toEntity() {
     return VisitorBlacklist(
       id: blacklistId,
+      schoolId: schoolId,
       visitorId: visitorId,
       fullName: fullName,
       phone: phone,

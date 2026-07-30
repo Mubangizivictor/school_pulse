@@ -12,7 +12,7 @@ abstract class VisitorRepository {
   Future<Either<Failure, Visitor>> checkOutVisitor(String visitorId, DateTime departureTime, String duration);
   Future<Either<Failure, List<Visitor>>> searchVisitors(String schoolId, String query);
   
-  Future<Either<Failure, List<VisitorBlacklist>>> getBlacklist();
+  Future<Either<Failure, List<VisitorBlacklist>>> getBlacklist(String schoolId);
   Future<Either<Failure, void>> addToBlacklist(VisitorBlacklist blacklist);
   
   Future<Either<Failure, List<PreApprovedVisitor>>> getPreApprovedVisitors(String schoolId);

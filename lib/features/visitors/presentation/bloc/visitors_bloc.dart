@@ -83,7 +83,7 @@ class VisitorsBloc extends Bloc<VisitorsEvent, VisitorsState> {
   Future<void> _onLoadVisitors(LoadVisitors event, Emitter<VisitorsState> emit) async {
     emit(VisitorsLoading());
     final result = await getVisitors(event.schoolId);
-    final blacklistResult = await getVisitorBlacklist();
+    final blacklistResult = await getVisitorBlacklist(event.schoolId);
     final activeResult = await getActiveVisitors(event.schoolId);
     final overstayedResult = await getOverstayedVisitors(event.schoolId);
     

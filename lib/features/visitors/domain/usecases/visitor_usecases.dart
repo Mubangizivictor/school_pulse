@@ -41,7 +41,7 @@ class SearchVisitors {
 class GetVisitorBlacklist {
   final VisitorRepository repository;
   GetVisitorBlacklist(this.repository);
-  Future<Either<Failure, List<VisitorBlacklist>>> call() => repository.getBlacklist();
+  Future<Either<Failure, List<VisitorBlacklist>>> call(String schoolId) => repository.getBlacklist(schoolId);
 }
 
 class AddToBlacklist {

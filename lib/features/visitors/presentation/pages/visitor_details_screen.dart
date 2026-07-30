@@ -51,6 +51,7 @@ class VisitorDetailsScreen extends StatelessWidget {
               
               final blacklist = VisitorBlacklist(
                 id: const Uuid().v4(),
+                schoolId: visitor.schoolId,
                 visitorId: visitor.id,
                 fullName: visitor.fullName,
                 phone: visitor.phone,

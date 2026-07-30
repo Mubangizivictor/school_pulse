@@ -14,7 +14,7 @@ abstract class VisitorLocalDataSource {
   Future<List<VisitorIsar>> getActiveVisitors(String schoolId);
   Future<List<VisitorIsar>> getOverstayedVisitors(String schoolId);
   
-  Future<List<VisitorBlacklistIsar>> getBlacklist();
+  Future<List<VisitorBlacklistIsar>> getBlacklist(String schoolId);
   Future<void> saveBlacklist(List<VisitorBlacklistIsar> blacklist);
   
   Future<List<PreApprovedVisitorIsar>> getPreApprovedVisitors(String schoolId);
@@ -93,8 +93,11 @@ class VisitorLocalDataSourceImpl implements VisitorLocalDataSource {
   }
 
   @override
-  Future<List<VisitorBlacklistIsar>> getBlacklist() async {
-    return await isar.visitorBlacklistIsars.where().findAll();
+  Future<List<VisitorBlacklistIsar>> getBlacklist(String schoolId) async {
+    return await isar.visitorBlacklistIsars
+        .filter()
+        .schoolIdEqualTo(schoolId)
+        .findAll();
   }
 
   @override

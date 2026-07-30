@@ -48,8 +48,13 @@ const VisitorBlacklistIsarSchema = CollectionSchema(
       name: r'reason',
       type: IsarType.string,
     ),
-    r'visitorId': PropertySchema(
+    r'schoolId': PropertySchema(
       id: 6,
+      name: r'schoolId',
+      type: IsarType.string,
+    ),
+    r'visitorId': PropertySchema(
+      id: 7,
       name: r'visitorId',
       type: IsarType.string,
     )
@@ -68,6 +73,19 @@ const VisitorBlacklistIsarSchema = CollectionSchema(
       properties: [
         IndexPropertySchema(
           name: r'blacklistId',
+          type: IndexType.hash,
+          caseSensitive: true,
+        )
+      ],
+    ),
+    r'schoolId': IndexSchema(
+      id: 6631843591736686975,
+      name: r'schoolId',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'schoolId',
           type: IndexType.hash,
           caseSensitive: true,
         )
@@ -93,6 +111,7 @@ int _visitorBlacklistIsarEstimateSize(
   bytesCount += 3 + object.fullName.length * 3;
   bytesCount += 3 + object.phone.length * 3;
   bytesCount += 3 + object.reason.length * 3;
+  bytesCount += 3 + object.schoolId.length * 3;
   bytesCount += 3 + object.visitorId.length * 3;
   return bytesCount;
 }
@@ -109,7 +128,8 @@ void _visitorBlacklistIsarSerialize(
   writer.writeString(offsets[3], object.fullName);
   writer.writeString(offsets[4], object.phone);
   writer.writeString(offsets[5], object.reason);
-  writer.writeString(offsets[6], object.visitorId);
+  writer.writeString(offsets[6], object.schoolId);
+  writer.writeString(offsets[7], object.visitorId);
 }
 
 VisitorBlacklistIsar _visitorBlacklistIsarDeserialize(
@@ -126,7 +146,8 @@ VisitorBlacklistIsar _visitorBlacklistIsarDeserialize(
   object.id = id;
   object.phone = reader.readString(offsets[4]);
   object.reason = reader.readString(offsets[5]);
-  object.visitorId = reader.readString(offsets[6]);
+  object.schoolId = reader.readString(offsets[6]);
+  object.visitorId = reader.readString(offsets[7]);
   return object;
 }
 
@@ -150,6 +171,8 @@ P _visitorBlacklistIsarDeserializeProp<P>(
     case 5:
       return (reader.readString(offset)) as P;
     case 6:
+      return (reader.readString(offset)) as P;
+    case 7:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -347,6 +370,51 @@ extension VisitorBlacklistIsarQueryWhere
               indexName: r'blacklistId',
               lower: [],
               upper: [blacklistId],
+              includeUpper: false,
+            ));
+      }
+    });
+  }
+
+  QueryBuilder<VisitorBlacklistIsar, VisitorBlacklistIsar, QAfterWhereClause>
+      schoolIdEqualTo(String schoolId) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'schoolId',
+        value: [schoolId],
+      ));
+    });
+  }
+
+  QueryBuilder<VisitorBlacklistIsar, VisitorBlacklistIsar, QAfterWhereClause>
+      schoolIdNotEqualTo(String schoolId) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'schoolId',
+              lower: [],
+              upper: [schoolId],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'schoolId',
+              lower: [schoolId],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'schoolId',
+              lower: [schoolId],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'schoolId',
+              lower: [],
+              upper: [schoolId],
               includeUpper: false,
             ));
       }
@@ -1159,6 +1227,144 @@ extension VisitorBlacklistIsarQueryFilter on QueryBuilder<VisitorBlacklistIsar,
   }
 
   QueryBuilder<VisitorBlacklistIsar, VisitorBlacklistIsar,
+      QAfterFilterCondition> schoolIdEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'schoolId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<VisitorBlacklistIsar, VisitorBlacklistIsar,
+      QAfterFilterCondition> schoolIdGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'schoolId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<VisitorBlacklistIsar, VisitorBlacklistIsar,
+      QAfterFilterCondition> schoolIdLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'schoolId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<VisitorBlacklistIsar, VisitorBlacklistIsar,
+      QAfterFilterCondition> schoolIdBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'schoolId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<VisitorBlacklistIsar, VisitorBlacklistIsar,
+      QAfterFilterCondition> schoolIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'schoolId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<VisitorBlacklistIsar, VisitorBlacklistIsar,
+      QAfterFilterCondition> schoolIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'schoolId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<VisitorBlacklistIsar, VisitorBlacklistIsar,
+          QAfterFilterCondition>
+      schoolIdContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'schoolId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<VisitorBlacklistIsar, VisitorBlacklistIsar,
+          QAfterFilterCondition>
+      schoolIdMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'schoolId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<VisitorBlacklistIsar, VisitorBlacklistIsar,
+      QAfterFilterCondition> schoolIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'schoolId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<VisitorBlacklistIsar, VisitorBlacklistIsar,
+      QAfterFilterCondition> schoolIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'schoolId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<VisitorBlacklistIsar, VisitorBlacklistIsar,
       QAfterFilterCondition> visitorIdEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -1390,6 +1596,20 @@ extension VisitorBlacklistIsarQuerySortBy
   }
 
   QueryBuilder<VisitorBlacklistIsar, VisitorBlacklistIsar, QAfterSortBy>
+      sortBySchoolId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'schoolId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<VisitorBlacklistIsar, VisitorBlacklistIsar, QAfterSortBy>
+      sortBySchoolIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'schoolId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<VisitorBlacklistIsar, VisitorBlacklistIsar, QAfterSortBy>
       sortByVisitorId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'visitorId', Sort.asc);
@@ -1505,6 +1725,20 @@ extension VisitorBlacklistIsarQuerySortThenBy
   }
 
   QueryBuilder<VisitorBlacklistIsar, VisitorBlacklistIsar, QAfterSortBy>
+      thenBySchoolId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'schoolId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<VisitorBlacklistIsar, VisitorBlacklistIsar, QAfterSortBy>
+      thenBySchoolIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'schoolId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<VisitorBlacklistIsar, VisitorBlacklistIsar, QAfterSortBy>
       thenByVisitorId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'visitorId', Sort.asc);
@@ -1564,6 +1798,13 @@ extension VisitorBlacklistIsarQueryWhereDistinct
   }
 
   QueryBuilder<VisitorBlacklistIsar, VisitorBlacklistIsar, QDistinct>
+      distinctBySchoolId({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'schoolId', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<VisitorBlacklistIsar, VisitorBlacklistIsar, QDistinct>
       distinctByVisitorId({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'visitorId', caseSensitive: caseSensitive);
@@ -1617,6 +1858,13 @@ extension VisitorBlacklistIsarQueryProperty on QueryBuilder<
       reasonProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'reason');
+    });
+  }
+
+  QueryBuilder<VisitorBlacklistIsar, String, QQueryOperations>
+      schoolIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'schoolId');
     });
   }
 

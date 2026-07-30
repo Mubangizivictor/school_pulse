@@ -117,13 +117,14 @@ class VisitorRepositoryImpl implements VisitorRepository {
   }
 
   @override
-  Future<Either<Failure, List<VisitorBlacklist>>> getBlacklist() async {
+  Future<Either<Failure, List<VisitorBlacklist>>> getBlacklist(String schoolId) async {
     try {
       if (await networkInfo.isConnected) {
-        final remoteData = await remoteDataSource.getBlacklist();
+        final remoteData = await remoteDataSource.getBlacklist(schoolId);
         final blacklistIsar = remoteData.map((data) {
           final b = VisitorBlacklistIsar()
             ..blacklistId = data['id']
+            ..schoolId = data['schoolId'] ?? schoolId
             ..visitorId = data['visitorId']
             ..fullName = data['fullName'] ?? ''
             ..phone = data['phone']
@@ -134,7 +135,7 @@ class VisitorRepositoryImpl implements VisitorRepository {
         }).toList();
         await localDataSource.saveBlacklist(blacklistIsar);
       }
-      final localData = await localDataSource.getBlacklist();
+      final localData = await localDataSource.getBlacklist(schoolId);
       return Right(localData.map((e) => e.toEntity()).toList());
     } catch (e) {
       return Left(CacheFailure());
@@ -146,6 +147,7 @@ class VisitorRepositoryImpl implements VisitorRepository {
     try {
       final blacklistIsar = VisitorBlacklistIsar()
         ..blacklistId = blacklist.id
+        ..schoolId = blacklist.schoolId
         ..visitorId = blacklist.visitorId
         ..fullName = blacklist.fullName
         ..phone = blacklist.phone
@@ -158,6 +160,7 @@ class VisitorRepositoryImpl implements VisitorRepository {
       if (await networkInfo.isConnected) {
         await remoteDataSource.addToBlacklist({
           'id': blacklist.id,
+          'schoolId': blacklist.schoolId,
           'visitorId': blacklist.visitorId,
           'fullName': blacklist.fullName,
           'phone': blacklist.phone,

@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 abstract class VisitorRemoteDataSource {
   Future<List<Map<String, dynamic>>> getVisitors(String schoolId);
   Future<void> syncVisitor(Map<String, dynamic> visitorData);
-  Future<List<Map<String, dynamic>>> getBlacklist();
+  Future<List<Map<String, dynamic>>> getBlacklist(String schoolId);
   Future<List<Map<String, dynamic>>> getPreApprovedVisitors(String schoolId);
   Future<void> markPreApprovedAsUsed(String preApprovedId);
   Future<void> addToBlacklist(Map<String, dynamic> blacklistData);
@@ -41,8 +41,11 @@ class VisitorRemoteDataSourceImpl implements VisitorRemoteDataSource {
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getBlacklist() async {
-    final snapshot = await firestore.collection('visitor_blacklist').get();
+  Future<List<Map<String, dynamic>>> getBlacklist(String schoolId) async {
+    final snapshot = await firestore
+        .collection('visitor_blacklist')
+        .where('schoolId', isEqualTo: schoolId)
+        .get();
     return snapshot.docs.map((doc) => {
       ...doc.data(),
       'id': doc.id,
