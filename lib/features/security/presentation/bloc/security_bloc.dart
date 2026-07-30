@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:school_pulse/core/notification/notification_service.dart';
 import '../../domain/entities/security_entities.dart';
 import '../../domain/usecases/security_usecases.dart';
 import 'security_event.dart';
@@ -182,7 +183,13 @@ class SecurityBloc extends Bloc<SecurityEvent, SecurityState> {
     final result = await triggerEmergency(event.event);
     result.fold(
       (failure) => emit(state.copyWith(feedback: SecurityFeedback(failure.message, isError: true))),
-      (_) => emit(state.copyWith(feedback: SecurityFeedback('Emergency triggered'))),
+      (_) {
+        emit(state.copyWith(feedback: SecurityFeedback('Emergency triggered')));
+        NotificationService().sendSecurityAlert(
+          title: event.event.type,
+          body: event.event.description.isNotEmpty ? event.event.description : 'Emergency alert triggered - respond immediately.',
+        );
+      },
     );
   }
 

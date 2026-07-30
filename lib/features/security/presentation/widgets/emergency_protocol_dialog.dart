@@ -2,9 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/security_bloc.dart';
 import '../bloc/security_event.dart';
+import '../bloc/security_state.dart';
 import '../../data/models/security_models.dart';
 import '../../../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../../../features/auth/presentation/bloc/auth_state.dart';
+
+const List<String> kEmergencyTypes = [
+  'Fire',
+  'Medical Emergency',
+  'Security Threat',
+  'Missing Student',
+  'Intruder Alert',
+  'Accident',
+];
 
 class EmergencyProtocolDialog extends StatefulWidget {
   const EmergencyProtocolDialog({super.key});
@@ -14,76 +24,83 @@ class EmergencyProtocolDialog extends StatefulWidget {
 }
 
 class _EmergencyProtocolDialogState extends State<EmergencyProtocolDialog> {
-  String _selectedType = 'Intruder';
+  String _selectedType = kEmergencyTypes.first;
   final _descriptionController = TextEditingController();
   bool _isSubmitting = false;
 
-  final List<String> _emergencyTypes = [
-    'Intruder',
-    'Fire',
-    'Medical',
-    'Bomb Threat',
-    'Natural Disaster',
-    'Other'
-  ];
-
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Row(
-        children: [
-          const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
-          const SizedBox(width: 8),
-          const Text('Trigger Emergency', style: TextStyle(color: Colors.red)),
-        ],
-      ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return BlocListener<SecurityBloc, SecurityState>(
+      listenWhen: (previous, current) => !identical(previous.feedback, current.feedback) && current.feedback != null,
+      listener: (context, state) {
+        final feedback = state.feedback!;
+        if (_isSubmitting) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(feedback.isError ? feedback.message : 'EMERGENCY ALERT ACTIVATED'),
+              backgroundColor: feedback.isError ? Colors.red : Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      },
+      child: AlertDialog(
+        title: Row(
           children: [
-            const Text(
-              'This will alert all security staff and admin immediately. Select the type of emergency.',
-              style: TextStyle(fontSize: 13, color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: _selectedType,
-              decoration: const InputDecoration(
-                labelText: 'Emergency Type',
-                border: OutlineInputBorder(),
-              ),
-              items: _emergencyTypes.map((type) {
-                return DropdownMenuItem(value: type, child: Text(type));
-              }).toList(),
-              onChanged: (value) => setState(() => _selectedType = value!),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _descriptionController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Quick Description / Location',
-                hintText: 'e.g., Fire at Block A, Room 202',
-                border: OutlineInputBorder(),
-              ),
-            ),
+            const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+            const SizedBox(width: 8),
+            const Text('Trigger Emergency', style: TextStyle(color: Colors.red)),
           ],
         ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'This will alert all security staff and admin immediately. Select the type of emergency.',
+                style: TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: _selectedType,
+                decoration: const InputDecoration(
+                  labelText: 'Emergency Type',
+                  border: OutlineInputBorder(),
+                ),
+                items: kEmergencyTypes.map((type) {
+                  return DropdownMenuItem(value: type, child: Text(type));
+                }).toList(),
+                onChanged: (value) => setState(() => _selectedType = value!),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _descriptionController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Quick Description / Location',
+                  hintText: 'e.g., Fire at Block A, Room 202',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: _isSubmitting ? null : () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: _isSubmitting ? null : _triggerEmergency,
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: _isSubmitting
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Text('ACTIVATE ALERT'),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: _isSubmitting ? null : () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: _isSubmitting ? null : _triggerEmergency,
-          style: FilledButton.styleFrom(backgroundColor: Colors.red),
-          child: _isSubmitting
-              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-              : const Text('ACTIVATE ALERT'),
-        ),
-      ],
     );
   }
 
@@ -94,7 +111,7 @@ class _EmergencyProtocolDialogState extends State<EmergencyProtocolDialog> {
     setState(() => _isSubmitting = true);
 
     final event = EmergencyEventModel(
-      id: '', // Generated by remote
+      id: '',
       type: _selectedType,
       startTime: DateTime.now(),
       description: _descriptionController.text.trim(),
@@ -105,16 +122,5 @@ class _EmergencyProtocolDialogState extends State<EmergencyProtocolDialog> {
     );
 
     context.read<SecurityBloc>().add(TriggerEmergencyRequested(event));
-    
-    // In a real app, we might wait for the Bloc to emit success
-    // but for an emergency UI, we want fast feedback.
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('EMERGENCY ALERT ACTIVATED'),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
   }
 }

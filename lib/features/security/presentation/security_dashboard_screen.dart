@@ -10,7 +10,9 @@ import 'package:school_pulse/features/security/domain/entities/security_entities
 import 'bloc/security_bloc.dart';
 import 'bloc/security_event.dart';
 import 'bloc/security_state.dart';
-import '../data/models/security_models.dart';
+import 'screens/emergency_detail_screen.dart';
+import 'screens/incident_detail_screen.dart';
+import 'screens/report_incident_screen.dart';
 
 import 'widgets/emergency_protocol_dialog.dart';
 import 'widgets/verification_workflow.dart';
@@ -30,88 +32,6 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
     if (authState is AuthAuthenticated) {
       context.read<SecurityBloc>().add(LoadSecurityDashboard(authState.user.schoolId));
     }
-  }
-
-  void _showReportIncidentDialog(BuildContext context) {
-    final titleController = TextEditingController();
-    String severity = 'low';
-    bool isSending = false;
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          title: const Text('Report Incident to Admin'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(
-                controller: titleController,
-                autofocus: true,
-                decoration: const InputDecoration(labelText: 'What happened?'),
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: severity,
-                decoration: const InputDecoration(labelText: 'Severity'),
-                items: const [
-                  DropdownMenuItem(value: 'low', child: Text('Low')),
-                  DropdownMenuItem(value: 'medium', child: Text('Medium')),
-                  DropdownMenuItem(value: 'high', child: Text('High')),
-                ],
-                onChanged: (v) => setDialogState(() => severity = v ?? 'low'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
-            FilledButton(
-              onPressed: isSending
-                  ? null
-                  : () async {
-                      if (titleController.text.trim().isEmpty) return;
-                      final authState = context.read<AuthBloc>().state;
-                      if (authState is! AuthAuthenticated) return;
-                      setDialogState(() => isSending = true);
-                      try {
-                        final incident = SecurityIncidentModel(
-                          id: '', // Backend should generate ID or we use uuid
-                          type: 'General', 
-                          description: titleController.text.trim(),
-                          timestamp: DateTime.now(),
-                          location: 'Unknown',
-                          involvedPersonIds: const [],
-                          photoUrls: const [],
-                          reportedByOfficerId: authState.user.id,
-                          report: '',
-                          status: 'Pending',
-                          schoolId: authState.user.schoolId,
-                        );
-                        context.read<SecurityBloc>().add(ReportIncidentRequested(incident));
-                        if (dialogContext.mounted) Navigator.pop(dialogContext);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Incident reported.')),
-                          );
-                        }
-                      } catch (e) {
-                        setDialogState(() => isSending = false);
-                        if (dialogContext.mounted) {
-                          ScaffoldMessenger.of(dialogContext).showSnackBar(
-                            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-                          );
-                        }
-                      }
-                    },
-              child: isSending
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Alert Admin'),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _showVerificationWorkflow(BuildContext context) {
@@ -160,7 +80,7 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
                   context.push('/staff/security/pickup-authorizations');
                   break;
                 case 'report':
-                  _showReportIncidentDialog(context);
+                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReportIncidentScreen()));
                   break;
               }
             },
@@ -245,7 +165,12 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
                       child: SectionHeader(title: 'Active Emergencies', color: Colors.red),
                     ),
                     const SizedBox(height: 12),
-                    ...state.activeEmergencies.map((emergency) => _EmergencyCard(emergency: emergency)),
+                    ...state.activeEmergencies.map((emergency) => _EmergencyCard(
+                          emergency: emergency,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => EmergencyDetailScreen(emergency: emergency)),
+                          ),
+                        )),
                     const SizedBox(height: 24),
                   ],
                   const FadeInSlide(
@@ -266,7 +191,12 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
                   if (state.incidents.isEmpty)
                     const Center(child: Text("No active incidents"))
                   else
-                    ...state.incidents.take(5).map((incident) => _IncidentListTile(incident: incident)),
+                    ...state.incidents.take(5).map((incident) => _IncidentListTile(
+                          incident: incident,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => IncidentDetailScreen(incident: incident)),
+                          ),
+                        )),
                   const SizedBox(height: 32),
                 ],
               ),
@@ -299,7 +229,8 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
 
 class _EmergencyCard extends StatelessWidget {
   final EmergencyEvent emergency;
-  const _EmergencyCard({required this.emergency});
+  final VoidCallback onTap;
+  const _EmergencyCard({required this.emergency, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -311,6 +242,7 @@ class _EmergencyCard extends StatelessWidget {
         title: Text(emergency.type, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
         subtitle: Text(emergency.description),
         trailing: const Icon(Icons.chevron_right, color: Colors.red),
+        onTap: onTap,
       ),
     );
   }
@@ -346,7 +278,8 @@ class _MovementListTile extends StatelessWidget {
 
 class _IncidentListTile extends StatelessWidget {
   final SecurityIncident incident;
-  const _IncidentListTile({required this.incident});
+  final VoidCallback onTap;
+  const _IncidentListTile({required this.incident, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -370,6 +303,7 @@ class _IncidentListTile extends StatelessWidget {
             style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.orange),
           ),
         ),
+        onTap: onTap,
       ),
     );
   }
