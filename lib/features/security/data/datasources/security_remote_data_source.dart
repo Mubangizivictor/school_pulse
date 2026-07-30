@@ -9,8 +9,8 @@ abstract class SecurityRemoteDataSource {
 
   // Student Movement
   Future<void> recordStudentMovement(StudentMovementModel movement);
-  Stream<List<StudentMovementModel>> watchStudentMovements(String schoolId, {DateTime? date, String? gateId});
-  
+  Stream<List<StudentMovementModel>> watchStudentMovements(String schoolId, {DateTime? date, String? gateId, String? studentId});
+
   // Staff Movement
   Future<void> recordStaffMovement(StaffMovementModel movement);
   Stream<List<StaffMovementModel>> watchStaffMovements(String schoolId, {DateTime? date, String? gateId});
@@ -22,12 +22,12 @@ abstract class SecurityRemoteDataSource {
   // Incidents
   Future<void> reportIncident(SecurityIncidentModel incident);
   Stream<List<SecurityIncidentModel>> watchIncidents(String schoolId);
-  Future<void> updateIncidentStatus(String incidentId, String status, String resolution);
+  Future<void> updateIncidentStatus(String schoolId, String incidentId, String status, String resolution);
 
   // Emergency
   Future<void> triggerEmergency(EmergencyEventModel event);
   Stream<List<EmergencyEventModel>> watchActiveEmergencies(String schoolId);
-  Future<void> resolveEmergency(String emergencyId, DateTime endTime, List<String> actions);
+  Future<void> resolveEmergency(String schoolId, String emergencyId, DateTime endTime, List<String> actions);
 
   // Patrols
   Future<void> recordPatrol(SecurityPatrolModel patrol);
@@ -35,7 +35,7 @@ abstract class SecurityRemoteDataSource {
 
   // Lost and Found
   Future<void> reportFoundItem(LostAndFoundItemModel item);
-  Future<void> claimItem(String itemId, Map<String, dynamic> claimDetails);
+  Future<void> claimItem(String schoolId, String itemId, Map<String, dynamic> claimDetails);
   Stream<List<LostAndFoundItemModel>> watchLostAndFound(String schoolId);
 
   // Dashboard Stats
@@ -86,20 +86,24 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
   }
 
   @override
-  Stream<List<StudentMovementModel>> watchStudentMovements(String schoolId, {DateTime? date, String? gateId}) {
+  Stream<List<StudentMovementModel>> watchStudentMovements(String schoolId, {DateTime? date, String? gateId, String? studentId}) {
     Query query = firestore
         .collection('schools')
         .doc(schoolId)
         .collection('student_movements');
-    
+
     if (date != null) {
       final start = DateTime(date.year, date.month, date.day);
       final end = start.add(const Duration(days: 1));
       query = query.where('timestamp', isGreaterThanOrEqualTo: start).where('timestamp', isLessThan: end);
     }
-    
+
     if (gateId != null) {
       query = query.where('gateId', isEqualTo: gateId);
+    }
+
+    if (studentId != null) {
+      query = query.where('studentId', isEqualTo: studentId);
     }
 
     return query.orderBy('timestamp', descending: true).snapshots().map(
@@ -121,13 +125,13 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
         .collection('schools')
         .doc(schoolId)
         .collection('staff_movements');
-    
+
     if (date != null) {
       final start = DateTime(date.year, date.month, date.day);
       final end = start.add(const Duration(days: 1));
       query = query.where('timestamp', isGreaterThanOrEqualTo: start).where('timestamp', isLessThan: end);
     }
-    
+
     if (gateId != null) {
       query = query.where('gateId', isEqualTo: gateId);
     }
@@ -175,14 +179,16 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
   }
 
   @override
-  Future<void> updateIncidentStatus(String incidentId, String status, String resolution) async {
-     final snapshot = await firestore.collectionGroup('security_incidents').where(FieldPath.documentId, isEqualTo: incidentId).get();
-     if(snapshot.docs.isNotEmpty) {
-       await snapshot.docs.first.reference.update({
-         'status': status,
-         'report': resolution,
-       });
-     }
+  Future<void> updateIncidentStatus(String schoolId, String incidentId, String status, String resolution) async {
+    await firestore
+        .collection('schools')
+        .doc(schoolId)
+        .collection('security_incidents')
+        .doc(incidentId)
+        .update({
+      'status': status,
+      'report': resolution,
+    });
   }
 
   @override
@@ -206,15 +212,17 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
   }
 
   @override
-  Future<void> resolveEmergency(String emergencyId, DateTime endTime, List<String> actions) async {
-    final snapshot = await firestore.collectionGroup('emergency_events').where(FieldPath.documentId, isEqualTo: emergencyId).get();
-     if(snapshot.docs.isNotEmpty) {
-       await snapshot.docs.first.reference.update({
-         'status': 'Resolved',
-         'endTime': Timestamp.fromDate(endTime),
-         'responseActions': actions,
-       });
-     }
+  Future<void> resolveEmergency(String schoolId, String emergencyId, DateTime endTime, List<String> actions) async {
+    await firestore
+        .collection('schools')
+        .doc(schoolId)
+        .collection('emergency_events')
+        .doc(emergencyId)
+        .update({
+      'status': 'Resolved',
+      'endTime': Timestamp.fromDate(endTime),
+      'responseActions': actions,
+    });
   }
 
   @override
@@ -247,14 +255,16 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
   }
 
   @override
-  Future<void> claimItem(String itemId, Map<String, dynamic> claimDetails) async {
-    final snapshot = await firestore.collectionGroup('lost_and_found').where(FieldPath.documentId, isEqualTo: itemId).get();
-     if(snapshot.docs.isNotEmpty) {
-       await snapshot.docs.first.reference.update({
-         'isClaimed': true,
-         'claimDetails': claimDetails,
-       });
-     }
+  Future<void> claimItem(String schoolId, String itemId, Map<String, dynamic> claimDetails) async {
+    await firestore
+        .collection('schools')
+        .doc(schoolId)
+        .collection('lost_and_found')
+        .doc(itemId)
+        .update({
+      'isClaimed': true,
+      'claimDetails': claimDetails,
+    });
   }
 
   @override
@@ -272,11 +282,32 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
   Future<Map<String, dynamic>> getSecurityDashboardStats(String schoolId) async {
     // This would typically involve several count queries or a cloud function.
     // For now, return placeholders or do basic counts if possible.
-    final studentsIn = await firestore.collection('schools').doc(schoolId).collection('student_movements').where('direction', isEqualTo: 'In').where('timestamp', isGreaterThanOrEqualTo: DateTime.now().subtract(const Duration(hours: 24))).get();
-    final visitorsIn = await firestore.collection('schools').doc(schoolId).collection('visitors').where('status', isEqualTo: 'Checked In').get();
-    final incidentsToday = await firestore.collection('schools').doc(schoolId).collection('security_incidents').where('timestamp', isGreaterThanOrEqualTo: DateTime.now().subtract(const Duration(hours: 24))).get();
-    
+    final gates = await firestore.collection('schools').doc(schoolId).collection('gates').get();
+    final studentsIn = await firestore
+        .collection('schools')
+        .doc(schoolId)
+        .collection('student_movements')
+        .where('direction', isEqualTo: 'In')
+        .where('timestamp', isGreaterThanOrEqualTo: DateTime.now().subtract(const Duration(hours: 24)))
+        .get();
+    // Visitors are stored in a top-level `visitors` collection scoped by a
+    // `schoolId` field, not nested under schools/{schoolId} - see
+    // VisitorRemoteDataSourceImpl.getVisitors for the same convention.
+    final visitorsIn = await firestore
+        .collection('visitors')
+        .where('schoolId', isEqualTo: schoolId)
+        .where('status', isEqualTo: 'checkedIn')
+        .get();
+    final incidentsToday = await firestore
+        .collection('schools')
+        .doc(schoolId)
+        .collection('security_incidents')
+        .where('timestamp', isGreaterThanOrEqualTo: DateTime.now().subtract(const Duration(hours: 24)))
+        .get();
+
     return {
+      'activeGates': gates.docs.length,
+      'studentsIn': studentsIn.docs.length,
       'studentsCheckedInToday': studentsIn.docs.length,
       'visitorsCurrentlyInside': visitorsIn.docs.length,
       'incidentsToday': incidentsToday.docs.length,

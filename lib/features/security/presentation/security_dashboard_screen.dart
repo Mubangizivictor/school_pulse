@@ -25,7 +25,10 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<SecurityBloc>().add(LoadSecurityDashboard());
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      context.read<SecurityBloc>().add(LoadSecurityDashboard(authState.user.schoolId));
+    }
   }
 
   void _showReportIncidentDialog(BuildContext context) {
@@ -150,20 +153,32 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
           const NotificationBellButton(),
         ],
       ),
-      body: BlocBuilder<SecurityBloc, SecurityState>(
+      body: BlocConsumer<SecurityBloc, SecurityState>(
+        listenWhen: (previous, current) => !identical(previous.feedback, current.feedback) && current.feedback != null,
+        listener: (context, state) {
+          final feedback = state.feedback!;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(feedback.message),
+              backgroundColor: feedback.isError ? Colors.red : null,
+            ),
+          );
+        },
         builder: (context, state) {
-          if (state is SecurityLoading) {
+          if (state.status == SecurityStatus.loading || state.status == SecurityStatus.initial) {
             return const _SecuritySkeleton();
           }
 
-          if (state is SecurityError) {
-            return Center(child: Text(state.message));
+          if (state.status == SecurityStatus.error) {
+            return Center(child: Text(state.errorMessage ?? 'Something went wrong'));
           }
 
-          if (state is SecurityDashboardLoaded) {
-            return RefreshIndicator(
+          return RefreshIndicator(
               onRefresh: () async {
-                context.read<SecurityBloc>().add(LoadSecurityDashboard());
+                final authState = context.read<AuthBloc>().state;
+                if (authState is AuthAuthenticated) {
+                  context.read<SecurityBloc>().add(LoadSecurityDashboard(authState.user.schoolId));
+                }
               },
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
@@ -217,26 +232,24 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
                     child: SectionHeader(title: 'Recent Movements'),
                   ),
                   const SizedBox(height: 12),
-                  if (state.recentMovements.isEmpty)
+                  if (state.studentMovements.isEmpty)
                     const Center(child: Text("No recent movements recorded"))
                   else
-                    ...state.recentMovements.take(5).map((movement) => _MovementListTile(movement: movement)),
+                    ...state.studentMovements.take(5).map((movement) => _MovementListTile(movement: movement)),
                   const SizedBox(height: 24),
                   const FadeInSlide(
                     delay: Duration(milliseconds: 400),
                     child: SectionHeader(title: 'Active Incidents'),
                   ),
                   const SizedBox(height: 12),
-                  if (state.activeIncidents.isEmpty)
+                  if (state.incidents.isEmpty)
                     const Center(child: Text("No active incidents"))
                   else
-                    ...state.activeIncidents.take(5).map((incident) => _IncidentListTile(incident: incident)),
+                    ...state.incidents.take(5).map((incident) => _IncidentListTile(incident: incident)),
                   const SizedBox(height: 32),
                 ],
               ),
             );
-          }
-          return const SizedBox.shrink();
         },
       ),
       floatingActionButton: Column(

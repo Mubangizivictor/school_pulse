@@ -1,81 +1,92 @@
 import 'package:equatable/equatable.dart';
 import '../../domain/entities/security_entities.dart';
 
-abstract class SecurityState extends Equatable {
-  const SecurityState();
+enum SecurityStatus { initial, loading, loaded, error }
 
-  @override
-  List<Object?> get props => [];
+/// A one-off success/error message for a mutating action (e.g. "Gate
+/// created"). Deliberately NOT Equatable - each instance is compared by
+/// identity, so [SecurityState]'s Equatable `props` sees it as a distinct
+/// value on every emission (even for repeated text), letting a
+/// BlocListener's `listenWhen` fire exactly once per action instead of being
+/// swallowed by value-equality.
+class SecurityFeedback {
+  final String message;
+  final bool isError;
+  SecurityFeedback(this.message, {this.isError = false});
 }
 
-class SecurityInitial extends SecurityState {}
-
-class SecurityLoading extends SecurityState {}
-
-class SecurityDashboardLoaded extends SecurityState {
+/// Single accumulating dashboard state. Gates/movements/incidents/etc. each
+/// have their own live Firestore+Isar stream subscription in SecurityBloc;
+/// every update merges into this one state via copyWith rather than
+/// emitting a disjoint state subtype, so unrelated streams don't blank out
+/// data the screen already loaded.
+class SecurityState extends Equatable {
+  final SecurityStatus status;
+  final String? errorMessage;
   final Map<String, dynamic> stats;
   final List<Gate> gates;
-  final List<StudentMovement> recentMovements;
-  final List<SecurityIncident> activeIncidents;
+  final List<StudentMovement> studentMovements;
+  final List<StaffMovement> staffMovements;
+  final List<SecurityIncident> incidents;
   final List<EmergencyEvent> activeEmergencies;
+  final List<SecurityPatrol> patrols;
+  final List<LostAndFoundItem> lostAndFound;
+  final SecurityFeedback? feedback;
 
-  const SecurityDashboardLoaded({
-    required this.stats,
-    required this.gates,
-    required this.recentMovements,
-    required this.activeIncidents,
-    required this.activeEmergencies,
+  const SecurityState({
+    this.status = SecurityStatus.initial,
+    this.errorMessage,
+    this.stats = const {},
+    this.gates = const [],
+    this.studentMovements = const [],
+    this.staffMovements = const [],
+    this.incidents = const [],
+    this.activeEmergencies = const [],
+    this.patrols = const [],
+    this.lostAndFound = const [],
+    this.feedback,
   });
 
-  @override
-  List<Object?> get props => [stats, gates, recentMovements, activeIncidents, activeEmergencies];
-}
+  SecurityState copyWith({
+    SecurityStatus? status,
+    String? errorMessage,
+    Map<String, dynamic>? stats,
+    List<Gate>? gates,
+    List<StudentMovement>? studentMovements,
+    List<StaffMovement>? staffMovements,
+    List<SecurityIncident>? incidents,
+    List<EmergencyEvent>? activeEmergencies,
+    List<SecurityPatrol>? patrols,
+    List<LostAndFoundItem>? lostAndFound,
+    SecurityFeedback? feedback,
+  }) {
+    return SecurityState(
+      status: status ?? this.status,
+      errorMessage: errorMessage ?? this.errorMessage,
+      stats: stats ?? this.stats,
+      gates: gates ?? this.gates,
+      studentMovements: studentMovements ?? this.studentMovements,
+      staffMovements: staffMovements ?? this.staffMovements,
+      incidents: incidents ?? this.incidents,
+      activeEmergencies: activeEmergencies ?? this.activeEmergencies,
+      patrols: patrols ?? this.patrols,
+      lostAndFound: lostAndFound ?? this.lostAndFound,
+      feedback: feedback ?? this.feedback,
+    );
+  }
 
-class GatesLoaded extends SecurityState {
-  final List<Gate> gates;
-  const GatesLoaded(this.gates);
   @override
-  List<Object?> get props => [gates];
-}
-
-class StudentMovementsLoaded extends SecurityState {
-  final List<StudentMovement> movements;
-  const StudentMovementsLoaded(this.movements);
-  @override
-  List<Object?> get props => [movements];
-}
-
-class IncidentsLoaded extends SecurityState {
-  final List<SecurityIncident> incidents;
-  const IncidentsLoaded(this.incidents);
-  @override
-  List<Object?> get props => [incidents];
-}
-
-class ActiveEmergenciesLoaded extends SecurityState {
-  final List<EmergencyEvent> emergencies;
-  const ActiveEmergenciesLoaded(this.emergencies);
-  @override
-  List<Object?> get props => [emergencies];
-}
-
-class LostAndFoundLoaded extends SecurityState {
-  final List<LostAndFoundItem> items;
-  const LostAndFoundLoaded(this.items);
-  @override
-  List<Object?> get props => [items];
-}
-
-class SecurityError extends SecurityState {
-  final String message;
-  const SecurityError(this.message);
-  @override
-  List<Object?> get props => [message];
-}
-
-class SecurityActionSuccess extends SecurityState {
-  final String message;
-  const SecurityActionSuccess(this.message);
-  @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [
+        status,
+        errorMessage,
+        stats,
+        gates,
+        studentMovements,
+        staffMovements,
+        incidents,
+        activeEmergencies,
+        patrols,
+        lostAndFound,
+        feedback,
+      ];
 }

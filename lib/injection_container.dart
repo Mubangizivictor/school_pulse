@@ -853,32 +853,47 @@ Future<void> init() async {
     () => SecurityBloc(
       watchGates: sl(),
       createGate: sl(),
+      updateGate: sl(),
       recordStudentMovement: sl(),
       watchStudentMovements: sl(),
+      recordStaffMovement: sl(),
+      watchStaffMovements: sl(),
       reportIncident: sl(),
       watchIncidents: sl(),
+      updateIncidentStatus: sl(),
       triggerEmergency: sl(),
       watchActiveEmergencies: sl(),
+      resolveEmergency: sl(),
       recordPatrol: sl(),
+      watchPatrols: sl(),
       getSecurityDashboardStats: sl(),
       reportFoundItem: sl(),
+      claimItem: sl(),
       watchLostAndFound: sl(),
     ),
   );
 
   sl.registerLazySingleton(() => WatchGates(sl()));
   sl.registerLazySingleton(() => CreateGate(sl()));
+  sl.registerLazySingleton(() => UpdateGate(sl()));
   sl.registerLazySingleton(() => RecordStudentMovement(sl()));
   sl.registerLazySingleton(() => WatchStudentMovements(sl()));
+  sl.registerLazySingleton(() => RecordStaffMovement(sl()));
+  sl.registerLazySingleton(() => WatchStaffMovements(sl()));
   sl.registerLazySingleton(() => ReportIncident(sl()));
   sl.registerLazySingleton(() => WatchIncidents(sl()));
+  sl.registerLazySingleton(() => UpdateIncidentStatus(sl()));
   sl.registerLazySingleton(() => TriggerEmergency(sl()));
   sl.registerLazySingleton(() => WatchActiveEmergencies(sl()));
+  sl.registerLazySingleton(() => ResolveEmergency(sl()));
   sl.registerLazySingleton(() => RecordPatrol(sl()));
+  sl.registerLazySingleton(() => WatchPatrols(sl()));
   sl.registerLazySingleton(() => GetSecurityDashboardStats(sl()));
   sl.registerLazySingleton(() => ReportFoundItem(sl()));
+  sl.registerLazySingleton(() => ClaimItem(sl()));
   sl.registerLazySingleton(() => WatchLostAndFound(sl()));
   sl.registerLazySingleton(() => GetPickupAuthorizations(sl()));
+  sl.registerLazySingleton(() => AddPickupAuthorization(sl()));
   sl.registerLazySingleton(() => SyncSecurityData(sl()));
 
   sl.registerLazySingleton<SecurityRepository>(
@@ -1064,8 +1079,11 @@ Future<void> init() async {
     GateIsarSchema,
     SecurityIncidentIsarSchema,
     StudentMovementIsarSchema,
+    StaffMovementIsarSchema,
     EmergencyEventIsarSchema,
     SecurityPatrolIsarSchema,
+    LostAndFoundItemIsarSchema,
+    PickupAuthorizationIsarSchema,
     EducationalLevelIsarSchema,
     AcademicYearIsarSchema,
     AcademicTermIsarSchema,
