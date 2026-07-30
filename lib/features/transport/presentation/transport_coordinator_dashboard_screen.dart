@@ -122,39 +122,38 @@ class _TransportCoordinatorDashboardScreenState extends State<TransportCoordinat
         context.read<TransportCoordinatorBloc>().add(TransportCoordinatorDashboardRequested());
       },
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
         children: [
           FadeInSlide(
             child: Text(
               "Fleet Overview",
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
-          const SizedBox(height: 24),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.1,
+          const SizedBox(height: 15),
+          Row(
             children: [
-              FadeInSlide(
-                delay: const Duration(milliseconds: 100),
-                child: DashboardStatCard(
-                  title: 'Active Buses',
-                  value: state.activeBuses.toDouble(),
-                  icon: Icons.directions_bus,
-                  color: Theme.of(context).colorScheme.primary,
+              Expanded(
+                child: FadeInSlide(
+                  delay: const Duration(milliseconds: 100),
+                  child: DashboardStatCard(
+                    title: 'Active Buses',
+                    value: state.activeBuses.toDouble(),
+                    icon: Icons.directions_bus,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
               ),
-              FadeInSlide(
-                delay: const Duration(milliseconds: 200),
-                child: DashboardStatCard(
-                  title: 'In Transit',
-                  value: state.studentsInTransit.toDouble(),
-                  icon: Icons.person_pin_circle_outlined,
-                  color: semanticColors.info,
+              const SizedBox(width: 12),
+              Expanded(
+                child: FadeInSlide(
+                  delay: const Duration(milliseconds: 200),
+                  child: DashboardStatCard(
+                    title: 'In Transit',
+                    value: state.studentsInTransit.toDouble(),
+                    icon: Icons.person_pin_circle_outlined,
+                    color: semanticColors.info,
+                  ),
                 ),
               ),
             ],
@@ -164,6 +163,7 @@ class _TransportCoordinatorDashboardScreenState extends State<TransportCoordinat
             delay: Duration(milliseconds: 300),
             child: SectionHeader(title: 'Active Routes'),
           ),
+          const SizedBox(height: 12),
           ...state.routes.asMap().entries.map((entry) {
             final index = entry.key;
             final route = entry.value;
@@ -220,22 +220,20 @@ class _TransportSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
       children: [
         const Skeleton(width: 200, height: 28),
-        const SizedBox(height: 24),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 1.1,
-          children: List.generate(2, (index) => const Skeleton(borderRadius: 12)),
+        const SizedBox(height: 15),
+        Row(
+          children: [
+            Expanded(child: const Skeleton(height: 48, borderRadius: 12)),
+            const SizedBox(width: 12),
+            Expanded(child: const Skeleton(height: 48, borderRadius: 12)),
+          ],
         ),
         const SizedBox(height: 24),
         const Skeleton(width: 120, height: 20),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         ...List.generate(3, (index) => const Padding(
           padding: EdgeInsets.only(bottom: 12),
           child: Skeleton(height: 80, borderRadius: 12),

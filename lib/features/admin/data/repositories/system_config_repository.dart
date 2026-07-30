@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../models/system_config.dart';
+import 'package:school_pulse/features/student/domain/entities/student_portal_config.dart';
 
 import 'package:school_pulse/firebase_options.dart';
 
@@ -19,6 +20,9 @@ class SystemConfigRepository {
       schoolName: 'School Pulse Academy',
       schoolMotto: 'Precision in Education',
       schoolLogoUrl: null,
+      schoolAddress: null,
+      schoolEmail: null,
+      schoolPhone: null,
       primaryColor: null,
       secondaryColor: null,
       currentTerm: 'Term 1',
@@ -28,6 +32,7 @@ class SystemConfigRepository {
       mfaEnabled: false,
       smsGatewayStatus: 'Disconnected',
       smsCredits: 0,
+      studentPortalConfig: StudentPortalConfig(),
     );
   }
 

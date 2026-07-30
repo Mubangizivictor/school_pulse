@@ -1,5 +1,8 @@
+import 'package:school_pulse/features/student/domain/entities/student_portal_config.dart';
+
 class SystemConfig {
   final String schoolName;
+  final String? schoolCode; // e.g., "SMAC"
   final String schoolMotto;
   final String? schoolLogoUrl;
   final String? schoolAddress;
@@ -14,9 +17,12 @@ class SystemConfig {
   final bool mfaEnabled;
   final String smsGatewayStatus;
   final int smsCredits;
+  final StudentPortalConfig studentPortalConfig;
+  final List<String> visitorGates;
 
   SystemConfig({
     required this.schoolName,
+    this.schoolCode,
     required this.schoolMotto,
     this.schoolLogoUrl,
     this.schoolAddress,
@@ -31,11 +37,14 @@ class SystemConfig {
     required this.mfaEnabled,
     required this.smsGatewayStatus,
     required this.smsCredits,
+    required this.studentPortalConfig,
+    this.visitorGates = const ['Main Gate'],
   });
 
   Map<String, dynamic> toMap() {
     return {
       'schoolName': schoolName,
+      'schoolCode': schoolCode,
       'schoolMotto': schoolMotto,
       'schoolLogoUrl': schoolLogoUrl,
       'schoolAddress': schoolAddress,
@@ -50,12 +59,15 @@ class SystemConfig {
       'mfaEnabled': mfaEnabled,
       'smsGatewayStatus': smsGatewayStatus,
       'smsCredits': smsCredits,
+      'studentPortalConfig': studentPortalConfig.toMap(),
+      'visitorGates': visitorGates,
     };
   }
 
   factory SystemConfig.fromMap(Map<String, dynamic> map) {
     return SystemConfig(
       schoolName: map['schoolName'] ?? '',
+      schoolCode: map['schoolCode'],
       schoolMotto: map['schoolMotto'] ?? '',
       schoolLogoUrl: map['schoolLogoUrl'],
       schoolAddress: map['schoolAddress'],
@@ -70,11 +82,16 @@ class SystemConfig {
       mfaEnabled: map['mfaEnabled'] ?? false,
       smsGatewayStatus: map['smsGatewayStatus'] ?? 'Disconnected',
       smsCredits: map['smsCredits'] ?? 0,
+      studentPortalConfig: StudentPortalConfig.fromMap(map['studentPortalConfig'] ?? {}),
+      visitorGates: map['visitorGates'] != null
+          ? List<String>.from(map['visitorGates'])
+          : const ['Main Gate'],
     );
   }
 
   SystemConfig copyWith({
     String? schoolName,
+    String? schoolCode,
     String? schoolMotto,
     String? schoolLogoUrl,
     String? schoolAddress,
@@ -89,9 +106,12 @@ class SystemConfig {
     bool? mfaEnabled,
     String? smsGatewayStatus,
     int? smsCredits,
+    StudentPortalConfig? studentPortalConfig,
+    List<String>? visitorGates,
   }) {
     return SystemConfig(
       schoolName: schoolName ?? this.schoolName,
+      schoolCode: schoolCode ?? this.schoolCode,
       schoolMotto: schoolMotto ?? this.schoolMotto,
       schoolLogoUrl: schoolLogoUrl ?? this.schoolLogoUrl,
       schoolAddress: schoolAddress ?? this.schoolAddress,
@@ -106,6 +126,9 @@ class SystemConfig {
       mfaEnabled: mfaEnabled ?? this.mfaEnabled,
       smsGatewayStatus: smsGatewayStatus ?? this.smsGatewayStatus,
       smsCredits: smsCredits ?? this.smsCredits,
+      studentPortalConfig: studentPortalConfig ?? this.studentPortalConfig,
+      visitorGates: visitorGates ?? this.visitorGates,
     );
   }
 }
+

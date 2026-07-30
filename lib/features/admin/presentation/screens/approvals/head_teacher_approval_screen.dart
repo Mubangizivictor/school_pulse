@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:school_pulse/features/academic/domain/entities/report_card.dart';
-import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/dean/domain/entities/report_card_approval.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_event.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_state.dart';
@@ -16,13 +14,10 @@ class HeadTeacherApprovalScreen extends StatefulWidget {
 }
 
 class _HeadTeacherApprovalScreenState extends State<HeadTeacherApprovalScreen> {
-  ReportCardStatus? selectedStatus = ReportCardStatus.deanSigned;
-
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => sl<DeanBloc>()
-        ..add(DeanReportCardsRequested(status: selectedStatus)),
+      create: (context) => sl<DeanBloc>()..add(PendingReportApprovalsRequested()),
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Final Report Approvals'),
@@ -33,47 +28,15 @@ class _HeadTeacherApprovalScreenState extends State<HeadTeacherApprovalScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text(state.message)),
               );
+              context.read<DeanBloc>().add(PendingReportApprovalsRequested());
             } else if (state is DeanError) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text(state.message), backgroundColor: Colors.red),
               );
             }
           },
-          child: Column(
-            children: [
-              _buildFilterChips(),
-              Expanded(child: _buildReportList()),
-            ],
-          ),
+          child: _buildReportList(),
         ),
-      ),
-    );
-  }
-
-  Widget _buildFilterChips() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          FilterChip(
-            label: const Text('Dean Signed (Pending Final)'),
-            selected: selectedStatus == ReportCardStatus.deanSigned,
-            onSelected: (selected) {
-              setState(() => selectedStatus = selected ? ReportCardStatus.deanSigned : null);
-              context.read<DeanBloc>().add(DeanReportCardsRequested(status: selectedStatus));
-            },
-          ),
-          const SizedBox(width: 8),
-          FilterChip(
-            label: const Text('Fully Signed'),
-            selected: selectedStatus == ReportCardStatus.fullySigned,
-            onSelected: (selected) {
-              setState(() => selectedStatus = selected ? ReportCardStatus.fullySigned : null);
-              context.read<DeanBloc>().add(DeanReportCardsRequested(status: selectedStatus));
-            },
-          ),
-        ],
       ),
     );
   }
@@ -84,14 +47,14 @@ class _HeadTeacherApprovalScreenState extends State<HeadTeacherApprovalScreen> {
         if (state is DeanLoading) {
           return const Center(child: CircularProgressIndicator());
         }
-        if (state is DeanReportCardsLoaded) {
-          if (state.reportCards.isEmpty) {
+        if (state is PendingReportApprovalsLoaded) {
+          if (state.approvals.isEmpty) {
             return const Center(child: Text('No reports awaiting final signature'));
           }
           return ListView.builder(
-            itemCount: state.reportCards.length,
+            itemCount: state.approvals.length,
             itemBuilder: (context, index) {
-              final report = state.reportCards[index];
+              final report = state.approvals[index];
               return _HeadTeacherReportCardTile(report: report);
             },
           );
@@ -103,14 +66,13 @@ class _HeadTeacherApprovalScreenState extends State<HeadTeacherApprovalScreen> {
 }
 
 class _HeadTeacherReportCardTile extends StatelessWidget {
-  final ReportCard report;
+  final ReportCardApproval report;
 
   const _HeadTeacherReportCardTile({required this.report});
 
   @override
   Widget build(BuildContext context) {
-    final canSign = report.status == ReportCardStatus.deanSigned;
-    final headTeacherId = (context.read<AuthBloc>().state as AuthAuthenticated).user.id;
+    final canSign = !report.isApproved;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -124,18 +86,14 @@ class _HeadTeacherReportCardTile extends StatelessWidget {
                   foregroundColor: Colors.white,
                 ),
                 onPressed: () {
-                  context.read<DeanBloc>().add(DeanSignReportCardRequested(
-                        reportCardId: report.id,
-                        signerId: headTeacherId,
-                        isHeadTeacher: true,
-                      ));
+                  context.read<DeanBloc>().add(ApproveReportCardsRequested([report.id]));
                 },
                 child: const Text('Final Sign'),
               )
             : Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
+                  color: Colors.green.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(color: Colors.green),
                 ),

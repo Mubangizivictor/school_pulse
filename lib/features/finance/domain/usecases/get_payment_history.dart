@@ -8,7 +8,7 @@ class GetPaymentHistory {
 
   GetPaymentHistory(this.repository);
 
-  Future<Either<Failure, List<PaymentRecord>>> call(String studentId) async {
-    return await repository.getPaymentHistory(studentId);
+  Future<Either<Failure, List<PaymentRecord>>> call(String studentId, String schoolId) async {
+    return await repository.getPaymentHistory(studentId, schoolId);
   }
 }

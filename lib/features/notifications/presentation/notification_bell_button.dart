@@ -6,6 +6,8 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/notifications/data/models/staff_alert.dart';
 import 'package:school_pulse/features/notifications/data/repositories/staff_alerts_repository.dart';
+import 'package:school_pulse/features/student/presentation/bloc/students_bloc.dart';
+import 'package:school_pulse/features/student/presentation/bloc/students_state.dart';
 
 /// Bell icon with a live unread-count badge, shared by every staff
 /// dashboard app bar. Tapping it opens the shared notification center.
@@ -26,7 +28,19 @@ class NotificationBellButton extends StatelessWidget {
     }
     final uid = authState.user.id;
     final role = authState.user.role;
-    final groups = NotificationGroups.forRole(role);
+    // Parents also belong to a 'Class:<X>' group per child, which
+    // NotificationGroups.forRole can't know about - match the groups the
+    // actual Notifications screen queries by so the badge doesn't undercount.
+    List<String> groups = NotificationGroups.forRole(role);
+    if (role == UserRole.parent) {
+      final studentsState = context.watch<StudentsBloc>().state;
+      if (studentsState is StudentsLoaded) {
+        groups = {
+          'Parents',
+          ...studentsState.students.map((s) => 'Class:${s.className}'),
+        }.toList();
+      }
+    }
     final notificationRoute = role == UserRole.parent ? '/parent/notifications' : '/staff/notifications';
 
     return StreamBuilder<List<StaffAlert>>(

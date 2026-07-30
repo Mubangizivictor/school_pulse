@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
+import 'package:school_pulse/core/notification/notification_service.dart';
 import '../models/academic_record_model.dart';
 import '../models/attendance_record_model.dart';
-
+import '../../domain/entities/report_card.dart';
 import '../models/report_card_model.dart';
 
 abstract class AcademicRemoteDataSource {
@@ -91,7 +93,7 @@ class AcademicRemoteDataSourceImpl implements AcademicRemoteDataSource {
     String? year,
     ReportCardStatus? status,
   }) async {
-    var query = firestore.collection('report_cards').asQuery();
+    Query<Map<String, dynamic>> query = firestore.collection('report_cards');
 
     if (studentId != null) {
       query = query.where('studentId', isEqualTo: studentId);
@@ -131,6 +133,40 @@ class AcademicRemoteDataSourceImpl implements AcademicRemoteDataSource {
             'status': ReportCardStatus.deanSigned.name,
           };
 
-    await firestore.collection('report_cards').doc(reportCardId).update(updates);
+    final reportRef = firestore.collection('report_cards').doc(reportCardId);
+    await reportRef.update(updates);
+
+    // Once the Head Teacher's signature makes this fully approved, let the
+    // parent know - they can't see the report card until this point.
+    if (isHeadTeacher) {
+      final doc = await reportRef.get();
+      final studentId = doc.data()?['studentId'] as String?;
+      if (studentId != null) {
+        await _notifyParentReportCardReady(studentId);
+      }
+    }
+  }
+
+  /// Best-effort: a notification failure shouldn't undo an already-recorded
+  /// signature. Mirrors the parent-uid derivation loginParent uses
+  /// server-side (`parent_accessCode`), since a student doc doesn't store
+  /// its parent's uid directly.
+  Future<void> _notifyParentReportCardReady(String studentId) async {
+    try {
+      final snap = await firestore
+          .collection('parent_access_codes')
+          .where('studentIds', arrayContains: studentId)
+          .limit(1)
+          .get();
+      if (snap.docs.isEmpty) return;
+      final parentUid = 'parent_${snap.docs.first.id}';
+      await NotificationService().sendDirectNotification(
+        userId: parentUid,
+        title: 'Report Card Ready',
+        body: "Your child's report card has been approved and is ready to view.",
+      );
+    } catch (e) {
+      if (kDebugMode) print('Error notifying parent of report card: $e');
+    }
   }
 }

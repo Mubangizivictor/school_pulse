@@ -9,16 +9,18 @@ abstract class NotificationsEvent extends Equatable {
 
 class FetchAlerts extends NotificationsEvent {
   final List<String> studentIds;
-  const FetchAlerts(this.studentIds);
+  final List<String> groups;
+  const FetchAlerts(this.studentIds, {this.groups = const []});
 
   @override
-  List<Object> get props => [studentIds];
+  List<Object> get props => [studentIds, groups];
 }
 
 class DismissAlert extends NotificationsEvent {
   final String alertId;
-  const DismissAlert(this.alertId);
+  final String uid;
+  const DismissAlert(this.alertId, this.uid);
 
   @override
-  List<Object> get props => [alertId];
+  List<Object> get props => [alertId, uid];
 }

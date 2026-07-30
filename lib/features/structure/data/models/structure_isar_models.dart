@@ -1,0 +1,1037 @@
+import 'package:isar/isar.dart';
+import '../../domain/entities/structure_entities.dart';
+import '../../domain/entities/campus_entities.dart';
+import '../../domain/entities/hostel_entities.dart';
+import '../../domain/entities/transport_structure_entities.dart';
+import '../../domain/entities/fee_category_entities.dart';
+import '../../domain/entities/assessment_grading_entities.dart';
+import '../../domain/entities/attendance_config_entities.dart';
+import '../../domain/entities/communication_config_entities.dart';
+import '../../domain/entities/document_template_entities.dart';
+import '../../domain/entities/custom_field_entities.dart';
+
+part 'structure_isar_models.g.dart';
+
+@collection
+class EducationalLevelIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String levelId;
+
+  late String name;
+  late String code;
+  late int order;
+  late String description;
+  late bool isActive;
+
+  EducationalLevelIsar();
+
+  factory EducationalLevelIsar.fromEntity(EducationalLevel e) {
+    return EducationalLevelIsar()
+      ..levelId = e.id
+      ..name = e.name
+      ..code = e.code
+      ..order = e.order
+      ..description = e.description
+      ..isActive = e.isActive;
+  }
+
+  EducationalLevel toEntity() {
+    return EducationalLevel(
+      id: levelId,
+      name: name,
+      code: code,
+      order: order,
+      description: description,
+      isActive: isActive,
+    );
+  }
+}
+
+@collection
+class AcademicYearIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String yearId;
+
+  late String name;
+  late DateTime startDate;
+  late DateTime endDate;
+  late bool isCurrent;
+  late bool isArchived;
+
+  AcademicYearIsar();
+
+  factory AcademicYearIsar.fromEntity(AcademicYear e) {
+    return AcademicYearIsar()
+      ..yearId = e.id
+      ..name = e.name
+      ..startDate = e.startDate
+      ..endDate = e.endDate
+      ..isCurrent = e.isCurrent
+      ..isArchived = e.isArchived;
+  }
+
+  AcademicYear toEntity() {
+    return AcademicYear(
+      id: yearId,
+      name: name,
+      startDate: startDate,
+      endDate: endDate,
+      isCurrent: isCurrent,
+      isArchived: isArchived,
+    );
+  }
+}
+
+@collection
+class AcademicTermIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String termId;
+
+  late String academicYearId;
+  late String name;
+  late int order;
+  late DateTime startDate;
+  late DateTime endDate;
+  late bool isCurrent;
+
+  AcademicTermIsar();
+
+  factory AcademicTermIsar.fromEntity(AcademicTerm e) {
+    return AcademicTermIsar()
+      ..termId = e.id
+      ..academicYearId = e.academicYearId
+      ..name = e.name
+      ..order = e.order
+      ..startDate = e.startDate
+      ..endDate = e.endDate
+      ..isCurrent = e.isCurrent;
+  }
+
+  AcademicTerm toEntity() {
+    return AcademicTerm(
+      id: termId,
+      academicYearId: academicYearId,
+      name: name,
+      order: order,
+      startDate: startDate,
+      endDate: endDate,
+      isCurrent: isCurrent,
+    );
+  }
+}
+
+@collection
+class SchoolClassIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String classId;
+
+  late String name;
+  late String code;
+  late String levelId;
+  late int capacity;
+  late String description;
+  late bool isActive;
+
+  SchoolClassIsar();
+
+  factory SchoolClassIsar.fromEntity(SchoolClass e) {
+    return SchoolClassIsar()
+      ..classId = e.id
+      ..name = e.name
+      ..code = e.code
+      ..levelId = e.levelId
+      ..capacity = e.capacity
+      ..description = e.description
+      ..isActive = e.isActive;
+  }
+
+  SchoolClass toEntity() {
+    return SchoolClass(
+      id: classId,
+      name: name,
+      code: code,
+      levelId: levelId,
+      capacity: capacity,
+      description: description,
+      isActive: isActive,
+    );
+  }
+}
+
+@collection
+class ClassStreamIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String streamId;
+
+  late String name;
+  late String code;
+  late String classId;
+  late int capacity;
+  late bool isActive;
+
+  ClassStreamIsar();
+
+  factory ClassStreamIsar.fromEntity(ClassStream e) {
+    return ClassStreamIsar()
+      ..streamId = e.id
+      ..name = e.name
+      ..code = e.code
+      ..classId = e.classId
+      ..capacity = e.capacity
+      ..isActive = e.isActive;
+  }
+
+  ClassStream toEntity() {
+    return ClassStream(
+      id: streamId,
+      name: name,
+      code: code,
+      classId: classId,
+      capacity: capacity,
+      isActive: isActive,
+    );
+  }
+}
+
+@collection
+class SubjectIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String subjectId;
+
+  late String name;
+  late String code;
+  late String departmentId;
+  late String color;
+  late String description;
+  late bool isElective;
+  late bool isPractical;
+  late int creditUnits;
+  late bool isActive;
+  List<String> assignedLevelIds = [];
+  List<String> assignedClassIds = [];
+
+  SubjectIsar();
+
+  factory SubjectIsar.fromEntity(Subject e) {
+    return SubjectIsar()
+      ..subjectId = e.id
+      ..name = e.name
+      ..code = e.code
+      ..departmentId = e.departmentId
+      ..color = e.color
+      ..description = e.description
+      ..isElective = e.isElective
+      ..isPractical = e.isPractical
+      ..creditUnits = e.creditUnits
+      ..isActive = e.isActive
+      ..assignedLevelIds = e.assignedLevelIds
+      ..assignedClassIds = e.assignedClassIds;
+  }
+
+  Subject toEntity() {
+    return Subject(
+      id: subjectId,
+      name: name,
+      code: code,
+      departmentId: departmentId,
+      color: color,
+      description: description,
+      isElective: isElective,
+      isPractical: isPractical,
+      creditUnits: creditUnits,
+      isActive: isActive,
+      assignedLevelIds: assignedLevelIds,
+      assignedClassIds: assignedClassIds,
+    );
+  }
+}
+
+@collection
+class DepartmentIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String departmentId;
+
+  late String name;
+  late String code;
+  late String description;
+  late String headOfDepartmentStaffId;
+  late bool isActive;
+
+  DepartmentIsar();
+
+  factory DepartmentIsar.fromEntity(Department e) {
+    return DepartmentIsar()
+      ..departmentId = e.id
+      ..name = e.name
+      ..code = e.code
+      ..description = e.description
+      ..headOfDepartmentStaffId = e.headOfDepartmentStaffId
+      ..isActive = e.isActive;
+  }
+
+  Department toEntity() {
+    return Department(
+      id: departmentId,
+      name: name,
+      code: code,
+      description: description,
+      headOfDepartmentStaffId: headOfDepartmentStaffId,
+      isActive: isActive,
+    );
+  }
+}
+
+@collection
+class StaffDesignationIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String designationId;
+
+  late String name;
+  late String description;
+  late bool isActive;
+
+  StaffDesignationIsar();
+
+  factory StaffDesignationIsar.fromEntity(StaffDesignation e) {
+    return StaffDesignationIsar()
+      ..designationId = e.id
+      ..name = e.name
+      ..description = e.description
+      ..isActive = e.isActive;
+  }
+
+  StaffDesignation toEntity() {
+    return StaffDesignation(
+      id: designationId,
+      name: name,
+      description: description,
+      isActive: isActive,
+    );
+  }
+}
+
+@collection
+class StaffRoleIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String roleId;
+
+  late String name;
+  late String designationId;
+  late String description;
+  late bool isActive;
+
+  StaffRoleIsar();
+
+  factory StaffRoleIsar.fromEntity(StaffRole e) {
+    return StaffRoleIsar()
+      ..roleId = e.id
+      ..name = e.name
+      ..designationId = e.designationId
+      ..description = e.description
+      ..isActive = e.isActive;
+  }
+
+  StaffRole toEntity() {
+    return StaffRole(
+      id: roleId,
+      name: name,
+      designationId: designationId,
+      description: description,
+      isActive: isActive,
+    );
+  }
+}
+
+@collection
+class HouseIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String houseId;
+
+  late String name;
+  late String colorHex;
+  late String description;
+  late bool isActive;
+
+  HouseIsar();
+
+  factory HouseIsar.fromEntity(House e) {
+    return HouseIsar()
+      ..houseId = e.id
+      ..name = e.name
+      ..colorHex = e.colorHex
+      ..description = e.description
+      ..isActive = e.isActive;
+  }
+
+  House toEntity() {
+    return House(
+      id: houseId,
+      name: name,
+      colorHex: colorHex,
+      description: description,
+      isActive: isActive,
+    );
+  }
+}
+
+@collection
+class ClubIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String clubId;
+
+  late String name;
+  late String category;
+  late String description;
+  late String patronName;
+  late bool isActive;
+
+  ClubIsar();
+
+  factory ClubIsar.fromEntity(Club e) {
+    return ClubIsar()
+      ..clubId = e.id
+      ..name = e.name
+      ..category = e.category
+      ..description = e.description
+      ..patronName = e.patronName
+      ..isActive = e.isActive;
+  }
+
+  Club toEntity() {
+    return Club(
+      id: clubId,
+      name: name,
+      category: category,
+      description: description,
+      patronName: patronName,
+      isActive: isActive,
+    );
+  }
+}
+
+@collection
+class FacilityIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String facilityId;
+
+  late String name;
+  late String facilityType;
+  late String location;
+  late int capacity;
+  late String description;
+  late bool isActive;
+
+  FacilityIsar();
+
+  factory FacilityIsar.fromEntity(Facility e) {
+    return FacilityIsar()
+      ..facilityId = e.id
+      ..name = e.name
+      ..facilityType = e.facilityType
+      ..location = e.location
+      ..capacity = e.capacity
+      ..description = e.description
+      ..isActive = e.isActive;
+  }
+
+  Facility toEntity() {
+    return Facility(
+      id: facilityId,
+      name: name,
+      facilityType: facilityType,
+      location: location,
+      capacity: capacity,
+      description: description,
+      isActive: isActive,
+    );
+  }
+}
+
+@collection
+class HostelIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String hostelId;
+
+  late String name;
+  late String gender;
+  late String wardenName;
+  late String wardenContact;
+  late int capacity;
+  late String description;
+  late bool isActive;
+
+  HostelIsar();
+
+  factory HostelIsar.fromEntity(Hostel e) {
+    return HostelIsar()
+      ..hostelId = e.id
+      ..name = e.name
+      ..gender = e.gender
+      ..wardenName = e.wardenName
+      ..wardenContact = e.wardenContact
+      ..capacity = e.capacity
+      ..description = e.description
+      ..isActive = e.isActive;
+  }
+
+  Hostel toEntity() {
+    return Hostel(
+      id: hostelId,
+      name: name,
+      gender: gender,
+      wardenName: wardenName,
+      wardenContact: wardenContact,
+      capacity: capacity,
+      description: description,
+      isActive: isActive,
+    );
+  }
+}
+
+@collection
+class HostelRoomIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String roomId;
+
+  late String hostelId;
+  late String blockName;
+  late String roomNumber;
+  late int bedCapacity;
+  late bool isActive;
+
+  HostelRoomIsar();
+
+  factory HostelRoomIsar.fromEntity(HostelRoom e) {
+    return HostelRoomIsar()
+      ..roomId = e.id
+      ..hostelId = e.hostelId
+      ..blockName = e.blockName
+      ..roomNumber = e.roomNumber
+      ..bedCapacity = e.bedCapacity
+      ..isActive = e.isActive;
+  }
+
+  HostelRoom toEntity() {
+    return HostelRoom(
+      id: roomId,
+      hostelId: hostelId,
+      blockName: blockName,
+      roomNumber: roomNumber,
+      bedCapacity: bedCapacity,
+      isActive: isActive,
+    );
+  }
+}
+
+@collection
+class TransportRouteIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String routeId;
+
+  late String name;
+  late String code;
+  late String description;
+  late bool isActive;
+
+  TransportRouteIsar();
+
+  factory TransportRouteIsar.fromEntity(TransportRoute e) {
+    return TransportRouteIsar()
+      ..routeId = e.id
+      ..name = e.name
+      ..code = e.code
+      ..description = e.description
+      ..isActive = e.isActive;
+  }
+
+  TransportRoute toEntity() {
+    return TransportRoute(
+      id: routeId,
+      name: name,
+      code: code,
+      description: description,
+      isActive: isActive,
+    );
+  }
+}
+
+@collection
+class TransportStopIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String stopId;
+
+  late String routeId;
+  late String name;
+  late int order;
+  late String pickupTime;
+  late String zone;
+  late bool isActive;
+
+  TransportStopIsar();
+
+  factory TransportStopIsar.fromEntity(TransportStop e) {
+    return TransportStopIsar()
+      ..stopId = e.id
+      ..routeId = e.routeId
+      ..name = e.name
+      ..order = e.order
+      ..pickupTime = e.pickupTime
+      ..zone = e.zone
+      ..isActive = e.isActive;
+  }
+
+  TransportStop toEntity() {
+    return TransportStop(
+      id: stopId,
+      routeId: routeId,
+      name: name,
+      order: order,
+      pickupTime: pickupTime,
+      zone: zone,
+      isActive: isActive,
+    );
+  }
+}
+
+@collection
+class TransportVehicleIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String vehicleId;
+
+  late String busNumber;
+  late String plateNumber;
+  late int capacity;
+  late String driverName;
+  late String routeId;
+  late bool isActive;
+
+  TransportVehicleIsar();
+
+  factory TransportVehicleIsar.fromEntity(TransportVehicle e) {
+    return TransportVehicleIsar()
+      ..vehicleId = e.id
+      ..busNumber = e.busNumber
+      ..plateNumber = e.plateNumber
+      ..capacity = e.capacity
+      ..driverName = e.driverName
+      ..routeId = e.routeId
+      ..isActive = e.isActive;
+  }
+
+  TransportVehicle toEntity() {
+    return TransportVehicle(
+      id: vehicleId,
+      busNumber: busNumber,
+      plateNumber: plateNumber,
+      capacity: capacity,
+      driverName: driverName,
+      routeId: routeId,
+      isActive: isActive,
+    );
+  }
+}
+
+@collection
+class StructureFeeCategoryIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String feeCategoryId;
+
+  late String name;
+  late String code;
+  late String description;
+  late bool isMandatory;
+  late bool isActive;
+
+  StructureFeeCategoryIsar();
+
+  factory StructureFeeCategoryIsar.fromEntity(FeeCategory e) {
+    return StructureFeeCategoryIsar()
+      ..feeCategoryId = e.id
+      ..name = e.name
+      ..code = e.code
+      ..description = e.description
+      ..isMandatory = e.isMandatory
+      ..isActive = e.isActive;
+  }
+
+  FeeCategory toEntity() {
+    return FeeCategory(
+      id: feeCategoryId,
+      name: name,
+      code: code,
+      description: description,
+      isMandatory: isMandatory,
+      isActive: isActive,
+    );
+  }
+}
+
+@collection
+class AssessmentTypeDefIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String assessmentTypeId;
+
+  late String name;
+  late double weightPercentage;
+  late String description;
+  late bool isActive;
+
+  AssessmentTypeDefIsar();
+
+  factory AssessmentTypeDefIsar.fromEntity(AssessmentTypeDef e) {
+    return AssessmentTypeDefIsar()
+      ..assessmentTypeId = e.id
+      ..name = e.name
+      ..weightPercentage = e.weightPercentage
+      ..description = e.description
+      ..isActive = e.isActive;
+  }
+
+  AssessmentTypeDef toEntity() {
+    return AssessmentTypeDef(
+      id: assessmentTypeId,
+      name: name,
+      weightPercentage: weightPercentage,
+      description: description,
+      isActive: isActive,
+    );
+  }
+}
+
+@collection
+class GradingSystemDefIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String gradingSystemId;
+
+  late String name;
+  late String type;
+  late bool isDefault;
+  late bool isActive;
+
+  GradingSystemDefIsar();
+
+  factory GradingSystemDefIsar.fromEntity(GradingSystemDef e) {
+    return GradingSystemDefIsar()
+      ..gradingSystemId = e.id
+      ..name = e.name
+      ..type = e.type
+      ..isDefault = e.isDefault
+      ..isActive = e.isActive;
+  }
+
+  GradingSystemDef toEntity() {
+    return GradingSystemDef(
+      id: gradingSystemId,
+      name: name,
+      type: type,
+      isDefault: isDefault,
+      isActive: isActive,
+    );
+  }
+}
+
+@collection
+class GradeBandIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String gradeBandId;
+
+  late String gradingSystemId;
+  late String grade;
+  late double minScore;
+  late double maxScore;
+  late String remarks;
+  late int order;
+
+  GradeBandIsar();
+
+  factory GradeBandIsar.fromEntity(GradeBand e) {
+    return GradeBandIsar()
+      ..gradeBandId = e.id
+      ..gradingSystemId = e.gradingSystemId
+      ..grade = e.grade
+      ..minScore = e.minScore
+      ..maxScore = e.maxScore
+      ..remarks = e.remarks
+      ..order = e.order;
+  }
+
+  GradeBand toEntity() {
+    return GradeBand(
+      id: gradeBandId,
+      gradingSystemId: gradingSystemId,
+      grade: grade,
+      minScore: minScore,
+      maxScore: maxScore,
+      remarks: remarks,
+      order: order,
+    );
+  }
+}
+
+@collection
+class AttendanceTypeDefIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String attendanceTypeId;
+
+  late String name;
+  late String colorHex;
+  late bool isActive;
+
+  AttendanceTypeDefIsar();
+
+  factory AttendanceTypeDefIsar.fromEntity(AttendanceTypeDef e) {
+    return AttendanceTypeDefIsar()
+      ..attendanceTypeId = e.id
+      ..name = e.name
+      ..colorHex = e.colorHex
+      ..isActive = e.isActive;
+  }
+
+  AttendanceTypeDef toEntity() {
+    return AttendanceTypeDef(
+      id: attendanceTypeId,
+      name: name,
+      colorHex: colorHex,
+      isActive: isActive,
+    );
+  }
+}
+
+@collection
+class AttendanceSessionDefIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String attendanceSessionId;
+
+  late String name;
+  late bool isActive;
+
+  AttendanceSessionDefIsar();
+
+  factory AttendanceSessionDefIsar.fromEntity(AttendanceSessionDef e) {
+    return AttendanceSessionDefIsar()
+      ..attendanceSessionId = e.id
+      ..name = e.name
+      ..isActive = e.isActive;
+  }
+
+  AttendanceSessionDef toEntity() {
+    return AttendanceSessionDef(
+      id: attendanceSessionId,
+      name: name,
+      isActive: isActive,
+    );
+  }
+}
+
+@collection
+class AnnouncementCategoryDefIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String announcementCategoryId;
+
+  late String name;
+  late bool isActive;
+
+  AnnouncementCategoryDefIsar();
+
+  factory AnnouncementCategoryDefIsar.fromEntity(AnnouncementCategoryDef e) {
+    return AnnouncementCategoryDefIsar()
+      ..announcementCategoryId = e.id
+      ..name = e.name
+      ..isActive = e.isActive;
+  }
+
+  AnnouncementCategoryDef toEntity() {
+    return AnnouncementCategoryDef(
+      id: announcementCategoryId,
+      name: name,
+      isActive: isActive,
+    );
+  }
+}
+
+@collection
+class NotificationCategoryDefIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String notificationCategoryId;
+
+  late String name;
+  late bool isActive;
+
+  NotificationCategoryDefIsar();
+
+  factory NotificationCategoryDefIsar.fromEntity(NotificationCategoryDef e) {
+    return NotificationCategoryDefIsar()
+      ..notificationCategoryId = e.id
+      ..name = e.name
+      ..isActive = e.isActive;
+  }
+
+  NotificationCategoryDef toEntity() {
+    return NotificationCategoryDef(
+      id: notificationCategoryId,
+      name: name,
+      isActive: isActive,
+    );
+  }
+}
+
+@collection
+class MessageTemplateDefIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String messageTemplateId;
+
+  late String name;
+  late String channel;
+  late String subject;
+  late String body;
+  late bool isActive;
+
+  MessageTemplateDefIsar();
+
+  factory MessageTemplateDefIsar.fromEntity(MessageTemplateDef e) {
+    return MessageTemplateDefIsar()
+      ..messageTemplateId = e.id
+      ..name = e.name
+      ..channel = e.channel
+      ..subject = e.subject
+      ..body = e.body
+      ..isActive = e.isActive;
+  }
+
+  MessageTemplateDef toEntity() {
+    return MessageTemplateDef(
+      id: messageTemplateId,
+      name: name,
+      channel: channel,
+      subject: subject,
+      body: body,
+      isActive: isActive,
+    );
+  }
+}
+
+@collection
+class DocumentTemplateDefIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String documentTemplateId;
+
+  late String name;
+  late String templateType;
+  late String description;
+  late bool isActive;
+
+  DocumentTemplateDefIsar();
+
+  factory DocumentTemplateDefIsar.fromEntity(DocumentTemplateDef e) {
+    return DocumentTemplateDefIsar()
+      ..documentTemplateId = e.id
+      ..name = e.name
+      ..templateType = e.templateType
+      ..description = e.description
+      ..isActive = e.isActive;
+  }
+
+  DocumentTemplateDef toEntity() {
+    return DocumentTemplateDef(
+      id: documentTemplateId,
+      name: name,
+      templateType: templateType,
+      description: description,
+      isActive: isActive,
+    );
+  }
+}
+
+@collection
+class CustomFieldDefIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String customFieldId;
+
+  late String appliesTo;
+  late String fieldName;
+  late String fieldType;
+  List<String> options = [];
+  late bool isRequired;
+  late bool isActive;
+
+  CustomFieldDefIsar();
+
+  factory CustomFieldDefIsar.fromEntity(CustomFieldDef e) {
+    return CustomFieldDefIsar()
+      ..customFieldId = e.id
+      ..appliesTo = e.appliesTo
+      ..fieldName = e.fieldName
+      ..fieldType = e.fieldType
+      ..options = e.options
+      ..isRequired = e.isRequired
+      ..isActive = e.isActive;
+  }
+
+  CustomFieldDef toEntity() {
+    return CustomFieldDef(
+      id: customFieldId,
+      appliesTo: appliesTo,
+      fieldName: fieldName,
+      fieldType: fieldType,
+      options: options,
+      isRequired: isRequired,
+      isActive: isActive,
+    );
+  }
+}

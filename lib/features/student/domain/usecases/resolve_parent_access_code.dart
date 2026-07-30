@@ -8,7 +8,7 @@ class ResolveParentAccessCode {
 
   ResolveParentAccessCode(this.repository);
 
-  Future<Either<Failure, ParentAccessCode?>> call(String code) async {
+  Future<Either<Failure, ParentAccessCode>> call(String code) async {
     return await repository.resolveAccessCode(code);
   }
 }

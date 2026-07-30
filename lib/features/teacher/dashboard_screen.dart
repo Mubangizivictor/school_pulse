@@ -71,7 +71,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 }
               },
               child: ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
                 children: [
                   FadeInSlide(
                     child: Builder(builder: (context) {
@@ -85,11 +85,26 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context)
                             .textTheme
-                            .headlineSmall
+                            .titleLarge
                             ?.copyWith(fontWeight: FontWeight.bold),
                       );
                     }),
                   ),
+                  Builder(builder: (context) {
+                    final authState = context.watch<AuthBloc>().state;
+                    final assignedClass = authState is AuthAuthenticated ? authState.user.assignedClass : null;
+                    if (assignedClass == null) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        'Class Teacher - $assignedClass',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    );
+                  }),
                   const SizedBox(height: 8),
                   FadeInSlide(
                     delay: const Duration(milliseconds: 100),
@@ -101,122 +116,210 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                           ?.copyWith(color: Theme.of(context).colorScheme.outline),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 1.1,
-                    children: [
-                      FadeInSlide(
-                        delay: const Duration(milliseconds: 200),
-                        child: DashboardStatCard(
-                          title: 'Students Today',
-                          value: state.studentsToday.toDouble(),
-                          suffix: '/${state.totalStudents}',
-                          icon: Icons.people_outline,
-                          color: Theme.of(context).colorScheme.primary,
+                  const SizedBox(height: 15),
+                  Builder(builder: (context) {
+                    final screenWidth = MediaQuery.of(context).size.width;
+                    final isMobile = screenWidth < 600;
+
+                    if (isMobile) {
+                      return Column(
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: FadeInSlide(
+                                  delay: const Duration(milliseconds: 200),
+                                  child: DashboardStatCard(
+                                    title: 'Students Today',
+                                    value: state.studentsToday.toDouble(),
+                                    suffix: '/${state.totalStudents}',
+                                    icon: Icons.people_outline,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: FadeInSlide(
+                                  delay: const Duration(milliseconds: 300),
+                                  child: DashboardStatCard(
+                                    title: 'Submissions',
+                                    value: state.submissionsDue.toDouble(),
+                                    icon: Icons.assignment_outlined,
+                                    color: semanticColors.warning,
+                                    trend: 'Due today',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: FadeInSlide(
+                                  delay: const Duration(milliseconds: 400),
+                                  child: DashboardStatCard(
+                                    title: 'Classes Today',
+                                    value: state.classesToday.toDouble(),
+                                    icon: Icons.calendar_today_outlined,
+                                    color: semanticColors.info,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: FadeInSlide(
+                                  delay: const Duration(milliseconds: 500),
+                                  child: DashboardStatCard(
+                                    title: 'Notifications',
+                                    value: state.activeNotifications.toDouble(),
+                                    icon: Icons.notifications_active_outlined,
+                                    color: semanticColors.error,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: DashboardStatCard(
+                            title: 'Students Today',
+                            value: state.studentsToday.toDouble(),
+                            suffix: '/${state.totalStudents}',
+                            icon: Icons.people_outline,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                         ),
-                      ),
-                      FadeInSlide(
-                        delay: const Duration(milliseconds: 300),
-                        child: DashboardStatCard(
-                          title: 'Submissions',
-                          value: state.submissionsDue.toDouble(),
-                          icon: Icons.assignment_outlined,
-                          color: semanticColors.warning,
-                          trend: 'Due today',
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: DashboardStatCard(
+                            title: 'Submissions',
+                            value: state.submissionsDue.toDouble(),
+                            icon: Icons.assignment_outlined,
+                            color: semanticColors.warning,
+                            trend: 'Due today',
+                          ),
                         ),
-                      ),
-                      FadeInSlide(
-                        delay: const Duration(milliseconds: 400),
-                        child: DashboardStatCard(
-                          title: 'Classes Today',
-                          value: state.classesToday.toDouble(),
-                          icon: Icons.calendar_today_outlined,
-                          color: semanticColors.info,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: DashboardStatCard(
+                            title: 'Classes Today',
+                            value: state.classesToday.toDouble(),
+                            icon: Icons.calendar_today_outlined,
+                            color: semanticColors.info,
+                          ),
                         ),
-                      ),
-                      FadeInSlide(
-                        delay: const Duration(milliseconds: 500),
-                        child: DashboardStatCard(
-                          title: 'Notifications',
-                          value: state.activeNotifications.toDouble(),
-                          icon: Icons.notifications_active_outlined,
-                          color: semanticColors.error,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: DashboardStatCard(
+                            title: 'Notifications',
+                            value: state.activeNotifications.toDouble(),
+                            icon: Icons.notifications_active_outlined,
+                            color: semanticColors.error,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  const FadeInSlide(
-                    delay: Duration(milliseconds: 600),
-                    child: SectionHeader(title: 'Class Progress'),
-                  ),
-                  ...state.classProgress.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final progress = entry.value;
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: FadeInSlide(
-                        delay: Duration(milliseconds: 700 + (index * 100)),
-                        child: ProgressCard(
-                          title: progress.title,
-                          progress: progress.progress,
-                          subtitle: progress.subtitle,
-                          color: index.isOdd ? semanticColors.info : null,
-                        ),
-                      ),
+                      ],
                     );
                   }),
-                  const SizedBox(height: 12),
-                  const FadeInSlide(
-                    delay: Duration(milliseconds: 900),
-                    child: SectionHeader(title: 'Quick Actions'),
+                  const SizedBox(height: 15),
+                  FadeInSlide(
+                    delay: const Duration(milliseconds: 600),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Class Progress',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleLarge
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 16),
+                        ...state.classProgress.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final progress = entry.value;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: ProgressCard(
+                              title: progress.title,
+                              progress: progress.progress,
+                              subtitle: progress.subtitle,
+                              color: index.isOdd ? semanticColors.info : null,
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
                   ),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      FadeInSlide(
-                        delay: const Duration(milliseconds: 1000),
-                        child: _QuickAction(
-                          label: 'Attendance',
-                          icon: Icons.how_to_reg,
-                          color: semanticColors.info,
-                          onTap: () => context.push('/staff/attendance'),
+                  const SizedBox(height: 15),
+                  FadeInSlide(
+                    delay: const Duration(milliseconds: 900),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Quick Actions',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleLarge
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
-                      ),
-                      FadeInSlide(
-                        delay: const Duration(milliseconds: 1100),
-                        child: _QuickAction(
-                          label: 'Enter Marks',
-                          icon: Icons.edit_note,
-                          color: semanticColors.warning,
-                          onTap: () => context.push('/staff/marks'),
-                        ),
-                      ),
-                      FadeInSlide(
-                        delay: const Duration(milliseconds: 1200),
-                        child: _QuickAction(
-                          label: 'Homework',
-                          icon: Icons.assignment_outlined,
-                          color: semanticColors.success,
-                          onTap: () => context.push('/staff/homework'),
-                        ),
-                      ),
-                      FadeInSlide(
-                        delay: const Duration(milliseconds: 1300),
-                        child: _QuickAction(
-                          label: 'Analytics',
-                          icon: Icons.analytics_outlined,
-                          color: Theme.of(context).colorScheme.secondary,
-                          onTap: () => context.push('/staff/class-analytics'),
-                        ),
-                      ),
-                    ],
+                        const SizedBox(height: 16),
+                        LayoutBuilder(builder: (context, constraints) {
+                          final itemWidth = (constraints.maxWidth - 12) / 2;
+                          return Wrap(
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: [
+                              _QuickAction(
+                                label: 'Attendance',
+                                icon: Icons.how_to_reg,
+                                color: semanticColors.info,
+                                onTap: () => context.push('/staff/attendance'),
+                                width: itemWidth,
+                              ),
+                              _QuickAction(
+                                label: 'Enter Marks',
+                                icon: Icons.edit_note,
+                                color: semanticColors.warning,
+                                onTap: () => context.push('/staff/marks'),
+                                width: itemWidth,
+                              ),
+                              _QuickAction(
+                                label: 'Homework',
+                                icon: Icons.assignment_outlined,
+                                color: semanticColors.success,
+                                onTap: () => context.push('/staff/homework'),
+                                width: itemWidth,
+                              ),
+                              _QuickAction(
+                                label: 'Analytics',
+                                icon: Icons.analytics_outlined,
+                                color: Theme.of(context).colorScheme.secondary,
+                                onTap: () => context.push('/staff/class-analytics'),
+                                width: itemWidth,
+                              ),
+                              _QuickAction(
+                                label: 'QR Attendance',
+                                icon: Icons.qr_code_scanner,
+                                color: Colors.deepPurple,
+                                onTap: () => context.push('/staff/attendance/qr-dashboard'),
+                                width: itemWidth,
+                              ),
+                            ],
+                          );
+                        }),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 32),
                 ],
@@ -237,7 +340,7 @@ class _TeacherDashboardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
       children: [
         const Skeleton(width: 200, height: 28),
         const SizedBox(height: 8),
@@ -249,17 +352,17 @@ class _TeacherDashboardSkeleton extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          childAspectRatio: 1.1,
+          childAspectRatio: 1.4,
           children: List.generate(4, (index) => const Skeleton(borderRadius: 12)),
         ),
         const SizedBox(height: 24),
-        const Skeleton(width: 120, height: 20),
+        const Skeleton(width: 120, height: 24),
         const SizedBox(height: 16),
         const Skeleton(height: 100, borderRadius: 12),
         const SizedBox(height: 12),
         const Skeleton(height: 100, borderRadius: 12),
         const SizedBox(height: 24),
-        const Skeleton(width: 120, height: 20),
+        const Skeleton(width: 120, height: 24),
         const SizedBox(height: 16),
         Wrap(
           spacing: 12,
@@ -267,7 +370,7 @@ class _TeacherDashboardSkeleton extends StatelessWidget {
           children: List.generate(
             4,
             (index) => Skeleton(
-              width: (MediaQuery.of(context).size.width - 44) / 2,
+              width: (MediaQuery.of(context).size.width - 36) / 2,
               height: 100,
               borderRadius: 12,
             ),
@@ -283,27 +386,27 @@ class _QuickAction extends StatelessWidget {
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
+  final double? width;
 
   const _QuickAction({
     required this.label,
     required this.icon,
     required this.color,
     required this.onTap,
+    this.width,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return InkWell(
+    return AppCard(
+      padding: EdgeInsets.zero,
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
       child: Container(
-        width: (MediaQuery.of(context).size.width - 44) / 2,
+        width: width ?? (MediaQuery.of(context).size.width - 36) / 2,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isDark ? color.withValues(alpha: 0.15) : color.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           children: [
@@ -312,6 +415,8 @@ class _QuickAction extends StatelessWidget {
             Text(
               label,
               textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 13,

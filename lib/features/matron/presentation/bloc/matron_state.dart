@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../domain/entities/boarding_entities.dart';
 import '../../domain/repositories/matron_repository.dart';
 
 abstract class MatronState extends Equatable {
@@ -12,26 +13,24 @@ class MatronInitial extends MatronState {}
 
 class MatronLoading extends MatronState {}
 
-class MatronLoaded extends MatronState {
-  final List<DormitoryStatus> dormitories;
-  final int totalStudents;
-  final int studentsPresent;
-  final int studentsOnLeave;
-
-  const MatronLoaded({
-    required this.dormitories,
-    required this.totalStudents,
-    required this.studentsPresent,
-    required this.studentsOnLeave,
-  });
+class MatronDashboardLoaded extends MatronState {
+  final BoardingDashboardData data;
+  const MatronDashboardLoaded(this.data);
 
   @override
-  List<Object?> get props => [dormitories, totalStudents, studentsPresent, studentsOnLeave];
+  List<Object?> get props => [data];
+}
+
+class DormitoriesLoaded extends MatronState {
+  final List<Dormitory> dormitories;
+  const DormitoriesLoaded(this.dormitories);
+
+  @override
+  List<Object?> get props => [dormitories];
 }
 
 class UnallocatedStudentsLoaded extends MatronState {
-  final List<Student> students;
-
+  final List<BoardingStudent> students;
   const UnallocatedStudentsLoaded(this.students);
 
   @override
@@ -39,40 +38,55 @@ class UnallocatedStudentsLoaded extends MatronState {
 }
 
 class DormitoryStudentsLoaded extends MatronState {
-  final List<Student> students;
-
+  final List<BoardingStudent> students;
   const DormitoryStudentsLoaded(this.students);
 
   @override
   List<Object?> get props => [students];
 }
 
-class AttendanceSubmittedSuccessfully extends MatronState {}
-
-class AllocationSuccessful extends MatronState {}
-
-class DormitoryStatus extends Equatable {
-  final String id;
-  final String name;
-  final int capacity;
-  final int currentOccupants;
-  final String status;
-
-  const DormitoryStatus({
-    required this.id,
-    required this.name,
-    required this.capacity,
-    required this.currentOccupants,
-    required this.status,
-  });
+class WelfareRecordsLoaded extends MatronState {
+  final List<WelfareRecord> records;
+  const WelfareRecordsLoaded(this.records);
 
   @override
-  List<Object?> get props => [id, name, capacity, currentOccupants, status];
+  List<Object?> get props => [records];
+}
+
+class DisciplineCasesLoaded extends MatronState {
+  final List<DisciplineCase> cases;
+  const DisciplineCasesLoaded(this.cases);
+
+  @override
+  List<Object?> get props => [cases];
+}
+
+class HygieneChecksLoaded extends MatronState {
+  final List<HygieneCheck> checks;
+  const HygieneChecksLoaded(this.checks);
+
+  @override
+  List<Object?> get props => [checks];
+}
+
+class StudentsOnLeaveLoaded extends MatronState {
+  final List<BoardingStudent> students;
+  const StudentsOnLeaveLoaded(this.students);
+
+  @override
+  List<Object?> get props => [students];
+}
+
+class MatronSuccess extends MatronState {
+  final String message;
+  const MatronSuccess(this.message);
+
+  @override
+  List<Object?> get props => [message];
 }
 
 class MatronError extends MatronState {
   final String message;
-
   const MatronError(this.message);
 
   @override

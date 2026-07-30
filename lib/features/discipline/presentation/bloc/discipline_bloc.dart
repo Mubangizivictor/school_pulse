@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/entities/discipline_incident.dart';
 import '../../domain/entities/counseling_session.dart';
+import '../../../student/domain/repositories/student_repository.dart';
 import '../../domain/usecases/get_discipline_incidents.dart';
 import '../../domain/usecases/get_recent_discipline_incidents.dart';
 import '../../domain/usecases/log_discipline_incident.dart';
@@ -15,6 +16,7 @@ class DisciplineBloc extends Bloc<DisciplineEvent, DisciplineState> {
   final LogDisciplineIncident logDisciplineIncident;
   final GetCounselingSessions getCounselingSessions;
   final LogCounselingSession logCounselingSession;
+  final StudentRepository studentRepository;
 
   DisciplineBloc({
     required this.getDisciplineIncidents,
@@ -22,13 +24,22 @@ class DisciplineBloc extends Bloc<DisciplineEvent, DisciplineState> {
     required this.logDisciplineIncident,
     required this.getCounselingSessions,
     required this.logCounselingSession,
+    required this.studentRepository,
   }) : super(DisciplineInitial()) {
     on<LoadDisciplineIncidents>((event, emit) async {
       emit(DisciplineLoading());
+      
       final result = await getDisciplineIncidents(event.studentId);
+      final boardingResult = await studentRepository.getDisciplineCases(studentId: event.studentId);
+      
       result.fold(
         (failure) => emit(const DisciplineError('Failed to fetch discipline incidents')),
-        (incidents) => emit(DisciplineLoaded(incidents: incidents)),
+        (incidents) {
+          boardingResult.fold(
+            (l) => emit(DisciplineLoaded(incidents: incidents)),
+            (boardingCases) => emit(DisciplineLoaded(incidents: incidents, boardingCases: boardingCases)),
+          );
+        },
       );
     });
 
@@ -36,13 +47,23 @@ class DisciplineBloc extends Bloc<DisciplineEvent, DisciplineState> {
       emit(DisciplineLoading());
       final incidentsResult = await getRecentDisciplineIncidents();
       final sessionsResult = await getCounselingSessions();
+      final boardingResult = await studentRepository.getDisciplineCases();
 
       incidentsResult.fold(
         (failure) => emit(const DisciplineError('Failed to fetch recent incidents')),
         (incidents) {
           sessionsResult.fold(
             (failure) => emit(DisciplineLoaded(incidents: incidents)),
-            (sessions) => emit(DisciplineLoaded(incidents: incidents, sessions: sessions)),
+            (sessions) {
+              boardingResult.fold(
+                (l) => emit(DisciplineLoaded(incidents: incidents, sessions: sessions)),
+                (boardingCases) => emit(DisciplineLoaded(
+                  incidents: incidents,
+                  sessions: sessions,
+                  boardingCases: boardingCases,
+                )),
+              );
+            },
           );
         },
       );

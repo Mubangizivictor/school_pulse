@@ -58,15 +58,18 @@ class _GamesDashboardScreenState extends State<GamesDashboardScreen> {
                 context.read<GamesBloc>().add(GamesDashboardRequested());
               },
               child: ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
                 children: [
                   FadeInSlide(
                     child: Text(
                       'Inter-House Standings',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.5,
+                          ),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 15),
                   _HousePointsGrid(houses: state.houses),
                   const SizedBox(height: 24),
                   const SectionHeader(title: 'Upcoming Competitions'),
@@ -196,10 +199,10 @@ class _GamesSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
       children: [
         const Skeleton(width: 200, height: 28),
-        const SizedBox(height: 16),
+        const SizedBox(height: 15),
         GridView.count(
           crossAxisCount: 2,
           shrinkWrap: true,

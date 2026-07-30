@@ -114,7 +114,19 @@ class AdminSearchDelegate extends SearchDelegate<void> {
                           ],
                         ),
                         actions: [
-                          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Close'),
+                          ),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.pop(context); // Close dialog
+                              close(context, null); // Close search
+                              context.go('/staff/admin/student-id-card', extra: s);
+                            },
+                            icon: const Icon(Icons.badge_outlined, size: 18),
+                            label: const Text('Issue ID Card'),
+                          ),
                         ],
                       ),
                     ),

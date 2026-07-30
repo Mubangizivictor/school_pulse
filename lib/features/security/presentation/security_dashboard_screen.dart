@@ -2,10 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
+import 'package:school_pulse/features/security/domain/entities/security_entities.dart';
 import 'bloc/security_bloc.dart';
 import 'bloc/security_event.dart';
 import 'bloc/security_state.dart';
+import '../data/models/security_models.dart';
+
+import 'widgets/emergency_protocol_dialog.dart';
+import 'widgets/verification_workflow.dart';
 
 class SecurityDashboardScreen extends StatefulWidget {
   const SecurityDashboardScreen({super.key});
@@ -18,7 +25,113 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<SecurityBloc>().add(SecurityDashboardRequested());
+    context.read<SecurityBloc>().add(LoadSecurityDashboard());
+  }
+
+  void _showReportIncidentDialog(BuildContext context) {
+    final titleController = TextEditingController();
+    String severity = 'low';
+    bool isSending = false;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Report Incident to Admin'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: titleController,
+                autofocus: true,
+                decoration: const InputDecoration(labelText: 'What happened?'),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: severity,
+                decoration: const InputDecoration(labelText: 'Severity'),
+                items: const [
+                  DropdownMenuItem(value: 'low', child: Text('Low')),
+                  DropdownMenuItem(value: 'medium', child: Text('Medium')),
+                  DropdownMenuItem(value: 'high', child: Text('High')),
+                ],
+                onChanged: (v) => setDialogState(() => severity = v ?? 'low'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: isSending
+                  ? null
+                  : () async {
+                      if (titleController.text.trim().isEmpty) return;
+                      final authState = context.read<AuthBloc>().state;
+                      if (authState is! AuthAuthenticated) return;
+                      setDialogState(() => isSending = true);
+                      try {
+                        final incident = SecurityIncidentModel(
+                          id: '', // Backend should generate ID or we use uuid
+                          type: 'General', 
+                          description: titleController.text.trim(),
+                          timestamp: DateTime.now(),
+                          location: 'Unknown',
+                          involvedPersonIds: const [],
+                          photoUrls: const [],
+                          reportedByOfficerId: authState.user.id,
+                          report: '',
+                          status: 'Pending',
+                          schoolId: authState.user.schoolId,
+                        );
+                        context.read<SecurityBloc>().add(ReportIncidentRequested(incident));
+                        if (dialogContext.mounted) Navigator.pop(dialogContext);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Incident reported.')),
+                          );
+                        }
+                      } catch (e) {
+                        setDialogState(() => isSending = false);
+                        if (dialogContext.mounted) {
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                          );
+                        }
+                      }
+                    },
+              child: isSending
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Alert Admin'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showVerificationWorkflow(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+          top: 20,
+          left: 20,
+          right: 20,
+        ),
+        child: const VerificationWorkflow(),
+      ),
+    );
+  }
+
+  void _showEmergencyProtocol(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => const EmergencyProtocolDialog(),
+    );
   }
 
   @override
@@ -29,6 +142,11 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
       appBar: AppBar(
         title: const Text('Security Portal'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.report_gmailerrorred_outlined),
+            tooltip: 'Report Incident to Admin',
+            onPressed: () => _showReportIncidentDialog(context),
+          ),
           const NotificationBellButton(),
         ],
       ),
@@ -42,79 +160,77 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
             return Center(child: Text(state.message));
           }
 
-          if (state is SecurityLoaded) {
+          if (state is SecurityDashboardLoaded) {
             return RefreshIndicator(
               onRefresh: () async {
-                context.read<SecurityBloc>().add(SecurityDashboardRequested());
+                context.read<SecurityBloc>().add(LoadSecurityDashboard());
               },
               child: ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
                 children: [
                   FadeInSlide(
                     child: Text(
                       "Security Status",
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 1.1,
+                  const SizedBox(height: 15),
+                  Row(
                     children: [
-                      FadeInSlide(
-                        delay: const Duration(milliseconds: 100),
-                        child: DashboardStatCard(
-                          title: 'Guards on Duty',
-                          value: state.guardsOnDuty.toDouble(),
-                          icon: Icons.security,
-                          color: Theme.of(context).colorScheme.primary,
+                      Expanded(
+                        child: FadeInSlide(
+                          delay: const Duration(milliseconds: 100),
+                          child: DashboardStatCard(
+                            title: 'Active Gates',
+                            value: (state.stats['activeGates'] ?? 0).toDouble(),
+                            icon: Icons.door_front_door_outlined,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                         ),
                       ),
-                      FadeInSlide(
-                        delay: const Duration(milliseconds: 200),
-                        child: DashboardStatCard(
-                          title: 'Active Visitors',
-                          value: state.visitorsIn.toDouble(),
-                          icon: Icons.person_pin_circle_outlined,
-                          color: semanticColors.success,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FadeInSlide(
+                          delay: const Duration(milliseconds: 200),
+                          child: DashboardStatCard(
+                            title: 'Students In',
+                            value: (state.stats['studentsIn'] ?? 0).toDouble(),
+                            icon: Icons.person_pin_circle_outlined,
+                            color: semanticColors.success,
+                          ),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 24),
+                  if (state.activeEmergencies.isNotEmpty) ...[
+                    const FadeInSlide(
+                      delay: Duration(milliseconds: 250),
+                      child: SectionHeader(title: 'Active Emergencies', color: Colors.red),
+                    ),
+                    const SizedBox(height: 12),
+                    ...state.activeEmergencies.map((emergency) => _EmergencyCard(emergency: emergency)),
+                    const SizedBox(height: 24),
+                  ],
                   const FadeInSlide(
                     delay: Duration(milliseconds: 300),
-                    child: SectionHeader(title: 'Recent Activity'),
+                    child: SectionHeader(title: 'Recent Movements'),
                   ),
-                  ...state.recentAlerts.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final alert = entry.value;
-                    Color alertColor = semanticColors.info;
-                    if (alert.severity == 'medium') alertColor = semanticColors.warning;
-                    if (alert.severity == 'high') alertColor = semanticColors.error;
-
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: FadeInSlide(
-                        delay: Duration(milliseconds: 400 + (index * 100)),
-                        child: AppCard(
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: alertColor.withValues(alpha: 0.1),
-                              child: Icon(Icons.notifications_outlined, color: alertColor),
-                            ),
-                            title: Text(alert.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            subtitle: Text(alert.time),
-                            trailing: const Icon(Icons.chevron_right),
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
+                  const SizedBox(height: 12),
+                  if (state.recentMovements.isEmpty)
+                    const Center(child: Text("No recent movements recorded"))
+                  else
+                    ...state.recentMovements.take(5).map((movement) => _MovementListTile(movement: movement)),
+                  const SizedBox(height: 24),
+                  const FadeInSlide(
+                    delay: Duration(milliseconds: 400),
+                    child: SectionHeader(title: 'Active Incidents'),
+                  ),
+                  const SizedBox(height: 12),
+                  if (state.activeIncidents.isEmpty)
+                    const Center(child: Text("No active incidents"))
+                  else
+                    ...state.activeIncidents.take(5).map((incident) => _IncidentListTile(incident: incident)),
                   const SizedBox(height: 32),
                 ],
               ),
@@ -122,6 +238,104 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
           }
           return const SizedBox.shrink();
         },
+      ),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton.extended(
+            heroTag: 'emergency',
+            onPressed: () => _showEmergencyProtocol(context),
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+            icon: const Icon(Icons.emergency),
+            label: const Text("EMERGENCY"),
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton.extended(
+            heroTag: 'verify',
+            onPressed: () => _showVerificationWorkflow(context),
+            icon: const Icon(Icons.qr_code_scanner),
+            label: const Text("Verify Entry/Exit"),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmergencyCard extends StatelessWidget {
+  final EmergencyEvent emergency;
+  const _EmergencyCard({required this.emergency});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: Colors.red.shade50,
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        leading: const Icon(Icons.warning, color: Colors.red),
+        title: Text(emergency.type, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+        subtitle: Text(emergency.description),
+        trailing: const Icon(Icons.chevron_right, color: Colors.red),
+      ),
+    );
+  }
+}
+
+class _MovementListTile extends StatelessWidget {
+  final StudentMovement movement;
+  const _MovementListTile({required this.movement});
+
+  @override
+  Widget build(BuildContext context) {
+    final isIn = movement.direction.toLowerCase() == 'in';
+    return AppCard(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: isIn ? Colors.green.shade50 : Colors.blue.shade50,
+          child: Icon(
+            isIn ? Icons.login : Icons.logout,
+            color: isIn ? Colors.green : Colors.blue,
+          ),
+        ),
+        title: Text(movement.studentName),
+        subtitle: Text("${movement.movementType} • ${movement.className}"),
+        trailing: Text(
+          "${movement.timestamp.hour}:${movement.timestamp.minute.toString().padLeft(2, '0')}",
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ),
+    );
+  }
+}
+
+class _IncidentListTile extends StatelessWidget {
+  final SecurityIncident incident;
+  const _IncidentListTile({required this.incident});
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Colors.orange.shade50,
+          child: const Icon(Icons.gavel, color: Colors.orange),
+        ),
+        title: Text(incident.type),
+        subtitle: Text(incident.description, maxLines: 1, overflow: TextOverflow.ellipsis),
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.orange.shade100,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            incident.status,
+            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.orange),
+          ),
+        ),
       ),
     );
   }
@@ -133,22 +347,20 @@ class _SecuritySkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
       children: [
         const Skeleton(width: 200, height: 28),
-        const SizedBox(height: 24),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 1.1,
-          children: List.generate(2, (index) => const Skeleton(borderRadius: 12)),
+        const SizedBox(height: 15),
+        Row(
+          children: [
+            Expanded(child: const Skeleton(height: 48, borderRadius: 12)),
+            const SizedBox(width: 12),
+            Expanded(child: const Skeleton(height: 48, borderRadius: 12)),
+          ],
         ),
         const SizedBox(height: 24),
         const Skeleton(width: 120, height: 20),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         ...List.generate(3, (index) => const Padding(
           padding: EdgeInsets.only(bottom: 12),
           child: Skeleton(height: 72, borderRadius: 12),

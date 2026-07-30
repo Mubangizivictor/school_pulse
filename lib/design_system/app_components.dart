@@ -39,6 +39,9 @@ class AppCard extends StatefulWidget {
   final EdgeInsetsGeometry? margin;
   final VoidCallback? onTap;
   final Color? color;
+  final Color? borderColor;
+  final bool showBorder;
+  final bool showShadow;
 
   const AppCard({
     super.key,
@@ -47,6 +50,9 @@ class AppCard extends StatefulWidget {
     this.margin,
     this.onTap,
     this.color,
+    this.borderColor,
+    this.showBorder = true,
+    this.showShadow = true,
   });
 
   @override
@@ -92,19 +98,21 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
           decoration: BoxDecoration(
             color: widget.color ?? (isDark ? Theme.of(context).colorScheme.surface : Colors.white),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isDark 
-                ? Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.1)
-                : Theme.of(context).dividerColor.withValues(alpha: 0.8),
-              width: 1,
-            ),
-            boxShadow: isDark ? [] : [
+            border: widget.showBorder
+              ? Border.all(
+                  color: widget.borderColor ?? Theme.of(context).colorScheme.outlineVariant.withValues(
+                    alpha: isDark ? 0.7 : 0.8,
+                  ),
+                  width: 1,
+                )
+              : null,
+            boxShadow: (widget.showShadow && !isDark) ? [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.03),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
-            ],
+            ] : [],
           ),
           clipBehavior: Clip.antiAlias,
           // A Material ancestor here (rather than relying on whatever
@@ -589,7 +597,7 @@ class _DashboardStatCardState extends State<DashboardStatCard> with SingleTicker
   Widget build(BuildContext context) {
     final semantic = Theme.of(context).extension<SemanticColors>()!;
     return AppCard(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -597,16 +605,16 @@ class _DashboardStatCardState extends State<DashboardStatCard> with SingleTicker
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.all(7),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: widget.color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: ScaleTransition(
                   scale: _iconAnimation,
                   child: RotationTransition(
                     turns: Tween(begin: -0.1, end: 0.0).animate(_controller),
-                    child: Icon(widget.icon, color: widget.color, size: 18),
+                    child: Icon(widget.icon, color: widget.color, size: 16),
                   ),
                 ),
               ),
@@ -620,30 +628,35 @@ class _DashboardStatCardState extends State<DashboardStatCard> with SingleTicker
                 ),
             ],
           ),
-          const SizedBox(height: 10),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: AnimatedNumberText(
-              value: widget.value,
-              suffix: widget.suffix,
-              decimalPlaces: widget.decimalPlaces,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 20,
-                    letterSpacing: -0.5,
-                  ),
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            widget.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w500,
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Expanded(
+                child: Text(
+                  widget.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
                 ),
+              ),
+              const SizedBox(width: 8),
+              AnimatedNumberText(
+                value: widget.value,
+                suffix: widget.suffix,
+                decimalPlaces: widget.decimalPlaces,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 18,
+                      letterSpacing: -0.5,
+                    ),
+              ),
+            ],
           ),
         ],
       ),
@@ -778,35 +791,36 @@ class QuickActionGrid extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 4,
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
-        childAspectRatio: 0.8,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 0.85,
       ),
       itemCount: items.length,
       itemBuilder: (context, index) {
         final item = items[index];
-        return InkWell(
+        return AppCard(
           onTap: item.onTap,
-          borderRadius: BorderRadius.circular(12),
+          padding: EdgeInsets.zero,
+          showShadow: false,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: item.color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(item.icon, color: item.color),
+                child: Icon(item.icon, color: item.color, size: 20),
               ),
               const SizedBox(height: 6),
               Flexible(
                 child: Text(
                   item.label,
                   textAlign: TextAlign.center,
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -831,16 +845,72 @@ class QuickActionItem {
   });
 }
 
+class AppSearchField extends StatelessWidget {
+  final String hintText;
+  final ValueChanged<String>? onChanged;
+  final TextEditingController? controller;
+
+  const AppSearchField({
+    super.key,
+    this.hintText = 'Search...',
+    this.onChanged,
+    this.controller,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        hintText: hintText,
+        prefixIcon: const Icon(Icons.search),
+        filled: true,
+        fillColor: Theme.of(context).colorScheme.surface,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      ),
+    );
+  }
+}
+
+Future<bool?> confirmActionDialog(
+  BuildContext context, {
+  required String title,
+  required String message,
+  String confirmLabel = 'Confirm',
+  String cancelLabel = 'Cancel',
+  bool isDestructive = false,
+}) {
+  return showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(title),
+      content: Text(message),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(cancelLabel)),
+        TextButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: Text(confirmLabel, style: TextStyle(color: isDestructive ? Colors.red : null)),
+        ),
+      ],
+    ),
+  );
+}
+
 class SectionHeader extends StatelessWidget {
   final String title;
   final String? actionLabel;
   final VoidCallback? onActionPressed;
+  final Widget? trailing;
+  final Color? color;
 
   const SectionHeader({
     super.key,
     required this.title,
     this.actionLabel,
     this.onActionPressed,
+    this.trailing,
+    this.color,
   });
 
   @override
@@ -855,11 +925,16 @@ class SectionHeader extends StatelessWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
+                    color: color,
                   ),
             ),
           ),
+          if (trailing != null) ...[
+            const SizedBox(width: 8),
+            trailing!,
+          ],
           if (actionLabel != null)
             TextButton(
               onPressed: onActionPressed,

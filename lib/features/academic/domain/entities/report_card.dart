@@ -20,6 +20,7 @@ class ReportCard extends Equatable {
   final DateTime? headTeacherSignedAt;
   final String? classTeacherComment;
   final double averageScore;
+  final bool isLockedForFees;
 
   const ReportCard({
     required this.id,
@@ -35,6 +36,7 @@ class ReportCard extends Equatable {
     this.headTeacherSignedAt,
     this.classTeacherComment,
     this.averageScore = 0.0,
+    this.isLockedForFees = false,
   });
 
   @override
@@ -52,6 +54,7 @@ class ReportCard extends Equatable {
         headTeacherSignedAt,
         classTeacherComment,
         averageScore,
+        isLockedForFees,
       ];
 
   ReportCard copyWith({
@@ -62,6 +65,7 @@ class ReportCard extends Equatable {
     DateTime? headTeacherSignedAt,
     String? classTeacherComment,
     double? averageScore,
+    bool? isLockedForFees,
   }) {
     return ReportCard(
       id: id,
@@ -77,6 +81,7 @@ class ReportCard extends Equatable {
       headTeacherSignedAt: headTeacherSignedAt ?? this.headTeacherSignedAt,
       classTeacherComment: classTeacherComment ?? this.classTeacherComment,
       averageScore: averageScore ?? this.averageScore,
+      isLockedForFees: isLockedForFees ?? this.isLockedForFees,
     );
   }
 }

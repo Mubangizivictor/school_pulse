@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/staff_alert.dart';
 
 /// Reads the same Firestore 'alerts' collection that NotificationService
@@ -40,38 +41,54 @@ class StaffAlertsRepository {
     late final StreamController<List<StaffAlert>> controller;
     List<StaffAlert> direct = [];
     List<StaffAlert> broadcasts = [];
-    bool hasDirect = false;
-    bool hasBroadcast = groups.isEmpty;
     StreamSubscription? subDirect;
     StreamSubscription? subBroadcast;
 
     void emit() {
-      if (!hasDirect || !hasBroadcast) return;
       final seen = <String>{};
       final merged = [...direct, ...broadcasts].where((a) => seen.add(a.id)).toList()
         ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
-      controller.add(merged);
+      
+      if (kDebugMode) print('StaffAlertsRepository: Emitting ${merged.length} alerts');
+      if (!controller.isClosed) {
+        controller.add(merged);
+      }
     }
 
     controller = StreamController<List<StaffAlert>>.broadcast(
       onListen: () {
+        if (kDebugMode) print('StaffAlertsRepository: Watching alerts for $uid');
+        
+        // Use a small delay to ensure the UI listener is fully attached
+        // before we emit the initial empty state.
+        Future.delayed(const Duration(milliseconds: 100), () => emit());
+
         subDirect = _watchDirect(uid).listen(
           (data) {
             direct = data;
-            hasDirect = true;
             emit();
           },
-          onError: controller.addError,
+          onError: (e) {
+            if (kDebugMode) print('StaffAlertsRepository: Direct alerts error (Index likely building): $e');
+            direct = []; 
+            emit();
+          },
         );
+
         if (groups.isNotEmpty) {
           subBroadcast = _watchBroadcasts(groups).listen(
             (data) {
               broadcasts = data;
-              hasBroadcast = true;
               emit();
             },
-            onError: controller.addError,
+            onError: (e) {
+              if (kDebugMode) print('StaffAlertsRepository: Broadcast alerts error: $e');
+              broadcasts = [];
+              emit();
+            },
           );
+        } else {
+          emit(); // Trigger initial empty state if no groups
         }
       },
       onCancel: () {
@@ -98,5 +115,9 @@ class StaffAlertsRepository {
       }
     }
     await batch.commit();
+  }
+
+  Future<void> deleteAlert(String alertId) {
+    return _firestore.collection('alerts').doc(alertId).delete();
   }
 }

@@ -352,32 +352,32 @@ class _IncidentsTab extends StatelessWidget {
         context.read<DisciplineBloc>().add(LoadRecentIncidents());
       },
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
         children: [
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.1,
+          Row(
             children: [
-              DashboardStatCard(
-                title: 'Total Incidents',
-                value: state.incidents.length.toDouble(),
-                icon: Icons.gavel_outlined,
-                color: Theme.of(context).colorScheme.primary,
+              Expanded(
+                child: DashboardStatCard(
+                  title: 'Total Incidents',
+                  value: state.incidents.length.toDouble(),
+                  icon: Icons.gavel_outlined,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               ),
-              DashboardStatCard(
-                title: 'Pending Review',
-                value: state.incidents.where((i) => i.resolution.isEmpty).length.toDouble(),
-                icon: Icons.pending_actions_outlined,
-                color: semanticColors.warning,
+              const SizedBox(width: 12),
+              Expanded(
+                child: DashboardStatCard(
+                  title: 'Pending Review',
+                  value: state.incidents.where((i) => i.resolution.isEmpty).length.toDouble(),
+                  icon: Icons.pending_actions_outlined,
+                  color: semanticColors.warning,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 24),
           const SectionHeader(title: 'Recent Incidents'),
+          const SizedBox(height: 12),
           if (state.incidents.isEmpty)
             const Center(
               child: Padding(
@@ -500,7 +500,7 @@ class _CounselingTab extends StatelessWidget {
         context.read<DisciplineBloc>().add(LoadRecentIncidents());
       },
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
         children: [
           DashboardStatCard(
             title: 'Sessions This Month',
@@ -510,6 +510,7 @@ class _CounselingTab extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           const SectionHeader(title: 'Recent Sessions'),
+          const SizedBox(height: 12),
           if (state.sessions.isEmpty)
             const Center(
               child: Padding(
@@ -596,22 +597,20 @@ class _DisciplineDashboardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
       children: [
         const Skeleton(width: 200, height: 28),
-        const SizedBox(height: 24),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 1.1,
-          children: List.generate(2, (index) => const Skeleton(borderRadius: 12)),
+        const SizedBox(height: 15),
+        Row(
+          children: [
+            Expanded(child: const Skeleton(height: 48, borderRadius: 12)),
+            const SizedBox(width: 12),
+            Expanded(child: const Skeleton(height: 48, borderRadius: 12)),
+          ],
         ),
         const SizedBox(height: 24),
         const Skeleton(width: 120, height: 20),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         ...List.generate(
           5,
           (index) => const Padding(

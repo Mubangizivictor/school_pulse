@@ -9,6 +9,7 @@ import '../discipline/presentation/bloc/discipline_bloc.dart';
 import '../discipline/presentation/bloc/discipline_event.dart';
 import '../discipline/presentation/bloc/discipline_state.dart';
 import '../discipline/domain/entities/discipline_incident.dart';
+import '../matron/domain/entities/boarding_entities.dart';
 import 'widgets/student_app_bar.dart';
 
 class DisciplineScreen extends StatefulWidget {
@@ -59,7 +60,9 @@ class _DisciplineScreenState extends State<DisciplineScreen> {
                     return const Center(child: CircularProgressIndicator());
                   } else if (state is DisciplineLoaded) {
                     final incidents = state.incidents;
-                    if (incidents.isEmpty) {
+                    final boardingCases = state.boardingCases;
+
+                    if (incidents.isEmpty && boardingCases.isEmpty) {
                       return FadeInSlide(
                         child: EmptyState(
                           icon: Icons.sentiment_satisfied_alt_outlined,
@@ -69,68 +72,35 @@ class _DisciplineScreenState extends State<DisciplineScreen> {
                         ),
                       );
                     }
-                    return ListView.builder(
+                    return ListView(
                       padding: const EdgeInsets.all(16),
-                      itemCount: incidents.length,
-                      itemBuilder: (context, index) {
-                        final incident = incidents[index];
-                        return FadeInSlide(
-                          delay: Duration(milliseconds: index * 100),
-                          child: AppCard(
-                            margin: const EdgeInsets.only(bottom: 16),
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      DateFormatter.format(incident.date),
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    StatusBadge(
-                                      label: incident.severity.name
-                                          .toUpperCase(),
-                                      color: _getSeverityColor(
-                                        incident.severity,
-                                        semanticColors,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                _buildIncidentRow(
-                                  context,
-                                  'Incident',
-                                  incident.description,
-                                  Icons.report_problem_outlined,
-                                ),
-                                const SizedBox(height: 8),
-                                _buildIncidentRow(
-                                  context,
-                                  'Resolution',
-                                  incident.resolution,
-                                  Icons.check_circle_outline,
-                                ),
-                                if (incident.counselingNotes.isNotEmpty) ...[
-                                  const SizedBox(height: 8),
-                                  _buildIncidentRow(
-                                    context,
-                                    'Counseling',
-                                    incident.counselingNotes,
-                                    Icons.psychology_outlined,
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        );
-                      },
+                      children: [
+                        if (incidents.isNotEmpty) ...[
+                          const SectionHeader(title: 'Academic & General'),
+                          const SizedBox(height: 12),
+                          ...incidents.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final incident = entry.value;
+                            return FadeInSlide(
+                              delay: Duration(milliseconds: index * 100),
+                              child: _buildAcademicIncidentCard(context, incident, semanticColors),
+                            );
+                          }),
+                          const SizedBox(height: 24),
+                        ],
+                        if (boardingCases.isNotEmpty) ...[
+                          const SectionHeader(title: 'Boarding & Dormitory'),
+                          const SizedBox(height: 12),
+                          ...boardingCases.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final disciplineCase = entry.value;
+                            return FadeInSlide(
+                              delay: Duration(milliseconds: index * 100),
+                              child: _buildBoardingIncidentCard(context, disciplineCase, semanticColors),
+                            );
+                          }),
+                        ],
+                      ],
                     );
                   } else if (state is DisciplineError) {
                     return EmptyState(
@@ -148,6 +118,116 @@ class _DisciplineScreenState extends State<DisciplineScreen> {
             return const Center(child: CircularProgressIndicator());
           },
         ),
+      ),
+    );
+  }
+
+  Widget _buildAcademicIncidentCard(
+    BuildContext context,
+    DisciplineIncident incident,
+    SemanticColors semanticColors,
+  ) {
+    return AppCard(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                DateFormatter.format(incident.date),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              StatusBadge(
+                label: incident.severity.name.toUpperCase(),
+                color: _getSeverityColor(incident.severity, semanticColors),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildIncidentRow(
+            context,
+            'Incident',
+            incident.description,
+            Icons.report_problem_outlined,
+          ),
+          const SizedBox(height: 8),
+          _buildIncidentRow(
+            context,
+            'Resolution',
+            incident.resolution,
+            Icons.check_circle_outline,
+          ),
+          if (incident.counselingNotes.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _buildIncidentRow(
+              context,
+              'Counseling',
+              incident.counselingNotes,
+              Icons.psychology_outlined,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBoardingIncidentCard(
+    BuildContext context,
+    DisciplineCase disciplineCase,
+    SemanticColors semanticColors,
+  ) {
+    return AppCard(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                DateFormatter.format(disciplineCase.date),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              StatusBadge(
+                label: disciplineCase.status.toUpperCase(),
+                color: disciplineCase.status.toLowerCase() == 'resolved'
+                    ? semanticColors.success
+                    : semanticColors.warning,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildIncidentRow(
+            context,
+            'Category',
+            disciplineCase.category,
+            Icons.category_outlined,
+          ),
+          const SizedBox(height: 8),
+          _buildIncidentRow(
+            context,
+            'Incident',
+            disciplineCase.incident,
+            Icons.report_problem_outlined,
+          ),
+          const SizedBox(height: 8),
+          _buildIncidentRow(
+            context,
+            'Action',
+            disciplineCase.actionTaken,
+            Icons.gavel_outlined,
+          ),
+        ],
       ),
     );
   }

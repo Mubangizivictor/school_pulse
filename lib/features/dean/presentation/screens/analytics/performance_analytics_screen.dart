@@ -1,36 +1,56 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
+import 'package:school_pulse/features/dean/presentation/bloc/dean_event.dart';
+import 'package:school_pulse/features/dean/presentation/bloc/dean_state.dart';
+import 'package:school_pulse/injection_container.dart';
 
 class PerformanceAnalyticsScreen extends StatelessWidget {
   const PerformanceAnalyticsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Academic Performance')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _buildGradeDistribution(context),
-          const SizedBox(height: 24),
-          _buildSubjectPerformance(context),
-          const SizedBox(height: 24),
-          const SectionHeader(title: 'Top Performing Students'),
-          const SizedBox(height: 12),
-          _buildTopStudents(context),
-        ],
+    return BlocProvider(
+      create: (context) => sl<DeanBloc>()..add(const PerformanceAnalyticsRequested(type: 'school')),
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Academic Performance')),
+        body: BlocBuilder<DeanBloc, DeanState>(
+          builder: (context, state) {
+            if (state is DeanLoading) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (state is PerformanceAnalyticsLoaded) {
+              return ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  _buildGradeDistribution(context, state.analytics['gradeDistribution'] ?? {}),
+                  const SizedBox(height: 24),
+                  _buildSubjectPerformance(context, state.analytics['subjectPassRates'] ?? []),
+                  const SizedBox(height: 24),
+                  const SectionHeader(title: 'Top Performing Students'),
+                  const SizedBox(height: 12),
+                  _buildTopStudents(context, state.analytics['topStudents'] ?? []),
+                ],
+              );
+            } else if (state is DeanError) {
+              return Center(child: Text(state.message));
+            }
+            return const Center(child: Text('Initializing analytics...'));
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildGradeDistribution(BuildContext context) {
+  Widget _buildGradeDistribution(BuildContext context, Map<String, dynamic> data) {
+    final grades = ['D1', 'D2', 'C3', 'C4', 'C5', 'C6', 'P7', 'P8', 'F9'];
     return AppCard(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Grade Distribution (Term 3)', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text('Grade Distribution', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 24),
           SizedBox(
             height: 200,
@@ -45,10 +65,10 @@ class PerformanceAnalyticsScreen extends StatelessWidget {
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (value, meta) {
-                        const titles = ['D1', 'D2', 'C3', 'C4', 'C5', 'C6', 'P7', 'P8', 'F9'];
+                        if (value.toInt() >= grades.length) return const SizedBox.shrink();
                         return SideTitleWidget(
                           axisSide: meta.axisSide,
-                          child: Text(titles[value.toInt()], style: const TextStyle(fontSize: 10)),
+                          child: Text(grades[value.toInt()], style: const TextStyle(fontSize: 10)),
                         );
                       },
                     ),
@@ -59,23 +79,24 @@ class PerformanceAnalyticsScreen extends StatelessWidget {
                 ),
                 gridData: const FlGridData(show: false),
                 borderData: FlBorderData(show: false),
-                barGroups: [
-                  _makeGroupData(0, 15, Colors.blue),
-                  _makeGroupData(1, 25, Colors.blue),
-                  _makeGroupData(2, 45, Colors.blue),
-                  _makeGroupData(3, 60, Colors.blue),
-                  _makeGroupData(4, 30, Colors.blue),
-                  _makeGroupData(5, 20, Colors.blue),
-                  _makeGroupData(6, 10, Colors.orange),
-                  _makeGroupData(7, 5, Colors.orange),
-                  _makeGroupData(8, 2, Colors.red),
-                ],
+                barGroups: List.generate(grades.length, (index) {
+                  final grade = grades[index];
+                  final value = (data[grade] ?? 0).toDouble();
+                  return _makeGroupData(index, value, _getColorForGrade(grade));
+                }),
               ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Color _getColorForGrade(String grade) {
+    if (grade.startsWith('D')) return Colors.blue;
+    if (grade.startsWith('C')) return Colors.green;
+    if (grade.startsWith('P')) return Colors.orange;
+    return Colors.red;
   }
 
   BarChartGroupData _makeGroupData(int x, double y, Color color) {
@@ -92,7 +113,7 @@ class PerformanceAnalyticsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSubjectPerformance(BuildContext context) {
+  Widget _buildSubjectPerformance(BuildContext context, List<dynamic> subjects) {
     return AppCard(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -100,35 +121,34 @@ class PerformanceAnalyticsScreen extends StatelessWidget {
         children: [
           const Text('Subject Pass Rates', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 20),
-          _SubjectRow(subject: 'Mathematics', rate: 0.88, color: Colors.green),
-          _SubjectRow(subject: 'English', rate: 0.92, color: Colors.green),
-          _SubjectRow(subject: 'Science', rate: 0.74, color: Colors.orange),
-          _SubjectRow(subject: 'Social Studies', rate: 0.95, color: Colors.green),
+          ...subjects.map((s) => _SubjectRow(
+                subject: s['subject'] ?? '',
+                rate: (s['rate'] ?? 0).toDouble(),
+                color: (s['rate'] ?? 0) > 0.8 ? Colors.green : Colors.orange,
+              )),
         ],
       ),
     );
   }
 
-  Widget _buildTopStudents(BuildContext context) {
-    final students = [
-      {'name': 'Namono Grace', 'class': 'P.7 Blue', 'score': '92%', 'rank': '1'},
-      {'name': 'Okello David', 'class': 'P.7 Red', 'score': '90%', 'rank': '2'},
-      {'name': 'Mugabe Robert', 'class': 'P.6 White', 'score': '89%', 'rank': '3'},
-    ];
-
+  Widget _buildTopStudents(BuildContext context, List<dynamic> students) {
     return Column(
-      children: students.map((s) => AppCard(
-        margin: const EdgeInsets.only(bottom: 8),
-        child: ListTile(
-          leading: CircleAvatar(
-            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-            child: Text(s['rank']!, style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
+      children: students.asMap().entries.map((entry) {
+        final idx = entry.key;
+        final s = entry.value;
+        return AppCard(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+              child: Text('${idx + 1}', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
+            ),
+            title: Text(s['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text(s['class'] ?? ''),
+            trailing: Text('${(s['score'] * 100).toInt()}%', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           ),
-          title: Text(s['name']!, style: const TextStyle(fontWeight: FontWeight.bold)),
-          subtitle: Text(s['class']!),
-          trailing: Text(s['score']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        ),
-      )).toList(),
+        );
+      }).toList(),
     );
   }
 }

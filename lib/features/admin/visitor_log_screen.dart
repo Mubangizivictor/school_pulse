@@ -7,6 +7,7 @@ import 'package:school_pulse/features/admin/data/repositories/visitor_repository
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:school_pulse/features/admin/data/repositories/audit_repository.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
 class VisitorLogScreen extends StatefulWidget {
@@ -20,6 +21,17 @@ class _VisitorLogScreenState extends State<VisitorLogScreen> {
   final _repository = di.sl<VisitorRepository>();
   final _searchController = TextEditingController();
   String _query = '';
+  
+  // Filtering state
+  int? _selectedYear;
+  int? _selectedMonth; // 1-12, or null for entire year
+  bool _showTodayOnly = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedYear = DateTime.now().year;
+  }
 
   @override
   void dispose() {
@@ -36,6 +48,11 @@ class _VisitorLogScreenState extends State<VisitorLogScreen> {
       appBar: AppBar(
         title: const Text('Visitor Log'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_today_outlined),
+            onPressed: () => _showFilterDialog(context),
+            tooltip: 'Filter by Period',
+          ),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () => _showAddVisitorDialog(context),
@@ -57,9 +74,24 @@ class _VisitorLogScreenState extends State<VisitorLogScreen> {
             );
           }
           final visitors = snapshot.data ?? const [];
+          
+          final now = DateTime.now();
+          final filteredByDate = visitors.where((v) {
+            if (_showTodayOnly) {
+              return v.checkIn.year == now.year && 
+                     v.checkIn.month == now.month && 
+                     v.checkIn.day == now.day;
+            }
+            
+            bool matchesYear = _selectedYear == null || v.checkIn.year == _selectedYear;
+            bool matchesMonth = _selectedMonth == null || v.checkIn.month == _selectedMonth;
+            
+            return matchesYear && matchesMonth;
+          }).toList();
+
           final filtered = _query.isEmpty
-              ? visitors
-              : visitors
+              ? filteredByDate
+              : filteredByDate
                   .where((v) =>
                       v.name.toLowerCase().contains(_query) ||
                       v.purpose.toLowerCase().contains(_query))
@@ -69,7 +101,11 @@ class _VisitorLogScreenState extends State<VisitorLogScreen> {
             padding: EdgeInsets.all(isMobile ? 16 : 24),
             child: Column(
               children: [
-                _buildVisitorStats(context, visitors),
+                _buildActiveFilterChip(context),
+                const SizedBox(height: 12),
+                _buildVisitorStats(context, filteredByDate),
+                const SizedBox(height: 24),
+                _buildVisitorTrafficChart(context, filteredByDate),
                 const SizedBox(height: 24),
                 _buildVisitorList(context, filtered),
               ],
@@ -77,6 +113,103 @@ class _VisitorLogScreenState extends State<VisitorLogScreen> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildActiveFilterChip(BuildContext context) {
+    String label = '';
+    if (_showTodayOnly) {
+      label = 'Showing: Today';
+    } else {
+      final monthName = _selectedMonth != null ? DateFormat('MMMM').format(DateTime(2000, _selectedMonth!)) : 'All Months';
+      label = 'Showing: $monthName ${_selectedYear ?? ""}';
+    }
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: InputChip(
+        avatar: const Icon(Icons.filter_list, size: 16),
+        label: Text(label),
+        onPressed: () => _showFilterDialog(context),
+        onDeleted: _showTodayOnly ? null : () {
+          setState(() {
+            _showTodayOnly = true;
+          });
+        },
+      ),
+    );
+  }
+
+  void _showFilterDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        int? tempYear = _selectedYear;
+        int? tempMonth = _selectedMonth;
+        bool tempToday = _showTodayOnly;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Filter Visitors'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SwitchListTile(
+                    title: const Text('Today Only'),
+                    value: tempToday,
+                    onChanged: (val) {
+                      setDialogState(() {
+                        tempToday = val;
+                      });
+                    },
+                  ),
+                  if (!tempToday) ...[
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<int>(
+                      decoration: const InputDecoration(labelText: 'Year'),
+                      initialValue: tempYear,
+                      items: List.generate(5, (i) => DateTime.now().year - i).map((y) {
+                        return DropdownMenuItem(value: y, child: Text(y.toString()));
+                      }).toList(),
+                      onChanged: (y) => setDialogState(() => tempYear = y),
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<int?>(
+                      decoration: const InputDecoration(labelText: 'Month'),
+                      initialValue: tempMonth,
+                      items: [
+                        const DropdownMenuItem(value: null, child: Text('All Months')),
+                        ...List.generate(12, (i) => i + 1).map((m) {
+                          return DropdownMenuItem(
+                            value: m,
+                            child: Text(DateFormat('MMMM').format(DateTime(2000, m))),
+                          );
+                        }),
+                      ],
+                      onChanged: (m) => setDialogState(() => tempMonth = m),
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                FilledButton(
+                  onPressed: () {
+                    setState(() {
+                      _showTodayOnly = tempToday;
+                      _selectedYear = tempYear;
+                      _selectedMonth = tempMonth;
+                    });
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Apply Filter'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -93,16 +226,31 @@ class _VisitorLogScreenState extends State<VisitorLogScreen> {
             completed.length;
 
     if (isMobile) {
-      return GridView.count(
-        crossAxisCount: 2,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 1.5,
+      return Column(
         children: [
-          DashboardStatCard(title: 'Active', value: active.length.toDouble(), icon: Icons.meeting_room, color: Colors.blue, trend: 'Inside'),
-          DashboardStatCard(title: 'Total Today', value: today.length.toDouble(), icon: Icons.people_outline, color: Colors.green, trend: 'Logged'),
+          Row(
+            children: [
+              Expanded(
+                child: DashboardStatCard(
+                  title: 'Active',
+                  value: active.length.toDouble(),
+                  icon: Icons.meeting_room,
+                  color: Colors.blue,
+                  trend: 'Inside',
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DashboardStatCard(
+                  title: 'Total Today',
+                  value: today.length.toDouble(),
+                  icon: Icons.people_outline,
+                  color: Colors.green,
+                  trend: 'Logged',
+                ),
+              ),
+            ],
+          ),
         ],
       );
     }
@@ -134,14 +282,9 @@ class _VisitorLogScreenState extends State<VisitorLogScreen> {
                     children: [
                       const Text('Visitor History', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                       const SizedBox(height: 12),
-                      TextField(
+                      AppSearchField(
                         controller: _searchController,
                         onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
-                        decoration: const InputDecoration(
-                          hintText: 'Search...',
-                          prefixIcon: Icon(Icons.search),
-                          isDense: true,
-                        ),
                       ),
                     ],
                   )
@@ -151,14 +294,10 @@ class _VisitorLogScreenState extends State<VisitorLogScreen> {
                       const Text('Visitor Entry/Exit History', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                       SizedBox(
                         width: 300,
-                        child: TextField(
+                        child: AppSearchField(
                           controller: _searchController,
+                          hintText: 'Search by name or purpose...',
                           onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
-                          decoration: const InputDecoration(
-                            hintText: 'Search by name or purpose...',
-                            prefixIcon: Icon(Icons.search),
-                            isDense: true,
-                          ),
                         ),
                       ),
                     ],
@@ -232,50 +371,123 @@ class _VisitorLogScreenState extends State<VisitorLogScreen> {
     );
   }
 
+  Widget _buildVisitorTrafficChart(BuildContext context, List<Visitor> visitors) {
+    final now = DateTime.now();
+    const weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final counts = {for (final label in weekdayLabels) label: 0.0};
+
+    for (final v in visitors) {
+      final checkInDay = DateTime(v.checkIn.year, v.checkIn.month, v.checkIn.day);
+      final daysAgo = DateTime(now.year, now.month, now.day).difference(checkInDay).inDays;
+      if (daysAgo >= 0 && daysAgo < 7) {
+        final label = weekdayLabels[v.checkIn.weekday - 1];
+        counts[label] = (counts[label] ?? 0) + 1;
+      }
+    }
+
+    final maxCount = counts.values.fold<double>(0, (a, b) => a > b ? a : b);
+    return PerformanceBarChart(
+      title: 'Visitor Traffic (Last 7 Days)',
+      color: Colors.blue,
+      data: counts,
+      maxValue: maxCount == 0 ? 1 : maxCount,
+      showPercentSign: false,
+    );
+  }
+
   void _showAddVisitorDialog(BuildContext context) {
     final nameController = TextEditingController();
     final contactController = TextEditingController();
     final purposeController = TextEditingController();
+    DateTime selectedDate = DateTime.now();
+    
     final hostId = (context.read<AuthBloc>().state is AuthAuthenticated)
         ? (context.read<AuthBloc>().state as AuthAuthenticated).user.id
         : '';
 
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('New Visitor Entry'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Full Name')),
-            const SizedBox(height: 16),
-            TextField(
-              controller: contactController,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: 'Contact Number'),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text('New Visitor Entry'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Full Name')),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: contactController,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(labelText: 'Contact Number'),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(controller: purposeController, decoration: const InputDecoration(labelText: 'Purpose of Visit')),
+                  const SizedBox(height: 16),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Check-in Date'),
+                    subtitle: Text(DateFormat('MMM dd, yyyy - hh:mm a').format(selectedDate)),
+                    trailing: const Icon(Icons.calendar_month),
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (date != null) {
+                        if (!dialogContext.mounted) return;
+                        final time = await showTimePicker(
+                          context: dialogContext,
+                          initialTime: TimeOfDay.fromDateTime(selectedDate),
+                        );
+                        if (time != null) {
+                          setDialogState(() {
+                            selectedDate = DateTime(
+                              date.year,
+                              date.month,
+                              date.day,
+                              time.hour,
+                              time.minute,
+                            );
+                          });
+                        }
+                      }
+                    },
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            TextField(controller: purposeController, decoration: const InputDecoration(labelText: 'Purpose of Visit')),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () async {
-              if (nameController.text.trim().isEmpty) return;
-              await _repository.addVisitor(Visitor(
-                id: '',
-                name: nameController.text.trim(),
-                purpose: purposeController.text.trim().isEmpty ? 'General visit' : purposeController.text.trim(),
-                contact: contactController.text.trim(),
-                checkIn: DateTime.now(),
-                signedInBy: hostId,
-              ));
-              if (dialogContext.mounted) Navigator.pop(dialogContext);
-            },
-            child: const Text('Log Entry'),
-          ),
-        ],
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+              FilledButton(
+                onPressed: () async {
+                  if (nameController.text.trim().isEmpty) return;
+                  await _repository.addVisitor(Visitor(
+                    id: '',
+                    name: nameController.text.trim(),
+                    purpose: purposeController.text.trim().isEmpty ? 'General visit' : purposeController.text.trim(),
+                    contact: contactController.text.trim(),
+                    checkIn: selectedDate,
+                    signedInBy: hostId,
+                  ));
+                  di.sl<AuditRepository>().logAction(
+                    title: 'Visitor Checked In',
+                    description: '${nameController.text.trim()} - ${purposeController.text.trim().isEmpty ? 'General visit' : purposeController.text.trim()}.',
+                    iconName: 'inventory_2',
+                    colorHex: 'FF009688',
+                    userId: hostId.isEmpty ? null : hostId,
+                  );
+                  if (!dialogContext.mounted) return;
+                  Navigator.pop(dialogContext);
+                },
+                child: const Text('Log Entry'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

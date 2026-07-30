@@ -43,9 +43,9 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, void>> completeParentPinSetup(String code, String newPin) async {
+  Future<Either<Failure, void>> completeParentPinSetup(String code, String phoneNumber, String newPin) async {
     try {
-      await remoteDataSource.completeParentPinSetup(code, newPin);
+      await remoteDataSource.completeParentPinSetup(code, phoneNumber, newPin);
       return const Right(null);
     } on AuthFailure catch (e) {
       return Left(e);
@@ -78,7 +78,8 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Either<Failure, String>> createStaffAccount({
     required String name,
     required String email,
-    required UserRole role,
+    required String schoolId,
+    required List<UserRole> roles,
     required String password,
     String? assignedClass,
     List<SubjectAssignment>? subjects,
@@ -87,7 +88,8 @@ class AuthRepositoryImpl implements AuthRepository {
       final temporaryPassword = await remoteDataSource.createStaffAccount(
         name: name,
         email: email,
-        role: role,
+        schoolId: schoolId,
+        roles: roles,
         password: password,
         assignedClass: assignedClass,
         subjects: subjects,
@@ -123,9 +125,9 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, void>> toggleStaffActiveStatus(String userId, bool isActive) async {
+  Future<Either<Failure, void>> toggleStaffActiveStatus(String userId, bool isActive, {String? reason}) async {
     try {
-      await remoteDataSource.toggleStaffActiveStatus(userId, isActive);
+      await remoteDataSource.toggleStaffActiveStatus(userId, isActive, reason: reason);
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString()));

@@ -207,6 +207,12 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                                   onTap: () => context.push('/parent/discipline'),
                                 ),
                                 QuickActionItem(
+                                  label: 'Boarding',
+                                  icon: Icons.bed_outlined,
+                                  color: Colors.indigo,
+                                  onTap: () => context.push('/parent/boarding'),
+                                ),
+                                QuickActionItem(
                                   label: 'Messages',
                                   icon: Icons.chat_bubble_outline,
                                   color: Colors.blueAccent,
@@ -254,9 +260,13 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                                             semanticColors,
                                           ),
                                           icon: _getAlertIcon(alert.severity),
-                                          onDismiss: () => context
-                                              .read<NotificationsBloc>()
-                                              .add(DismissAlert(alert.id)),
+                                          onDismiss: () {
+                                            final authState = context.read<AuthBloc>().state;
+                                            if (authState is! AuthAuthenticated) return;
+                                            context.read<NotificationsBloc>().add(
+                                                  DismissAlert(alert.id, authState.user.id),
+                                                );
+                                          },
                                         ),
                                       );
                                     })

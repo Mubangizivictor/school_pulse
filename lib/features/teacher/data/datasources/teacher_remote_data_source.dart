@@ -287,6 +287,7 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
       return ReportComment(
         id: doc.id,
         studentId: data['studentId'] ?? '',
+        className: data['className'] ?? '',
         term: data['term'] ?? '',
         year: data['year'] ?? '',
         comment: data['comment'] ?? '',

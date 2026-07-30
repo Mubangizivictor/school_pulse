@@ -8,7 +8,7 @@ class GetAllStudents {
 
   GetAllStudents(this.repository);
 
-  Future<Either<Failure, List<Student>>> call() async {
-    return await repository.getAllStudents();
+  Future<Either<Failure, List<Student>>> call({String? schoolId}) async {
+    return await repository.getAllStudents(schoolId: schoolId);
   }
 }

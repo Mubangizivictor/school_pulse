@@ -6,6 +6,7 @@ import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/teacher/teacher_library_screen.dart';
 
 class StaffMoreScreen extends StatelessWidget {
   const StaffMoreScreen({super.key});
@@ -51,6 +52,14 @@ class StaffMoreScreen extends StatelessWidget {
                     title: 'Class Analytics',
                     onTap: () => context.push('/staff/class-analytics'),
                   ),
+                _MenuTile(
+                  icon: Icons.library_books_outlined,
+                  title: 'Library & Resources',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const TeacherLibraryScreen()),
+                  ),
+                ),
                 _MenuTile(
                   icon: Icons.event_note_outlined,
                   title: 'School Calendar',

@@ -1,4 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import 'package:school_pulse/core/notification/notification_service.dart';
+import 'package:school_pulse/features/admin/data/repositories/audit_repository.dart';
+import '../../domain/entities/school_event.dart';
 import '../models/school_event_model.dart';
 
 abstract class CalendarRemoteDataSource {
@@ -33,7 +38,7 @@ class CalendarRemoteDataSourceImpl implements CalendarRemoteDataSource {
       }
     } catch (e) {
       // Log error but don't block fetching upcoming events
-      print('Error cleaning up old events: $e');
+      debugPrint('Error cleaning up old events: $e');
     }
 
     // 2. Fetch upcoming events (current and future)
@@ -48,10 +53,35 @@ class CalendarRemoteDataSourceImpl implements CalendarRemoteDataSource {
 
   @override
   Future<void> addEvent(SchoolEventModel event) async {
-    if (event.id.isNotEmpty) {
+    // An existing id means this is an edit to an already-announced event -
+    // only a genuinely new event (empty id, Firestore assigns one) should
+    // trigger a fresh broadcast.
+    final isNewEvent = event.id.isEmpty;
+
+    if (!isNewEvent) {
       await firestore.collection('school_events').doc(event.id).set(event.toFirestore());
     } else {
       await firestore.collection('school_events').add(event.toFirestore());
+    }
+
+    if (isNewEvent) {
+      try {
+        await NotificationService().sendBroadcast(
+          title: 'New School Event: ${event.title}',
+          body: event.description,
+          targetGroups: event.targetGroups.isEmpty ? defaultEventTargetGroups : event.targetGroups,
+        );
+      } catch (e) {
+        if (kDebugMode) print('Error broadcasting calendar event: $e');
+      }
+
+      AuditRepository().logAction(
+        title: 'School Event Created',
+        description: '"${event.title}" scheduled for ${event.date.day}/${event.date.month}/${event.date.year}.',
+        iconName: 'send',
+        colorHex: 'FF3F51B5',
+        userId: FirebaseAuth.instance.currentUser?.uid,
+      );
     }
   }
 

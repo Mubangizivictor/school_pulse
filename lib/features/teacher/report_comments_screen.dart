@@ -179,7 +179,7 @@ class _StudentCommentTileState extends State<_StudentCommentTile> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.between,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
               widget.student.name,

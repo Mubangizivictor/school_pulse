@@ -4,7 +4,9 @@ enum AlertSeverity { info, success, warning, error }
 
 class Alert extends Equatable {
   final String id;
-  final String studentId;
+  // Null for a school-wide/class broadcast (BroadcastSmsScreen), which
+  // isn't scoped to a single student.
+  final String? studentId;
   final String title;
   final String message;
   final AlertSeverity severity;
@@ -12,7 +14,7 @@ class Alert extends Equatable {
 
   const Alert({
     required this.id,
-    required this.studentId,
+    this.studentId,
     required this.title,
     required this.message,
     required this.severity,

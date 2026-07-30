@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/gatekeeper/presentation/bloc/gatekeeper_bloc.dart';
@@ -131,6 +132,14 @@ class _GatekeeperDashboardScreenState extends State<GatekeeperDashboardScreen> {
                   const SizedBox(height: 24),
                   const SectionHeader(title: 'Recent Visitors'),
                   const SizedBox(height: 12),
+                  if (state.recentVisitors.isEmpty)
+                    EmptyState(
+                      icon: Icons.person_off_outlined,
+                      title: 'No visitors yet',
+                      message: 'New visitors will appear here once they are checked in.',
+                      ctaLabel: 'Visit Log',
+                      onCtaPressed: () => context.push('/staff/gatekeeper/visitors'),
+                    ),
                   ...state.recentVisitors.map((visitor) => FadeInSlide(
                         child: AppCard(
                           margin: const EdgeInsets.only(bottom: 12),
@@ -170,8 +179,15 @@ class _GatekeeperDashboardScreenState extends State<GatekeeperDashboardScreen> {
                       )),
                   const SizedBox(height: 24),
                   PrimaryButton(
+                    label: 'Visitor Management',
+                    icon: Icons.people_outline,
+                    onPressed: () => context.push('/staff/gatekeeper/visitors'),
+                  ),
+                  const SizedBox(height: 12),
+                  SecondaryButton(
                     label: 'New Visitor Entry',
-                    onPressed: () => _showNewVisitorDialog(context),
+                    icon: Icons.add,
+                    onPressed: () => context.push('/staff/gatekeeper/visitors/new'),
                   ),
                 ],
               ),
@@ -183,9 +199,6 @@ class _GatekeeperDashboardScreenState extends State<GatekeeperDashboardScreen> {
     );
   }
 
-  void _showNewVisitorDialog(BuildContext context) {
-    // ...
-  }
 
   void _showVehicleLogDialog(BuildContext context) {
     showDialog(

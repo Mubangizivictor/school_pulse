@@ -1,20 +1,28 @@
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/core/usecases/usecase.dart';
+import 'package:school_pulse/features/admin/data/repositories/audit_repository.dart';
 import 'package:school_pulse/core/user_roles.dart';
+import 'package:school_pulse/core/utils.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/usecases/delete_staff_member.dart';
 import 'package:school_pulse/features/auth/domain/usecases/update_staff_member.dart';
 import 'package:school_pulse/features/auth/domain/usecases/create_staff_account.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
+import 'package:school_pulse/features/student/domain/entities/student.dart';
+import 'package:school_pulse/features/student/domain/entities/student_enums.dart';
 import 'package:school_pulse/features/student/domain/entities/parent_access_code.dart';
 import 'package:school_pulse/features/auth/domain/usecases/toggle_staff_status.dart';
 import 'package:school_pulse/features/student/domain/usecases/get_all_students.dart';
 import 'package:school_pulse/features/student/domain/usecases/manage_parent_access_codes.dart';
-import 'package:school_pulse/features/admin/data/models/school_class.dart';
-import 'package:school_pulse/features/admin/data/repositories/school_structure_repository.dart';
+import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
+import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 import 'package:go_router/go_router.dart';
 
@@ -32,7 +40,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -45,7 +53,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
     _appliedDeepLinkTab = true;
     final uri = GoRouterState.of(context).uri;
     final tabIndex = int.tryParse(uri.queryParameters['tab'] ?? '0') ?? 0;
-    if (tabIndex >= 0 && tabIndex < 2) {
+    if (tabIndex >= 0 && tabIndex < 3) {
       _tabController.index = tabIndex;
     }
   }
@@ -67,6 +75,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
           isScrollable: false,
           tabs: const [
             Tab(icon: Icon(Icons.people_outline), text: 'Staff Accounts'),
+            Tab(icon: Icon(Icons.school_outlined), text: 'Students'),
             Tab(icon: Icon(Icons.vpn_key_outlined), text: 'Parent Access'),
           ],
         ),
@@ -75,7 +84,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> with Single
         controller: _tabController,
         children: const [
           _StaffTab(),
-          _ParentCodesTab(),
+          _StudentsTab(),
+          ParentCodesTab(),
         ],
       ),
     );
@@ -94,11 +104,11 @@ class _StaffTabState extends State<_StaffTab> {
   String _searchQuery = '';
   String _statusFilter = 'Active'; // 'Active', 'Disabled', 'All'
 
-  final _structureRepository = di.sl<SchoolStructureRepository>();
+  final _structureRepository = di.sl<StructureRepository>();
   List<String> _classNames = [];
   List<String> _subjectNames = [];
   StreamSubscription<List<SchoolClass>>? _classesSub;
-  StreamSubscription<List<SchoolSubject>>? _subjectsSub;
+  StreamSubscription<List<Subject>>? _subjectsSub;
 
   @override
   void initState() {
@@ -164,33 +174,43 @@ class _StaffTabState extends State<_StaffTab> {
     );
 
     if (confirmed == true) {
+      final activating = !member.isActive;
       await di.sl<ToggleStaffStatus>()(
-        member.id, 
-        !member.isActive,
+        member.id,
+        activating,
         reason: member.isActive ? reasonController.text.trim() : null,
+      );
+      await di.sl<AuditRepository>().logAction(
+        title: activating ? 'Staff Account Enabled' : 'Staff Account Disabled',
+        description: activating
+            ? '${member.name} was re-enabled.'
+            : '${member.name} was disabled${reasonController.text.trim().isNotEmpty ? ' - ${reasonController.text.trim()}' : ''}.',
+        iconName: 'gpp_maybe',
+        colorHex: activating ? 'FF4CAF50' : 'FFF44336',
+        userId: FirebaseAuth.instance.currentUser?.uid,
       );
       _refresh();
     }
   }
 
   Future<void> _deleteStaff(UserEntity member) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Account'),
-        content: Text('Are you sure you want to PERMANENTLY delete the account for ${member.name}? This action cannot be undone.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+    final confirmed = await confirmActionDialog(
+      context,
+      title: 'Delete Account',
+      message: 'Are you sure you want to PERMANENTLY delete the account for ${member.name}? This action cannot be undone.',
+      confirmLabel: 'Delete',
+      isDestructive: true,
     );
 
     if (confirmed == true) {
       await di.sl<DeleteStaffMember>()(member.id);
+      await di.sl<AuditRepository>().logAction(
+        title: 'Staff Account Deleted',
+        description: '${member.name} (${member.email}) was permanently deleted.',
+        iconName: 'gpp_maybe',
+        colorHex: 'FFF44336',
+        userId: FirebaseAuth.instance.currentUser?.uid,
+      );
       _refresh();
     }
   }
@@ -238,6 +258,13 @@ class _StaffTabState extends State<_StaffTab> {
                         onSelected: (val) {
                           setDialogState(() {
                             if (val) {
+                              // Matron and Patron are mutually exclusive gendered roles
+                              if (role == UserRole.boardingMatron) {
+                                selectedRoles.remove(UserRole.boardingPatron);
+                              } else if (role == UserRole.boardingPatron) {
+                                selectedRoles.remove(UserRole.boardingMatron);
+                              }
+                              
                               selectedRoles.add(role);
                               if (role == UserRole.classTeacher && _classNames.isNotEmpty) {
                                 assignedClass ??= _classNames.first;
@@ -312,6 +339,7 @@ class _StaffTabState extends State<_StaffTab> {
         id: member.id,
         name: nameController.text.trim(),
         email: emailController.text.trim(),
+        schoolId: member.schoolId,
         roles: selectedRoles.toList(),
         assignedClass: selectedRoles.contains(UserRole.classTeacher) ? assignedClass : null,
         subjects: selectedRoles.contains(UserRole.subjectTeacher) ? subjects : null,
@@ -472,6 +500,13 @@ class _StaffTabState extends State<_StaffTab> {
                         onSelected: (val) {
                           setDialogState(() {
                             if (val) {
+                              // Matron and Patron are mutually exclusive gendered roles
+                              if (role == UserRole.boardingMatron) {
+                                selectedRoles.remove(UserRole.boardingPatron);
+                              } else if (role == UserRole.boardingPatron) {
+                                selectedRoles.remove(UserRole.boardingMatron);
+                              }
+
                               selectedRoles.add(role);
                               if (role == UserRole.classTeacher && _classNames.isNotEmpty) {
                                 assignedClass ??= _classNames.first;
@@ -566,6 +601,9 @@ class _StaffTabState extends State<_StaffTab> {
     final createResult = await di.sl<CreateStaffAccount>()(CreateStaffAccountParams(
       email: emailController.text.trim(),
       name: nameController.text.trim(),
+      schoolId: context.read<AuthBloc>().state is AuthAuthenticated
+          ? (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId
+          : '',
       roles: selectedRoles.toList(),
       password: passwordController.text.trim(),
       assignedClass: selectedRoles.contains(UserRole.classTeacher) ? assignedClass : null,
@@ -581,6 +619,13 @@ class _StaffTabState extends State<_StaffTab> {
       ),
       (tempPassword) {
         _refresh();
+        di.sl<AuditRepository>().logAction(
+          title: 'Staff Account Created',
+          description: '${nameController.text.trim()} was added as ${selectedRoles.map(UserRoleDisplay.name).join(', ')}.',
+          iconName: 'person_add',
+          colorHex: 'FF2196F3',
+          userId: FirebaseAuth.instance.currentUser?.uid,
+        );
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
@@ -588,7 +633,7 @@ class _StaffTabState extends State<_StaffTab> {
               children: [
                 Icon(Icons.check_circle, color: Colors.green),
                 SizedBox(width: 8),
-                Text('Staff Created'),
+                Expanded(child: Text('Staff Created')),
               ],
             ),
             content: Column(
@@ -669,14 +714,8 @@ class _StaffTabState extends State<_StaffTab> {
                     Row(
                       children: [
                         Expanded(
-                          child: TextField(
-                            decoration: InputDecoration(
-                              hintText: isMobile ? 'Search...' : 'Search staff by name or email...',
-                              prefixIcon: const Icon(Icons.search),
-                              filled: true,
-                              fillColor: Theme.of(context).colorScheme.surface,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                            ),
+                          child: AppSearchField(
+                            hintText: isMobile ? 'Search...' : 'Search staff by name or email...',
                             onChanged: (value) => setState(() => _searchQuery = value),
                           ),
                         ),
@@ -720,6 +759,7 @@ class _StaffTabState extends State<_StaffTab> {
                       return AppCard(
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(12),
+                        onTap: () => _showStaffDetails(member),
                         child: Row(
                           children: [
                             AvatarInitials(name: member.name, size: 40),
@@ -755,6 +795,10 @@ class _StaffTabState extends State<_StaffTab> {
                                   ),
                                 ],
                               ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.info_outline),
+                              onPressed: () => _showStaffDetails(member),
                             ),
                             IconButton(
                               icon: const Icon(Icons.more_vert),
@@ -798,24 +842,29 @@ class _StaffTabState extends State<_StaffTab> {
                               rows: filteredStaff.map((member) => DataRow(
                               color: member.isActive ? null : WidgetStateProperty.all(Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.05)),
                                 cells: [
-                                  DataCell(Row(
-                                    children: [
-                                      AvatarInitials(name: member.name, size: 36),
-                                      const SizedBox(width: 12),
-                                      Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                  DataCell(
+                                    InkWell(
+                                      onTap: () => _showStaffDetails(member),
+                                      child: Row(
                                         children: [
-                                          Text(member.name.isEmpty ? member.email : member.name, 
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              decoration: member.isActive ? null : TextDecoration.lineThrough,
-                                            )),
-                                          Text(member.email, style: Theme.of(context).textTheme.bodySmall),
+                                          AvatarInitials(name: member.name, size: 36),
+                                          const SizedBox(width: 12),
+                                          Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(member.name.isEmpty ? member.email : member.name, 
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  decoration: member.isActive ? null : TextDecoration.lineThrough,
+                                                )),
+                                              Text(member.email, style: Theme.of(context).textTheme.bodySmall),
+                                            ],
+                                          ),
                                         ],
                                       ),
-                                    ],
-                                  )),
+                                    )
+                                  ),
                                   DataCell(StatusBadge(
                                     label: UserRoleDisplay.name(member.role),
                                     color: Theme.of(context).colorScheme.secondary,
@@ -833,6 +882,11 @@ class _StaffTabState extends State<_StaffTab> {
                                   )),
                                   DataCell(Row(
                                     children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.visibility_outlined),
+                                        tooltip: 'View Details',
+                                        onPressed: () => _showStaffDetails(member),
+                                      ),
                                       IconButton(
                                         icon: Icon(member.isActive ? Icons.block : Icons.check_circle_outline, 
                                           color: member.isActive ? Theme.of(context).colorScheme.error : Colors.green),
@@ -860,6 +914,7 @@ class _StaffTabState extends State<_StaffTab> {
                     ),
                   ),
                 ),
+
               ),
             ],
           );
@@ -875,6 +930,14 @@ class _StaffTabState extends State<_StaffTab> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            ListTile(
+              leading: const Icon(Icons.visibility_outlined),
+              title: const Text('View Details'),
+              onTap: () {
+                Navigator.pop(context);
+                _showStaffDetails(member);
+              },
+            ),
             ListTile(
               leading: const Icon(Icons.edit_outlined),
               title: const Text('Edit Details'),
@@ -905,16 +968,237 @@ class _StaffTabState extends State<_StaffTab> {
       ),
     );
   }
+
+  void _showStaffDetails(UserEntity member) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            AvatarInitials(name: member.name, size: 40),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(member.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(member.email, style: Theme.of(context).textTheme.bodySmall),
+                ],
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 400,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Divider(),
+                _buildDetailItem(context, 'System Roles', member.roles.map(UserRoleDisplay.name).join(', ')),
+                if (member.assignedClass != null)
+                  _buildDetailItem(context, 'Assigned Class', member.assignedClass!),
+                if (member.subjects != null && member.subjects!.isNotEmpty)
+                  _buildDetailItem(
+                    context, 
+                    'Subject Assignments', 
+                    member.subjects!.map((s) => '${s.subjectName} (${s.className})').join('\n')
+                  ),
+                if (member.phoneNumber != null)
+                  _buildDetailItem(context, 'Phone Number', member.phoneNumber!),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: member.isActive 
+                      ? Colors.green.withValues(alpha: 0.1) 
+                      : Colors.red.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            member.isActive ? Icons.check_circle : Icons.error, 
+                            size: 16, 
+                            color: member.isActive ? Colors.green : Colors.red
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            member.isActive ? 'Account Active' : 'Account Disabled',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: member.isActive ? Colors.green : Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (!member.isActive && member.deactivationReason != null && member.deactivationReason!.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        const Text('Reason for deactivation:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                        Text(member.deactivationReason!, style: const TextStyle(fontSize: 12)),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _editStaff(member);
+            }, 
+            child: const Text('Edit')
+          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+        ],
+      ),
+    );
+  }
+
 }
 
-class _ParentCodesTab extends StatefulWidget {
-  const _ParentCodesTab();
+Widget _buildDetailItem(BuildContext context, String label, String value) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8.0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 2),
+        Text(value),
+      ],
+    ),
+  );
+}
+
+class _StudentsTab extends StatefulWidget {
+  const _StudentsTab();
 
   @override
-  State<_ParentCodesTab> createState() => _ParentCodesTabState();
+  State<_StudentsTab> createState() => _StudentsTabState();
 }
 
-class _ParentCodesTabState extends State<_ParentCodesTab> {
+class _StudentsTabState extends State<_StudentsTab> {
+  late Future<List<Student>> _future;
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  Future<List<Student>> _load() async {
+    final result = await di.sl<GetAllStudents>()();
+    return result.fold((failure) => throw failure, (students) => students);
+  }
+
+  void _refresh() {
+    setState(() {
+      _future = _load();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      onRefresh: () async => _refresh(),
+      child: FutureBuilder<List<Student>>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final students = snapshot.data ?? [];
+          final filteredStudents = students.where((s) {
+            final query = _searchQuery.toLowerCase();
+            return s.name.toLowerCase().contains(query) ||
+                s.studentCode.toLowerCase().contains(query) ||
+                s.admissionNumber.toLowerCase().contains(query);
+          }).toList();
+
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: AppSearchField(
+                  hintText: 'Search students by name, code, or admission no...',
+                  onChanged: (value) => setState(() => _searchQuery = value),
+                ),
+              ),
+              Expanded(
+                child: filteredStudents.isEmpty
+                    ? const EmptyState(
+                        icon: Icons.school_outlined,
+                        title: 'No Students Found',
+                        message: 'No students match your search.',
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: filteredStudents.length,
+                        itemBuilder: (context, index) {
+                          final student = filteredStudents[index];
+                          return AppCard(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(12),
+                            child: Row(
+                              children: [
+                                AvatarInitials(name: student.name, size: 40),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        student.name,
+                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        '${student.studentCode} • Class: ${student.className}',
+                                        style: Theme.of(context).textTheme.bodySmall,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                StatusBadge(
+                                  label: student.status.name,
+                                  color: student.status == StudentStatus.active
+                                      ? Colors.green
+                                      : Theme.of(context).colorScheme.outline,
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class ParentCodesTab extends StatefulWidget {
+  const ParentCodesTab({super.key});
+
+  @override
+  State<ParentCodesTab> createState() => ParentCodesTabState();
+}
+
+class ParentCodesTabState extends State<ParentCodesTab> {
   late Future<List<ParentAccessCode>> _future;
   String _searchQuery = '';
   String _statusFilter = 'Active'; // 'Active', 'Inactive', 'All'
@@ -947,7 +1231,7 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Are you sure you want to ${code.isActive ? 'deactivate' : 'restore'} the access code ${code.code}? ${code.isActive ? 'Parents using this code will lose access.' : ''}'),
+            Text('Are you sure you want to ${code.isActive ? 'deactivate' : 'restore'} the access code ${code.parentCode}? ${code.isActive ? 'Parents using this code will lose access.' : ''}'),
             if (code.isActive) ...[
               const SizedBox(height: 16),
               TextField(
@@ -973,7 +1257,7 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
 
     if (confirmed == true) {
       await di.sl<ToggleAccessCodeStatus>()(
-        code.code, 
+        code.parentCode,
         !code.isActive,
         reason: code.isActive ? reasonController.text.trim() : null,
       );
@@ -986,7 +1270,7 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Access Code'),
-        content: Text('Are you sure you want to delete the code ${code.code}? Parents currently using this code will not be disconnected, but the code will no longer work for new signups.'),
+        content: Text('Are you sure you want to delete the code ${code.parentCode}? Parents currently using this code will not be disconnected, but the code will no longer work for new signups.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           TextButton(
@@ -998,7 +1282,7 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
     );
 
     if (confirmed == true) {
-      await di.sl<DeleteAccessCode>()(code.code);
+      await di.sl<DeleteAccessCode>()(code.parentCode);
       _refresh();
     }
   }
@@ -1023,76 +1307,114 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
 
     final selectedStudentIds = List<String>.from(code.studentIds);
     final parentNameController = TextEditingController(text: code.parentName);
+    // Existing codes created before the phone field was required may have
+    // none stored yet - show it as a raw local number if present so editing
+    // it doesn't require re-typing the country code.
+    final phoneController = TextEditingController(text: code.phoneNumber ?? '');
 
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+        builder: (context, setDialogState) {
+          final isPhoneValid = phoneController.text.trim().length >= 9;
+          return AlertDialog(
           title: const Text('Edit Access Code'),
+          // Column(mainAxisSize: min) containing an Expanded, with no
+          // explicit height on the SizedBox above it, only works if the
+          // AlertDialog happens to hand back a bounded height - it doesn't
+          // reliably, and adding the phone field made the failure visible.
+          // Bounding height explicitly and scrolling instead of Expanded
+          // fixes it regardless of screen size or field count.
           content: SizedBox(
             width: 400,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: parentNameController,
-                  decoration: const InputDecoration(labelText: 'Parent Name (Optional)'),
-                ),
-                const SizedBox(height: 16),
-                const Text('Linked Students:', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: allStudents.length,
-                    itemBuilder: (context, index) {
-                      final s = allStudents[index];
-                      final currentCount = studentParentCounts[s.id] ?? 0;
-                      final isAlreadyInThisCode = selectedStudentIds.contains(s.id);
-                      // Can add if not already in this code AND total parents < 1
-                      final canAdd = isAlreadyInThisCode || currentCount < 1;
-
-                      return CheckboxListTile(
-                        title: Text(s.name),
-                        subtitle: Text('${s.className} • ${currentCount > 0 ? "Already linked to a parent" : "Available"}'),
-                        value: isAlreadyInThisCode,
-                        enabled: canAdd,
-                        onChanged: (val) {
-                          setDialogState(() {
-                            if (val == true) {
-                              selectedStudentIds.add(s.id);
-                            } else {
-                              selectedStudentIds.remove(s.id);
-                            }
-                          });
-                        },
-                      );
-                    },
+            height: MediaQuery.of(context).size.height * 0.7,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: parentNameController,
+                    decoration: const InputDecoration(labelText: 'Parent Name (Optional)'),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: phoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                      labelText: 'Parent Phone Number',
+                      hintText: '07xx xxx xxx',
+                      helperText: "Required - this exact number is what the parent must enter to log in.",
+                      helperMaxLines: 2,
+                    ),
+                    onChanged: (_) => setDialogState(() {}),
+                  ),
+                  const SizedBox(height: 16),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: const Text('Linked Students:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    constraints: const BoxConstraints(maxHeight: 260),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: allStudents.length,
+                      itemBuilder: (context, index) {
+                        final s = allStudents[index];
+                        final currentCount = studentParentCounts[s.id] ?? 0;
+                        final isAlreadyInThisCode = selectedStudentIds.contains(s.id);
+                        // Can add if not already in this code AND total parents < 1
+                        final canAdd = isAlreadyInThisCode || currentCount < 1;
+
+                        return CheckboxListTile(
+                          title: Text(s.name),
+                          subtitle: Text('${s.className} • ${currentCount > 0 ? "Already linked to a parent" : "Available"}'),
+                          value: isAlreadyInThisCode,
+                          enabled: canAdd,
+                          onChanged: (val) {
+                            setDialogState(() {
+                              if (val == true) {
+                                selectedStudentIds.add(s.id);
+                              } else {
+                                selectedStudentIds.remove(s.id);
+                              }
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
             FilledButton(
-              onPressed: selectedStudentIds.isEmpty ? null : () => Navigator.pop(context, true),
+              onPressed: selectedStudentIds.isEmpty || !isPhoneValid ? null : () => Navigator.pop(context, true),
               child: const Text('Save Changes'),
             ),
           ],
-        ),
+          );
+        },
       ),
     );
 
     if (result == true && mounted) {
       final updatedStudents = allStudents.where((s) => selectedStudentIds.contains(s.id)).toList();
+      final schoolId = context.read<AuthBloc>().state is AuthAuthenticated
+          ? (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId
+          : '';
+          
       final updated = ParentAccessCode(
-        code: code.code,
+        id: code.id,
+        parentCode: code.parentCode,
+        schoolId: schoolId,
         studentIds: selectedStudentIds,
         studentNames: updatedStudents.map((s) => s.name).toList(),
         parentName: parentNameController.text.isEmpty ? null : parentNameController.text,
         isActive: code.isActive,
-        phoneNumber: code.phoneNumber,
+        phoneNumber: PhoneFormatter.toE164(phoneController.text),
         pin: code.pin,
         mustChangePin: code.mustChangePin,
         deactivationReason: code.deactivationReason,
@@ -1122,6 +1444,7 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
 
     final selectedStudentIds = <String>[];
     final parentNameController = TextEditingController();
+    final phoneController = TextEditingController();
     String studentSearchQuery = '';
 
     final result = await showDialog<bool>(
@@ -1132,44 +1455,70 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
             s.name.toLowerCase().contains(studentSearchQuery.toLowerCase()) ||
             s.className.toLowerCase().contains(studentSearchQuery.toLowerCase())
           ).toList();
+          final isPhoneValid = phoneController.text.trim().length >= 9;
 
           return AlertDialog(
             title: const Text('Generate Parent Access Code'),
+            // A fixed-height Column+Expanded here previously assumed the
+            // fixed-size fields above the list would always fit within 500 -
+            // adding the (required) phone field pushed that over the edge on
+            // smaller screens, causing a RenderFlex overflow. Constraining
+            // the whole dialog's height and making it scroll (with the list
+            // itself using shrinkWrap instead of Expanded) fits any screen
+            // and any number of fields without needing to guess pixel math.
             content: SizedBox(
               width: 400,
-              height: 500,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: parentNameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Parent Name (Optional)',
-                      prefixIcon: Icon(Icons.person_outline),
+              height: MediaQuery.of(context).size.height * 0.7,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: parentNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Parent Name (Optional)',
+                        prefixIcon: Icon(Icons.person_outline),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('Link Siblings:', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Search students...',
-                      prefixIcon: const Icon(Icons.search, size: 20),
-                      isDense: true,
-                      filled: true,
-                      fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(
+                        labelText: 'Parent Phone Number',
+                        hintText: '07xx xxx xxx',
+                        prefixIcon: Icon(Icons.phone_outlined),
+                        helperText: "Required - this exact number is what the parent must enter to log in. No other number will work.",
+                        helperMaxLines: 2,
+                      ),
+                      onChanged: (_) => setDialogState(() {}),
                     ),
-                    onChanged: (val) => setDialogState(() => studentSearchQuery = val),
-                  ),
-                  const SizedBox(height: 8),
-                  Expanded(
-                    child: Container(
+                    const SizedBox(height: 16),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: const Text('Link Siblings:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      decoration: InputDecoration(
+                        hintText: 'Search students...',
+                        prefixIcon: const Icon(Icons.search, size: 20),
+                        isDense: true,
+                        filled: true,
+                        fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                      ),
+                      onChanged: (val) => setDialogState(() => studentSearchQuery = val),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      constraints: const BoxConstraints(maxHeight: 260),
                       decoration: BoxDecoration(
                         border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: ListView.builder(
+                        shrinkWrap: true,
                         itemCount: filteredStudents.length,
                         itemBuilder: (context, index) {
                           final s = filteredStudents[index];
@@ -1180,7 +1529,7 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
                             title: Text(s.name, style: const TextStyle(fontSize: 14)),
                             subtitle: Text('${s.className} • ${currentCount >= 1 ? "Parent already assigned" : "Available"}',
                               style: TextStyle(
-                                fontSize: 12, 
+                                fontSize: 12,
                                 color: currentCount >= 1 ? Colors.red : null,
                                 fontWeight: currentCount >= 1 ? FontWeight.bold : null,
                               )),
@@ -1200,14 +1549,14 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
                         },
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             actions: [
               TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
               FilledButton(
-                onPressed: selectedStudentIds.isEmpty ? null : () => Navigator.pop(context, true),
+                onPressed: selectedStudentIds.isEmpty || !isPhoneValid ? null : () => Navigator.pop(context, true),
                 child: const Text('Generate Code'),
               ),
             ],
@@ -1225,6 +1574,10 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
 
       final codeResult = await di.sl<CreateAccessCode>()(
         studentIds: selectedStudentIds,
+        schoolId: context.read<AuthBloc>().state is AuthAuthenticated
+          ? (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId
+          : '',
+        phoneNumber: PhoneFormatter.toE164(phoneController.text),
         parentName: parentNameController.text.isEmpty ? null : parentNameController.text,
       );
 
@@ -1240,11 +1593,14 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
+              // A plain Text in a Row (no Expanded/Flexible) doesn't wrap -
+              // it renders at its single-line intrinsic width and overflows
+              // once that's wider than the dialog on a narrower screen.
               title: const Row(
                 children: [
                   Icon(Icons.vpn_key, color: Colors.blue),
                   SizedBox(width: 8),
-                  Text('Access Code Generated'),
+                  Expanded(child: Text('Access Code Generated')),
                 ],
               ),
               content: Column(
@@ -1317,7 +1673,7 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
 
           final filteredCodes = codes.where((c) {
             final matchesSearch = (c.parentName?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false) || 
-                                 c.code.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                                 c.parentCode.toLowerCase().contains(_searchQuery.toLowerCase()) ||
                                  c.studentNames.any((n) => n.toLowerCase().contains(_searchQuery.toLowerCase()));
             
             bool matchesStatus;
@@ -1388,6 +1744,7 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
                     itemCount: filteredCodes.length,
                     itemBuilder: (context, index) => AppCard(
                       margin: const EdgeInsets.only(bottom: 16),
+                      onTap: () => _showParentDetails(filteredCodes[index]),
                       child: _buildCodeCardContent(context, filteredCodes[index], true),
                     ),
                   )
@@ -1401,6 +1758,7 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
                     ),
                     itemCount: filteredCodes.length,
                     itemBuilder: (context, index) => AppCard(
+                      onTap: () => _showParentDetails(filteredCodes[index]),
                       child: _buildCodeCardContent(context, filteredCodes[index], false),
                     ),
                   ),
@@ -1420,7 +1778,7 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            SelectableText(code.code, 
+            SelectableText(code.parentCode,
               style: TextStyle(
                 fontFamily: 'monospace', 
                 fontWeight: FontWeight.bold, 
@@ -1432,7 +1790,7 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
                 IconButton(
                   icon: const Icon(Icons.copy, size: 18), 
                   onPressed: () {
-                    Clipboard.setData(ClipboardData(text: code.code));
+                    Clipboard.setData(ClipboardData(text: code.parentCode));
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Code copied to clipboard')));
                   },
                 ),
@@ -1443,6 +1801,11 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
                       color: code.isActive ? Theme.of(context).colorScheme.error : Colors.green),
                     tooltip: code.isActive ? 'Deactivate' : 'Restore',
                     onPressed: () => _toggleStatus(code),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.info_outline, size: 18),
+                    tooltip: 'View Details',
+                    onPressed: () => _showParentDetails(code),
                   ),
                   IconButton(
                     icon: const Icon(Icons.edit_outlined, size: 18),
@@ -1495,6 +1858,104 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
     );
   }
 
+  void _showParentDetails(ParentAccessCode code) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.vpn_key, color: Colors.blue),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(code.parentName ?? 'Unnamed Parent', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text('Code: ${code.parentCode}', style: Theme.of(context).textTheme.bodySmall?.copyWith(fontFamily: 'monospace')),
+                ],
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 400,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Divider(),
+                if (code.phoneNumber != null)
+                  _buildDetailItem(context, 'Linked Phone', code.phoneNumber!),
+                _buildDetailItem(
+                  context, 
+                  'Linked Students', 
+                  code.studentNames.join('\n')
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: code.isActive 
+                      ? Colors.green.withValues(alpha: 0.1) 
+                      : Colors.red.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            code.isActive ? Icons.check_circle : Icons.error_outline,
+                            size: 16,
+                            color: code.isActive ? Colors.green : Colors.red,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            code.isActive ? 'Account Active' : 'Account Deactivated',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: code.isActive ? Colors.green : Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (!code.isActive && code.deactivationReason != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Reason:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red.shade900,
+                          ),
+                        ),
+                        Text(
+                          code.deactivationReason!,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.red.shade900,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showCodeActions(ParentAccessCode code) {
     showModalBottomSheet(
       context: context,
@@ -1502,6 +1963,14 @@ class _ParentCodesTabState extends State<_ParentCodesTab> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            ListTile(
+              leading: const Icon(Icons.info_outline),
+              title: const Text('View Details'),
+              onTap: () {
+                Navigator.pop(context);
+                _showParentDetails(code);
+              },
+            ),
             ListTile(
               leading: const Icon(Icons.edit_outlined),
               title: const Text('Edit Code'),

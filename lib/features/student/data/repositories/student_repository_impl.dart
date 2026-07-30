@@ -1,31 +1,44 @@
 import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
+import '../../../teacher/domain/entities/homework.dart';
+import '../../../matron/domain/entities/boarding_entities.dart';
+import '../../../matron/data/datasources/matron_remote_data_source.dart';
 import '../../domain/entities/student.dart';
+import '../../domain/entities/admission_application.dart';
+import '../../domain/entities/student_enums.dart';
 import '../../domain/entities/parent_access_code.dart';
 import '../../domain/repositories/student_repository.dart';
 import '../datasources/student_remote_data_source.dart';
-import '../models/parent_access_code_model.dart';
 import '../models/student_model.dart';
+import '../models/admission_application_model.dart';
 
 class StudentRepositoryImpl implements StudentRepository {
   final StudentRemoteDataSource remoteDataSource;
+  final MatronRemoteDataSource matronRemoteDataSource;
 
-  StudentRepositoryImpl({required this.remoteDataSource});
+  StudentRepositoryImpl({
+    required this.remoteDataSource,
+    required this.matronRemoteDataSource,
+  });
 
   @override
-  Future<Either<Failure, void>> createStudent(Student student) async {
+  Future<Either<Failure, Student>> getStudentById(String studentId) async {
     try {
-      final model = StudentModel(
-        id: student.id,
-        name: student.name,
-        className: student.className,
-        studentId: student.studentId,
-        photoUrl: student.photoUrl,
-      );
-      await remoteDataSource.createStudent(model);
-      return const Right(null);
+      final student = await remoteDataSource.getStudentById(studentId);
+      return Right(student);
     } catch (e) {
-      return Left(ServerFailure());
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<Student>>> getAllStudents({
+    String? schoolId,
+  }) async {
+    try {
+      return Right(await remoteDataSource.getAllStudents(schoolId: schoolId));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
     }
   }
 
@@ -34,96 +47,371 @@ class StudentRepositoryImpl implements StudentRepository {
     List<String> ids,
   ) async {
     try {
-      final students = await remoteDataSource.getStudentsByIds(ids);
+      return Right(await remoteDataSource.getStudentsByIds(ids));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> createStudent(Student student) async {
+    // TODO: implement createStudent
+    return const Right(null);
+  }
+
+  @override
+  Future<Either<Failure, List<Student>>> searchStudents({
+    required String schoolId,
+    String? query,
+    String? admissionNumber,
+    String? parentPhone,
+    String? classId,
+  }) async {
+    try {
+      final students = await remoteDataSource.searchStudents(
+        schoolId: schoolId,
+        query: query,
+        admissionNumber: admissionNumber,
+        parentPhone: parentPhone,
+        classId: classId,
+      );
       return Right(students);
     } catch (e) {
-      return Left(ServerFailure());
+      return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, List<Student>>> getAllStudents() async {
+  Future<Either<Failure, void>> updateStudent(Student student) async {
     try {
-      final students = await remoteDataSource.getAllStudents();
-      return Right(students);
+      final model = StudentModel(
+        id: student.id,
+        schoolId: student.schoolId,
+        name: student.name,
+        photoUrl: student.photoUrl,
+        studentCode: student.studentCode,
+        admissionNumber: student.admissionNumber,
+        qrReference: student.qrReference,
+        dateOfBirth: student.dateOfBirth,
+        gender: student.gender,
+        classId: student.classId,
+        streamId: student.streamId,
+        academicYearId: student.academicYearId,
+        previousSchool: student.previousSchool,
+        status: student.status,
+        medicalInfo: student.medicalInfo,
+        emergencyContacts: student.emergencyContacts,
+        parentIds: student.parentIds,
+        documents: student.documents,
+        campusId: student.campusId,
+        level: student.level,
+      );
+      await remoteDataSource.updateStudent(model);
+      return const Right(null);
     } catch (e) {
-      return Left(ServerFailure());
+      return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, ParentAccessCode?>> resolveAccessCode(String code) async {
+  Future<Either<Failure, void>> updateStudentStatus(
+    String studentId,
+    StudentStatus status,
+  ) async {
     try {
-      final result = await remoteDataSource.resolveAccessCode(code);
-      return Right(result);
+      await remoteDataSource.updateStudentStatus(studentId, status.name);
+      return const Right(null);
     } catch (e) {
-      return Left(ServerFailure());
+      return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, List<ParentAccessCode>>> getAllAccessCodes() async {
+  Future<Either<Failure, void>> createAdmissionApplication(
+    AdmissionApplication application,
+  ) async {
     try {
-      final result = await remoteDataSource.getAllAccessCodes();
-      return Right(result);
+      final model = AdmissionApplicationModel(
+        id: application.id,
+        schoolId: application.schoolId,
+        studentName: application.studentName,
+        dateOfBirth: application.dateOfBirth,
+        gender: application.gender,
+        targetClassId: application.targetClassId,
+        targetStreamId: application.targetStreamId,
+        academicYearId: application.academicYearId,
+        previousSchool: application.previousSchool,
+        applicantParentName: application.applicantParentName,
+        applicantParentPhone: application.applicantParentPhone,
+        status: application.status,
+        appliedAt: application.appliedAt,
+        attachedDocuments: application.attachedDocuments,
+      );
+      await remoteDataSource.createAdmissionApplication(model);
+      return const Right(null);
     } catch (e) {
-      return Left(ServerFailure());
+      return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, String>> createAccessCode({required List<String> studentIds, String? parentName}) async {
+  Future<Either<Failure, List<AdmissionApplication>>> getApplications(
+    String schoolId,
+  ) async {
     try {
-      final code = await remoteDataSource.createAccessCode(studentIds: studentIds, parentName: parentName);
-      return Right(code);
+      final applications = await remoteDataSource.getApplications(schoolId);
+      return Right(applications);
     } catch (e) {
-      return Left(ServerFailure());
+      return Left(ServerFailure(e.toString()));
     }
+  }
+
+  @override
+  Future<Either<Failure, void>> updateApplicationStatus(
+    String applicationId,
+    AdmissionStatus status, {
+    String? reviewerId,
+    String? comments,
+  }) async {
+    try {
+      await remoteDataSource.updateApplicationStatus(
+        applicationId,
+        status.name,
+        reviewerId: reviewerId,
+        comments: comments,
+      );
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, String>> generateAdmissionNumber(
+    String schoolId,
+    String academicYearId,
+  ) async {
+    try {
+      final sequence = await remoteDataSource.getNextSequenceNumber(
+        schoolId,
+        academicYearId,
+      );
+      // Format: SCH-YEAR-0001
+      final yearShort = academicYearId
+          .split('-')
+          .last; // Assuming year ID contains year info
+      final admissionNumber =
+          "SP-$yearShort-${sequence.toString().padLeft(4, '0')}";
+      return Right(admissionNumber);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, String>> finalizeAdmission(
+    String applicationId, {
+    required String studentCode,
+    required String admissionNumber,
+    String? qrReference,
+  }) async {
+    try {
+      // 1. Fetch applications to find the correct one
+      final applications = await remoteDataSource.getApplications('');
+      final application = applications.firstWhere((a) => a.id == applicationId);
+
+      // 2. Create Student Model with Identity System Codes
+      final student = StudentModel(
+        id: '', // Firestore will generate
+        schoolId: application.schoolId,
+        name: application.studentName,
+        studentCode: studentCode,
+        admissionNumber: admissionNumber,
+        qrReference: qrReference,
+        dateOfBirth: application.dateOfBirth,
+        gender: application.gender,
+        classId: application.targetClassId,
+        streamId: application.targetStreamId,
+        academicYearId: application.academicYearId,
+        previousSchool: application.previousSchool,
+        status: StudentStatus.active,
+        level: EducationLevel.primary,
+        documents: application.attachedDocuments,
+      );
+
+      final studentId = await remoteDataSource.finalizeAdmission(
+        application,
+        student,
+      );
+      return Right(studentId);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, String>> uploadStudentDocument(
+    String studentId,
+    String type,
+    dynamic file,
+  ) async {
+    try {
+      final url = await remoteDataSource.uploadDocument(studentId, type, file);
+      return Right(url);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteStudentDocument(
+    String studentId,
+    String type,
+  ) async {
+    try {
+      await remoteDataSource.deleteDocument(studentId, type);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> promoteStudents({
+    required String schoolId,
+    required List<String> studentIds,
+    required String targetClassId,
+    String? targetStreamId,
+    required String targetAcademicYearId,
+  }) async {
+    try {
+      List<StudentModel> updatedStudents = [];
+      for (var id in studentIds) {
+        final student = await remoteDataSource.getStudentById(id);
+        updatedStudents.add(
+          student.copyWith(
+                classId: targetClassId,
+                streamId: targetStreamId,
+                academicYearId: targetAcademicYearId,
+              )
+              as StudentModel,
+        );
+      }
+      await remoteDataSource.batchUpdateStudents(updatedStudents);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<ParentAccessCode>>> getAllAccessCodes({
+    String? schoolId,
+  }) async {
+    try {
+      return Right(
+        await remoteDataSource.getAllAccessCodes(schoolId: schoolId),
+      );
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, String>> createAccessCode({
+    required List<String> studentIds,
+    required String schoolId,
+    required String phoneNumber,
+    String? parentName,
+  }) async {
+    // TODO: implement createAccessCode
+    return const Right('');
   }
 
   @override
   Future<Either<Failure, String>> regenerateAccessCode(String oldCode) async {
-    try {
-      final code = await remoteDataSource.regenerateAccessCode(oldCode);
-      return Right(code);
-    } catch (e) {
-      return Left(ServerFailure());
-    }
+    // TODO: implement regenerateAccessCode
+    return const Right('');
   }
 
   @override
-  Future<Either<Failure, void>> toggleAccessCodeStatus(String code, bool isActive) async {
-    try {
-      await remoteDataSource.toggleAccessCodeStatus(code, isActive);
-      return const Right(null);
-    } catch (e) {
-      return Left(ServerFailure());
-    }
+  Future<Either<Failure, void>> toggleAccessCodeStatus(
+    String code,
+    bool isActive, {
+    String? reason,
+  }) async {
+    // TODO: implement toggleAccessCodeStatus
+    return const Right(null);
   }
 
   @override
   Future<Either<Failure, void>> deleteAccessCode(String code) async {
-    try {
-      await remoteDataSource.deleteAccessCode(code);
-      return const Right(null);
-    } catch (e) {
-      return Left(ServerFailure());
-    }
+    // TODO: implement deleteAccessCode
+    return const Right(null);
   }
 
   @override
   Future<Either<Failure, void>> updateAccessCode(ParentAccessCode code) async {
+    // TODO: implement updateAccessCode
+    return const Right(null);
+  }
+
+  @override
+  Future<Either<Failure, ParentAccessCode>> resolveAccessCode(
+    String code,
+  ) async {
     try {
-      await remoteDataSource.updateAccessCode(ParentAccessCodeModel(
-        code: code.code,
-        studentIds: code.studentIds,
-        studentNames: code.studentNames,
-        parentName: code.parentName,
-        isActive: code.isActive,
-      ));
-      return const Right(null);
+      final accessCode = await remoteDataSource.resolveAccessCode(code);
+      if (accessCode == null) {
+        return Left(ServerFailure('No account found with this code.'));
+      }
+      return Right(accessCode);
     } catch (e) {
-      return Left(ServerFailure());
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<Homework>>> getHomeworkForStudent(
+    String className,
+  ) async {
+    try {
+      final homework = await remoteDataSource.getHomeworkForStudent(className);
+      return Right(homework);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<WelfareRecord>>> getWelfareRecords({
+    String? schoolId,
+    String? studentId,
+    bool publicOnly = false,
+  }) async {
+    try {
+      final records = await matronRemoteDataSource.getWelfareRecords(
+        schoolId: schoolId,
+        studentId: studentId,
+        publicOnly: publicOnly,
+      );
+      return Right(records);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<DisciplineCase>>> getDisciplineCases({
+    String? studentId,
+  }) async {
+    try {
+      final cases = await matronRemoteDataSource.getDisciplineCases(
+        studentId: studentId,
+      );
+      return Right(cases);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
     }
   }
 }

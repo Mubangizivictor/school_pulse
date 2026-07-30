@@ -147,74 +147,131 @@ class _AdminStaffAttendanceScreenState extends State<AdminStaffAttendanceScreen>
   }
 
   Widget _buildStaffList(BuildContext context, List<({UserEntity staff, StaffAttendanceRecord? record})> rows) {
-    return AppCard(
-      padding: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Daily Attendance Log', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                SizedBox(
-                  width: 250,
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
-                    decoration: const InputDecoration(
-                      hintText: 'Search staff name...',
-                      prefixIcon: Icon(Icons.search),
-                      isDense: true,
+    return LayoutBuilder(builder: (context, constraints) {
+      final isMobile = constraints.maxWidth < 700;
+      return AppCard(
+        padding: EdgeInsets.zero,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: isMobile
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Daily Attendance Log', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                        const SizedBox(height: 12),
+                        _buildSearchField(),
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Daily Attendance Log', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                        SizedBox(width: 250, child: _buildSearchField()),
+                      ],
                     ),
-                  ),
+            ),
+            const Divider(height: 1),
+            if (rows.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(32),
+                child: EmptyState(
+                  icon: Icons.badge_outlined,
+                  title: 'No staff match',
+                  message: 'Try a different search or filter.',
+                ),
+              )
+            else if (isMobile)
+              Column(children: rows.map((r) => _buildStaffListTile(context, r)).toList())
+            else
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  columnSpacing: 24,
+                  columns: const [
+                    DataColumn(label: Text('Staff Member')),
+                    DataColumn(label: Text('Role')),
+                    DataColumn(label: Text('Clock In')),
+                    DataColumn(label: Text('Status')),
+                    DataColumn(label: Text('Location')),
+                  ],
+                  rows: rows.map((r) {
+                    final semantic = Theme.of(context).extension<SemanticColors>()!;
+                    final record = r.record;
+                    return DataRow(cells: [
+                      DataCell(Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          AvatarInitials(name: r.staff.name, size: 32),
+                          const SizedBox(width: 12),
+                          Text(r.staff.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        ],
+                      )),
+                      DataCell(Text(r.staff.role.name)),
+                      DataCell(Text(record != null ? DateFormat('hh:mm a').format(record.clockIn) : '--')),
+                      DataCell(StatusBadge(
+                        label: record == null ? 'Not Clocked In' : (record.status == 'late' ? 'Late' : 'On Time'),
+                        color: record == null ? Theme.of(context).colorScheme.outline : (record.status == 'late' ? semantic.warning : semantic.success),
+                      )),
+                      DataCell(Text(record?.location ?? '—')),
+                    ]);
+                  }).toList(),
+                ),
+              ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _buildSearchField() {
+    return TextField(
+      controller: _searchController,
+      onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
+      decoration: const InputDecoration(
+        hintText: 'Search staff name...',
+        prefixIcon: Icon(Icons.search),
+        isDense: true,
+      ),
+    );
+  }
+
+  Widget _buildStaffListTile(BuildContext context, ({UserEntity staff, StaffAttendanceRecord? record}) r) {
+    final semantic = Theme.of(context).extension<SemanticColors>()!;
+    final record = r.record;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          AvatarInitials(name: r.staff.name, size: 36),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(r.staff.name, style: const TextStyle(fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+                Text(
+                  r.staff.role.name,
+                  style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.outline),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          const Divider(height: 1),
-          if (rows.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(32),
-              child: EmptyState(
-                icon: Icons.badge_outlined,
-                title: 'No staff match',
-                message: 'Try a different search or filter.',
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(record != null ? DateFormat('hh:mm a').format(record.clockIn) : '--'),
+              const SizedBox(height: 4),
+              StatusBadge(
+                label: record == null ? 'Not Clocked In' : (record.status == 'late' ? 'Late' : 'On Time'),
+                color: record == null ? Theme.of(context).colorScheme.outline : (record.status == 'late' ? semantic.warning : semantic.success),
               ),
-            )
-          else
-            DataTable(
-              columnSpacing: 24,
-              columns: const [
-                DataColumn(label: Text('Staff Member')),
-                DataColumn(label: Text('Role')),
-                DataColumn(label: Text('Clock In')),
-                DataColumn(label: Text('Status')),
-                DataColumn(label: Text('Location')),
-              ],
-              rows: rows.map((r) {
-                final semantic = Theme.of(context).extension<SemanticColors>()!;
-                final record = r.record;
-                return DataRow(cells: [
-                  DataCell(Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      AvatarInitials(name: r.staff.name, size: 32),
-                      const SizedBox(width: 12),
-                      Text(r.staff.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    ],
-                  )),
-                  DataCell(Text(r.staff.role.name)),
-                  DataCell(Text(record != null ? DateFormat('hh:mm a').format(record.clockIn) : '--')),
-                  DataCell(StatusBadge(
-                    label: record == null ? 'Not Clocked In' : (record.status == 'late' ? 'Late' : 'On Time'),
-                    color: record == null ? Theme.of(context).colorScheme.outline : (record.status == 'late' ? semantic.warning : semantic.success),
-                  )),
-                  DataCell(Text(record?.location ?? '—')),
-                ]);
-              }).toList(),
-            ),
+            ],
+          ),
         ],
       ),
     );

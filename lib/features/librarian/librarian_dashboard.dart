@@ -1,23 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
-import 'package:school_pulse/design_system/searchable_picker.dart';
-import 'package:school_pulse/core/utils.dart';
-import 'package:school_pulse/injection_container.dart' as di;
-import 'package:school_pulse/features/student/domain/entities/student.dart';
-import 'package:school_pulse/features/student/domain/usecases/get_all_students.dart';
-import 'package:school_pulse/features/library/domain/entities/library_book.dart';
-import 'package:school_pulse/features/library/domain/usecases/get_all_borrowed_books.dart';
-import 'package:school_pulse/features/library/domain/usecases/issue_book.dart';
-import 'package:school_pulse/features/library/domain/usecases/return_book.dart';
-import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
-
-class _LibrarySnapshot {
-  final List<Student> students;
-  final List<LibraryBook> books;
-
-  const _LibrarySnapshot({required this.students, required this.books});
-}
+import 'package:school_pulse/features/library/presentation/bloc/library_bloc.dart';
+import 'package:school_pulse/features/library/presentation/bloc/library_event.dart';
+import 'package:school_pulse/features/library/presentation/bloc/library_state.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 
 class LibrarianDashboardScreen extends StatefulWidget {
   const LibrarianDashboardScreen({super.key});
@@ -27,335 +16,200 @@ class LibrarianDashboardScreen extends StatefulWidget {
 }
 
 class _LibrarianDashboardScreenState extends State<LibrarianDashboardScreen> {
-  late Future<_LibrarySnapshot> _snapshotFuture;
-  String _searchQuery = '';
-
   @override
   void initState() {
     super.initState();
-    _snapshotFuture = _loadSnapshot();
-  }
-
-  void _reload() {
-    setState(() => _snapshotFuture = _loadSnapshot());
-  }
-
-  Future<_LibrarySnapshot> _loadSnapshot() async {
-    final results = await Future.wait([
-      di.sl<GetAllStudents>()().then((r) => r.getOrElse(() => const <Student>[])),
-      di.sl<GetAllBorrowedBooks>()().then((r) => r.getOrElse(() => const <LibraryBook>[])),
-    ]);
-    return _LibrarySnapshot(
-      students: results[0] as List<Student>,
-      books: results[1] as List<LibraryBook>,
-    );
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      context.read<LibraryBloc>().add(WatchLibraryResources(authState.user.schoolId));
+      context.read<LibraryBloc>().add(FetchLibraryStats(authState.user.schoolId));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Library Portal'),
+        title: const Text('Library Dashboard'),
         actions: [
-          const NotificationBellButton(),
+          IconButton(
+            icon: const Icon(Icons.qr_code_scanner),
+            onPressed: () {
+              // TODO: Implement QR/Barcode scanner for borrowing/returns
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined),
+            onPressed: () {},
+          ),
         ],
       ),
-      body: FutureBuilder<_LibrarySnapshot>(
-        future: _snapshotFuture,
-        builder: (context, snapshot) {
-          final data = snapshot.data;
-          final isLoading = snapshot.connectionState == ConnectionState.waiting;
-          final studentsById = {for (final s in data?.students ?? const <Student>[]) s.id: s};
-          final books = data?.books ?? const <LibraryBook>[];
-          final overdue = books.where((b) => !b.isReturned && b.dueDate.isBefore(DateTime.now())).where((b) {
-            if (_searchQuery.isEmpty) return true;
-            final student = studentsById[b.studentId];
-            final haystack = '${b.title} ${b.author} ${student?.name ?? ''}'.toLowerCase();
-            return haystack.contains(_searchQuery.toLowerCase());
-          }).toList();
-
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              if (isLoading)
-                const Row(
-                  children: [
-                    Expanded(child: Skeleton(height: 100)),
-                    SizedBox(width: 12),
-                    Expanded(child: Skeleton(height: 100)),
-                  ],
-                )
-              else
-                Row(
-                  children: [
-                    Expanded(
-                      child: DashboardStatCard(
-                        title: 'Currently Issued',
-                        value: books.where((b) => !b.isReturned).length.toDouble(),
-                        icon: Icons.upload_file,
-                        color: semanticColors.info,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: DashboardStatCard(
-                        title: 'Overdue Total',
-                        value: books.where((b) => !b.isReturned && b.dueDate.isBefore(DateTime.now())).length.toDouble(),
-                        icon: Icons.running_with_errors,
-                        color: semanticColors.error,
-                      ),
-                    ),
-                  ],
-                ),
-              const SizedBox(height: 24),
-              const SectionHeader(title: 'Quick Actions'),
-              QuickActionGrid(
-                items: [
-                  QuickActionItem(
-                    label: 'Issue',
-                    icon: Icons.outbox,
-                    color: semanticColors.info,
-                    onTap: () => _showIssueBookDialog(context, data),
-                  ),
-                  QuickActionItem(
-                    label: 'Return',
-                    icon: Icons.move_to_inbox,
-                    color: semanticColors.success,
-                    onTap: () => _showReturnBookSheet(context, data),
-                  ),
-                  QuickActionItem(
-                    label: 'Inventory',
-                    icon: Icons.inventory_2_outlined,
-                    color: semanticColors.warning,
-                    onTap: () => _showInventorySheet(context, data),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              TextField(
-                decoration: const InputDecoration(
-                  hintText: 'Search overdue books by title, author, or student...',
-                  prefixIcon: Icon(Icons.search),
-                  isDense: true,
-                ),
-                onChanged: (value) => setState(() => _searchQuery = value.trim()),
-              ),
-              const SizedBox(height: 16),
-              const SectionHeader(title: 'Overdue Books'),
-              if (isLoading)
-                ...List.generate(3, (index) => const Padding(
-                  padding: EdgeInsets.only(bottom: 12),
-                  child: Skeleton(height: 100),
-                ))
-              else if (overdue.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(child: Text('No overdue books.')),
-                )
-              else
-                ...overdue.map((book) {
-                  final student = studentsById[book.studentId];
-                  final studentName = student?.name ?? 'Unknown Student';
-                  final studentClass = student?.className ?? '';
-                  return AppCard(
-                    padding: const EdgeInsets.all(16),
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: semanticColors.error.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(Icons.auto_stories, color: semanticColors.error, size: 24),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(book.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              Text('By ${book.author}', style: Theme.of(context).textTheme.labelSmall),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Held by: $studentName ($studentClass)',
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            ],
-                          ),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              'Overdue',
-                              style: TextStyle(color: semanticColors.error, fontSize: 10, fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              DateFormatter.relative(book.dueDate),
-                              style: Theme.of(context).textTheme.labelSmall,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  void _showIssueBookDialog(BuildContext context, _LibrarySnapshot? data) {
-    final students = data?.students ?? const <Student>[];
-    if (students.isEmpty) return;
-
-    final titleController = TextEditingController();
-    final authorController = TextEditingController();
-    String selectedStudentId = students.first.id;
-    DateTime dueDate = DateTime.now().add(const Duration(days: 14));
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          title: const Text('Issue Book'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SearchablePickerField<Student>(
-                label: 'Student',
-                value: students.firstWhere((s) => s.id == selectedStudentId),
-                items: students,
-                labelBuilder: (s) => s.name,
-                subtitleBuilder: (s) => s.className,
-                onChanged: (s) => setDialogState(() => selectedStudentId = s.id),
-              ),
-              const SizedBox(height: 16),
-              TextField(controller: titleController, decoration: const InputDecoration(labelText: 'Book Title')),
-              const SizedBox(height: 16),
-              TextField(controller: authorController, decoration: const InputDecoration(labelText: 'Author')),
-              const SizedBox(height: 16),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Due Date'),
-                subtitle: Text(DateFormatter.format(dueDate)),
-                trailing: const Icon(Icons.calendar_today, size: 18),
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: dialogContext,
-                    initialDate: dueDate,
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 180)),
-                  );
-                  if (picked != null) setDialogState(() => dueDate = picked);
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
-            FilledButton(
-              onPressed: () async {
-                if (titleController.text.trim().isEmpty) return;
-                await di.sl<IssueBook>()(LibraryBook(
-                  id: '',
-                  studentId: selectedStudentId,
-                  title: titleController.text.trim(),
-                  author: authorController.text.trim().isEmpty ? 'Unknown' : authorController.text.trim(),
-                  dueDate: dueDate,
-                ));
-                if (dialogContext.mounted) Navigator.pop(dialogContext);
-                _reload();
-              },
-              child: const Text('Issue'),
+      body: BlocBuilder<LibraryBloc, LibraryState>(
+        builder: (context, state) {
+          return RefreshIndicator(
+            onRefresh: () async {
+              final authState = context.read<AuthBloc>().state;
+              if (authState is AuthAuthenticated) {
+                context.read<LibraryBloc>().add(FetchLibraryStats(authState.user.schoolId));
+              }
+            },
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _buildStatsOverview(context, state),
+                const SizedBox(height: 24),
+                const SectionHeader(title: 'Quick Actions'),
+                const SizedBox(height: 12),
+                _buildQuickActions(context),
+                const SizedBox(height: 24),
+                const SectionHeader(title: 'Procurement & Repairs'),
+                const SizedBox(height: 12),
+                _buildIntegratedActions(context),
+              ],
             ),
-          ],
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          // TODO: Show Add Resource Dialog/Screen
+        },
+        label: const Text('Add Resource'),
+        icon: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  Widget _buildStatsOverview(BuildContext context, LibraryState state) {
+    Map<String, dynamic> stats = {
+      'totalBooks': 0,
+      'borrowedBooks': 0,
+      'overdueBooks': 0,
+    };
+
+    if (state is LibraryStatsLoaded) {
+      stats = state.stats;
+    }
+
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      childAspectRatio: 1.5,
+      children: [
+        DashboardStatCard(
+          title: 'Total Items',
+          value: stats['totalBooks'].toDouble(),
+          icon: Icons.inventory_2_outlined,
+          color: Theme.of(context).primaryColor,
         ),
-      ),
+        DashboardStatCard(
+          title: 'Borrowed',
+          value: stats['borrowedBooks'].toDouble(),
+          icon: Icons.book_outlined,
+          color: Colors.blue,
+        ),
+        DashboardStatCard(
+          title: 'Overdue',
+          value: stats['overdueBooks'].toDouble(),
+          icon: Icons.warning_amber_rounded,
+          color: Theme.of(context).extension<SemanticColors>()!.error,
+        ),
+        DashboardStatCard(
+          title: 'Fines Due',
+          value: 0.0, // TODO: Fetch from state
+          icon: Icons.account_balance_wallet_outlined,
+          color: Colors.orange,
+        ),
+      ],
     );
   }
 
-  void _showReturnBookSheet(BuildContext context, _LibrarySnapshot? data) {
-    final books = data?.books.where((b) => !b.isReturned).toList() ?? [];
-    final studentsById = {for (final s in data?.students ?? const <Student>[]) s.id: s};
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        expand: false,
-        builder: (sheetContext, scrollController) {
-          if (books.isEmpty) {
-            return const Center(child: Text('No books currently issued.'));
-          }
-          return ListView.separated(
-            controller: scrollController,
-            padding: const EdgeInsets.all(16),
-            itemCount: books.length,
-            separatorBuilder: (_, _) => const Divider(),
-            itemBuilder: (context, index) {
-              final book = books[index];
-              final studentName = studentsById[book.studentId]?.name ?? 'Unknown Student';
-              return ListTile(
-                title: Text(book.title),
-                subtitle: Text('Held by $studentName'),
-                trailing: FilledButton(
-                  onPressed: () async {
-                    await di.sl<ReturnBook>()(book.id);
-                    if (sheetContext.mounted) Navigator.pop(sheetContext);
-                    _reload();
-                  },
-                  child: const Text('Return'),
-                ),
-              );
-            },
-          );
-        },
-      ),
+  Widget _buildQuickActions(BuildContext context) {
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: [
+        _QuickActionChip(
+          label: 'Issue Item',
+          icon: Icons.outbond_outlined,
+          onTap: () {},
+        ),
+        _QuickActionChip(
+          label: 'Receive Return',
+          icon: Icons.move_to_inbox_outlined,
+          onTap: () {},
+        ),
+        _QuickActionChip(
+          label: 'Reservations',
+          icon: Icons.bookmark_added_outlined,
+          onTap: () {},
+        ),
+        _QuickActionChip(
+          label: 'Digital Library',
+          icon: Icons.cloud_upload_outlined,
+          onTap: () {},
+        ),
+      ],
     );
   }
 
-  void _showInventorySheet(BuildContext context, _LibrarySnapshot? data) {
-    final books = data?.books ?? const <LibraryBook>[];
-    final studentsById = {for (final s in data?.students ?? const <Student>[]) s.id: s};
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        expand: false,
-        builder: (sheetContext, scrollController) {
-          if (books.isEmpty) {
-            return const Center(child: Text('No library records yet.'));
-          }
-          return ListView.separated(
-            controller: scrollController,
-            padding: const EdgeInsets.all(16),
-            itemCount: books.length,
-            separatorBuilder: (_, _) => const Divider(),
-            itemBuilder: (context, index) {
-              final book = books[index];
-              final studentName = studentsById[book.studentId]?.name ?? 'Unknown Student';
-              return ListTile(
-                title: Text(book.title),
-                subtitle: Text('By ${book.author} • $studentName'),
-                trailing: StatusBadge(
-                  label: book.isReturned ? 'Returned' : 'Issued',
-                  color: book.isReturned ? Theme.of(context).colorScheme.outline : Theme.of(context).colorScheme.primary,
-                ),
-              );
+  Widget _buildIntegratedActions(BuildContext context) {
+    return Column(
+      children: [
+        AppCard(
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: Colors.purple.withValues(alpha: 0.1),
+              child: const Icon(Icons.shopping_cart_outlined, color: Colors.purple),
+            ),
+            title: const Text('Procurement Request'),
+            subtitle: const Text('Request new books or materials'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              // TODO: Navigate to Stores & Assets Procurement Request
             },
-          );
-        },
-      ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        AppCard(
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: Colors.orange.withValues(alpha: 0.1),
+              child: const Icon(Icons.build_outlined, color: Colors.orange),
+            ),
+            title: const Text('Repair Request'),
+            subtitle: const Text('Report damaged furniture or equipment'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              // TODO: Navigate to Stores & Assets Repair Request
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickActionChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _QuickActionChip({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ActionChip(
+      avatar: Icon(icon, size: 18),
+      label: Text(label),
+      onPressed: onTap,
     );
   }
 }

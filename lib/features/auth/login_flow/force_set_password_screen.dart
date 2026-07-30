@@ -61,7 +61,11 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
       // For parents, the 'id' was set to 'parent_CODE' in loginParent
       final code = widget.user!.id.replaceFirst('parent_', '');
       final result = await di.sl<CompleteParentPinSetup>()(
-        CompleteParentPinSetupParams(code: code, newPin: password),
+        CompleteParentPinSetupParams(
+          code: code,
+          phoneNumber: widget.user!.phoneNumber ?? '',
+          newPin: password,
+        ),
       );
       _handleResult(result);
     } else {

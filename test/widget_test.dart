@@ -14,16 +14,25 @@ void main() {
   group('UserRoleRouting', () {
     test('every staff role resolves to a /staff route', () {
       for (final role in UserRole.values) {
-        if (role == UserRole.parent) continue;
+        if (role == UserRole.parent ||
+            role == UserRole.superAdmin ||
+            role == UserRole.student) {
+          continue;
+        }
         final path = UserRoleRouting.dashboardPath(role);
         expect(path, startsWith('/staff/'),
             reason: '$role should land on a staff dashboard, got $path');
       }
     });
 
-    test('admin-tier roles all land on the admin dashboard', () {
+    test('super admin lands on the dedicated platform dashboard', () {
+      expect(UserRoleRouting.dashboardPath(UserRole.superAdmin), '/super-admin');
+    });
+
+    test('admin-tier roles all land on the admin dashboard, except Director who has a dedicated one', () {
       for (final role in UserRoleDisplay.adminRoles) {
-        expect(UserRoleRouting.dashboardPath(role), '/staff/admin');
+        final expected = role == UserRole.director ? '/staff/director' : '/staff/admin';
+        expect(UserRoleRouting.dashboardPath(role), expected);
       }
     });
   });

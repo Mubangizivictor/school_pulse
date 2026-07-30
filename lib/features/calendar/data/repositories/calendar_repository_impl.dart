@@ -29,9 +29,8 @@ class CalendarRepositoryImpl implements CalendarRepository {
         description: event.description,
         date: event.date,
         createdBy: event.createdBy,
-        targetRoles: event.targetRoles,
+        targetGroups: event.targetGroups,
         type: event.type,
-        responsiblePerson: event.responsiblePerson,
       );
       await remoteDataSource.addEvent(model);
       return const Right(null);

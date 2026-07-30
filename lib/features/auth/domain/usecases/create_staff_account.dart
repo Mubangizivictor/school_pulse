@@ -18,7 +18,8 @@ class CreateStaffAccount implements UseCase<String, CreateStaffAccountParams> {
     return await repository.createStaffAccount(
       name: params.name,
       email: params.email,
-      role: params.role,
+      schoolId: params.schoolId,
+      roles: params.roles,
       password: params.password,
       assignedClass: params.assignedClass,
       subjects: params.subjects,
@@ -29,7 +30,8 @@ class CreateStaffAccount implements UseCase<String, CreateStaffAccountParams> {
 class CreateStaffAccountParams extends Equatable {
   final String name;
   final String email;
-  final UserRole role;
+  final String schoolId;
+  final List<UserRole> roles;
   final String password;
   final String? assignedClass;
   final List<SubjectAssignment>? subjects;
@@ -37,12 +39,13 @@ class CreateStaffAccountParams extends Equatable {
   const CreateStaffAccountParams({
     required this.name,
     required this.email,
-    required this.role,
+    required this.schoolId,
+    required this.roles,
     required this.password,
     this.assignedClass,
     this.subjects,
   });
 
   @override
-  List<Object?> get props => [name, email, role, password, assignedClass, subjects];
+  List<Object?> get props => [name, email, schoolId, roles, password, assignedClass, subjects];
 }

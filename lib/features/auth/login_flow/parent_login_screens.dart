@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
+import 'package:school_pulse/core/utils.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
@@ -10,14 +11,6 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/student/domain/entities/parent_access_code.dart';
 import 'package:school_pulse/features/student/domain/usecases/resolve_parent_access_code.dart';
 import 'package:school_pulse/injection_container.dart' as di;
-
-/// Ugandan local numbers (07xxxxxxxx) into E.164 for Firebase Phone Auth.
-String _toE164(String localPhone) {
-  final digits = localPhone.replaceAll(RegExp(r'\D'), '');
-  if (digits.startsWith('256')) return '+$digits';
-  if (digits.startsWith('0')) return '+256${digits.substring(1)}';
-  return '+256$digits';
-}
 
 class ChildIdScreen extends StatefulWidget {
   const ChildIdScreen({super.key});
@@ -60,14 +53,10 @@ class _ChildIdScreenState extends State<ChildIdScreen> {
     result.fold(
       (failure) => setState(() {
         _isLooking = false;
-        _error = 'Something went wrong. Please try again.';
+        _error = failure.message;
       }),
       (accessCode) {
         setState(() => _isLooking = false);
-        if (accessCode == null) {
-          setState(() => _error = 'No account found with this code.');
-          return;
-        }
         context.push('/parent/login/verify', extra: accessCode);
       },
     );
@@ -185,7 +174,7 @@ class _ParentPhoneScreenState extends State<ParentPhoneScreen> {
       _error = null;
     });
 
-    final inputPhone = _toE164(_phoneController.text);
+    final inputPhone = PhoneFormatter.toE164(_phoneController.text);
     
     // Simulate a brief delay for UX
     Future.delayed(const Duration(milliseconds: 500), () {
@@ -310,13 +299,13 @@ class _ParentPinScreenState extends State<ParentPinScreen> {
       }
       
       context.read<AuthBloc>().add(CompleteParentPinSetupRequested(
-        code: widget.accessCode.code,
+        code: widget.accessCode.parentCode,
         phoneNumber: widget.phoneNumber,
         newPin: _pinController.text,
       ));
     } else {
       context.read<AuthBloc>().add(LoginParentPressed(
-        code: widget.accessCode.code,
+        code: widget.accessCode.parentCode,
         phoneNumber: widget.phoneNumber,
         pin: _pinController.text,
       ));

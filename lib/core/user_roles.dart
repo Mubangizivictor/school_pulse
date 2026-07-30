@@ -11,6 +11,7 @@ enum UserRole {
   librarian,
   nurse,
   boardingMatron,
+  boardingPatron,
   transportCoordinator,
   guidanceDiscipline,
   storeInventory,
@@ -21,12 +22,15 @@ enum UserRole {
   religiousLeader,
   receptionist,
   hrOfficer,
+  superAdmin,
+  student,
 }
 
 class UserRoleDisplay {
   static String name(UserRole role) {
     switch (role) {
       case UserRole.parent: return 'Parent';
+      case UserRole.student: return 'Student';
       case UserRole.director: return 'Director';
       case UserRole.headTeacher: return 'Head Teacher';
       case UserRole.deputyHead: return 'Deputy Head';
@@ -37,7 +41,8 @@ class UserRoleDisplay {
       case UserRole.subjectTeacher: return 'Subject Teacher';
       case UserRole.librarian: return 'Librarian';
       case UserRole.nurse: return 'Nurse';
-      case UserRole.boardingMatron: return 'Matron / Patron';
+      case UserRole.boardingMatron: return 'Matron (Girls)';
+      case UserRole.boardingPatron: return 'Patron (Boys)';
       case UserRole.transportCoordinator: return 'Transport';
       case UserRole.guidanceDiscipline: return 'Guidance & Discipline';
       case UserRole.storeInventory: return 'Store Inventory';
@@ -48,6 +53,7 @@ class UserRoleDisplay {
       case UserRole.religiousLeader: return 'Religious Leader';
       case UserRole.receptionist: return 'Receptionist';
       case UserRole.hrOfficer: return 'HR Officer';
+      case UserRole.superAdmin: return 'Platform Owner';
     }
   }
 
@@ -72,6 +78,17 @@ class UserRoleDisplay {
     UserRole.schoolAdmin,
     UserRole.deputyHead,
   ];
+
+  /// The dormitory wing a Matron (girls) or Patron (boys) is scoped to, so
+  /// neither sees the other's dormitories/boarders. Null for every other
+  /// role (unscoped - e.g. an admin previewing the same screen).
+  static String? matronGenderScope(UserRole role) {
+    switch (role) {
+      case UserRole.boardingMatron: return 'Female';
+      case UserRole.boardingPatron: return 'Male';
+      default: return null;
+    }
+  }
 }
 
 /// Maps a staff role to the broadcast target-group labels used by
@@ -87,12 +104,30 @@ class NotificationGroups {
     UserRole.bursar,
   ];
 
+  static const securityRoles = [UserRole.securityHead, UserRole.gatekeeper];
+
   static List<String> forRole(UserRole role) {
     if (role == UserRole.parent) return const ['Parents'];
     final groups = <String>['All Staff'];
     if (teacherRoles.contains(role)) groups.add('Teachers Only');
     if (adminRoles.contains(role)) groups.add('Bursars & Admin');
+    if (securityRoles.contains(role)) groups.add('Security');
+    
+    if (role == UserRole.boardingMatron) groups.add('Matrons (Girls)');
+    if (role == UserRole.boardingPatron) groups.add('Patrons (Boys)');
+
     return groups;
+  }
+
+  /// Unions the broadcast groups for every role a (multi-role) staff member
+  /// holds, so a Class Teacher who is also Bursar gets both sets of
+  /// broadcasts.
+  static List<String> forRoles(List<UserRole> roles) {
+    final groups = <String>{};
+    for (final role in roles) {
+      groups.addAll(forRole(role));
+    }
+    return groups.toList();
   }
 }
 
@@ -109,34 +144,25 @@ class UserRoleRouting {
       case UserRole.librarian:
         return '/staff/librarian';
       case UserRole.gatekeeper:
-        return '/staff/gatekeeper';
-      case UserRole.schoolAdmin:
-      case UserRole.director:
-      case UserRole.headTeacher:
-      case UserRole.deputyHead:
-        return '/staff/admin';
-      case UserRole.deanOfStudies:
-        return '/staff/dean';
-      case UserRole.boardingMatron:
-        return '/staff/matron';
-      case UserRole.transportCoordinator:
-        return '/staff/transport';
-      case UserRole.guidanceDiscipline:
-        return '/staff/discipline';
-      case UserRole.cateringManager:
-        return '/staff/catering';
-      case UserRole.gamesMaster:
-        return '/staff/games';
       case UserRole.securityHead:
-        return '/staff/security';
-      case UserRole.religiousLeader:
-        return '/staff/religious-leader';
       case UserRole.receptionist:
-        return '/staff/receptionist';
+        return '/staff/security';
       case UserRole.storeInventory:
         return '/staff/inventory';
       case UserRole.hrOfficer:
         return '/staff/hr';
+      case UserRole.superAdmin:
+        return '/super-admin';
+      case UserRole.parent:
+        return '/parent/home';
+      case UserRole.director:
+        return '/staff/director';
+      case UserRole.headTeacher:
+      case UserRole.schoolAdmin:
+      case UserRole.deputyHead:
+        return '/staff/admin';
+      case UserRole.boardingPatron:
+        return '/staff/patron';
       default:
         return '/staff/dashboard';
     }

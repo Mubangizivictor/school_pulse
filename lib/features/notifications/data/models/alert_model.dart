@@ -11,18 +11,21 @@ class AlertModel extends Alert {
     required super.timestamp,
   });
 
+  /// Handles two doc shapes sharing the 'alerts' collection: per-student
+  /// alerts (health/academic/discipline - studentId + message) and
+  /// BroadcastSmsScreen broadcasts (targets + body, no studentId).
   factory AlertModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final json = doc.data()!;
     return AlertModel(
       id: doc.id,
-      studentId: json['studentId'] as String,
-      title: json['title'] as String,
-      message: json['message'] as String,
+      studentId: json['studentId'] as String?,
+      title: json['title'] as String? ?? 'Notification',
+      message: (json['message'] ?? json['body']) as String? ?? '',
       severity: AlertSeverity.values.firstWhere(
         (e) => e.name == (json['severity'] ?? 'info'),
         orElse: () => AlertSeverity.info,
       ),
-      timestamp: (json['timestamp'] as Timestamp).toDate(),
+      timestamp: (json['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 

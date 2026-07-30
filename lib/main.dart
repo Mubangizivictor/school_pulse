@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:school_pulse/app/router.dart';
 import 'package:school_pulse/core/theme_provider.dart';
-import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/firebase_options.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
@@ -20,12 +19,14 @@ import 'package:school_pulse/features/student/presentation/bloc/selected_student
 import 'package:school_pulse/features/student/presentation/bloc/students_bloc.dart';
 import 'package:school_pulse/features/notifications/presentation/bloc/notifications_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
-import 'package:school_pulse/features/gatekeeper/presentation/bloc/gatekeeper_bloc.dart';
-import 'package:school_pulse/features/receptionist/presentation/bloc/receptionist_bloc.dart';
+import 'package:school_pulse/features/director/presentation/bloc/director_bloc.dart';
 import 'package:school_pulse/features/calendar/presentation/bloc/calendar_bloc.dart';
 import 'package:school_pulse/features/calendar/presentation/bloc/calendar_event.dart';
 import 'package:school_pulse/features/inventory/presentation/bloc/inventory_bloc.dart';
 import 'package:school_pulse/features/inventory/presentation/bloc/inventory_event.dart';
+import 'package:school_pulse/features/inventory/presentation/bloc/stores_assets_bloc.dart';
+import 'package:school_pulse/features/structure/presentation/bloc/structure_bloc.dart';
+import 'package:school_pulse/features/structure/presentation/bloc/structure_event.dart';
 import 'package:school_pulse/features/hr/presentation/bloc/hr_bloc.dart';
 import 'package:school_pulse/features/security/presentation/bloc/security_bloc.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
@@ -34,10 +35,17 @@ import 'package:school_pulse/features/exams/presentation/bloc/exams_bloc.dart';
 import 'package:school_pulse/features/catering/presentation/bloc/catering_bloc.dart';
 import 'package:school_pulse/features/games/presentation/bloc/games_bloc.dart';
 import 'package:school_pulse/features/matron/presentation/bloc/matron_bloc.dart';
+import 'package:school_pulse/features/patron/presentation/bloc/patron_bloc.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/system_config_bloc.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/system_config_event.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/system_config_state.dart';
 import 'package:school_pulse/core/notification/notification_service.dart';
+import 'package:school_pulse/features/visitors/presentation/bloc/visitors_bloc.dart';
+import 'package:school_pulse/features/biometrics/presentation/bloc/biometrics_bloc.dart';
+import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.dart';
+import 'package:school_pulse/features/super_admin/presentation/bloc/super_admin_bloc.dart';
+import 'package:school_pulse/features/branding/presentation/bloc/branding_event.dart';
+import 'package:school_pulse/features/branding/presentation/screens/branding_initializer.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -80,6 +88,9 @@ class SchoolPulseApp extends StatelessWidget {
           create: (_) => di.sl<AuthBloc>()..add(AuthCheckRequested()),
         ),
         BlocProvider(
+          create: (_) => di.sl<BrandingBloc>()..add(InitializeBranding()),
+        ),
+        BlocProvider(
           create: (_) => di.sl<AcademicBloc>(),
         ),
         BlocProvider(
@@ -113,13 +124,16 @@ class SchoolPulseApp extends StatelessWidget {
           create: (_) => di.sl<TeacherBloc>(),
         ),
         BlocProvider(
-          create: (_) => di.sl<GatekeeperBloc>(),
+          create: (_) => di.sl<DirectorBloc>(),
         ),
         BlocProvider(
           create: (_) => di.sl<InventoryBloc>()..add(LoadInventory()),
         ),
         BlocProvider(
-          create: (_) => di.sl<ReceptionistBloc>(),
+          create: (_) => di.sl<StoresAssetsBloc>(),
+        ),
+        BlocProvider(
+          create: (_) => di.sl<StructureBloc>()..add(LoadStructureData()),
         ),
         BlocProvider(
           create: (_) => di.sl<SecurityBloc>(),
@@ -143,13 +157,27 @@ class SchoolPulseApp extends StatelessWidget {
           create: (_) => di.sl<MatronBloc>(),
         ),
         BlocProvider(
+          create: (_) => di.sl<PatronBloc>(),
+        ),
+        BlocProvider(
           create: (_) => di.sl<HrBloc>(),
         ),
         BlocProvider(
           create: (_) => di.sl<SystemConfigBloc>()..add(WatchSystemConfig()),
         ),
+        BlocProvider(
+          create: (_) => di.sl<VisitorsBloc>(),
+        ),
+        BlocProvider(
+          create: (_) => di.sl<BiometricsBloc>(),
+        ),
+        BlocProvider(
+          create: (_) => di.sl<SuperAdminBloc>(),
+        ),
       ],
-      child: const SchoolPulseAppView(),
+      child: const BrandingInitializer(
+        child: SchoolPulseAppView(),
+      ),
     );
   }
 }
@@ -171,7 +199,6 @@ class SchoolPulseAppView extends StatelessWidget {
         BlocListener<AuthBloc, AuthState>(
           listener: (context, state) {
             if (state is AuthAuthenticated) {
-              // Sync FCM token whenever a user authenticates
               NotificationService().syncToken(state.user.id);
             }
           },
@@ -179,14 +206,10 @@ class SchoolPulseAppView extends StatelessWidget {
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
-          final config = themeProvider.config;
-          final primary = config?.primaryColor != null ? Color(int.parse(config!.primaryColor!)) : null;
-          final secondary = config?.secondaryColor != null ? Color(int.parse(config!.secondaryColor!)) : null;
-
           return MaterialApp.router(
-            title: config?.schoolName ?? 'School Pulse',
-            theme: AppTheme.light(primary: primary, secondary: secondary),
-            darkTheme: AppTheme.dark(primary: primary, secondary: secondary),
+            title: themeProvider.branding?.schoolName ?? 'School Pulse',
+            theme: themeProvider.lightTheme,
+            darkTheme: themeProvider.darkTheme,
             themeMode: themeProvider.themeMode,
             routerConfig: router,
             debugShowCheckedModeBanner: false,

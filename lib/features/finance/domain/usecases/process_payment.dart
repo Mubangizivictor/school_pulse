@@ -8,7 +8,7 @@ class ProcessPayment {
 
   ProcessPayment(this.repository);
 
-  Future<Either<Failure, void>> call(PaymentRecord payment) async {
-    return await repository.processPayment(payment);
+  Future<Either<Failure, String>> call(PaymentRecord payment) async {
+    return await repository.recordPayment(payment);
   }
 }

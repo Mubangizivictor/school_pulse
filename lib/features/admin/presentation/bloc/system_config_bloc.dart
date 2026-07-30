@@ -1,4 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:school_pulse/features/branding/domain/entities/school_branding.dart';
+import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.dart';
+import 'package:school_pulse/features/branding/presentation/bloc/branding_event.dart';
 import '../../data/models/system_config.dart';
 import '../../data/repositories/system_config_repository.dart';
 import 'system_config_event.dart';
@@ -6,12 +9,17 @@ import 'system_config_state.dart';
 
 class SystemConfigBloc extends Bloc<SystemConfigEvent, SystemConfigState> {
   final SystemConfigRepository repository;
+  final BrandingBloc brandingBloc;
 
-  SystemConfigBloc({required this.repository}) : super(SystemConfigInitial()) {
+  SystemConfigBloc({
+    required this.repository,
+    required this.brandingBloc,
+  }) : super(SystemConfigInitial()) {
     on<LoadSystemConfig>((event, emit) async {
       emit(SystemConfigLoading());
       try {
         final config = await repository.getConfig();
+        _updateBrandingFromConfig(config);
         emit(SystemConfigLoaded(config));
       } catch (e) {
         emit(SystemConfigError(e.toString()));
@@ -22,6 +30,7 @@ class SystemConfigBloc extends Bloc<SystemConfigEvent, SystemConfigState> {
       final currentConfig = _getCurrentConfig();
       try {
         await repository.updateConfig(event.config);
+        _updateBrandingFromConfig(event.config);
         emit(SystemConfigUpdated(event.config));
         emit(SystemConfigLoaded(event.config));
       } catch (e) {
@@ -32,7 +41,10 @@ class SystemConfigBloc extends Bloc<SystemConfigEvent, SystemConfigState> {
     on<WatchSystemConfig>((event, emit) async {
       await emit.forEach(
         repository.watchConfig(),
-        onData: (config) => SystemConfigLoaded(config),
+        onData: (config) {
+          _updateBrandingFromConfig(config);
+          return SystemConfigLoaded(config);
+        },
         onError: (e, stackTrace) => SystemConfigError(e.toString(), config: _getCurrentConfig()),
       );
     });
@@ -48,11 +60,24 @@ class SystemConfigBloc extends Bloc<SystemConfigEvent, SystemConfigState> {
         final latestConfig = await repository.getConfig();
         final newConfig = latestConfig.copyWith(schoolLogoUrl: logoUrl);
         await repository.updateConfig(newConfig);
+        _updateBrandingFromConfig(newConfig);
         emit(SystemConfigLoaded(newConfig));
       } catch (e) {
         emit(SystemConfigError(e.toString(), config: currentConfig));
       }
     });
+  }
+
+  void _updateBrandingFromConfig(SystemConfig config) {
+    brandingBloc.add(BrandingUpdateRequested(SchoolBranding(
+      schoolId: 'system', // Consistent with the collection('config').doc('system') logic
+      schoolName: config.schoolName,
+      schoolMotto: config.schoolMotto,
+      logoUrl: config.schoolLogoUrl,
+      primaryColor: config.primaryColor,
+      secondaryColor: config.secondaryColor,
+      version: 1,
+    )));
   }
 
   SystemConfig? _getCurrentConfig() {

@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 import 'package:school_pulse/features/matron/presentation/bloc/matron_bloc.dart';
 import 'package:school_pulse/features/matron/presentation/bloc/matron_event.dart';
 import 'package:school_pulse/features/matron/presentation/bloc/matron_state.dart';
-import 'package:school_pulse/features/matron/presentation/screens/dorm_allocation_screen.dart';
-import 'package:school_pulse/features/matron/presentation/screens/night_attendance_screen.dart';
+import 'package:school_pulse/features/matron/presentation/screens/dorm_management_screen.dart';
+import 'package:school_pulse/features/matron/presentation/screens/boarding_attendance_screen.dart';
+import 'package:school_pulse/features/matron/presentation/screens/welfare_management_screen.dart';
+import 'package:school_pulse/features/matron/presentation/screens/boarding_discipline_screen.dart';
+import 'package:school_pulse/features/matron/presentation/screens/hygiene_management_screen.dart';
 
 class MatronDashboardScreen extends StatefulWidget {
   const MatronDashboardScreen({super.key});
@@ -17,22 +23,40 @@ class MatronDashboardScreen extends StatefulWidget {
 }
 
 class _MatronDashboardScreenState extends State<MatronDashboardScreen> {
+  String? _genderScope(BuildContext context) {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthAuthenticated) return null;
+    return UserRoleDisplay.matronGenderScope(authState.user.role);
+  }
+
+  String? _schoolId(BuildContext context) {
+    final authState = context.read<AuthBloc>().state;
+    return authState is AuthAuthenticated ? authState.user.schoolId : null;
+  }
+
   @override
   void initState() {
     super.initState();
-    context.read<MatronBloc>().add(MatronDashboardRequested());
+    context.read<MatronBloc>().add(
+      MatronDashboardRequested(
+        schoolId: _schoolId(context),
+        gender: _genderScope(context),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
+    final genderScope = _genderScope(context);
+    final isPatron = genderScope == 'Male';
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Matron Portal'),
-        actions: [
-          const NotificationBellButton(),
-        ],
+        title: Text(
+          isPatron ? 'Patron Dashboard (Boys)' : 'Matron Dashboard (Girls)',
+        ),
+        actions: const [NotificationBellButton()],
       ),
       body: BlocBuilder<MatronBloc, MatronState>(
         builder: (context, state) {
@@ -44,124 +68,39 @@ class _MatronDashboardScreenState extends State<MatronDashboardScreen> {
             return Center(child: Text(state.message));
           }
 
-          if (state is MatronLoaded) {
+          if (state is MatronDashboardLoaded) {
+            final data = state.data;
             return RefreshIndicator(
               onRefresh: () async {
-                context.read<MatronBloc>().add(MatronDashboardRequested());
+                context.read<MatronBloc>().add(
+                  MatronDashboardRequested(
+                    schoolId: _schoolId(context),
+                    gender: genderScope,
+                  ),
+                );
               },
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
                   FadeInSlide(
                     child: Text(
-                      'Boarding Overview',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                      'Boarding Welfare Overview',
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  _buildStatsGrid(context, data, semanticColors),
                   const SizedBox(height: 24),
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 1.1,
-                    children: [
-                      FadeInSlide(
-                        delay: const Duration(milliseconds: 100),
-                        child: DashboardStatCard(
-                          title: 'Total Boarders',
-                          value: state.totalStudents.toDouble(),
-                          icon: Icons.hotel_outlined,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                      FadeInSlide(
-                        delay: const Duration(milliseconds: 200),
-                        child: DashboardStatCard(
-                          title: 'Present',
-                          value: state.studentsPresent.toDouble(),
-                          icon: Icons.check_circle_outline,
-                          color: semanticColors.success,
-                        ),
-                      ),
-                      FadeInSlide(
-                        delay: const Duration(milliseconds: 300),
-                        child: DashboardStatCard(
-                          title: 'On Leave',
-                          value: state.studentsOnLeave.toDouble(),
-                          icon: Icons.time_to_leave_outlined,
-                          color: semanticColors.warning,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  const SectionHeader(title: 'Dormitories'),
+                  _buildSectionTitle(context, 'Management Hub'),
                   const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      _QuickAction(
-                        label: 'Allocation',
-                        icon: Icons.assignment_ind_outlined,
-                        color: Theme.of(context).colorScheme.primary,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const DormAllocationScreen()),
-                        ),
-                      ),
-                      _QuickAction(
-                        label: 'Night Roll Call',
-                        icon: Icons.nightlight_round,
-                        color: Colors.indigo,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const NightAttendanceScreen()),
-                        ),
-                      ),
-                    ],
-                  ),
+                  _buildManagementGrid(context, isPatron),
                   const SizedBox(height: 24),
-                  ...state.dormitories.map((dorm) => FadeInSlide(
-                        child: AppCard(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(dorm.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                  StatusBadge(
-                                    label: dorm.status,
-                                    color: dorm.status == 'Normal' ? semanticColors.success : semanticColors.error,
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: LinearProgressIndicator(
-                                  value: dorm.currentOccupants / dorm.capacity,
-                                  minHeight: 8,
-                                  backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                                  valueColor: AlwaysStoppedAnimation(
-                                    dorm.currentOccupants > dorm.capacity ? semanticColors.error : Theme.of(context).colorScheme.primary,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '${dorm.currentOccupants} / ${dorm.capacity} Occupants',
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            ],
-                          ),
-                        ),
-                      )),
+                  _buildSectionTitle(context, 'Dormitories Status'),
+                  const SizedBox(height: 12),
+                  ...data.dormitories.map(
+                    (dorm) => _DormitoryStatusCard(dorm: dorm),
+                  ),
                 ],
               ),
             );
@@ -171,15 +110,141 @@ class _MatronDashboardScreenState extends State<MatronDashboardScreen> {
       ),
     );
   }
+
+  Widget _buildSectionTitle(BuildContext context, String title) {
+    return FadeInSlide(
+      child: Text(
+        title,
+        style: Theme.of(
+          context,
+        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildStatsGrid(
+    BuildContext context,
+    dynamic data,
+    SemanticColors semanticColors,
+  ) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 600;
+        return GridView.count(
+          crossAxisCount: isMobile ? 2 : 4,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 1.5,
+          children: [
+            DashboardStatCard(
+              title: 'Boarders',
+              value: data.totalStudents.toDouble(),
+              icon: Icons.people_outline,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            DashboardStatCard(
+              title: 'Present',
+              value: data.studentsPresent.toDouble(),
+              icon: Icons.check_circle_outline,
+              color: semanticColors.success,
+            ),
+            DashboardStatCard(
+              title: 'Leave',
+              value: data.studentsOnLeave.toDouble(),
+              icon: Icons.exit_to_app,
+              color: semanticColors.warning,
+            ),
+            DashboardStatCard(
+              title: 'Discipline',
+              value: data.activeDisciplineCases.toDouble(),
+              icon: Icons.gavel_outlined,
+              color: semanticColors.error,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildManagementGrid(BuildContext context, bool isPatron) {
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      childAspectRatio: 2.2,
+      children: [
+        _QuickActionCard(
+          label: 'Dormitories',
+          icon: Icons.hotel_outlined,
+          color: Colors.blue,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const DormManagementScreen()),
+          ),
+        ),
+        _QuickActionCard(
+          label: 'Attendance',
+          icon: Icons.how_to_reg_outlined,
+          color: Colors.green,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const BoardingAttendanceScreen()),
+          ),
+        ),
+        _QuickActionCard(
+          label: 'Welfare',
+          icon: Icons.favorite_outline,
+          color: Colors.orange,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const WelfareManagementScreen()),
+          ),
+        ),
+        _QuickActionCard(
+          label: 'Discipline',
+          icon: Icons.gavel_outlined,
+          color: Colors.red,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const BoardingDisciplineScreen()),
+          ),
+        ),
+        if (!isPatron)
+          _QuickActionCard(
+            label: 'Hygiene',
+            icon: Icons.clean_hands_outlined,
+            color: Colors.teal,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const HygieneManagementScreen(),
+              ),
+            ),
+          ),
+        _QuickActionCard(
+          label: 'Reports',
+          icon: Icons.assessment_outlined,
+          color: Colors.purple,
+          onTap: () {
+            // TODO: Navigate to reports
+          },
+        ),
+      ],
+    );
+  }
 }
 
-class _QuickAction extends StatelessWidget {
+class _QuickActionCard extends StatelessWidget {
   final String label;
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
 
-  const _QuickAction({
+  const _QuickActionCard({
     required this.label,
     required this.icon,
     required this.color,
@@ -188,25 +253,99 @@ class _QuickAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return AppCard(
+      padding: EdgeInsets.zero,
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
       child: Container(
-        width: (MediaQuery.of(context).size.width - 44) / 2,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
-        ),
-        child: Column(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(color: color.withValues(alpha: 0.05)),
+        child: Row(
           children: [
-            Icon(icon, color: color, size: 28),
+            Icon(icon, color: color, size: 24),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: color,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DormitoryStatusCard extends StatelessWidget {
+  final dynamic dorm;
+
+  const _DormitoryStatusCard({required this.dorm});
+
+  @override
+  Widget build(BuildContext context) {
+    final occupancy = dorm.occupantCount / dorm.capacity;
+    final isFull = dorm.occupantCount >= dorm.capacity;
+    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: AppCard(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  dorm.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                StatusBadge(
+                  label: isFull ? 'Full' : 'Available',
+                  color: isFull ? semanticColors.error : semanticColors.success,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: occupancy,
+                minHeight: 8,
+                backgroundColor: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest,
+                valueColor: AlwaysStoppedAnimation(
+                  occupancy > 1.0
+                      ? semanticColors.error
+                      : Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ),
             const SizedBox(height: 8),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: color),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${dorm.occupantCount} / ${dorm.capacity} Occupants',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                if (dorm.roomLeaderName != null)
+                  Text(
+                    'Leader: ${dorm.roomLeaderName}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+              ],
             ),
           ],
         ),
@@ -223,24 +362,33 @@ class _MatronSkeleton extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const Skeleton(width: 200, height: 28),
+        const Skeleton(width: 250, height: 32),
         const SizedBox(height: 24),
         GridView.count(
           crossAxisCount: 2,
           shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          childAspectRatio: 1.1,
-          children: List.generate(4, (index) => const Skeleton(borderRadius: 12)),
+          childAspectRatio: 1.5,
+          children: List.generate(
+            4,
+            (index) => const Skeleton(borderRadius: 12),
+          ),
         ),
         const SizedBox(height: 24),
-        const Skeleton(width: 150, height: 20),
+        const Skeleton(width: 150, height: 24),
         const SizedBox(height: 12),
-        ...List.generate(3, (index) => const Padding(
-              padding: EdgeInsets.only(bottom: 12),
-              child: Skeleton(height: 100, borderRadius: 12),
-            )),
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 2.2,
+          children: List.generate(
+            4,
+            (index) => const Skeleton(borderRadius: 12),
+          ),
+        ),
       ],
     );
   }

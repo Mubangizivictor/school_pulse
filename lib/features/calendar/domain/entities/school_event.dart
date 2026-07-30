@@ -1,7 +1,22 @@
 import 'package:equatable/equatable.dart';
-import '../../../../core/user_roles.dart';
 
-enum SchoolEventType { general, staffMeeting, exam, holiday, other }
+enum SchoolEventType {
+  general,
+  staffMeeting,
+  parentMeeting,
+  exam,
+  holiday,
+  sportsEvent,
+  trip,
+  deadline,
+  assembly,
+  other,
+}
+
+/// Broadcast group labels an event can be aimed at - matches the topic
+/// names BroadcastSmsScreen and NotificationGroups already use, so picking
+/// "Parents" here reaches the same devices a manual broadcast would.
+const List<String> defaultEventTargetGroups = ['Parents', 'All Staff'];
 
 class SchoolEvent extends Equatable {
   final String id;
@@ -9,9 +24,8 @@ class SchoolEvent extends Equatable {
   final String description;
   final DateTime date;
   final String createdBy;
-  final List<UserRole> targetRoles;
+  final List<String> targetGroups;
   final SchoolEventType type;
-  final String? responsiblePerson;
 
   const SchoolEvent({
     required this.id,
@@ -19,9 +33,8 @@ class SchoolEvent extends Equatable {
     required this.description,
     required this.date,
     required this.createdBy,
-    this.targetRoles = const [],
+    this.targetGroups = defaultEventTargetGroups,
     this.type = SchoolEventType.general,
-    this.responsiblePerson,
   });
 
   @override
@@ -31,8 +44,7 @@ class SchoolEvent extends Equatable {
         description,
         date,
         createdBy,
-        targetRoles,
+        targetGroups,
         type,
-        responsiblePerson,
       ];
 }

@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/core/utils.dart';
 import 'package:school_pulse/features/inventory/domain/entities/procurement_request.dart';
+import 'package:school_pulse/features/inventory/domain/entities/purchase_order.dart';
+import '../bloc/stores_assets_bloc.dart';
+import '../bloc/stores_assets_event.dart';
+import '../bloc/stores_assets_state.dart';
+
+import '../../../../core/utils/reporting_engine.dart';
 
 class ProcurementScreen extends StatefulWidget {
   final bool isAdminView;
@@ -11,63 +18,115 @@ class ProcurementScreen extends StatefulWidget {
   State<ProcurementScreen> createState() => _ProcurementScreenState();
 }
 
-class _ProcurementScreenState extends State<ProcurementScreen> {
-  final List<ProcurementRequest> _requests = [
-    ProcurementRequest(
-      id: '1',
-      requesterId: 'T001',
-      requesterName: 'Mr. Okello',
-      itemName: 'Chalk Boxes',
-      quantity: 50,
-      reason: 'End of term supplies needed.',
-      status: ProcurementStatus.pending,
-      date: DateTime.now().subtract(const Duration(days: 2)),
-    ),
-  ];
+class _ProcurementScreenState extends State<ProcurementScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    context.read<StoresAssetsBloc>().add(LoadProcurementRequests());
+    context.read<StoresAssetsBloc>().add(LoadPurchaseOrders());
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isAdminView ? 'Procurement Approvals' : 'Procurement Requests'),
+        title: Text(widget.isAdminView ? 'Procurement & Orders' : 'Procurement Requests'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Requests'),
+            Tab(text: 'Purchase Orders'),
+          ],
+        ),
         actions: [
           if (!widget.isAdminView)
             IconButton(
-              onPressed: _showRequestDialog,
+              onPressed: () => _showRequestDialog(context),
               icon: const Icon(Icons.add_shopping_cart),
             ),
           const SizedBox(width: 8),
         ],
       ),
-      body: _requests.isEmpty
-          ? const Center(child: Text('No procurement requests yet.'))
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _requests.length,
-              itemBuilder: (context, index) {
-                final request = _requests[index];
-                return _RequestTile(
-                  request: request,
-                  isAdmin: widget.isAdminView,
-                  onStatusChanged: (status) {
-                    setState(() {
-                      _requests[index] = request.copyWith(status: status);
-                    });
-                  },
-                );
-              },
-            ),
+      body: BlocBuilder<StoresAssetsBloc, StoresAssetsState>(
+        builder: (context, state) {
+          if (state is StoresAssetsLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          List<ProcurementRequest> requests = [];
+          List<PurchaseOrder> orders = [];
+          if (state is StoresAssetsLoaded) {
+            requests = state.procurementRequests;
+            orders = state.purchaseOrders;
+          }
+
+          return TabBarView(
+            controller: _tabController,
+            children: [
+              _buildRequestsList(requests),
+              _buildOrdersList(orders),
+            ],
+          );
+        },
+      ),
     );
   }
 
-  void _showRequestDialog() {
+  Widget _buildRequestsList(List<ProcurementRequest> requests) {
+    if (requests.isEmpty) {
+      return const Center(child: Text('No procurement requests yet.'));
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: requests.length,
+      itemBuilder: (context, index) {
+        final request = requests[index];
+        return _RequestTile(
+          request: request,
+          isAdmin: widget.isAdminView,
+          onStatusChanged: (status) {
+            context.read<StoresAssetsBloc>().add(
+                  UpdateProcurementRequestStatusRequested(request.id, status),
+                );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildOrdersList(List<PurchaseOrder> orders) {
+    if (orders.isEmpty) {
+      return const Center(child: Text('No purchase orders yet.'));
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: orders.length,
+      itemBuilder: (context, index) {
+        final order = orders[index];
+        return _OrderTile(order: order);
+      },
+    );
+  }
+
+  void _showRequestDialog(BuildContext context) {
     final itemController = TextEditingController();
     final quantityController = TextEditingController();
     final reasonController = TextEditingController();
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('New Procurement Request'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -80,23 +139,24 @@ class _ProcurementScreenState extends State<ProcurementScreen> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
           FilledButton(
             onPressed: () {
               if (itemController.text.isEmpty || quantityController.text.isEmpty) return;
-              setState(() {
-                _requests.insert(0, ProcurementRequest(
-                  id: DateTime.now().millisecondsSinceEpoch.toString(),
-                  requesterId: 'SELF',
-                  requesterName: 'Me',
-                  itemName: itemController.text,
-                  quantity: int.tryParse(quantityController.text) ?? 1,
-                  reason: reasonController.text,
-                  status: ProcurementStatus.pending,
-                  date: DateTime.now(),
-                ));
-              });
-              Navigator.pop(context);
+              
+              final request = ProcurementRequest(
+                id: '', // Generated by backend/repo
+                requesterId: 'CURRENT_USER_ID', // Replace with actual user ID
+                requesterName: 'Current User', // Replace with actual user name
+                itemName: itemController.text,
+                quantity: int.tryParse(quantityController.text) ?? 1,
+                reason: reasonController.text,
+                status: ProcurementStatus.pending,
+                date: DateTime.now(),
+              );
+
+              context.read<StoresAssetsBloc>().add(CreateProcurementRequestRequested(request));
+              Navigator.pop(dialogContext);
             },
             child: const Text('Submit Request'),
           ),
@@ -127,7 +187,16 @@ class _RequestTile extends StatelessWidget {
               Expanded(
                 child: Text(request.itemName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               ),
-              _StatusBadge(status: request.status),
+              StatusBadge(
+                label: request.status.name,
+                color: request.status == ProcurementStatus.pending
+                    ? Colors.orange
+                    : request.status == ProcurementStatus.approved
+                        ? Colors.green
+                        : request.status == ProcurementStatus.rejected
+                            ? Colors.red
+                            : Colors.blue,
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -160,23 +229,62 @@ class _RequestTile extends StatelessWidget {
   }
 }
 
-class _StatusBadge extends StatelessWidget {
-  final ProcurementStatus status;
-  const _StatusBadge({required this.status});
+class _OrderTile extends StatelessWidget {
+  final PurchaseOrder order;
+  const _OrderTile({required this.order});
 
   @override
   Widget build(BuildContext context) {
-    Color color;
-    switch (status) {
-      case ProcurementStatus.pending: color = Colors.orange; break;
-      case ProcurementStatus.approved: color = Colors.green; break;
-      case ProcurementStatus.rejected: color = Colors.red; break;
-      case ProcurementStatus.completed: color = Colors.blue; break;
+    Color statusColor;
+    switch (order.status) {
+      case PurchaseOrderStatus.pending:
+        statusColor = Colors.orange;
+        break;
+      case PurchaseOrderStatus.approved:
+        statusColor = Colors.blue;
+        break;
+      case PurchaseOrderStatus.ordered:
+        statusColor = Colors.indigo;
+        break;
+      case PurchaseOrderStatus.received:
+        statusColor = Colors.green;
+        break;
+      case PurchaseOrderStatus.cancelled:
+        statusColor = Colors.red;
+        break;
     }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-      child: Text(status.name.toUpperCase(), style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+
+    return AppCard(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(order.orderNumber, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              StatusBadge(label: order.status.name, color: statusColor),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text('Supplier: ${order.supplierName}'),
+          Text('Items: ${order.items.length}'),
+          Text('Total: UGX ${order.totalAmount.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+          const Divider(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(DateFormatter.format(order.date), style: Theme.of(context).textTheme.bodySmall),
+              TextButton.icon(
+                onPressed: () => ReportingEngine.exportPurchaseOrderToPdf(order),
+                icon: const Icon(Icons.picture_as_pdf, size: 18),
+                label: const Text('Export PDF'),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

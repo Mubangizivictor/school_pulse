@@ -9,8 +9,10 @@ class GetAllAccessCodes {
   final StudentRepository repository;
   GetAllAccessCodes(this.repository);
 
-  Future<Either<Failure, List<ParentAccessCode>>> call() async {
-    return await repository.getAllAccessCodes();
+  Future<Either<Failure, List<ParentAccessCode>>> call({
+    String? schoolId,
+  }) async {
+    return await repository.getAllAccessCodes(schoolId: schoolId);
   }
 }
 
@@ -18,8 +20,18 @@ class CreateAccessCode {
   final StudentRepository repository;
   CreateAccessCode(this.repository);
 
-  Future<Either<Failure, String>> call({required List<String> studentIds, String? parentName}) async {
-    return await repository.createAccessCode(studentIds: studentIds, parentName: parentName);
+  Future<Either<Failure, String>> call({
+    required List<String> studentIds,
+    required String schoolId,
+    required String phoneNumber,
+    String? parentName,
+  }) async {
+    return await repository.createAccessCode(
+      studentIds: studentIds,
+      schoolId: schoolId,
+      phoneNumber: phoneNumber,
+      parentName: parentName,
+    );
   }
 }
 
@@ -36,8 +48,16 @@ class ToggleAccessCodeStatus {
   final StudentRepository repository;
   ToggleAccessCodeStatus(this.repository);
 
-  Future<Either<Failure, void>> call(String code, bool isActive) async {
-    return await repository.toggleAccessCodeStatus(code, isActive);
+  Future<Either<Failure, void>> call(
+    String code,
+    bool isActive, {
+    String? reason,
+  }) async {
+    return await repository.toggleAccessCodeStatus(
+      code,
+      isActive,
+      reason: reason,
+    );
   }
 }
 

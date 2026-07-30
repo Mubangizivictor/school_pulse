@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import '../bloc/matron_bloc.dart';
 import '../bloc/matron_event.dart';
 import '../bloc/matron_state.dart';
-import '../../domain/repositories/matron_repository.dart';
+import '../../domain/entities/boarding_entities.dart';
 
 class DormAllocationScreen extends StatefulWidget {
   const DormAllocationScreen({super.key});
@@ -17,11 +20,17 @@ class _DormAllocationScreenState extends State<DormAllocationScreen> {
   String? _selectedDormitoryId;
   String? _selectedStudentId;
 
+  String? _genderScope(BuildContext context) {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthAuthenticated) return null;
+    return UserRoleDisplay.matronGenderScope(authState.user.role);
+  }
+
   @override
   void initState() {
     super.initState();
-    context.read<MatronBloc>().add(UnallocatedStudentsRequested());
-    context.read<MatronBloc>().add(MatronDashboardRequested());
+    context.read<MatronBloc>().add(UnallocatedStudentsRequested(gender: _genderScope(context)));
+    context.read<MatronBloc>().add(MatronDashboardRequested(gender: _genderScope(context)));
   }
 
   @override
@@ -32,19 +41,19 @@ class _DormAllocationScreenState extends State<DormAllocationScreen> {
       ),
       body: BlocConsumer<MatronBloc, MatronState>(
         listener: (context, state) {
-          if (state is AllocationSuccessful) {
+          if (state is MatronSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Student allocated successfully')),
             );
-            context.read<MatronBloc>().add(UnallocatedStudentsRequested());
-            context.read<MatronBloc>().add(MatronDashboardRequested());
+            context.read<MatronBloc>().add(UnallocatedStudentsRequested(gender: _genderScope(context)));
+            context.read<MatronBloc>().add(MatronDashboardRequested(gender: _genderScope(context)));
             setState(() {
               _selectedStudentId = null;
             });
           }
         },
         builder: (context, state) {
-          List<Student> unallocated = [];
+          List<BoardingStudent> unallocated = [];
 
           if (state is UnallocatedStudentsLoaded) {
             unallocated = state.students;
@@ -97,19 +106,19 @@ class _DormAllocationScreenState extends State<DormAllocationScreen> {
                 const SizedBox(height: 12),
                 Expanded(
                   child: BlocBuilder<MatronBloc, MatronState>(
-                    buildWhen: (previous, current) => current is MatronLoaded,
+                    buildWhen: (previous, current) => current is MatronDashboardLoaded,
                     builder: (context, state) {
-                      if (state is! MatronLoaded) return const Center(child: CircularProgressIndicator());
-                      
+                      if (state is! MatronDashboardLoaded) return const Center(child: CircularProgressIndicator());
+
                       return GridView.builder(
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
                           mainAxisSpacing: 12,
                           crossAxisSpacing: 12,
                         ),
-                        itemCount: state.dormitories.length,
+                        itemCount: state.data.dormitories.length,
                         itemBuilder: (context, index) {
-                          final dorm = state.dormitories[index];
+                          final dorm = state.data.dormitories[index];
                           final isSelected = _selectedDormitoryId == dorm.id;
                           return GestureDetector(
                             onTap: () => setState(() => _selectedDormitoryId = dorm.id),
@@ -121,12 +130,12 @@ class _DormAllocationScreenState extends State<DormAllocationScreen> {
                                 children: [
                                   Text(dorm.name, style: const TextStyle(fontWeight: FontWeight.bold)),
                                   const SizedBox(height: 8),
-                                  Text('${dorm.currentOccupants} / ${dorm.capacity}', 
+                                  Text('${dorm.occupantCount} / ${dorm.capacity}', 
                                       style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                                   const Text('Occupants', style: TextStyle(fontSize: 10)),
                                   const SizedBox(height: 12),
                                   LinearProgressIndicator(
-                                    value: dorm.currentOccupants / dorm.capacity,
+                                    value: dorm.occupantCount / dorm.capacity,
                                     color: isSelected ? Theme.of(context).colorScheme.primary : null,
                                   ),
                                 ],

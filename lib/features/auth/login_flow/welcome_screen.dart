@@ -160,7 +160,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
                     title: "I'm a Staff Member",
                     subtitle: "Manage classes and student records",
                     icon: Icons.assignment_ind,
-                    onTap: () => context.push('/staff/login/role'),
+                    onTap: () => context.push('/staff/login'),
                   ),
                 ),
               ],

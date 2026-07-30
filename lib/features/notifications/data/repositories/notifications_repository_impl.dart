@@ -11,13 +11,24 @@ class NotificationsRepositoryImpl implements NotificationsRepository {
 
   @override
   Future<Either<Failure, List<Alert>>> getAlerts(
-    List<String> studentIds,
-  ) async {
+    List<String> studentIds, {
+    List<String> groups = const [],
+  }) async {
     try {
-      final alerts = await remoteDataSource.getAlerts(studentIds);
+      final alerts = await remoteDataSource.getAlerts(studentIds, groups: groups);
       return Right(alerts);
     } catch (e) {
       return Left(ServerFailure());
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> markAlertRead(String alertId, String uid) async {
+    try {
+      await remoteDataSource.markAlertRead(alertId, uid);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
     }
   }
 }

@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lottie/lottie.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/admin/data/models/system_config.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/system_config_bloc.dart';
@@ -146,6 +145,8 @@ class _SchoolSplashScreenState extends State<SchoolSplashScreen>
     final user = widget.user;
     if (user.role == UserRole.parent) {
       context.go('/parent/home');
+    } else if (user.roles.length > 1) {
+      context.go('/staff/hub');
     } else {
       context.go(UserRoleRouting.dashboardPath(user.role));
     }
@@ -154,7 +155,6 @@ class _SchoolSplashScreenState extends State<SchoolSplashScreen>
   @override
   Widget build(BuildContext context) {
     final userRole = widget.user.role;
-    final isParent = userRole == UserRole.parent;
 
     return BlocListener<SystemConfigBloc, SystemConfigState>(
       listener: (context, state) {
@@ -173,16 +173,10 @@ class _SchoolSplashScreenState extends State<SchoolSplashScreen>
             if (config != null) {
               return Stack(
                 children: [
-                  // Background Animation based on role
+                  // Background Overlay
                   Positioned.fill(
-                    child: Opacity(
-                      opacity: 0.05,
-                      child: Lottie.network(
-                        isParent 
-                          ? 'https://assets5.lottiefiles.com/packages/lf20_1Lue46.json' // Soft bubbles/shapes
-                          : 'https://assets3.lottiefiles.com/packages/lf20_WkS4aD.json', // Subtle tech lines
-                        fit: BoxFit.cover,
-                      ),
+                    child: Container(
+                      color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
                     ),
                   ),
                   Center(

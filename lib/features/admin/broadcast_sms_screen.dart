@@ -1,10 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/core/notification/notification_service.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/features/admin/data/repositories/audit_repository.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 
 class BroadcastSmsScreen extends StatefulWidget {
   const BroadcastSmsScreen({super.key});
@@ -130,9 +133,15 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
               _ChannelTile(
                 icon: Icons.sms,
                 label: 'SMS Text',
-                description: 'Paid • Offline reach',
-                isSelected: _selectedChannels.contains('SMS'),
-                onTap: () => _toggleChannel('SMS'),
+                description: 'Not connected yet',
+                isSelected: false,
+                isDisabled: true,
+                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text(
+                    'SMS isn\'t connected to a provider yet. Ask your developer to wire up '
+                    'Twilio/Africa\'s Talking, or use Push & In-App for now.',
+                  )),
+                ),
               ),
             ],
           ),
@@ -302,40 +311,68 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
     final isPush = _selectedChannels.contains('Push');
     final scheduleDate = _isScheduled ? _scheduledDateTime : null;
 
-    // Show loading
+    // Show loading. A dedicated navigator key would be more robust still, but
+    // capturing this dialog's own context (rather than reusing the screen's)
+    // means the pop below targets the dialog route specifically even if the
+    // screen underneath it rebuilds or navigates during the await.
+    late BuildContext loadingDialogContext;
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
+      builder: (dialogContext) {
+        loadingDialogContext = dialogContext;
+        return const Center(child: CircularProgressIndicator());
+      },
     );
+    var dialogClosed = false;
+    void closeLoadingDialog() {
+      if (dialogClosed) return;
+      dialogClosed = true;
+      Navigator.of(loadingDialogContext).pop();
+    }
 
     try {
+      // A hung Firestore write (or any other unresolved await) must never be
+      // able to leave this barrier-blocking spinner on screen forever - cap
+      // it so the UI always recovers even if the write itself never settles.
       if (isPush) {
-        await NotificationService().sendBroadcast(
-          title: title,
-          body: body,
-          targetGroups: targets,
-          isSms: false,
-          scheduledAt: scheduleDate,
-        );
+        await NotificationService()
+            .sendBroadcast(
+              title: title,
+              body: body,
+              targetGroups: targets,
+              isSms: false,
+              scheduledAt: scheduleDate,
+            )
+            .timeout(const Duration(seconds: 15));
       }
 
       if (isSms) {
-        await NotificationService().sendBroadcast(
-          title: title,
-          body: body,
-          targetGroups: targets,
-          isSms: true,
-          scheduledAt: scheduleDate,
-        );
+        await NotificationService()
+            .sendBroadcast(
+              title: title,
+              body: body,
+              targetGroups: targets,
+              isSms: true,
+              scheduledAt: scheduleDate,
+            )
+            .timeout(const Duration(seconds: 15));
       }
 
+      di.sl<AuditRepository>().logAction(
+        title: _isScheduled ? 'Broadcast Scheduled' : 'Broadcast Sent',
+        description: '"$title" sent to ${targets.join(', ')} via ${_selectedChannels.join(' & ')}.',
+        iconName: 'send',
+        colorHex: 'FF9C27B0',
+        userId: FirebaseAuth.instance.currentUser?.uid,
+      );
+
+      closeLoadingDialog();
       if (mounted) {
-        Navigator.pop(context); // Close loading
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(_isScheduled 
-              ? 'Broadcast scheduled for ${_scheduledDateTime.toString()}' 
+            content: Text(_isScheduled
+              ? 'Broadcast scheduled for ${_scheduledDateTime.toString()}'
               : 'Broadcast sent successfully via ${_selectedChannels.join(" & ")}'),
             backgroundColor: Colors.green,
           ),
@@ -349,8 +386,8 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
         });
       }
     } catch (e) {
+      closeLoadingDialog();
       if (mounted) {
-        Navigator.pop(context); // Close loading
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
@@ -364,6 +401,8 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
       {'id': 'All Staff', 'icon': Icons.people},
       {'id': 'Teachers Only', 'icon': Icons.school},
       {'id': 'Bursars & Admin', 'icon': Icons.admin_panel_settings},
+      {'id': 'Matrons (Girls)', 'icon': Icons.female},
+      {'id': 'Patrons (Boys)', 'icon': Icons.male},
       {'id': 'Specific Class Parents', 'icon': Icons.class_},
     ];
     
@@ -605,6 +644,7 @@ class _ChannelTile extends StatelessWidget {
   final String label;
   final String description;
   final bool isSelected;
+  final bool isDisabled;
   final VoidCallback onTap;
 
   const _ChannelTile({
@@ -612,46 +652,53 @@ class _ChannelTile extends StatelessWidget {
     required this.label,
     required this.description,
     required this.isSelected,
+    this.isDisabled = false,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final iconColor = isDisabled
+        ? Theme.of(context).colorScheme.outline
+        : (isSelected ? Colors.white : Theme.of(context).colorScheme.primary);
     return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).dividerColor.withValues(alpha: 0.1),
+      child: Opacity(
+        opacity: isDisabled ? 0.5 : 1.0,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).dividerColor.withValues(alpha: 0.1),
+              ),
             ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, color: isSelected ? Colors.white : Theme.of(context).colorScheme.primary, size: 20),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                style: TextStyle(
-                  color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(icon, color: iconColor, size: 20),
+                const SizedBox(height: 8),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
                 ),
-              ),
-              Text(
-                description,
-                style: TextStyle(
-                  color: isSelected ? Colors.white.withValues(alpha: 0.8) : Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontSize: 10,
+                Text(
+                  description,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white.withValues(alpha: 0.8) : Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 10,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

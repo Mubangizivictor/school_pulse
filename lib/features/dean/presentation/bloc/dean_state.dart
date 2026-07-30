@@ -1,6 +1,13 @@
 import 'package:equatable/equatable.dart';
-import '../../domain/entities/dean_stats.dart';
-import '../../../academic/domain/entities/report_card.dart';
+import '../../domain/entities/academic_dashboard_stats.dart';
+import '../../domain/entities/academic_intervention.dart';
+import '../../domain/entities/class_observation.dart';
+import '../../domain/entities/curriculum.dart';
+import '../../domain/entities/lesson_tracking.dart';
+import '../../domain/entities/teacher_workload.dart';
+import '../../domain/entities/homework_record.dart';
+import '../../domain/entities/assessment_moderation.dart';
+import '../../domain/entities/report_card_approval.dart';
 
 abstract class DeanState extends Equatable {
   const DeanState();
@@ -13,38 +20,114 @@ class DeanInitial extends DeanState {}
 
 class DeanLoading extends DeanState {}
 
-class DeanLoaded extends DeanState {
-  final DeanStats stats;
-
-  const DeanLoaded(this.stats);
-
+class AcademicDashboardLoaded extends DeanState {
+  final AcademicDashboardStats stats;
+  const AcademicDashboardLoaded(this.stats);
   @override
   List<Object?> get props => [stats];
 }
 
-class DeanReportCardsLoaded extends DeanState {
-  final List<ReportCard> reportCards;
-
-  const DeanReportCardsLoaded(this.reportCards);
-
+class CurriculaLoaded extends DeanState {
+  final List<Curriculum> curricula;
+  const CurriculaLoaded(this.curricula);
   @override
-  List<Object?> get props => [reportCards];
+  List<Object?> get props => [curricula];
+}
+
+class SubjectsLoaded extends DeanState {
+  final List<Subject> subjects;
+  const SubjectsLoaded(this.subjects);
+  @override
+  List<Object?> get props => [subjects];
+}
+
+class TeacherWorkloadsLoaded extends DeanState {
+  final List<TeacherWorkload> workloads;
+  const TeacherWorkloadsLoaded(this.workloads);
+  @override
+  List<Object?> get props => [workloads];
+}
+
+class TeacherWorkloadDetailLoaded extends DeanState {
+  final TeacherWorkload workload;
+  const TeacherWorkloadDetailLoaded(this.workload);
+  @override
+  List<Object?> get props => [workload];
+}
+
+class LessonRecordsLoaded extends DeanState {
+  final List<LessonRecord> records;
+  const LessonRecordsLoaded(this.records);
+  @override
+  List<Object?> get props => [records];
+}
+
+class HomeworkRecordsLoaded extends DeanState {
+  final List<HomeworkRecord> records;
+  const HomeworkRecordsLoaded(this.records);
+  @override
+  List<Object?> get props => [records];
+}
+
+class PendingModerationAssessmentsLoaded extends DeanState {
+  final List<AssessmentModeration> assessments;
+  const PendingModerationAssessmentsLoaded(this.assessments);
+  @override
+  List<Object?> get props => [assessments];
+}
+
+class PendingReportApprovalsLoaded extends DeanState {
+  final List<ReportCardApproval> approvals;
+  const PendingReportApprovalsLoaded(this.approvals);
+  @override
+  List<Object?> get props => [approvals];
+}
+
+class PerformanceAnalyticsLoaded extends DeanState {
+  final Map<String, dynamic> analytics;
+  const PerformanceAnalyticsLoaded(this.analytics);
+  @override
+  List<Object?> get props => [analytics];
+}
+
+class InterventionsLoaded extends DeanState {
+  final List<AcademicIntervention> interventions;
+  const InterventionsLoaded(this.interventions);
+  @override
+  List<Object?> get props => [interventions];
+}
+
+class ClassObservationsLoaded extends DeanState {
+  final List<ClassObservation> observations;
+  const ClassObservationsLoaded(this.observations);
+  @override
+  List<Object?> get props => [observations];
+}
+
+class MasterTimetableLoaded extends DeanState {
+  final Map<String, dynamic> timetable;
+  const MasterTimetableLoaded(this.timetable);
+  @override
+  List<Object?> get props => [timetable];
+}
+
+class ExaminationSchedulesLoaded extends DeanState {
+  final List<dynamic> schedules;
+  const ExaminationSchedulesLoaded(this.schedules);
+  @override
+  List<Object?> get props => [schedules];
 }
 
 class DeanOperationSuccess extends DeanState {
   final String message;
-
   const DeanOperationSuccess(this.message);
-
   @override
   List<Object?> get props => [message];
 }
 
 class DeanError extends DeanState {
   final String message;
-
   const DeanError(this.message);
-
   @override
   List<Object?> get props => [message];
 }

@@ -12,22 +12,25 @@ abstract class AuthRepository {
     required String pin,
   });
 
-  /// Updates the parent's PIN and clears the mustChangePin flag.
-  Future<Either<Failure, void>> completeParentPinSetup(String code, String newPin);
+  /// Updates the parent's PIN and clears the mustChangePin flag. Requires
+  /// the phone number on file so this can be verified server-side before
+  /// the parent has a Firebase Auth session of their own.
+  Future<Either<Failure, void>> completeParentPinSetup(String code, String phoneNumber, String newPin);
 
   Future<Either<Failure, void>> logout();
   Future<Either<Failure, UserEntity?>> getCurrentUser();
   Future<Either<Failure, String>> createStaffAccount({
     required String name,
     required String email,
-    required UserRole role,
+    required String schoolId,
+    required List<UserRole> roles,
     required String password,
     String? assignedClass,
     List<SubjectAssignment>? subjects,
   });
   Future<Either<Failure, void>> completePasswordReset(String newPassword);
   Future<Either<Failure, List<UserEntity>>> getStaffMembers();
-  Future<Either<Failure, void>> toggleStaffActiveStatus(String userId, bool isActive);
+  Future<Either<Failure, void>> toggleStaffActiveStatus(String userId, bool isActive, {String? reason});
   Future<Either<Failure, void>> updateStaffMember(UserEntity user);
   Future<Either<Failure, void>> deleteStaffMember(String userId);
 }

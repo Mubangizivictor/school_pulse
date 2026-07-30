@@ -11,6 +11,19 @@ import 'package:school_pulse/features/calendar/domain/entities/school_event.dart
 import 'package:school_pulse/features/calendar/presentation/bloc/calendar_bloc.dart';
 import 'package:school_pulse/features/calendar/presentation/bloc/calendar_event.dart';
 import 'package:school_pulse/features/calendar/presentation/bloc/calendar_state.dart';
+import 'package:school_pulse/features/calendar/presentation/event_detail_screen.dart';
+import 'package:school_pulse/features/calendar/presentation/widgets/event_type_style.dart';
+
+/// Broadcast groups an admin can aim an event at when creating/editing it -
+/// mirrors the options in BroadcastSmsScreen so the same topics are reached.
+const _audienceOptions = [
+  'Parents',
+  'All Staff',
+  'Teachers Only',
+  'Bursars & Admin',
+  'Matrons (Girls)',
+  'Patrons (Boys)',
+];
 
 class SchoolCalendarScreen extends StatelessWidget {
   const SchoolCalendarScreen({super.key});
@@ -66,8 +79,19 @@ class SchoolCalendarScreen extends StatelessWidget {
                   final event = events[index];
                   return _EventCard(
                     event: event,
-                    canDelete: canAdd,
+                    canManage: canAdd,
                     onDelete: () => _confirmDelete(context, event),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => EventDetailScreen(
+                          event: event,
+                          canManage: canAdd,
+                          onEdit: () => _showAddEventDialog(context, existing: event),
+                          onDelete: () => _confirmDelete(context, event),
+                        ),
+                      ),
+                    ),
                   );
                 },
               ),
@@ -85,43 +109,33 @@ class SchoolCalendarScreen extends StatelessWidget {
     }
   }
 
-  void _confirmDelete(BuildContext context, SchoolEvent event) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Event'),
-        content: Text('Are you sure you want to delete "${event.title}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              context.read<CalendarBloc>().add(DeleteCalendarEvent(event.id));
-              _cancelNotifications(event);
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+  void _confirmDelete(BuildContext context, SchoolEvent event) async {
+    final confirmed = await confirmActionDialog(
+      context,
+      title: 'Delete Event',
+      message: 'Are you sure you want to delete "${event.title}"?',
+      confirmLabel: 'Delete',
+      isDestructive: true,
     );
+    if (confirmed == true && context.mounted) {
+      context.read<CalendarBloc>().add(DeleteCalendarEvent(event.id));
+      _cancelNotifications(event);
+    }
   }
 
-  void _showAddEventDialog(BuildContext context) {
-    final titleController = TextEditingController();
-    final descriptionController = TextEditingController();
-    final responsibleController = TextEditingController();
-    DateTime selectedDate = DateTime.now().add(const Duration(hours: 1));
-    SchoolEventType selectedType = SchoolEventType.general;
-    List<UserRole> selectedRoles = [];
+  void _showAddEventDialog(BuildContext context, {SchoolEvent? existing}) {
+    final isEditing = existing != null;
+    final titleController = TextEditingController(text: existing?.title);
+    final descriptionController = TextEditingController(text: existing?.description);
+    DateTime selectedDate = existing?.date ?? DateTime.now().add(const Duration(hours: 1));
+    SchoolEventType selectedType = existing?.type ?? SchoolEventType.general;
+    final selectedGroups = Set<String>.of(existing?.targetGroups ?? defaultEventTargetGroups);
 
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setDialogState) => AlertDialog(
-          title: const Text('Add School Event'),
+          title: Text(isEditing ? 'Edit School Event' : 'Add School Event'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -133,24 +147,31 @@ class SchoolCalendarScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 TextField(
                   controller: descriptionController,
-                  decoration: const InputDecoration(labelText: 'Description'),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: responsibleController,
+                  minLines: 3,
+                  maxLines: 6,
+                  textInputAction: TextInputAction.newline,
                   decoration: const InputDecoration(
-                    labelText: 'Responsible Person',
-                    hintText: 'e.g. Mr. Okello',
+                    labelText: 'Description',
+                    hintText: 'Add as much detail as staff/parents need…',
+                    alignLabelWithHint: true,
+                    border: OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<SchoolEventType>(
-                  value: selectedType,
+                  initialValue: selectedType,
                   decoration: const InputDecoration(labelText: 'Event Type'),
                   items: SchoolEventType.values
                       .map((type) => DropdownMenuItem(
                             value: type,
-                            child: Text(type.name.toUpperCase()),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(type.icon, size: 16, color: type.color),
+                                const SizedBox(width: 8),
+                                Text(type.label),
+                              ],
+                            ),
                           ))
                       .toList(),
                   onChanged: (val) {
@@ -170,7 +191,7 @@ class SchoolCalendarScreen extends StatelessWidget {
                       firstDate: DateTime.now(),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
                     );
-                    if (date != null) {
+                    if (date != null && dialogContext.mounted) {
                       final time = await showTimePicker(
                         context: dialogContext,
                         initialTime: TimeOfDay.fromDateTime(selectedDate),
@@ -189,6 +210,33 @@ class SchoolCalendarScreen extends StatelessWidget {
                     }
                   },
                 ),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Notify',
+                    style: Theme.of(dialogContext).textTheme.labelLarge,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _audienceOptions.map((group) {
+                    final selected = selectedGroups.contains(group);
+                    return FilterChip(
+                      label: Text(group),
+                      selected: selected,
+                      onSelected: (val) => setDialogState(() {
+                        if (val) {
+                          selectedGroups.add(group);
+                        } else {
+                          selectedGroups.remove(group);
+                        }
+                      }),
+                    );
+                  }).toList(),
+                ),
               ],
             ),
           ),
@@ -200,31 +248,32 @@ class SchoolCalendarScreen extends StatelessWidget {
             FilledButton(
               onPressed: () {
                 if (titleController.text.trim().isEmpty) return;
-                
+
                 final authState = context.read<AuthBloc>().state;
                 final createdBy = authState is AuthAuthenticated ? authState.user.id : '';
 
-                final eventId = FirebaseFirestore.instance.collection('school_events').doc().id;
+                final eventId = existing?.id ??
+                    FirebaseFirestore.instance.collection('school_events').doc().id;
 
                 final event = SchoolEvent(
                   id: eventId,
                   title: titleController.text.trim(),
                   description: descriptionController.text.trim(),
                   date: selectedDate,
-                  createdBy: createdBy,
+                  createdBy: isEditing ? existing.createdBy : createdBy,
                   type: selectedType,
-                  responsiblePerson: responsibleController.text.trim(),
-                  targetRoles: selectedRoles,
+                  targetGroups: selectedGroups.isEmpty ? defaultEventTargetGroups : selectedGroups.toList(),
                 );
 
                 context.read<CalendarBloc>().add(AddCalendarEvent(event));
-                
-                // Schedule Local Notifications/Alarms
+
+                // Re-arm the ringing reminders for the (possibly new) date/type.
+                if (isEditing) _cancelNotifications(existing);
                 _scheduleNotifications(event);
 
                 Navigator.pop(dialogContext);
               },
-              child: const Text('Add Event'),
+              child: Text(isEditing ? 'Save Changes' : 'Add Event'),
             ),
           ],
         ),
@@ -232,98 +281,65 @@ class SchoolCalendarScreen extends StatelessWidget {
     );
   }
 
+  /// Arms two ringing local notifications for every event - a day before
+  /// and an hour before (see [SchoolEventTypeStyle.reminderLeadTimes]).
   void _scheduleNotifications(SchoolEvent event) {
     if (event.id.isEmpty) return;
-    
+
     final now = DateTime.now();
-    final eventId = event.id.hashCode;
+    final baseId = event.id.hashCode;
+    final leadTimes = event.type.reminderLeadTimes;
 
-    // Staff Meeting specific notifications
-    if (event.type == SchoolEventType.staffMeeting) {
-      // 1 day before
-      final dayBefore = event.date.subtract(const Duration(days: 1));
-      if (dayBefore.isAfter(now)) {
-        LocalNotificationService.schedule(
-          id: eventId + 1,
-          title: 'Staff Meeting Tomorrow',
-          body: 'Reminder: ${event.title} is scheduled for tomorrow at ${DateFormat('HH:mm').format(event.date)}',
-          scheduledDate: dayBefore,
-        );
-      }
+    for (var i = 0; i < leadTimes.length; i++) {
+      final leadTime = leadTimes[i];
+      final fireAt = event.date.subtract(leadTime);
+      if (!fireAt.isAfter(now)) continue;
 
-      // 1 hour before
-      final hourBefore = event.date.subtract(const Duration(hours: 1));
-      if (hourBefore.isAfter(now)) {
-        LocalNotificationService.schedule(
-          id: eventId + 2,
-          title: 'Staff Meeting in 1 Hour',
-          body: 'Reminder: ${event.title} starts at ${DateFormat('HH:mm').format(event.date)}',
-          scheduledDate: hourBefore,
-        );
-      }
-    } else {
-      // General reminder 2 hours before
-      final reminder = event.date.subtract(const Duration(hours: 2));
-      if (reminder.isAfter(now)) {
-        LocalNotificationService.schedule(
-          id: eventId,
-          title: 'Upcoming School Event',
-          body: '${event.title} is starting at ${DateFormat('HH:mm').format(event.date)}',
-          scheduledDate: reminder,
-        );
-      }
+      LocalNotificationService.schedule(
+        id: baseId + i + 1,
+        title: '${event.type.label}: ${event.title}',
+        body: '${event.title} starts ${_describeLeadTime(leadTime)} at ${DateFormat('HH:mm').format(event.date)}',
+        scheduledDate: fireAt,
+      );
     }
+  }
+
+  String _describeLeadTime(Duration leadTime) {
+    if (leadTime.inHours >= 24) return 'tomorrow';
+    if (leadTime.inHours >= 1) return 'in ${leadTime.inHours} hour${leadTime.inHours == 1 ? '' : 's'}';
+    return 'soon';
   }
 
   void _cancelNotifications(SchoolEvent event) {
     if (event.id.isEmpty) return;
-    final eventId = event.id.hashCode;
-    if (event.type == SchoolEventType.staffMeeting) {
-      LocalNotificationService.cancel(eventId + 1);
-      LocalNotificationService.cancel(eventId + 2);
-    } else {
-      LocalNotificationService.cancel(eventId);
+    final baseId = event.id.hashCode;
+    for (var i = 0; i < event.type.reminderLeadTimes.length; i++) {
+      LocalNotificationService.cancel(baseId + i + 1);
     }
   }
 }
 
 class _EventCard extends StatelessWidget {
   final SchoolEvent event;
-  final bool canDelete;
+  final bool canManage;
   final VoidCallback? onDelete;
+  final VoidCallback? onTap;
 
   const _EventCard({
     required this.event,
-    this.canDelete = false,
+    this.canManage = false,
     this.onDelete,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    
-    IconData icon;
-    Color color;
-    switch (event.type) {
-      case SchoolEventType.staffMeeting:
-        icon = Icons.groups;
-        color = Colors.orange;
-        break;
-      case SchoolEventType.exam:
-        icon = Icons.assignment;
-        color = Colors.red;
-        break;
-      case SchoolEventType.holiday:
-        icon = Icons.beach_access;
-        color = Colors.green;
-        break;
-      default:
-        icon = Icons.event;
-        color = colorScheme.primary;
-    }
+    final type = event.type;
 
     return AppCard(
       padding: const EdgeInsets.all(16),
+      onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -332,16 +348,20 @@ class _EventCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: type.color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, color: color, size: 20),
+                child: Icon(type.icon, color: type.color, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text(
+                      type.label,
+                      style: TextStyle(color: type.color, fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 0.3),
+                    ),
                     Text(
                       event.title,
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -355,7 +375,7 @@ class _EventCard extends StatelessWidget {
                   ],
                 ),
               ),
-              if (canDelete)
+              if (canManage)
                 IconButton(
                   icon: const Icon(Icons.delete_outline, size: 20),
                   onPressed: onDelete,
@@ -367,19 +387,11 @@ class _EventCard extends StatelessWidget {
           ),
           if (event.description.isNotEmpty) ...[
             const SizedBox(height: 12),
-            Text(event.description, style: Theme.of(context).textTheme.bodyMedium),
-          ],
-          if (event.responsiblePerson != null && event.responsiblePerson!.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(Icons.person_outline, size: 14, color: colorScheme.outline),
-                const SizedBox(width: 4),
-                Text(
-                  'Responsible: ${event.responsiblePerson}',
-                  style: Theme.of(context).textTheme.labelSmall,
-                ),
-              ],
+            Text(
+              event.description,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
           ],
         ],

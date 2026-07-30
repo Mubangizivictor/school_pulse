@@ -99,6 +99,8 @@ class StaffHubScreen extends StatelessWidget {
       case UserRole.receptionist: return Icons.support_agent;
       case UserRole.hrOfficer: return Icons.badge;
       case UserRole.parent: return Icons.person;
+      case UserRole.superAdmin: return Icons.workspace_premium;
+      case UserRole.student: return Icons.school;
     }
   }
 }

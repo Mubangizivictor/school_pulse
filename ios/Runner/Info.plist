@@ -26,6 +26,18 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>School Pulse uses the camera to capture visitor and ID photos and to scan QR codes for attendance.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>School Pulse needs access to your photo library to attach images such as visitor photos and documents.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>School Pulse uses Bluetooth to connect to badge and ID card printers.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>School Pulse uses Bluetooth to connect to badge and ID card printers.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

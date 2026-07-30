@@ -1,16 +1,17 @@
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { randomBytes, randomUUID } = require("crypto");
 const admin = require("firebase-admin");
 
 admin.initializeApp();
 
-// Roles allowed to land on the /staff/admin screen in the app - the same
-// set that's allowed to invite new staff.
+// ... existing roles and helper functions ...
 const ADMIN_ROLES = ["director", "headTeacher", "schoolAdmin"];
 
 const STAFF_ROLES = [
   "director", "headTeacher", "deputyHead", "schoolAdmin", "bursar",
-  "classTeacher", "subjectTeacher", "librarian", "nurse", "boardingMatron",
+  "classTeacher", "subjectTeacher", "librarian", "nurse", "boardingMatron", "boardingPatron",
   "transportCoordinator", "guidanceDiscipline", "storeInventory",
   "receptionist", "gatekeeper", "securityHead",
   "gamesMaster", "cateringManager",
@@ -35,23 +36,37 @@ exports.createStaffAccount = onCall(async (request) => {
     throw new HttpsError("unauthenticated", "You must be signed in.");
   }
 
-  const { name, email, role, assignedClass, subjects } = request.data || {};
+  const { name, email, assignedClass, subjects } = request.data || {};
+  // Accept the current multi-role `roles` array, falling back to a legacy
+  // singular `role` from any older client build still calling this.
+  const roles = Array.isArray(request.data?.roles)
+    ? request.data.roles
+    : (request.data?.role ? [request.data.role] : []);
+
   if (typeof name !== "string" || !name.trim()) {
     throw new HttpsError("invalid-argument", "Name is required.");
   }
   if (typeof email !== "string" || !email.trim()) {
     throw new HttpsError("invalid-argument", "Email is required.");
   }
-  if (!STAFF_ROLES.includes(role)) {
+  if (roles.length === 0 || !roles.every((r) => STAFF_ROLES.includes(r))) {
     throw new HttpsError("invalid-argument", "Invalid staff role.");
   }
 
   // The Admin SDK bypasses Firestore rules entirely, so this check is the
   // only gate on who may create staff accounts - it must happen here.
   const callerDoc = await admin.firestore().collection("users").doc(auth.uid).get();
-  const callerRole = callerDoc.exists ? callerDoc.data().role : null;
+  const callerData = callerDoc.exists ? callerDoc.data() : {};
+  const callerRole = callerData.role || null;
+  const schoolId = callerData.schoolId || null;
   if (!ADMIN_ROLES.includes(callerRole)) {
     throw new HttpsError("permission-denied", "Only school administrators can create staff accounts.");
+  }
+  if (!schoolId) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Your administrator account is not assigned to a school."
+    );
   }
 
   const temporaryPassword = generateTemporaryPassword();
@@ -71,17 +86,30 @@ exports.createStaffAccount = onCall(async (request) => {
   }
 
   try {
-    await admin.firestore().collection("users").doc(userRecord.uid).set({
+    const db = admin.firestore();
+    const userData = {
       name: name.trim(),
       email: email.trim(),
-      role,
+      role: roles[0],
+      roles,
+      schoolId,
       studentIds: [],
       mustChangePassword: true,
       createdBy: auth.uid,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       ...(assignedClass ? { assignedClass } : {}),
       ...(Array.isArray(subjects) ? { subjects } : {}),
+    };
+    const batch = db.batch();
+    batch.set(db.collection("users").doc(userRecord.uid), userData);
+    batch.set(db.collection("school_contacts").doc(userRecord.uid), {
+      name: name.trim(),
+      role: roles[0],
+      roles,
+      schoolId,
+      isActive: true,
     });
+    await batch.commit();
   } catch (err) {
     // Don't leave an orphaned Auth user with no matching profile doc - a
     // retry with the same email would otherwise permanently fail with
@@ -327,6 +355,79 @@ exports.mtnMomoWebhook = onRequest(async (req, res) => {
   }
 });
 
+// ============================================================================
+// Visitor Management - Overstay Detection
+// ============================================================================
+
+/**
+ * Periodically checks for visitors who have exceeded their expected departure time
+ * and sends alerts to their hosts and security personnel.
+ */
+exports.checkVisitorOverstays = onSchedule("every 15 minutes", async () => {
+  const now = admin.firestore.Timestamp.now();
+  const db = admin.firestore();
+
+  const overstayedVisitors = await db.collection("visitors")
+    .where("status", "==", "checkedIn")
+    .where("expectedDepartureTime", "<=", now)
+    .where("overstayAlertSent", "==", false)
+    .get();
+
+  for (const doc of overstayedVisitors.docs) {
+    const visitor = doc.data();
+    const visitorId = doc.id;
+
+    try {
+      // 1. Alert the Host if hostId is available
+      if (visitor.hostId) {
+        const hostDoc = await db.collection("users").doc(visitor.hostId).get();
+        const hostData = hostDoc.data();
+
+        if (hostData && hostData.fcmToken) {
+          await db.collection("notification_queue").add({
+            token: hostData.fcmToken,
+            status: "pending",
+            notification: {
+              title: "Visitor Overstay Alert",
+              body: `Your visitor ${visitor.fullName} has exceeded their scheduled time.`,
+            },
+            data: {
+              type: "visitor_overstay",
+              visitorId: visitorId,
+              schoolId: visitor.schoolId,
+            },
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        }
+      }
+
+      // 2. Alert Security Topic for the school
+      const securityTopic = `topic_Security_${visitor.schoolId.replace(/[^a-zA-Z0-9-_.~%]/g, '_')}`;
+      await admin.messaging().send({
+        topic: securityTopic,
+        notification: {
+          title: "SECURITY: Visitor Overstay",
+          body: `${visitor.fullName} (Host: ${visitor.host}) has overstayed. Please verify.`,
+        },
+        android: {
+          priority: "high",
+          notification: { channelId: "security_alerts", color: "#FF0000" },
+        },
+        data: {
+          type: "visitor_overstay_security",
+          visitorId: visitorId,
+        },
+      });
+
+      // 3. Mark alert as sent to avoid duplicates
+      await doc.ref.update({ overstayAlertSent: true });
+
+    } catch (err) {
+      console.error(`Failed to process overstay for visitor ${visitorId}:`, err);
+    }
+  }
+});
+
 // Register this URL as the Collection callback on the Airtel developer
 // portal, e.g. https://REGION-PROJECT.cloudfunctions.net/airtelMoneyWebhook?secret=...
 exports.airtelMoneyWebhook = onRequest(async (req, res) => {
@@ -345,6 +446,248 @@ exports.airtelMoneyWebhook = onRequest(async (req, res) => {
   } catch (err) {
     console.error("airtelMoneyWebhook error", err);
     res.status(500).send("Error");
+  }
+});
+
+// ============================================================================
+// Parent Authentication
+// ============================================================================
+
+/**
+ * Verifies a parent's access code + phone + PIN server-side (parent_access_
+ * codes/{code} is publicly readable by design so the pre-login screens can
+ * show the parent's name - see firestore.rules - so the PIN comparison can
+ * no longer happen trustingly on the client) and mints a Firebase custom
+ * token so the parent gets a real Firebase Auth session. Also mirrors a
+ * users/{uid} profile so Firestore rules (myUser/isParentOf) and the
+ * "groups" a parent belongs to for broadcast targeting can be resolved.
+ */
+exports.loginParent = onCall(async (request) => {
+  const { code, phoneNumber, pin } = request.data || {};
+  if (!code || !phoneNumber || !pin) {
+    throw new HttpsError("invalid-argument", "Access code, phone number, and PIN are required.");
+  }
+
+  const codeRef = admin.firestore().collection("parent_access_codes").doc(code);
+  const doc = await codeRef.get();
+  if (!doc.exists) {
+    throw new HttpsError("not-found", "Invalid access code.");
+  }
+
+  const data = doc.data();
+  if (data.isActive === false) {
+    const reason = data.deactivationReason ? `\nReason: ${data.deactivationReason}` : "";
+    throw new HttpsError("permission-denied", `This access code has been deactivated.${reason}`);
+  }
+  if (data.phoneNumber !== phoneNumber) {
+    throw new HttpsError("permission-denied", "Phone number does not match this access code.");
+  }
+  if (data.pin !== pin) {
+    throw new HttpsError("permission-denied", "Incorrect PIN.");
+  }
+
+  const uid = `parent_${code}`;
+  const studentIds = data.studentIds || [];
+
+  // Resolve each child's class so the parent can be scoped to "Class:X"
+  // broadcasts, in addition to the general "Parents" group.
+  const groups = new Set(["Parents"]);
+  if (studentIds.length > 0) {
+    const studentDocs = await admin.firestore().getAll(
+      ...studentIds.map((id) => admin.firestore().collection("students").doc(id))
+    );
+    for (const sDoc of studentDocs) {
+      const className = sDoc.exists ? sDoc.data().className : null;
+      if (className) groups.add(`Class:${className}`);
+    }
+  }
+
+  await admin.firestore().collection("users").doc(uid).set({
+    role: "parent",
+    studentIds,
+    groups: Array.from(groups),
+    name: data.parentName || "Parent",
+    phoneNumber: data.phoneNumber,
+    schoolId: data.schoolId || "",
+    isActive: true,
+  }, { merge: true });
+
+  const token = await admin.auth().createCustomToken(uid, { role: "parent" });
+  return { token, mustChangePin: !!data.mustChangePin };
+});
+
+/**
+ * Sets a parent's PIN (first-time setup or reset). Runs before the parent
+ * has a Firebase Auth session, so identity is proven with code+phone
+ * instead of request.auth.
+ */
+exports.completeParentPinSetup = onCall(async (request) => {
+  const { code, phoneNumber, newPin } = request.data || {};
+  if (!code || !phoneNumber || !newPin) {
+    throw new HttpsError("invalid-argument", "Access code, phone number, and new PIN are required.");
+  }
+
+  const codeRef = admin.firestore().collection("parent_access_codes").doc(code);
+  const doc = await codeRef.get();
+  if (!doc.exists) {
+    throw new HttpsError("not-found", "Invalid access code.");
+  }
+  const data = doc.data();
+  if (data.isActive === false) {
+    throw new HttpsError("permission-denied", "This access code has been deactivated.");
+  }
+  if (data.phoneNumber !== phoneNumber) {
+    throw new HttpsError("permission-denied", "Phone number does not match this access code.");
+  }
+
+  await codeRef.update({ pin: newPin, mustChangePin: false });
+  return { success: true };
+});
+
+// ============================================================================
+// Notification Delivery Triggers
+// ============================================================================
+
+/**
+ * Triggered when a new document is added to 'broadcast_queue'.
+ * Delivers push notifications to FCM topics based on targetGroups.
+ */
+exports.processBroadcastQueue = onDocumentCreated("broadcast_queue/{id}", async (event) => {
+  const data = event.data.data();
+  if (data.status !== "pending") return;
+
+  const { notification, targets } = data;
+
+  try {
+    // Send to each target group as an FCM topic
+    // Targets in DB are like ['Parents', 'Class:P.1']
+    // We map these to topics like 'topic_Parents', 'topic_Class_P1'
+    const sendPromises = targets.map(target => {
+      const topicName = target.replace(/[^a-zA-Z0-9-_.~%]/g, '_');
+      return admin.messaging().send({
+        topic: `topic_${topicName}`,
+        notification: {
+          title: notification.title,
+          body: notification.body,
+        },
+        android: {
+          priority: "high",
+          notification: { channelId: "school_pulse_alerts" },
+        },
+        apns: {
+          payload: { aps: { sound: "default" } },
+        },
+      });
+    });
+
+    await Promise.all(sendPromises);
+    await event.data.ref.update({ status: "sent", sentAt: admin.firestore.FieldValue.serverTimestamp() });
+  } catch (err) {
+    console.error("Broadcast failed:", err);
+    await event.data.ref.update({ status: "failed", error: err.message });
+  }
+});
+
+/**
+ * Triggered when a new document is added to 'notification_queue'.
+ * Delivers a direct push notification to a specific device token.
+ */
+exports.processDirectNotificationQueue = onDocumentCreated("notification_queue/{id}", async (event) => {
+  const data = event.data.data();
+  if (data.status !== "pending") return;
+
+  const { token, notification, data: extraData } = data;
+
+  try {
+    await admin.messaging().send({
+      token: token,
+      notification: {
+        title: notification.title,
+        body: notification.body,
+      },
+      data: extraData || {},
+      android: {
+        priority: "high",
+        notification: { channelId: "school_pulse_alerts" },
+      },
+      apns: {
+        payload: { aps: { sound: "default" } },
+      },
+    });
+    await event.data.ref.update({ status: "sent", sentAt: admin.firestore.FieldValue.serverTimestamp() });
+  } catch (err) {
+    console.error("Direct notification failed:", err);
+    await event.data.ref.update({ status: "failed", error: err.message });
+  }
+});
+
+/**
+ * Placeholder for SMS delivery. In a real app, this would call
+ * Twilio or Africa's Talking API.
+ */
+exports.processSmsQueue = onDocumentCreated("sms_queue/{id}", async (event) => {
+  const data = event.data.data();
+  if (data.status !== "pending") return;
+
+  // Implementation depends on your SMS provider
+  console.log("SMS Queue triggered for:", data.targets);
+  await event.data.ref.update({ status: "processed_placeholder" });
+});
+
+/**
+ * processBroadcastQueue/processSmsQueue above only fire once, when the
+ * queue doc is first created, and both ignore status "scheduled" - so a
+ * broadcast scheduled for later was written once and then silently never
+ * revisited by anything. This runs periodically and delivers any broadcast
+ * whose scheduled time has arrived.
+ */
+exports.processScheduledBroadcasts = onSchedule("every 5 minutes", async () => {
+  const now = admin.firestore.Timestamp.now();
+
+  const dueBroadcasts = await admin.firestore()
+    .collection("broadcast_queue")
+    .where("status", "==", "scheduled")
+    .where("scheduledAt", "<=", now)
+    .get();
+
+  for (const doc of dueBroadcasts.docs) {
+    const { notification, targets } = doc.data();
+    try {
+      await Promise.all(targets.map((target) => {
+        const topicName = target.replace(/[^a-zA-Z0-9-_.~%]/g, "_");
+        return admin.messaging().send({
+          topic: `topic_${topicName}`,
+          notification: { title: notification.title, body: notification.body },
+          android: { priority: "high", notification: { channelId: "school_pulse_alerts" } },
+          apns: { payload: { aps: { sound: "default" } } },
+        });
+      }));
+      await doc.ref.update({ status: "sent", sentAt: admin.firestore.FieldValue.serverTimestamp() });
+    } catch (err) {
+      console.error("Scheduled broadcast failed:", err);
+      await doc.ref.update({ status: "failed", error: err.message });
+    }
+  }
+
+  const dueSms = await admin.firestore()
+    .collection("sms_queue")
+    .where("status", "==", "scheduled")
+    .where("scheduledAt", "<=", now)
+    .get();
+  for (const doc of dueSms.docs) {
+    console.log("Scheduled SMS queue triggered for:", doc.data().targets);
+    await doc.ref.update({ status: "processed_placeholder" });
+  }
+
+  // Keep the matching 'alerts' audit doc (Recent Broadcasts list) in sync
+  // so its status badge doesn't stay stuck on "scheduled" forever.
+  const dueAlerts = await admin.firestore()
+    .collection("alerts")
+    .where("status", "==", "scheduled")
+    .where("scheduledAt", "<=", now)
+    .get();
+  for (const doc of dueAlerts.docs) {
+    await doc.ref.update({ status: "sent" });
   }
 });
 

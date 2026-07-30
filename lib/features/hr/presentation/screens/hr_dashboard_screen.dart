@@ -27,12 +27,12 @@ class HRDashboardScreen extends StatelessWidget {
           _buildAppBar(context, isDesktop),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildStatsRow(context, isDesktop),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 15),
                   _buildMainGrid(context, isDesktop),
                 ],
               ),
@@ -72,14 +72,37 @@ class HRDashboardScreen extends StatelessWidget {
 
   Widget _buildStatsRow(BuildContext context, bool isDesktop) {
     return LayoutBuilder(builder: (context, constraints) {
-      return Wrap(
-        spacing: 16,
-        runSpacing: 16,
+      if (isDesktop) {
+        return Row(
+          children: [
+            Expanded(child: DashboardStatCard(title: 'Total Staff', value: 84, icon: Icons.people, color: Colors.blue)),
+            const SizedBox(width: 12),
+            Expanded(child: DashboardStatCard(title: 'Recruits', value: 12, icon: Icons.person_add, color: Colors.green)),
+            const SizedBox(width: 12),
+            Expanded(child: DashboardStatCard(title: 'Leave', value: 5, icon: Icons.time_to_leave, color: Colors.orange)),
+            const SizedBox(width: 12),
+            Expanded(child: DashboardStatCard(title: 'Appraisals', value: 8, icon: Icons.assessment, color: Colors.purple)),
+          ],
+        );
+      }
+
+      return Column(
         children: [
-          _StatCard(title: 'Total Staff', value: '84', icon: Icons.people, color: Colors.blue, width: isDesktop ? 200 : (constraints.maxWidth - 16) / 2),
-          _StatCard(title: 'Active Recruits', value: '12', icon: Icons.person_add, color: Colors.green, width: isDesktop ? 200 : (constraints.maxWidth - 16) / 2),
-          _StatCard(title: 'Leave Requests', value: '5', icon: Icons.time_to_leave, color: Colors.orange, width: isDesktop ? 200 : (constraints.maxWidth - 16) / 2),
-          _StatCard(title: 'Pending Appraisals', value: '8', icon: Icons.assessment, color: Colors.purple, width: isDesktop ? 200 : (constraints.maxWidth - 16) / 2),
+          Row(
+            children: [
+              Expanded(child: DashboardStatCard(title: 'Total Staff', value: 84, icon: Icons.people, color: Colors.blue)),
+              const SizedBox(width: 12),
+              Expanded(child: DashboardStatCard(title: 'Recruits', value: 12, icon: Icons.person_add, color: Colors.green)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: DashboardStatCard(title: 'Leave', value: 5, icon: Icons.time_to_leave, color: Colors.orange)),
+              const SizedBox(width: 12),
+              Expanded(child: DashboardStatCard(title: 'Appraisals', value: 8, icon: Icons.assessment, color: Colors.purple)),
+            ],
+          ),
         ],
       );
     });
@@ -164,41 +187,6 @@ class HRDashboardScreen extends StatelessWidget {
   }
 }
 
-class _StatCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color color;
-  final double width;
-
-  const _StatCard({required this.title, required this.value, required this.icon, required this.color, required this.width});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(height: 12),
-          Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          Text(title, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.outline)),
-        ],
-      ),
-    );
-  }
-}
 
 class _MenuTile extends StatelessWidget {
   final IconData icon;

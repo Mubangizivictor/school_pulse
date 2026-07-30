@@ -1,126 +1,170 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
-import '../../../../../design_system/app_components.dart';
+import 'package:school_pulse/design_system/app_components.dart';
+import '../../../domain/entities/curriculum.dart';
 
-class SyllabusCoverageScreen extends StatefulWidget {
-  const SyllabusCoverageScreen({super.key});
+class SyllabusCoverageScreen extends StatelessWidget {
+  final Subject subject;
 
-  @override
-  State<SyllabusCoverageScreen> createState() => _SyllabusCoverageScreenState();
-}
-
-class _SyllabusCoverageScreenState extends State<SyllabusCoverageScreen> {
-  String _selectedClass = 'Primary 4';
-  
-  final List<Map<String, dynamic>> _subjects = [
-    {'name': 'Mathematics', 'coverage': 0.75, 'topics': 12, 'completed': 9, 'teacher': 'Robert Mugabe'},
-    {'name': 'English', 'coverage': 0.60, 'topics': 10, 'completed': 6, 'teacher': 'Sarah Namusoke'},
-    {'name': 'Science', 'coverage': 0.85, 'topics': 8, 'completed': 7, 'teacher': 'John Musisi'},
-    {'name': 'Social Studies', 'coverage': 0.40, 'topics': 10, 'completed': 4, 'teacher': 'Peter Kaguta'},
-  ];
+  const SyllabusCoverageScreen({super.key, required this.subject});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Syllabus Coverage'),
+        title: Text(subject.name),
       ),
-      body: Column(
-        children: [
-          _buildFilters(),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _buildSummaryChart(),
-                const SizedBox(height: 24),
-                const SectionHeader(title: 'Subject Breakdown'),
-                const SizedBox(height: 12),
-                ..._subjects.map((subject) => Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: ProgressCard(
-                    title: subject['name'],
-                    progress: subject['coverage'],
-                    subtitle: '${subject['completed']}/${subject['topics']} topics completed • ${subject['teacher']}',
-                    color: _getColorForCoverage(subject['coverage']),
-                  ),
-                )),
-              ],
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSummaryCard(),
+            const SizedBox(height: 24),
+            const Text(
+              'Topics & Subtopics',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-          ),
-        ],
+            const SizedBox(height: 12),
+            ...subject.topics.map((topic) => _TopicExpansionTile(topic: topic)),
+            const SizedBox(height: 24),
+            const Text(
+              'Learning Objectives',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            ...subject.objectives.map((obj) => _ObjectiveTile(objective: obj)),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildSummaryChart() {
+  Widget _buildSummaryCard() {
     return AppCard(
-      padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          const Text('Class Average Coverage', style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 20),
-          SizedBox(
-            height: 200,
-            child: PieChart(
-              PieChartData(
-                sectionsSpace: 0,
-                centerSpaceRadius: 60,
-                sections: [
-                  PieChartSectionData(
-                    color: Theme.of(context).colorScheme.primary,
-                    value: 65,
-                    title: '65%',
-                    radius: 20,
-                    titleStyle: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-                  ),
-                  PieChartSectionData(
-                    color: Theme.of(context).colorScheme.primaryContainer,
-                    value: 35,
-                    title: '',
-                    radius: 15,
-                  ),
-                ],
+          const Text(
+            'Overall Syllabus Coverage',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox(
+                height: 100,
+                width: 100,
+                child: CircularProgressIndicator(
+                  value: subject.currentCoverage / 100,
+                  strokeWidth: 10,
+                  backgroundColor: Colors.grey[200],
+                ),
               ),
-            ),
+              Text(
+                '${subject.currentCoverage.toStringAsFixed(0)}%',
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            'Target: 80% by Mid-Term',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.orange, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilters() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1))),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.filter_list, size: 20),
-          const SizedBox(width: 12),
-          DropdownButton<String>(
-            value: _selectedClass,
-            underline: const SizedBox(),
-            onChanged: (val) => setState(() => _selectedClass = val!),
-            items: ['Primary 4', 'Primary 5', 'Primary 6', 'Primary 7']
-                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                .toList(),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _SummaryItem(label: 'Topics', value: subject.topics.length.toString()),
+              _SummaryItem(
+                label: 'Subtopics',
+                value: subject.topics.fold(0, (sum, t) => sum + t.subTopics.length).toString(),
+              ),
+              _SummaryItem(
+                label: 'Core Objectives',
+                value: subject.objectives.where((o) => o.isCore).length.toString(),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
+}
 
-  Color _getColorForCoverage(double coverage) {
-    if (coverage > 0.8) return Colors.green;
-    if (coverage > 0.5) return Colors.orange;
-    return Colors.red;
+class _SummaryItem extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _SummaryItem({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+      ],
+    );
+  }
+}
+
+class _TopicExpansionTile extends StatelessWidget {
+  final Topic topic;
+
+  const _TopicExpansionTile({required this.topic});
+
+  @override
+  Widget build(BuildContext context) {
+    final completedCount = topic.subTopics.where((st) => st.isCompleted).length;
+    final totalCount = topic.subTopics.length;
+    final progress = totalCount > 0 ? completedCount / totalCount : 0.0;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: ExpansionTile(
+        title: Text(topic.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text('$completedCount/$totalCount subtopics completed'),
+        leading: CircularProgressIndicator(
+          value: progress,
+          strokeWidth: 3,
+          backgroundColor: Colors.grey[200],
+        ),
+        children: topic.subTopics.map((st) => ListTile(
+          dense: true,
+          title: Text(st.title),
+          trailing: Icon(
+            st.isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
+            color: st.isCompleted ? Colors.green : Colors.grey,
+          ),
+        )).toList(),
+      ),
+    );
+  }
+}
+
+class _ObjectiveTile extends StatelessWidget {
+  final LearningObjective objective;
+
+  const _ObjectiveTile({required this.objective});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: Icon(
+          Icons.track_changes,
+          color: objective.isCore ? Colors.blue : Colors.grey,
+        ),
+        title: Text(objective.description),
+        trailing: objective.isCore
+            ? Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text('CORE', style: TextStyle(fontSize: 8, color: Colors.blue, fontWeight: FontWeight.bold)),
+              )
+            : null,
+      ),
+    );
   }
 }

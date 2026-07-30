@@ -47,70 +47,112 @@ class _ReceptionistDashboardScreenState extends State<ReceptionistDashboardScree
                 context.read<ReceptionistBloc>().add(ReceptionistDashboardRequested());
               },
               child: ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
                 children: [
                   Text(
                     'Daily Overview',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 24),
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 1.1,
-                    children: [
-                      DashboardStatCard(
-                        title: 'Appointments',
-                        value: state.appointments.length.toDouble(),
-                        icon: Icons.calendar_today,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      DashboardStatCard(
-                        title: 'Total Visitors',
-                        value: state.totalVisitorsToday.toDouble(),
-                        icon: Icons.people_outline,
-                        color: Theme.of(context).extension<SemanticColors>()?.success ?? Colors.green,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  const SectionHeader(title: 'Upcoming Appointments'),
-                  if (state.appointments.isEmpty)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(32),
-                        child: Text('No appointments scheduled.'),
-                      ),
-                    )
-                  else
-                    ...state.appointments.map((appointment) => AppCard(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          child: ListTile(
-                            leading: const CircleAvatar(child: Icon(Icons.person)),
-                            title: Text(appointment.visitorName),
-                            subtitle: Text(appointment.purpose),
-                            trailing: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  DateFormat('hh:mm a').format(appointment.time),
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                Text(
-                                  appointment.status,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: appointment.status == 'Scheduled' ? Colors.blue : Colors.grey,
-                                  ),
-                                ),
-                              ],
+                  const SizedBox(height: 15),
+                  Builder(builder: (context) {
+                    final screenWidth = MediaQuery.of(context).size.width;
+                    final isMobile = screenWidth < 600;
+
+                    if (isMobile) {
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: DashboardStatCard(
+                              title: 'Appointments',
+                              value: state.appointments.length.toDouble(),
+                              icon: Icons.calendar_today,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
-                        )),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: DashboardStatCard(
+                              title: 'Total Visitors',
+                              value: state.totalVisitorsToday.toDouble(),
+                              icon: Icons.people_outline,
+                              color: Theme.of(context).extension<SemanticColors>()?.success ?? Colors.green,
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: DashboardStatCard(
+                            title: 'Appointments',
+                            value: state.appointments.length.toDouble(),
+                            icon: Icons.calendar_today,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: DashboardStatCard(
+                            title: 'Total Visitors',
+                            value: state.totalVisitorsToday.toDouble(),
+                            icon: Icons.people_outline,
+                            color: Theme.of(context).extension<SemanticColors>()?.success ?? Colors.green,
+                          ),
+                        ),
+                        const Spacer(),
+                        const Spacer(),
+                      ],
+                    );
+                  }),
+                  const SizedBox(height: 15),
+                  FadeInSlide(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SectionHeader(title: 'Upcoming Appointments'),
+                        if (state.appointments.isEmpty)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(32),
+                              child: Text('No appointments scheduled.'),
+                            ),
+                          )
+                        else
+                          ...state.appointments.map((appointment) => AppCard(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                child: ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: const CircleAvatar(child: Icon(Icons.person)),
+                                  title: Text(appointment.visitorName),
+                                  subtitle: Text(appointment.purpose),
+                                  trailing: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        DateFormat('hh:mm a').format(appointment.time),
+                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                      Text(
+                                        appointment.status,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: appointment.status == 'Scheduled'
+                                              ? Colors.blue
+                                              : Colors.grey,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             );

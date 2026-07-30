@@ -117,7 +117,7 @@ class _AdminMessagesScreenState extends State<AdminMessagesScreen> {
     return [
       ...staff.map((s) => _Recipient(id: s.id, name: s.name, subtitle: UserRoleDisplay.name(s.role))),
       ...codes.map((c) => _Recipient(
-            id: 'parent_${c.code}',
+            id: 'parent_${c.parentCode}',
             name: c.parentName ?? 'Unnamed Parent',
             subtitle: 'Parent • ${c.studentNames.join(', ')}',
           )),
@@ -223,12 +223,25 @@ class _AdminMessagesScreenState extends State<AdminMessagesScreen> {
                           : () async {
                               if (titleController.text.trim().isEmpty || bodyController.text.trim().isEmpty) return;
                               setDialogState(() => isSending = true);
-                              await NotificationService().sendDirectNotification(
-                                userId: selected!.id,
-                                title: titleController.text.trim(),
-                                body: bodyController.text.trim(),
-                              );
-                              if (dialogContext.mounted) Navigator.pop(dialogContext);
+                              try {
+                                // Capped so a hung write can never leave the
+                                // button spinning forever with no way out.
+                                await NotificationService()
+                                    .sendDirectNotification(
+                                      userId: selected!.id,
+                                      title: titleController.text.trim(),
+                                      body: bodyController.text.trim(),
+                                    )
+                                    .timeout(const Duration(seconds: 15));
+                                if (dialogContext.mounted) Navigator.pop(dialogContext);
+                              } catch (e) {
+                                setDialogState(() => isSending = false);
+                                if (dialogContext.mounted) {
+                                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                    SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                                  );
+                                }
+                              }
                             },
                       child: isSending
                           ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))

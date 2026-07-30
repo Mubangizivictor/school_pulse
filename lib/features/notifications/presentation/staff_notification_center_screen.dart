@@ -34,8 +34,10 @@ class _StaffNotificationCenterScreenState extends State<StaffNotificationCenterS
       ),
       body: StreamBuilder<List<StaffAlert>>(
         stream: _repository.watchAllForUser(uid: uid, groups: groups),
+        initialData: const [],
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          // Only show skeletons if we are truly waiting and have no data at all
+          if (snapshot.connectionState == ConnectionState.waiting && snapshot.data == null) {
             return ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: 6,
@@ -92,14 +94,31 @@ class _StaffNotificationCenterScreenState extends State<StaffNotificationCenterS
                   itemBuilder: (context, index) {
                     final alert = alerts[index];
                     final isUnread = !alert.isReadBy(uid);
-                    return FadeInSlide(
-                      delay: Duration(milliseconds: index * 40),
-                      child: _AlertTile(
-                        alert: alert,
-                        isUnread: isUnread,
-                        onTap: () {
-                          if (isUnread) _repository.markRead(alert.id, uid);
-                        },
+                    return Dismissible(
+                      key: Key(alert.id),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 20),
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Icon(Icons.delete_outline, color: Colors.white),
+                      ),
+                      onDismissed: (direction) {
+                        _repository.deleteAlert(alert.id);
+                      },
+                      child: FadeInSlide(
+                        delay: Duration(milliseconds: index * 40),
+                        child: _AlertTile(
+                          alert: alert,
+                          isUnread: isUnread,
+                          onTap: () {
+                            if (isUnread) _repository.markRead(alert.id, uid);
+                          },
+                        ),
                       ),
                     );
                   },

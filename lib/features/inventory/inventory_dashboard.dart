@@ -10,6 +10,7 @@ import 'package:school_pulse/features/inventory/presentation/bloc/inventory_even
 import 'package:school_pulse/features/inventory/presentation/bloc/inventory_state.dart';
 import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 import 'package:school_pulse/features/inventory/presentation/screens/procurement_screen.dart';
+import 'package:school_pulse/features/inventory/presentation/screens/medical_supply_requests_screen.dart';
 
 class InventoryDashboardScreen extends StatelessWidget {
   const InventoryDashboardScreen({super.key});
@@ -21,9 +22,7 @@ class InventoryDashboardScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Store & Inventory'),
-        actions: [
-          const NotificationBellButton(),
-        ],
+        actions: [const NotificationBellButton()],
       ),
       body: BlocBuilder<InventoryBloc, InventoryState>(
         builder: (context, state) {
@@ -37,13 +36,16 @@ class InventoryDashboardScreen extends StatelessWidget {
 
           if (state is InventoryLoaded) {
             return RefreshIndicator(
-              onRefresh: () async => context.read<InventoryBloc>().add(LoadInventory()),
+              onRefresh: () async =>
+                  context.read<InventoryBloc>().add(LoadInventory()),
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
                   Text(
                     'Stock Overview',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 24),
                   GridView.count(
@@ -56,7 +58,10 @@ class InventoryDashboardScreen extends StatelessWidget {
                     children: [
                       DashboardStatCard(
                         title: 'Low Stock Items',
-                        value: state.items.where((i) => i.isLowStock).length.toDouble(),
+                        value: state.items
+                            .where((i) => i.isLowStock)
+                            .length
+                            .toDouble(),
                         icon: Icons.warning_amber_rounded,
                         color: semanticColors.error,
                       ),
@@ -77,13 +82,23 @@ class InventoryDashboardScreen extends StatelessWidget {
                       child: Text('No stock movements recorded yet.'),
                     )
                   else
-                    ...state.movements.take(5).map((m) => _InventoryItemTile(
-                          name: m.itemName,
-                          status: m.type == StockMovementType.restock ? 'Restocked' : 'Issued',
-                          quantity: m.type == StockMovementType.restock ? '+${m.quantity}' : '-${m.quantity}',
-                          date: DateFormatter.relative(m.date),
-                          color: m.type == StockMovementType.restock ? semanticColors.success : semanticColors.warning,
-                        )),
+                    ...state.movements
+                        .take(5)
+                        .map(
+                          (m) => _InventoryItemTile(
+                            name: m.itemName,
+                            status: m.type == StockMovementType.restock
+                                ? 'Restocked'
+                                : 'Issued',
+                            quantity: m.type == StockMovementType.restock
+                                ? '+${m.quantity}'
+                                : '-${m.quantity}',
+                            date: DateFormatter.relative(m.date),
+                            color: m.type == StockMovementType.restock
+                                ? semanticColors.success
+                                : semanticColors.warning,
+                          ),
+                        ),
                   const SizedBox(height: 24),
                   Wrap(
                     spacing: 12,
@@ -113,7 +128,21 @@ class InventoryDashboardScreen extends StatelessWidget {
                         color: Colors.deepPurple,
                         onTap: () => Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const ProcurementScreen()),
+                          MaterialPageRoute(
+                            builder: (context) => const ProcurementScreen(),
+                          ),
+                        ),
+                      ),
+                      _QuickAction(
+                        label: 'Medical Requests',
+                        icon: Icons.medical_services_outlined,
+                        color: Colors.teal,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const MedicalSupplyRequestsScreen(),
+                          ),
                         ),
                       ),
                     ],
@@ -152,39 +181,66 @@ class InventoryDashboardScreen extends StatelessWidget {
                     contentPadding: EdgeInsets.zero,
                     title: const Text('New item'),
                     value: isNewItem,
-                    onChanged: (value) => setDialogState(() => isNewItem = value),
+                    onChanged: (value) =>
+                        setDialogState(() => isNewItem = value),
                   ),
                 if (!isNewItem && items.isNotEmpty)
                   DropdownButtonFormField<String>(
                     initialValue: selectedItemId,
                     decoration: const InputDecoration(labelText: 'Item'),
-                    items: items.map((i) => DropdownMenuItem(value: i.id, child: Text(i.name))).toList(),
-                    onChanged: (value) => setDialogState(() => selectedItemId = value),
+                    items: items
+                        .map(
+                          (i) => DropdownMenuItem(
+                            value: i.id,
+                            child: Text(i.name),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) =>
+                        setDialogState(() => selectedItemId = value),
                   )
                 else ...[
-                  TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Item Name')),
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(labelText: 'Item Name'),
+                  ),
                   const SizedBox(height: 16),
-                  TextField(controller: categoryController, decoration: const InputDecoration(labelText: 'Category')),
+                  TextField(
+                    controller: categoryController,
+                    decoration: const InputDecoration(labelText: 'Category'),
+                  ),
                   const SizedBox(height: 16),
-                  TextField(controller: unitController, decoration: const InputDecoration(labelText: 'Unit (e.g. Reams, Boxes)')),
+                  TextField(
+                    controller: unitController,
+                    decoration: const InputDecoration(
+                      labelText: 'Unit (e.g. Reams, Boxes)',
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: thresholdController,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Low Stock Threshold'),
+                    decoration: const InputDecoration(
+                      labelText: 'Low Stock Threshold',
+                    ),
                   ),
                 ],
                 const SizedBox(height: 16),
                 TextField(
                   controller: quantityController,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Quantity to Add'),
+                  decoration: const InputDecoration(
+                    labelText: 'Quantity to Add',
+                  ),
                 ),
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
             FilledButton(
               onPressed: () {
                 final quantity = int.tryParse(quantityController.text.trim());
@@ -192,25 +248,34 @@ class InventoryDashboardScreen extends StatelessWidget {
 
                 if (isNewItem) {
                   if (nameController.text.trim().isEmpty) return;
-                  context.read<InventoryBloc>().add(AddStockRequested(
-                        itemId: '',
-                        itemName: nameController.text.trim(),
-                        category: categoryController.text.trim().isEmpty ? 'General' : categoryController.text.trim(),
-                        unit: unitController.text.trim().isEmpty ? 'Units' : unitController.text.trim(),
-                        lowStockThreshold: int.tryParse(thresholdController.text.trim()) ?? 5,
-                        quantity: quantity,
-                      ));
+                  context.read<InventoryBloc>().add(
+                    AddStockRequested(
+                      itemId: '',
+                      itemName: nameController.text.trim(),
+                      category: categoryController.text.trim().isEmpty
+                          ? 'General'
+                          : categoryController.text.trim(),
+                      unit: unitController.text.trim().isEmpty
+                          ? 'Units'
+                          : unitController.text.trim(),
+                      lowStockThreshold:
+                          int.tryParse(thresholdController.text.trim()) ?? 5,
+                      quantity: quantity,
+                    ),
+                  );
                 } else {
                   if (selectedItemId == null) return;
                   final item = items.firstWhere((i) => i.id == selectedItemId);
-                  context.read<InventoryBloc>().add(AddStockRequested(
-                        itemId: item.id,
-                        itemName: item.name,
-                        category: item.category,
-                        unit: item.unit,
-                        lowStockThreshold: item.lowStockThreshold,
-                        quantity: quantity,
-                      ));
+                  context.read<InventoryBloc>().add(
+                    AddStockRequested(
+                      itemId: item.id,
+                      itemName: item.name,
+                      category: item.category,
+                      unit: item.unit,
+                      lowStockThreshold: item.lowStockThreshold,
+                      quantity: quantity,
+                    ),
+                  );
                 }
                 Navigator.pop(dialogContext);
               },
@@ -225,7 +290,9 @@ class InventoryDashboardScreen extends StatelessWidget {
   void _showIssueItemDialog(BuildContext context, List<InventoryItem> items) {
     if (items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No items in stock yet. Add stock first.')),
+        const SnackBar(
+          content: Text('No items in stock yet. Add stock first.'),
+        ),
       );
       return;
     }
@@ -245,31 +312,55 @@ class InventoryDashboardScreen extends StatelessWidget {
               DropdownButtonFormField<String>(
                 initialValue: selectedItemId,
                 decoration: const InputDecoration(labelText: 'Item'),
-                items: items.map((i) => DropdownMenuItem(value: i.id, child: Text('${i.name} (${i.quantity} ${i.unit})'))).toList(),
-                onChanged: (value) => setDialogState(() => selectedItemId = value ?? selectedItemId),
+                items: items
+                    .map(
+                      (i) => DropdownMenuItem(
+                        value: i.id,
+                        child: Text('${i.name} (${i.quantity} ${i.unit})'),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) => setDialogState(
+                  () => selectedItemId = value ?? selectedItemId,
+                ),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: quantityController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Quantity to Issue'),
+                decoration: const InputDecoration(
+                  labelText: 'Quantity to Issue',
+                ),
               ),
               const SizedBox(height: 16),
-              TextField(controller: noteController, decoration: const InputDecoration(labelText: 'Issued To / Note')),
+              TextField(
+                controller: noteController,
+                decoration: const InputDecoration(
+                  labelText: 'Issued To / Note',
+                ),
+              ),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
             FilledButton(
               onPressed: () {
                 final quantity = int.tryParse(quantityController.text.trim());
                 final item = items.firstWhere((i) => i.id == selectedItemId);
-                if (quantity == null || quantity <= 0 || quantity > item.quantity) return;
-                context.read<InventoryBloc>().add(IssueItemRequested(
-                      itemId: selectedItemId,
-                      quantity: quantity,
-                      note: noteController.text.trim(),
-                    ));
+                if (quantity == null ||
+                    quantity <= 0 ||
+                    quantity > item.quantity)
+                  return;
+                context.read<InventoryBloc>().add(
+                  IssueItemRequested(
+                    itemId: selectedItemId,
+                    quantity: quantity,
+                    note: noteController.text.trim(),
+                  ),
+                );
                 Navigator.pop(dialogContext);
               },
               child: const Text('Issue'),
@@ -305,7 +396,9 @@ class InventoryDashboardScreen extends StatelessWidget {
                   '${item.quantity} ${item.unit}',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: item.isLowStock ? Theme.of(context).colorScheme.error : null,
+                    color: item.isLowStock
+                        ? Theme.of(context).colorScheme.error
+                        : null,
                   ),
                 ),
               );
@@ -337,10 +430,13 @@ class _LoadingView extends StatelessWidget {
         const SizedBox(height: 24),
         const Skeleton(height: 20, width: 180),
         const SizedBox(height: 12),
-        ...List.generate(3, (index) => const Padding(
-              padding: EdgeInsets.only(bottom: 12),
-              child: Skeleton(height: 72),
-            )),
+        ...List.generate(
+          3,
+          (index) => const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: Skeleton(height: 72),
+          ),
+        ),
       ],
     );
   }
@@ -386,16 +482,16 @@ class _InventoryItemTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text('$status • $date', style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  '$status • $date',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ],
             ),
           ),
           Text(
             quantity,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
+            style: TextStyle(fontWeight: FontWeight.bold, color: color),
           ),
         ],
       ),
@@ -436,7 +532,11 @@ class _QuickAction extends StatelessWidget {
             Text(
               label,
               textAlign: TextAlign.center,
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: color),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: color,
+              ),
             ),
           ],
         ),

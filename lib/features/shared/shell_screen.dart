@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
+import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
@@ -15,7 +16,7 @@ class StaffShell extends StatelessWidget {
   bool _isAdmin(BuildContext context) {
     final state = context.read<AuthBloc>().state;
     if (state is AuthAuthenticated) {
-      return UserRoleDisplay.adminConsoleRoles.contains(state.user.role);
+      return state.user.roles.any(UserRoleDisplay.adminConsoleRoles.contains);
     }
     return false;
   }
@@ -28,7 +29,7 @@ class StaffShell extends StatelessWidget {
   bool _isTeacher(BuildContext context) {
     final state = context.read<AuthBloc>().state;
     if (state is AuthAuthenticated) {
-      return _teacherRoles.contains(state.user.role);
+      return state.user.roles.any(_teacherRoles.contains);
     }
     return false;
   }
@@ -59,10 +60,12 @@ class StaffShell extends StatelessWidget {
   }
 
   /// The signed-in user's own dashboard, so a bursar's Home tab doesn't land
-  /// on the teacher dashboard.
+  /// on the teacher dashboard. Staff holding more than one role go to the
+  /// role hub instead of any single role's dashboard.
   String _homePath(BuildContext context) {
     final state = context.read<AuthBloc>().state;
     if (state is AuthAuthenticated) {
+      if (state.user.roles.length > 1) return '/staff/hub';
       return UserRoleRouting.dashboardPath(state.user.role);
     }
     return '/staff/dashboard';
@@ -97,25 +100,18 @@ class StaffShell extends StatelessWidget {
     }
   }
 
-  void _handleLogout(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to log out?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () {
-              context.read<AuthBloc>().add(LogoutPressed());
-              Navigator.pop(context);
-              context.go('/welcome');
-            },
-            child: const Text('Logout', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+  void _handleLogout(BuildContext context) async {
+    final confirmed = await confirmActionDialog(
+      context,
+      title: 'Logout',
+      message: 'Are you sure you want to log out?',
+      confirmLabel: 'Logout',
+      isDestructive: true,
     );
+    if (confirmed == true && context.mounted) {
+      context.read<AuthBloc>().add(LogoutPressed());
+      context.go('/welcome');
+    }
   }
 
   @override

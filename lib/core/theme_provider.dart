@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../features/admin/data/models/system_config.dart';
+import '../features/branding/domain/entities/school_branding.dart';
+import 'theme/branding_theme_engine.dart';
 
 class ThemeProvider extends ChangeNotifier {
   ThemeProvider();
@@ -12,8 +14,14 @@ class ThemeProvider extends ChangeNotifier {
   SystemConfig? _config;
   SystemConfig? get config => _config;
 
+  SchoolBranding? _branding;
+  SchoolBranding? get branding => _branding;
+
   static const _themeKey = 'theme_mode';
   static const _configKey = 'system_config';
+
+  ThemeData get lightTheme => BrandingThemeEngine.createTheme(_branding, Brightness.light);
+  ThemeData get darkTheme => BrandingThemeEngine.createTheme(_branding, Brightness.dark);
 
   Future<void> initialize() async {
     await Future.wait([
@@ -55,5 +63,9 @@ class ThemeProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_configKey, json.encode(config.toMap()));
   }
-}
 
+  void updateBranding(SchoolBranding? branding) {
+    _branding = branding;
+    notifyListeners();
+  }
+}

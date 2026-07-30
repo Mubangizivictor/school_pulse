@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../../core/user_roles.dart';
 import '../../domain/entities/school_event.dart';
 
 class SchoolEventModel extends SchoolEvent {
@@ -9,9 +8,8 @@ class SchoolEventModel extends SchoolEvent {
     required super.description,
     required super.date,
     required super.createdBy,
-    super.targetRoles,
+    super.targetGroups,
     super.type,
-    super.responsiblePerson,
   });
 
   factory SchoolEventModel.fromFirestore(DocumentSnapshot doc) {
@@ -22,15 +20,14 @@ class SchoolEventModel extends SchoolEvent {
       description: data['description'] ?? '',
       date: (data['date'] as Timestamp).toDate(),
       createdBy: data['createdBy'] ?? '',
-      targetRoles: (data['targetRoles'] as List<dynamic>?)
-              ?.map((e) => UserRole.values.firstWhere((r) => r.name == e))
+      targetGroups: (data['targetGroups'] as List<dynamic>?)
+              ?.map((e) => e.toString())
               .toList() ??
-          const [],
+          defaultEventTargetGroups,
       type: SchoolEventType.values.firstWhere(
         (e) => e.name == (data['type'] ?? 'general'),
         orElse: () => SchoolEventType.general,
       ),
-      responsiblePerson: data['responsiblePerson'],
     );
   }
 
@@ -40,9 +37,8 @@ class SchoolEventModel extends SchoolEvent {
       'description': description,
       'date': Timestamp.fromDate(date),
       'createdBy': createdBy,
-      'targetRoles': targetRoles.map((e) => e.name).toList(),
+      'targetGroups': targetGroups,
       'type': type.name,
-      'responsiblePerson': responsiblePerson,
     };
   }
 }

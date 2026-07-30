@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:school_pulse/core/user_roles.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import '../bloc/matron_bloc.dart';
 import '../bloc/matron_event.dart';
 import '../bloc/matron_state.dart';
-import '../../domain/repositories/matron_repository.dart';
+import '../../domain/entities/boarding_entities.dart';
 
 class NightAttendanceScreen extends StatefulWidget {
   const NightAttendanceScreen({super.key});
@@ -16,10 +19,16 @@ class _NightAttendanceScreenState extends State<NightAttendanceScreen> {
   final Map<String, bool> _attendance = {};
   String? _selectedDormitoryId;
 
+  String? _genderScope(BuildContext context) {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthAuthenticated) return null;
+    return UserRoleDisplay.matronGenderScope(authState.user.role);
+  }
+
   @override
   void initState() {
     super.initState();
-    context.read<MatronBloc>().add(MatronDashboardRequested());
+    context.read<MatronBloc>().add(MatronDashboardRequested(gender: _genderScope(context)));
   }
 
   @override
@@ -31,9 +40,12 @@ class _NightAttendanceScreenState extends State<NightAttendanceScreen> {
           IconButton(
             onPressed: (_selectedDormitoryId != null && _attendance.isNotEmpty)
                 ? () {
-                    context.read<MatronBloc>().add(SubmitNightAttendanceRequested(
+                    context.read<MatronBloc>().add(SubmitAttendanceRequested(
                           dormitoryId: _selectedDormitoryId!,
-                          attendance: _attendance,
+                          type: 'Night',
+                          attendance: _attendance.map(
+                            (studentId, present) => MapEntry(studentId, present ? 'Present' : 'Absent'),
+                          ),
                         ));
                   }
                 : null,
@@ -43,14 +55,14 @@ class _NightAttendanceScreenState extends State<NightAttendanceScreen> {
       ),
       body: BlocConsumer<MatronBloc, MatronState>(
         listener: (context, state) {
-          if (state is AttendanceSubmittedSuccessfully) {
+          if (state is MatronSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Attendance saved successfully')),
             );
           }
         },
         builder: (context, state) {
-          List<Student> students = [];
+          List<BoardingStudent> students = [];
 
           if (state is DormitoryStudentsLoaded) {
             students = state.students;
@@ -61,9 +73,9 @@ class _NightAttendanceScreenState extends State<NightAttendanceScreen> {
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: BlocBuilder<MatronBloc, MatronState>(
-                  buildWhen: (prev, curr) => curr is MatronLoaded,
+                  buildWhen: (prev, curr) => curr is MatronDashboardLoaded,
                   builder: (context, state) {
-                    final dorms = state is MatronLoaded ? state.dormitories : <DormitoryStatus>[];
+                    final dorms = state is MatronDashboardLoaded ? state.data.dormitories : <Dormitory>[];
                     return DropdownButtonFormField<String>(
                       decoration: const InputDecoration(labelText: 'Select Dormitory'),
                       initialValue: _selectedDormitoryId,

@@ -6,7 +6,7 @@ class ToggleStaffStatus {
   final AuthRepository repository;
   ToggleStaffStatus(this.repository);
 
-  Future<Either<Failure, void>> call(String userId, bool isActive) async {
-    return await repository.toggleStaffActiveStatus(userId, isActive);
+  Future<Either<Failure, void>> call(String userId, bool isActive, {String? reason}) async {
+    return await repository.toggleStaffActiveStatus(userId, isActive, reason: reason);
   }
 }

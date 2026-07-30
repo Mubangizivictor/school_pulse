@@ -53,17 +53,17 @@ class _ReligiousLeaderDashboardScreenState extends State<ReligiousLeaderDashboar
                 context.read<ReligionBloc>().add(ReligionDashboardRequested());
               },
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     FadeInSlide(
                       child: Text(
                         'Spiritual Oversight',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 15),
                     Row(
                       children: [
                         Expanded(
@@ -77,7 +77,7 @@ class _ReligiousLeaderDashboardScreenState extends State<ReligiousLeaderDashboar
                             ),
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: FadeInSlide(
                             delay: const Duration(milliseconds: 200),
@@ -91,7 +91,7 @@ class _ReligiousLeaderDashboardScreenState extends State<ReligiousLeaderDashboar
                         ),
                       ],
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
                     const SectionHeader(title: 'Upcoming Activities'),
                     const SizedBox(height: 12),
                     ...state.activities.map((activity) => FadeInSlide(
@@ -182,18 +182,18 @@ class _ReligionSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
       children: [
         const Skeleton(width: 200, height: 28),
-        const SizedBox(height: 24),
+        const SizedBox(height: 15),
         Row(
           children: [
-            Expanded(child: const Skeleton(height: 100, borderRadius: 12)),
-            const SizedBox(width: 16),
-            Expanded(child: const Skeleton(height: 100, borderRadius: 12)),
+            Expanded(child: const Skeleton(height: 48, borderRadius: 12)),
+            const SizedBox(width: 12),
+            Expanded(child: const Skeleton(height: 48, borderRadius: 12)),
           ],
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 24),
         const Skeleton(width: 150, height: 20),
         const SizedBox(height: 12),
         ...List.generate(3, (index) => const Padding(

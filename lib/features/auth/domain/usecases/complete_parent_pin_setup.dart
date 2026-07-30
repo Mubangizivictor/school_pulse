@@ -10,13 +10,14 @@ class CompleteParentPinSetup implements UseCase<void, CompleteParentPinSetupPara
 
   @override
   Future<Either<Failure, void>> call(CompleteParentPinSetupParams params) async {
-    return await repository.completeParentPinSetup(params.code, params.newPin);
+    return await repository.completeParentPinSetup(params.code, params.phoneNumber, params.newPin);
   }
 }
 
 class CompleteParentPinSetupParams {
   final String code;
+  final String phoneNumber;
   final String newPin;
 
-  CompleteParentPinSetupParams({required this.code, required this.newPin});
+  CompleteParentPinSetupParams({required this.code, required this.phoneNumber, required this.newPin});
 }

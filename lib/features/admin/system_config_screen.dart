@@ -34,6 +34,8 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
   DateTime? _termStart;
   DateTime? _termEnd;
   bool _mfaEnabled = false;
+  List<String> _gates = ['Main Gate'];
+  final _newGateController = TextEditingController();
 
   @override
   void initState() {
@@ -66,6 +68,7 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
     _phoneController.dispose();
     _termController.dispose();
     _yearController.dispose();
+    _newGateController.dispose();
     super.dispose();
   }
 
@@ -83,6 +86,7 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
     _termStart = config.termStart;
     _termEnd = config.termEnd;
     _mfaEnabled = config.mfaEnabled;
+    _gates = List<String>.from(config.visitorGates);
   }
 
   @override
@@ -163,6 +167,8 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
                     const SizedBox(height: 24),
                     _buildAcademicCalendarSection(context),
                     const SizedBox(height: 24),
+                    _buildGatesSection(context),
+                    const SizedBox(height: 24),
                     _buildIntegrationSettings(context, config),
                     const SizedBox(height: 24),
                     _buildSecuritySettings(context),
@@ -209,6 +215,8 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
         mfaEnabled: _mfaEnabled,
         smsGatewayStatus: oldConfig.smsGatewayStatus,
         smsCredits: oldConfig.smsCredits,
+        studentPortalConfig: oldConfig.studentPortalConfig,
+        visitorGates: _gates,
       );
       context.read<SystemConfigBloc>().add(UpdateSystemConfig(newConfig));
     }
@@ -513,6 +521,70 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
     }
   }
 
+  void _addGate() {
+    final name = _newGateController.text.trim();
+    if (name.isEmpty || _gates.any((g) => g.toLowerCase() == name.toLowerCase())) return;
+    setState(() {
+      _gates.add(name);
+      _newGateController.clear();
+    });
+  }
+
+  void _removeGate(String gate) {
+    if (_gates.length <= 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('At least one gate is required')),
+      );
+      return;
+    }
+    setState(() => _gates.remove(gate));
+  }
+
+  Widget _buildGatesSection(BuildContext context) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Visitor Gates', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 4),
+          Text(
+            'Define the physical entry points gatekeepers can select when checking in a visitor.',
+            style: TextStyle(color: Theme.of(context).colorScheme.outline, fontSize: 12),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _gates
+                .map((gate) => Chip(
+                      label: Text(gate),
+                      onDeleted: () => _removeGate(gate),
+                    ))
+                .toList(),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _newGateController,
+                  decoration: const InputDecoration(
+                    labelText: 'Add Gate',
+                    hintText: 'e.g. North Gate, Delivery Bay',
+                    prefixIcon: Icon(Icons.sensor_door_outlined),
+                  ),
+                  onFieldSubmitted: (_) => _addGate(),
+                ),
+              ),
+              const SizedBox(width: 12),
+              FilledButton(onPressed: _addGate, child: const Text('Add')),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildIntegrationSettings(BuildContext context, SystemConfig config) {
     return AppCard(
       child: Column(
@@ -527,17 +599,9 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
             trailing: Switch(
               value: config.smsGatewayStatus == 'Connected',
               onChanged: (connect) {
-                context.read<SystemConfigBloc>().add(UpdateSystemConfig(SystemConfig(
-                      schoolName: config.schoolName,
-                      schoolMotto: config.schoolMotto,
-                      currentTerm: config.currentTerm,
-                      academicYear: config.academicYear,
-                      termStart: config.termStart,
-                      termEnd: config.termEnd,
-                      mfaEnabled: config.mfaEnabled,
-                      smsGatewayStatus: connect ? 'Connected' : 'Disconnected',
-                      smsCredits: config.smsCredits,
-                    )));
+                context.read<SystemConfigBloc>().add(UpdateSystemConfig(
+                      config.copyWith(smsGatewayStatus: connect ? 'Connected' : 'Disconnected'),
+                    ));
               },
             ),
           ),

@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/core/utils.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/notifications/domain/entities/alert.dart';
 import 'package:school_pulse/features/notifications/presentation/bloc/notifications_bloc.dart';
 import 'package:school_pulse/features/notifications/presentation/bloc/notifications_event.dart';
@@ -20,7 +22,9 @@ class NotificationsScreen extends StatelessWidget {
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
 
     return Scaffold(
-      appBar: const StudentAppBar(title: 'Notifications'),
+      appBar: StudentAppBar(
+        title: 'Notifications',
+      ),
       body: BlocBuilder<StudentsBloc, StudentsState>(
         builder: (context, studentsState) {
           if (studentsState is! StudentsLoaded) {
@@ -31,7 +35,11 @@ class NotificationsScreen extends StatelessWidget {
             builder: (context, notificationsState) {
               if (notificationsState is NotificationsInitial) {
                 final ids = studentsState.students.map((s) => s.id).toList();
-                context.read<NotificationsBloc>().add(FetchAlerts(ids));
+                final groups = {
+                  'Parents',
+                  ...studentsState.students.map((s) => 'Class:${s.className}'),
+                }.toList();
+                context.read<NotificationsBloc>().add(FetchAlerts(ids, groups: groups));
               }
 
               if (notificationsState is NotificationsLoading || notificationsState is NotificationsInitial) {
@@ -54,7 +62,11 @@ class NotificationsScreen extends StatelessWidget {
                   onCtaPressed: () {
                     final ids =
                         studentsState.students.map((s) => s.id).toList();
-                    context.read<NotificationsBloc>().add(FetchAlerts(ids));
+                    final groups = {
+                      'Parents',
+                      ...studentsState.students.map((s) => 'Class:${s.className}'),
+                    }.toList();
+                    context.read<NotificationsBloc>().add(FetchAlerts(ids, groups: groups));
                   },
                 );
               }
@@ -76,57 +88,77 @@ class NotificationsScreen extends StatelessWidget {
                 itemCount: alerts.length,
                 itemBuilder: (context, index) {
                   final alert = alerts[index];
-                  return FadeInSlide(
-                    delay: Duration(milliseconds: index * 100),
-                    child: AppCard(
+                  return Dismissible(
+                    key: Key(alert.id),
+                    direction: DismissDirection.endToStart,
+                    background: Container(
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.only(right: 20),
                       margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: _getAlertColor(alert.severity, semanticColors).withValues(alpha: 0.1),
-                              shape: BoxShape.circle,
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Icon(Icons.delete_outline, color: Colors.white),
+                    ),
+                    onDismissed: (direction) {
+                      final authState = context.read<AuthBloc>().state;
+                      if (authState is AuthAuthenticated) {
+                        context.read<NotificationsBloc>().add(DismissAlert(alert.id, authState.user.id));
+                      }
+                    },
+                    child: FadeInSlide(
+                      delay: Duration(milliseconds: index * 100),
+                      child: AppCard(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: _getAlertColor(alert.severity, semanticColors).withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                _getAlertIcon(alert.severity),
+                                color: _getAlertColor(alert.severity, semanticColors),
+                                size: 20,
+                              ),
                             ),
-                            child: Icon(
-                              _getAlertIcon(alert.severity),
-                              color: _getAlertColor(alert.severity, semanticColors),
-                              size: 20,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        alert.title,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          alert.title,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(fontWeight: FontWeight.bold),
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      DateFormatter.relative(alert.timestamp),
-                                      style: Theme.of(context).textTheme.labelSmall,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  alert.message,
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ],
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        DateFormatter.relative(alert.timestamp),
+                                        style: Theme.of(context).textTheme.labelSmall,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    alert.message,
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   );

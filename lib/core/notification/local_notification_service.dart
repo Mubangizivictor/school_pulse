@@ -11,6 +11,11 @@ class LocalNotificationService {
       FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
 
+  /// Invoked when the user taps a notification this service displayed
+  /// (foreground case). Set by NotificationService so tapping actually
+  /// takes the user somewhere instead of just opening the app cold.
+  static void Function()? onNotificationTap;
+
   static const _channel = AndroidNotificationChannel(
     'school_pulse_alerts',
     'School Pulse Alerts',
@@ -29,10 +34,16 @@ class LocalNotificationService {
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
+      defaultPresentAlert: true,
+      defaultPresentBadge: true,
+      defaultPresentSound: true,
     );
     const settings = InitializationSettings(android: androidInit, iOS: iosInit);
 
-    await _plugin.initialize(settings: settings);
+    await _plugin.initialize(
+      settings: settings,
+      onDidReceiveNotificationResponse: (response) => onNotificationTap?.call(),
+    );
     await _plugin
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
@@ -40,6 +51,21 @@ class LocalNotificationService {
   }
 
   static Future<void> show({required String title, required String body}) async {
+    // Ensure permission is granted before showing (Android 13+ and iOS)
+    await _plugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestNotificationsPermission();
+
+    await _plugin
+        .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>()
+        ?.requestPermissions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+
     await _plugin.show(
       id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
       title: title,
@@ -52,7 +78,11 @@ class LocalNotificationService {
           importance: Importance.high,
           priority: Priority.high,
         ),
-        iOS: const DarwinNotificationDetails(),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
       ),
     );
   }
@@ -79,7 +109,11 @@ class LocalNotificationService {
           priority: Priority.high,
           styleInformation: BigTextStyleInformation(body),
         ),
-        iOS: const DarwinNotificationDetails(),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );

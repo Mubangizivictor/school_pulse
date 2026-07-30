@@ -9,6 +9,7 @@ import 'package:school_pulse/features/dean/presentation/bloc/dean_event.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_state.dart';
 import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 import 'package:school_pulse/injection_container.dart';
+import '../../domain/entities/academic_dashboard_stats.dart';
 
 class DeanDashboardScreen extends StatelessWidget {
   const DeanDashboardScreen({super.key});
@@ -16,7 +17,7 @@ class DeanDashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => sl<DeanBloc>()..add(DeanStatsRequested()),
+      create: (context) => sl<DeanBloc>()..add(AcademicDashboardRequested()),
       child: Scaffold(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
         body: CustomScrollView(
@@ -24,15 +25,19 @@ class DeanDashboardScreen extends StatelessWidget {
             _buildAppBar(context),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.all(24.0),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildGreeting(context),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
                     _buildActionGrid(context),
-                    const SizedBox(height: 32),
-                    _buildAcademicsOverview(context),
+                    const SizedBox(height: 24),
+                    _buildStatsOverview(context),
+                    const SizedBox(height: 24),
+                    _buildPerformanceSection(context),
+                    const SizedBox(height: 24),
+                    _buildAlertsSection(context),
                   ],
                 ),
               ),
@@ -48,12 +53,16 @@ class DeanDashboardScreen extends StatelessWidget {
       pinned: true,
       expandedHeight: 80,
       backgroundColor: Theme.of(context).colorScheme.surface,
-      title: const Text('Dean of Studies Console', style: TextStyle(fontWeight: FontWeight.bold)),
+      title: const Text('Academic Command Centre',
+          style: TextStyle(fontWeight: FontWeight.bold)),
       actions: [
         const NotificationBellButton(),
-        const SizedBox(width: 16),
-        const CircleAvatar(radius: 18, child: Icon(Icons.person)),
-        const SizedBox(width: 24),
+        const SizedBox(width: 8),
+        IconButton(
+          icon: const Icon(Icons.settings_outlined),
+          onPressed: () {},
+        ),
+        const SizedBox(width: 8),
       ],
     );
   }
@@ -65,8 +74,21 @@ class DeanDashboardScreen extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Welcome back, $name', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
-            Text('Academic Year 2024 • Term 3', style: TextStyle(color: Theme.of(context).hintColor)),
+            Text('Welcome, $name',
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.bold)),
+            BlocBuilder<DeanBloc, DeanState>(
+              builder: (context, state) {
+                if (state is AcademicDashboardLoaded) {
+                  return Text(
+                      '${state.stats.currentAcademicYear} • ${state.stats.currentTerm}',
+                      style: TextStyle(color: Theme.of(context).hintColor));
+                }
+                return const Text('Loading academic session...');
+              },
+            ),
           ],
         );
       },
@@ -74,154 +96,279 @@ class DeanDashboardScreen extends StatelessWidget {
   }
 
   Widget _buildActionGrid(BuildContext context) {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: MediaQuery.of(context).size.width > 900 ? 4 : 2,
-      mainAxisSpacing: 16,
-      crossAxisSpacing: 16,
-      childAspectRatio: 2.5,
-      children: [
-        _DeanActionCard(
+    final actions = [
+      _ActionItem(
           icon: Icons.menu_book,
-          label: 'Curriculum & Syllabi',
+          label: 'Curriculum',
           color: Colors.blue,
-          onTap: () => GoRouter.of(context).go('/staff/dean/curriculum'),
-        ),
-        _DeanActionCard(
-          icon: Icons.assignment_turned_in,
-          label: 'Report Approvals',
+          route: '/staff/dean/curriculum'),
+      _ActionItem(
+          icon: Icons.assignment_ind,
+          label: 'Workload',
+          color: Colors.purple,
+          route: '/staff/dean/workload'),
+      _ActionItem(
+          icon: Icons.history_edu,
+          label: 'Lessons',
           color: Colors.orange,
-          onTap: () => GoRouter.of(context).push('/staff/dean/approvals/reports'),
-        ),
-        _DeanActionCard(
-          icon: Icons.assignment,
-          label: 'Exams & Assessment',
+          route: '/staff/dean/lessons'),
+      _ActionItem(
+          icon: Icons.grading,
+          label: 'Quality QA',
           color: Colors.green,
-          onTap: () => GoRouter.of(context).push('/staff/exams'),
+          route: '/staff/dean/marks-qa'),
+      _ActionItem(
+          icon: Icons.verified_user,
+          label: 'Report Approvals',
+          color: Colors.red,
+          route: '/staff/dean/approvals'),
+      _ActionItem(
+          icon: Icons.psychology,
+          label: 'Interventions',
+          color: Colors.teal,
+          route: '/staff/dean/interventions'),
+      _ActionItem(
+          icon: Icons.visibility,
+          label: 'Observations',
+          color: Colors.indigo,
+          route: '/staff/dean/observations'),
+      _ActionItem(
+          icon: Icons.analytics,
+          label: 'Analytics',
+          color: Colors.amber,
+          route: '/staff/dean/analytics'),
+    ];
+
+    return LayoutBuilder(builder: (context, constraints) {
+      final crossAxisCount = constraints.maxWidth > 900 ? 4 : 2;
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: crossAxisCount,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 2.5,
         ),
-      ],
+        itemCount: actions.length,
+        itemBuilder: (context, index) {
+          final action = actions[index];
+          return AppCard(
+            onTap: () => GoRouter.of(context).push(action.route),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: action.color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(action.icon, color: action.color, size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(action.label,
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    });
+  }
+
+  Widget _buildStatsOverview(BuildContext context) {
+    return BlocBuilder<DeanBloc, DeanState>(
+      builder: (context, state) {
+        if (state is AcademicDashboardLoaded) {
+          final stats = state.stats;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SectionHeader(title: 'Academic Pulse'),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  _StatBox(
+                      label: 'Lessons Today',
+                      value: '${stats.lessonsConductedToday}',
+                      subValue: '${stats.lessonsMissedToday} missed',
+                      icon: Icons.class_,
+                      color: Colors.blue),
+                  _StatBox(
+                      label: 'Pending Marks',
+                      value: '${stats.marksPendingEntry}',
+                      subValue: 'Assessments: ${stats.assessmentsPending}',
+                      icon: Icons.pending_actions,
+                      color: Colors.orange),
+                  _StatBox(
+                      label: 'Reports to Approve',
+                      value: '${stats.reportCardsPendingApproval}',
+                      subValue: '${stats.reportCardsPublished} published',
+                      icon: Icons.fact_check,
+                      color: Colors.green),
+                  _StatBox(
+                      label: 'School Average',
+                      value: '${stats.overallSchoolAverage.toStringAsFixed(1)}%',
+                      subValue: 'Trend: ${stats.attendanceTrend > 0 ? "+" : ""}${stats.attendanceTrend}%',
+                      icon: Icons.trending_up,
+                      color: Colors.purple),
+                ],
+              ),
+            ],
+          );
+        }
+        return const Center(child: CircularProgressIndicator());
+      },
     );
   }
 
-  Widget _buildAcademicsOverview(BuildContext context) {
+  Widget _buildPerformanceSection(BuildContext context) {
     return BlocBuilder<DeanBloc, DeanState>(
       builder: (context, state) {
-        if (state is DeanLoading) {
-          return const AppCard(child: Center(child: CircularProgressIndicator()));
-        }
-        if (state is DeanError) {
-          return AppCard(child: Text('Error: ${state.message}'));
-        }
-        if (state is DeanLoaded) {
-          final stats = state.stats;
-          return AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Academic Overview', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    _Metric(label: 'Total Students', value: stats.totalStudents.toString()),
-                    _Metric(label: 'Syllabus Coverage', value: '${(stats.syllabusCoverage * 100).toInt()}%'),
-                    _Metric(label: 'Avg Performance', value: '${(stats.averagePerformance * 100).toInt()}%'),
-                  ],
+        if (state is AcademicDashboardLoaded) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Top Performing Classes',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      const Divider(),
+                      ...state.stats.topPerformingClasses.map((c) => ListTile(
+                            dense: true,
+                            title: Text(c.className),
+                            trailing: Text('${c.average}%',
+                                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                          )),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 32),
-                const Text('Recent Department Updates', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 16),
-                const _DepartmentUpdate(dept: 'Science', update: 'Physics syllabus completed for S4', time: '2h ago'),
-                const _DepartmentUpdate(dept: 'Mathematics', update: 'Termly tests scores uploaded', time: 'Yesterday'),
-              ],
-            ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Subject Rankings',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      const Divider(),
+                      ...state.stats.subjectRankings.take(5).map((s) => ListTile(
+                            dense: true,
+                            title: Text(s.subjectName),
+                            trailing: Text('${s.average}%',
+                                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+                          )),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           );
         }
         return const SizedBox.shrink();
       },
     );
   }
+
+  Widget _buildAlertsSection(BuildContext context) {
+    return BlocBuilder<DeanBloc, DeanState>(
+      builder: (context, state) {
+        if (state is AcademicDashboardLoaded && state.stats.activeAlerts.isNotEmpty) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SectionHeader(title: 'Academic Alerts'),
+              const SizedBox(height: 12),
+              ...state.stats.activeAlerts.map((alert) => AppCard(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    color: _getAlertColor(alert.severity).withValues(alpha: 0.05),
+                    child: ListTile(
+                      leading: Icon(Icons.warning_amber, color: _getAlertColor(alert.severity)),
+                      title: Text(alert.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text(alert.message),
+                      trailing: Text(_formatTime(alert.timestamp), style: const TextStyle(fontSize: 12)),
+                    ),
+                  )),
+            ],
+          );
+        }
+        return const SizedBox.shrink();
+      },
+    );
+  }
+
+  Color _getAlertColor(AlertSeverity severity) {
+    switch (severity) {
+      case AlertSeverity.critical:
+        return Colors.red;
+      case AlertSeverity.high:
+        return Colors.orange;
+      case AlertSeverity.medium:
+        return Colors.blue;
+      case AlertSeverity.low:
+        return Colors.grey;
+    }
+  }
+
+  String _formatTime(DateTime dt) {
+    return '${dt.hour}:${dt.minute.toString().padLeft(2, "0")}';
+  }
 }
 
-class _DeanActionCard extends StatelessWidget {
+class _ActionItem {
   final IconData icon;
   final String label;
   final Color color;
-  final VoidCallback? onTap;
+  final String route;
 
-  const _DeanActionCard({
-    required this.icon, 
-    required this.label, 
+  _ActionItem(
+      {required this.icon, required this.label, required this.color, required this.route});
+}
+
+class _StatBox extends StatelessWidget {
+  final String label;
+  final String value;
+  final String subValue;
+  final IconData icon;
+  final Color color;
+
+  const _StatBox({
+    required this.label,
+    required this.value,
+    required this.subValue,
+    required this.icon,
     required this.color,
-    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
+    final width = (MediaQuery.of(context).size.width - 48) / 2;
+    return Container(
+      width: width > 200 ? 200 : width,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
+        border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
       ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                child: Icon(icon, color: color),
-              ),
-              const SizedBox(width: 16),
-              Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Metric extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _Metric({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          Text(label, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-        ],
-      ),
-    );
-  }
-}
-
-class _DepartmentUpdate extends StatelessWidget {
-  final String dept;
-  final String update;
-  final String time;
-
-  const _DepartmentUpdate({required this.dept, required this.update, required this.time});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Text('[$dept]', style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary, fontSize: 12)),
-          const SizedBox(width: 8),
-          Expanded(child: Text(update, style: const TextStyle(fontSize: 13))),
-          Text(time, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11)),
+          Icon(icon, color: color, size: 20),
+          const SizedBox(height: 12),
+          Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+          const SizedBox(height: 4),
+          Text(subValue,
+              style: TextStyle(fontSize: 11, color: Theme.of(context).hintColor)),
         ],
       ),
     );
