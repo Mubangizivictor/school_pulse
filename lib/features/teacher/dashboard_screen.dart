@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_typography.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/design_system/theme/app_radius.dart';
+import 'package:school_pulse/design_system/components/pulse_card.dart';
 import 'package:school_pulse/design_system/app_components.dart';
-import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
@@ -30,13 +34,22 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
+    final theme = Theme.of(context);
 
     return Scaffold(
+      backgroundColor: AppColors.background(context),
       appBar: AppBar(
-        title: const Text('Staff Portal'),
+        title: Text(
+          'Staff Portal',
+          style: AppTypography.titleLarge.copyWith(
+            color: AppColors.textPrimary(context),
+          ),
+        ),
+        backgroundColor: AppColors.surface(context),
+        elevation: 0,
         actions: const [
           NotificationBellButton(),
+          SizedBox(width: AppSpacing.m),
         ],
       ),
       body: BlocBuilder<TeacherBloc, TeacherState>(
@@ -71,7 +84,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 }
               },
               child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
+                padding: const EdgeInsets.all(AppSpacing.xl),
                 children: [
                   FadeInSlide(
                     child: Builder(builder: (context) {
@@ -83,10 +96,9 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                         'Hello, $name',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleLarge
-                            ?.copyWith(fontWeight: FontWeight.bold),
+                        style: AppTypography.headlineMedium.copyWith(
+                          color: AppColors.textPrimary(context),
+                        ),
                       );
                     }),
                   ),
@@ -95,142 +107,29 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                     final assignedClass = authState is AuthAuthenticated ? authState.user.assignedClass : null;
                     if (assignedClass == null) return const SizedBox.shrink();
                     return Padding(
-                      padding: const EdgeInsets.only(top: 4),
+                      padding: const EdgeInsets.only(top: AppSpacing.s),
                       child: Text(
                         'Class Teacher - $assignedClass',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
+                        style: AppTypography.titleSmall.copyWith(
+                          color: AppColors.primary(context),
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     );
                   }),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.s),
                   FadeInSlide(
                     delay: const Duration(milliseconds: 100),
                     child: Text(
                       DateFormat('EEEE, d MMMM yyyy').format(DateTime.now()),
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(color: Theme.of(context).colorScheme.outline),
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.textSecondary(context),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 15),
-                  Builder(builder: (context) {
-                    final screenWidth = MediaQuery.of(context).size.width;
-                    final isMobile = screenWidth < 600;
-
-                    if (isMobile) {
-                      return Column(
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: FadeInSlide(
-                                  delay: const Duration(milliseconds: 200),
-                                  child: DashboardStatCard(
-                                    title: 'Students Today',
-                                    value: state.studentsToday.toDouble(),
-                                    suffix: '/${state.totalStudents}',
-                                    icon: Icons.people_outline,
-                                    color: Theme.of(context).colorScheme.primary,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: FadeInSlide(
-                                  delay: const Duration(milliseconds: 300),
-                                  child: DashboardStatCard(
-                                    title: 'Submissions',
-                                    value: state.submissionsDue.toDouble(),
-                                    icon: Icons.assignment_outlined,
-                                    color: semanticColors.warning,
-                                    trend: 'Due today',
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: FadeInSlide(
-                                  delay: const Duration(milliseconds: 400),
-                                  child: DashboardStatCard(
-                                    title: 'Classes Today',
-                                    value: state.classesToday.toDouble(),
-                                    icon: Icons.calendar_today_outlined,
-                                    color: semanticColors.info,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: FadeInSlide(
-                                  delay: const Duration(milliseconds: 500),
-                                  child: DashboardStatCard(
-                                    title: 'Notifications',
-                                    value: state.activeNotifications.toDouble(),
-                                    icon: Icons.notifications_active_outlined,
-                                    color: semanticColors.error,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      );
-                    }
-
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: DashboardStatCard(
-                            title: 'Students Today',
-                            value: state.studentsToday.toDouble(),
-                            suffix: '/${state.totalStudents}',
-                            icon: Icons.people_outline,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: DashboardStatCard(
-                            title: 'Submissions',
-                            value: state.submissionsDue.toDouble(),
-                            icon: Icons.assignment_outlined,
-                            color: semanticColors.warning,
-                            trend: 'Due today',
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: DashboardStatCard(
-                            title: 'Classes Today',
-                            value: state.classesToday.toDouble(),
-                            icon: Icons.calendar_today_outlined,
-                            color: semanticColors.info,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: DashboardStatCard(
-                            title: 'Notifications',
-                            value: state.activeNotifications.toDouble(),
-                            icon: Icons.notifications_active_outlined,
-                            color: semanticColors.error,
-                          ),
-                        ),
-                      ],
-                    );
-                  }),
-                  const SizedBox(height: 15),
+                  const SizedBox(height: AppSpacing.x3l),
+                  _buildStatsGrid(context, state),
+                  const SizedBox(height: AppSpacing.x3l),
                   FadeInSlide(
                     delay: const Duration(milliseconds: 600),
                     child: Column(
@@ -238,29 +137,27 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                       children: [
                         Text(
                           'Class Progress',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleLarge
-                              ?.copyWith(fontWeight: FontWeight.bold),
+                          style: AppTypography.titleLarge.copyWith(
+                            color: AppColors.textPrimary(context),
+                          ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: AppSpacing.xl),
                         ...state.classProgress.asMap().entries.map((entry) {
-                          final index = entry.key;
                           final progress = entry.value;
                           return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: ProgressCard(
+                            padding: const EdgeInsets.only(bottom: AppSpacing.l),
+                            child: _PulseProgressCard(
                               title: progress.title,
                               progress: progress.progress,
                               subtitle: progress.subtitle,
-                              color: index.isOdd ? semanticColors.info : null,
+                              color: entry.key.isOdd ? AppColors.information(context) : AppColors.primary(context),
                             ),
                           );
                         }),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 15),
+                  const SizedBox(height: AppSpacing.x3l),
                   FadeInSlide(
                     delay: const Duration(milliseconds: 900),
                     child: Column(
@@ -268,43 +165,42 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                       children: [
                         Text(
                           'Quick Actions',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleLarge
-                              ?.copyWith(fontWeight: FontWeight.bold),
+                          style: AppTypography.titleLarge.copyWith(
+                            color: AppColors.textPrimary(context),
+                          ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: AppSpacing.xl),
                         LayoutBuilder(builder: (context, constraints) {
-                          final itemWidth = (constraints.maxWidth - 12) / 2;
+                          final itemWidth = (constraints.maxWidth - AppSpacing.l) / 2;
                           return Wrap(
-                            spacing: 12,
-                            runSpacing: 12,
+                            spacing: AppSpacing.l,
+                            runSpacing: AppSpacing.l,
                             children: [
                               _QuickAction(
                                 label: 'Attendance',
                                 icon: Icons.how_to_reg,
-                                color: semanticColors.info,
+                                color: AppColors.information(context),
                                 onTap: () => context.push('/staff/attendance'),
                                 width: itemWidth,
                               ),
                               _QuickAction(
                                 label: 'Enter Marks',
                                 icon: Icons.edit_note,
-                                color: semanticColors.warning,
+                                color: AppColors.warning(context),
                                 onTap: () => context.push('/staff/marks'),
                                 width: itemWidth,
                               ),
                               _QuickAction(
                                 label: 'Homework',
                                 icon: Icons.assignment_outlined,
-                                color: semanticColors.success,
+                                color: AppColors.success(context),
                                 onTap: () => context.push('/staff/homework'),
                                 width: itemWidth,
                               ),
                               _QuickAction(
                                 label: 'Analytics',
                                 icon: Icons.analytics_outlined,
-                                color: Theme.of(context).colorScheme.secondary,
+                                color: AppColors.royalBlue,
                                 onTap: () => context.push('/staff/class-analytics'),
                                 width: itemWidth,
                               ),
@@ -321,7 +217,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: AppSpacing.x6l),
                 ],
               ),
             );
@@ -329,6 +225,189 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
 
           return const SizedBox.shrink();
         },
+      ),
+    );
+  }
+
+  Widget _buildStatsGrid(BuildContext context, TeacherLoaded state) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
+    final stats = [
+      (
+        title: 'Students Today',
+        value: state.studentsToday.toDouble(),
+        suffix: '/${state.totalStudents}',
+        icon: Icons.people_outline,
+        color: AppColors.primary(context),
+        trend: null,
+      ),
+      (
+        title: 'Submissions',
+        value: state.submissionsDue.toDouble(),
+        suffix: null,
+        icon: Icons.assignment_outlined,
+        color: AppColors.warning(context),
+        trend: 'Due today',
+      ),
+      (
+        title: 'Classes Today',
+        value: state.classesToday.toDouble(),
+        suffix: null,
+        icon: Icons.calendar_today_outlined,
+        color: AppColors.information(context),
+        trend: null,
+      ),
+      (
+        title: 'Notifications',
+        value: state.activeNotifications.toDouble(),
+        suffix: null,
+        icon: Icons.notifications_active_outlined,
+        color: AppColors.errorRed,
+        trend: null,
+      ),
+    ];
+
+    if (isMobile) {
+      return Column(
+        children: [
+          Row(
+            children: [
+              Expanded(child: _StatCard(stat: stats[0])),
+              const SizedBox(width: AppSpacing.l),
+              Expanded(child: _StatCard(stat: stats[1])),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.l),
+          Row(
+            children: [
+              Expanded(child: _StatCard(stat: stats[2])),
+              const SizedBox(width: AppSpacing.l),
+              Expanded(child: _StatCard(stat: stats[3])),
+            ],
+          ),
+        ],
+      );
+    }
+
+    return Row(
+      children: stats.map((stat) => Expanded(
+        child: Padding(
+          padding: EdgeInsets.only(right: stat == stats.last ? 0 : AppSpacing.l),
+          child: _StatCard(stat: stat),
+        ),
+      )).toList(),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final ({String title, double value, String? suffix, IconData icon, Color color, String? trend}) stat;
+
+  const _StatCard({required this.stat});
+
+  @override
+  Widget build(BuildContext context) {
+    return PulseCard(
+      variant: PulseCardVariant.elevated,
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.m),
+                decoration: BoxDecoration(
+                  color: stat.color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppRadius.m),
+                ),
+                child: Icon(stat.icon, color: stat.color, size: 20),
+              ),
+              if (stat.trend != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning(context).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    stat.trend!,
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.warning(context),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          Text(
+            '${stat.value.toInt()}${stat.suffix ?? ''}',
+            style: AppTypography.headlineSmall.copyWith(
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            stat.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.labelMedium.copyWith(
+              color: AppColors.textSecondary(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PulseProgressCard extends StatelessWidget {
+  final String title;
+  final double progress;
+  final String subtitle;
+  final Color color;
+
+  const _PulseProgressCard({
+    required this.title,
+    required this.progress,
+    required this.subtitle,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return PulseCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: AppTypography.titleMedium.copyWith(
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.l),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.s),
+            child: LinearProgressIndicator(
+              value: progress,
+              backgroundColor: color.withValues(alpha: 0.1),
+              color: color,
+              minHeight: 8,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.m),
+          Text(
+            subtitle,
+            style: AppTypography.labelSmall.copyWith(
+              color: AppColors.textSecondary(context),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -340,42 +419,27 @@ class _TeacherDashboardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       children: [
-        const Skeleton(width: 200, height: 28),
-        const SizedBox(height: 8),
-        const Skeleton(width: 150, height: 16),
-        const SizedBox(height: 24),
+        const Skeleton(width: 200, height: 32),
+        const SizedBox(height: AppSpacing.m),
+        const Skeleton(width: 150, height: 20),
+        const SizedBox(height: AppSpacing.x3l),
         GridView.count(
           crossAxisCount: 2,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 1.4,
-          children: List.generate(4, (index) => const Skeleton(borderRadius: 12)),
+          mainAxisSpacing: AppSpacing.l,
+          crossAxisSpacing: AppSpacing.l,
+          childAspectRatio: 1.3,
+          children: List.generate(4, (index) => const Skeleton(borderRadius: AppRadius.l)),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: AppSpacing.x3l),
         const Skeleton(width: 120, height: 24),
-        const SizedBox(height: 16),
-        const Skeleton(height: 100, borderRadius: 12),
-        const SizedBox(height: 12),
-        const Skeleton(height: 100, borderRadius: 12),
-        const SizedBox(height: 24),
-        const Skeleton(width: 120, height: 24),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: List.generate(
-            4,
-            (index) => Skeleton(
-              width: (MediaQuery.of(context).size.width - 36) / 2,
-              height: 100,
-              borderRadius: 12,
-            ),
-          ),
-        ),
+        const SizedBox(height: AppSpacing.xl),
+        const Skeleton(height: 120, borderRadius: AppRadius.l),
+        const SizedBox(height: AppSpacing.l),
+        const Skeleton(height: 120, borderRadius: AppRadius.l),
       ],
     );
   }
@@ -398,29 +462,32 @@ class _QuickAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return AppCard(
-      padding: EdgeInsets.zero,
+    return PulseCard(
       onTap: onTap,
+      padding: EdgeInsets.zero,
+      backgroundColor: AppColors.surfaceElevated(context),
       child: Container(
-        width: width ?? (MediaQuery.of(context).size.width - 36) / 2,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark ? color.withValues(alpha: 0.15) : color.withValues(alpha: 0.05),
-        ),
+        width: width,
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.m),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const SizedBox(height: AppSpacing.m),
             Text(
               label,
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
+              style: AppTypography.labelMedium.copyWith(
                 fontWeight: FontWeight.bold,
-                fontSize: 13,
-                color: isDark ? color : color.withValues(alpha: 0.8),
+                color: AppColors.textPrimary(context),
               ),
             ),
           ],
@@ -429,3 +496,4 @@ class _QuickAction extends StatelessWidget {
     );
   }
 }
+

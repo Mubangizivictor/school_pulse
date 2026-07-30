@@ -22,7 +22,7 @@ class InventoryDashboardScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Store & Inventory'),
-        actions: [const NotificationBellButton()],
+        actions: const [NotificationBellButton()],
       ),
       body: BlocBuilder<InventoryBloc, InventoryState>(
         builder: (context, state) {
@@ -186,7 +186,7 @@ class InventoryDashboardScreen extends StatelessWidget {
                   ),
                 if (!isNewItem && items.isNotEmpty)
                   DropdownButtonFormField<String>(
-                    initialValue: selectedItemId,
+                    value: selectedItemId,
                     decoration: const InputDecoration(labelText: 'Item'),
                     items: items
                         .map(
@@ -310,7 +310,7 @@ class InventoryDashboardScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<String>(
-                initialValue: selectedItemId,
+                value: selectedItemId,
                 decoration: const InputDecoration(labelText: 'Item'),
                 items: items
                     .map(

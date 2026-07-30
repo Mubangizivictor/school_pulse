@@ -61,6 +61,10 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth >= 1100;
+    final isTablet = screenWidth >= 700 && screenWidth < 1100;
+    final isLargeScreen = isDesktop || isTablet;
 
     return Scaffold(
       appBar: AppBar(
@@ -131,145 +135,220 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
           }
 
           return RefreshIndicator(
-              onRefresh: () async {
-                final authState = context.read<AuthBloc>().state;
-                if (authState is AuthAuthenticated) {
-                  context.read<SecurityBloc>().add(LoadSecurityDashboard(authState.user.schoolId));
-                }
-              },
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
-                children: [
-                  FadeInSlide(
-                    child: Text(
-                      "Security Status",
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  const SizedBox(height: 15),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: FadeInSlide(
-                          delay: const Duration(milliseconds: 100),
-                          child: DashboardStatCard(
-                            title: 'People Inside',
-                            value: (state.stats['peopleCurrentlyInside'] ?? 0).toDouble(),
-                            icon: Icons.groups_outlined,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: FadeInSlide(
-                          delay: const Duration(milliseconds: 150),
-                          child: DashboardStatCard(
-                            title: 'Students In',
-                            value: (state.stats['studentsIn'] ?? 0).toDouble(),
-                            icon: Icons.person_pin_circle_outlined,
-                            color: semanticColors.success,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: FadeInSlide(
-                          delay: const Duration(milliseconds: 200),
-                          child: DashboardStatCard(
-                            title: 'Visitors Inside',
-                            value: (state.stats['visitorsCurrentlyInside'] ?? 0).toDouble(),
-                            icon: Icons.badge_outlined,
-                            color: semanticColors.info,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: FadeInSlide(
-                          delay: const Duration(milliseconds: 250),
-                          child: DashboardStatCard(
-                            title: 'Pending Incidents',
-                            value: (state.stats['pendingIncidents'] ?? 0).toDouble(),
-                            icon: Icons.report_gmailerrorred_outlined,
-                            color: semanticColors.warning,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  if (state.activeEmergencies.isNotEmpty) ...[
-                    const FadeInSlide(
-                      delay: Duration(milliseconds: 250),
-                      child: SectionHeader(title: 'Active Emergencies', color: Colors.red),
-                    ),
-                    const SizedBox(height: 12),
-                    ...state.activeEmergencies.map((emergency) => _EmergencyCard(
-                          emergency: emergency,
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => EmergencyDetailScreen(emergency: emergency)),
-                          ),
-                        )),
-                    const SizedBox(height: 24),
-                  ],
-                  const FadeInSlide(
-                    delay: Duration(milliseconds: 300),
-                    child: SectionHeader(title: 'Recent Movements'),
-                  ),
-                  const SizedBox(height: 12),
-                  if (state.studentMovements.isEmpty)
-                    const Center(child: Text("No recent movements recorded"))
-                  else
-                    ...state.studentMovements.take(5).map((movement) => _MovementListTile(movement: movement)),
-                  const SizedBox(height: 24),
-                  const FadeInSlide(
-                    delay: Duration(milliseconds: 400),
-                    child: SectionHeader(title: 'Active Incidents'),
-                  ),
-                  const SizedBox(height: 12),
-                  if (state.incidents.isEmpty)
-                    const Center(child: Text("No active incidents"))
-                  else
-                    ...state.incidents.take(5).map((incident) => _IncidentListTile(
-                          incident: incident,
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => IncidentDetailScreen(incident: incident)),
-                          ),
-                        )),
-                  const SizedBox(height: 32),
-                ],
+            onRefresh: () async {
+              final authState = context.read<AuthBloc>().state;
+              if (authState is AuthAuthenticated) {
+                context.read<SecurityBloc>().add(LoadSecurityDashboard(authState.user.schoolId));
+              }
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.symmetric(
+                horizontal: isLargeScreen ? 32 : 12,
+                vertical: 20,
               ),
-            );
+              child: Center(
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 1400),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      FadeInSlide(
+                        child: Text(
+                          "Security Status",
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      
+                      // Stats Grid
+                      _buildStatsGrid(context, state, semanticColors, screenWidth),
+                      
+                      const SizedBox(height: 32),
+                      
+                      if (state.activeEmergencies.isNotEmpty) ...[
+                        const FadeInSlide(
+                          delay: Duration(milliseconds: 250),
+                          child: SectionHeader(title: 'Active Emergencies', color: Colors.red),
+                        ),
+                        const SizedBox(height: 12),
+                        ...state.activeEmergencies.map((emergency) => _EmergencyCard(
+                              emergency: emergency,
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => EmergencyDetailScreen(emergency: emergency)),
+                              ),
+                            )),
+                        const SizedBox(height: 32),
+                      ],
+
+                      if (isLargeScreen)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: _buildMovementsSection(context, state),
+                            ),
+                            const SizedBox(width: 32),
+                            Expanded(
+                              flex: 2,
+                              child: _buildIncidentsSection(context, state),
+                            ),
+                          ],
+                        )
+                      else ...[
+                        _buildMovementsSection(context, state),
+                        const SizedBox(height: 32),
+                        _buildIncidentsSection(context, state),
+                      ],
+                      
+                      const SizedBox(height: 100), // Bottom padding for FAB
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
         },
       ),
-      floatingActionButton: Column(
+      floatingActionButton: isDesktop 
+        ? _buildDesktopActions(context)
+        : Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              FloatingActionButton.extended(
+                heroTag: 'emergency',
+                onPressed: () => _showEmergencyProtocol(context),
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                icon: const Icon(Icons.emergency),
+                label: const Text("EMERGENCY"),
+              ),
+              const SizedBox(height: 12),
+              FloatingActionButton.extended(
+                heroTag: 'verify',
+                onPressed: () => _showVerificationWorkflow(context),
+                icon: const Icon(Icons.qr_code_scanner),
+                label: const Text("Verify Entry/Exit"),
+              ),
+            ],
+          ),
+    );
+  }
+
+  Widget _buildStatsGrid(BuildContext context, SecurityState state, SemanticColors semantic, double width) {
+    int crossAxisCount = width > 1200 ? 4 : (width > 600 ? 2 : 2);
+    double spacing = 16.0;
+
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: crossAxisCount,
+      mainAxisSpacing: spacing,
+      crossAxisSpacing: spacing,
+      childAspectRatio: width > 1200 ? 2.8 : (width > 600 ? 2.2 : 2.0),
+      children: [
+        DashboardStatCard(
+          title: 'People Inside',
+          value: (state.stats['peopleCurrentlyInside'] ?? 0).toDouble(),
+          icon: Icons.groups_outlined,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        DashboardStatCard(
+          title: 'Students In',
+          value: (state.stats['studentsIn'] ?? 0).toDouble(),
+          icon: Icons.person_pin_circle_outlined,
+          color: semantic.success,
+        ),
+        DashboardStatCard(
+          title: 'Visitors Inside',
+          value: (state.stats['visitorsCurrentlyInside'] ?? 0).toDouble(),
+          icon: Icons.badge_outlined,
+          color: semantic.info,
+        ),
+        DashboardStatCard(
+          title: 'Pending Incidents',
+          value: (state.stats['pendingIncidents'] ?? 0).toDouble(),
+          icon: Icons.report_gmailerrorred_outlined,
+          color: semantic.warning,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMovementsSection(BuildContext context, SecurityState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const FadeInSlide(
+          delay: Duration(milliseconds: 300),
+          child: SectionHeader(title: 'Recent Movements'),
+        ),
+        const SizedBox(height: 12),
+        if (state.studentMovements.isEmpty)
+          const AppCard(child: Center(child: Text("No recent movements recorded")))
+        else
+          ...state.studentMovements.take(10).map((movement) => _MovementListTile(movement: movement)),
+      ],
+    );
+  }
+
+  Widget _buildIncidentsSection(BuildContext context, SecurityState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const FadeInSlide(
+          delay: Duration(milliseconds: 400),
+          child: SectionHeader(title: 'Active Incidents'),
+        ),
+        const SizedBox(height: 12),
+        if (state.incidents.isEmpty)
+          const AppCard(child: Center(child: Text("No active incidents")))
+        else
+          ...state.incidents.take(10).map((incident) => _IncidentListTile(
+                incident: incident,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => IncidentDetailScreen(incident: incident)),
+                ),
+              )),
+      ],
+    );
+  }
+
+  Widget _buildDesktopActions(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20, right: 20),
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          FloatingActionButton.extended(
-            heroTag: 'emergency',
-            onPressed: () => _showEmergencyProtocol(context),
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
-            icon: const Icon(Icons.emergency),
-            label: const Text("EMERGENCY"),
-          ),
-          const SizedBox(height: 12),
-          FloatingActionButton.extended(
-            heroTag: 'verify',
+          ElevatedButton.icon(
             onPressed: () => _showVerificationWorkflow(context),
             icon: const Icon(Icons.qr_code_scanner),
             label: const Text("Verify Entry/Exit"),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+            ),
+          ),
+          const SizedBox(width: 16),
+          ElevatedButton.icon(
+            onPressed: () => _showEmergencyProtocol(context),
+            icon: const Icon(Icons.emergency),
+            label: const Text("EMERGENCY"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+            ),
           ),
         ],
       ),
     );
   }
 }
+
 
 class _EmergencyCard extends StatelessWidget {
   final EmergencyEvent emergency;

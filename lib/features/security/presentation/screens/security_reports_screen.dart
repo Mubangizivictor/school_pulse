@@ -58,6 +58,9 @@ class _SecurityReportsScreenState extends State<SecurityReportsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeScreen = screenWidth >= 700;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Security Reports')),
       body: BlocBuilder<SecurityBloc, SecurityState>(
@@ -67,53 +70,87 @@ class _SecurityReportsScreenState extends State<SecurityReportsScreen> {
           final patrols = state.patrols.where((p) => _inRange(p.timestamp)).toList();
           final lostAndFound = state.lostAndFound.where((i) => _inRange(i.dateFound)).toList();
 
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Date Range'),
-                subtitle: Text(
-                  '${_range.start.toLocal().toString().split(' ').first} — ${_range.end.toLocal().toString().split(' ').first}',
-                ),
-                trailing: const Icon(Icons.edit_calendar_outlined),
-                onTap: _pickRange,
+          return Center(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 1200),
+              child: ListView(
+                padding: EdgeInsets.all(isLargeScreen ? 24 : 16),
+                children: [
+                  Card(
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      title: const Text('Report Date Range', style: TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text(
+                        '${_range.start.toLocal().toString().split(' ').first} — ${_range.end.toLocal().toString().split(' ').first}',
+                      ),
+                      trailing: FilledButton.tonalIcon(
+                        onPressed: _pickRange,
+                        icon: const Icon(Icons.edit_calendar_outlined),
+                        label: const Text('Change'),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  GridView(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: screenWidth > 1100 ? 2 : 1,
+                      mainAxisExtent: 100,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 12,
+                    ),
+                    children: [
+                      _ReportTile(
+                        icon: Icons.door_front_door_outlined,
+                        title: 'Gate & Movement Report',
+                        subtitle: '${movements.length} record(s)',
+                        isLoading: _isExporting,
+                        onExport: () => _export(() => ReportingEngine.exportStudentMovementsToExcel(movements)),
+                      ),
+                      _ReportTile(
+                        icon: Icons.gavel_outlined,
+                        title: 'Incidents Report',
+                        subtitle: '${incidents.length} record(s)',
+                        isLoading: _isExporting,
+                        onExport: () => _export(() => ReportingEngine.exportSecurityIncidentsToExcel(incidents)),
+                      ),
+                      _ReportTile(
+                        icon: Icons.directions_walk_outlined,
+                        title: 'Patrol Report',
+                        subtitle: '${patrols.length} record(s)',
+                        isLoading: _isExporting,
+                        onExport: () => _export(() => ReportingEngine.exportPatrolLogToExcel(patrols)),
+                      ),
+                      _ReportTile(
+                        icon: Icons.inventory_2_outlined,
+                        title: 'Lost & Found Report',
+                        subtitle: '${lostAndFound.length} record(s)',
+                        isLoading: _isExporting,
+                        onExport: () => _export(() => ReportingEngine.exportLostAndFoundToExcel(lostAndFound)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  const Card(
+                    color: Colors.transparent,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      side: BorderSide(color: Colors.grey, width: 0.5),
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text(
+                        'Visitor reports (today / history / frequent visitors) are available from the Visitors dashboard export.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey, fontSize: 13),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const Divider(height: 32),
-              _ReportTile(
-                icon: Icons.door_front_door_outlined,
-                title: 'Gate & Student Movement Report',
-                subtitle: '${movements.length} record(s) — daily entry/exit, late arrivals, pickup history',
-                isLoading: _isExporting,
-                onExport: () => _export(() => ReportingEngine.exportStudentMovementsToExcel(movements)),
-              ),
-              _ReportTile(
-                icon: Icons.gavel_outlined,
-                title: 'Security Incidents Report',
-                subtitle: '${incidents.length} record(s)',
-                isLoading: _isExporting,
-                onExport: () => _export(() => ReportingEngine.exportSecurityIncidentsToExcel(incidents)),
-              ),
-              _ReportTile(
-                icon: Icons.directions_walk_outlined,
-                title: 'Patrol Report',
-                subtitle: '${patrols.length} record(s)',
-                isLoading: _isExporting,
-                onExport: () => _export(() => ReportingEngine.exportPatrolLogToExcel(patrols)),
-              ),
-              _ReportTile(
-                icon: Icons.inventory_2_outlined,
-                title: 'Lost & Found Report',
-                subtitle: '${lostAndFound.length} record(s)',
-                isLoading: _isExporting,
-                onExport: () => _export(() => ReportingEngine.exportLostAndFoundToExcel(lostAndFound)),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Visitor reports (today / history / frequent visitors) are available from the Visitors dashboard export.',
-                style: TextStyle(color: Colors.grey, fontSize: 12),
-              ),
-            ],
+            ),
           );
         },
       ),

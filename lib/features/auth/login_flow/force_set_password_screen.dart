@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:school_pulse/design_system/app_components.dart';
-import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/design_system/components/pulse_button.dart';
+import 'package:school_pulse/design_system/components/pulse_text_field.dart';
+import 'package:school_pulse/design_system/components/pulse_logo.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/design_system/theme/app_typography.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_gradients.dart';
+import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/usecases/set_new_password.dart';
 import 'package:school_pulse/features/auth/domain/usecases/complete_parent_pin_setup.dart';
@@ -99,73 +105,106 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).extension<SemanticColors>()?.primaryBlue ??
-        Theme.of(context).colorScheme.primary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final title = _isParent ? 'Set Your Secret PIN' : 'Set New Password';
     final subtitle = _isParent 
         ? "For your security, please choose a 4-digit PIN to use for future logins."
-        : "For your security, choose a new password to replace the one your admin gave you.";
+        : "For your security, choose a new password to replace the temporary one.";
     final label = _isParent ? 'New 4-Digit PIN' : 'New Password';
     final confirmLabel = _isParent ? 'Confirm PIN' : 'Confirm Password';
 
     return Scaffold(
-      appBar: AppBar(title: Text(title), automaticallyImplyLeading: false),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 400),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Icon(_isParent ? Icons.pin_outlined : Icons.password_outlined, size: 64, color: primaryColor),
-                const SizedBox(height: 24),
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  subtitle,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 32),
-                TextField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  keyboardType: _isParent ? TextInputType.number : TextInputType.text,
-                  maxLength: _isParent ? 4 : null,
-                  decoration: InputDecoration(
-                    labelText: label,
-                    border: const OutlineInputBorder(),
-                    prefixIcon: Icon(_isParent ? Icons.dialpad : Icons.lock_outline),
-                    counterText: "",
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+      ),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: isDark ? AppGradients.premiumDark : null,
+          color: isDark ? null : AppColors.bgLight,
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(AppSpacing.x3l),
+            child: ResponsiveBuilder(
+              builder: (context, layout) {
+                final isDesktop = layout == ResponsiveLayout.desktop;
+                
+                return Container(
+                  constraints: BoxConstraints(maxWidth: isDesktop ? 450 : 400),
+                  padding: isDesktop ? const EdgeInsets.all(AppSpacing.x4l) : null,
+                  decoration: isDesktop ? BoxDecoration(
+                    color: isDark ? AppColors.surfaceDark.withValues(alpha: 0.5) : Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: isDark ? AppColors.white.withValues(alpha: 0.1) : AppColors.borderLight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ) : null,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Center(
+                        child: PulseLogo(size: 80, variant: PulseLogoVariant.auth),
+                      ),
+                      const SizedBox(height: AppSpacing.x4l),
+                      Text(
+                        title,
+                        style: AppTypography.headlineMedium.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? Colors.white : AppColors.textPrimaryLight,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        subtitle,
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: AppSpacing.x6l),
+                      PulseTextField(
+                        controller: _passwordController,
+                        isPassword: true,
+                        keyboardType: _isParent ? TextInputType.number : TextInputType.text,
+                        label: label,
+                        hint: _isParent ? '••••' : '••••••••',
+                        prefixIcon: _isParent ? Icons.dialpad : Icons.lock_outline,
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      PulseTextField(
+                        controller: _confirmController,
+                        isPassword: true,
+                        keyboardType: _isParent ? TextInputType.number : TextInputType.text,
+                        label: confirmLabel,
+                        hint: _isParent ? '••••' : '••••••••',
+                        prefixIcon: _isParent ? Icons.dialpad : Icons.lock_reset_rounded,
+                        validator: (_) => _error,
+                      ),
+                      const SizedBox(height: AppSpacing.x4l),
+                      PulseButton(
+                        label: 'Update & Continue',
+                        isLoading: _isLoading,
+                        onPressed: _isLoading ? null : _submit,
+                        isFullWidth: true,
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _confirmController,
-                  obscureText: true,
-                  keyboardType: _isParent ? TextInputType.number : TextInputType.text,
-                  maxLength: _isParent ? 4 : null,
-                  decoration: InputDecoration(
-                    labelText: confirmLabel,
-                    border: const OutlineInputBorder(),
-                    prefixIcon: Icon(_isParent ? Icons.dialpad : Icons.lock_outline),
-                    errorText: _error,
-                    counterText: "",
-                  ),
-                ),
-                const SizedBox(height: 24),
-                PrimaryButton(
-                  label: 'Continue',
-                  isLoading: _isLoading,
-                  onPressed: _isLoading ? null : _submit,
-                ),
-              ],
+                );
+              }
             ),
           ),
         ),
@@ -173,3 +212,4 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
     );
   }
 }
+

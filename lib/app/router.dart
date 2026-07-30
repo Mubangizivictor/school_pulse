@@ -14,6 +14,7 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/admin/admin_dashboard_screen.dart';
 import 'package:school_pulse/features/admin/admin_messages_screen.dart';
+import 'package:school_pulse/features/notifications/presentation/staff_notification_center_screen.dart';
 import 'package:school_pulse/features/admin/user_management_screen.dart';
 import 'package:school_pulse/features/admin/broadcast_sms_screen.dart';
 import 'package:school_pulse/features/admin/system_config_screen.dart';
@@ -113,7 +114,10 @@ import 'package:school_pulse/features/security/presentation/screens/pickup_autho
 import 'package:school_pulse/features/games/presentation/screens/games_dashboard_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/dean_dashboard_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/approvals/report_approval_screen.dart';
-import 'package:school_pulse/features/notifications/presentation/staff_notification_center_screen.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/design_system/theme/app_typography.dart';
+import 'package:school_pulse/design_system/components/pulse_logo.dart';
 
 import 'package:school_pulse/features/branding/presentation/screens/splash_screen.dart'
     as pulse_splash;
@@ -884,7 +888,7 @@ class ParentShell extends StatelessWidget {
               Navigator.pop(context);
               context.go('/welcome');
             },
-            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+            child: const Text('Logout', style: TextStyle(color: AppColors.deepOrange)),
           ),
         ],
       ),
@@ -894,111 +898,165 @@ class ParentShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 600;
-    final config = context.watch<ThemeProvider>().config;
-    final logoUrl = config?.schoolLogoUrl;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final destinations = [
+      const NavigationDestination(
+        icon: Icon(Icons.home_outlined),
+        selectedIcon: Icon(Icons.home, color: AppColors.royalBlue),
+        label: 'Home',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.school_outlined),
+        selectedIcon: Icon(Icons.school, color: AppColors.royalBlue),
+        label: 'Academics',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.account_balance_wallet_outlined),
+        selectedIcon: Icon(Icons.account_balance_wallet, color: AppColors.royalBlue),
+        label: 'Fees',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.message_outlined),
+        selectedIcon: Icon(Icons.message, color: AppColors.royalBlue),
+        label: 'Messages',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.grid_view_outlined),
+        selectedIcon: Icon(Icons.grid_view_rounded, color: AppColors.royalBlue),
+        label: 'More',
+      ),
+    ];
 
     return Scaffold(
       body: Row(
         children: [
           if (!isMobile)
-            NavigationRail(
-              selectedIndex: _calculateSelectedIndex(context),
-              onDestinationSelected: (idx) => _onItemTapped(idx, context),
-              labelType: NavigationRailLabelType.all,
-              leading: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: logoUrl != null && logoUrl.isNotEmpty
-                    ? Image.network(
-                        logoUrl,
-                        height: 40,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(
-                              Icons.school,
-                              color: Colors.blue,
-                              size: 32,
-                            ),
-                      )
-                    : const Icon(Icons.school, color: Colors.blue, size: 32),
-              ),
-              destinations: const [
-                NavigationRailDestination(
-                  icon: Icon(Icons.home_outlined),
-                  selectedIcon: Icon(Icons.home),
-                  label: Text('Home'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.school_outlined),
-                  selectedIcon: Icon(Icons.school),
-                  label: Text('Academics'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.account_balance_wallet_outlined),
-                  selectedIcon: Icon(Icons.account_balance_wallet),
-                  label: Text('Fees'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.message_outlined),
-                  selectedIcon: Icon(Icons.message),
-                  label: Text('Messages'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.more_horiz),
-                  label: Text('More'),
-                ),
-              ],
-              trailing: Expanded(
-                child: Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 24),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.logout_rounded,
-                        color: Colors.redAccent,
-                      ),
-                      onPressed: () => _handleLogout(context),
-                      tooltip: 'Logout',
-                    ),
+            Container(
+              width: MediaQuery.of(context).size.width > 1200 ? 280 : 80,
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                border: Border(
+                  right: BorderSide(
+                    color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                    width: 1,
                   ),
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.shadow(context),
+                    blurRadius: 20,
+                    offset: const Offset(5, 0),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.x4l),
+                    child: PulseLogo(
+                      size: 40,
+                      variant: MediaQuery.of(context).size.width > 1200 
+                          ? PulseLogoVariant.full 
+                          : PulseLogoVariant.shield,
+                    ),
+                  ),
+                  Expanded(
+                    child: NavigationRail(
+                      backgroundColor: Colors.transparent,
+                      extended: MediaQuery.of(context).size.width > 1200,
+                      selectedIndex: _calculateSelectedIndex(context),
+                      onDestinationSelected: (idx) => _onItemTapped(idx, context),
+                      minExtendedWidth: 280,
+                      labelType: MediaQuery.of(context).size.width > 1200 
+                          ? NavigationRailLabelType.none 
+                          : NavigationRailLabelType.all,
+                      unselectedLabelTextStyle: AppTypography.labelMedium.copyWith(
+                        color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                      ),
+                      selectedLabelTextStyle: AppTypography.labelMedium.copyWith(
+                        color: AppColors.primary(context),
+                        fontWeight: FontWeight.bold,
+                      ),
+                      destinations: destinations.map((d) => NavigationRailDestination(
+                        icon: d.icon,
+                        selectedIcon: d.selectedIcon,
+                        label: Text(d.label),
+                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.m),
+                      )).toList(),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.x3l),
+                    child: _LogoutButton(onPressed: () => _handleLogout(context)),
+                  ),
+                ],
               ),
             ),
-          Expanded(child: child),
+          Expanded(
+            child: Container(
+              color: AppColors.background(context),
+              child: child,
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: isMobile
-          ? BottomNavigationBar(
-              type: BottomNavigationBarType.fixed,
-              currentIndex: _calculateSelectedIndex(context),
-              onTap: (idx) => _onItemTapped(idx, context),
-              items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.home_outlined),
-                  activeIcon: Icon(Icons.home),
-                  label: 'Home',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.school_outlined),
-                  activeIcon: Icon(Icons.school),
-                  label: 'Academics',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.account_balance_wallet_outlined),
-                  activeIcon: Icon(Icons.account_balance_wallet),
-                  label: 'Fees',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.message_outlined),
-                  activeIcon: Icon(Icons.message),
-                  label: 'Messages',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.more_horiz),
-                  label: 'More',
-                ),
-              ],
+          ? Container(
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.shadow(context),
+                    blurRadius: 20,
+                    offset: const Offset(0, -5),
+                  ),
+                ],
+              ),
+              child: NavigationBar(
+                height: 64,
+                backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                indicatorColor: AppColors.electricBlue.withValues(alpha: 0.1),
+                selectedIndex: _calculateSelectedIndex(context),
+                onDestinationSelected: (idx) => _onItemTapped(idx, context),
+                destinations: destinations,
+                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+              ),
             )
           : null,
+    );
+  }
+}
+
+class _LogoutButton extends StatelessWidget {
+  final VoidCallback onPressed;
+  const _LogoutButton({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    final isExtended = MediaQuery.of(context).size.width > 1200;
+    
+    if (isExtended) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+        child: TextButton.icon(
+          onPressed: onPressed,
+          icon: const Icon(Icons.logout_rounded, color: AppColors.deepOrange),
+          label: Text(
+            'Logout',
+            style: AppTypography.labelLarge.copyWith(color: AppColors.deepOrange),
+          ),
+          style: TextButton.styleFrom(
+            alignment: Alignment.centerLeft,
+            minimumSize: const Size(double.infinity, 50),
+          ),
+        ),
+      );
+    }
+
+    return IconButton(
+      icon: const Icon(Icons.logout_rounded, color: AppColors.deepOrange),
+      onPressed: onPressed,
+      tooltip: 'Logout',
     );
   }
 }

@@ -54,39 +54,63 @@ class _PickupAuthorizationsScreenState extends State<PickupAuthorizationsScreen>
       );
     }
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeScreen = screenWidth >= 700;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Pickup Authorizations')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                labelText: 'Search student by name or code',
-                border: const OutlineInputBorder(),
-                suffixIcon: IconButton(icon: const Icon(Icons.search), onPressed: () => _search(_searchController.text)),
-              ),
-              onSubmitted: _search,
+      body: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 1200),
+          child: Padding(
+            padding: EdgeInsets.all(isLargeScreen ? 24 : 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AppSearchField(
+                  controller: _searchController,
+                  hintText: 'Search student by name or code',
+                  onChanged: (v) {
+                    if (v.length >= 3) _search(v);
+                  },
+                ),
+                const SizedBox(height: 24),
+                if (_isSearching) const Center(child: CircularProgressIndicator()),
+                Expanded(
+                  child: _results.isEmpty && !_isSearching
+                      ? const EmptyState(
+                          icon: Icons.person_search_outlined,
+                          title: 'Search Students',
+                          message: 'Enter a student name or registration code to manage their authorized pickup persons.',
+                        )
+                      : GridView.builder(
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: screenWidth > 1100 ? 3 : (isLargeScreen ? 2 : 1),
+                            mainAxisExtent: 80,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 12,
+                          ),
+                          itemCount: _results.length,
+                          itemBuilder: (context, index) {
+                            final student = _results[index];
+                            return AppCard(
+                              padding: EdgeInsets.zero,
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                  child: Icon(Icons.person_outline, color: Theme.of(context).colorScheme.onPrimaryContainer),
+                                ),
+                                title: Text(student.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                subtitle: Text(student.studentCode),
+                                onTap: () => setState(() => _selectedStudent = student),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            if (_isSearching) const Center(child: CircularProgressIndicator()),
-            Expanded(
-              child: ListView.builder(
-                itemCount: _results.length,
-                itemBuilder: (context, index) {
-                  final student = _results[index];
-                  return ListTile(
-                    leading: const Icon(Icons.person_outline),
-                    title: Text(student.name),
-                    subtitle: Text(student.studentCode),
-                    onTap: () => setState(() => _selectedStudent = student),
-                  );
-                },
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -146,6 +170,9 @@ class _StudentAuthorizationsViewState extends State<_StudentAuthorizationsView> 
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeScreen = screenWidth >= 700;
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: widget.onBack),
@@ -153,29 +180,55 @@ class _StudentAuthorizationsViewState extends State<_StudentAuthorizationsView> 
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _authorizations.isEmpty
-              ? const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('No authorized pickup persons yet.')))
-              : ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: _authorizations.length,
-                  itemBuilder: (context, index) {
-                    final auth = _authorizations[index];
-                    final expired = auth.expiryDate != null && auth.expiryDate!.isBefore(DateTime.now());
-                    return AppCard(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundImage: auth.photoUrl != null ? NetworkImage(auth.photoUrl!) : null,
-                          child: auth.photoUrl == null ? const Icon(Icons.person) : null,
+          : Center(
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 1200),
+                child: _authorizations.isEmpty
+                    ? const EmptyState(
+                        icon: Icons.badge_outlined,
+                        title: 'No Authorizations',
+                        message: 'No persons have been authorized to pick up this student yet.',
+                      )
+                    : GridView.builder(
+                        padding: EdgeInsets.all(isLargeScreen ? 24 : 12),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: screenWidth > 1100 ? 3 : (isLargeScreen ? 2 : 1),
+                          mainAxisExtent: 100,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
                         ),
-                        title: Text(auth.authorizedPersonName),
-                        subtitle: Text('${auth.relationship} • ${auth.phone}${expired ? ' • EXPIRED' : ''}'),
-                        trailing: expired ? const Icon(Icons.warning, color: Colors.orange) : const Icon(Icons.verified, color: Colors.green),
+                        itemCount: _authorizations.length,
+                        itemBuilder: (context, index) {
+                          final auth = _authorizations[index];
+                          final expired = auth.expiryDate != null && auth.expiryDate!.isBefore(DateTime.now());
+                          return AppCard(
+                            padding: EdgeInsets.zero,
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              leading: CircleAvatar(
+                                backgroundImage: auth.photoUrl != null ? NetworkImage(auth.photoUrl!) : null,
+                                child: auth.photoUrl == null ? const Icon(Icons.person) : null,
+                              ),
+                              title: Text(auth.authorizedPersonName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                              subtitle: Text(
+                                '${auth.relationship} • ${auth.phone}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              trailing: expired
+                                  ? const Icon(Icons.warning_amber_rounded, color: Colors.orange)
+                                  : const Icon(Icons.check_circle, color: Colors.green),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
-      floatingActionButton: FloatingActionButton(onPressed: _openAddForm, child: const Icon(Icons.add)),
+              ),
+            ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openAddForm,
+        icon: const Icon(Icons.add),
+        label: const Text('Add Person'),
+      ),
     );
   }
 }

@@ -65,6 +65,13 @@ dev_dependencies:
   build_runner: ^2.4.9
   isar_generator: ^3.1.0+1
   fake_cloud_firestore: ^3.1.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/logos/vertical_logo_school_pulse.png"
+  min_sdk_android: 21
 
 dependency_overrides:
   analyzer: 5.13.0
@@ -75,3 +82,4 @@ flutter:
 
   assets:
     - assets/animations/
+    - assets/logos/

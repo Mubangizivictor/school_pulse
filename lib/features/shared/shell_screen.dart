@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
-import 'package:school_pulse/design_system/app_components.dart';
-import 'package:school_pulse/core/theme_provider.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/design_system/theme/app_typography.dart';
+import 'package:school_pulse/design_system/components/pulse_logo.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
@@ -21,9 +23,6 @@ class StaffShell extends StatelessWidget {
     return false;
   }
 
-  /// Only classroom teachers have an "Attendance"/"Marks" tab - every other
-  /// operational role (bursar, nurse, HR, discipline, etc.) gets a simpler
-  /// Home/Messages/More nav instead of screens that don't apply to them.
   static const List<UserRole> _teacherRoles = [UserRole.classTeacher, UserRole.subjectTeacher];
 
   bool _isTeacher(BuildContext context) {
@@ -59,9 +58,6 @@ class StaffShell extends StatelessWidget {
     return 0;
   }
 
-  /// The signed-in user's own dashboard, so a bursar's Home tab doesn't land
-  /// on the teacher dashboard. Staff holding more than one role go to the
-  /// role hub instead of any single role's dashboard.
   String _homePath(BuildContext context) {
     final state = context.read<AuthBloc>().state;
     if (state is AuthAuthenticated) {
@@ -101,13 +97,23 @@ class StaffShell extends StatelessWidget {
   }
 
   void _handleLogout(BuildContext context) async {
-    final confirmed = await confirmActionDialog(
-      context,
-      title: 'Logout',
-      message: 'Are you sure you want to log out?',
-      confirmLabel: 'Logout',
-      isDestructive: true,
+    // Note: confirmActionDialog was previously imported from app_components.dart
+    // For now, using standard showDialog until PulseDialogs are implemented
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to log out?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Logout', style: TextStyle(color: AppColors.deepOrange)),
+          ),
+        ],
+      ),
     );
+
     if (confirmed == true && context.mounted) {
       context.read<AuthBloc>().add(LogoutPressed());
       context.go('/welcome');
@@ -119,84 +125,210 @@ class StaffShell extends StatelessWidget {
     final isMobile = MediaQuery.of(context).size.width < 600;
     final isAdmin = _isAdmin(context);
     final isTeacher = _isTeacher(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final List<NavigationDestination> teacherDestinations = const [
-      NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Home'),
-      NavigationDestination(icon: Icon(Icons.how_to_reg_outlined), selectedIcon: Icon(Icons.how_to_reg), label: 'Attendance'),
-      NavigationDestination(icon: Icon(Icons.edit_note_outlined), selectedIcon: Icon(Icons.edit_note), label: 'Marks'),
-      NavigationDestination(icon: Icon(Icons.message_outlined), selectedIcon: Icon(Icons.message), label: 'Messages'),
-      NavigationDestination(icon: Icon(Icons.more_horiz), label: 'More'),
+      NavigationDestination(
+        icon: Icon(Icons.home_outlined, size: 24),
+        selectedIcon: Icon(Icons.home_rounded, size: 24, color: AppColors.royalBlue),
+        label: 'Home',
+      ),
+      NavigationDestination(
+        icon: Icon(Icons.how_to_reg_outlined, size: 24),
+        selectedIcon: Icon(Icons.how_to_reg_rounded, size: 24, color: AppColors.royalBlue),
+        label: 'Attendance',
+      ),
+      NavigationDestination(
+        icon: Icon(Icons.edit_note_outlined, size: 24),
+        selectedIcon: Icon(Icons.edit_note_rounded, size: 24, color: AppColors.royalBlue),
+        label: 'Marks',
+      ),
+      NavigationDestination(
+        icon: Icon(Icons.chat_bubble_outline_rounded, size: 24),
+        selectedIcon: Icon(Icons.chat_bubble_rounded, size: 24, color: AppColors.royalBlue),
+        label: 'Messages',
+      ),
+      NavigationDestination(
+        icon: Icon(Icons.grid_view_outlined, size: 24),
+        selectedIcon: Icon(Icons.grid_view_rounded, size: 24, color: AppColors.royalBlue),
+        label: 'More',
+      ),
     ];
 
     final List<NavigationDestination> adminDestinations = const [
-      NavigationDestination(icon: Icon(Icons.analytics_outlined), selectedIcon: Icon(Icons.analytics), label: 'Dashboard'),
-      NavigationDestination(icon: Icon(Icons.manage_accounts_outlined), selectedIcon: Icon(Icons.manage_accounts), label: 'Users'),
-      NavigationDestination(icon: Icon(Icons.message_outlined), selectedIcon: Icon(Icons.message), label: 'Messages'),
-      NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: 'Settings'),
+      NavigationDestination(
+        icon: Icon(Icons.analytics_outlined, size: 24),
+        selectedIcon: Icon(Icons.analytics_rounded, size: 24, color: AppColors.royalBlue),
+        label: 'Insights',
+      ),
+      NavigationDestination(
+        icon: Icon(Icons.people_outline_rounded, size: 24),
+        selectedIcon: Icon(Icons.people_rounded, size: 24, color: AppColors.royalBlue),
+        label: 'Users',
+      ),
+      NavigationDestination(
+        icon: Icon(Icons.chat_bubble_outline_rounded, size: 24),
+        selectedIcon: Icon(Icons.chat_bubble_rounded, size: 24, color: AppColors.royalBlue),
+        label: 'Messages',
+      ),
+      NavigationDestination(
+        icon: Icon(Icons.settings_outlined, size: 24),
+        selectedIcon: Icon(Icons.settings_rounded, size: 24, color: AppColors.royalBlue),
+        label: 'System',
+      ),
     ];
 
     final List<NavigationDestination> operationalDestinations = const [
-      NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Home'),
-      NavigationDestination(icon: Icon(Icons.message_outlined), selectedIcon: Icon(Icons.message), label: 'Messages'),
-      NavigationDestination(icon: Icon(Icons.more_horiz), label: 'More'),
+      NavigationDestination(
+        icon: Icon(Icons.home_outlined, size: 24),
+        selectedIcon: Icon(Icons.home_rounded, size: 24, color: AppColors.royalBlue),
+        label: 'Home',
+      ),
+      NavigationDestination(
+        icon: Icon(Icons.chat_bubble_outline_rounded, size: 24),
+        selectedIcon: Icon(Icons.chat_bubble_rounded, size: 24, color: AppColors.royalBlue),
+        label: 'Messages',
+      ),
+      NavigationDestination(
+        icon: Icon(Icons.grid_view_outlined, size: 24),
+        selectedIcon: Icon(Icons.grid_view_rounded, size: 24, color: AppColors.royalBlue),
+        label: 'More',
+      ),
     ];
 
     final destinations = isAdmin
         ? adminDestinations
         : (isTeacher ? teacherDestinations : operationalDestinations);
 
-    final config = context.watch<ThemeProvider>().config;
-    final logoUrl = config?.schoolLogoUrl;
-
     return Scaffold(
       body: Row(
         children: [
           if (!isMobile)
-            NavigationRail(
-              extended: MediaQuery.of(context).size.width > 1200,
-              selectedIndex: _calculateSelectedIndex(context),
-              onDestinationSelected: (idx) => _onItemTapped(idx, context),
-              labelType: NavigationRailLabelType.none,
-              leading: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: logoUrl != null && logoUrl.isNotEmpty
-                    ? Image.network(
-                        logoUrl,
-                        height: 40,
-                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.bolt, color: Colors.blue, size: 32),
-                      )
-                    : const Icon(Icons.bolt, color: Colors.blue, size: 32),
-              ),
-              destinations: destinations.map((d) => NavigationRailDestination(
-                icon: d.icon,
-                selectedIcon: d.selectedIcon,
-                label: Text(d.label),
-              )).toList(),
-              trailing: Expanded(
-                child: Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 24),
-                    child: IconButton(
-                      icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
-                      onPressed: () => _handleLogout(context),
-                      tooltip: 'Logout',
-                    ),
+            Container(
+              width: MediaQuery.of(context).size.width > 1200 ? 280 : 80,
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                border: Border(
+                  right: BorderSide(
+                    color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                    width: 1,
                   ),
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.shadow(context),
+                    blurRadius: 20,
+                    offset: const Offset(5, 0),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.x4l),
+                    child: PulseLogo(
+                      size: 40,
+                      variant: MediaQuery.of(context).size.width > 1200 
+                          ? PulseLogoVariant.full 
+                          : PulseLogoVariant.shield,
+                    ),
+                  ),
+                  Expanded(
+                    child: NavigationRail(
+                      backgroundColor: Colors.transparent,
+                      extended: MediaQuery.of(context).size.width > 1200,
+                      selectedIndex: _calculateSelectedIndex(context),
+                      onDestinationSelected: (idx) => _onItemTapped(idx, context),
+                      minExtendedWidth: 280,
+                      labelType: MediaQuery.of(context).size.width > 1200 
+                          ? NavigationRailLabelType.none 
+                          : NavigationRailLabelType.all,
+                      unselectedLabelTextStyle: AppTypography.labelMedium.copyWith(
+                        color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                      ),
+                      selectedLabelTextStyle: AppTypography.labelMedium.copyWith(
+                        color: AppColors.primary(context),
+                        fontWeight: FontWeight.bold,
+                      ),
+                      destinations: destinations.map((d) => NavigationRailDestination(
+                        icon: d.icon,
+                        selectedIcon: d.selectedIcon,
+                        label: Text(d.label),
+                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.m),
+                      )).toList(),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.x3l),
+                    child: _LogoutButton(onPressed: () => _handleLogout(context)),
+                  ),
+                ],
               ),
             ),
-          if (!isMobile) const VerticalDivider(thickness: 1, width: 1),
-          Expanded(child: child),
+          Expanded(
+            child: Container(
+              color: AppColors.background(context),
+              child: child,
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: isMobile
-          ? NavigationBar(
-              selectedIndex: _calculateSelectedIndex(context),
-              onDestinationSelected: (idx) => _onItemTapped(idx, context),
-              destinations: destinations,
+          ? Container(
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.shadow(context),
+                    blurRadius: 20,
+                    offset: const Offset(0, -5),
+                  ),
+                ],
+              ),
+              child: NavigationBar(
+                height: 64,
+                backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                indicatorColor: AppColors.electricBlue.withValues(alpha: 0.1),
+                selectedIndex: _calculateSelectedIndex(context),
+                onDestinationSelected: (idx) => _onItemTapped(idx, context),
+                destinations: destinations,
+                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+              ),
             )
           : null,
+    );
+  }
+}
+
+class _LogoutButton extends StatelessWidget {
+  final VoidCallback onPressed;
+  const _LogoutButton({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    final isExtended = MediaQuery.of(context).size.width > 1200;
+    
+    if (isExtended) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+        child: TextButton.icon(
+          onPressed: onPressed,
+          icon: const Icon(Icons.logout_rounded, color: AppColors.deepOrange),
+          label: Text(
+            'Logout',
+            style: AppTypography.labelLarge.copyWith(color: AppColors.deepOrange),
+          ),
+          style: TextButton.styleFrom(
+            alignment: Alignment.centerLeft,
+            minimumSize: const Size(double.infinity, 50),
+          ),
+        ),
+      );
+    }
+
+    return IconButton(
+      icon: const Icon(Icons.logout_rounded, color: AppColors.deepOrange),
+      onPressed: onPressed,
+      tooltip: 'Logout',
     );
   }
 }

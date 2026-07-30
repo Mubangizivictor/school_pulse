@@ -53,6 +53,9 @@ class _LostAndFoundScreenState extends State<LostAndFoundScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeScreen = screenWidth >= 700;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Lost & Found')),
       body: BlocConsumer<SecurityBloc, SecurityState>(
@@ -65,35 +68,67 @@ class _LostAndFoundScreenState extends State<LostAndFoundScreen> {
         },
         builder: (context, state) {
           if (state.lostAndFound.isEmpty) {
-            return const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('No found items reported yet.')));
+            return const EmptyState(
+              icon: Icons.inventory_2_outlined,
+              title: 'No Items Found',
+              message: 'When you find a lost item, report it here to help return it to its owner.',
+            );
           }
-          return ListView.builder(
-            padding: const EdgeInsets.all(12),
-            itemCount: state.lostAndFound.length,
-            itemBuilder: (context, index) {
-              final item = state.lostAndFound[index];
-              return AppCard(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundImage: item.photoUrl != null ? NetworkImage(item.photoUrl!) : null,
-                    child: item.photoUrl == null ? const Icon(Icons.inventory_2_outlined) : null,
-                  ),
-                  title: Text(item.description),
-                  subtitle: Text('${item.locationFound} • ${item.dateFound.toLocal().toString().split(' ').first}'),
-                  trailing: item.isClaimed
-                      ? const Chip(label: Text('Claimed'), backgroundColor: Color(0xFFE0F2E9))
-                      : FilledButton(onPressed: () => _openClaimForm(item), child: const Text('Claim')),
+          
+          return Center(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 1200),
+              child: GridView.builder(
+                padding: EdgeInsets.all(isLargeScreen ? 24 : 12),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: screenWidth > 1100 ? 3 : (isLargeScreen ? 2 : 1),
+                  mainAxisExtent: 110,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
                 ),
-              );
-            },
+                itemCount: state.lostAndFound.length,
+                itemBuilder: (context, index) {
+                  final item = state.lostAndFound[index];
+                  return AppCard(
+                    padding: EdgeInsets.zero,
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      leading: CircleAvatar(
+                        backgroundImage: item.photoUrl != null ? NetworkImage(item.photoUrl!) : null,
+                        child: item.photoUrl == null ? const Icon(Icons.inventory_2_outlined) : null,
+                      ),
+                      title: Text(item.description, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text(
+                        '${item.locationFound} • ${item.dateFound.toLocal().toString().split(' ').first}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: item.isClaimed
+                          ? const Icon(Icons.check_circle, color: Colors.green)
+                          : OutlinedButton(
+                              onPressed: () => _openClaimForm(item),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                              ),
+                              child: const Text('Claim'),
+                            ),
+                    ),
+                  );
+                },
+              ),
+            ),
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(onPressed: _openReportForm, child: const Icon(Icons.add)),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openReportForm,
+        icon: const Icon(Icons.add),
+        label: const Text('Report Item'),
+      ),
     );
   }
 }
+
 
 class _ReportFoundItemSheet extends StatefulWidget {
   final String schoolId;

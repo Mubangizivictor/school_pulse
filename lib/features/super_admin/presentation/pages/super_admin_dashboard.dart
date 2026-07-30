@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/design_system/theme/app_typography.dart';
+import 'package:school_pulse/design_system/components/pulse_logo.dart';
+import 'package:school_pulse/design_system/components/pulse_card.dart';
 import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
 import '../bloc/super_admin_state.dart';
@@ -76,49 +81,61 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
   }
 
   Widget _buildSidebar() {
-    final theme = Theme.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
-      width: 260,
+      width: 280,
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border(right: BorderSide(color: theme.dividerColor)),
+        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+        border: Border(
+          right: BorderSide(
+            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+            width: 1,
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow(context),
+            blurRadius: 20,
+            offset: const Offset(5, 0),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          const SizedBox(height: 32),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Row(
+          const SizedBox(height: AppSpacing.x4l),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+            child: PulseLogo(
+              variant: PulseLogoVariant.full,
+              size: 40,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x4l),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
               children: [
-                Icon(Icons.bolt, color: theme.colorScheme.primary, size: 32),
-                const SizedBox(width: 12),
-                Text(
-                  'Pulse Owner',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -1,
+                for (final (index, section) in _kSections.indexed)
+                  _SidebarItem(
+                    icon: section.icon,
+                    selectedIcon: section.selectedIcon,
+                    label: section.label,
+                    isSelected: _selectedIndex == index,
+                    onTap: () => setState(() => _selectedIndex = index),
                   ),
-                ),
               ],
             ),
           ),
-          const SizedBox(height: 40),
-          for (final (index, section) in _kSections.indexed)
-            _SidebarItem(
-              icon: section.icon,
-              selectedIcon: section.selectedIcon,
-              label: section.label,
-              isSelected: _selectedIndex == index,
-              onTap: () => setState(() => _selectedIndex = index),
-            ),
-          const Spacer(),
+          const Divider(),
           _SidebarItem(
-            icon: Icons.logout,
+            icon: Icons.logout_rounded,
             label: 'Sign Out',
             isSelected: false,
             onTap: () => handleSuperAdminLogout(context),
+            isDestructive: true,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.xl),
         ],
       ),
     );
@@ -131,6 +148,7 @@ class _SidebarItem extends StatelessWidget {
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
+  final bool isDestructive;
 
   const _SidebarItem({
     required this.icon,
@@ -138,29 +156,38 @@ class _SidebarItem extends StatelessWidget {
     required this.label,
     required this.isSelected,
     required this.onTap,
+    this.isDestructive = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final color = isDestructive 
+        ? AppColors.deepOrange 
+        : (isSelected ? AppColors.primary(context) : AppColors.textSecondary(context));
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: ListTile(
-        onTap: onTap,
-        selected: isSelected,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        leading: Icon(
-          isSelected ? (selectedIcon ?? icon) : icon,
-          color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
-        ),
-        title: Text(
-          label,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Material(
+        color: isSelected ? AppColors.primary(context).withValues(alpha: 0.1) : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: ListTile(
+          onTap: onTap,
+          dense: true,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          leading: Icon(
+            isSelected ? (selectedIcon ?? icon) : icon,
+            color: color,
+            size: 22,
+          ),
+          title: Text(
+            label,
+            style: AppTypography.labelLarge.copyWith(
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              color: color,
+            ),
           ),
         ),
-        tileColor: isSelected ? theme.colorScheme.primary.withValues(alpha: 0.08) : Colors.transparent,
       ),
     );
   }
@@ -269,33 +296,37 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, color: color, size: 24),
+    return PulseCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
             ),
-            const SizedBox(height: 16),
-            Text(
-              value,
-              style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            value,
+            style: AppTypography.headlineSmall.copyWith(
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary(context),
             ),
-            Text(
-              label,
-              style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: AppTypography.bodySmall.copyWith(
+              color: AppColors.textSecondary(context),
+              fontWeight: FontWeight.w600,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

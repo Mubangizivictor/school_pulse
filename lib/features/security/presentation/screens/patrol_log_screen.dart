@@ -45,6 +45,9 @@ class _PatrolLogScreenState extends State<PatrolLogScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeScreen = screenWidth >= 700;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Security Patrols')),
       body: BlocConsumer<SecurityBloc, SecurityState>(
@@ -57,38 +60,67 @@ class _PatrolLogScreenState extends State<PatrolLogScreen> {
         },
         builder: (context, state) {
           if (state.patrols.isEmpty) {
-            return const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('No patrols logged yet.')));
+            return const EmptyState(
+              icon: Icons.shield_outlined,
+              title: 'No Patrol Logs',
+              message: 'Security patrols help keep the campus safe. Start a new patrol to log your activities.',
+            );
           }
-          return ListView.builder(
-            padding: const EdgeInsets.all(12),
-            itemCount: state.patrols.length,
-            itemBuilder: (context, index) {
-              final patrol = state.patrols[index];
-              final hasIssues = patrol.issuesFound.isNotEmpty;
-              return AppCard(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: hasIssues ? Colors.orange.shade50 : Colors.green.shade50,
-                    child: Icon(hasIssues ? Icons.report_problem_outlined : Icons.check_circle_outline,
-                        color: hasIssues ? Colors.orange : Colors.green),
-                  ),
-                  title: Text(patrol.location),
-                  subtitle: Text(
-                    '${patrol.timestamp.toLocal().toString().split('.').first}\n'
-                    '${patrol.observations}${hasIssues ? '\nIssues: ${patrol.issuesFound.join(', ')}' : ''}',
-                  ),
-                  isThreeLine: true,
+          
+          return Center(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 1200),
+              child: GridView.builder(
+                padding: EdgeInsets.all(isLargeScreen ? 24 : 12),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: screenWidth > 1100 ? 3 : (isLargeScreen ? 2 : 1),
+                  mainAxisExtent: 140,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
                 ),
-              );
-            },
+                itemCount: state.patrols.length,
+                itemBuilder: (context, index) {
+                  final patrol = state.patrols[index];
+                  final hasIssues = patrol.issuesFound.isNotEmpty;
+                  return AppCard(
+                    padding: EdgeInsets.zero,
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.all(16),
+                      leading: CircleAvatar(
+                        backgroundColor: hasIssues ? Colors.orange.shade50 : Colors.green.shade50,
+                        child: Icon(
+                          hasIssues ? Icons.report_problem_outlined : Icons.check_circle_outline,
+                          color: hasIssues ? Colors.orange : Colors.green,
+                        ),
+                      ),
+                      title: Text(patrol.location, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          '${patrol.timestamp.toLocal().toString().split('.').first}\n'
+                          '${patrol.observations}',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      isThreeLine: true,
+                    ),
+                  );
+                },
+              ),
+            ),
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(onPressed: _openRecordForm, child: const Icon(Icons.add)),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openRecordForm,
+        icon: const Icon(Icons.add),
+        label: const Text('Record Patrol'),
+      ),
     );
   }
 }
+
 
 class _RecordPatrolSheet extends StatefulWidget {
   final String schoolId;

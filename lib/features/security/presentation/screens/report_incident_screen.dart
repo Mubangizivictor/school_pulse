@@ -101,104 +101,170 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isLargeScreen = screenWidth >= 700;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Report Security Incident')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          DropdownButtonFormField<String>(
-            initialValue: _type,
-            decoration: const InputDecoration(labelText: 'Incident Type', border: OutlineInputBorder()),
-            items: kIncidentTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
-            onChanged: (v) => setState(() => _type = v ?? _type),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _descriptionController,
-            maxLines: 3,
-            decoration: const InputDecoration(labelText: 'Description', border: OutlineInputBorder()),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _locationController,
-            decoration: const InputDecoration(labelText: 'Location', border: OutlineInputBorder()),
-          ),
-          const SizedBox(height: 12),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text('Date & Time: ${_timestamp.toLocal()}'.split('.').first),
-            trailing: const Icon(Icons.edit_calendar_outlined),
-            onTap: () async {
-              final date = await showDatePicker(
-                context: context,
-                initialDate: _timestamp,
-                firstDate: DateTime.now().subtract(const Duration(days: 30)),
-                lastDate: DateTime.now(),
-              );
-              if (date == null || !context.mounted) return;
-              final time = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(_timestamp));
-              if (time == null) return;
-              setState(() => _timestamp = DateTime(date.year, date.month, date.day, time.hour, time.minute));
-            },
-          ),
-          const SizedBox(height: 12),
-          Text('People Involved', style: Theme.of(context).textTheme.titleSmall),
-          const SizedBox(height: 8),
-          Row(
+      body: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 900),
+          child: ListView(
+            padding: EdgeInsets.all(isLargeScreen ? 32 : 16),
             children: [
-              Expanded(
-                child: TextField(
-                  controller: _involvedController,
-                  decoration: const InputDecoration(labelText: 'Name or ID', border: OutlineInputBorder()),
-                  onSubmitted: (_) => _addInvolvedPerson(),
+              if (isLargeScreen) ...[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        initialValue: _type,
+                        decoration: const InputDecoration(labelText: 'Incident Type', border: OutlineInputBorder()),
+                        items: kIncidentTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                        onChanged: (v) => setState(() => _type = v ?? _type),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextField(
+                        controller: _locationController,
+                        decoration: const InputDecoration(labelText: 'Location', border: OutlineInputBorder()),
+                      ),
+                    ),
+                  ],
+                ),
+              ] else ...[
+                DropdownButtonFormField<String>(
+                  initialValue: _type,
+                  decoration: const InputDecoration(labelText: 'Incident Type', border: OutlineInputBorder()),
+                  items: kIncidentTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                  onChanged: (v) => setState(() => _type = v ?? _type),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _locationController,
+                  decoration: const InputDecoration(labelText: 'Location', border: OutlineInputBorder()),
+                ),
+              ],
+              const SizedBox(height: 12),
+              TextField(
+                controller: _descriptionController,
+                maxLines: 2,
+                decoration: const InputDecoration(labelText: 'Short Description', border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                title: Text('Date & Time: ${_timestamp.toLocal()}'.split('.').first),
+                trailing: const Icon(Icons.edit_calendar_outlined),
+                onTap: () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: _timestamp,
+                    firstDate: DateTime.now().subtract(const Duration(days: 30)),
+                    lastDate: DateTime.now(),
+                  );
+                  if (date == null || !context.mounted) return;
+                  final time = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(_timestamp));
+                  if (time == null) return;
+                  setState(() => _timestamp = DateTime(date.year, date.month, date.day, time.hour, time.minute));
+                },
+              ),
+              const SizedBox(height: 12),
+              Text('People Involved', style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _involvedController,
+                      decoration: const InputDecoration(labelText: 'Name or ID', border: OutlineInputBorder()),
+                      onSubmitted: (_) => _addInvolvedPerson(),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.filledTonal(icon: const Icon(Icons.add), onPressed: _addInvolvedPerson),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: _involvedPersons
+                    .map((p) => Chip(
+                          label: Text(p),
+                          onDeleted: () => setState(() => _involvedPersons.remove(p)),
+                          deleteIcon: const Icon(Icons.close, size: 14),
+                        ))
+                    .toList(),
+              ),
+              const SizedBox(height: 24),
+              Text('Photos / Evidence', style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  ..._photos.map((p) => Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.file(File(p.path), width: 100, height: 100, fit: BoxFit.cover),
+                          ),
+                          Positioned(
+                            top: 4,
+                            right: 4,
+                            child: IconButton.filled(
+                              icon: const Icon(Icons.close, size: 14),
+                              onPressed: () => setState(() => _photos.remove(p)),
+                              constraints: const BoxConstraints.tightFor(width: 24, height: 24),
+                              padding: EdgeInsets.zero,
+                            ),
+                          ),
+                        ],
+                      )),
+                  InkWell(
+                    onTap: _addPhoto,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Theme.of(context).dividerColor),
+                        borderRadius: BorderRadius.circular(12),
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                      ),
+                      child: const Icon(Icons.add_a_photo_outlined),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              TextField(
+                controller: _reportController,
+                maxLines: 6,
+                decoration: const InputDecoration(
+                  labelText: 'Officer Report (Detailed Findings)',
+                  border: OutlineInputBorder(),
+                  alignLabelWithHint: true,
                 ),
               ),
-              IconButton(icon: const Icon(Icons.add_circle), onPressed: _addInvolvedPerson),
-            ],
-          ),
-          Wrap(
-            spacing: 8,
-            children: _involvedPersons
-                .map((p) => Chip(label: Text(p), onDeleted: () => setState(() => _involvedPersons.remove(p))))
-                .toList(),
-          ),
-          const SizedBox(height: 16),
-          Text('Photos / Evidence', style: Theme.of(context).textTheme.titleSmall),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              ..._photos.map((p) => ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.file(File(p.path), width: 72, height: 72, fit: BoxFit.cover),
-                  )),
-              InkWell(
-                onTap: _addPhoto,
-                child: Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(border: Border.all(color: Colors.grey), borderRadius: BorderRadius.circular(8)),
-                  child: const Icon(Icons.add_a_photo_outlined),
+              const SizedBox(height: 32),
+              SizedBox(
+                height: 54,
+                child: FilledButton(
+                  onPressed: _isSaving ? null : _submit,
+                  child: _isSaving
+                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Text('Submit Incident Report', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ),
+              const SizedBox(height: 40),
             ],
           ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _reportController,
-            maxLines: 4,
-            decoration: const InputDecoration(labelText: 'Officer Report', border: OutlineInputBorder()),
-          ),
-          const SizedBox(height: 24),
-          FilledButton(
-            onPressed: _isSaving ? null : _submit,
-            child: _isSaving
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Submit Incident Report'),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
+

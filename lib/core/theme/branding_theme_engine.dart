@@ -1,88 +1,35 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/design_system/theme/app_theme.dart';
 import 'package:school_pulse/features/branding/domain/entities/school_branding.dart';
-import 'app_colors.dart';
 
 class BrandingThemeEngine {
   static ThemeData createTheme(SchoolBranding? branding, Brightness brightness) {
     final bool isDark = brightness == Brightness.dark;
     
-    // Fallback to School Pulse colors if branding is missing
-    final Color primaryColor = AppColors.fromHex(branding?.primaryColor) ?? AppColors.pulseBlue;
-    final Color secondaryColor = AppColors.fromHex(branding?.secondaryColor) ?? AppColors.pulseNavy;
-    final Color accentColor = AppColors.fromHex(branding?.accentColor) ?? AppColors.pulseAccent;
+    // Parse school-specific colors if they exist
+    final Color? schoolPrimary = _fromHex(branding?.primaryColor);
+    final Color? schoolSecondary = _fromHex(branding?.secondaryColor);
 
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: primaryColor,
-      primary: primaryColor,
-      secondary: secondaryColor,
-      tertiary: accentColor,
-      brightness: brightness,
-      surface: isDark ? const Color(0xFF1C1C1E) : Colors.white,
-    );
+    // If no school branding, return the default AppTheme
+    if (schoolPrimary == null && schoolSecondary == null) {
+      return isDark ? AppTheme.dark() : AppTheme.light();
+    }
 
-    return ThemeData(
-      useMaterial3: true,
-      colorScheme: colorScheme,
-      extensions: [isDark ? SemanticColors.dark : SemanticColors.light],
-      scaffoldBackgroundColor: colorScheme.surface,
-      textTheme: GoogleFonts.interTextTheme(
-        isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme,
-      ),
-      appBarTheme: AppBarTheme(
-        backgroundColor: colorScheme.surface,
-        foregroundColor: colorScheme.onSurface,
-        elevation: 0,
-        centerTitle: false,
-        titleTextStyle: GoogleFonts.inter(
-          color: colorScheme.onSurface,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      cardTheme: CardThemeData(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-          ),
-        ),
-        color: colorScheme.surface,
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
-          foregroundColor: Colors.white,
-          minimumSize: const Size.fromHeight(52),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 0,
-          textStyle: GoogleFonts.inter(
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-          ),
-        ),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.outline),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.outlineVariant),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: primaryColor, width: 2),
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      ),
-    );
+    // Otherwise, generate a themed version using the global design system constraints
+    return isDark 
+      ? AppTheme.dark(primary: schoolPrimary, secondary: schoolSecondary)
+      : AppTheme.light(primary: schoolPrimary, secondary: schoolSecondary);
+  }
+
+  static Color? _fromHex(String? hexString) {
+    if (hexString == null || hexString.isEmpty) return null;
+    final buffer = StringBuffer();
+    if (hexString.length == 6 || hexString.length == 7) buffer.write('ff');
+    buffer.write(hexString.replaceFirst('#', ''));
+    try {
+      return Color(int.parse(buffer.toString(), radix: 16));
+    } catch (e) {
+      return null;
+    }
   }
 }

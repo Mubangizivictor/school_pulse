@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/core/theme_provider.dart';
-import 'package:school_pulse/design_system/app_theme.dart';
-import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_gradients.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/design_system/theme/app_typography.dart';
+import 'package:school_pulse/design_system/components/pulse_logo.dart';
+import 'package:school_pulse/design_system/components/pulse_card.dart';
+import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -14,32 +19,29 @@ class WelcomeScreen extends StatefulWidget {
 
 class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateMixin {
   late AnimationController _mainController;
-  late Animation<double> _rotationAnimation;
   late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
     super.initState();
     _mainController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    );
-
-    _rotationAnimation = Tween<double>(begin: 0, end: 2 * 3.14159 * 2).animate(
-      CurvedAnimation(
-        parent: _mainController,
-        curve: const Interval(0.0, 0.7, curve: Curves.elasticOut),
-      ),
+      duration: const Duration(milliseconds: 1500),
     );
 
     _scaleAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.2), weight: 70),
-      TweenSequenceItem(tween: Tween(begin: 1.2, end: 1.0), weight: 30),
-    ]).animate(
-      CurvedAnimation(
-        parent: _mainController,
-        curve: const Interval(0.0, 0.8, curve: Curves.easeOut),
-      ),
+      TweenSequenceItem(tween: Tween(begin: 0.8, end: 1.02).chain(CurveTween(curve: Curves.easeOut)), weight: 70),
+      TweenSequenceItem(tween: Tween(begin: 1.02, end: 1.0).chain(CurveTween(curve: Curves.easeInOut)), weight: 30),
+    ]).animate(_mainController);
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _mainController, curve: const Interval(0.2, 0.8, curve: Curves.easeIn)),
+    );
+
+    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero).animate(
+      CurvedAnimation(parent: _mainController, curve: const Interval(0.4, 1.0, curve: Curves.easeOutCubic)),
     );
 
     _mainController.forward();
@@ -53,119 +55,123 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    final semanticColors = Theme.of(context).extension<SemanticColors>();
-    final primaryColor = semanticColors?.primaryBlue ?? Theme.of(context).colorScheme.primary;
     final config = context.watch<ThemeProvider>().config;
-    final logoUrl = config?.schoolLogoUrl;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       body: Container(
         width: double.infinity,
         height: double.infinity,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              primaryColor.withValues(alpha: 0.05),
-              Theme.of(context).scaffoldBackgroundColor,
-            ],
-          ),
+          gradient: isDark ? AppGradients.premiumDark : null,
+          color: isDark ? null : AppColors.bgLight,
         ),
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                AnimatedBuilder(
-                  animation: _mainController,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: _scaleAnimation.value,
-                      child: Transform.rotate(
-                        angle: _rotationAnimation.value,
-                        child: child,
-                      ),
-                    );
-                  },
+        child: ResponsiveBuilder(
+          builder: (context, layout) {
+            final isDesktop = layout == ResponsiveLayout.desktop;
+            
+            return SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isDesktop ? AppSpacing.x7l : AppSpacing.x3l,
+                    vertical: AppSpacing.x3l,
+                  ),
                   child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: logoUrl != null && logoUrl.isNotEmpty ? Colors.white : primaryColor.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: primaryColor.withValues(alpha: 0.2),
-                          blurRadius: 20,
-                          spreadRadius: 5,
+                    constraints: BoxConstraints(maxWidth: isDesktop ? 1000 : 500),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        AnimatedBuilder(
+                          animation: _scaleAnimation,
+                          builder: (context, child) => Transform.scale(
+                            scale: _scaleAnimation.value,
+                            child: child,
+                          ),
+                          child: const PulseLogo(size: 100, variant: PulseLogoVariant.full),
+                        ),
+                        const SizedBox(height: AppSpacing.x6l),
+                        FadeTransition(
+                          opacity: _fadeAnimation,
+                          child: SlideTransition(
+                            position: _slideAnimation,
+                            child: Column(
+                              children: [
+                                Text(
+                                  config?.schoolName ?? 'School Pulse',
+                                  textAlign: TextAlign.center,
+                                  style: AppTypography.headlineLarge.copyWith(
+                                    color: isDark ? Colors.white : AppColors.textPrimaryLight,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.s),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.electricBlue.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(AppSpacing.s),
+                                  ),
+                                  child: Text(
+                                    config?.schoolMotto ?? 'Precision in Education Management',
+                                    textAlign: TextAlign.center,
+                                    style: AppTypography.bodyMedium.copyWith(
+                                      color: isDark ? AppColors.brightCyan : AppColors.royalBlue,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.x8l),
+                                if (isDesktop) 
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: _RoleCard(
+                                          title: "I'm a Parent",
+                                          subtitle: "Access student grades, attendance, and financial records in real-time.",
+                                          icon: Icons.family_restroom_rounded,
+                                          onTap: () => context.push('/parent/login/child-id'),
+                                        ),
+                                      ),
+                                      const SizedBox(width: AppSpacing.xl),
+                                      Expanded(
+                                        child: _RoleCard(
+                                          title: "I'm a Staff Member",
+                                          subtitle: "Manage academic operations, student tracking, and administrative tasks.",
+                                          icon: Icons.badge_rounded,
+                                          onTap: () => context.push('/staff/login'),
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                else ...[
+                                  _RoleCard(
+                                    title: "I'm a Parent",
+                                    subtitle: "Check grades, fees & attendance",
+                                    icon: Icons.family_restroom_rounded,
+                                    onTap: () => context.push('/parent/login/child-id'),
+                                  ),
+                                  const SizedBox(height: AppSpacing.xl),
+                                  _RoleCard(
+                                    title: "I'm a Staff Member",
+                                    subtitle: "Manage classes and student records",
+                                    icon: Icons.badge_rounded,
+                                    onTap: () => context.push('/staff/login'),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                    child: logoUrl != null && logoUrl.isNotEmpty
-                        ? Image.network(
-                            logoUrl,
-                            width: 80,
-                            height: 80,
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) => Icon(
-                              Icons.school,
-                              size: 80,
-                              color: primaryColor,
-                            ),
-                          )
-                        : Icon(
-                            Icons.school,
-                            size: 80,
-                            color: primaryColor,
-                          ),
                   ),
                 ),
-                const SizedBox(height: 24),
-                FadeInSlide(
-                  delay: const Duration(milliseconds: 800),
-                  child: Text(
-                    config?.schoolName ?? 'School Pulse',
-                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                          color: primaryColor,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
-                        ),
-                  ),
-                ),
-                FadeInSlide(
-                  delay: const Duration(milliseconds: 1000),
-                  child: Text(
-                    config?.schoolMotto ?? 'Precision in Education Management',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.outline,
-                          fontStyle: FontStyle.italic,
-                        ),
-                  ),
-                ),
-                const SizedBox(height: 64),
-                FadeInSlide(
-                  delay: const Duration(milliseconds: 1200),
-                  child: _RoleCard(
-                    title: "I'm a Parent",
-                    subtitle: "Check grades, fees & attendance",
-                    icon: Icons.family_restroom,
-                    onTap: () => context.push('/parent/login/child-id'),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                FadeInSlide(
-                  delay: const Duration(milliseconds: 1400),
-                  child: _RoleCard(
-                    title: "I'm a Staff Member",
-                    subtitle: "Manage classes and student records",
-                    icon: Icons.assignment_ind,
-                    onTap: () => context.push('/staff/login'),
-                  ),
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -187,57 +193,63 @@ class _RoleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).extension<SemanticColors>()?.primaryBlue ?? 
-                        Theme.of(context).colorScheme.primary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Card(
-      elevation: 0,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          width: double.infinity,
-          constraints: const BoxConstraints(maxWidth: 400),
-          padding: const EdgeInsets.all(24),
-          child: Row(
+    return PulseCard(
+      onTap: onTap,
+      variant: PulseCardVariant.glass,
+      padding: const EdgeInsets.all(AppSpacing.x3l),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.l),
+            decoration: BoxDecoration(
+              gradient: AppGradients.primary,
+              borderRadius: BorderRadius.circular(AppSpacing.l),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.electricBlue.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Icon(
+              icon,
+              size: 32,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: primaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, size: 32, color: primaryColor),
-              ),
-              const SizedBox(width: 20),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.outline,
-                          ),
-                    ),
-                  ],
+                child: Text(
+                  title,
+                  style: AppTypography.titleLarge.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : AppColors.textPrimaryLight,
+                  ),
                 ),
               ),
-              Icon(Icons.arrow_forward_ios, size: 16, color: Theme.of(context).disabledColor),
+              Icon(
+                Icons.arrow_forward_rounded,
+                color: isDark ? AppColors.brightCyan : AppColors.royalBlue,
+              ),
             ],
           ),
-        ),
+          const SizedBox(height: AppSpacing.s),
+          Text(
+            subtitle,
+            style: AppTypography.bodySmall.copyWith(
+              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              height: 1.4,
+            ),
+          ),
+        ],
       ),
     );
   }
 }
+
