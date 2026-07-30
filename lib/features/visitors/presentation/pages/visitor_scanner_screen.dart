@@ -102,7 +102,7 @@ class _VisitorScannerScreenState extends State<VisitorScannerScreen> {
              expectedDate: DateTime.now(),
              isUsed: false,
            );
-           context.push('/staff/gatekeeper/visitors/new', extra: preApproved);
+           context.push('/staff/security/visitors/new', extra: preApproved);
         } else {
            setState(() => _isProcessing = false);
         }
