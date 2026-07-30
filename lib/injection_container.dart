@@ -112,6 +112,7 @@ import 'package:school_pulse/features/student/presentation/bloc/admission_bloc.d
 import 'package:school_pulse/features/student_identity/domain/repositories/student_identity_repository.dart';
 import 'package:school_pulse/features/student_identity/data/repositories/student_identity_repository_impl.dart';
 import 'package:school_pulse/features/student_identity/domain/services/id_generator_service.dart';
+import 'package:school_pulse/features/student_identity/domain/services/nfc_credential_service.dart';
 
 // Admin Dashboard
 import 'package:school_pulse/features/admin/domain/usecases/get_admin_dashboard_stats.dart';
@@ -319,6 +320,8 @@ import 'package:school_pulse/features/verification/domain/repositories/identity_
 import 'package:school_pulse/features/verification/domain/repositories/permission_evaluator.dart';
 import 'package:school_pulse/features/verification/domain/repositories/verification_event_recorder.dart';
 import 'package:school_pulse/features/verification/domain/repositories/verification_policy_evaluator.dart';
+import 'package:school_pulse/features/verification/domain/repositories/nfc_credential_repository.dart';
+import 'package:school_pulse/features/verification/data/repositories/nfc_credential_repository_impl.dart';
 import 'package:school_pulse/features/verification/domain/services/verification_feedback_service.dart';
 import 'package:school_pulse/features/verification/presentation/services/haptic_verification_feedback_service.dart';
 import 'package:school_pulse/features/verification/presentation/adapters/qr_credential_reader_adapter.dart';
@@ -1149,6 +1152,14 @@ Future<void> init() async {
   sl.registerLazySingleton<VerificationFeedbackService>(() => HapticVerificationFeedbackService());
 
   sl.registerLazySingleton<VerificationLocalDataSource>(() => VerificationLocalDataSourceImpl(sl()));
+
+  sl.registerLazySingleton<NfcCredentialRepository>(
+    () => NfcCredentialRepositoryImpl(localDataSource: sl()),
+  );
+
+  sl.registerLazySingleton(
+    () => NfcCredentialService(nfcCredentialRepository: sl(), studentIdentityRepository: sl()),
+  );
 
   sl.registerLazySingleton(() => QrCredentialReaderAdapter());
   sl.registerLazySingleton(() => NfcCredentialReaderAdapter());

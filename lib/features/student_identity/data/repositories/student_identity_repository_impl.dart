@@ -177,4 +177,23 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
       return Left(ServerFailure(e.toString()));
     }
   }
+
+  @override
+  Future<Either<Failure, void>> updateNfcStatus(String studentId, String nfcStatus) async {
+    try {
+      final existing = await firestore
+          .collection('student_identities')
+          .where('studentId', isEqualTo: studentId)
+          .get();
+
+      if (existing.docs.isEmpty) {
+        return Left(ServerFailure('No StudentIdentity found for this student'));
+      }
+
+      await existing.docs.first.reference.update({'nfcStatus': nfcStatus});
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
 }

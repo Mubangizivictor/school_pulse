@@ -6,6 +6,8 @@ abstract class VerificationLocalDataSource {
   Future<void> cacheCredential(CachedCredentialIsar credential);
 
   Future<RevokedCredentialIsar?> findRevocation(String credentialValue, String schoolId);
+  Future<void> saveRevocation(RevokedCredentialIsar revocation);
+  Future<void> deleteRevocation(String credentialValue, String schoolId);
 
   Future<OperatorPermissionSnapshotIsar?> getPermissionSnapshot(String operatorId);
   Future<void> savePermissionSnapshot(OperatorPermissionSnapshotIsar snapshot);
@@ -46,6 +48,22 @@ class VerificationLocalDataSourceImpl implements VerificationLocalDataSource {
         .credentialValueEqualTo(credentialValue)
         .schoolIdEqualTo(schoolId)
         .findFirst();
+  }
+
+  @override
+  Future<void> saveRevocation(RevokedCredentialIsar revocation) async {
+    await isar.writeTxn(() async {
+      await isar.revokedCredentialIsars.put(revocation);
+    });
+  }
+
+  @override
+  Future<void> deleteRevocation(String credentialValue, String schoolId) async {
+    final existing = await findRevocation(credentialValue, schoolId);
+    if (existing == null) return;
+    await isar.writeTxn(() async {
+      await isar.revokedCredentialIsars.delete(existing.id);
+    });
   }
 
   @override

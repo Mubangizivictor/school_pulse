@@ -15,4 +15,7 @@ abstract class StudentIdentityRepository {
   // Local caching
   Future<Either<Failure, void>> cacheStudentsForOffline(List<Student> students);
   Future<Either<Failure, Student?>> getStudentByUniqueId(String uniqueSystemId);
+
+  // NFC lifecycle
+  Future<Either<Failure, void>> updateNfcStatus(String studentId, String nfcStatus);
 }
