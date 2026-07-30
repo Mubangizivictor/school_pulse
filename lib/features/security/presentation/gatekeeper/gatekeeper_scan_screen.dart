@@ -9,27 +9,26 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/qr_scanner/domain/entities/scanner_mode.dart';
 import 'package:school_pulse/features/qr_scanner/presentation/screens/qr_scanner_screen.dart';
-import 'package:school_pulse/features/security/data/models/security_models.dart';
 import 'package:school_pulse/features/security/domain/entities/security_entities.dart';
-import 'package:school_pulse/features/security/presentation/bloc/security_bloc.dart';
-import 'package:school_pulse/features/security/presentation/bloc/security_event.dart';
-import 'package:school_pulse/features/student/domain/entities/student.dart';
-import 'package:school_pulse/features/student_identity/domain/repositories/student_identity_repository.dart';
+import 'package:school_pulse/features/verification/domain/entities/scan_credential.dart';
+import 'package:school_pulse/features/verification/domain/entities/verification_context.dart';
+import 'package:school_pulse/features/verification/presentation/widgets/verification_scan_screen.dart';
 import 'package:school_pulse/features/visitors/domain/entities/visitor.dart';
 import 'package:school_pulse/features/visitors/presentation/bloc/visitors_bloc.dart';
 import 'package:school_pulse/features/visitors/presentation/bloc/visitors_event.dart';
 import 'package:school_pulse/features/visitors/presentation/bloc/visitors_state.dart';
-import 'package:school_pulse/injection_container.dart' as di;
 import 'gatekeeper_shared.dart';
 
-enum _ScanResultKind { none, student, visitorCheckout, visitorPreApproved, notFound }
+enum _ScanResultKind { none, visitorCheckout, visitorPreApproved }
 
-/// Gatekeeper Simple Mode's unified scanner: opens the camera immediately,
-/// then routes the decoded code to the right flow automatically - a raw
-/// code resolves as a student ID (StudentIdentityRepository), a JSON
-/// `{type:'pre_approved', ...}` payload as a pre-approved visitor, and any
-/// other JSON payload with id/name/arrival as a visitor pass checkout
-/// (mirrors VisitorScannerScreen's existing QR encoding, Reception mode).
+/// Gatekeeper Simple Mode's unified scanner: opens the camera immediately.
+/// A raw code is handed to the shared verification engine (identity
+/// resolution, permission/gate-scoping, suggested direction, and movement
+/// recording all happen the same way as the Reception-mode workflow) -
+/// see `VerificationScanScreen`. JSON visitor payloads (pre-approved
+/// check-in / visitor-pass checkout) are pre-visitors-phase: out of scope
+/// for the shared engine in Phase 1, so they keep using the same inline
+/// handling this screen already had.
 class GatekeeperScanScreen extends StatefulWidget {
   final Gate gate;
   const GatekeeperScanScreen({super.key, required this.gate});
@@ -42,7 +41,6 @@ class _GatekeeperScanScreenState extends State<GatekeeperScanScreen> {
   _ScanResultKind _kind = _ScanResultKind.none;
   bool _isSubmitting = false;
 
-  Student? _student;
   String? _visitorId;
   String? _visitorName;
   DateTime? _visitorArrival;
@@ -103,21 +101,32 @@ class _GatekeeperScanScreenState extends State<GatekeeperScanScreen> {
       return;
     }
 
-    final result = await di.sl<StudentIdentityRepository>().getStudentByUniqueId(code);
+    await _openVerificationEngine(code);
+  }
+
+  Future<void> _openVerificationEngine(String rawPayload) async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthAuthenticated) return;
+    final deviceId = await DeviceIdService().getDeviceId();
     if (!mounted) return;
-    result.fold(
-      (failure) => setState(() => _kind = _ScanResultKind.notFound),
-      (student) {
-        if (student == null) {
-          setState(() => _kind = _ScanResultKind.notFound);
-        } else {
-          setState(() {
-            _kind = _ScanResultKind.student;
-            _student = student;
-          });
-        }
-      },
+
+    final verificationContext = VerificationContext(
+      gate: widget.gate,
+      operatorUser: authState.user,
+      purpose: 'security.identity.verify',
+      deviceId: deviceId,
+      requestedAt: DateTime.now(),
     );
+
+    await Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(
+        builder: (_) => VerificationScanScreen(
+          context: verificationContext,
+          initialCredential: QrScanCredential(rawPayload: rawPayload, scannedAt: DateTime.now()),
+        ),
+      ),
+    );
+    if (mounted) Navigator.of(context).pop();
   }
 
   bool _isBlacklisted(String? phone, String? name) {
@@ -126,31 +135,6 @@ class _GatekeeperScanScreenState extends State<GatekeeperScanScreen> {
     return visitorsState.blacklist.any((b) =>
         (phone != null && phone.isNotEmpty && b.phone == phone) ||
         (name != null && name.isNotEmpty && b.fullName.toLowerCase() == name.toLowerCase()));
-  }
-
-  Future<void> _confirmStudentMovement(String direction) async {
-    final authState = context.read<AuthBloc>().state;
-    if (authState is! AuthAuthenticated || _student == null) return;
-    setState(() => _isSubmitting = true);
-    final deviceId = await DeviceIdService().getDeviceId();
-    if (!mounted) return;
-
-    final movement = StudentMovementModel(
-      id: const Uuid().v4(),
-      studentId: _student!.id,
-      studentName: _student!.name,
-      className: _student!.classId,
-      timestamp: DateTime.now(),
-      gateId: widget.gate.id,
-      direction: direction,
-      movementType: computeMovementType(widget.gate, direction),
-      verificationMethod: 'QR Student ID',
-      officerId: authState.user.id,
-      deviceId: deviceId,
-      schoolId: authState.user.schoolId,
-    );
-    context.read<SecurityBloc>().add(RecordStudentMovementRequested(movement));
-    if (mounted) Navigator.of(context).pop();
   }
 
   void _confirmVisitorCheckout() {
@@ -193,75 +177,9 @@ class _GatekeeperScanScreenState extends State<GatekeeperScanScreen> {
       appBar: AppBar(title: const Text('Scan')),
       body: switch (_kind) {
         _ScanResultKind.none => const Center(child: CircularProgressIndicator()),
-        _ScanResultKind.notFound => _buildNotFound(context),
-        _ScanResultKind.student => _buildStudentConfirm(context),
         _ScanResultKind.visitorCheckout => _buildVisitorCheckoutConfirm(context),
         _ScanResultKind.visitorPreApproved => _buildPreApprovedConfirm(context),
       },
-    );
-  }
-
-  Widget _buildNotFound(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.search_off, size: 72, color: Theme.of(context).colorScheme.error),
-          const SizedBox(height: 16),
-          const Text('No match found', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-          const SizedBox(height: 8),
-          const Text('This code isn\'t recognized. Try scanning again.', textAlign: TextAlign.center),
-          const SizedBox(height: 24),
-          GatekeeperPrimaryButton(
-            label: 'SCAN AGAIN',
-            icon: Icons.qr_code_scanner,
-            tone: GatekeeperButtonTone.info,
-            onPressed: _openScanner,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStudentConfirm(BuildContext context) {
-    final student = _student!;
-    final securityState = context.watch<SecurityBloc>().state;
-    final suggestedDirection = suggestStudentDirection(securityState.studentMovements, student.id);
-
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          AvatarInitials(name: student.name, size: 96),
-          const SizedBox(height: 16),
-          Text(student.name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-          Text(student.studentCode, style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: 12),
-          StatusBadge(
-            label: suggestedDirection == 'In' ? 'Suggested: Enter' : 'Suggested: Leave',
-            color: suggestedDirection == 'In' ? Colors.green : Colors.blueGrey,
-            icon: suggestedDirection == 'In' ? Icons.login : Icons.logout,
-          ),
-          const SizedBox(height: 32),
-          GatekeeperPrimaryButton(
-            label: 'ENTER',
-            icon: Icons.login,
-            tone: GatekeeperButtonTone.success,
-            isLoading: _isSubmitting,
-            onPressed: () => _confirmStudentMovement('In'),
-          ),
-          const SizedBox(height: 12),
-          GatekeeperPrimaryButton(
-            label: 'LEAVE',
-            icon: Icons.logout,
-            tone: GatekeeperButtonTone.info,
-            isLoading: _isSubmitting,
-            onPressed: () => _confirmStudentMovement('Out'),
-          ),
-        ],
-      ),
     );
   }
 

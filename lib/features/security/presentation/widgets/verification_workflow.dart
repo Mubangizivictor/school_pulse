@@ -13,17 +13,16 @@ import 'package:school_pulse/features/student/domain/entities/parent_access_code
 import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/student/domain/usecases/resolve_parent_access_code.dart';
 import 'package:school_pulse/features/student/domain/usecases/search_students.dart';
-import 'package:school_pulse/features/student_identity/domain/repositories/student_identity_repository.dart';
+import 'package:school_pulse/features/verification/domain/entities/scan_credential.dart';
+import 'package:school_pulse/features/verification/domain/entities/verification_context.dart';
+import 'package:school_pulse/features/verification/presentation/widgets/verification_scan_screen.dart';
 import 'package:school_pulse/injection_container.dart' as di;
-import 'package:uuid/uuid.dart';
-import '../../data/models/security_models.dart';
 import '../../domain/entities/security_entities.dart';
 import '../../domain/entities/verification_method.dart';
 import '../bloc/security_bloc.dart';
-import '../bloc/security_event.dart';
 import '../bloc/security_state.dart';
 
-enum _Step { gateSelect, methodSelect, manualStudentSearch, staffSearch, parentCode, fingerprintStub, confirm }
+enum _Step { gateSelect, methodSelect, manualStudentSearch, staffSearch, parentCode, fingerprintStub }
 
 class VerificationWorkflow extends StatefulWidget {
   const VerificationWorkflow({super.key});
@@ -35,20 +34,13 @@ class VerificationWorkflow extends StatefulWidget {
 class _VerificationWorkflowState extends State<VerificationWorkflow> {
   _Step _step = _Step.gateSelect;
   Gate? _selectedGate;
-  VerificationMethod? _selectedMethod;
-
-  Student? _resolvedStudent;
-  UserEntity? _resolvedStaff;
-  ParentAccessCode? _resolvedParentCode;
-  String? _selectedChildIdFromParentCode;
-  String? _selectedChildNameFromParentCode;
 
   bool _isSearching = false;
-  bool _isSubmitting = false;
   List<Student> _studentResults = [];
   List<UserEntity> _staffResults = [];
   final _searchController = TextEditingController();
   final _parentCodeController = TextEditingController();
+  ParentAccessCode? _resolvedParentCode;
 
   String get _schoolId {
     final authState = context.read<AuthBloc>().state;
@@ -72,8 +64,6 @@ class _VerificationWorkflowState extends State<VerificationWorkflow> {
   }
 
   Future<void> _selectMethod(VerificationMethod method) async {
-    setState(() => _selectedMethod = method);
-
     switch (method) {
       case VerificationMethod.qrStudentId:
       case VerificationMethod.digitalId:
@@ -98,6 +88,30 @@ class _VerificationWorkflowState extends State<VerificationWorkflow> {
     }
   }
 
+  Future<VerificationContext> _buildContext() async {
+    final authState = context.read<AuthBloc>().state;
+    final operatorUser = (authState as AuthAuthenticated).user;
+    final deviceId = await DeviceIdService().getDeviceId();
+    return VerificationContext(
+      gate: _selectedGate!,
+      operatorUser: operatorUser,
+      purpose: 'security.identity.verify',
+      deviceId: deviceId,
+      requestedAt: DateTime.now(),
+    );
+  }
+
+  Future<void> _openScanScreen(ScanCredential credential) async {
+    final verificationContext = await _buildContext();
+    if (!mounted) return;
+    await Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(
+        builder: (_) => VerificationScanScreen(context: verificationContext, initialCredential: credential),
+      ),
+    );
+    if (mounted) Navigator.of(context).pop();
+  }
+
   Future<void> _scanQrCode() async {
     await Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
@@ -105,21 +119,7 @@ class _VerificationWorkflowState extends State<VerificationWorkflow> {
           mode: ScannerMode.security,
           onScan: (code) async {
             Navigator.of(context, rootNavigator: true).pop();
-            final result = await di.sl<StudentIdentityRepository>().getStudentByUniqueId(code);
-            result.fold(
-              (failure) => _showSnack('Lookup failed: ${failure.message}', isError: true),
-              (student) {
-                if (student == null) {
-                  _showSnack('No student found for this code', isError: true);
-                  _goTo(_Step.methodSelect);
-                } else {
-                  setState(() {
-                    _resolvedStudent = student;
-                    _step = _Step.confirm;
-                  });
-                }
-              },
-            );
+            await _openScanScreen(QrScanCredential(rawPayload: code, scannedAt: DateTime.now()));
           },
         ),
       ),
@@ -177,101 +177,6 @@ class _VerificationWorkflowState extends State<VerificationWorkflow> {
     );
   }
 
-  /// Arrival/Late Arrival on the way in, Departure/Early Departure on the
-  /// way out, computed from the gate's configured operating hours (falls
-  /// back to a plain Arrival/Departure if the gate has none set).
-  String _computeMovementType(String direction) {
-    final hours = _selectedGate?.operatingHours ?? const {};
-    final open = _parseTimeToday(hours['open'] as String?);
-    final close = _parseTimeToday(hours['close'] as String?);
-    final now = DateTime.now();
-
-    if (direction == 'In') {
-      if (open != null && now.isAfter(open.add(const Duration(minutes: 15)))) return 'Late Arrival';
-      return 'Arrival';
-    } else {
-      if (close != null && now.isBefore(close)) return 'Early Departure';
-      return 'Departure';
-    }
-  }
-
-  DateTime? _parseTimeToday(String? hhmm) {
-    if (hhmm == null || !hhmm.contains(':')) return null;
-    final parts = hhmm.split(':');
-    final hour = int.tryParse(parts[0]);
-    final minute = int.tryParse(parts[1]);
-    if (hour == null || minute == null) return null;
-    final now = DateTime.now();
-    return DateTime(now.year, now.month, now.day, hour, minute);
-  }
-
-  Future<void> _confirmMovement(String direction) async {
-    final authState = context.read<AuthBloc>().state;
-    if (authState is! AuthAuthenticated || _selectedGate == null) return;
-    final securityBloc = context.read<SecurityBloc>();
-
-    setState(() => _isSubmitting = true);
-    final deviceId = await DeviceIdService().getDeviceId();
-    if (!mounted) return;
-    final movementType = _computeMovementType(direction);
-
-    if (_resolvedStaff != null) {
-      final movement = StaffMovementModel(
-        id: const Uuid().v4(),
-        staffId: _resolvedStaff!.id,
-        staffName: _resolvedStaff!.name,
-        timestamp: DateTime.now(),
-        gateId: _selectedGate!.id,
-        direction: direction,
-        verificationMethod: _selectedMethod?.label ?? 'Staff ID',
-        officerId: authState.user.id,
-        schoolId: authState.user.schoolId,
-      );
-      securityBloc.add(RecordStaffMovementRequested(movement));
-    } else if (_resolvedStudent != null) {
-      final movement = StudentMovementModel(
-        id: const Uuid().v4(),
-        studentId: _resolvedStudent!.id,
-        studentName: _resolvedStudent!.name,
-        className: _resolvedStudent!.classId,
-        timestamp: DateTime.now(),
-        gateId: _selectedGate!.id,
-        direction: direction,
-        movementType: movementType,
-        verificationMethod: _selectedMethod?.label ?? 'Manual',
-        officerId: authState.user.id,
-        deviceId: deviceId,
-        schoolId: authState.user.schoolId,
-      );
-      securityBloc.add(RecordStudentMovementRequested(movement));
-    } else if (_resolvedParentCode != null && _selectedChildIdFromParentCode != null) {
-      final movement = StudentMovementModel(
-        id: const Uuid().v4(),
-        studentId: _selectedChildIdFromParentCode!,
-        studentName: _selectedChildNameFromParentCode ?? 'Student',
-        className: '',
-        timestamp: DateTime.now(),
-        gateId: _selectedGate!.id,
-        direction: direction,
-        movementType: direction == 'Out' ? 'Authorized Pickup' : movementType,
-        verificationMethod: VerificationMethod.parentCode.label,
-        officerId: authState.user.id,
-        deviceId: deviceId,
-        schoolId: authState.user.schoolId,
-        pickupDetails: {
-          'parentCode': _resolvedParentCode!.parentCode,
-          'parentName': _resolvedParentCode!.parentName,
-          'phoneNumber': _resolvedParentCode!.phoneNumber,
-        },
-      );
-      securityBloc.add(RecordStudentMovementRequested(movement));
-    }
-
-    if (mounted) {
-      Navigator.of(context).pop();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -283,7 +188,6 @@ class _VerificationWorkflowState extends State<VerificationWorkflow> {
         _Step.staffSearch => _buildStaffSearch(),
         _Step.parentCode => _buildParentCode(),
         _Step.fingerprintStub => _buildFingerprintStub(),
-        _Step.confirm => _buildConfirm(),
       },
     );
   }
@@ -394,10 +298,7 @@ class _VerificationWorkflowState extends State<VerificationWorkflow> {
                 leading: const Icon(Icons.person_outline),
                 title: Text(student.name),
                 subtitle: Text(student.studentCode),
-                onTap: () => setState(() {
-                  _resolvedStudent = student;
-                  _step = _Step.confirm;
-                }),
+                onTap: () => _openScanScreen(ManualCodeScanCredential(code: student.studentCode)),
               );
             },
           ),
@@ -432,10 +333,7 @@ class _VerificationWorkflowState extends State<VerificationWorkflow> {
                 leading: const Icon(Icons.badge_outlined),
                 title: Text(staff.name),
                 subtitle: Text(staff.staffCode ?? staff.email),
-                onTap: () => setState(() {
-                  _resolvedStaff = staff;
-                  _step = _Step.confirm;
-                }),
+                onTap: () => _openScanScreen(StaffLookupScanCredential(staffId: staff.id)),
               );
             },
           ),
@@ -473,14 +371,15 @@ class _VerificationWorkflowState extends State<VerificationWorkflow> {
             child: ListView.builder(
               itemCount: code.studentIds.length,
               itemBuilder: (context, index) {
+                final childName = code.studentNames.length > index ? code.studentNames[index] : 'Student';
                 return ListTile(
                   leading: const Icon(Icons.child_care),
-                  title: Text(code.studentNames.length > index ? code.studentNames[index] : 'Student'),
-                  onTap: () => setState(() {
-                    _selectedChildIdFromParentCode = code.studentIds[index];
-                    _selectedChildNameFromParentCode = code.studentNames.length > index ? code.studentNames[index] : 'Student';
-                    _step = _Step.confirm;
-                  }),
+                  title: Text(childName),
+                  onTap: () => _openScanScreen(ParentCodeScanCredential(
+                    code: code.parentCode,
+                    preSelectedChildId: code.studentIds[index],
+                    preSelectedChildName: childName,
+                  )),
                 );
               },
             ),
@@ -499,43 +398,6 @@ class _VerificationWorkflowState extends State<VerificationWorkflow> {
         const Text('Fingerprint verification is not available on this device yet.', textAlign: TextAlign.center),
         const SizedBox(height: 16),
         TextButton(onPressed: () => _goTo(_Step.methodSelect), child: const Text('Choose another method')),
-      ],
-    );
-  }
-
-  Widget _buildConfirm() {
-    final name = _resolvedStaff?.name ?? _resolvedStudent?.name ?? _selectedChildNameFromParentCode ?? 'Unknown';
-    final subtitle = _resolvedStaff != null
-        ? 'Staff • ${_resolvedStaff!.staffCode ?? ''}'
-        : _resolvedStudent != null
-            ? 'Student • ${_resolvedStudent!.studentCode}'
-            : 'Student (via parent code)';
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        CircleAvatar(radius: 32, child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?')),
-        const SizedBox(height: 12),
-        Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        Text(subtitle, style: const TextStyle(color: Colors.grey)),
-        const SizedBox(height: 24),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            FilledButton.icon(
-              onPressed: _isSubmitting ? null : () => _confirmMovement('In'),
-              icon: const Icon(Icons.login),
-              label: const Text('Confirm In'),
-            ),
-            const SizedBox(width: 12),
-            FilledButton.icon(
-              onPressed: _isSubmitting ? null : () => _confirmMovement('Out'),
-              style: FilledButton.styleFrom(backgroundColor: Colors.blueGrey),
-              icon: const Icon(Icons.logout),
-              label: const Text('Confirm Out'),
-            ),
-          ],
-        ),
       ],
     );
   }
