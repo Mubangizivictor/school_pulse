@@ -162,6 +162,7 @@ import 'package:school_pulse/features/discipline/presentation/bloc/discipline_bl
 
 // Finance
 import 'package:school_pulse/features/finance/domain/repositories/finance_repository.dart';
+import 'package:school_pulse/features/finance/domain/services/bursar_student_projection_service.dart';
 import 'package:school_pulse/features/finance/data/repositories/finance_repository_impl.dart';
 import 'package:school_pulse/features/finance/data/datasources/finance_remote_data_source.dart';
 import 'package:school_pulse/features/finance/presentation/bloc/finance_bloc.dart';
@@ -723,6 +724,14 @@ Future<void> init() async {
 
   sl.registerLazySingleton<FinanceRepository>(
     () => FinanceRepositoryImpl(remoteDataSource: sl()),
+  );
+
+  sl.registerLazySingleton(
+    () => BursarStudentProjectionService(
+      permissionEvaluator: sl(),
+      studentRepository: sl(),
+      financeRepository: sl(),
+    ),
   );
 
   sl.registerLazySingleton<FinanceRemoteDataSource>(
