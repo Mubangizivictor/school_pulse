@@ -9,6 +9,7 @@ import 'package:school_pulse/features/security/domain/entities/security_entities
 import 'package:school_pulse/features/verification/domain/entities/scan_credential.dart';
 import 'package:school_pulse/features/verification/domain/entities/verification_context.dart';
 import 'package:school_pulse/injection_container.dart';
+import 'package:school_pulse/features/biometrics/presentation/screens/biometric_enrollment_screen.dart';
 import '../../../student/domain/entities/student.dart';
 import '../../domain/entities/student_identity.dart';
 import '../bloc/student_identity_bloc.dart';
@@ -91,6 +92,23 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
                     const Divider(),
                     const SizedBox(height: 8),
                     _NfcCardSection(student: widget.student, identity: state.identity, assignedCardUid: state.assignedCardUid),
+                    const SizedBox(height: 24),
+                    const Divider(),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => BiometricEnrollmentScreen(
+                            personId: widget.student.id,
+                            personName: widget.student.name,
+                            schoolId: widget.student.schoolId,
+                          ),
+                        ),
+                      ),
+                      icon: const Icon(Icons.fingerprint),
+                      label: const Text('Enroll Fingerprint'),
+                    ),
                   ],
                 ),
               ),
