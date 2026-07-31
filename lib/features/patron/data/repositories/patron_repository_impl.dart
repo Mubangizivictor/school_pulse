@@ -8,6 +8,11 @@ class PatronRepositoryImpl implements PatronRepository {
   PatronRepositoryImpl({required this.remoteDataSource});
 
   @override
+  Stream<PatronDashboardOverview> watchDashboardOverview(String schoolId) {
+    return remoteDataSource.watchDashboardOverview(schoolId);
+  }
+
+  @override
   Stream<List<Dormitory>> getDormitories() {
     return remoteDataSource.getDormitories();
   }
@@ -28,8 +33,63 @@ class PatronRepositoryImpl implements PatronRepository {
   }
 
   @override
+  Future<void> setDormLeadership(
+    String dormitoryId, {
+    String? roomLeaderId,
+    String? dormPrefectId,
+  }) {
+    return remoteDataSource.setDormLeadership(
+      dormitoryId,
+      roomLeaderId: roomLeaderId,
+      dormPrefectId: dormPrefectId,
+    );
+  }
+
+  @override
+  Stream<List<Bed>> getBeds(String dormitoryId) {
+    return remoteDataSource.getBeds(dormitoryId);
+  }
+
+  @override
+  Future<void> addBed(String dormitoryId, String bedNumber) {
+    return remoteDataSource.addBed(dormitoryId, bedNumber);
+  }
+
+  @override
+  Future<void> removeBed(String dormitoryId, String bedId) {
+    return remoteDataSource.removeBed(dormitoryId, bedId);
+  }
+
+  @override
+  Future<void> transferStudent({
+    required String studentId,
+    required String toDormitoryId,
+    String? toBedNumber,
+    required String transferredBy,
+    String? reason,
+  }) {
+    return remoteDataSource.transferStudent(
+      studentId: studentId,
+      toDormitoryId: toDormitoryId,
+      toBedNumber: toBedNumber,
+      transferredBy: transferredBy,
+      reason: reason,
+    );
+  }
+
+  @override
+  Stream<List<BedTransfer>> getTransferHistory(String? studentId) {
+    return remoteDataSource.getTransferHistory(studentId);
+  }
+
+  @override
   Stream<List<BoardingStudent>> getBoardingStudents(String? dormitoryId) {
     return remoteDataSource.getBoardingStudents(dormitoryId);
+  }
+
+  @override
+  Stream<List<BoardingStudent>> getUnallocatedStudents() {
+    return remoteDataSource.getUnallocatedStudents();
   }
 
   @override
@@ -75,6 +135,33 @@ class PatronRepositoryImpl implements PatronRepository {
   }
 
   @override
+  Stream<List<LeaveRequest>> getLeaveRequests({String? status}) {
+    return remoteDataSource.getLeaveRequests(status: status);
+  }
+
+  @override
+  Future<void> requestLeave(LeaveRequest request) {
+    return remoteDataSource.requestLeave(request);
+  }
+
+  @override
+  Future<void> updateLeaveStatus(
+    String requestId,
+    String status, {
+    String? approvedBy,
+    DateTime? actualReturnDate,
+    String? notes,
+  }) {
+    return remoteDataSource.updateLeaveStatus(
+      requestId,
+      status,
+      approvedBy: approvedBy,
+      actualReturnDate: actualReturnDate,
+      notes: notes,
+    );
+  }
+
+  @override
   Stream<List<WelfareRecord>> getWelfareRecords(
     String schoolId,
     String studentId, {
@@ -101,6 +188,39 @@ class PatronRepositoryImpl implements PatronRepository {
   @override
   Future<void> logWelfareRecord(WelfareRecord record) {
     return remoteDataSource.logWelfareRecord(record);
+  }
+
+  @override
+  Stream<List<CounselingReferral>> getCounselingReferrals(String? studentId) {
+    return remoteDataSource.getCounselingReferrals(studentId);
+  }
+
+  @override
+  Future<void> logCounselingReferral(CounselingReferral referral) {
+    return remoteDataSource.logCounselingReferral(referral);
+  }
+
+  @override
+  Future<void> updateReferralStatus(
+    String referralId,
+    String status, {
+    String? followUpNotes,
+  }) {
+    return remoteDataSource.updateReferralStatus(
+      referralId,
+      status,
+      followUpNotes: followUpNotes,
+    );
+  }
+
+  @override
+  Stream<List<BehaviourObservation>> getBehaviourObservations(String? studentId) {
+    return remoteDataSource.getBehaviourObservations(studentId);
+  }
+
+  @override
+  Future<void> logBehaviourObservation(BehaviourObservation observation) {
+    return remoteDataSource.logBehaviourObservation(observation);
   }
 
   @override
