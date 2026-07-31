@@ -115,4 +115,17 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
       return Left(CacheFailure(e.toString()));
     }
   }
+
+  @override
+  Future<Either<Failure, String?>> findAssignedCredential({
+    required String identityId,
+    required String schoolId,
+  }) async {
+    try {
+      final existing = await localDataSource.findCredentialByIdentity(identityId, schoolId);
+      return Right(existing?.credentialValue);
+    } catch (e) {
+      return Left(CacheFailure(e.toString()));
+    }
+  }
 }

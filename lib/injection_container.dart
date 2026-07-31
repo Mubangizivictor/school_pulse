@@ -111,6 +111,7 @@ import 'package:school_pulse/features/student/presentation/bloc/student_homework
 import 'package:school_pulse/features/student/presentation/bloc/admission_bloc.dart';
 import 'package:school_pulse/features/student_identity/domain/repositories/student_identity_repository.dart';
 import 'package:school_pulse/features/student_identity/data/repositories/student_identity_repository_impl.dart';
+import 'package:school_pulse/features/student_identity/presentation/bloc/student_identity_bloc.dart';
 import 'package:school_pulse/features/student_identity/domain/services/id_generator_service.dart';
 import 'package:school_pulse/features/student_identity/domain/services/nfc_credential_service.dart';
 
@@ -572,6 +573,13 @@ Future<void> init() async {
 
   sl.registerLazySingleton<StudentIdentityRepository>(
     () => StudentIdentityRepositoryImpl(firestore: sl(), isar: sl(), idGenerator: sl()),
+  );
+
+  // Was never registered even though StudentIdCardScreen already read it
+  // via context.read<StudentIdentityBloc>() - that screen would have
+  // thrown a ProviderNotFoundException the moment anyone navigated to it.
+  sl.registerFactory(
+    () => StudentIdentityBloc(repository: sl(), nfcCredentialService: sl()),
   );
 
   // Features - Auth

@@ -77,6 +77,16 @@ class NfcCredentialService {
     );
   }
 
+  Future<Either<Failure, String?>> findAssignedCardForStudent({
+    required String uniqueSystemId,
+    required String schoolId,
+  }) {
+    return nfcCredentialRepository.findAssignedCredential(
+      identityId: uniqueSystemId,
+      schoolId: schoolId,
+    );
+  }
+
   Future<Either<Failure, void>> reactivateForStudent({
     required String cardUid,
     required String studentId,

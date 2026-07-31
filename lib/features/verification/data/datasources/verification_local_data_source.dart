@@ -5,6 +5,12 @@ abstract class VerificationLocalDataSource {
   Future<CachedCredentialIsar?> findCredential(String credentialValue, String schoolId);
   Future<void> cacheCredential(CachedCredentialIsar credential);
 
+  // Reverse lookup: "what card (if any) is/was bound to this identity" -
+  // needed so a lost/stolen card can be revoked without the physical card
+  // being available to scan. Returns the most recently updated mapping
+  // regardless of status (active or revoked), not just active ones.
+  Future<CachedCredentialIsar?> findCredentialByIdentity(String identityId, String schoolId);
+
   Future<RevokedCredentialIsar?> findRevocation(String credentialValue, String schoolId);
   Future<void> saveRevocation(RevokedCredentialIsar revocation);
   Future<void> deleteRevocation(String credentialValue, String schoolId);
@@ -39,6 +45,16 @@ class VerificationLocalDataSourceImpl implements VerificationLocalDataSource {
     await isar.writeTxn(() async {
       await isar.cachedCredentialIsars.put(credential);
     });
+  }
+
+  @override
+  Future<CachedCredentialIsar?> findCredentialByIdentity(String identityId, String schoolId) async {
+    return isar.cachedCredentialIsars
+        .filter()
+        .identityIdEqualTo(identityId)
+        .schoolIdEqualTo(schoolId)
+        .sortByUpdatedAtDesc()
+        .findFirst();
   }
 
   @override

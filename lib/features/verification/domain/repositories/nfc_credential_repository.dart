@@ -51,4 +51,13 @@ abstract class NfcCredentialRepository {
     required String credentialValue,
     required String schoolId,
   });
+
+  /// The most recent card bound to [identityId] regardless of status
+  /// (active or revoked), or null if none was ever assigned. Lets a caller
+  /// revoke a lost/stolen card without the physical card being available
+  /// to scan.
+  Future<Either<Failure, String?>> findAssignedCredential({
+    required String identityId,
+    required String schoolId,
+  });
 }

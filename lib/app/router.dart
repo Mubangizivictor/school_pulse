@@ -100,6 +100,7 @@ import 'package:school_pulse/features/director/presentation/screens/director_app
 import 'package:school_pulse/features/director/presentation/screens/director_dashboard_screen.dart';
 import 'package:school_pulse/features/director/presentation/screens/director_reports_screen.dart';
 import 'package:school_pulse/features/student_identity/presentation/screens/student_id_card_screen.dart';
+import 'package:school_pulse/features/student_identity/presentation/bloc/student_identity_bloc.dart';
 import 'package:school_pulse/features/attendance_qr_integration/presentation/screens/qr_attendance_dashboard_screen.dart';
 import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/super_admin_dashboard.dart';
@@ -233,8 +234,10 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/student/id-card',
-          builder: (context, state) =>
-              StudentIdCardScreen(student: state.extra as Student),
+          builder: (context, state) => BlocProvider(
+            create: (_) => di.sl<StudentIdentityBloc>(),
+            child: StudentIdCardScreen(student: state.extra as Student),
+          ),
         ),
       ],
     ),
@@ -742,7 +745,10 @@ final router = GoRouter(
               path: 'student-id-card',
               builder: (context, state) {
                 final student = state.extra as Student;
-                return StudentIdCardScreen(student: student);
+                return BlocProvider(
+                  create: (_) => di.sl<StudentIdentityBloc>(),
+                  child: StudentIdCardScreen(student: student),
+                );
               },
             ),
           ],

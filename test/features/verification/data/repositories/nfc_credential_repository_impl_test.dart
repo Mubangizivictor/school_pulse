@@ -1,3 +1,4 @@
+import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source.dart';
@@ -213,6 +214,33 @@ void main() {
       final saved = captured.cast<CachedCredentialIsar>();
       expect(saved.map((c) => c.credentialValue), containsAll(['OLD', 'NEW']));
       expect(saved.firstWhere((c) => c.credentialValue == 'NEW').status, 'active');
+    });
+  });
+
+  group('findAssignedCredential', () {
+    test('returns the credentialValue of the most recent mapping for an identity', () async {
+      when(() => localDataSource.findCredentialByIdentity('SP-STUDENT-1', schoolId)).thenAnswer(
+        (_) async => CachedCredentialIsar()
+          ..credentialValue = cardUid
+          ..credentialType = 'nfc'
+          ..identityId = 'SP-STUDENT-1'
+          ..identityType = 'student'
+          ..schoolId = schoolId
+          ..status = 'revoked'
+          ..updatedAt = DateTime(2026),
+      );
+
+      final result = await repository.findAssignedCredential(identityId: 'SP-STUDENT-1', schoolId: schoolId);
+
+      expect(result, Right(cardUid));
+    });
+
+    test('returns null when the identity has never had a card assigned', () async {
+      when(() => localDataSource.findCredentialByIdentity('SP-STUDENT-1', schoolId)).thenAnswer((_) async => null);
+
+      final result = await repository.findAssignedCredential(identityId: 'SP-STUDENT-1', schoolId: schoolId);
+
+      expect(result, const Right<Object, String?>(null));
     });
   });
 }
