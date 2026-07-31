@@ -1,15 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:get_it/get_it.dart';
 import 'package:provider/provider.dart';
 import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
+import 'package:school_pulse/features/auth/domain/services/staff_id_card_service.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 
 class StaffProfileScreen extends StatelessWidget {
   const StaffProfileScreen({super.key});
+
+  Future<void> _printIdCard(BuildContext context, UserEntity user) async {
+    final idCardService = GetIt.I<StaffIdCardService>();
+    final schoolName = context.read<ThemeProvider>().config?.schoolName ?? 'School Pulse Academy';
+    try {
+      final pdfData = await idCardService.generateStaffIdCardPdf(
+        schoolName: schoolName,
+        staffName: user.name,
+        staffCode: user.staffCode ?? user.id,
+        roleLabel: UserRoleDisplay.name(user.role),
+      );
+      await idCardService.printIdCard(pdfData);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to print ID card: $e')));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +42,16 @@ class StaffProfileScreen extends StatelessWidget {
         final user = state.user;
 
         return Scaffold(
-          appBar: AppBar(title: const Text('My Profile')),
+          appBar: AppBar(
+            title: const Text('My Profile'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.badge_outlined),
+                tooltip: 'Print Staff ID Card',
+                onPressed: () => _printIdCard(context, user),
+              ),
+            ],
+          ),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(

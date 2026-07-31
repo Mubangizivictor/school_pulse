@@ -112,6 +112,9 @@ import 'package:school_pulse/features/student/presentation/bloc/admission_bloc.d
 import 'package:school_pulse/features/student_identity/domain/repositories/student_identity_repository.dart';
 import 'package:school_pulse/features/student_identity/data/repositories/student_identity_repository_impl.dart';
 import 'package:school_pulse/features/student_identity/presentation/bloc/student_identity_bloc.dart';
+import 'package:school_pulse/features/student_identity/domain/services/id_card_service.dart';
+import 'package:school_pulse/features/auth/domain/services/staff_id_card_service.dart';
+import 'package:school_pulse/features/visitors/domain/services/visitor_id_card_service.dart';
 import 'package:school_pulse/features/student_identity/domain/services/id_generator_service.dart';
 import 'package:school_pulse/features/student_identity/domain/services/nfc_credential_service.dart';
 
@@ -575,6 +578,13 @@ Future<void> init() async {
   // Features - Student Identity (QR / ID card resolution, used by the
   // security module's gate verification workflow)
   sl.registerLazySingleton(() => IdGeneratorService());
+
+  // Also never registered - StudentIdCardScreen's print button resolves
+  // this via GetIt.I<IdCardService>() and would have thrown
+  // "type IdCardService is not registered" the moment anyone pressed it.
+  sl.registerLazySingleton(() => IdCardService());
+  sl.registerLazySingleton(() => StaffIdCardService());
+  sl.registerLazySingleton(() => VisitorIdCardService());
 
   sl.registerLazySingleton<StudentIdentityRepository>(
     () => StudentIdentityRepositoryImpl(firestore: sl(), isar: sl(), idGenerator: sl()),

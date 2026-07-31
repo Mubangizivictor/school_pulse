@@ -1,13 +1,16 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import 'package:intl/intl.dart';
+import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/core/services/printer/printer_service.dart';
 import 'package:school_pulse/injection_container.dart';
 import 'package:uuid/uuid.dart';
 import '../../domain/entities/visitor.dart';
 import '../../domain/entities/visitor_blacklist.dart';
+import '../../domain/services/visitor_id_card_service.dart';
 import '../bloc/visitors_bloc.dart';
 import '../bloc/visitors_event.dart';
 import '../bloc/visitors_state.dart';
@@ -18,6 +21,26 @@ class VisitorDetailsScreen extends StatelessWidget {
   final Visitor visitor;
 
   const VisitorDetailsScreen({super.key, required this.visitor});
+
+  Future<void> _printVisitorPass(BuildContext context) async {
+    final idCardService = GetIt.I<VisitorIdCardService>();
+    final schoolName = context.read<ThemeProvider>().config?.schoolName ?? 'School Pulse Academy';
+    try {
+      final pdfData = await idCardService.generateVisitorIdCardPdf(
+        schoolName: schoolName,
+        visitorName: visitor.fullName,
+        badgeNumber: visitor.badgeNumber,
+        host: visitor.host,
+        purpose: visitor.purpose,
+        arrivalTime: visitor.arrivalTime,
+      );
+      await idCardService.printIdCard(pdfData);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to print visitor pass: $e')));
+      }
+    }
+  }
 
   void _showBlacklistDialog(BuildContext context) {
     final reasonController = TextEditingController();
@@ -122,6 +145,11 @@ class VisitorDetailsScreen extends StatelessWidget {
               ),
               tooltip: 'Show QR Pass',
             ),
+          IconButton(
+            icon: const Icon(Icons.print_outlined),
+            onPressed: () => _printVisitorPass(context),
+            tooltip: 'Print Visitor Pass',
+          ),
           PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'blacklist') {
