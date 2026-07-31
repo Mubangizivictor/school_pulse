@@ -100,6 +100,11 @@ class _NurseDashboardScreenState extends State<NurseDashboardScreen> {
           title: const Text('School Health Portal'),
           actions: [
             IconButton(
+              icon: const Icon(Icons.search),
+              tooltip: 'Student Health Lookup',
+              onPressed: () => context.push('/staff/nurse/lookup'),
+            ),
+            IconButton(
               icon: const Icon(Icons.message_outlined),
               tooltip: 'Messages',
               onPressed: () => context.push('/staff/messages'),

@@ -63,10 +63,13 @@ import 'package:school_pulse/features/teacher/report_comments_screen.dart';
 import 'package:school_pulse/features/calendar/presentation/school_calendar_screen.dart';
 import 'package:school_pulse/features/lesson_plans/presentation/lesson_plans_screen.dart';
 import 'package:school_pulse/features/bursar/bursar_dashboard.dart';
+import 'package:school_pulse/features/finance/presentation/screens/bursar_student_lookup_screen.dart';
 import 'package:school_pulse/features/nurse/nurse_dashboard.dart';
+import 'package:school_pulse/features/health/presentation/screens/nurse_student_lookup_screen.dart';
 import 'package:school_pulse/features/health/presentation/bloc/health_bloc.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 import 'package:school_pulse/features/librarian/librarian_dashboard.dart';
+import 'package:school_pulse/features/library/presentation/screens/library_student_lookup_screen.dart';
 import 'package:school_pulse/features/matron/matron_dashboard.dart';
 import 'package:school_pulse/features/inventory/inventory_dashboard.dart';
 import 'package:school_pulse/features/patron/presentation/screens/patron_dashboard.dart';
@@ -76,6 +79,7 @@ import 'package:school_pulse/features/patron/presentation/screens/welfare_manage
 import 'package:school_pulse/features/patron/presentation/screens/discipline_management_screen.dart';
 import 'package:school_pulse/features/teacher/attendance_history_screen.dart';
 import 'package:school_pulse/features/catering/presentation/catering_dashboard_screen.dart';
+import 'package:school_pulse/features/catering/presentation/screens/catering_student_lookup_screen.dart';
 import 'package:school_pulse/features/security/presentation/security_dashboard_screen.dart';
 import 'package:school_pulse/features/security/presentation/gatekeeper/gatekeeper_home_screen.dart';
 import 'package:school_pulse/features/security/presentation/screens/gate_management_screen.dart';
@@ -84,6 +88,7 @@ import 'package:school_pulse/features/security/presentation/screens/patrol_log_s
 import 'package:school_pulse/features/security/presentation/screens/admin_security_settings_screen.dart';
 import 'package:school_pulse/features/security/presentation/screens/security_reports_screen.dart';
 import 'package:school_pulse/features/transport/presentation/transport_coordinator_dashboard_screen.dart';
+import 'package:school_pulse/features/transport/presentation/screens/transport_student_lookup_screen.dart';
 import 'package:school_pulse/features/discipline/presentation/discipline_dashboard_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/workload/teacher_workload_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/approvals/dean_approvals_screen.dart';
@@ -380,6 +385,12 @@ final router = GoRouter(
         GoRoute(
           path: '/staff/bursar',
           builder: (context, state) => const BursarDashboardScreen(),
+          routes: [
+            GoRoute(
+              path: 'lookup',
+              builder: (context, state) => const BursarStudentLookupScreen(),
+            ),
+          ],
         ),
         GoRoute(
           path: '/staff/nurse',
@@ -432,11 +443,21 @@ final router = GoRouter(
                 ),
               ),
             ),
+            GoRoute(
+              path: 'lookup',
+              builder: (context, state) => const NurseStudentLookupScreen(),
+            ),
           ],
         ),
         GoRoute(
           path: '/staff/librarian',
           builder: (context, state) => const LibrarianDashboardScreen(),
+          routes: [
+            GoRoute(
+              path: 'lookup',
+              builder: (context, state) => const LibraryStudentLookupScreen(),
+            ),
+          ],
         ),
         GoRoute(
           path: '/staff/security',
@@ -556,6 +577,12 @@ final router = GoRouter(
         GoRoute(
           path: '/staff/catering',
           builder: (context, state) => const CateringDashboardScreen(),
+          routes: [
+            GoRoute(
+              path: 'lookup',
+              builder: (context, state) => const CateringStudentLookupScreen(),
+            ),
+          ],
         ),
         GoRoute(
           path: '/staff/games',
@@ -565,6 +592,12 @@ final router = GoRouter(
           path: '/staff/transport',
           builder: (context, state) =>
               const TransportCoordinatorDashboardScreen(),
+          routes: [
+            GoRoute(
+              path: 'lookup',
+              builder: (context, state) => const TransportStudentLookupScreen(),
+            ),
+          ],
         ),
         GoRoute(
           path: '/staff/discipline',

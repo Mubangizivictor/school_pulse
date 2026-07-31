@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
@@ -84,6 +85,11 @@ class _TransportCoordinatorDashboardScreenState extends State<TransportCoordinat
       appBar: AppBar(
         title: const Text('Transport Portal'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: 'Student Route Lookup',
+            onPressed: () => context.push('/staff/transport/lookup'),
+          ),
           const NotificationBellButton(),
         ],
       ),

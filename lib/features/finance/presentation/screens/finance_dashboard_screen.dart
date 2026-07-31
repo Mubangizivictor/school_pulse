@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/core/utils.dart';
@@ -49,6 +50,11 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen> {
       appBar: AppBar(
         title: const Text('Financial Management'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () => context.push('/staff/bursar/lookup'),
+            tooltip: 'Student Balance Lookup',
+          ),
           IconButton(
             icon: const Icon(Icons.qr_code_scanner),
             onPressed: () => _scanReceipt(context),

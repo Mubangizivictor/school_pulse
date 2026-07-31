@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
@@ -69,6 +70,11 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
         appBar: AppBar(
           title: const Text('Catering Management'),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () => context.push('/staff/catering/lookup'),
+              tooltip: 'Meal Eligibility Lookup',
+            ),
             IconButton(
               icon: const Icon(Icons.qr_code_scanner),
               onPressed: () => _scanForMeal(context),
@@ -356,8 +362,16 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
             const SizedBox(height: 24),
             _buildStudentDetailRow('Student', data['studentName']),
             _buildStudentDetailRow('Class', data['class']),
-            _buildStudentDetailRow('Status', status, color: isCleared ? semanticColors.success : semanticColors.error),
-            _buildStudentDetailRow('Fees Paid', '${data['percentagePaid'].toStringAsFixed(1)}%'),
+            // Deliberately no balance/percentage-paid row here - catering
+            // staff see eligible/not-eligible only, never why, per the
+            // "never reveal balances" requirement (see
+            // CateringEligibilityService, which enforces this for the
+            // manual-search lookup path).
+            if (!isCleared)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Text('Meal not authorized. Please contact the bursar.', textAlign: TextAlign.center),
+              ),
             const SizedBox(height: 32),
             if (isCleared)
               SizedBox(

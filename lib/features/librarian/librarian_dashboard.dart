@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/library/presentation/bloc/library_bloc.dart';
@@ -32,6 +33,11 @@ class _LibrarianDashboardScreenState extends State<LibrarianDashboardScreen> {
       appBar: AppBar(
         title: const Text('Library Dashboard'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: 'Student Eligibility Lookup',
+            onPressed: () => context.push('/staff/librarian/lookup'),
+          ),
           IconButton(
             icon: const Icon(Icons.qr_code_scanner),
             onPressed: () {
