@@ -12,11 +12,13 @@ class StaffMoreScreen extends StatelessWidget {
   const StaffMoreScreen({super.key});
 
   static const _teacherRoles = [UserRole.classTeacher, UserRole.subjectTeacher];
+  static const _boardingRoles = [UserRole.boardingPatron, UserRole.boardingMatron];
 
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthBloc>().state;
     final isTeacher = authState is AuthAuthenticated && _teacherRoles.contains(authState.user.role);
+    final isBoardingStaff = authState is AuthAuthenticated && _boardingRoles.contains(authState.user.role);
 
     return Scaffold(
       appBar: AppBar(title: const Text('More')),
@@ -52,14 +54,15 @@ class StaffMoreScreen extends StatelessWidget {
                     title: 'Class Analytics',
                     onTap: () => context.push('/staff/class-analytics'),
                   ),
-                _MenuTile(
-                  icon: Icons.library_books_outlined,
-                  title: 'Library & Resources',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const TeacherLibraryScreen()),
+                if (!isBoardingStaff)
+                  _MenuTile(
+                    icon: Icons.library_books_outlined,
+                    title: 'Library & Resources',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const TeacherLibraryScreen()),
+                    ),
                   ),
-                ),
                 _MenuTile(
                   icon: Icons.event_note_outlined,
                   title: 'School Calendar',

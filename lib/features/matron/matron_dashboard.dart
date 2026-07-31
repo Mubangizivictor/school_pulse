@@ -52,12 +52,6 @@ class _MatronDashboardScreenState extends State<MatronDashboardScreen> {
     final isPatron = genderScope == 'Male';
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          isPatron ? 'Patron Dashboard (Boys)' : 'Matron Dashboard (Girls)',
-        ),
-        actions: const [NotificationBellButton()],
-      ),
       body: BlocBuilder<MatronBloc, MatronState>(
         builder: (context, state) {
           if (state is MatronLoading) {
@@ -70,6 +64,9 @@ class _MatronDashboardScreenState extends State<MatronDashboardScreen> {
 
           if (state is MatronDashboardLoaded) {
             final data = state.data;
+            final authState = context.watch<AuthBloc>().state;
+            final userName = authState is AuthAuthenticated ? authState.user.name : 'User';
+
             return RefreshIndicator(
               onRefresh: () async {
                 context.read<MatronBloc>().add(
@@ -80,44 +77,52 @@ class _MatronDashboardScreenState extends State<MatronDashboardScreen> {
                 );
               },
               child: ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12),
                 children: [
-                  FadeInSlide(
-                    child: Text(
-                      'Boarding Welfare Overview',
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.bold),
-                    ),
+                  const SizedBox(height: 48), // Space for status bar
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Welcome back,',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Theme.of(context).colorScheme.outline,
+                              ),
+                            ),
+                            Text(
+                              userName,
+                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const NotificationBellButton(),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  _buildStatsGrid(context, data, semanticColors),
-                  const SizedBox(height: 24),
-                  _buildSectionTitle(context, 'Management Hub'),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 20),
                   _buildManagementGrid(context, isPatron),
-                  const SizedBox(height: 24),
-                  _buildSectionTitle(context, 'Dormitories Status'),
                   const SizedBox(height: 12),
+                  const SectionHeader(title: 'Dormitories Status'),
                   ...data.dormitories.map(
                     (dorm) => _DormitoryStatusCard(dorm: dorm),
                   ),
+                  const SizedBox(height: 20),
+                  const SectionHeader(title: 'Boarding Analytics'),
+                  const SizedBox(height: 8),
+                  _buildStatsGrid(context, data, semanticColors),
                 ],
               ),
             );
           }
           return const SizedBox.shrink();
         },
-      ),
-    );
-  }
-
-  Widget _buildSectionTitle(BuildContext context, String title) {
-    return FadeInSlide(
-      child: Text(
-        title,
-        style: Theme.of(
-          context,
-        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -136,27 +141,27 @@ class _MatronDashboardScreenState extends State<MatronDashboardScreen> {
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          childAspectRatio: 1.5,
+          childAspectRatio: 2.5,
           children: [
-            DashboardStatCard(
+            AnalyticalStatCard(
               title: 'Boarders',
               value: data.totalStudents.toDouble(),
               icon: Icons.people_outline,
               color: Theme.of(context).colorScheme.primary,
             ),
-            DashboardStatCard(
+            AnalyticalStatCard(
               title: 'Present',
               value: data.studentsPresent.toDouble(),
               icon: Icons.check_circle_outline,
               color: semanticColors.success,
             ),
-            DashboardStatCard(
+            AnalyticalStatCard(
               title: 'Leave',
               value: data.studentsOnLeave.toDouble(),
               icon: Icons.exit_to_app,
               color: semanticColors.warning,
             ),
-            DashboardStatCard(
+            AnalyticalStatCard(
               title: 'Discipline',
               value: data.activeDisciplineCases.toDouble(),
               icon: Icons.gavel_outlined,
@@ -173,9 +178,9 @@ class _MatronDashboardScreenState extends State<MatronDashboardScreen> {
       crossAxisCount: 2,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 2.2,
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
+      childAspectRatio: 2.6,
       children: [
         _QuickActionCard(
           label: 'Dormitories',
@@ -225,14 +230,6 @@ class _MatronDashboardScreenState extends State<MatronDashboardScreen> {
               ),
             ),
           ),
-        _QuickActionCard(
-          label: 'Reports',
-          icon: Icons.assessment_outlined,
-          color: Colors.purple,
-          onTap: () {
-            // TODO: Navigate to reports
-          },
-        ),
       ],
     );
   }
@@ -257,18 +254,18 @@ class _QuickActionCard extends StatelessWidget {
       padding: EdgeInsets.zero,
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(color: color.withValues(alpha: 0.05)),
         child: Row(
           children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(width: 12),
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 label,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 14,
+                  fontSize: 13,
                   color: color,
                 ),
               ),
@@ -360,35 +357,40 @@ class _MatronSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       children: [
-        const Skeleton(width: 250, height: 32),
-        const SizedBox(height: 24),
         GridView.count(
           crossAxisCount: 2,
           shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          childAspectRatio: 1.5,
+          childAspectRatio: 2.5,
           children: List.generate(
             4,
-            (index) => const Skeleton(borderRadius: 12),
+            (index) => const Skeleton(borderRadius: 16),
           ),
         ),
-        const SizedBox(height: 24),
-        const Skeleton(width: 150, height: 24),
         const SizedBox(height: 12),
         GridView.count(
           crossAxisCount: 2,
           shrinkWrap: true,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 2.2,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          childAspectRatio: 2.6,
           children: List.generate(
             4,
-            (index) => const Skeleton(borderRadius: 12),
+            (index) => const Skeleton(borderRadius: 16),
           ),
         ),
+        const SizedBox(height: 12),
+        const Skeleton(width: 160, height: 24, borderRadius: 4),
+        const SizedBox(height: 12),
+        ...List.generate(3, (index) => const Padding(
+          padding: EdgeInsets.only(bottom: 12),
+          child: Skeleton(height: 110, borderRadius: 16),
+        )),
       ],
     );
   }

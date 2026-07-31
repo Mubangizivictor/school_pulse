@@ -7,7 +7,6 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_event.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_state.dart';
-import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 import 'package:school_pulse/injection_container.dart';
 import '../../domain/entities/academic_dashboard_stats.dart';
 
@@ -22,13 +21,13 @@ class DeanDashboardScreen extends StatelessWidget {
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
         body: CustomScrollView(
           slivers: [
-            _buildAppBar(context),
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    const SizedBox(height: 48),
                     _buildGreeting(context),
                     const SizedBox(height: 24),
                     _buildActionGrid(context),
@@ -45,25 +44,6 @@ class DeanDashboardScreen extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildAppBar(BuildContext context) {
-    return SliverAppBar(
-      pinned: true,
-      expandedHeight: 80,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      title: const Text('Academic Command Centre',
-          style: TextStyle(fontWeight: FontWeight.bold)),
-      actions: [
-        const NotificationBellButton(),
-        const SizedBox(width: 8),
-        IconButton(
-          icon: const Icon(Icons.settings_outlined),
-          onPressed: () {},
-        ),
-        const SizedBox(width: 8),
-      ],
     );
   }
 

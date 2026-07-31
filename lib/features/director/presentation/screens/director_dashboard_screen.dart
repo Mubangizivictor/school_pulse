@@ -7,7 +7,6 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/director/presentation/bloc/director_bloc.dart';
 import 'package:school_pulse/features/director/presentation/bloc/director_event.dart';
 import 'package:school_pulse/features/director/presentation/bloc/director_state.dart';
-import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 import '../../domain/entities/director_dashboard_stats.dart';
 
 class DirectorDashboardScreen extends StatelessWidget {
@@ -20,13 +19,13 @@ class DirectorDashboardScreen extends StatelessWidget {
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
         body: CustomScrollView(
           slivers: [
-            _buildAppBar(context),
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    const SizedBox(height: 48),
                     _buildGreeting(context),
                     const SizedBox(height: 24),
                     _buildOverviewGrid(context),
@@ -45,26 +44,6 @@ class DirectorDashboardScreen extends StatelessWidget {
             ),
           ],
         ),
-    );
-  }
-
-  Widget _buildAppBar(BuildContext context) {
-    return SliverAppBar(
-      pinned: true,
-      expandedHeight: 80,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      title: const Text('Executive Dashboard',
-          style: TextStyle(fontWeight: FontWeight.bold)),
-      actions: [
-        const NotificationBellButton(),
-        const SizedBox(width: 8),
-        IconButton(
-          icon: const Icon(Icons.print_outlined),
-          onPressed: () {},
-          tooltip: 'Export Report',
-        ),
-        const SizedBox(width: 8),
-      ],
     );
   }
 

@@ -45,50 +45,74 @@ class _PatronDashboardState extends State<PatronDashboard> {
     _loadData();
   }
 
+  // PatronBloc is provided once at the app root (see main.dart), so this
+  // screen's State - and its original stream subscriptions - survive
+  // Navigator.push/pop instead of being recreated. Without this,
+  // navigating to another patron screen and back leaves the dashboard
+  // showing whatever it last rendered before the push, since initState()
+  // never runs again. Re-running _loadData() on return keeps it fresh.
+  void _navigateAndReload(Widget screen) {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => screen)).then((_) {
+      if (mounted) _loadData();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
+    final authState = context.watch<AuthBloc>().state;
+    final userName = authState is AuthAuthenticated ? authState.user.name : 'User';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Patron Dashboard (Boys)'),
-        actions: const [NotificationBellButton()],
-      ),
       body: RefreshIndicator(
         onRefresh: () async => _loadData(),
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           children: [
-            FadeInSlide(
-              child: Text(
-                'Boarding Overview',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-              ),
-            ),
-            const SizedBox(height: 16),
-            BlocBuilder<PatronBloc, PatronState>(
-              buildWhen: (previous, current) => current is DashboardOverviewLoaded || current is PatronLoading,
-              builder: (context, state) {
-                if (state is DashboardOverviewLoaded) {
-                  return Column(
+            const SizedBox(height: 48), // Space for status bar
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildStatsGrid(context, state.overview, semanticColors),
-                      const SizedBox(height: 16),
-                      _buildAlerts(context, state.overview, semanticColors),
+                      Text(
+                        'Welcome back,',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                      ),
+                      Text(
+                        userName,
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.5,
+                            ),
+                      ),
                     ],
+                  ),
+                ),
+                const NotificationBellButton(),
+              ],
+            ),
+            const SizedBox(height: 20),
+            _buildManagementGrid(context),
+            const SizedBox(height: 12),
+            BlocBuilder<PatronBloc, PatronState>(
+              buildWhen: (previous, current) => current is DashboardOverviewLoaded,
+              builder: (context, state) {
+                if (state is DashboardOverviewLoaded &&
+                    (state.overview.missingStudentCount > 0 || state.overview.overdueLeaveCount > 0)) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _buildAlerts(context, state.overview, semanticColors),
                   );
                 }
-                return const _StatsSkeleton();
+                return const SizedBox.shrink();
               },
             ),
-            const SizedBox(height: 24),
-            SectionHeader(title: 'Management Hub'),
-            const SizedBox(height: 12),
-            _buildManagementGrid(context),
-            const SizedBox(height: 24),
-            SectionHeader(title: 'Dormitories'),
-            const SizedBox(height: 12),
+            const SectionHeader(title: 'Dormitories'),
             BlocBuilder<PatronBloc, PatronState>(
               buildWhen: (previous, current) => current is DormitoriesLoaded,
               builder: (context, state) {
@@ -109,9 +133,8 @@ class _PatronDashboardState extends State<PatronDashboard> {
                 return const Skeleton(height: 96, borderRadius: 12);
               },
             ),
-            const SizedBox(height: 24),
-            SectionHeader(title: 'Recent Announcements'),
             const SizedBox(height: 12),
+            const SectionHeader(title: 'Recent Announcements'),
             BlocBuilder<PatronBloc, PatronState>(
               buildWhen: (previous, current) => current is AnnouncementsLoaded,
               builder: (context, state) {
@@ -139,76 +162,11 @@ class _PatronDashboardState extends State<PatronDashboard> {
                 return const Skeleton(height: 72, borderRadius: 12);
               },
             ),
+            const SizedBox(height: 20),
+            _AnalyticsCta(onTap: () => _navigateAndReload(const ReportsScreen())),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildStatsGrid(BuildContext context, PatronDashboardOverview data, SemanticColors semanticColors) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isMobile = constraints.maxWidth < 600;
-        return GridView.count(
-          crossAxisCount: isMobile ? 2 : 4,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 2.5,
-          children: [
-            AnalyticalStatCard(
-              title: 'Boarders',
-              value: data.totalStudents.toDouble(),
-              icon: Icons.people_outline,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            AnalyticalStatCard(
-              title: 'Present',
-              value: data.studentsPresent.toDouble(),
-              icon: Icons.check_circle_outline,
-              color: semanticColors.success,
-            ),
-            AnalyticalStatCard(
-              title: 'On Leave',
-              value: data.studentsOnLeave.toDouble(),
-              icon: Icons.exit_to_app,
-              color: semanticColors.warning,
-            ),
-            AnalyticalStatCard(
-              title: 'Bed Occupancy',
-              value: data.totalBeds == 0 ? 0 : (data.occupiedBeds / data.totalBeds) * 100,
-              icon: Icons.bed_outlined,
-              color: Colors.blue,
-              suffix: '%',
-            ),
-            AnalyticalStatCard(
-              title: 'Discipline Cases',
-              value: data.openDisciplineCases.toDouble(),
-              icon: Icons.gavel_outlined,
-              color: semanticColors.error,
-            ),
-            AnalyticalStatCard(
-              title: 'Welfare Concerns',
-              value: data.pendingWelfareConcerns.toDouble(),
-              icon: Icons.favorite_outline,
-              color: Colors.pink,
-            ),
-            AnalyticalStatCard(
-              title: 'Pending Leave',
-              value: data.pendingLeaveRequests.toDouble(),
-              icon: Icons.pending_actions_outlined,
-              color: Colors.purple,
-            ),
-            AnalyticalStatCard(
-              title: 'Missing',
-              value: data.missingStudentCount.toDouble(),
-              icon: Icons.person_search_outlined,
-              color: semanticColors.error,
-            ),
-          ],
-        );
-      },
     );
   }
 
@@ -219,7 +177,7 @@ class _PatronDashboardState extends State<PatronDashboard> {
         icon: Icons.person_search_outlined,
         color: semanticColors.error,
         message: '${data.missingStudentCount} boarder(s) unaccounted for at last roll call.',
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BoardingAttendanceScreen())),
+        onTap: () => _navigateAndReload(const BoardingAttendanceScreen()),
       ));
     }
     if (data.overdueLeaveCount > 0) {
@@ -227,7 +185,7 @@ class _PatronDashboardState extends State<PatronDashboard> {
         icon: Icons.watch_later_outlined,
         color: semanticColors.warning,
         message: '${data.overdueLeaveCount} student(s) overdue from leave.',
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LeaveManagementScreen())),
+        onTap: () => _navigateAndReload(const LeaveManagementScreen()),
       ));
     }
     if (alerts.isEmpty) return const SizedBox.shrink();
@@ -241,49 +199,49 @@ class _PatronDashboardState extends State<PatronDashboard> {
           label: 'Dormitories',
           icon: Icons.hotel_outlined,
           color: Colors.blue,
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DormitoryManagementScreen())),
+          onTap: () => _navigateAndReload(const DormitoryManagementScreen()),
         ),
         QuickActionItem(
           label: 'Beds',
           icon: Icons.bed_outlined,
           color: Colors.indigo,
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DormitoryManagementScreen())),
+          onTap: () => _navigateAndReload(const DormitoryManagementScreen()),
         ),
         QuickActionItem(
           label: 'Attendance',
           icon: Icons.how_to_reg_outlined,
           color: Colors.green,
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BoardingAttendanceScreen())),
+          onTap: () => _navigateAndReload(const BoardingAttendanceScreen()),
         ),
         QuickActionItem(
           label: 'Leave',
           icon: Icons.exit_to_app,
           color: Colors.deepOrange,
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LeaveManagementScreen())),
+          onTap: () => _navigateAndReload(const LeaveManagementScreen()),
         ),
         QuickActionItem(
           label: 'Welfare',
           icon: Icons.favorite_outline,
           color: Colors.pink,
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WelfareManagementScreen())),
+          onTap: () => _navigateAndReload(const WelfareManagementScreen()),
         ),
         QuickActionItem(
           label: 'Discipline',
           icon: Icons.gavel_outlined,
           color: Colors.red,
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DisciplineManagementScreen())),
+          onTap: () => _navigateAndReload(const DisciplineManagementScreen()),
         ),
         QuickActionItem(
           label: 'Communication',
           icon: Icons.campaign_outlined,
           color: Colors.teal,
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CommunicationScreen())),
+          onTap: () => _navigateAndReload(const CommunicationScreen()),
         ),
         QuickActionItem(
           label: 'Reports',
           icon: Icons.assessment_outlined,
           color: Colors.purple,
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReportsScreen())),
+          onTap: () => _navigateAndReload(const ReportsScreen()),
         ),
       ],
     );
@@ -316,6 +274,50 @@ class _AlertBanner extends StatelessWidget {
             child: Text(message, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
           ),
           Icon(Icons.chevron_right, color: color),
+        ],
+      ),
+    );
+  }
+}
+
+class _AnalyticsCta extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _AnalyticsCta({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AppCard(
+      onTap: onTap,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.purple.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.insights_outlined, color: Colors.purple),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Boarding Analytics',
+                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Occupancy, discipline, welfare & leave trends',
+                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right, color: theme.colorScheme.outline),
         ],
       ),
     );
@@ -377,23 +379,6 @@ class _DormitoryStatusCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _StatsSkeleton extends StatelessWidget {
-  const _StatsSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 2.5,
-      children: List.generate(4, (index) => const Skeleton(borderRadius: 12)),
     );
   }
 }
