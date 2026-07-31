@@ -921,7 +921,7 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<PatronRemoteDataSource>(
-    () => PatronRemoteDataSourceImpl(firestore: sl()),
+    () => PatronRemoteDataSourceImpl(firestore: sl(), auditRepository: sl()),
   );
 
   // Features - Notifications

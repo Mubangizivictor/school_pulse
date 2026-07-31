@@ -288,6 +288,46 @@ service cloud.firestore {
         request.resource.data.schoolId == resource.data.schoolId;
       allow delete: if false;
     }
+
+    // ---- Patron (boys' boarding) module -------------------------------
+    // Boarding roll-call. Distinct from the generic `attendance` collection
+    // used by the classroom attendance engine.
+    match /boarding_attendance/{docId} {
+      allow read: if isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId);
+      allow write: if hasAnyRole(['boardingPatron', 'schoolAdmin', 'headTeacher', 'director']);
+    }
+    // Boarding-specific discipline incidents (separate from the general
+    // Guidance & Discipline module's discipline_incidents collection).
+    // isPrivate defaults true in the app - parents only ever see a doc once
+    // a patron explicitly discloses it by setting isPrivate: false.
+    match /boarding_discipline/{docId} {
+      allow read: if isStaff() || (
+        resource.data.isPrivate == false &&
+        (isParentOf(resource.data.studentId) || isMe(resource.data.studentId))
+      );
+      allow write: if hasAnyRole(['boardingPatron', 'schoolAdmin', 'headTeacher', 'director']);
+    }
+    match /boarding_announcements/{docId} {
+      allow read: if isSignedIn();
+      allow write: if hasAnyRole(['boardingPatron', 'schoolAdmin', 'headTeacher', 'director']);
+    }
+    match /boarding_leave_requests/{docId} {
+      allow read: if isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId);
+      allow write: if hasAnyRole(['boardingPatron', 'schoolAdmin', 'headTeacher', 'director']);
+    }
+    // Bed-to-bed / dorm-to-dorm move log, kept separately from the
+    // per-dormitory `beds` subcollection so history survives a bed deletion.
+    match /bed_transfers/{docId} {
+      allow read, write: if hasAnyRole(['boardingPatron', 'schoolAdmin', 'headTeacher', 'director']);
+    }
+    // Sensitive - counseling referrals are staff-only, never parent-visible.
+    match /boarding_counseling_referrals/{docId} {
+      allow read, write: if hasAnyRole(['boardingPatron', 'schoolAdmin', 'headTeacher', 'director']);
+    }
+    match /boarding_behaviour_observations/{docId} {
+      allow read, write: if hasAnyRole(['boardingPatron', 'schoolAdmin', 'headTeacher', 'director']);
+    }
+
     match /library_books/{docId} {
       allow read: if isStudentRecordReadable();
       allow write: if isStaff();
@@ -718,6 +758,12 @@ service cloud.firestore {
     match /dormitories/{id} {
       allow read: if isSignedIn();
       allow write: if isStaff();
+
+      // Per-bed allocation state, owned by the Patron/Matron boarding
+      // modules - not touched by any other feature.
+      match /beds/{bedId} {
+        allow read, write: if hasAnyRole(['boardingPatron', 'boardingMatron', 'schoolAdmin', 'headTeacher', 'director']);
+      }
     }
     match /meal_plans/{id} {
       allow read, write: if isStaff();
