@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
+import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/patron/domain/entities/patron_entities.dart';
 import 'package:school_pulse/features/patron/presentation/bloc/patron_bloc.dart';
 import 'package:school_pulse/features/patron/presentation/bloc/patron_event.dart';
 import 'package:school_pulse/features/patron/presentation/bloc/patron_state.dart';
-import 'package:intl/intl.dart';
+
+const _kSeverities = ['Low', 'Medium', 'High'];
+const _kCategories = ['Curfew Violation', 'Disruptive Behaviour', 'Property Damage', 'Bullying', 'Substance Use', 'Other'];
 
 class DisciplineManagementScreen extends StatefulWidget {
   const DisciplineManagementScreen({super.key});
@@ -21,13 +28,17 @@ class _DisciplineManagementScreenState extends State<DisciplineManagementScreen>
     context.read<PatronBloc>().add(WatchBoardingStudents());
   }
 
+  String _currentUserName(BuildContext context) {
+    final authState = context.read<AuthBloc>().state;
+    return authState is AuthAuthenticated ? authState.user.name : 'Patron';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Discipline Tracking'),
-      ),
+      appBar: AppBar(title: const Text('Discipline Tracking')),
       body: BlocBuilder<PatronBloc, PatronState>(
+        buildWhen: (previous, current) => current is DisciplineIncidentsLoaded || current is PatronLoading,
         builder: (context, state) {
           if (state is PatronLoading) {
             return const Center(child: CircularProgressIndicator());
@@ -39,67 +50,31 @@ class _DisciplineManagementScreenState extends State<DisciplineManagementScreen>
           }
 
           if (incidents.isEmpty) {
-            return const Center(child: Text('No discipline incidents recorded.'));
+            return const EmptyState(
+              icon: Icons.gavel_outlined,
+              title: 'No Discipline Incidents',
+              message: 'Recorded incidents will appear here for case tracking.',
+            );
           }
 
-          return ListView.builder(
+          final open = incidents.where((i) => i.status != 'Resolved').toList();
+          final resolved = incidents.where((i) => i.status == 'Resolved').toList();
+
+          return ListView(
             padding: const EdgeInsets.all(16),
-            itemCount: incidents.length,
-            itemBuilder: (context, index) {
-              final incident = incidents[index];
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: ExpansionTile(
-                  leading: CircleAvatar(
-                    backgroundColor: _getStatusColor(incident.status).withValues(alpha: 0.2),
-                    child: Icon(Icons.gavel, color: _getStatusColor(incident.status)),
-                  ),
-                  title: Text(incident.studentName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text('${incident.category} • ${DateFormat('MMM d').format(incident.date)}'),
-                  trailing: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _getStatusColor(incident.status).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      incident.status,
-                      style: TextStyle(color: _getStatusColor(incident.status), fontSize: 10, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Description:', style: TextStyle(fontWeight: FontWeight.bold)),
-                          Text(incident.description),
-                          const SizedBox(height: 12),
-                          const Text('Action Taken:', style: TextStyle(fontWeight: FontWeight.bold)),
-                          Text(incident.actionTaken),
-                          const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              if (incident.status == 'Pending')
-                                TextButton(
-                                  onPressed: () => _updateIncidentStatus(incident, 'Resolved'),
-                                  child: const Text('Mark Resolved'),
-                                ),
-                              TextButton(
-                                onPressed: () => _showUpdateStatusDialog(incident),
-                                child: const Text('Update Details'),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
+            children: [
+              if (open.isNotEmpty) ...[
+                SectionHeader(title: 'Open Cases (${open.length})'),
+                const SizedBox(height: 8),
+                ...open.map((i) => _IncidentCard(incident: i, currentUserName: _currentUserName(context))),
+                const SizedBox(height: 16),
+              ],
+              if (resolved.isNotEmpty) ...[
+                SectionHeader(title: 'Resolved (${resolved.length})'),
+                const SizedBox(height: 8),
+                ...resolved.map((i) => _IncidentCard(incident: i, currentUserName: _currentUserName(context))),
+              ],
+            ],
           );
         },
       ),
@@ -111,78 +86,22 @@ class _DisciplineManagementScreenState extends State<DisciplineManagementScreen>
     );
   }
 
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'Pending': return Colors.orange;
-      case 'Resolved': return Colors.green;
-      case 'Follow-up': return Colors.blue;
-      default: return Colors.grey;
-    }
-  }
-
-  void _updateIncidentStatus(DisciplineIncident incident, String status) {
-    context.read<PatronBloc>().add(UpdateDisciplineStatusEvent(
-      incident.id,
-      status,
-      incident.actionTaken,
-    ));
-  }
-
-  void _showUpdateStatusDialog(DisciplineIncident incident) {
-    final actionController = TextEditingController(text: incident.actionTaken);
-    String selectedStatus = incident.status;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Update Incident'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<String>(
-              initialValue: selectedStatus,
-              items: ['Pending', 'Resolved', 'Follow-up']
-                  .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                  .toList(),
-              onChanged: (val) => selectedStatus = val!,
-              decoration: const InputDecoration(labelText: 'Status'),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: actionController,
-              decoration: const InputDecoration(labelText: 'Action Taken', border: OutlineInputBorder()),
-              maxLines: 2,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              context.read<PatronBloc>().add(UpdateDisciplineStatusEvent(
-                incident.id,
-                selectedStatus,
-                actionController.text,
-              ));
-              Navigator.pop(context);
-            },
-            child: const Text('Update'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showLogIncidentDialog(BuildContext context) {
     final descController = TextEditingController();
     final actionController = TextEditingController();
-    String selectedCategory = 'Minor';
+    final locationController = TextEditingController();
+    final witnessesController = TextEditingController();
+    String selectedCategory = _kCategories.first;
+    String selectedSeverity = 'Low';
     BoardingStudent? selectedStudent;
+    var parentNotified = false;
+    var isPrivate = true;
+    final recordedBy = _currentUserName(context);
 
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setState) {
           final patronState = context.watch<PatronBloc>().state;
           List<BoardingStudent> students = [];
           if (patronState is BoardingStudentsLoaded) {
@@ -205,10 +124,25 @@ class _DisciplineManagementScreenState extends State<DisciplineManagementScreen>
                   DropdownButtonFormField<String>(
                     decoration: const InputDecoration(labelText: 'Category'),
                     initialValue: selectedCategory,
-                    items: ['Minor', 'Major', 'Severe', 'Positive Reinforcement']
-                        .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                        .toList(),
+                    items: _kCategories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                     onChanged: (val) => setState(() => selectedCategory = val!),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(labelText: 'Severity'),
+                    initialValue: selectedSeverity,
+                    items: _kSeverities.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                    onChanged: (val) => setState(() => selectedSeverity = val!),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: locationController,
+                    decoration: const InputDecoration(labelText: 'Location', border: OutlineInputBorder()),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: witnessesController,
+                    decoration: const InputDecoration(labelText: 'Witnesses (comma separated)', border: OutlineInputBorder()),
                   ),
                   const SizedBox(height: 16),
                   TextField(
@@ -222,11 +156,25 @@ class _DisciplineManagementScreenState extends State<DisciplineManagementScreen>
                     decoration: const InputDecoration(labelText: 'Initial Action', border: OutlineInputBorder()),
                     maxLines: 2,
                   ),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Notify parent'),
+                    subtitle: const Text('A summary alert will be sent to the parent'),
+                    value: parentNotified,
+                    onChanged: (val) => setState(() => parentNotified = val ?? false),
+                  ),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Keep record private'),
+                    subtitle: const Text('Hidden from parent/student portal unless disclosed later'),
+                    value: isPrivate,
+                    onChanged: (val) => setState(() => isPrivate = val ?? true),
+                  ),
                 ],
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
               ElevatedButton(
                 onPressed: selectedStudent == null || descController.text.isEmpty
                     ? null
@@ -235,21 +183,186 @@ class _DisciplineManagementScreenState extends State<DisciplineManagementScreen>
                           id: '',
                           studentId: selectedStudent!.id,
                           studentName: selectedStudent!.name,
-                          description: descController.text,
+                          description: descController.text.trim(),
                           category: selectedCategory,
-                          actionTaken: actionController.text,
+                          actionTaken: actionController.text.trim(),
                           date: DateTime.now(),
                           status: 'Pending',
-                          recordedBy: 'Patron',
+                          recordedBy: recordedBy,
+                          location: locationController.text.trim().isEmpty ? null : locationController.text.trim(),
+                          witnesses: witnessesController.text
+                              .split(',')
+                              .map((w) => w.trim())
+                              .where((w) => w.isNotEmpty)
+                              .toList(),
+                          severity: selectedSeverity,
+                          parentNotified: parentNotified,
+                          isPrivate: isPrivate,
                         );
                         context.read<PatronBloc>().add(LogDisciplineIncidentEvent(incident));
-                        Navigator.pop(context);
+                        Navigator.pop(dialogContext);
                       },
                 child: const Text('Log Incident'),
               ),
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _IncidentCard extends StatelessWidget {
+  final DisciplineIncident incident;
+  final String currentUserName;
+  const _IncidentCard({required this.incident, required this.currentUserName});
+
+  Color _statusColor(SemanticColors semanticColors) {
+    switch (incident.status) {
+      case 'Pending':
+        return semanticColors.warning;
+      case 'Resolved':
+        return semanticColors.success;
+      case 'Follow-up':
+        return Colors.blue;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Color _severityColor(SemanticColors semanticColors) {
+    switch (incident.severity) {
+      case 'High':
+        return semanticColors.error;
+      case 'Medium':
+        return semanticColors.warning;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
+    return AppCard(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.zero,
+      child: ExpansionTile(
+        leading: CircleAvatar(
+          backgroundColor: _statusColor(semanticColors).withValues(alpha: 0.2),
+          child: Icon(Icons.gavel, color: _statusColor(semanticColors)),
+        ),
+        title: Text(incident.studentName, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text('${incident.category} - ${DateFormat('MMM d').format(incident.date)}'),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            StatusBadge(label: incident.severity, color: _severityColor(semanticColors)),
+            const SizedBox(height: 4),
+            StatusBadge(label: incident.status, color: _statusColor(semanticColors)),
+          ],
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Description:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(incident.description),
+                if (incident.location != null) ...[
+                  const SizedBox(height: 8),
+                  Text('Location: ${incident.location}'),
+                ],
+                if (incident.witnesses.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text('Witnesses: ${incident.witnesses.join(', ')}'),
+                ],
+                const SizedBox(height: 12),
+                const Text('Action Taken:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(incident.actionTaken.isEmpty ? 'None recorded yet' : incident.actionTaken),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(
+                      incident.isPrivate ? Icons.lock_outline : Icons.lock_open_outlined,
+                      size: 14,
+                      color: Colors.grey,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      incident.isPrivate ? 'Private (staff only)' : 'Shared with parent',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (incident.status == 'Pending')
+                      TextButton(
+                        onPressed: () => context.read<PatronBloc>().add(UpdateDisciplineStatusEvent(
+                              incident.id,
+                              'Resolved',
+                              incident.actionTaken,
+                            )),
+                        child: const Text('Mark Resolved'),
+                      ),
+                    TextButton(
+                      onPressed: () => _showUpdateStatusDialog(context, incident),
+                      child: const Text('Update Details'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showUpdateStatusDialog(BuildContext context, DisciplineIncident incident) {
+    final actionController = TextEditingController(text: incident.actionTaken);
+    String selectedStatus = incident.status;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Update Incident'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DropdownButtonFormField<String>(
+              initialValue: selectedStatus,
+              items: ['Pending', 'Resolved', 'Follow-up'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+              onChanged: (val) => selectedStatus = val!,
+              decoration: const InputDecoration(labelText: 'Status'),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: actionController,
+              decoration: const InputDecoration(labelText: 'Action Taken', border: OutlineInputBorder()),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              context.read<PatronBloc>().add(UpdateDisciplineStatusEvent(
+                    incident.id,
+                    selectedStatus,
+                    actionController.text,
+                  ));
+              Navigator.pop(dialogContext);
+            },
+            child: const Text('Update'),
+          ),
+        ],
       ),
     );
   }
