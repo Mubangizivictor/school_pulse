@@ -177,6 +177,7 @@ import 'package:school_pulse/features/health/domain/repositories/health_reposito
 import 'package:school_pulse/features/health/data/repositories/health_repository_impl.dart';
 import 'package:school_pulse/features/health/data/datasources/health_remote_data_source.dart';
 import 'package:school_pulse/features/health/domain/usecases/health_usecases.dart';
+import 'package:school_pulse/features/health/domain/services/nurse_student_projection_service.dart';
 import 'package:school_pulse/features/health/presentation/bloc/health_bloc.dart';
 
 // HR
@@ -776,6 +777,14 @@ Future<void> init() async {
 
   sl.registerLazySingleton<HealthRemoteDataSource>(
     () => HealthRemoteDataSourceImpl(firestore: sl()),
+  );
+
+  sl.registerLazySingleton(
+    () => NurseStudentProjectionService(
+      permissionEvaluator: sl(),
+      studentRepository: sl(),
+      healthRepository: sl(),
+    ),
   );
 
   // Features - HR
