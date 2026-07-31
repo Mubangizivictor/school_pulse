@@ -1200,6 +1200,7 @@ Future<void> init() async {
       resolveParentAccessCode: sl(),
       verifyFingerprint: sl(),
       localDataSource: sl(),
+      firestore: sl(),
     ),
   );
 
@@ -1220,7 +1221,7 @@ Future<void> init() async {
   sl.registerLazySingleton<VerificationLocalDataSource>(() => VerificationLocalDataSourceImpl(sl()));
 
   sl.registerLazySingleton<NfcCredentialRepository>(
-    () => NfcCredentialRepositoryImpl(localDataSource: sl()),
+    () => NfcCredentialRepositoryImpl(localDataSource: sl(), firestore: sl(), networkInfo: sl()),
   );
 
   sl.registerLazySingleton(

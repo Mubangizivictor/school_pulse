@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dartz/dartz.dart';
 import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/usecases/usecase.dart';
@@ -6,6 +7,7 @@ import 'package:school_pulse/features/biometrics/domain/usecases/biometric_useca
 import 'package:school_pulse/features/student/domain/usecases/resolve_parent_access_code.dart';
 import 'package:school_pulse/features/student_identity/domain/repositories/student_identity_repository.dart';
 import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source.dart';
+import 'package:school_pulse/features/verification/data/models/verification_isar_models.dart';
 import 'package:school_pulse/features/verification/domain/entities/resolved_identity.dart';
 import 'package:school_pulse/features/verification/domain/entities/scan_credential.dart';
 import 'package:school_pulse/features/verification/domain/entities/verification_context.dart';
@@ -22,6 +24,7 @@ class IdentityResolverImpl implements IdentityResolver {
   final ResolveParentAccessCode resolveParentAccessCode;
   final VerifyFingerprint verifyFingerprint;
   final VerificationLocalDataSource localDataSource;
+  final FirebaseFirestore firestore;
 
   IdentityResolverImpl({
     required this.studentIdentityRepository,
@@ -29,6 +32,7 @@ class IdentityResolverImpl implements IdentityResolver {
     required this.resolveParentAccessCode,
     required this.verifyFingerprint,
     required this.localDataSource,
+    required this.firestore,
   });
 
   @override
@@ -114,7 +118,22 @@ class IdentityResolverImpl implements IdentityResolver {
       return const Right(UnresolvedResolvedIdentity(reason: 'revoked_credential'));
     }
 
-    final cached = await localDataSource.findCredential(cardUid, schoolId);
+    var cached = await localDataSource.findCredential(cardUid, schoolId);
+
+    // Never seen on this device - it may have been assigned/revoked on a
+    // different one (NfcCredentialRepositoryImpl pushes every change to
+    // Firestore for exactly this). Fall back once, mirroring
+    // StudentIdentityRepositoryImpl.getStudentByUniqueId's cache-then-
+    // remote pattern, and cache whatever's found so the next scan on this
+    // device resolves offline.
+    if (cached == null) {
+      final remote = await _fetchRemoteCredentialState(cardUid, schoolId);
+      if (remote.isRevoked) {
+        return const Right(UnresolvedResolvedIdentity(reason: 'revoked_credential'));
+      }
+      cached = remote.credential;
+    }
+
     if (cached == null || cached.status != 'active') {
       return const Right(UnresolvedResolvedIdentity(reason: 'unknown_credential'));
     }
@@ -123,6 +142,48 @@ class IdentityResolverImpl implements IdentityResolver {
       return _resolveStudentCode(cached.identityId);
     }
     return _resolveStaffId(cached.identityId, context);
+  }
+
+  Future<({CachedCredentialIsar? credential, bool isRevoked})> _fetchRemoteCredentialState(
+    String cardUid,
+    String schoolId,
+  ) async {
+    try {
+      final revokedDoc =
+          await firestore.collection('schools').doc(schoolId).collection('revoked_credentials').doc(cardUid).get();
+      if (revokedDoc.exists) {
+        final data = revokedDoc.data()!;
+        await localDataSource.saveRevocation(
+          RevokedCredentialIsar()
+            ..credentialValue = cardUid
+            ..schoolId = schoolId
+            ..revokedAt = DateTime.tryParse(data['revokedAt'] as String? ?? '') ?? DateTime.now()
+            ..reason = data['reason'] as String? ?? 'revoked',
+        );
+        return (credential: null, isRevoked: true);
+      }
+
+      final credentialDoc =
+          await firestore.collection('schools').doc(schoolId).collection('credentials').doc(cardUid).get();
+      if (!credentialDoc.exists) return (credential: null, isRevoked: false);
+
+      final data = credentialDoc.data()!;
+      final credential = CachedCredentialIsar()
+        ..credentialValue = cardUid
+        ..credentialType = data['credentialType'] as String? ?? 'nfc'
+        ..identityId = data['identityId'] as String
+        ..identityType = data['identityType'] as String
+        ..schoolId = schoolId
+        ..status = data['status'] as String? ?? 'active'
+        ..updatedAt = DateTime.tryParse(data['updatedAt'] as String? ?? '') ?? DateTime.now();
+
+      await localDataSource.cacheCredential(credential);
+      return (credential: credential, isRevoked: false);
+    } catch (_) {
+      // Offline, or no Firestore doc reachable - fall through to
+      // "unknown", exactly the behavior before this fallback existed.
+      return (credential: null, isRevoked: false);
+    }
   }
 
   Future<Either<Failure, ResolvedIdentity>> _resolveParentCode(

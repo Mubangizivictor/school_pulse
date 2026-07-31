@@ -1,15 +1,21 @@
 import 'package:dartz/dartz.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:school_pulse/core/network/network_info.dart';
 import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source.dart';
 import 'package:school_pulse/features/verification/data/models/verification_isar_models.dart';
 import 'package:school_pulse/features/verification/data/repositories/nfc_credential_repository_impl.dart';
 
 class MockVerificationLocalDataSource extends Mock implements VerificationLocalDataSource {}
 
+class MockNetworkInfo extends Mock implements NetworkInfo {}
+
 void main() {
   late NfcCredentialRepositoryImpl repository;
   late MockVerificationLocalDataSource localDataSource;
+  late MockNetworkInfo networkInfo;
+  late FakeFirebaseFirestore firestore;
 
   const schoolId = 'school-1';
   const cardUid = 'CARD-001';
@@ -21,7 +27,18 @@ void main() {
 
   setUp(() {
     localDataSource = MockVerificationLocalDataSource();
-    repository = NfcCredentialRepositoryImpl(localDataSource: localDataSource);
+    networkInfo = MockNetworkInfo();
+    firestore = FakeFirebaseFirestore();
+    // Most tests below only care about the local Isar behavior that
+    // predates cross-device sync - default to offline so the Firestore
+    // push is skipped and doesn't need per-test stubbing. The dedicated
+    // "cross-device sync" group below flips this on.
+    when(() => networkInfo.isConnected).thenAnswer((_) async => false);
+    repository = NfcCredentialRepositoryImpl(
+      localDataSource: localDataSource,
+      firestore: firestore,
+      networkInfo: networkInfo,
+    );
 
     when(() => localDataSource.cacheCredential(any())).thenAnswer((_) async {});
     when(() => localDataSource.saveRevocation(any())).thenAnswer((_) async {});
@@ -241,6 +258,93 @@ void main() {
       final result = await repository.findAssignedCredential(identityId: 'SP-STUDENT-1', schoolId: schoolId);
 
       expect(result, const Right<Object, String?>(null));
+    });
+  });
+
+  group('cross-device sync (Firestore push)', () {
+    setUp(() {
+      when(() => networkInfo.isConnected).thenAnswer((_) async => true);
+    });
+
+    test('assign pushes the active mapping to schools/{schoolId}/credentials', () async {
+      when(() => localDataSource.findCredential(cardUid, schoolId)).thenAnswer((_) async => null);
+
+      await repository.assign(
+        credentialValue: cardUid,
+        identityId: 'SP-STUDENT-1',
+        identityType: 'student',
+        schoolId: schoolId,
+      );
+
+      final doc =
+          await firestore.collection('schools').doc(schoolId).collection('credentials').doc(cardUid).get();
+      expect(doc.exists, true);
+      expect(doc.data()!['identityId'], 'SP-STUDENT-1');
+      expect(doc.data()!['status'], 'active');
+    });
+
+    test('revoke pushes a denylist entry to schools/{schoolId}/revoked_credentials', () async {
+      when(() => localDataSource.findCredential(cardUid, schoolId)).thenAnswer((_) async => null);
+
+      await repository.revoke(credentialValue: cardUid, schoolId: schoolId, reason: 'lost');
+
+      final doc = await firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('revoked_credentials')
+          .doc(cardUid)
+          .get();
+      expect(doc.exists, true);
+      expect(doc.data()!['reason'], 'lost');
+    });
+
+    test('reassigning a previously-revoked card removes it from the remote denylist too', () async {
+      await firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('revoked_credentials')
+          .doc(cardUid)
+          .set({'credentialValue': cardUid, 'schoolId': schoolId, 'reason': 'lost'});
+      when(() => localDataSource.findCredential(cardUid, schoolId)).thenAnswer((_) async => CachedCredentialIsar()
+        ..credentialValue = cardUid
+        ..credentialType = 'nfc'
+        ..identityId = 'SP-STUDENT-OLD'
+        ..identityType = 'student'
+        ..schoolId = schoolId
+        ..status = 'revoked'
+        ..updatedAt = DateTime(2026));
+
+      await repository.assign(
+        credentialValue: cardUid,
+        identityId: 'SP-STUDENT-NEW',
+        identityType: 'student',
+        schoolId: schoolId,
+      );
+
+      final doc = await firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('revoked_credentials')
+          .doc(cardUid)
+          .get();
+      expect(doc.exists, false);
+    });
+
+    test('does not push anything when offline - the local write still succeeds', () async {
+      when(() => networkInfo.isConnected).thenAnswer((_) async => false);
+      when(() => localDataSource.findCredential(cardUid, schoolId)).thenAnswer((_) async => null);
+
+      final result = await repository.assign(
+        credentialValue: cardUid,
+        identityId: 'SP-STUDENT-1',
+        identityType: 'student',
+        schoolId: schoolId,
+      );
+
+      expect(result.isRight(), true);
+      final doc =
+          await firestore.collection('schools').doc(schoolId).collection('credentials').doc(cardUid).get();
+      expect(doc.exists, false);
     });
   });
 }

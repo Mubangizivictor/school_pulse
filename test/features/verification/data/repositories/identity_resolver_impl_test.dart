@@ -1,4 +1,5 @@
 import 'package:dartz/dartz.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:school_pulse/core/error/failures.dart';
@@ -36,6 +37,7 @@ void main() {
   late MockResolveParentAccessCode resolveParentAccessCode;
   late MockVerifyFingerprint verifyFingerprint;
   late MockVerificationLocalDataSource localDataSource;
+  late FakeFirebaseFirestore firestore;
 
   const gate = Gate(
     id: 'gate-1',
@@ -90,6 +92,8 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(NoParams());
+    registerFallbackValue(CachedCredentialIsar());
+    registerFallbackValue(RevokedCredentialIsar());
   });
 
   setUp(() {
@@ -98,13 +102,18 @@ void main() {
     resolveParentAccessCode = MockResolveParentAccessCode();
     verifyFingerprint = MockVerifyFingerprint();
     localDataSource = MockVerificationLocalDataSource();
+    firestore = FakeFirebaseFirestore();
     resolver = IdentityResolverImpl(
       studentIdentityRepository: studentIdentityRepository,
       getStaffMembers: getStaffMembers,
       resolveParentAccessCode: resolveParentAccessCode,
       verifyFingerprint: verifyFingerprint,
       localDataSource: localDataSource,
+      firestore: firestore,
     );
+
+    when(() => localDataSource.saveRevocation(any())).thenAnswer((_) async {});
+    when(() => localDataSource.cacheCredential(any())).thenAnswer((_) async {});
   });
 
   group('QR credential', () {
@@ -205,7 +214,7 @@ void main() {
       expect((identity as UnresolvedResolvedIdentity).reason, 'revoked_credential');
     });
 
-    test('resolves to unresolved(unknown_credential) when the UID is not cached at all', () async {
+    test('resolves to unresolved(unknown_credential) when the UID is not cached at all and Firestore has no record either', () async {
       when(() => localDataSource.findRevocation('UID000', 'school-1')).thenAnswer((_) async => null);
       when(() => localDataSource.findCredential('UID000', 'school-1')).thenAnswer((_) async => null);
 
@@ -217,6 +226,54 @@ void main() {
       final identity = result.getOrElse(() => throw Exception());
       expect(identity, isA<UnresolvedResolvedIdentity>());
       expect((identity as UnresolvedResolvedIdentity).reason, 'unknown_credential');
+    });
+
+    test('falls back to Firestore and resolves when the card was assigned on a different device', () async {
+      when(() => localDataSource.findRevocation('UID-REMOTE', 'school-1')).thenAnswer((_) async => null);
+      when(() => localDataSource.findCredential('UID-REMOTE', 'school-1')).thenAnswer((_) async => null);
+      await firestore.collection('schools').doc('school-1').collection('credentials').doc('UID-REMOTE').set({
+        'credentialValue': 'UID-REMOTE',
+        'credentialType': 'nfc',
+        'identityId': 'SP-0001',
+        'identityType': 'student',
+        'schoolId': 'school-1',
+        'status': 'active',
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+      when(() => studentIdentityRepository.getStudentByUniqueId('SP-0001'))
+          .thenAnswer((_) async => Right(student));
+
+      final result = await resolver.resolve(
+        NfcScanCredential(cardUid: 'UID-REMOTE', scannedAt: DateTime.now()),
+        context,
+      );
+
+      final identity = result.getOrElse(() => throw Exception());
+      expect(identity, isA<StudentResolvedIdentity>());
+      // Write-through: the next scan on this device should resolve
+      // offline without hitting Firestore again.
+      verify(() => localDataSource.cacheCredential(any())).called(1);
+    });
+
+    test('falls back to Firestore and denies when the card was revoked on a different device', () async {
+      when(() => localDataSource.findRevocation('UID-REVOKED-REMOTE', 'school-1')).thenAnswer((_) async => null);
+      when(() => localDataSource.findCredential('UID-REVOKED-REMOTE', 'school-1')).thenAnswer((_) async => null);
+      await firestore
+          .collection('schools')
+          .doc('school-1')
+          .collection('revoked_credentials')
+          .doc('UID-REVOKED-REMOTE')
+          .set({'credentialValue': 'UID-REVOKED-REMOTE', 'schoolId': 'school-1', 'reason': 'stolen'});
+
+      final result = await resolver.resolve(
+        NfcScanCredential(cardUid: 'UID-REVOKED-REMOTE', scannedAt: DateTime.now()),
+        context,
+      );
+
+      final identity = result.getOrElse(() => throw Exception());
+      expect(identity, isA<UnresolvedResolvedIdentity>());
+      expect((identity as UnresolvedResolvedIdentity).reason, 'revoked_credential');
+      verify(() => localDataSource.saveRevocation(any())).called(1);
     });
   });
 

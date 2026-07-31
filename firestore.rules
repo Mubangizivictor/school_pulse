@@ -569,6 +569,28 @@ service cloud.firestore {
       allow write: if isSameSchool(schoolId) &&
         hasAnyRole(['securityHead', 'schoolAdmin', 'director', 'headTeacher']);
     }
+    // NFC credential lifecycle (assign/replace/revoke/reactivate) - the
+    // cross-device sync counterpart to CachedCredentialIsar/
+    // RevokedCredentialIsar. NfcCredentialRepositoryImpl pushes here on
+    // every change; IdentityResolverImpl falls back to reading here when
+    // a card was never scanned on this device before.
+    match /schools/{schoolId}/credentials/{id} {
+      allow read, write: if isStaff() && isSameSchool(schoolId);
+    }
+    match /schools/{schoolId}/revoked_credentials/{id} {
+      allow read, write: if isStaff() && isSameSchool(schoolId);
+    }
+    // Verification engine's own audit trail (Phase 1). This match block
+    // was missing even though VerificationEventRecorderImpl has pushed to
+    // this path since Phase 1 shipped - every push was silently rejected
+    // by Firestore's default-deny and swallowed by the push's own
+    // try/catch (the local record still succeeded, so nothing user-facing
+    // broke, but the "audit trail" existed only on-device, never synced).
+    match /schools/{schoolId}/verification_events/{id} {
+      allow read: if isStaff() && isSameSchool(schoolId);
+      allow create: if isStaff() && isSameSchool(schoolId);
+      allow update, delete: if false;
+    }
 
     // Visitor Management enterprise collections - blacklist, pre-approval,
     // scheduled visits (host approval workflow) and gate-logged deliveries.
