@@ -39,6 +39,41 @@ class RolePermissionDefaults {
     Permission.admissionEnroll,
   };
 
+  // Information-projection permissions for the roles whose whole job is
+  // "look up one student's slice of data" - Nurse/Bursar/Librarian/
+  // Transport Coordinator/Catering Manager. Each set is deliberately
+  // narrow to its own domain; none of these roles gain any other role's
+  // permissions by being added here.
+  static const Set<String> _nursePermissions = {
+    Permission.healthStudentVerify,
+    Permission.healthStudentBasicRead,
+    Permission.healthStudentClinicalRead,
+    Permission.healthStudentVisitCreate,
+    Permission.healthStudentEmergencyRead,
+  };
+
+  static const Set<String> _bursarPermissions = {
+    Permission.financeStudentVerify,
+    Permission.financeStudentBalanceRead,
+  };
+
+  static const Set<String> _librarianPermissions = {
+    Permission.libraryMemberVerify,
+    Permission.libraryBorrow,
+    Permission.libraryReturn,
+  };
+
+  static const Set<String> _transportCoordinatorPermissions = {
+    Permission.transportBoardingVerify,
+    Permission.transportBoardingRecord,
+    Permission.transportDropoffRecord,
+  };
+
+  static const Set<String> _cateringManagerPermissions = {
+    Permission.mealsVerify,
+    Permission.mealsServe,
+  };
+
   static const Map<UserRole, Set<String>> defaults = {
     UserRole.gatekeeper: _gatekeeperPermissions,
     UserRole.receptionist: {..._gatekeeperPermissions, ..._admissionsPermissions},
@@ -49,6 +84,11 @@ class RolePermissionDefaults {
     UserRole.deputyHead: {..._securityLeadPermissions, ..._admissionsPermissions},
     UserRole.deanOfStudies: _admissionsPermissions,
     UserRole.hrOfficer: _admissionsPermissions,
+    UserRole.nurse: _nursePermissions,
+    UserRole.bursar: _bursarPermissions,
+    UserRole.librarian: _librarianPermissions,
+    UserRole.transportCoordinator: _transportCoordinatorPermissions,
+    UserRole.cateringManager: _cateringManagerPermissions,
   };
 
   static Set<String> permissionsFor(List<UserRole> roles) {

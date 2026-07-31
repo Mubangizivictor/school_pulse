@@ -2,10 +2,12 @@
 /// verification system, declared upfront across every module the
 /// end-state spec covers so later phases never need a breaking rename.
 ///
-/// Only the `security.*`/`verification.*` (Phase 1, Security/Gate) and
-/// `admission.*` (Phase 2, Admissions) subsets have real enforcement and
-/// role-default wiring. Every other ID here is inert until its own phase
-/// wires enforcement and `role_permission_defaults` entries for it.
+/// Enforced subsets: `security.*`/`verification.*` (Security/Gate),
+/// `admission.*` (Admissions), and `health.*`/`finance.*`/`library.*`/
+/// `transport.*`/`meals.*` for the Nurse/Bursar/Librarian/Transport
+/// Coordinator/Catering Manager information-projection services. Every
+/// other ID here is inert until its own phase wires enforcement and
+/// `role_permission_defaults` entries for it.
 class Permission {
   const Permission._();
 
@@ -40,6 +42,12 @@ class Permission {
   static const libraryMemberVerify = 'library.member.verify';
   static const libraryBorrow = 'library.borrow';
   static const libraryReturn = 'library.return';
+
+  // Finance / bursar - no prior art existed for this domain (unlike
+  // health.*/library.*/meals.*/transport.*, which were all pre-declared);
+  // added alongside the Bursar information-projection service.
+  static const financeStudentVerify = 'finance.student.verify';
+  static const financeStudentBalanceRead = 'finance.student.balance.read';
 
   // Boarding / dormitory
   static const boardingRollcallScan = 'boarding.rollcall.scan';

@@ -23,3 +23,10 @@ class AuthFailure extends Failure {
 class NetworkFailure extends Failure {
   const NetworkFailure([super.message = 'Network Error']);
 }
+
+/// The operator doesn't hold the permission required for the action -
+/// distinct from ServerFailure so a UI can show a specific "not
+/// authorized" state instead of a generic error.
+class PermissionDeniedFailure extends Failure {
+  const PermissionDeniedFailure([super.message = 'You do not have permission to perform this action']);
+}
