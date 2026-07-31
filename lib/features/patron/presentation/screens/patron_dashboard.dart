@@ -106,7 +106,7 @@ class _PatronDashboardState extends State<PatronDashboard> {
                         .toList(),
                   );
                 }
-                return const SizedBox.shrink();
+                return const Skeleton(height: 96, borderRadius: 12);
               },
             ),
             const SizedBox(height: 24),
@@ -136,7 +136,7 @@ class _PatronDashboardState extends State<PatronDashboard> {
                     }).toList(),
                   );
                 }
-                return const SizedBox.shrink();
+                return const Skeleton(height: 72, borderRadius: 12);
               },
             ),
           ],
@@ -155,52 +155,52 @@ class _PatronDashboardState extends State<PatronDashboard> {
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          childAspectRatio: 1.5,
+          childAspectRatio: 2.5,
           children: [
-            DashboardStatCard(
+            AnalyticalStatCard(
               title: 'Boarders',
               value: data.totalStudents.toDouble(),
               icon: Icons.people_outline,
               color: Theme.of(context).colorScheme.primary,
             ),
-            DashboardStatCard(
+            AnalyticalStatCard(
               title: 'Present',
               value: data.studentsPresent.toDouble(),
               icon: Icons.check_circle_outline,
               color: semanticColors.success,
             ),
-            DashboardStatCard(
+            AnalyticalStatCard(
               title: 'On Leave',
               value: data.studentsOnLeave.toDouble(),
               icon: Icons.exit_to_app,
               color: semanticColors.warning,
             ),
-            DashboardStatCard(
+            AnalyticalStatCard(
               title: 'Bed Occupancy',
               value: data.totalBeds == 0 ? 0 : (data.occupiedBeds / data.totalBeds) * 100,
               icon: Icons.bed_outlined,
               color: Colors.blue,
               suffix: '%',
             ),
-            DashboardStatCard(
+            AnalyticalStatCard(
               title: 'Discipline Cases',
               value: data.openDisciplineCases.toDouble(),
               icon: Icons.gavel_outlined,
               color: semanticColors.error,
             ),
-            DashboardStatCard(
+            AnalyticalStatCard(
               title: 'Welfare Concerns',
               value: data.pendingWelfareConcerns.toDouble(),
               icon: Icons.favorite_outline,
               color: Colors.pink,
             ),
-            DashboardStatCard(
+            AnalyticalStatCard(
               title: 'Pending Leave',
               value: data.pendingLeaveRequests.toDouble(),
               icon: Icons.pending_actions_outlined,
               color: Colors.purple,
             ),
-            DashboardStatCard(
+            AnalyticalStatCard(
               title: 'Missing',
               value: data.missingStudentCount.toDouble(),
               icon: Icons.person_search_outlined,
@@ -392,7 +392,7 @@ class _StatsSkeleton extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: 12,
       crossAxisSpacing: 12,
-      childAspectRatio: 1.5,
+      childAspectRatio: 2.5,
       children: List.generate(4, (index) => const Skeleton(borderRadius: 12)),
     );
   }
