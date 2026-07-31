@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import 'package:school_pulse/injection_container.dart';
+import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
+import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
 import '../../domain/entities/admission_application.dart';
 import '../../domain/entities/student_enums.dart';
 import '../bloc/admission_bloc.dart';
@@ -32,20 +35,48 @@ class _NewApplicationView extends StatefulWidget {
 class _NewApplicationViewState extends State<_NewApplicationView> {
   final _formKey = GlobalKey<FormState>();
   final _studentNameController = TextEditingController();
-  final _classIdController = TextEditingController();
-  final _academicYearIdController = TextEditingController();
   final _parentNameController = TextEditingController();
   final _parentPhoneController = TextEditingController();
   final _previousSchoolController = TextEditingController();
+  final _structureRepository = sl<StructureRepository>();
+
   DateTime? _dateOfBirth;
   Gender _gender = Gender.male;
   bool _busy = false;
 
+  List<SchoolClass> _classes = [];
+  List<AcademicYear> _academicYears = [];
+  SchoolClass? _selectedClass;
+  AcademicYear? _selectedYear;
+  StreamSubscription<List<SchoolClass>>? _classesSub;
+  StreamSubscription<List<AcademicYear>>? _yearsSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _classesSub = _structureRepository.watchClasses().listen((classes) {
+      setState(() => _classes = classes);
+    });
+    _yearsSub = _structureRepository.watchAcademicYears().listen((years) {
+      setState(() {
+        _academicYears = years;
+        if (_selectedYear == null) {
+          for (final year in years) {
+            if (year.isCurrent) {
+              _selectedYear = year;
+              break;
+            }
+          }
+        }
+      });
+    });
+  }
+
   @override
   void dispose() {
+    _classesSub?.cancel();
+    _yearsSub?.cancel();
     _studentNameController.dispose();
-    _classIdController.dispose();
-    _academicYearIdController.dispose();
     _parentNameController.dispose();
     _parentPhoneController.dispose();
     _previousSchoolController.dispose();
@@ -65,10 +96,14 @@ class _NewApplicationViewState extends State<_NewApplicationView> {
 
   void _submit() {
     final formValid = _formKey.currentState?.validate() ?? false;
-    if (!formValid || _dateOfBirth == null) {
+    if (!formValid || _dateOfBirth == null || _selectedClass == null || _selectedYear == null) {
       if (_dateOfBirth == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please select a date of birth')),
+        );
+      } else if (_selectedClass == null || _selectedYear == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a class and academic year')),
         );
       }
       return;
@@ -80,8 +115,8 @@ class _NewApplicationViewState extends State<_NewApplicationView> {
       studentName: _studentNameController.text.trim(),
       dateOfBirth: _dateOfBirth!,
       gender: _gender,
-      targetClassId: _classIdController.text.trim(),
-      academicYearId: _academicYearIdController.text.trim(),
+      targetClassId: _selectedClass!.id,
+      academicYearId: _selectedYear!.id,
       previousSchool:
           _previousSchoolController.text.trim().isEmpty ? null : _previousSchoolController.text.trim(),
       applicantParentName: _parentNameController.text.trim(),
@@ -135,24 +170,26 @@ class _NewApplicationViewState extends State<_NewApplicationView> {
                 onChanged: (v) => setState(() => _gender = v ?? _gender),
               ),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: _classIdController,
-                decoration: const InputDecoration(
-                  labelText: 'Target class ID',
-                  helperText: 'Temporary free-text entry until a class picker is wired in',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+              DropdownButtonFormField<SchoolClass>(
+                initialValue: _selectedClass,
+                decoration: const InputDecoration(labelText: 'Target class', border: OutlineInputBorder()),
+                items: _classes
+                    .map((c) => DropdownMenuItem(value: c, child: Text(c.name)))
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedClass = v),
+                validator: (v) => v == null ? 'Required' : null,
+                hint: _classes.isEmpty ? const Text('Loading classes…') : const Text('Select class'),
               ),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: _academicYearIdController,
-                decoration: const InputDecoration(
-                  labelText: 'Academic year ID',
-                  helperText: 'Temporary free-text entry until an academic-year picker is wired in',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+              DropdownButtonFormField<AcademicYear>(
+                initialValue: _selectedYear,
+                decoration: const InputDecoration(labelText: 'Academic year', border: OutlineInputBorder()),
+                items: _academicYears
+                    .map((y) => DropdownMenuItem(value: y, child: Text(y.name)))
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedYear = v),
+                validator: (v) => v == null ? 'Required' : null,
+                hint: _academicYears.isEmpty ? const Text('Loading academic years…') : const Text('Select year'),
               ),
               const SizedBox(height: 12),
               TextFormField(
