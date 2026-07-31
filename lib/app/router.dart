@@ -100,6 +100,7 @@ import 'package:school_pulse/features/director/presentation/screens/director_app
 import 'package:school_pulse/features/director/presentation/screens/director_dashboard_screen.dart';
 import 'package:school_pulse/features/director/presentation/screens/director_reports_screen.dart';
 import 'package:school_pulse/features/student_identity/presentation/screens/student_id_card_screen.dart';
+import 'package:school_pulse/features/student_identity/presentation/screens/batch_id_card_screen.dart';
 import 'package:school_pulse/features/student_identity/presentation/bloc/student_identity_bloc.dart';
 import 'package:school_pulse/features/attendance_qr_integration/presentation/screens/qr_attendance_dashboard_screen.dart';
 import 'package:school_pulse/features/student/domain/entities/student.dart';
@@ -692,6 +693,10 @@ final router = GoRouter(
             GoRoute(
               path: 'staff-attendance',
               builder: (context, state) => const AdminStaffAttendanceScreen(),
+            ),
+            GoRoute(
+              path: 'batch-id-cards',
+              builder: (context, state) => const BatchIdCardScreen(),
             ),
             GoRoute(
               path: 'admissions',
