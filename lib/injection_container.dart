@@ -260,6 +260,7 @@ import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dar
 
 // Transport
 import 'package:school_pulse/features/transport/domain/repositories/transport_repository.dart';
+import 'package:school_pulse/features/transport/domain/services/transport_student_projection_service.dart';
 import 'package:school_pulse/features/transport/data/repositories/transport_repository_impl.dart';
 import 'package:school_pulse/features/transport/data/datasources/transport_remote_data_source.dart';
 import 'package:school_pulse/features/transport/domain/usecases/get_transport_info.dart';
@@ -1038,6 +1039,14 @@ Future<void> init() async {
 
   sl.registerLazySingleton<TransportRepository>(
     () => TransportRepositoryImpl(remoteDataSource: sl()),
+  );
+
+  sl.registerLazySingleton(
+    () => TransportStudentProjectionService(
+      permissionEvaluator: sl(),
+      studentRepository: sl(),
+      transportRepository: sl(),
+    ),
   );
 
   sl.registerLazySingleton<TransportRemoteDataSource>(
