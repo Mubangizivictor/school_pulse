@@ -75,10 +75,14 @@ class _WelfareManagementScreenState extends State<WelfareManagementScreen> with 
         ),
       ),
       body: BlocListener<PatronBloc, PatronState>(
-        listenWhen: (_, current) => current is PatronActionSuccess,
+        listenWhen: (_, current) => current is PatronActionSuccess || current is PatronError,
         listener: (context, state) {
           if (state is PatronActionSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
+          } else if (state is PatronError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.message), backgroundColor: Theme.of(context).colorScheme.error),
+            );
           }
         },
         child: TabBarView(
@@ -215,6 +219,7 @@ class _WelfareManagementScreenState extends State<WelfareManagementScreen> with 
                     controller: reasonController,
                     decoration: const InputDecoration(labelText: 'Reason for Referral', border: OutlineInputBorder()),
                     maxLines: 2,
+                    onChanged: (_) => setState(() {}),
                   ),
                   const SizedBox(height: 16),
                   TextField(
@@ -287,6 +292,7 @@ class _WelfareManagementScreenState extends State<WelfareManagementScreen> with 
                     controller: descController,
                     decoration: const InputDecoration(labelText: 'Description', border: OutlineInputBorder()),
                     maxLines: 3,
+                    onChanged: (_) => setState(() {}),
                   ),
                 ],
               ),

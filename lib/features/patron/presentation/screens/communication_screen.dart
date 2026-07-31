@@ -38,6 +38,10 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
         listener: (context, state) {
           if (state is PatronActionSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
+          } else if (state is PatronError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.message), backgroundColor: Theme.of(context).colorScheme.error),
+            );
           }
         },
         buildWhen: (previous, current) => current is AnnouncementsLoaded || current is PatronLoading,

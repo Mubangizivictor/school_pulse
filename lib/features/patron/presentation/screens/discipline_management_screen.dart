@@ -37,7 +37,18 @@ class _DisciplineManagementScreenState extends State<DisciplineManagementScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Discipline Tracking')),
-      body: BlocBuilder<PatronBloc, PatronState>(
+      body: BlocListener<PatronBloc, PatronState>(
+        listenWhen: (_, current) => current is PatronActionSuccess || current is PatronError,
+        listener: (context, state) {
+          if (state is PatronActionSuccess) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
+          } else if (state is PatronError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.message), backgroundColor: Theme.of(context).colorScheme.error),
+            );
+          }
+        },
+        child: BlocBuilder<PatronBloc, PatronState>(
         buildWhen: (previous, current) => current is DisciplineIncidentsLoaded || current is PatronLoading,
         builder: (context, state) {
           if (state is PatronLoading) {
@@ -77,6 +88,7 @@ class _DisciplineManagementScreenState extends State<DisciplineManagementScreen>
             ],
           );
         },
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showLogIncidentDialog(context),
@@ -149,12 +161,14 @@ class _DisciplineManagementScreenState extends State<DisciplineManagementScreen>
                     controller: descController,
                     decoration: const InputDecoration(labelText: 'Description', border: OutlineInputBorder()),
                     maxLines: 2,
+                    onChanged: (_) => setState(() {}),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: actionController,
                     decoration: const InputDecoration(labelText: 'Initial Action', border: OutlineInputBorder()),
                     maxLines: 2,
+                    onChanged: (_) => setState(() {}),
                   ),
                   CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
