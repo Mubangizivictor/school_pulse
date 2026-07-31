@@ -133,6 +133,7 @@ import 'package:school_pulse/features/calendar/presentation/bloc/calendar_bloc.d
 
 // Catering
 import 'package:school_pulse/features/catering/domain/repositories/catering_repository.dart';
+import 'package:school_pulse/features/catering/domain/services/catering_eligibility_service.dart';
 import 'package:school_pulse/features/catering/data/repositories/catering_repository_impl.dart';
 import 'package:school_pulse/features/catering/data/datasources/catering_remote_data_source.dart';
 import 'package:school_pulse/features/catering/data/datasources/catering_local_data_source.dart';
@@ -661,6 +662,14 @@ Future<void> init() async {
 
   sl.registerLazySingleton<CateringRepository>(
     () => CateringRepositoryImpl(remoteDataSource: sl(), localDataSource: sl()),
+  );
+
+  sl.registerLazySingleton(
+    () => CateringEligibilityService(
+      permissionEvaluator: sl(),
+      studentRepository: sl(),
+      cateringRepository: sl(),
+    ),
   );
 
   sl.registerLazySingleton<CateringRemoteDataSource>(
