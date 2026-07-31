@@ -204,6 +204,7 @@ import 'package:school_pulse/features/inventory/presentation/bloc/stores_assets_
 
 // Library
 import 'package:school_pulse/features/library/domain/repositories/library_repository.dart';
+import 'package:school_pulse/features/library/domain/services/library_eligibility_service.dart';
 import 'package:school_pulse/features/library/data/repositories/library_repository_impl.dart';
 import 'package:school_pulse/features/library/data/datasources/library_remote_data_source.dart';
 import 'package:school_pulse/features/library/data/datasources/local/library_local_data_source.dart';
@@ -859,6 +860,14 @@ Future<void> init() async {
       auditRepository: sl(),
       financeRepository: sl(),
       storesAssetsRepository: sl(),
+    ),
+  );
+
+  sl.registerLazySingleton(
+    () => LibraryEligibilityService(
+      permissionEvaluator: sl(),
+      studentRepository: sl(),
+      libraryRepository: sl(),
     ),
   );
 
