@@ -5,6 +5,7 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import '../../domain/entities/admission_application.dart';
 import '../../domain/entities/student_enums.dart';
+import '../../domain/services/parent_linking_service.dart';
 import '../bloc/admission_bloc.dart';
 import '../bloc/admission_event.dart';
 import '../bloc/admission_state.dart';
@@ -68,6 +69,67 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
         ));
   }
 
+  // admitStudent() never touched ParentAccessCode, so a newly enrolled
+  // student otherwise has no route to a parent login until an admin
+  // separately remembers to create one from User Management. Prompt for
+  // it right here, using the phone/name already collected on the
+  // application - reuses the sibling-linking logic in
+  // ParentLinkingService if this phone number already has a code.
+  Future<void> _maybeLinkParent(BuildContext context, String studentId) async {
+    final linkingService = sl<ParentLinkingService>();
+    final application = widget.application;
+
+    final existingResult = await linkingService.findExistingCodeForPhone(
+      schoolId: application.schoolId,
+      phoneNumber: application.applicantParentPhone,
+    );
+    final existing = existingResult.fold((_) => null, (code) => code);
+
+    if (!context.mounted) return;
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Link Parent Access'),
+        content: Text(existing == null
+            ? 'Create a parent access code for ${application.applicantParentName} '
+                '(${application.applicantParentPhone})?'
+            : '${application.applicantParentPhone} already has a parent access code '
+                '(${existing.parentCode}) for ${existing.studentNames.join(', ')}. '
+                'Add ${application.studentName} to it?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Skip')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Link')),
+        ],
+      ),
+    );
+    if (proceed != true || !context.mounted) return;
+
+    final linkResult = await linkingService.linkStudentToParent(
+      studentId: studentId,
+      studentName: application.studentName,
+      schoolId: application.schoolId,
+      phoneNumber: application.applicantParentPhone,
+      parentName: application.applicantParentName,
+    );
+    if (!context.mounted) return;
+
+    linkResult.fold(
+      (failure) => ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not link parent: ${failure.message}'), backgroundColor: Colors.red),
+      ),
+      (code) => showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Parent Access Code'),
+          content: SelectableText('Give this code to the parent to sign in:\n\n$code'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Done')),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _enroll() async {
     final authState = context.read<AuthBloc>().state;
     if (authState is! AuthAuthenticated) return;
@@ -98,8 +160,12 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
   Widget build(BuildContext context) {
     final application = widget.application;
     return BlocListener<AdmissionBloc, AdmissionState>(
-      listener: (context, state) {
-        if (state is AdmissionActionSuccess) {
+      listener: (context, state) async {
+        if (state is AdmissionEnrollSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
+          await _maybeLinkParent(context, state.studentId);
+          if (context.mounted) Navigator.of(context).pop(true);
+        } else if (state is AdmissionActionSuccess) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
           Navigator.of(context).pop(true);
         } else if (state is AdmissionError) {

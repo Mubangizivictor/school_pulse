@@ -44,7 +44,7 @@ class AdmissionService {
     );
   }
 
-  Future<Either<Failure, void>> admitStudent(
+  Future<Either<Failure, String>> admitStudent(
     String applicationId,
     String schoolId,
     String schoolCode,
@@ -102,7 +102,7 @@ class AdmissionService {
                     term != null &&
                     feeStructureId != null &&
                     totalBilled != null) {
-                  return initializeFinancials!(
+                  final financeResult = await initializeFinancials!(
                     studentId: studentId,
                     schoolId: schoolId,
                     academicYear: academicYear,
@@ -110,8 +110,9 @@ class AdmissionService {
                     feeStructureId: feeStructureId,
                     totalBilled: totalBilled,
                   );
+                  return financeResult.fold(Left.new, (_) => Right(studentId));
                 }
-                return const Right(null);
+                return Right(studentId);
               },
             );
           },

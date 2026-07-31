@@ -48,6 +48,7 @@ import 'package:school_pulse/features/branding/domain/usecases/get_school_brandi
 
 import 'package:school_pulse/features/finance/domain/services/finance_service.dart';
 import 'package:school_pulse/features/student/domain/services/admission_service.dart';
+import 'package:school_pulse/features/student/domain/services/parent_linking_service.dart';
 import 'package:school_pulse/features/finance/domain/usecases/initialize_student_financials.dart';
 
 // Super Admin
@@ -570,6 +571,8 @@ Future<void> init() async {
       initializeFinancials: sl(),
     ),
   );
+
+  sl.registerLazySingleton(() => ParentLinkingService(sl()));
 
   sl.registerFactory(
     () => AdmissionBloc(admissionService: sl(), permissionEvaluator: sl()),

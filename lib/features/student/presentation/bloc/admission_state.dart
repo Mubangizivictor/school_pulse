@@ -30,6 +30,18 @@ class AdmissionActionSuccess extends AdmissionState {
   List<Object?> get props => [message];
 }
 
+// Distinct from AdmissionActionSuccess so the review screen can trigger
+// the parent-linking prompt only after an actual enrollment, not after
+// every review/approve/reject action.
+class AdmissionEnrollSuccess extends AdmissionActionSuccess {
+  final String studentId;
+
+  const AdmissionEnrollSuccess(super.message, this.studentId);
+
+  @override
+  List<Object?> get props => [message, studentId];
+}
+
 class AdmissionActionDenied extends AdmissionState {
   final String message;
 

@@ -131,10 +131,10 @@ void main() {
       expect((captured.single as Student).id, studentId);
     });
 
-    test('returns Right(null) when no financial parameters are supplied', () async {
+    test('returns Right(studentId) when no financial parameters are supplied', () async {
       final result = await call();
 
-      expect(result, const Right<Failure, void>(null));
+      expect(result, const Right<Failure, String>(studentId));
       verifyNever(() => initializeFinancials(
             studentId: any(named: 'studentId'),
             schoolId: any(named: 'schoolId'),
@@ -157,7 +157,7 @@ void main() {
 
       final result = await call(term: 'Term 1', feeStructureId: 'fee-1', totalBilled: 500);
 
-      expect(result, const Right<Failure, void>(null));
+      expect(result, const Right<Failure, String>(studentId));
       verify(() => initializeFinancials(
             studentId: studentId,
             schoolId: schoolId,

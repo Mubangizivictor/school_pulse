@@ -87,7 +87,7 @@ class AdmissionBloc extends Bloc<AdmissionEvent, AdmissionState> {
     );
     result.fold(
       (failure) => emit(AdmissionError(failure.message)),
-      (_) => emit(const AdmissionActionSuccess('Student enrolled')),
+      (studentId) => emit(AdmissionEnrollSuccess('Student enrolled', studentId)),
     );
   }
 }

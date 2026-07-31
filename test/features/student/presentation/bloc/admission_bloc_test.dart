@@ -214,7 +214,7 @@ void main() {
         return bloc;
       },
       act: (bloc) => bloc.add(enrollEvent),
-      expect: () => [const AdmissionActionSuccess('Student enrolled')],
+      expect: () => [const AdmissionEnrollSuccess('Student enrolled', 'student-1')],
     );
   });
 }
