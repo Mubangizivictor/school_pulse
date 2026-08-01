@@ -281,12 +281,14 @@ import 'package:school_pulse/features/teacher/data/repositories/subject_student_
 import 'package:school_pulse/features/teacher/data/services/academic_calendar_service_impl.dart';
 import 'package:school_pulse/features/teacher/data/services/active_responsibility_service_impl.dart';
 import 'package:school_pulse/features/teacher/data/services/subject_audit_service_impl.dart';
+import 'package:school_pulse/features/teacher/data/services/subject_sync_service_impl.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/lesson_attendance_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/staff_assignment_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/subject_student_repository.dart';
 import 'package:school_pulse/features/teacher/domain/services/academic_calendar_service.dart';
 import 'package:school_pulse/features/teacher/domain/services/active_responsibility_service.dart';
 import 'package:school_pulse/features/teacher/domain/services/subject_audit_service.dart';
+import 'package:school_pulse/features/teacher/domain/services/subject_sync_service.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_dashboard/subject_teacher_dashboard_bloc.dart';
 
@@ -1283,6 +1285,15 @@ Future<void> init() async {
   // Everywhere else constructs this directly; the audit service takes it as a
   // dependency so tests can supply a fixed device id.
   sl.registerLazySingleton(() => DeviceIdService());
+
+  sl.registerLazySingleton<SubjectSyncService>(
+    () => SubjectSyncServiceImpl(
+      remoteDataSource: sl(),
+      localDataSource: sl(),
+      auditService: sl(),
+      networkInfo: sl(),
+    ),
+  );
 
   sl.registerLazySingleton<LessonAttendanceRepository>(
     () => LessonAttendanceRepositoryImpl(
