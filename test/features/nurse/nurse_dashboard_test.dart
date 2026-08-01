@@ -231,14 +231,14 @@ void main() {
     );
     await pumpDashboard(tester);
 
-    expect(find.text('School Health Portal'), findsOneWidget);
+    expect(find.text('Welcome back,'), findsOneWidget);
     expect(find.text('Visits Today'), findsOneWidget);
     expect(find.text("Today's Emergencies"), findsOneWidget);
     expect(find.text('Fell during break time'), findsOneWidget);
-    expect(find.text('Recent Clinic Visits'), findsOneWidget);
-    expect(find.text('Headache'), findsOneWidget);
-    expect(find.text('Inventory Alerts'), findsOneWidget);
-    expect(find.text('Paracetamol'), findsOneWidget);
+    expect(find.text('Recent Clinic Visits', skipOffstage: false), findsOneWidget);
+    expect(find.text('Headache', skipOffstage: false), findsOneWidget);
+    expect(find.text('Inventory Alerts', skipOffstage: false), findsOneWidget);
+    expect(find.text('Paracetamol', skipOffstage: false), findsOneWidget);
     verify(
       () => healthBloc.add(const FetchHealthDashboardData(schoolId)),
     ).called(1);
@@ -255,11 +255,22 @@ void main() {
   ) async {
     await pumpDashboard(tester);
 
+    expect(find.text('Student Health', skipOffstage: false), findsOneWidget);
+    // The quick action is labelled "Emergency"; "Report Incident" is the title
+    // of the dialog it opens.
+    expect(find.text('Emergency', skipOffstage: false), findsOneWidget);
+    expect(find.text('All History', skipOffstage: false), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('No clinic visits recorded today.'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('No clinic visits recorded today.'), findsOneWidget);
-    expect(find.text('Student Health'), findsOneWidget);
-    expect(find.text('Report Incident'), findsOneWidget);
-    expect(find.text('All History'), findsOneWidget);
-    expect(find.byKey(const Key('nurse-new-visit-button')), findsOneWidget);
+    expect(
+      find.byKey(const Key('nurse-new-visit-button'), skipOffstage: false),
+      findsOneWidget,
+    );
   });
 
   testWidgets('renders the load error and retry dispatches a scoped fetch', (
@@ -343,7 +354,11 @@ void main() {
       ];
 
       await pumpDashboard(tester);
-      await tester.tap(find.byTooltip('Contact Admin / Store'));
+      // "Support" sits at the end of the quick-action row, below the fold at
+      // the default 800x600 test surface.
+      await tester.ensureVisible(find.text('Support'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Support'));
       await tester.pumpAndSettle();
 
       expect(find.text('Mrs. Amina'), findsOneWidget);
@@ -445,7 +460,7 @@ void main() {
     await pumpDashboard(tester);
     clearInteractions(healthBloc);
 
-    await tester.tap(find.text('Report Incident'));
+    await tester.tap(find.text('Emergency'));
     await tester.pumpAndSettle();
     expect(find.text('Report Emergency Incident'), findsOneWidget);
 
@@ -493,7 +508,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await pumpDashboard(tester);
-    expect(find.text('School Health Portal'), findsOneWidget);
+    expect(find.text('Welcome back,'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('nurse-new-visit-button')));
     await tester.pumpAndSettle();
