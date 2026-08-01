@@ -79,7 +79,9 @@ abstract class SubjectTeacherRemoteDataSource {
 
   Future<Lesson?> getLesson({required String schoolId, required String lessonId});
 
-  Future<void> updateLesson(Lesson lesson);
+  /// Records what happened during a lesson. [roleAssignmentId] is written so
+  /// the rules can prove the writer held a responsibility covering it.
+  Future<void> updateLesson(Lesson lesson, {required String roleAssignmentId});
 
   Future<LessonAttendance?> getLessonAttendance({
     required String schoolId,
@@ -317,7 +319,7 @@ class SubjectTeacherRemoteDataSourceImpl implements SubjectTeacherRemoteDataSour
   }
 
   @override
-  Future<void> updateLesson(Lesson lesson) async {
+  Future<void> updateLesson(Lesson lesson, {required String roleAssignmentId}) async {
     // Only the fields the panel owns. The timetable owns the schedule, the
     // room and who is assigned - a merge write of the whole entity would let
     // a teacher quietly move their own lesson.
@@ -331,6 +333,7 @@ class SubjectTeacherRemoteDataSourceImpl implements SubjectTeacherRemoteDataSour
       'topic': lesson.topic,
       'subtopic': lesson.subtopic,
       'attendanceSubmitted': lesson.attendanceSubmitted,
+      'roleAssignmentId': roleAssignmentId,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }

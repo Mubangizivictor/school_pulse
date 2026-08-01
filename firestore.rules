@@ -1218,6 +1218,126 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /schools/{schoolId}/lessons/{lessonId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+
+      // The timetable owns lessons. A teacher records what happened during
+      // one - start time, status, topic - but may not create a period,
+      // move it, change the room, or reassign it to themselves. Those
+      // fields are absent from the allowed set below rather than merely
+      // hidden in the UI.
+      //
+      // Entitlement is proved through the assignment, not through a staffId
+      // on the user doc: user profiles here carry staffCode, so a
+      // myUser().staffId comparison would silently deny every teacher.
+      allow update: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          resource.data.subjectId,
+                          resource.data.classId,
+                          resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'subject.lesson.start')
+          // The lesson must be theirs to record against - holding a
+          // Mathematics assignment is not entitlement to another teacher's
+          // Mathematics period.
+          && (resource.data.teacherStaffId
+                == assignment(schoolId, request.resource.data.roleAssignmentId).staffId
+              || resource.data.substituteStaffId
+                == assignment(schoolId, request.resource.data.roleAssignmentId).staffId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status', 'statusReason', 'actualStart', 'actualEnd',
+                        'topic', 'subtopic', 'attendanceSubmitted',
+                        'roleAssignmentId', 'updatedAt'])
+        ));
+
+      allow create, delete: if isSameSchool(schoolId) && schoolAcademicAdmin();
+    }
+
+    match /schools/{schoolId}/lesson_attendance/{lessonId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+
+      // One register per lesson, keyed on the lesson id, so a replay
+      // overwrites rather than creating a second register for the period.
+      // The writer has to hold an assignment covering the register's own
+      // subject and class - not merely be a teacher somewhere.
+      allow create, update: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          request.resource.data.subjectId,
+                          request.resource.data.classId,
+                          request.resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'subject.attendance.take')
+          // Once submitted, only a holder of the edit permission may touch
+          // it again - an ordinary re-save cannot quietly rewrite a
+          // register the school has already acted on.
+          && (!(resource != null && resource.data.status == 'submitted')
+              || grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                                  'subject.attendance.edit'))
+          // Locked registers are the academic office's alone.
+          && !(resource != null && resource.data.status == 'locked')
+        ));
+
+      allow delete: if false;
+    }
+
+    match /schools/{schoolId}/subject_assessments/{assessmentId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+      allow create: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          request.resource.data.subjectId,
+                          request.resource.data.classId,
+                          request.resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'subject.assessment.create')
+        ));
+      // Status transitions (open, approve, lock, publish) belong to the
+      // Assessment Engine and the academic office, never to the teacher
+      // whose marks are being approved.
+      allow update, delete: if isSameSchool(schoolId) && schoolAcademicAdmin();
+    }
+
+    match /schools/{schoolId}/student_marks/{markId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+
+      allow create, update: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          request.resource.data.subjectId,
+                          request.resource.data.classId,
+                          request.resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'subject.marks.enter')
+          // Approved and published marks feed report cards. A teacher
+          // cannot overwrite one; the route back is a correction request
+          // the academic office acts on.
+          && !(resource != null
+               && resource.data.markStatus in ['approved', 'published'])
+          && (!(resource != null && resource.data.markStatus == 'submitted')
+              || grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                                  'subject.marks.edit_submitted'))
+        ));
+
+      // Marks are an academic record. Superseding one is an update that
+      // leaves an audit row; deleting it leaves nothing.
+      allow delete: if false;
+    }
+
+    match /schools/{schoolId}/marks_correction_requests/{requestId} {
+      // A teacher may raise a request and read their own; only the academic
+      // office may decide one.
+      allow create: if isSameSchool(schoolId)
+        && isStaff()
+        && request.resource.data.requestedByUserId == request.auth.uid
+        && request.resource.data.status == 'pending';
+      allow read: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || resource.data.requestedByUserId == request.auth.uid);
+      allow update: if isSameSchool(schoolId) && schoolAcademicAdmin();
+      allow delete: if false;
+    }
+
     match /schools/{schoolId}/subject_audit_logs/{auditId} {
       // Append-only. A teacher can write their own trail and read it back,
       // but the update and delete paths are closed to everyone including
