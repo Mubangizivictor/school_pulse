@@ -46,6 +46,10 @@ import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.d
 import 'package:school_pulse/features/branding/data/models/school_branding_isar.dart';
 import 'package:school_pulse/features/branding/domain/usecases/get_school_branding.dart';
 
+import 'package:school_pulse/features/messages/domain/repositories/messages_repository.dart';
+import 'package:school_pulse/features/messages/data/repositories/messages_repository_impl.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/report_wizard/report_wizard_bloc.dart';
+import 'package:school_pulse/features/teacher/domain/usecases/generate_reports.dart';
 import 'package:school_pulse/features/finance/domain/services/finance_service.dart';
 import 'package:school_pulse/features/student/domain/services/admission_service.dart';
 import 'package:school_pulse/features/student/domain/services/parent_linking_service.dart';
@@ -262,6 +266,7 @@ import 'package:school_pulse/features/teacher/domain/usecases/get_attendance_his
 import 'package:school_pulse/features/teacher/domain/usecases/get_teacher_dashboard_stats.dart';
 import 'package:school_pulse/features/teacher/domain/usecases/manage_homework.dart';
 import 'package:school_pulse/features/teacher/domain/usecases/manage_report_comments.dart';
+import 'package:school_pulse/features/teacher/domain/usecases/manage_competency_ratings.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
 
 // Transport
@@ -945,6 +950,11 @@ Future<void> init() async {
     () => PatronRemoteDataSourceImpl(firestore: sl(), auditRepository: sl()),
   );
 
+  // Features - Messages
+  sl.registerLazySingleton<MessagesRepository>(
+    () => MessagesRepositoryImpl(firestore: sl(), storage: sl()),
+  );
+
   // Features - Notifications
   sl.registerFactory(
     () => NotificationsBloc(
@@ -1169,6 +1179,8 @@ Future<void> init() async {
       deleteHomework: sl(),
       getReportComments: sl(),
       saveReportComment: sl(),
+      getCompetencyRatings: sl(),
+      saveCompetencyRating: sl(),
     ),
   );
 
@@ -1183,6 +1195,9 @@ Future<void> init() async {
   sl.registerLazySingleton(() => DeleteHomework(sl()));
   sl.registerLazySingleton(() => GetReportComments(sl()));
   sl.registerLazySingleton(() => SaveReportComment(sl()));
+  sl.registerLazySingleton(() => GetCompetencyRatings(sl()));
+  sl.registerLazySingleton(() => SaveCompetencyRating(sl()));
+  sl.registerLazySingleton(() => GenerateReports(sl()));
 
   sl.registerLazySingleton<TeacherRepository>(
     () => TeacherRepositoryImpl(remoteDataSource: sl()),
@@ -1191,6 +1206,8 @@ Future<void> init() async {
   sl.registerLazySingleton<TeacherRemoteDataSource>(
     () => TeacherRemoteDataSourceImpl(firestore: sl()),
   );
+
+  sl.registerFactory(() => ReportWizardBloc(generateReports: sl()));
 
   // Features - Transport
   sl.registerFactory(() => TransportBloc(getTransportInfo: sl()));
