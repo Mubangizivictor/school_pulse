@@ -72,9 +72,7 @@ class MessageRequestsScreen extends StatelessWidget {
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Marking spam accepts nothing but does hide the chat from the inbox, so
-    // the two tabs split on whether the user archived it away.
-    final items = requests.where((c) => c.isArchived == spam).toList();
+    final items = requests.where((c) => c.isSpam == spam).toList();
 
     if (items.isEmpty) {
       return Center(
@@ -173,11 +171,7 @@ class MessageRequestsScreen extends StatelessWidget {
                     if (!spam) ...[
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () async {
-                            await context.messages.markSpam(request.id, userId);
-                            if (!context.mounted) return;
-                            await context.messages.setArchived(request.id, userId, true);
-                          },
+                          onPressed: () => context.messages.markSpam(request.id, userId),
                           style: OutlinedButton.styleFrom(
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
@@ -190,8 +184,6 @@ class MessageRequestsScreen extends StatelessWidget {
                       child: ElevatedButton(
                         onPressed: () async {
                           await context.messages.acceptRequest(request.id, userId);
-                          if (!context.mounted) return;
-                          await context.messages.setArchived(request.id, userId, false);
                           if (!context.mounted) return;
                           context.push('/messages/chat/${request.id}');
                         },

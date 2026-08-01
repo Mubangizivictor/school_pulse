@@ -71,7 +71,9 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
             ),
             SizedBox(
               height: 48,
-              child: ListView(
+              child: StreamBuilder<List<ChatConversation>>(
+                stream: context.messages.watchConversations(user.id),
+                builder: (context, snapshot) => ListView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 children: [
@@ -100,7 +102,16 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                     isSelected: false,
                     onTap: () => context.push('/messages/archived'),
                   ),
+                  // Only appears when something is actually waiting, so the
+                  // chip row stays as short as it was for most people.
+                  if (_pendingRequests(snapshot.data) > 0)
+                    _FilterChip(
+                      label: 'Requests (${_pendingRequests(snapshot.data)})',
+                      isSelected: false,
+                      onTap: () => context.push('/messages/requests'),
+                    ),
                 ],
+                ),
               ),
             ),
             Expanded(
@@ -142,10 +153,19 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
     );
   }
 
+  /// A 1:1 chat someone started that this user hasn't accepted yet. Only
+  /// happens between two non-staff accounts - see
+  /// MessagesRepositoryImpl.startDirectConversation.
+  static bool _isRequest(ChatConversation chat) =>
+      chat.type == ChatType.direct && !chat.isAccepted;
+
+  int _pendingRequests(List<ChatConversation>? all) =>
+      all == null ? 0 : all.where(_isRequest).length;
+
   List<ChatConversation> _applyFilter(List<ChatConversation> all) {
-    // Archived chats live behind their own screen; everything else is
-    // filtered by the chip row.
-    final visible = all.where((c) => !c.isArchived);
+    // Archived chats and unaccepted requests each live behind their own
+    // screen; everything else is filtered by the chip row.
+    final visible = all.where((c) => !c.isArchived && !_isRequest(c));
     switch (_filter) {
       case _InboxFilter.all:
         return visible.toList();
