@@ -74,21 +74,106 @@ class RolePermissionDefaults {
     Permission.mealsServe,
   };
 
+  // Notification send/manage permissions. `notification.view` and
+  // `notification.acknowledge` are NOT listed here - every authenticated user
+  // may read and acknowledge their own notifications, so gating them by role
+  // would lock parents and students out of their own notification centre.
+  // What follows is only the authority to *originate* and *administer*
+  // notifications, which is genuinely role-scoped.
+
+  /// Staff who may send targeted notifications within their own remit
+  /// (a class teacher messaging their class's parents, for example).
+  static const Set<String> _notificationSenderPermissions = {
+    Permission.notificationSend,
+    Permission.notificationSendToParent,
+    Permission.notificationSendToStudent,
+    Permission.notificationUseImages,
+    Permission.notificationUseAttachments,
+    Permission.notificationArchive,
+  };
+
+  /// Office roles that additionally broadcast school-wide, schedule ahead and
+  /// read delivery reports for what they sent.
+  static const Set<String> _notificationOfficePermissions = {
+    ..._notificationSenderPermissions,
+    Permission.notificationSendToStaff,
+    Permission.notificationBroadcast,
+    Permission.notificationSchedule,
+    Permission.notificationCancel,
+    Permission.notificationViewDeliveryReports,
+  };
+
+  /// School leadership: full notification administration including emergency
+  /// alerts, templates and school-level notification settings.
+  static const Set<String> _notificationAdminPermissions = {
+    ..._notificationOfficePermissions,
+    Permission.notificationSendEmergency,
+    Permission.notificationManageTemplates,
+    Permission.notificationManageSettings,
+    Permission.notificationDelete,
+    Permission.notificationRunDeliveryTest,
+  };
+
   static const Map<UserRole, Set<String>> defaults = {
     UserRole.gatekeeper: _gatekeeperPermissions,
-    UserRole.receptionist: {..._gatekeeperPermissions, ..._admissionsPermissions},
-    UserRole.securityHead: _securityLeadPermissions,
-    UserRole.schoolAdmin: {..._securityLeadPermissions, ..._admissionsPermissions},
-    UserRole.director: {..._securityLeadPermissions, ..._admissionsPermissions},
-    UserRole.headTeacher: {..._securityLeadPermissions, ..._admissionsPermissions},
-    UserRole.deputyHead: {..._securityLeadPermissions, ..._admissionsPermissions},
-    UserRole.deanOfStudies: _admissionsPermissions,
-    UserRole.hrOfficer: _admissionsPermissions,
-    UserRole.nurse: _nursePermissions,
-    UserRole.bursar: _bursarPermissions,
-    UserRole.librarian: _librarianPermissions,
-    UserRole.transportCoordinator: _transportCoordinatorPermissions,
-    UserRole.cateringManager: _cateringManagerPermissions,
+    UserRole.receptionist: {
+      ..._gatekeeperPermissions,
+      ..._admissionsPermissions,
+      ..._notificationSenderPermissions,
+    },
+    UserRole.securityHead: {
+      ..._securityLeadPermissions,
+      ..._notificationOfficePermissions,
+      // Security leads raise emergency alerts (lockdown, intruder, missing
+      // student) without needing a head teacher to be reachable first.
+      Permission.notificationSendEmergency,
+    },
+    UserRole.schoolAdmin: {
+      ..._securityLeadPermissions,
+      ..._admissionsPermissions,
+      ..._notificationAdminPermissions,
+    },
+    UserRole.director: {
+      ..._securityLeadPermissions,
+      ..._admissionsPermissions,
+      ..._notificationAdminPermissions,
+    },
+    UserRole.headTeacher: {
+      ..._securityLeadPermissions,
+      ..._admissionsPermissions,
+      ..._notificationAdminPermissions,
+    },
+    UserRole.deputyHead: {
+      ..._securityLeadPermissions,
+      ..._admissionsPermissions,
+      ..._notificationAdminPermissions,
+    },
+    UserRole.deanOfStudies: {
+      ..._admissionsPermissions,
+      ..._notificationOfficePermissions,
+    },
+    UserRole.hrOfficer: {
+      ..._admissionsPermissions,
+      ..._notificationOfficePermissions,
+    },
+    UserRole.nurse: {..._nursePermissions, ..._notificationSenderPermissions},
+    UserRole.bursar: {..._bursarPermissions, ..._notificationOfficePermissions},
+    UserRole.librarian: {..._librarianPermissions, ..._notificationSenderPermissions},
+    UserRole.transportCoordinator: {
+      ..._transportCoordinatorPermissions,
+      ..._notificationOfficePermissions,
+    },
+    UserRole.cateringManager: {
+      ..._cateringManagerPermissions,
+      ..._notificationSenderPermissions,
+    },
+    UserRole.classTeacher: _notificationSenderPermissions,
+    UserRole.subjectTeacher: _notificationSenderPermissions,
+    UserRole.boardingMatron: _notificationSenderPermissions,
+    UserRole.boardingPatron: _notificationSenderPermissions,
+    UserRole.guidanceDiscipline: _notificationSenderPermissions,
+    UserRole.gamesMaster: _notificationSenderPermissions,
+    UserRole.religiousLeader: _notificationSenderPermissions,
   };
 
   static Set<String> permissionsFor(List<UserRole> roles) {

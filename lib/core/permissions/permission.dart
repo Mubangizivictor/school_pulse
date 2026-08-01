@@ -80,4 +80,28 @@ class Permission {
   static const verificationOverride = 'verification.override';
   static const verificationAuditRead = 'verification.audit.read';
   static const verificationDeviceManage = 'verification.device.manage';
+
+  // Notifications (enforced) - gate who may send, broadcast, schedule and
+  // inspect notifications, and which deep-link destinations a recipient may
+  // actually open. `notification.view` is implicitly held by every signed-in
+  // user for their own notifications; it exists here for explicit denial.
+  static const notificationView = 'notification.view';
+  static const notificationSend = 'notification.send';
+  static const notificationSendToParent = 'notification.send_to_parent';
+  static const notificationSendToStudent = 'notification.send_to_student';
+  static const notificationSendToStaff = 'notification.send_to_staff';
+  static const notificationBroadcast = 'notification.broadcast';
+  static const notificationSchedule = 'notification.schedule';
+  static const notificationCancel = 'notification.cancel';
+  static const notificationUseImages = 'notification.use_images';
+  static const notificationUseAttachments = 'notification.use_attachments';
+  static const notificationSendEmergency = 'notification.send_emergency';
+  static const notificationViewDeliveryReports = 'notification.view_delivery_reports';
+  static const notificationManageTemplates = 'notification.manage_templates';
+  static const notificationManageSettings = 'notification.manage_settings';
+  static const notificationAcknowledge = 'notification.acknowledge';
+  static const notificationArchive = 'notification.archive';
+  static const notificationDelete = 'notification.delete';
+  static const notificationSeedTestData = 'notification.seed_test_data';
+  static const notificationRunDeliveryTest = 'notification.run_delivery_test';
 }
