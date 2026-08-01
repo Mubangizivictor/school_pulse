@@ -233,6 +233,7 @@ import 'package:school_pulse/features/notifications/data/repositories/notificati
 import 'package:school_pulse/features/notifications/data/datasources/notifications_remote_data_source.dart';
 import 'package:school_pulse/features/notifications/domain/usecases/get_alerts.dart';
 import 'package:school_pulse/features/notifications/domain/usecases/mark_alert_read.dart';
+import 'package:school_pulse/features/notifications/domain/usecases/send_notification.dart';
 import 'package:school_pulse/features/notifications/presentation/bloc/notifications_bloc.dart';
 
 // Religion
@@ -332,6 +333,7 @@ import 'package:school_pulse/features/notifications/notification_coordinator.dar
 import 'package:school_pulse/features/notifications/push/handlers/notification_push_handler.dart';
 import 'package:school_pulse/features/notifications/routing/deep_link_router/notification_deep_link_router.dart';
 import 'package:school_pulse/features/notifications/data/notification_image_cache.dart';
+import 'package:school_pulse/features/notifications/domain/services/notification_sender.dart';
 import 'package:school_pulse/features/notifications/local/notification_presenter.dart';
 import 'package:school_pulse/features/notifications/push/token_management/notification_token_manager.dart';
 import 'package:school_pulse/features/notifications/push/notification_badge_service.dart';
@@ -945,11 +947,16 @@ Future<void> init() async {
 
   // Features - Notifications
   sl.registerFactory(
-    () => NotificationsBloc(getAlerts: sl(), markAlertRead: sl()),
+    () => NotificationsBloc(
+      getAlerts: sl(),
+      markAlertRead: sl(),
+      sendNotification: sl(),
+    ),
   );
 
   sl.registerLazySingleton(() => GetAlerts(sl()));
   sl.registerLazySingleton(() => MarkAlertRead(sl()));
+  sl.registerLazySingleton(() => SendNotificationUseCase(sl()));
 
   sl.registerLazySingleton(() => InitializeStudentFinancials(sl()));
 
@@ -1029,6 +1036,10 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton(() => NotificationSeedRunner(isar: sl()));
+
+  // Send requests go to Firestore for a Cloud Function to fan out; the client
+  // never writes notification documents or calls FCM itself.
+  sl.registerLazySingleton(() => NotificationSendService(firestore: sl()));
 
   // Push handler and coordinator. The handler reads the live session from the
   // coordinator rather than holding its own copy, so there is one source of

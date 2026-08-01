@@ -24,3 +24,22 @@ class DismissAlert extends NotificationsEvent {
   @override
   List<Object> get props => [alertId, uid];
 }
+
+class SendNotification extends NotificationsEvent {
+  final String title;
+  final String body;
+  final List<String> targetGroups;
+  final String? imageUrl;
+  final bool isAnnouncement;
+
+  const SendNotification({
+    required this.title,
+    required this.body,
+    required this.targetGroups,
+    this.imageUrl,
+    this.isAnnouncement = false,
+  });
+
+  @override
+  List<Object> get props => [title, body, targetGroups, imageUrl ?? '', isAnnouncement];
+}

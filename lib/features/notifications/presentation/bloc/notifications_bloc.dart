@@ -1,16 +1,23 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/usecases/get_alerts.dart';
 import '../../domain/usecases/mark_alert_read.dart';
+import '../../domain/usecases/send_notification.dart';
 import 'notifications_event.dart';
 import 'notifications_state.dart';
 
 class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
   final GetAlerts getAlerts;
   final MarkAlertRead markAlertRead;
+  final SendNotificationUseCase sendNotification;
 
-  NotificationsBloc({required this.getAlerts, required this.markAlertRead}) : super(NotificationsInitial()) {
+  NotificationsBloc({
+    required this.getAlerts,
+    required this.markAlertRead,
+    required this.sendNotification,
+  }) : super(NotificationsInitial()) {
     on<FetchAlerts>(_onFetchAlerts);
     on<DismissAlert>(_onDismissAlert);
+    on<SendNotification>(_onSendNotification);
   }
 
   void _onDismissAlert(DismissAlert event, Emitter<NotificationsState> emit) {
@@ -34,6 +41,25 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
     result.fold(
       (failure) => emit(const NotificationsError('Server Failure')),
       (alerts) => emit(NotificationsLoaded(alerts)),
+    );
+  }
+
+  Future<void> _onSendNotification(
+    SendNotification event,
+    Emitter<NotificationsState> emit,
+  ) async {
+    // We don't necessarily need a loading state for the whole bloc feed
+    // but we might want to handle success/failure feedback in the UI.
+    final result = await sendNotification(
+      title: event.title,
+      body: event.body,
+      targetGroups: event.targetGroups,
+      imageUrl: event.imageUrl,
+    );
+
+    result.fold(
+      (failure) => emit(const NotificationsError('Failed to send notification')),
+      (_) => null, // Success is handled by UI popping/snackbars
     );
   }
 }

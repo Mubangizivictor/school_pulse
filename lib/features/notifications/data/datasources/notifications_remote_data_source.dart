@@ -9,6 +9,12 @@ abstract class NotificationsRemoteDataSource {
   /// bell (see StaffAlertsRepository, which does the equivalent merge).
   Future<List<AlertModel>> getAlerts(List<String> studentIds, {List<String> groups = const []});
   Future<void> markAlertRead(String alertId, String uid);
+  Future<void> sendNotification({
+    required String title,
+    required String body,
+    required List<String> targetGroups,
+    String? imageUrl,
+  });
 }
 
 class NotificationsRemoteDataSourceImpl
@@ -62,6 +68,40 @@ class NotificationsRemoteDataSourceImpl
   Future<void> markAlertRead(String alertId, String uid) {
     return firestore.collection('alerts').doc(alertId).update({
       'readBy': FieldValue.arrayUnion([uid]),
+    });
+  }
+
+  @override
+  Future<void> sendNotification({
+    required String title,
+    required String body,
+    required List<String> targetGroups,
+    String? imageUrl,
+  }) async {
+    final timestamp = FieldValue.serverTimestamp();
+
+    // 1. Create the 'alert' document in Firestore
+    await firestore.collection('alerts').add({
+      'title': title,
+      'body': body,
+      'targets': targetGroups,
+      'timestamp': timestamp,
+      'type': 'Push',
+      'status': 'sent',
+      'imageUrl': imageUrl,
+      'readBy': [],
+    });
+
+    // 2. Trigger FCM via broadcast_queue
+    await firestore.collection('broadcast_queue').add({
+      'notification': {
+        'title': title,
+        'body': body,
+        'image': imageUrl,
+      },
+      'targets': targetGroups,
+      'status': 'pending',
+      'createdAt': timestamp,
     });
   }
 }

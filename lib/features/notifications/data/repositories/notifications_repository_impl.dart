@@ -31,4 +31,24 @@ class NotificationsRepositoryImpl implements NotificationsRepository {
       return Left(ServerFailure(e.toString()));
     }
   }
+
+  @override
+  Future<Either<Failure, void>> sendNotification({
+    required String title,
+    required String body,
+    required List<String> targetGroups,
+    String? imageUrl,
+  }) async {
+    try {
+      await remoteDataSource.sendNotification(
+        title: title,
+        body: body,
+        targetGroups: targetGroups,
+        imageUrl: imageUrl,
+      );
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
 }
