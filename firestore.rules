@@ -1114,5 +1114,120 @@ service cloud.firestore {
       allow read: if isSuperAdmin();
       allow write: if false;
     }
+
+    // ---------------------------------------------------------------
+    // Subject Teacher panel
+    //
+    // Everything here is nested under schools/{schoolId}, so tenant
+    // isolation is enforced by the path itself rather than by trusting a
+    // schoolId field the client supplied. isSameSchool() is the gate; a
+    // teacher signed into one school cannot reach another's documents even
+    // by guessing document ids.
+    //
+    // The rules below never grant on job title. Access is decided by
+    // whether the requesting user holds an *assignment row* covering the
+    // document's subject and class - the same model the client enforces,
+    // re-checked here because a hidden button is not security.
+    // ---------------------------------------------------------------
+
+    // No dedicated examination-officer UserRole exists in this codebase yet;
+    // that responsibility is carried by the Dean of Studies today.
+    function schoolAcademicAdmin() {
+      return hasAnyRole([
+        'schoolAdmin', 'headTeacher', 'deputyHead', 'director', 'deanOfStudies'
+      ]);
+    }
+
+    // The caller's assignment row, looked up by its document id. Reading it
+    // here is what lets a rule ask "does this teacher actually hold this
+    // responsibility" instead of taking the client's word for it.
+    function assignment(schoolId, assignmentId) {
+      return get(/databases/$(database)/documents/schools/$(schoolId)/staff_role_assignments/$(assignmentId)).data;
+    }
+
+    function assignmentExists(schoolId, assignmentId) {
+      return exists(/databases/$(database)/documents/schools/$(schoolId)/staff_role_assignments/$(assignmentId));
+    }
+
+    // An assignment authorises a write only when it belongs to the caller,
+    // is still active, and covers the subject/class/year of the document
+    // being written. All four conditions, every time.
+    function holdsAssignment(schoolId, assignmentId, subjectId, classId, academicYearId) {
+      return assignmentExists(schoolId, assignmentId)
+        && assignment(schoolId, assignmentId).userId == request.auth.uid
+        && assignment(schoolId, assignmentId).status == 'active'
+        && assignment(schoolId, assignmentId).academicYearId == academicYearId
+        && (subjectId == null || assignment(schoolId, assignmentId).subjectId == subjectId)
+        && (classId == null || assignment(schoolId, assignmentId).classId == classId);
+    }
+
+    function grantsPermission(schoolId, assignmentId, permissionId) {
+      return assignmentExists(schoolId, assignmentId)
+        && permissionId in assignment(schoolId, assignmentId).permissionScope.permissions;
+    }
+
+    match /schools/{schoolId}/staff_role_assignments/{assignmentId} {
+      // A teacher may read their own responsibilities and nothing else -
+      // the switcher needs them, but one teacher's timetable is not another
+      // teacher's business.
+      allow read: if isSameSchool(schoolId)
+        && (resource.data.userId == request.auth.uid || schoolAcademicAdmin());
+
+      // Assigning, suspending and re-scoping responsibilities is entirely
+      // the admin's. A teacher writing here could grant themselves any
+      // subject in the school, so there is no teacher path at all.
+      allow create, update: if isSameSchool(schoolId) && schoolAcademicAdmin();
+
+      // Ended assignments are suspended or expired, never deleted - the
+      // audit trail references them by id.
+      allow delete: if false;
+    }
+
+    match /schools/{schoolId}/subject_enrollments/{enrollmentId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+
+      // A teacher may enroll into a subject they actually teach, and only
+      // when their assignment carries the permission. Note the enrollment's
+      // own subject/class must match the assignment's - this is what stops
+      // the Maths teacher adding students to Physics.
+      allow create: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          request.resource.data.subjectId,
+                          request.resource.data.classId,
+                          request.resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'subject.student.enroll')
+        ));
+
+      allow update: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          resource.data.subjectId,
+                          resource.data.classId,
+                          resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'subject.student.remove')
+          // A mandatory subject is the academic office's call, never the
+          // teacher's, whatever permission they hold.
+          && resource.data.isMandatory == false
+        ));
+
+      // Enrollment history is what historical marks hang off. Closing a row
+      // is an update; removing it is not on offer.
+      allow delete: if false;
+    }
+
+    match /schools/{schoolId}/subject_audit_logs/{auditId} {
+      // Append-only. A teacher can write their own trail and read it back,
+      // but the update and delete paths are closed to everyone including
+      // admins - an audit log a user can rewrite is not an audit log.
+      allow create: if isSameSchool(schoolId)
+        && isStaff()
+        && request.resource.data.userId == request.auth.uid;
+      allow read: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || resource.data.userId == request.auth.uid);
+      allow update, delete: if false;
+    }
   }
 }
