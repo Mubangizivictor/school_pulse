@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/core/theme_provider.dart';
+import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
-import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
-import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
-import 'package:school_pulse/features/shared/boarding/boarding_dashboard_widgets.dart';
-import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
-import 'package:school_pulse/features/teacher/presentation/bloc/teacher_event.dart';
-import 'package:school_pulse/features/teacher/presentation/bloc/teacher_state.dart';
-import '../../domain/entities/ongoing_lesson.dart';
+import 'package:school_pulse/features/teacher/domain/entities/active_responsibility_context.dart';
+import 'package:school_pulse/features/teacher/domain/entities/staff_role_assignment.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_event.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_state.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_dashboard/subject_teacher_dashboard_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/widgets/responsibility_switcher_sheet.dart';
 
 class SubjectTeacherDashboard extends StatefulWidget {
   const SubjectTeacherDashboard({super.key});
@@ -22,382 +23,521 @@ class SubjectTeacherDashboard extends StatefulWidget {
 }
 
 class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
+  int _selectedTeachingTab = 0;
+
   @override
   void initState() {
     super.initState();
+    _refreshData();
+  }
+
+  void _refreshData() {
     final authState = context.read<AuthBloc>().state;
-    if (authState is AuthAuthenticated) {
-      context.read<TeacherBloc>().add(TeacherDashboardRequested(authState.user.id));
-    }
+    if (authState is! AuthAuthenticated) return;
+    context.read<SubjectTeacherContextBloc>().add(
+          ContextRequested(
+            schoolId: authState.user.schoolId,
+            userId: authState.user.id,
+          ),
+        );
+  }
+
+  Future<void> _openSwitcher(SubjectTeacherContextState state) async {
+    final chosen = await ResponsibilitySwitcherSheet.show(
+      context,
+      subjectAssignments: state.subjectAssignments,
+      otherResponsibilities: state.otherResponsibilities,
+      activeAssignmentId: state.active?.roleAssignmentId,
+    );
+    if (chosen == null || !mounted) return;
+    context.read<SubjectTeacherContextBloc>().add(ContextSwitched(chosen));
   }
 
   @override
   Widget build(BuildContext context) {
-    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
+    final theme = Theme.of(context);
     final authState = context.watch<AuthBloc>().state;
-    final user = authState is AuthAuthenticated ? authState.user : null;
 
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      body: BlocBuilder<TeacherBloc, TeacherState>(
-        builder: (context, state) {
-          if (state is TeacherLoading || state is TeacherInitial) {
-            return const _DashboardSkeleton();
-          }
+    if (authState is! AuthAuthenticated) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
-          if (state is TeacherError) {
-            return EmptyState(
-              icon: Icons.cloud_off,
-              title: 'Could not load dashboard',
-              message: state.message,
-              ctaLabel: 'Retry',
-              onCtaPressed: () {
-                final authState = context.read<AuthBloc>().state;
-                if (authState is AuthAuthenticated) {
-                  context
-                      .read<TeacherBloc>()
-                      .add(TeacherDashboardRequested(authState.user.id));
-                }
-              },
-            );
-          }
+    final user = authState.user;
 
-          if (state is TeacherLoaded) {
-            return RefreshIndicator(
-              onRefresh: () async {
-                final authState = context.read<AuthBloc>().state;
-                if (authState is AuthAuthenticated) {
-                  context.read<TeacherBloc>().add(TeacherDashboardRequested(authState.user.id));
-                }
-              },
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.xl,
-                  AppSpacing.x8l,
-                  AppSpacing.xl,
-                  AppSpacing.x4l,
+    return BlocConsumer<SubjectTeacherContextBloc, SubjectTeacherContextState>(
+      listenWhen: (previous, current) =>
+          previous.active?.roleAssignmentId != current.active?.roleAssignmentId ||
+          previous.notice != current.notice,
+      listener: (context, state) {
+        final active = state.active;
+        if (active != null) {
+          // Every responsibility change reloads the figures, so the previous
+          // subject's numbers never linger under the new one.
+          context.read<SubjectTeacherDashboardBloc>().add(DashboardRequested(active));
+        }
+        final notice = state.notice;
+        if (notice != null) {
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(SnackBar(content: Text(notice)));
+          context.read<SubjectTeacherContextBloc>().add(const ContextNoticeCleared());
+        }
+      },
+      builder: (context, contextState) {
+        return Scaffold(
+          backgroundColor: theme.scaffoldBackgroundColor,
+          body: RefreshIndicator(
+            onRefresh: () async => _refreshData(),
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                // Custom Header
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
+                    child: _buildHeader(user.name, contextState.active),
+                  ),
                 ),
-                children: [
-                  BoardingDashboardHeader(
-                    userName: user?.name ?? 'Subject Teacher',
-                    roleLabel: 'Subject Teacher • ${user?.schoolName ?? 'North Campus'}',
-                    photoUrl: user?.photoUrl,
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.chat_bubble_outline_rounded),
-                          onPressed: () => context.push('/staff/messages'),
-                          tooltip: 'Messages',
-                        ),
-                        const NotificationBellButton(),
-                      ],
+
+                if (contextState.isLoading)
+                  const SliverFillRemaining(
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (contextState.unavailableReason != null)
+                  SliverFillRemaining(
+                    child: _buildUnavailable(contextState),
+                  )
+                else if (contextState.active != null)
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+                        _buildMainContextCard(context, contextState),
+                        const SizedBox(height: 24),
+                        _buildQuickActions(context),
+                        const SizedBox(height: 24),
+                        _buildTodayLesson(context),
+                        const SizedBox(height: 24),
+                        _buildMyTeaching(context, contextState),
+                        const SizedBox(height: 24),
+                        _buildWhatsNext(context),
+                        const SizedBox(height: 40),
+                      ]),
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.x3l),
-
-                  // 1. Subject Metrics
-                  BoardingOverviewCard(
-                    metrics: _buildMetrics(context, state, semanticColors),
-                  ),
-                  const SizedBox(height: AppSpacing.x3l),
-
-                  // 2. Active Lesson
-                  if (state.ongoingLesson != null) ...[
-                    _buildOngoingLesson(context, state.ongoingLesson!),
-                    const SizedBox(height: AppSpacing.x3l),
-                  ],
-
-                  // 3. Quick Actions
-                  BoardingSectionHeading(title: 'Quick Actions'),
-                  const SizedBox(height: AppSpacing.l),
-                  _buildQuickActions(context),
-                  const SizedBox(height: AppSpacing.x3l),
-
-                  // 4. My Classes (Subject Specific)
-                  _buildMyClasses(context, state),
-                  const SizedBox(height: AppSpacing.x3l),
-
-                  // 5. What's Next
-                  _buildWhatsNext(context),
-                  const SizedBox(height: AppSpacing.x6l),
-                ],
-              ),
-            );
-          }
-
-          return const SizedBox.shrink();
-        },
-      ),
+                  )
+                else
+                  const SliverToBoxAdapter(child: SizedBox.shrink()),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
-  List<BoardingMetric> _buildMetrics(
-    BuildContext context,
-    TeacherLoaded state,
-    SemanticColors semanticColors,
-  ) {
-    return [
-      BoardingMetric(
-        label: 'My Students',
-        icon: Icons.groups_outlined,
-        color: Theme.of(context).colorScheme.primary,
-        value: state.totalStudents,
-        caption: 'Enrolled',
-        captionUsesColor: false,
-        onTap: () => context.push('/staff/students'),
-      ),
-      BoardingMetric(
-        label: 'Attendance',
-        icon: Icons.how_to_reg_outlined,
-        color: semanticColors.success,
-        value: state.studentsToday,
-        caption: 'Subject Avg',
-        onTap: () => context.push('/staff/attendance'),
-      ),
-      BoardingMetric(
-        label: 'Assessments',
-        icon: Icons.assignment_outlined,
-        color: semanticColors.warning,
-        value: state.submissionsDue,
-        caption: 'Pending',
-        onTap: () => context.push('/staff/marks'),
-      ),
-      BoardingMetric(
-        label: 'Lesson Plans',
-        icon: Icons.menu_book_outlined,
-        color: Colors.purple,
-        value: 4,
-        caption: 'This Week',
-        onTap: () => context.push('/staff/lesson-plans'),
-      ),
-    ];
+  /// The states where the panel has nothing to show: no responsibility, one
+  /// that has been suspended, or a school with no academic year configured.
+  /// Each says which it is, because the fix is different every time.
+  Widget _buildUnavailable(SubjectTeacherContextState state) {
+    final (icon, title, message) = switch (state.unavailableReason!) {
+      ContextUnavailableReason.noAssignments => (
+          Icons.school_outlined,
+          'No teaching assignments',
+          'Your school admin has not assigned you a subject or class yet.',
+        ),
+      ContextUnavailableReason.assignmentSuspended => (
+          Icons.lock_outline,
+          'Responsibility suspended',
+          state.errorMessage ??
+              'This responsibility has been suspended by your school admin.',
+        ),
+      ContextUnavailableReason.assignmentExpired => (
+          Icons.event_busy_outlined,
+          'Assignment ended',
+          'This responsibility is outside its active dates.',
+        ),
+      ContextUnavailableReason.noAcademicYear => (
+          Icons.calendar_today_outlined,
+          'No academic year set',
+          'Your school admin needs to set the current academic year before '
+              'lessons and marks can be recorded.',
+        ),
+      ContextUnavailableReason.loadFailed => (
+          Icons.cloud_off_outlined,
+          'Could not load your panel',
+          state.errorMessage ?? 'Something went wrong. Try again.',
+        ),
+    };
+
+    return EmptyState(
+      icon: icon,
+      title: title,
+      message: message,
+      ctaLabel: 'Retry',
+      onCtaPressed: _refreshData,
+    );
   }
 
-  Widget _buildOngoingLesson(BuildContext context, OngoingLesson lesson) {
-    final theme = Theme.of(context);
-    final semanticColors = theme.extension<SemanticColors>()!;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildHeader(String name, ActiveResponsibilityContext? active) {
+    return Row(
       children: [
-        BoardingSectionHeading(title: 'Current Lesson'),
-        const SizedBox(height: AppSpacing.l),
-        AppCard(
-          padding: const EdgeInsets.all(AppSpacing.xl),
+        AvatarInitials(
+          name: name,
+          size: 48,
+          ringColor: AppColors.primary(context),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(AppSpacing.m),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.timer_outlined,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.l),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${lesson.startTime} - ${lesson.endTime}',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.outline,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Text(
-                          lesson.subjectName,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  StatusBadge(
-                    label: 'Ongoing',
-                    color: semanticColors.success,
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              Row(
-                children: [
-                  _LessonMeta(
-                    icon: Icons.room_outlined,
-                    label: lesson.room,
-                  ),
-                  const SizedBox(width: AppSpacing.xl),
-                  _LessonMeta(
-                    icon: Icons.class_outlined,
-                    label: lesson.className,
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.xl),
               Text(
-                'Topic: ${lesson.topic}',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.outline,
+                _greeting(),
+                style: TextStyle(
+                  color: AppColors.textSecondary(context),
+                  fontSize: 14,
                 ),
               ),
-              const SizedBox(height: AppSpacing.xl),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.play_arrow_rounded),
-                  label: const Text('Resume Lesson'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.royalBlue,
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.l),
-                  ),
+              Text(
+                name,
+                style: TextStyle(
+                  color: AppColors.textPrimary(context),
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                active?.responsibilityLabel ?? 'Subject Teacher',
+                style: TextStyle(
+                  color: AppColors.primary(context),
+                  fontSize: 12,
                 ),
               ),
             ],
           ),
         ),
+        IconButton(
+          icon: Icon(
+            Theme.of(context).brightness == Brightness.dark
+                ? Icons.wb_sunny_outlined
+                : Icons.nightlight_round_outlined,
+            color: AppColors.textSecondary(context),
+          ),
+          onPressed: () {
+            final provider = context.read<ThemeProvider>();
+            provider.setThemeMode(
+              Theme.of(context).brightness == Brightness.dark
+                  ? ThemeMode.light
+                  : ThemeMode.dark,
+            );
+          },
+        ),
+        IconButton(
+          icon: Icon(Icons.chat_bubble_outline, color: AppColors.textSecondary(context)),
+          onPressed: () => context.push('/staff/messages'),
+        ),
+        IconButton(
+          icon: Icon(Icons.notifications_none, color: AppColors.textSecondary(context)),
+          onPressed: () => context.push('/staff/notifications'),
+        ),
       ],
     );
   }
 
-  Widget _buildQuickActions(BuildContext context) {
-    return BoardingQuickActionGrid(
-      actions: [
-        BoardingQuickAction(
-          label: 'Start Lesson',
-          icon: Icons.play_circle_outline,
-          color: AppColors.successGreen,
-          onTap: () {},
-        ),
-        BoardingQuickAction(
-          label: 'Lesson Plans',
-          icon: Icons.menu_book,
-          color: AppColors.royalBlue,
-          onTap: () => context.push('/staff/lesson-plans'),
-        ),
-        BoardingQuickAction(
-          label: 'Record Marks',
-          icon: Icons.edit_note,
-          color: Colors.orange,
-          onTap: () => context.push('/staff/marks'),
-        ),
-      ],
-    );
+  String _greeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good Morning,';
+    if (hour < 17) return 'Good Afternoon,';
+    return 'Good Evening,';
   }
 
-  Widget _buildMyClasses(BuildContext context, TeacherLoaded state) {
-    final theme = Theme.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        BoardingSectionHeading(
-          title: 'My Subject Classes',
-          onViewAll: () => context.push('/staff/classes'),
-        ),
-        const SizedBox(height: AppSpacing.l),
-        ...state.classProgress.take(2).map((cp) => Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.l),
-              child: AppCard(
-                onTap: () {},
-                padding: const EdgeInsets.all(AppSpacing.l),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: Text(
-                          cp.title.substring(0, 2),
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: theme.colorScheme.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.l),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            cp.title,
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            cp.subtitle,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.outline,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    CircularProgressIndicator(
-                      value: cp.progress,
-                      strokeWidth: 3,
-                      backgroundColor: theme.colorScheme.outlineVariant,
-                    ),
-                  ],
-                ),
-              ),
-            )),
-      ],
-    );
-  }
-
-  Widget _buildWhatsNext(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        BoardingSectionHeading(title: "What's Next?"),
-        const SizedBox(height: AppSpacing.l),
-        AppCard(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          child: Row(
+  Widget _buildMainContextCard(
+    BuildContext context,
+    SubjectTeacherContextState contextState,
+  ) {
+    final active = contextState.active!;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow(context),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
             children: [
-              const Icon(Icons.notifications_active_outlined, color: Colors.orange),
-              const SizedBox(width: AppSpacing.l),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary(context).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.functions, color: AppColors.primary(context), size: 24),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Term 2 Progress Reports Due',
-                      style: theme.textTheme.bodyLarge?.copyWith(
+                      active.subjectName ?? active.roleType.label,
+                      style: TextStyle(
+                        color: AppColors.textPrimary(context),
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     Text(
-                      'Friday, 24th Oct • 3 days left',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.outline,
-                      ),
+                      active.academicSubtitle,
+                      style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12),
                     ),
                   ],
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.arrow_forward_ios, size: 16),
-                onPressed: () => context.push('/staff/reports'),
+              InkWell(
+                onTap: contextState.isSwitching
+                    ? null
+                    : () => _openSwitcher(contextState),
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceContainer(context),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Change Class/Subject',
+                        style: TextStyle(color: AppColors.textPrimary(context), fontSize: 10),
+                      ),
+                      Icon(Icons.keyboard_arrow_down, color: AppColors.textPrimary(context), size: 14),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Divider(color: AppColors.border(context).withValues(alpha: 0.5)),
+          const SizedBox(height: 12),
+          BlocBuilder<SubjectTeacherDashboardBloc, SubjectTeacherDashboardState>(
+            builder: (context, stats) {
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildMetricItem(
+                    'Students Enrolled',
+                    _count(stats.studentsEnrolled),
+                    'Total',
+                    AppColors.primary(context),
+                  ),
+                  _buildMetricItem(
+                    'Present Today',
+                    _count(stats.presentToday),
+                    _percent(stats.presentPercentage),
+                    AppColors.success(context),
+                  ),
+                  _buildMetricItem(
+                    'Absent Today',
+                    _count(stats.absentToday),
+                    _percent(stats.absentPercentage),
+                    AppColors.danger(context),
+                  ),
+                  _buildMetricItem(
+                    'Lessons Today',
+                    _count(stats.lessonsToday),
+                    'Scheduled',
+                    AppColors.warning(context),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// A tile with nothing behind it yet shows a dash, not a zero. "Attendance
+  /// has not been taken" and "nobody turned up" are different facts.
+  String _count(int? value) => value?.toString() ?? '–';
+
+  String _percent(double? value) =>
+      value == null ? '–' : '${value.round()}%';
+
+  Widget _buildMetricItem(String label, String value, String subValue, Color color) {
+    return Expanded(
+      child: Column(
+        children: [
+          Icon(Icons.people_outline, color: color, size: 18),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppColors.textMuted(context), fontSize: 9),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              color: AppColors.textPrimary(context),
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(subValue, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context) {
+    return Row(
+      children: [
+        _buildActionCard(
+          'Take Attendance',
+          'Mark students present or absent',
+          Icons.how_to_reg,
+          AppColors.surfaceElevated(context),
+          () => context.push('/staff/attendance'),
+        ),
+        const SizedBox(width: 12),
+        _buildActionCard(
+          'Enter Marks',
+          'Record assessment or exam marks',
+          Icons.edit_note,
+          AppColors.surfaceElevated(context),
+          () => context.push('/staff/marks'),
+        ),
+        const SizedBox(width: 12),
+        _buildActionCard(
+          'Lesson Notes',
+          'Add or view notes for lessons',
+          Icons.menu_book,
+          AppColors.surfaceElevated(context),
+          () => context.push('/staff/lessons'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionCard(String title, String desc, IconData icon, Color color, VoidCallback onTap) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          height: 110,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.shadow(context),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: AppColors.primary(context), size: 24),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.textPrimary(context),
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                desc,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.textMuted(context), fontSize: 8),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTodayLesson(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "Today's Lesson",
+              style: TextStyle(
+                color: AppColors.textPrimary(context),
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            TextButton(
+              onPressed: () => context.push('/staff/timetable'),
+              child: Text(
+                'View Timetable',
+                style: TextStyle(color: AppColors.primary(context), fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceElevated(context),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
+          ),
+          child: _buildNoLessonRow(context),
+        ),
+      ],
+    );
+  }
+
+  /// Shown until the timetable feed lands. Previously this card displayed a
+  /// hardcoded 10:00 Mathematics lesson in Room 12 to every teacher on every
+  /// day, which is worse than saying nothing.
+  Widget _buildNoLessonRow(BuildContext context) {
+    return Row(
+      children: [
+        Icon(Icons.event_available_outlined, color: AppColors.textMuted(context), size: 20),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'No lesson scheduled',
+                style: TextStyle(
+                  color: AppColors.textPrimary(context),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Nothing on your timetable for this class today.',
+                style: TextStyle(color: AppColors.textSecondary(context), fontSize: 11),
               ),
             ],
           ),
@@ -405,62 +545,197 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
       ],
     );
   }
-}
 
-class _LessonMeta extends StatelessWidget {
-  final IconData icon;
-  final String label;
+  Widget _buildMyTeaching(BuildContext context, SubjectTeacherContextState state) {
+    final subjectClasses = state.currentSubjectClasses;
+    final otherSubjects = state.otherSubjectAssignments;
+    final classTeacher = state.classTeacherAssignment;
 
-  const _LessonMeta({required this.icon, required this.label});
+    final items = switch (_selectedTeachingTab) {
+      0 => subjectClasses,
+      1 => otherSubjects,
+      _ => [?classTeacher],
+    };
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 16, color: theme.colorScheme.outline),
-        const SizedBox(width: AppSpacing.s),
         Text(
-          label,
-          style: theme.textTheme.bodySmall?.copyWith(
-            fontWeight: FontWeight.w600,
+          "My Teaching",
+          style: TextStyle(
+            color: AppColors.textPrimary(context),
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
           ),
         ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceContainer(context),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              _buildTab('Subject Classes (${subjectClasses.length})', 0),
+              _buildTab('Other Subjects (${otherSubjects.length})', 1),
+              _buildTab('Class Teacher', 2),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (items.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Text(
+              switch (_selectedTeachingTab) {
+                0 => 'No other classes for this subject.',
+                1 => 'You teach one subject.',
+                _ => 'You are not a class teacher this year.',
+              },
+              style: TextStyle(color: AppColors.textMuted(context), fontSize: 12),
+            ),
+          )
+        else
+          ...items.map((a) => _buildTeachingItem(a, state)),
       ],
     );
   }
-}
 
-class _DashboardSkeleton extends StatelessWidget {
-  const _DashboardSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.xl,
-        AppSpacing.x8l,
-        AppSpacing.xl,
-        AppSpacing.x4l,
+  Widget _buildTab(String label, int index) {
+    final isSelected = _selectedTeachingTab == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedTeachingTab = index),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primary(context) : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: isSelected ? Colors.white : AppColors.textSecondary(context),
+              fontSize: 11,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ),
       ),
+    );
+  }
+
+  Widget _buildTeachingItem(
+    StaffRoleAssignment assignment,
+    SubjectTeacherContextState state,
+  ) {
+    final className = [assignment.className, assignment.streamName]
+        .where((e) => e != null && e.isNotEmpty)
+        .join(' ');
+    final shortName =
+        className.isEmpty ? assignment.roleType.label : className.split(' ').first;
+    final isActive = assignment.id == state.active?.roleAssignmentId;
+
+    return InkWell(
+      onTap: isActive
+          ? null
+          : () => context
+              .read<SubjectTeacherContextBloc>()
+              .add(ContextSwitched(assignment.id)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceContainer(context),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Center(
+                child: Text(
+                  shortName,
+                  style: TextStyle(
+                    color: AppColors.textPrimary(context),
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    className.isEmpty ? assignment.displayLabel : className,
+                    style: TextStyle(
+                      color: AppColors.textPrimary(context),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    assignment.subjectName ?? assignment.roleType.label,
+                    style: TextStyle(color: AppColors.textSecondary(context), fontSize: 11),
+                  ),
+                  if (assignment.isSubstitute)
+                    Text(
+                      'Covering',
+                      style: TextStyle(color: AppColors.warning(context), fontSize: 11),
+                    ),
+                ],
+              ),
+            ),
+            if (isActive)
+              Text(
+                'Active',
+                style: TextStyle(
+                  color: AppColors.success(context),
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            const SizedBox(width: 8),
+            Icon(Icons.chevron_right, color: AppColors.textMuted(context)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWhatsNext(BuildContext context) {
+    return Column(
       children: [
-        const Skeleton(width: 250, height: 80, borderRadius: 12),
-        const SizedBox(height: AppSpacing.x3l),
-        const Skeleton(height: 160, borderRadius: 16),
-        const SizedBox(height: AppSpacing.x3l),
-        const Skeleton(height: 200, borderRadius: 16),
-        const SizedBox(height: AppSpacing.x3l),
-        const Skeleton(width: 150, height: 20),
-        const SizedBox(height: AppSpacing.l),
-        GridView.count(
-          crossAxisCount: 3,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: AppSpacing.l,
-          crossAxisSpacing: AppSpacing.l,
-          childAspectRatio: 1.35,
-          children: List.generate(3, (index) => const Skeleton(borderRadius: 12)),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "What's Next",
+              style: TextStyle(
+                color: AppColors.textPrimary(context),
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            TextButton(
+              onPressed: () => context.push('/staff/lessons'),
+              child: Text(
+                'View All',
+                style: TextStyle(color: AppColors.primary(context), fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.m),
+          child: Text(
+            'Nothing due for this class right now.',
+            style: TextStyle(color: AppColors.textMuted(context), fontSize: 12),
+          ),
         ),
       ],
     );

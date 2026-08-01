@@ -22,6 +22,8 @@ import 'package:school_pulse/features/student/presentation/bloc/selected_student
 import 'package:school_pulse/features/student/presentation/bloc/students_bloc.dart';
 import 'package:school_pulse/features/notifications/presentation/bloc/notifications_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_dashboard/subject_teacher_dashboard_bloc.dart';
 import 'package:school_pulse/features/director/presentation/bloc/director_bloc.dart';
 import 'package:school_pulse/features/calendar/presentation/bloc/calendar_bloc.dart';
 import 'package:school_pulse/features/calendar/presentation/bloc/calendar_event.dart';
@@ -132,6 +134,15 @@ class SchoolPulseApp extends StatelessWidget {
         ),
         BlocProvider(
           create: (_) => di.sl<TeacherBloc>(),
+        ),
+        // Provided app-wide, not per-screen: the Subject Teacher tabs are
+        // separate routes, and each has to read the same active
+        // responsibility as the others.
+        BlocProvider(
+          create: (_) => di.sl<SubjectTeacherContextBloc>(),
+        ),
+        BlocProvider(
+          create: (_) => di.sl<SubjectTeacherDashboardBloc>(),
         ),
         BlocProvider(
           create: (_) => di.sl<DirectorBloc>(),
