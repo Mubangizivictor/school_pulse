@@ -55,6 +55,10 @@ dependencies:
   url_launcher: ^6.3.1
   share_plus: ^10.1.4
   nfc_manager: ^3.5.0
+  file_picker: ^11.0.3
+  record: ^7.1.1
+  just_audio: ^0.10.6
+  geolocator: ^14.0.2
 
 dev_dependencies:
   flutter_test:
