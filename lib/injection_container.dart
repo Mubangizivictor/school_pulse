@@ -275,11 +275,13 @@ import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dar
 import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_local_data_source.dart';
 import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_remote_data_source.dart';
 import 'package:school_pulse/features/teacher/data/models/subject_teacher_isar_models.dart';
+import 'package:school_pulse/features/teacher/data/repositories/lesson_attendance_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/staff_assignment_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/subject_student_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/services/academic_calendar_service_impl.dart';
 import 'package:school_pulse/features/teacher/data/services/active_responsibility_service_impl.dart';
 import 'package:school_pulse/features/teacher/data/services/subject_audit_service_impl.dart';
+import 'package:school_pulse/features/teacher/domain/repositories/lesson_attendance_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/staff_assignment_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/subject_student_repository.dart';
 import 'package:school_pulse/features/teacher/domain/services/academic_calendar_service.dart';
@@ -1282,6 +1284,16 @@ Future<void> init() async {
   // dependency so tests can supply a fixed device id.
   sl.registerLazySingleton(() => DeviceIdService());
 
+  sl.registerLazySingleton<LessonAttendanceRepository>(
+    () => LessonAttendanceRepositoryImpl(
+      remoteDataSource: sl(),
+      localDataSource: sl(),
+      auditService: sl(),
+      networkInfo: sl(),
+      deviceIdService: sl(),
+    ),
+  );
+
   sl.registerLazySingleton<SubjectAuditService>(
     () => SubjectAuditServiceImpl(
       remoteDataSource: sl(),
@@ -1533,6 +1545,8 @@ Future<void> init() async {
     StaffRoleAssignmentIsarSchema,
     SubjectEnrollmentIsarSchema,
     SubjectTeacherOfflineOperationIsarSchema,
+    LessonIsarSchema,
+    LessonAttendanceIsarSchema,
   ], directory: dir.path);
   sl.registerLazySingleton(() => isar);
 

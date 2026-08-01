@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:isar/isar.dart';
 
+import '../../domain/entities/lesson.dart';
+import '../../domain/entities/lesson_attendance.dart';
 import '../../domain/entities/offline_operation.dart';
 import '../../domain/entities/staff_role_assignment.dart';
 import '../../domain/entities/subject_enrollment.dart';
@@ -300,5 +302,232 @@ class SubjectTeacherOfflineOperationIsar {
       // the operation surfaces as failed instead.
       return <String, dynamic>{};
     }
+  }
+}
+
+/// Locally cached timetable lessons, so the Lessons tab and the register
+/// both open with no connectivity.
+@collection
+class LessonIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String lessonId;
+
+  @Index()
+  late String schoolId;
+
+  late String campusId;
+  late String academicYearId;
+  late String termId;
+
+  @Index()
+  late String subjectId;
+
+  late String subjectName;
+
+  @Index()
+  late String classId;
+
+  late String className;
+  String? streamId;
+  String? streamName;
+  late String timetableSlotId;
+
+  @Index()
+  late String teacherStaffId;
+
+  String? substituteStaffId;
+  late String title;
+  String? topic;
+  String? subtopic;
+
+  @Index()
+  late DateTime scheduledStart;
+
+  late DateTime scheduledEnd;
+  DateTime? actualStart;
+  DateTime? actualEnd;
+  String? room;
+  late String status;
+  String? statusReason;
+  late int enrolledCount;
+  late bool attendanceSubmitted;
+  late int lessonNoteCount;
+  late int resourceCount;
+  String? relatedAssessmentId;
+
+  LessonIsar();
+
+  factory LessonIsar.fromEntity(Lesson e) {
+    return LessonIsar()
+      ..lessonId = e.id
+      ..schoolId = e.schoolId
+      ..campusId = e.campusId
+      ..academicYearId = e.academicYearId
+      ..termId = e.termId
+      ..subjectId = e.subjectId
+      ..subjectName = e.subjectName
+      ..classId = e.classId
+      ..className = e.className
+      ..streamId = e.streamId
+      ..streamName = e.streamName
+      ..timetableSlotId = e.timetableSlotId
+      ..teacherStaffId = e.teacherStaffId
+      ..substituteStaffId = e.substituteStaffId
+      ..title = e.title
+      ..topic = e.topic
+      ..subtopic = e.subtopic
+      ..scheduledStart = e.scheduledStart
+      ..scheduledEnd = e.scheduledEnd
+      ..actualStart = e.actualStart
+      ..actualEnd = e.actualEnd
+      ..room = e.room
+      ..status = e.status.name
+      ..statusReason = e.statusReason
+      ..enrolledCount = e.enrolledCount
+      ..attendanceSubmitted = e.attendanceSubmitted
+      ..lessonNoteCount = e.lessonNoteCount
+      ..resourceCount = e.resourceCount
+      ..relatedAssessmentId = e.relatedAssessmentId;
+  }
+
+  Lesson toEntity() {
+    return Lesson(
+      id: lessonId,
+      schoolId: schoolId,
+      campusId: campusId,
+      academicYearId: academicYearId,
+      termId: termId,
+      subjectId: subjectId,
+      subjectName: subjectName,
+      classId: classId,
+      className: className,
+      streamId: streamId,
+      streamName: streamName,
+      timetableSlotId: timetableSlotId,
+      teacherStaffId: teacherStaffId,
+      substituteStaffId: substituteStaffId,
+      title: title,
+      topic: topic,
+      subtopic: subtopic,
+      scheduledStart: scheduledStart,
+      scheduledEnd: scheduledEnd,
+      actualStart: actualStart,
+      actualEnd: actualEnd,
+      room: room,
+      status: LessonStatus.fromId(status),
+      statusReason: statusReason,
+      enrolledCount: enrolledCount,
+      attendanceSubmitted: attendanceSubmitted,
+      lessonNoteCount: lessonNoteCount,
+      resourceCount: resourceCount,
+      relatedAssessmentId: relatedAssessmentId,
+    );
+  }
+}
+
+/// One student's row in a locally held register. Stored as an embedded
+/// object so a register round-trips as a unit and a half-written draft can
+/// never lose some of its marks.
+@embedded
+class LessonAttendanceEntryIsar {
+  String? studentId;
+  String? status;
+  String? note;
+  DateTime? markedAt;
+}
+
+/// A register held on the device - a draft in progress, or a submitted one
+/// waiting for the sync queue to drain.
+@collection
+class LessonAttendanceIsar {
+  Id id = Isar.autoIncrement;
+
+  /// Keyed on the lesson, not on a generated id: one register per lesson is
+  /// what makes a double submit or an offline replay overwrite instead of
+  /// creating a second register for the same period.
+  @Index(unique: true, replace: true)
+  late String lessonId;
+
+  late String attendanceId;
+
+  @Index()
+  late String schoolId;
+
+  late String campusId;
+  late String academicYearId;
+  late String termId;
+
+  @Index()
+  late String subjectId;
+
+  late String classId;
+  String? streamId;
+  late String staffId;
+  late String roleAssignmentId;
+  late List<LessonAttendanceEntryIsar> entries;
+
+  @Index()
+  late String status;
+
+  DateTime? submittedAt;
+  String? deviceId;
+  late DateTime updatedAt;
+
+  LessonAttendanceIsar();
+
+  factory LessonAttendanceIsar.fromEntity(LessonAttendance e) {
+    return LessonAttendanceIsar()
+      ..lessonId = e.lessonId
+      ..attendanceId = e.id
+      ..schoolId = e.schoolId
+      ..campusId = e.campusId
+      ..academicYearId = e.academicYearId
+      ..termId = e.termId
+      ..subjectId = e.subjectId
+      ..classId = e.classId
+      ..streamId = e.streamId
+      ..staffId = e.staffId
+      ..roleAssignmentId = e.roleAssignmentId
+      ..entries = e.entries
+          .map((entry) => LessonAttendanceEntryIsar()
+            ..studentId = entry.studentId
+            ..status = entry.status.name
+            ..note = entry.note
+            ..markedAt = entry.markedAt)
+          .toList()
+      ..status = e.status.name
+      ..submittedAt = e.submittedAt
+      ..deviceId = e.deviceId
+      ..updatedAt = e.updatedAt;
+  }
+
+  LessonAttendance toEntity() {
+    return LessonAttendance(
+      id: attendanceId,
+      schoolId: schoolId,
+      campusId: campusId,
+      lessonId: lessonId,
+      academicYearId: academicYearId,
+      termId: termId,
+      subjectId: subjectId,
+      classId: classId,
+      streamId: streamId,
+      staffId: staffId,
+      roleAssignmentId: roleAssignmentId,
+      entries: entries
+          .map((entry) => LessonAttendanceEntry(
+                studentId: entry.studentId ?? '',
+                status: LessonAttendanceStatus.fromId(entry.status),
+                note: entry.note,
+                markedAt: entry.markedAt,
+              ))
+          .toList(),
+      status: AttendanceRegisterStatus.fromId(status),
+      submittedAt: submittedAt,
+      deviceId: deviceId,
+      updatedAt: updatedAt,
+    );
   }
 }

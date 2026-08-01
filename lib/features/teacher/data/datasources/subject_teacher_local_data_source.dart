@@ -25,6 +25,21 @@ abstract class SubjectTeacherLocalDataSource {
   Future<void> cacheEnrollments(List<SubjectEnrollmentIsar> enrollments);
   Future<void> clearEnrollments({String? schoolId});
 
+  Future<List<LessonIsar>> getLessons({
+    required String schoolId,
+    required String subjectId,
+    required String classId,
+    DateTime? from,
+    DateTime? to,
+  });
+  Future<LessonIsar?> getLesson(String lessonId);
+  Future<void> cacheLessons(List<LessonIsar> lessons);
+
+  /// The register held on this device for a lesson - a draft in progress, or
+  /// a submitted one still waiting to sync.
+  Future<LessonAttendanceIsar?> getAttendance(String lessonId);
+  Future<void> saveAttendance(LessonAttendanceIsar attendance);
+
   Future<void> enqueueOperation(SubjectTeacherOfflineOperationIsar operation);
   Future<List<SubjectTeacherOfflineOperationIsar>> getPendingOperations({
     String? schoolId,
@@ -129,6 +144,57 @@ class SubjectTeacherLocalDataSourceImpl implements SubjectTeacherLocalDataSource
   }
 
   @override
+  Future<List<LessonIsar>> getLessons({
+    required String schoolId,
+    required String subjectId,
+    required String classId,
+    DateTime? from,
+    DateTime? to,
+  }) async {
+    final rows = await isar.lessonIsars
+        .filter()
+        .schoolIdEqualTo(schoolId)
+        .and()
+        .subjectIdEqualTo(subjectId)
+        .and()
+        .classIdEqualTo(classId)
+        .findAll();
+
+    final filtered = rows.where((l) {
+      if (from != null && l.scheduledStart.isBefore(from)) return false;
+      if (to != null && l.scheduledStart.isAfter(to)) return false;
+      return true;
+    }).toList();
+
+    filtered.sort((a, b) => a.scheduledStart.compareTo(b.scheduledStart));
+    return filtered;
+  }
+
+  @override
+  Future<LessonIsar?> getLesson(String lessonId) {
+    return isar.lessonIsars.filter().lessonIdEqualTo(lessonId).findFirst();
+  }
+
+  @override
+  Future<void> cacheLessons(List<LessonIsar> lessons) async {
+    await isar.writeTxn(() async {
+      await isar.lessonIsars.putAll(lessons);
+    });
+  }
+
+  @override
+  Future<LessonAttendanceIsar?> getAttendance(String lessonId) {
+    return isar.lessonAttendanceIsars.filter().lessonIdEqualTo(lessonId).findFirst();
+  }
+
+  @override
+  Future<void> saveAttendance(LessonAttendanceIsar attendance) async {
+    await isar.writeTxn(() async {
+      await isar.lessonAttendanceIsars.put(attendance);
+    });
+  }
+
+  @override
   Future<void> enqueueOperation(SubjectTeacherOfflineOperationIsar operation) async {
     await isar.writeTxn(() async {
       await isar.subjectTeacherOfflineOperationIsars.put(operation);
@@ -189,6 +255,8 @@ class SubjectTeacherLocalDataSourceImpl implements SubjectTeacherLocalDataSource
       await isar.staffRoleAssignmentIsars.clear();
       await isar.subjectEnrollmentIsars.clear();
       await isar.subjectTeacherOfflineOperationIsars.clear();
+      await isar.lessonIsars.clear();
+      await isar.lessonAttendanceIsars.clear();
     });
   }
 }

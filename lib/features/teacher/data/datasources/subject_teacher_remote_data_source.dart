@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../domain/entities/lesson.dart';
+import '../../domain/entities/lesson_attendance.dart';
 import '../../domain/entities/staff_role_assignment.dart';
 import '../../domain/entities/subject_audit_log.dart';
 import '../../domain/entities/subject_enrollment.dart';
@@ -65,6 +67,26 @@ abstract class SubjectTeacherRemoteDataSource {
     required String academicYearId,
     String? streamId,
   });
+
+  Future<List<Lesson>> getLessons({
+    required String schoolId,
+    required String subjectId,
+    required String classId,
+    required String academicYearId,
+    DateTime? from,
+    DateTime? to,
+  });
+
+  Future<Lesson?> getLesson({required String schoolId, required String lessonId});
+
+  Future<void> updateLesson(Lesson lesson);
+
+  Future<LessonAttendance?> getLessonAttendance({
+    required String schoolId,
+    required String lessonId,
+  });
+
+  Future<void> saveLessonAttendance(LessonAttendance attendance);
 }
 
 class SubjectTeacherRemoteDataSourceImpl implements SubjectTeacherRemoteDataSource {
@@ -248,6 +270,180 @@ class SubjectTeacherRemoteDataSourceImpl implements SubjectTeacherRemoteDataSour
         streamName: data['streamName'] as String?,
       );
     }).toList();
+  }
+
+  CollectionReference<Map<String, dynamic>> _lessons(String schoolId) =>
+      _school(schoolId).collection('lessons');
+
+  CollectionReference<Map<String, dynamic>> _attendance(String schoolId) =>
+      _school(schoolId).collection('lesson_attendance');
+
+  @override
+  Future<List<Lesson>> getLessons({
+    required String schoolId,
+    required String subjectId,
+    required String classId,
+    required String academicYearId,
+    DateTime? from,
+    DateTime? to,
+  }) async {
+    Query<Map<String, dynamic>> query = _lessons(schoolId)
+        .where('subjectId', isEqualTo: subjectId)
+        .where('classId', isEqualTo: classId)
+        .where('academicYearId', isEqualTo: academicYearId);
+
+    if (from != null) {
+      query = query.where('scheduledStart',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(from));
+    }
+    if (to != null) {
+      query = query.where('scheduledStart',
+          isLessThanOrEqualTo: Timestamp.fromDate(to));
+    }
+
+    final snapshot = await query.orderBy('scheduledStart').get();
+    return snapshot.docs.map((d) => _lessonFromDoc(d.id, schoolId, d.data())).toList();
+  }
+
+  @override
+  Future<Lesson?> getLesson({
+    required String schoolId,
+    required String lessonId,
+  }) async {
+    final doc = await _lessons(schoolId).doc(lessonId).get();
+    final data = doc.data();
+    if (!doc.exists || data == null) return null;
+    return _lessonFromDoc(doc.id, schoolId, data);
+  }
+
+  @override
+  Future<void> updateLesson(Lesson lesson) async {
+    // Only the fields the panel owns. The timetable owns the schedule, the
+    // room and who is assigned - a merge write of the whole entity would let
+    // a teacher quietly move their own lesson.
+    await _lessons(lesson.schoolId).doc(lesson.id).set({
+      'status': lesson.status.name,
+      'statusReason': lesson.statusReason,
+      if (lesson.actualStart != null)
+        'actualStart': Timestamp.fromDate(lesson.actualStart!),
+      if (lesson.actualEnd != null)
+        'actualEnd': Timestamp.fromDate(lesson.actualEnd!),
+      'topic': lesson.topic,
+      'subtopic': lesson.subtopic,
+      'attendanceSubmitted': lesson.attendanceSubmitted,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  @override
+  Future<LessonAttendance?> getLessonAttendance({
+    required String schoolId,
+    required String lessonId,
+  }) async {
+    // Keyed on the lesson id, so there is exactly one register per period.
+    final doc = await _attendance(schoolId).doc(lessonId).get();
+    final data = doc.data();
+    if (!doc.exists || data == null) return null;
+    return _attendanceFromDoc(schoolId, lessonId, data);
+  }
+
+  @override
+  Future<void> saveLessonAttendance(LessonAttendance attendance) async {
+    await _attendance(attendance.schoolId).doc(attendance.lessonId).set({
+      'attendanceId': attendance.id,
+      'schoolId': attendance.schoolId,
+      'campusId': attendance.campusId,
+      'lessonId': attendance.lessonId,
+      'academicYearId': attendance.academicYearId,
+      'termId': attendance.termId,
+      'subjectId': attendance.subjectId,
+      'classId': attendance.classId,
+      'streamId': attendance.streamId,
+      'staffId': attendance.staffId,
+      'roleAssignmentId': attendance.roleAssignmentId,
+      'entries': attendance.entries
+          .map((e) => {
+                'studentId': e.studentId,
+                'status': e.status.name,
+                'note': e.note,
+                if (e.markedAt != null) 'markedAt': Timestamp.fromDate(e.markedAt!),
+              })
+          .toList(),
+      'status': attendance.status.name,
+      if (attendance.submittedAt != null)
+        'submittedAt': Timestamp.fromDate(attendance.submittedAt!),
+      'deviceId': attendance.deviceId,
+      'presentCount': attendance.presentCount,
+      'absentCount': attendance.absentCount,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  Lesson _lessonFromDoc(String id, String schoolId, Map<String, dynamic> data) {
+    return Lesson(
+      id: id,
+      schoolId: schoolId,
+      campusId: data['campusId'] as String? ?? '',
+      academicYearId: data['academicYearId'] as String? ?? '',
+      termId: data['termId'] as String? ?? '',
+      subjectId: data['subjectId'] as String? ?? '',
+      subjectName: data['subjectName'] as String? ?? '',
+      classId: data['classId'] as String? ?? '',
+      className: data['className'] as String? ?? '',
+      streamId: data['streamId'] as String?,
+      streamName: data['streamName'] as String?,
+      timetableSlotId: data['timetableSlotId'] as String? ?? '',
+      teacherStaffId: data['teacherStaffId'] as String? ?? '',
+      substituteStaffId: data['substituteStaffId'] as String?,
+      title: data['title'] as String? ?? '',
+      topic: data['topic'] as String?,
+      subtopic: data['subtopic'] as String?,
+      scheduledStart: _toDate(data['scheduledStart']) ?? DateTime(1970),
+      scheduledEnd: _toDate(data['scheduledEnd']) ?? DateTime(1970),
+      actualStart: _toDate(data['actualStart']),
+      actualEnd: _toDate(data['actualEnd']),
+      room: data['room'] as String?,
+      status: LessonStatus.fromId(data['status'] as String?),
+      statusReason: data['statusReason'] as String?,
+      enrolledCount: (data['enrolledCount'] as num?)?.toInt() ?? 0,
+      attendanceSubmitted: data['attendanceSubmitted'] as bool? ?? false,
+      lessonNoteCount: (data['lessonNoteCount'] as num?)?.toInt() ?? 0,
+      resourceCount: (data['resourceCount'] as num?)?.toInt() ?? 0,
+      relatedAssessmentId: data['relatedAssessmentId'] as String?,
+    );
+  }
+
+  LessonAttendance _attendanceFromDoc(
+    String schoolId,
+    String lessonId,
+    Map<String, dynamic> data,
+  ) {
+    final rawEntries = (data['entries'] as List?) ?? const [];
+    return LessonAttendance(
+      id: data['attendanceId'] as String? ?? lessonId,
+      schoolId: schoolId,
+      campusId: data['campusId'] as String? ?? '',
+      lessonId: lessonId,
+      academicYearId: data['academicYearId'] as String? ?? '',
+      termId: data['termId'] as String? ?? '',
+      subjectId: data['subjectId'] as String? ?? '',
+      classId: data['classId'] as String? ?? '',
+      streamId: data['streamId'] as String?,
+      staffId: data['staffId'] as String? ?? '',
+      roleAssignmentId: data['roleAssignmentId'] as String? ?? '',
+      entries: rawEntries.whereType<Map<String, dynamic>>().map((e) {
+        return LessonAttendanceEntry(
+          studentId: e['studentId'] as String? ?? '',
+          status: LessonAttendanceStatus.fromId(e['status'] as String?),
+          note: e['note'] as String?,
+          markedAt: _toDate(e['markedAt']),
+        );
+      }).toList(),
+      status: AttendanceRegisterStatus.fromId(data['status'] as String?),
+      submittedAt: _toDate(data['submittedAt']),
+      deviceId: data['deviceId'] as String?,
+      updatedAt: _toDate(data['updatedAt']) ?? DateTime.now(),
+    );
   }
 
   static String _enrollmentDocId(SubjectEnrollment e) =>
