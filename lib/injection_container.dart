@@ -17,6 +17,7 @@ import 'package:school_pulse/features/visitors/data/datasources/visitor_remote_d
 import 'package:school_pulse/features/visitors/presentation/bloc/visitors_bloc.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:school_pulse/features/visitors/data/models/visitor_isar.dart';
 import 'package:school_pulse/features/visitors/data/models/visitor_blacklist_isar.dart';
 import 'package:school_pulse/features/visitors/data/models/pre_approved_visitor_isar.dart';
@@ -268,6 +269,18 @@ import 'package:school_pulse/features/teacher/domain/usecases/manage_homework.da
 import 'package:school_pulse/features/teacher/domain/usecases/manage_report_comments.dart';
 import 'package:school_pulse/features/teacher/domain/usecases/manage_competency_ratings.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
+
+// Subject Teacher panel
+import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_local_data_source.dart';
+import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_remote_data_source.dart';
+import 'package:school_pulse/features/teacher/data/models/subject_teacher_isar_models.dart';
+import 'package:school_pulse/features/teacher/data/repositories/staff_assignment_repository_impl.dart';
+import 'package:school_pulse/features/teacher/data/services/academic_calendar_service_impl.dart';
+import 'package:school_pulse/features/teacher/data/services/active_responsibility_service_impl.dart';
+import 'package:school_pulse/features/teacher/domain/repositories/staff_assignment_repository.dart';
+import 'package:school_pulse/features/teacher/domain/services/academic_calendar_service.dart';
+import 'package:school_pulse/features/teacher/domain/services/active_responsibility_service.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_bloc.dart';
 
 // Transport
 import 'package:school_pulse/features/transport/domain/repositories/transport_repository.dart';
@@ -1209,6 +1222,51 @@ Future<void> init() async {
 
   sl.registerFactory(() => ReportWizardBloc(generateReports: sl()));
 
+  // Features - Subject Teacher panel
+  //
+  // The context BLoC is a lazy singleton, not a factory: it owns which
+  // responsibility the teacher is acting under, and every tab has to read the
+  // same answer. A factory would give the Students tab a different active
+  // subject from the Marks tab.
+  sl.registerLazySingleton(
+    () => SubjectTeacherContextBloc(
+      responsibilityService: sl(),
+      assignmentRepository: sl(),
+      calendarService: sl(),
+    ),
+  );
+
+  sl.registerLazySingleton<ActiveResponsibilityService>(
+    () => ActiveResponsibilityServiceImpl(
+      assignmentRepository: sl(),
+      calendarService: sl(),
+    ),
+  );
+
+  sl.registerLazySingleton<AcademicCalendarService>(
+    () => AcademicCalendarServiceImpl(structureRepository: sl()),
+  );
+
+  sl.registerLazySingleton<StaffAssignmentRepository>(
+    () => StaffAssignmentRepositoryImpl(
+      remoteDataSource: sl(),
+      localDataSource: sl(),
+      networkInfo: sl(),
+      preferences: sl(),
+      // Read at call time rather than captured, so the persisted selection is
+      // always keyed to whoever is signed in now.
+      currentUserId: () => sl<FirebaseAuth>().currentUser?.uid ?? '',
+    ),
+  );
+
+  sl.registerLazySingleton<SubjectTeacherRemoteDataSource>(
+    () => SubjectTeacherRemoteDataSourceImpl(firestore: sl()),
+  );
+
+  sl.registerLazySingleton<SubjectTeacherLocalDataSource>(
+    () => SubjectTeacherLocalDataSourceImpl(isar: sl()),
+  );
+
   // Features - Transport
   sl.registerFactory(() => TransportBloc(getTransportInfo: sl()));
 
@@ -1391,6 +1449,7 @@ Future<void> init() async {
   sl.registerLazySingleton<PrinterService>(() => ThermalPrinterService());
 
   //! External
+  final preferences = await SharedPreferences.getInstance();
   final dir = await getApplicationDocumentsDirectory();
   final isar = await Isar.open([
     VisitorIsarSchema,
@@ -1439,8 +1498,13 @@ Future<void> init() async {
     OperatorPermissionSnapshotIsarSchema,
     NotificationIsarSchema,
     NotificationTokenIsarSchema,
+    StaffRoleAssignmentIsarSchema,
+    SubjectEnrollmentIsarSchema,
+    SubjectTeacherOfflineOperationIsarSchema,
   ], directory: dir.path);
   sl.registerLazySingleton(() => isar);
+
+  sl.registerLazySingleton(() => preferences);
 
   sl.registerLazySingleton(() => FirebaseAuth.instance);
   sl.registerLazySingleton(() => FirebaseFirestore.instance);
