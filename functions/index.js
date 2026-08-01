@@ -622,6 +622,89 @@ exports.processDirectNotificationQueue = onDocumentCreated("notification_queue/{
 });
 
 /**
+ * Pushes a new chat message to everyone in the conversation except the
+ * sender.
+ *
+ * This deliberately runs server-side rather than in the app: fanning out
+ * would otherwise mean the sending client reading every recipient's token
+ * subcollection on every keystroke-length message, which is both slow on a
+ * phone and impossible to secure (a client must not be able to decide who
+ * gets pushed). Recipients who muted the chat are skipped, and the data
+ * payload carries the conversation id so tapping the notification can deep
+ * link straight into the thread.
+ */
+exports.processChatMessage = onDocumentCreated(
+  "conversations/{conversationId}/messages/{messageId}",
+  async (event) => {
+    const message = event.data.data();
+    const { conversationId } = event.params;
+
+    const conversationRef = admin.firestore().collection("conversations").doc(conversationId);
+    const conversationSnap = await conversationRef.get();
+    if (!conversationSnap.exists) return;
+
+    const conversation = conversationSnap.data();
+    const muted = conversation.mutedBy || [];
+    const recipients = (conversation.participantIds || [])
+      .filter((uid) => uid !== message.senderId && !muted.includes(uid));
+    if (recipients.length === 0) return;
+
+    // A 1:1 chat shows the sender's name; a group shows "Sender · Group".
+    const title = conversation.type === "direct"
+      ? message.senderName
+      : `${message.senderName} · ${conversation.title || "Group"}`;
+    const body = previewForPush(message);
+
+    const tokenLookups = await Promise.all(
+      recipients.map((uid) =>
+        admin.firestore().collection("users").doc(uid).collection("tokens").get()
+      )
+    );
+    const tokens = tokenLookups.flatMap((snap) => snap.docs.map((doc) => doc.id));
+    if (tokens.length === 0) return;
+
+    try {
+      await admin.messaging().sendEachForMulticast({
+        tokens,
+        notification: { title, body },
+        // Shaped for NotificationPushPayload.tryParse on the client: it
+        // needs an id, a NotificationType name, and the conversation id -
+        // that trio is what lets NotificationDeepLinkRouter open
+        // /messages/chat/<id> when the notification is tapped.
+        data: {
+          notificationId: event.params.messageId,
+          type: conversation.type === "direct" ? "newMessage" : "groupMessage",
+          relatedConversationId: conversationId,
+          conversationId,
+        },
+        android: {
+          priority: "high",
+          notification: { channelId: "school_pulse_alerts" },
+        },
+        apns: { payload: { aps: { sound: "default" } } },
+      });
+    } catch (err) {
+      console.error("Chat message push failed:", err);
+    }
+  }
+);
+
+/** Mirrors ChatMessageModel.preview on the client. */
+function previewForPush(message) {
+  switch (message.type) {
+    case "image": return "📷 Photo";
+    case "video": return "🎬 Video";
+    case "audio": return "🎤 Voice message";
+    case "file": return `📄 ${message.fileName || "Document"}`;
+    case "location": return "📍 Location";
+    case "contact": return "👤 Contact";
+    case "poll": return "📊 Poll";
+    case "event": return "📅 Event";
+    default: return message.content || "New message";
+  }
+}
+
+/**
  * Placeholder for SMS delivery. In a real app, this would call
  * Twilio or Africa's Talking API.
  */

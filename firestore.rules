@@ -410,6 +410,72 @@ service cloud.firestore {
       allow delete: if isStaff();
     }
 
+    // In-app messaging (the /messages module: inbox, 1:1 chats, groups,
+    // broadcast lists and channels). Access is by membership, not by role -
+    // parents, students and staff all use the same collection, and the only
+    // thing that decides what you can see is whether your uid is in
+    // participantIds. Every client query filters on exactly that, so these
+    // rules are the real enforcement rather than a rubber stamp.
+    match /conversations/{conversationId} {
+      function isParticipant() {
+        return isSignedIn() && request.auth.uid in resource.data.participantIds;
+      }
+      function isConversationAdmin() {
+        return isSignedIn() && request.auth.uid in resource.data.adminIds;
+      }
+      // Everything the inbox renders (lastMessage, unreadCounts, and the
+      // pin/mute/archive/delete flags) lives on this document, so ordinary
+      // participants have to be able to write it. The membership list is
+      // what's protected.
+      function membershipUnchanged() {
+        return request.resource.data.participantIds == resource.data.participantIds;
+      }
+      // Leaving a group removes exactly one id - your own.
+      function isLeaving() {
+        return !(request.auth.uid in request.resource.data.participantIds) &&
+          request.resource.data.participantIds.size() == resource.data.participantIds.size() - 1;
+      }
+
+      allow read: if isParticipant();
+      allow create: if isSignedIn() &&
+        request.resource.data.createdBy == request.auth.uid &&
+        request.auth.uid in request.resource.data.participantIds &&
+        isSameSchool(request.resource.data.schoolId);
+      allow update: if isParticipant() &&
+        (membershipUnchanged() || isConversationAdmin() || isLeaving());
+      allow delete: if isConversationAdmin();
+
+      match /messages/{messageId} {
+        function conversation() {
+          return get(/databases/$(database)/documents/conversations/$(conversationId)).data;
+        }
+
+        // participantIds is denormalized onto every message so reads (and the
+        // collection-group queries below) never need the parent document.
+        allow read: if isSignedIn() && request.auth.uid in resource.data.participantIds;
+        // Posting does need the parent - otherwise a client could write
+        // itself into participantIds and post into a chat it isn't in. The
+        // adminsOnly clause is what makes a channel read-only server-side.
+        allow create: if isSignedIn() &&
+          request.resource.data.senderId == request.auth.uid &&
+          request.auth.uid in conversation().participantIds &&
+          (conversation().get('messagePolicy', 'everyone') != 'adminsOnly' ||
+           request.auth.uid in conversation().adminIds);
+        // Read receipts, stars, pins and reactions are all participant
+        // writes on somebody else's message.
+        allow update: if isSignedIn() && request.auth.uid in resource.data.participantIds;
+        allow delete: if isSignedIn() && resource.data.senderId == request.auth.uid;
+      }
+    }
+
+    // Backs Search / Starred / Pinned, which read collectionGroup('messages')
+    // instead of walking one conversation at a time. `messages` is only ever
+    // a subcollection of `conversations`, so this wildcard can't widen
+    // access to anything else.
+    match /{path=**}/messages/{messageId} {
+      allow read: if isSignedIn() && request.auth.uid in resource.data.participantIds;
+    }
+
     // Front-desk visitor log and appointment scheduling. Real isSameSchool()
     // tenant isolation - client queries already filter by schoolId
     // (VisitorRemoteDataSource.getVisitors), so this is safe to tighten.
