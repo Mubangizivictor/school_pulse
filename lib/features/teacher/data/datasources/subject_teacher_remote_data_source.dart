@@ -51,6 +51,20 @@ abstract class SubjectTeacherRemoteDataSource {
   Future<void> writeAuditLog(SubjectAuditLog log);
 
   Future<void> writeAuditLogs(List<SubjectAuditLog> logs);
+
+  /// The active students of one class, as a deliberately narrow projection.
+  ///
+  /// The Subject Teacher panel has no business reading a student's fee
+  /// balance, clinical notes or discipline file, so the projection carries
+  /// name, photo, admission number and placement and nothing else. Fetching
+  /// the class in one query rather than looking up enrolled ids individually
+  /// keeps this to a single read per class.
+  Future<List<EligibleStudent>> getClassRoster({
+    required String schoolId,
+    required String classId,
+    required String academicYearId,
+    String? streamId,
+  });
 }
 
 class SubjectTeacherRemoteDataSourceImpl implements SubjectTeacherRemoteDataSource {
@@ -198,6 +212,44 @@ class SubjectTeacherRemoteDataSourceImpl implements SubjectTeacherRemoteDataSour
     await batch.commit();
   }
 
+  @override
+  Future<List<EligibleStudent>> getClassRoster({
+    required String schoolId,
+    required String classId,
+    required String academicYearId,
+    String? streamId,
+  }) async {
+    Query<Map<String, dynamic>> query = firestore
+        .collection('students')
+        .where('schoolId', isEqualTo: schoolId)
+        .where('classId', isEqualTo: classId)
+        .where('academicYearId', isEqualTo: academicYearId)
+        // Transferred, withdrawn, graduated and suspended students must not
+        // appear in a teaching register.
+        .where('status', isEqualTo: 'active');
+
+    if (streamId != null && streamId.isNotEmpty) {
+      query = query.where('streamId', isEqualTo: streamId);
+    }
+
+    final snapshot = await query.get();
+    return snapshot.docs.map((d) {
+      final data = d.data();
+      return EligibleStudent(
+        studentId: d.id,
+        name: data['name'] as String? ?? '',
+        admissionNumber: data['admissionNumber'] as String? ??
+            data['studentCode'] as String? ??
+            '',
+        photoUrl: data['photoUrl'] as String?,
+        classId: data['classId'] as String? ?? classId,
+        className: data['className'] as String? ?? '',
+        streamId: data['streamId'] as String?,
+        streamName: data['streamName'] as String?,
+      );
+    }).toList();
+  }
+
   static String _enrollmentDocId(SubjectEnrollment e) =>
       '${e.studentId}_${e.subjectId}_${e.academicYearId}';
 
@@ -259,6 +311,7 @@ class SubjectTeacherRemoteDataSourceImpl implements SubjectTeacherRemoteDataSour
       streamId: data['streamId'] as String?,
       academicYearId: data['academicYearId'] as String? ?? '',
       status: SubjectEnrollmentStatus.fromId(data['status'] as String?),
+      roleAssignmentId: data['roleAssignmentId'] as String? ?? '',
       isMandatory: data['isMandatory'] as bool? ?? false,
       enrolledAt: _toDate(data['enrolledAt']) ?? DateTime(1970),
       enrolledBy: data['enrolledBy'] as String? ?? '',
@@ -280,6 +333,9 @@ class SubjectTeacherRemoteDataSourceImpl implements SubjectTeacherRemoteDataSour
       'streamId': e.streamId,
       'academicYearId': e.academicYearId,
       'status': e.status.name,
+      // The rules read this back to confirm the writer held an assignment
+      // covering this subject and class.
+      'roleAssignmentId': e.roleAssignmentId,
       'isMandatory': e.isMandatory,
       'enrolledAt': Timestamp.fromDate(e.enrolledAt),
       'enrolledBy': e.enrolledBy,

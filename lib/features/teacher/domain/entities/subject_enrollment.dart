@@ -35,6 +35,11 @@ class SubjectEnrollment extends Equatable {
   final String academicYearId;
   final SubjectEnrollmentStatus status;
 
+  /// The responsibility the enrollment was created under. Written so the
+  /// security rules can check the writer actually held an assignment
+  /// covering this subject and class, instead of trusting the request.
+  final String roleAssignmentId;
+
   /// Mandatory subjects cannot be dropped by a teacher without an explicit
   /// admin approval, regardless of the teacher's own removal permission.
   final bool isMandatory;
@@ -57,6 +62,7 @@ class SubjectEnrollment extends Equatable {
     this.streamId,
     required this.academicYearId,
     this.status = SubjectEnrollmentStatus.active,
+    this.roleAssignmentId = '',
     this.isMandatory = false,
     required this.enrolledAt,
     this.enrolledBy = '',
@@ -83,6 +89,7 @@ class SubjectEnrollment extends Equatable {
   SubjectEnrollment copyWith({
     String? id,
     SubjectEnrollmentStatus? status,
+    String? roleAssignmentId,
     bool? isMandatory,
     DateTime? removedAt,
     String? removedBy,
@@ -100,6 +107,7 @@ class SubjectEnrollment extends Equatable {
       streamId: streamId,
       academicYearId: academicYearId,
       status: status ?? this.status,
+      roleAssignmentId: roleAssignmentId ?? this.roleAssignmentId,
       isMandatory: isMandatory ?? this.isMandatory,
       enrolledAt: enrolledAt,
       enrolledBy: enrolledBy,
@@ -122,6 +130,7 @@ class SubjectEnrollment extends Equatable {
         streamId,
         academicYearId,
         status,
+        roleAssignmentId,
         isMandatory,
         enrolledAt,
         enrolledBy,

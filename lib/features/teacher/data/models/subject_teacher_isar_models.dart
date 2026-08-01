@@ -163,6 +163,7 @@ class SubjectEnrollmentIsar {
   late String academicYearId;
 
   late String status;
+  late String roleAssignmentId;
   late bool isMandatory;
   late DateTime enrolledAt;
   late String enrolledBy;
@@ -185,6 +186,7 @@ class SubjectEnrollmentIsar {
       ..streamId = e.streamId
       ..academicYearId = e.academicYearId
       ..status = e.status.name
+      ..roleAssignmentId = e.roleAssignmentId
       ..isMandatory = e.isMandatory
       ..enrolledAt = e.enrolledAt
       ..enrolledBy = e.enrolledBy
@@ -206,6 +208,7 @@ class SubjectEnrollmentIsar {
       streamId: streamId,
       academicYearId: academicYearId,
       status: SubjectEnrollmentStatus.fromId(status),
+      roleAssignmentId: roleAssignmentId,
       isMandatory: isMandatory,
       enrolledAt: enrolledAt,
       enrolledBy: enrolledBy,

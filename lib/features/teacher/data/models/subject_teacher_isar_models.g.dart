@@ -5827,28 +5827,33 @@ const SubjectEnrollmentIsarSchema = CollectionSchema(
       name: r'removedBy',
       type: IsarType.string,
     ),
-    r'schoolId': PropertySchema(
+    r'roleAssignmentId': PropertySchema(
       id: 12,
+      name: r'roleAssignmentId',
+      type: IsarType.string,
+    ),
+    r'schoolId': PropertySchema(
+      id: 13,
       name: r'schoolId',
       type: IsarType.string,
     ),
     r'status': PropertySchema(
-      id: 13,
+      id: 14,
       name: r'status',
       type: IsarType.string,
     ),
     r'streamId': PropertySchema(
-      id: 14,
+      id: 15,
       name: r'streamId',
       type: IsarType.string,
     ),
     r'studentId': PropertySchema(
-      id: 15,
+      id: 16,
       name: r'studentId',
       type: IsarType.string,
     ),
     r'subjectId': PropertySchema(
-      id: 16,
+      id: 17,
       name: r'subjectId',
       type: IsarType.string,
     )
@@ -5969,6 +5974,7 @@ int _subjectEnrollmentIsarEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
+  bytesCount += 3 + object.roleAssignmentId.length * 3;
   bytesCount += 3 + object.schoolId.length * 3;
   bytesCount += 3 + object.status.length * 3;
   {
@@ -6000,11 +6006,12 @@ void _subjectEnrollmentIsarSerialize(
   writer.writeString(offsets[9], object.removalReason);
   writer.writeDateTime(offsets[10], object.removedAt);
   writer.writeString(offsets[11], object.removedBy);
-  writer.writeString(offsets[12], object.schoolId);
-  writer.writeString(offsets[13], object.status);
-  writer.writeString(offsets[14], object.streamId);
-  writer.writeString(offsets[15], object.studentId);
-  writer.writeString(offsets[16], object.subjectId);
+  writer.writeString(offsets[12], object.roleAssignmentId);
+  writer.writeString(offsets[13], object.schoolId);
+  writer.writeString(offsets[14], object.status);
+  writer.writeString(offsets[15], object.streamId);
+  writer.writeString(offsets[16], object.studentId);
+  writer.writeString(offsets[17], object.subjectId);
 }
 
 SubjectEnrollmentIsar _subjectEnrollmentIsarDeserialize(
@@ -6027,11 +6034,12 @@ SubjectEnrollmentIsar _subjectEnrollmentIsarDeserialize(
   object.removalReason = reader.readStringOrNull(offsets[9]);
   object.removedAt = reader.readDateTimeOrNull(offsets[10]);
   object.removedBy = reader.readStringOrNull(offsets[11]);
-  object.schoolId = reader.readString(offsets[12]);
-  object.status = reader.readString(offsets[13]);
-  object.streamId = reader.readStringOrNull(offsets[14]);
-  object.studentId = reader.readString(offsets[15]);
-  object.subjectId = reader.readString(offsets[16]);
+  object.roleAssignmentId = reader.readString(offsets[12]);
+  object.schoolId = reader.readString(offsets[13]);
+  object.status = reader.readString(offsets[14]);
+  object.streamId = reader.readStringOrNull(offsets[15]);
+  object.studentId = reader.readString(offsets[16]);
+  object.subjectId = reader.readString(offsets[17]);
   return object;
 }
 
@@ -6071,10 +6079,12 @@ P _subjectEnrollmentIsarDeserializeProp<P>(
     case 13:
       return (reader.readString(offset)) as P;
     case 14:
-      return (reader.readStringOrNull(offset)) as P;
-    case 15:
       return (reader.readString(offset)) as P;
+    case 15:
+      return (reader.readStringOrNull(offset)) as P;
     case 16:
+      return (reader.readString(offset)) as P;
+    case 17:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -7854,6 +7864,144 @@ extension SubjectEnrollmentIsarQueryFilter on QueryBuilder<
   }
 
   QueryBuilder<SubjectEnrollmentIsar, SubjectEnrollmentIsar,
+      QAfterFilterCondition> roleAssignmentIdEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'roleAssignmentId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<SubjectEnrollmentIsar, SubjectEnrollmentIsar,
+      QAfterFilterCondition> roleAssignmentIdGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'roleAssignmentId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<SubjectEnrollmentIsar, SubjectEnrollmentIsar,
+      QAfterFilterCondition> roleAssignmentIdLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'roleAssignmentId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<SubjectEnrollmentIsar, SubjectEnrollmentIsar,
+      QAfterFilterCondition> roleAssignmentIdBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'roleAssignmentId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<SubjectEnrollmentIsar, SubjectEnrollmentIsar,
+      QAfterFilterCondition> roleAssignmentIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'roleAssignmentId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<SubjectEnrollmentIsar, SubjectEnrollmentIsar,
+      QAfterFilterCondition> roleAssignmentIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'roleAssignmentId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<SubjectEnrollmentIsar, SubjectEnrollmentIsar,
+          QAfterFilterCondition>
+      roleAssignmentIdContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'roleAssignmentId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<SubjectEnrollmentIsar, SubjectEnrollmentIsar,
+          QAfterFilterCondition>
+      roleAssignmentIdMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'roleAssignmentId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<SubjectEnrollmentIsar, SubjectEnrollmentIsar,
+      QAfterFilterCondition> roleAssignmentIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'roleAssignmentId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<SubjectEnrollmentIsar, SubjectEnrollmentIsar,
+      QAfterFilterCondition> roleAssignmentIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'roleAssignmentId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<SubjectEnrollmentIsar, SubjectEnrollmentIsar,
       QAfterFilterCondition> schoolIdEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -8739,6 +8887,20 @@ extension SubjectEnrollmentIsarQuerySortBy
   }
 
   QueryBuilder<SubjectEnrollmentIsar, SubjectEnrollmentIsar, QAfterSortBy>
+      sortByRoleAssignmentId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'roleAssignmentId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<SubjectEnrollmentIsar, SubjectEnrollmentIsar, QAfterSortBy>
+      sortByRoleAssignmentIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'roleAssignmentId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<SubjectEnrollmentIsar, SubjectEnrollmentIsar, QAfterSortBy>
       sortBySchoolId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schoolId', Sort.asc);
@@ -8994,6 +9156,20 @@ extension SubjectEnrollmentIsarQuerySortThenBy
   }
 
   QueryBuilder<SubjectEnrollmentIsar, SubjectEnrollmentIsar, QAfterSortBy>
+      thenByRoleAssignmentId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'roleAssignmentId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<SubjectEnrollmentIsar, SubjectEnrollmentIsar, QAfterSortBy>
+      thenByRoleAssignmentIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'roleAssignmentId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<SubjectEnrollmentIsar, SubjectEnrollmentIsar, QAfterSortBy>
       thenBySchoolId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schoolId', Sort.asc);
@@ -9153,6 +9329,14 @@ extension SubjectEnrollmentIsarQueryWhereDistinct
   }
 
   QueryBuilder<SubjectEnrollmentIsar, SubjectEnrollmentIsar, QDistinct>
+      distinctByRoleAssignmentId({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'roleAssignmentId',
+          caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<SubjectEnrollmentIsar, SubjectEnrollmentIsar, QDistinct>
       distinctBySchoolId({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'schoolId', caseSensitive: caseSensitive);
@@ -9277,6 +9461,13 @@ extension SubjectEnrollmentIsarQueryProperty on QueryBuilder<
       removedByProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'removedBy');
+    });
+  }
+
+  QueryBuilder<SubjectEnrollmentIsar, String, QQueryOperations>
+      roleAssignmentIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'roleAssignmentId');
     });
   }
 

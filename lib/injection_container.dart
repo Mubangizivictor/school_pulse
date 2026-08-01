@@ -18,6 +18,7 @@ import 'package:school_pulse/features/visitors/presentation/bloc/visitors_bloc.d
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:school_pulse/core/utils/device_id_service.dart';
 import 'package:school_pulse/features/visitors/data/models/visitor_isar.dart';
 import 'package:school_pulse/features/visitors/data/models/visitor_blacklist_isar.dart';
 import 'package:school_pulse/features/visitors/data/models/pre_approved_visitor_isar.dart';
@@ -275,12 +276,17 @@ import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_l
 import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_remote_data_source.dart';
 import 'package:school_pulse/features/teacher/data/models/subject_teacher_isar_models.dart';
 import 'package:school_pulse/features/teacher/data/repositories/staff_assignment_repository_impl.dart';
+import 'package:school_pulse/features/teacher/data/repositories/subject_student_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/services/academic_calendar_service_impl.dart';
 import 'package:school_pulse/features/teacher/data/services/active_responsibility_service_impl.dart';
+import 'package:school_pulse/features/teacher/data/services/subject_audit_service_impl.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/staff_assignment_repository.dart';
+import 'package:school_pulse/features/teacher/domain/repositories/subject_student_repository.dart';
 import 'package:school_pulse/features/teacher/domain/services/academic_calendar_service.dart';
 import 'package:school_pulse/features/teacher/domain/services/active_responsibility_service.dart';
+import 'package:school_pulse/features/teacher/domain/services/subject_audit_service.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_dashboard/subject_teacher_dashboard_bloc.dart';
 
 // Transport
 import 'package:school_pulse/features/transport/domain/repositories/transport_repository.dart';
@@ -1236,6 +1242,10 @@ Future<void> init() async {
     ),
   );
 
+  sl.registerLazySingleton(
+    () => SubjectTeacherDashboardBloc(studentRepository: sl()),
+  );
+
   sl.registerLazySingleton<ActiveResponsibilityService>(
     () => ActiveResponsibilityServiceImpl(
       assignmentRepository: sl(),
@@ -1256,6 +1266,28 @@ Future<void> init() async {
       // Read at call time rather than captured, so the persisted selection is
       // always keyed to whoever is signed in now.
       currentUserId: () => sl<FirebaseAuth>().currentUser?.uid ?? '',
+    ),
+  );
+
+  sl.registerLazySingleton<SubjectStudentRepository>(
+    () => SubjectStudentRepositoryImpl(
+      remoteDataSource: sl(),
+      localDataSource: sl(),
+      auditService: sl(),
+      networkInfo: sl(),
+    ),
+  );
+
+  // Everywhere else constructs this directly; the audit service takes it as a
+  // dependency so tests can supply a fixed device id.
+  sl.registerLazySingleton(() => DeviceIdService());
+
+  sl.registerLazySingleton<SubjectAuditService>(
+    () => SubjectAuditServiceImpl(
+      remoteDataSource: sl(),
+      localDataSource: sl(),
+      networkInfo: sl(),
+      deviceIdService: sl(),
     ),
   );
 
