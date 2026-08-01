@@ -752,3 +752,16 @@ exports.checkPaymentStatus = onCall(async (request) => {
 
   throw new HttpsError("invalid-argument", "Unknown provider.");
 });
+
+/**
+ * Notification module (fan-out, scheduling, escalation, retention, delivery
+ * testing). Kept in its own file so this one is not disturbed; re-exported
+ * here because the Firebase CLI only deploys what index.js exports.
+ */
+const notificationFunctions = require("./notifications");
+
+exports.processNotificationRequest = notificationFunctions.processNotificationRequest;
+exports.dispatchScheduledNotifications = notificationFunctions.dispatchScheduledNotifications;
+exports.escalateUnacknowledgedAlerts = notificationFunctions.escalateUnacknowledgedAlerts;
+exports.purgeExpiredNotifications = notificationFunctions.purgeExpiredNotifications;
+exports.sendTestNotification = notificationFunctions.sendTestNotification;

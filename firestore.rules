@@ -289,12 +289,13 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // ---- Patron (boys' boarding) module -------------------------------
+    // ---- Patron (boys') / Matron (girls') boarding modules -------------
+    // Shared collections, gender-scoped by a `gender` field on each doc.
     // Boarding roll-call. Distinct from the generic `attendance` collection
     // used by the classroom attendance engine.
     match /boarding_attendance/{docId} {
       allow read: if isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId);
-      allow write: if hasAnyRole(['boardingPatron', 'schoolAdmin', 'headTeacher', 'director']);
+      allow write: if hasAnyRole(['boardingPatron', 'boardingMatron', 'schoolAdmin', 'headTeacher', 'director']);
     }
     // Boarding-specific discipline incidents (separate from the general
     // Guidance & Discipline module's discipline_incidents collection).
@@ -305,27 +306,27 @@ service cloud.firestore {
         resource.data.isPrivate == false &&
         (isParentOf(resource.data.studentId) || isMe(resource.data.studentId))
       );
-      allow write: if hasAnyRole(['boardingPatron', 'schoolAdmin', 'headTeacher', 'director']);
+      allow write: if hasAnyRole(['boardingPatron', 'boardingMatron', 'schoolAdmin', 'headTeacher', 'director']);
     }
     match /boarding_announcements/{docId} {
       allow read: if isSignedIn();
-      allow write: if hasAnyRole(['boardingPatron', 'schoolAdmin', 'headTeacher', 'director']);
+      allow write: if hasAnyRole(['boardingPatron', 'boardingMatron', 'schoolAdmin', 'headTeacher', 'director']);
     }
     match /boarding_leave_requests/{docId} {
       allow read: if isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId);
-      allow write: if hasAnyRole(['boardingPatron', 'schoolAdmin', 'headTeacher', 'director']);
+      allow write: if hasAnyRole(['boardingPatron', 'boardingMatron', 'schoolAdmin', 'headTeacher', 'director']);
     }
     // Bed-to-bed / dorm-to-dorm move log, kept separately from the
     // per-dormitory `beds` subcollection so history survives a bed deletion.
     match /bed_transfers/{docId} {
-      allow read, write: if hasAnyRole(['boardingPatron', 'schoolAdmin', 'headTeacher', 'director']);
+      allow read, write: if hasAnyRole(['boardingPatron', 'boardingMatron', 'schoolAdmin', 'headTeacher', 'director']);
     }
     // Sensitive - counseling referrals are staff-only, never parent-visible.
     match /boarding_counseling_referrals/{docId} {
-      allow read, write: if hasAnyRole(['boardingPatron', 'schoolAdmin', 'headTeacher', 'director']);
+      allow read, write: if hasAnyRole(['boardingPatron', 'boardingMatron', 'schoolAdmin', 'headTeacher', 'director']);
     }
     match /boarding_behaviour_observations/{docId} {
-      allow read, write: if hasAnyRole(['boardingPatron', 'schoolAdmin', 'headTeacher', 'director']);
+      allow read, write: if hasAnyRole(['boardingPatron', 'boardingMatron', 'schoolAdmin', 'headTeacher', 'director']);
     }
 
     match /library_books/{docId} {
@@ -876,6 +877,109 @@ service cloud.firestore {
       // parent-initiated 1:1 messages - see the /alerts create rule above.
       allow create: if isSignedIn();
       allow read, update, delete: if false;
+    }
+
+    // ---- Notification module -------------------------------------------
+    // One document per recipient. Tenancy is enforced on every operation:
+    // a notification is readable only by the user it is addressed to, within
+    // their own school. There is no "read all notifications for a school"
+    // path from the client - delivery reporting is aggregated server-side.
+    match /notifications/{notificationId} {
+      function isMine() {
+        return isSignedIn()
+          && resource.data.recipientUserId == request.auth.uid
+          && resource.data.schoolId == myUser().schoolId;
+      }
+
+      // The only fields a recipient may ever change: their own engagement
+      // state. Content, sender, tenancy, routing and delivery status are
+      // written exclusively by the Admin SDK (which bypasses these rules).
+      function onlyStateFieldsChanged() {
+        return request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            'isRead', 'readAt',
+            'openedAt',
+            'acknowledgedAt',
+            'isPinned',
+            'isArchived'
+          ]);
+      }
+
+      allow read: if isMine();
+
+      // Clients never author notifications directly - they write a
+      // notification_request and a Cloud Function fans it out. This closes
+      // the hole where a client could forge a notification that appears to
+      // come from the school office.
+      allow create: if false;
+
+      allow update: if isMine() && onlyStateFieldsChanged();
+
+      // Deleting is permitted only for the recipient's own record, and only
+      // when it is not an unacknowledged alert - a parent must not be able to
+      // clear an emergency notice out of the audit trail before confirming it.
+      allow delete: if isMine()
+        && !(resource.data.requiresAcknowledgment == true
+             && resource.data.acknowledgedAt == null);
+    }
+
+    // Send requests. An authorised sender writes one of these; the Cloud
+    // Function resolves the audience and performs the fan-out with the Admin
+    // SDK, because recipient resolution needs reads the sender themselves is
+    // deliberately not permitted to make.
+    match /notification_requests/{requestId} {
+      allow create: if isStaff()
+        && request.resource.data.schoolId == myUser().schoolId
+        // Sender identity is stamped from the caller's own token, so a
+        // request cannot be attributed to somebody else.
+        && request.resource.data.senderId == request.auth.uid
+        && request.resource.data.status == 'pending'
+        // Emergency alerts are restricted to leadership and security heads.
+        && (
+          request.resource.data.category != 'emergency'
+          || hasAnyRole(['schoolAdmin', 'director', 'headTeacher',
+                         'deputyHead', 'securityHead'])
+        );
+
+      // A sender may follow their own request to see delivery counts.
+      allow read: if isStaff()
+        && resource.data.senderId == request.auth.uid
+        && resource.data.schoolId == myUser().schoolId;
+
+      // Status transitions are the Cloud Function's business. A sender may
+      // cancel a request that has not gone out yet, and nothing more.
+      allow update: if isStaff()
+        && resource.data.senderId == request.auth.uid
+        && resource.data.status in ['pending', 'scheduled']
+        && request.resource.data.status == 'cancelled'
+        && request.resource.data.diff(resource.data)
+             .affectedKeys().hasOnly(['status', 'cancelledAt']);
+
+      allow delete: if false;
+    }
+
+    // Per-user notification preferences, under the owning school.
+    match /schools/{schoolId}/notification_settings/{userId} {
+      allow read, write: if isSignedIn()
+        && request.auth.uid == userId
+        && myUser().schoolId == schoolId;
+    }
+
+    // School-wide notification policy. Readable by anyone in the school
+    // (the client needs it to evaluate delivery), writable only by admins.
+    match /schools/{schoolId}/notification_policy/{docId} {
+      allow read: if isSignedIn() && myUser().schoolId == schoolId;
+      allow write: if hasAnyRole(['schoolAdmin', 'director', 'headTeacher'])
+        && myUser().schoolId == schoolId;
+    }
+
+    // Reusable notification templates, scoped to one school.
+    match /schools/{schoolId}/notification_templates/{templateId} {
+      allow read: if isStaff() && myUser().schoolId == schoolId;
+      allow write: if hasAnyRole(['schoolAdmin', 'director', 'headTeacher',
+                                  'deputyHead'])
+        && myUser().schoolId == schoolId;
     }
 
     // ---- SaaS Owner / Platform layer -----------------------------------
