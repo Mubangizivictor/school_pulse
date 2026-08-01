@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -32,6 +33,11 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
 
   /// When set, the notification is queued for this time rather than sent now.
   DateTime? _scheduledAt;
+
+  /// Class names chosen when the audience is "Specific Class". Empty until the
+  /// sender picks; sending is blocked until at least one is chosen, so this
+  /// option can never quietly fall back to a wider audience.
+  final Set<String> _selectedClasses = {};
 
   bool _sending = false;
 
@@ -70,9 +76,10 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
           roles: ['classTeacher', 'subjectTeacher'],
         );
       case 'Specific Class':
-        // Class picking is not part of this screen yet; fall back to staff
-        // rather than silently broadcasting school-wide.
-        return const NotificationAudience.allStaff();
+        return NotificationAudience(
+          kind: NotificationAudienceKind.classParents,
+          classNames: _selectedClasses.toList(),
+        );
       case 'All Students & Staff':
       default:
         return const NotificationAudience.school();
@@ -123,6 +130,11 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
     final user = _user;
     if (user == null) {
       _toast('Sign in to send notifications');
+      return;
+    }
+
+    if (_selectedAudience == 'Specific Class' && _selectedClasses.isEmpty) {
+      _toast('Choose at least one class');
       return;
     }
 
@@ -264,6 +276,102 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
 
   void _toast(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// Lets the sender pick which classes' parents receive this.
+  ///
+  /// Reads the classes collection directly rather than going through the
+  /// structure bloc: this is one read of a small, rarely-changing list, and
+  /// depending on that module's state here would couple the two.
+  Future<void> _pickClasses() async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('classes')
+        .orderBy('name')
+        .get();
+
+    if (!mounted) return;
+
+    final classNames = snapshot.docs
+        .map((d) => (d.data()['name'] as String?) ?? '')
+        .where((name) => name.isNotEmpty)
+        .toList();
+
+    if (classNames.isEmpty) {
+      _toast('No classes have been set up yet');
+      return;
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF1E293B),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  'Select classes',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: classNames.map((name) {
+                    final selected = _selectedClasses.contains(name);
+                    return CheckboxListTile(
+                      value: selected,
+                      title: Text(
+                        name,
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      activeColor: const Color(0xFF6366F1),
+                      onChanged: (checked) {
+                        setSheetState(() {
+                          if (checked == true) {
+                            _selectedClasses.add(name);
+                          } else {
+                            _selectedClasses.remove(name);
+                          }
+                        });
+                        setState(() {});
+                      },
+                    );
+                  }).toList(),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(sheetContext),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6366F1),
+                      foregroundColor: Colors.white,
+                    ),
+                    child: Text(
+                      _selectedClasses.isEmpty
+                          ? 'Done'
+                          : 'Done (${_selectedClasses.length} selected)',
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   /// Shows how the notification will appear before it is sent.
@@ -508,6 +616,51 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
               ['All Students & Staff', 'Parents Only', 'Teachers Only', 'Specific Class'],
               (val) => setState(() => _selectedAudience = val!),
             ),
+            // Only shown when it applies, so the form does not grow a row that
+            // does nothing for the other three audiences.
+            if (_selectedAudience == 'Specific Class') ...[
+              const SizedBox(height: 12),
+              InkWell(
+                onTap: _sending ? null : _pickClasses,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E293B),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _selectedClasses.isEmpty
+                          ? const Color(0xFFE11D48)
+                          : Colors.transparent,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.school, color: Colors.white60, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _selectedClasses.isEmpty
+                              ? 'Choose classes'
+                              : _selectedClasses.join(', '),
+                          style: TextStyle(
+                            color: _selectedClasses.isEmpty
+                                ? Colors.white38
+                                : Colors.white,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: Colors.white30),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 20),
             // Schedule row. Sending immediately stays the default; this only
             // appears as a choice, so the common case is unchanged.

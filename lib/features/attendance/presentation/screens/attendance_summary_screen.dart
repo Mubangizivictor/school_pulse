@@ -22,87 +22,144 @@ class AttendanceSummaryScreen extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.l),
           child: Column(
             children: [
-              const SizedBox(height: 40),
+              const SizedBox(height: 20),
               Center(
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    SizedBox(
-                      width: 180,
-                      height: 180,
-                      child: CircularProgressIndicator(
-                        value: 23 / 25,
-                        strokeWidth: 12,
-                        backgroundColor: Colors.grey.withValues(alpha: 0.1),
-                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.success(context)),
-                        strokeCap: StrokeCap.round,
+                child: FadeInSlide(
+                  duration: const Duration(milliseconds: 800),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      SizedBox(
+                        width: 200,
+                        height: 200,
+                        child: CircularProgressIndicator(
+                          value: 23 / 25,
+                          strokeWidth: 14,
+                          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.success(context)),
+                          strokeCap: StrokeCap.round,
+                        ),
                       ),
-                    ),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          '23/25',
-                          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          'Present',
-                          style: TextStyle(color: AppColors.success(context), fontWeight: FontWeight.w500),
-                        ),
-                      ],
-                    ),
-                  ],
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '92%',
+                            style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.success(context),
+                                ),
+                          ),
+                          Text(
+                            'Attendance Rate',
+                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  color: Theme.of(context).hintColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 40),
-              const Text(
-                'Sunset House — Evening',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const Text(
-                '1/6/2026 — 08:46 PM',
-                style: TextStyle(color: Colors.grey),
+              FadeInSlide(
+                delay: const Duration(milliseconds: 200),
+                child: Column(
+                  children: [
+                    Text(
+                      'Sunset House — Evening',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'January 6, 2026 • 08:46 PM',
+                      style: TextStyle(color: Theme.of(context).hintColor),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 32),
               Row(
                 children: [
                   Expanded(
-                    child: _SummaryCard(
-                      icon: Icons.check_circle,
-                      count: '23',
-                      label: 'Present',
-                      color: AppColors.success(context),
+                    child: FadeInSlide(
+                      delay: const Duration(milliseconds: 300),
+                      child: _SummaryCard(
+                        icon: Icons.check_circle_rounded,
+                        count: '23',
+                        label: 'Present',
+                        color: AppColors.success(context),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _SummaryCard(
-                      icon: Icons.cancel,
-                      count: '2',
-                      label: 'Absent',
-                      color: AppColors.errorRed,
+                    child: FadeInSlide(
+                      delay: const Duration(milliseconds: 400),
+                      child: _SummaryCard(
+                        icon: Icons.cancel_rounded,
+                        count: '2',
+                        label: 'Absent',
+                        color: AppColors.errorRed,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _SummaryCard(
-                      icon: Icons.help_outline,
-                      count: '0',
-                      label: 'Not Taken',
-                      color: Colors.grey,
+                    child: FadeInSlide(
+                      delay: const Duration(milliseconds: 500),
+                      child: _SummaryCard(
+                        icon: Icons.access_time_filled_rounded,
+                        count: '0',
+                        label: 'Late',
+                        color: AppColors.warning(context),
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 48),
-              SecondaryButton(
-                label: 'View Attendance List',
-                onPressed: () => context.push('/staff/attendance/list'),
+              const SizedBox(height: 40),
+              FadeInSlide(
+                delay: const Duration(milliseconds: 600),
+                child: AppCard(
+                  padding: const EdgeInsets.all(AppSpacing.m),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.royalBlue.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.description_outlined, color: AppColors.royalBlue, size: 20),
+                      ),
+                      const SizedBox(width: 16),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Detailed Report', style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text('View full student breakdown', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                          ],
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => context.push('/staff/attendance/list'),
+                        child: const Text('View List'),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(height: 12),
-              PrimaryButton(
-                label: 'Done',
-                onPressed: () => context.go('/staff/dashboard'), // Assuming there's a staff dashboard
+              const SizedBox(height: 40),
+              FadeInSlide(
+                delay: const Duration(milliseconds: 700),
+                child: PrimaryButton(
+                  label: 'Finish Roll Call',
+                  onPressed: () => context.go('/staff/dashboard'),
+                ),
               ),
               const SizedBox(height: 20),
             ],
@@ -129,29 +186,32 @@ class _SummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.15), width: 1.5),
       ),
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: color, size: 16),
-              const SizedBox(width: 8),
-              Text(
-                count,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-              ),
-            ],
+          Icon(icon, color: color, size: 28),
+          const SizedBox(height: 12),
+          Text(
+            count,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  color: color,
+                ),
           ),
           const SizedBox(height: 4),
           Text(
             label,
-            style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
+            ),
           ),
         ],
       ),

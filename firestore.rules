@@ -872,6 +872,11 @@ service cloud.firestore {
       allow create: if isStaff();
       allow read, update, delete: if false;
     }
+    match /email_queue/{id} {
+      // Written only by the Admin SDK when a recipient opted into email
+      // copies. No client path creates these, and none reads them back.
+      allow read, write: if false;
+    }
     match /notification_queue/{id} {
       // Enqueued by sendDirectNotification for both staff-to-X and now
       // parent-initiated 1:1 messages - see the /alerts create rule above.

@@ -402,6 +402,97 @@ async function sendPush(request, tokenOwners, notificationIdByUser) {
 }
 
 /**
+ * Queues email and SMS copies for recipients who opted into them.
+ *
+ * Deliberately writes to the existing `email_queue` / `sms_queue` collections
+ * rather than calling a provider directly - the spec requires not hardcoding
+ * one SMS or email vendor, and those queues are already the project's
+ * provider-agnostic seam.
+ *
+ * Only non-transient notifications are copied: nobody wants an SMS for every
+ * chat message. Preferences are read per recipient, so a user who never opted
+ * in costs one read and no send.
+ */
+async function queueChannelCopies(request, recipientIds) {
+  // Chat pings and other transient alerts are pointers, not content worth
+  // paying an SMS for.
+  if ((request.persistence || "permanent") === "transient") {
+    return { emails: 0, sms: 0 };
+  }
+
+  const firestore = db();
+  let emails = 0;
+  let sms = 0;
+
+  for (const idChunk of chunk(recipientIds, BATCH_LIMIT)) {
+    const batch = firestore.batch();
+    let writes = 0;
+
+    for (const recipientId of idChunk) {
+      let prefs = null;
+      try {
+        const doc = await firestore
+          .collection("schools")
+          .doc(request.schoolId)
+          .collection("notification_settings")
+          .doc(recipientId)
+          .get();
+        prefs = doc.exists ? doc.data() : null;
+      } catch (err) {
+        console.error(`prefs read failed for ${recipientId}:`, err.message);
+      }
+
+      if (!prefs) continue;
+
+      const wantsEmail = prefs.emailCopies === true;
+      const wantsSms = prefs.smsCopies === true;
+      if (!wantsEmail && !wantsSms) continue;
+
+      let contact = null;
+      try {
+        const userDoc = await firestore.collection("users").doc(recipientId).get();
+        contact = userDoc.exists ? userDoc.data() : null;
+      } catch (err) {
+        console.error(`user read failed for ${recipientId}:`, err.message);
+      }
+      if (!contact) continue;
+
+      if (wantsEmail && contact.email) {
+        batch.set(firestore.collection("email_queue").doc(), {
+          to: contact.email,
+          subject: request.title,
+          body: request.fullBody || request.shortBody,
+          schoolId: request.schoolId,
+          notificationCategory: request.category,
+          status: "pending",
+          createdAt: FieldValue.serverTimestamp(),
+        });
+        emails++;
+        writes++;
+      }
+
+      if (wantsSms && contact.phoneNumber) {
+        batch.set(firestore.collection("sms_queue").doc(), {
+          // shortBody only: an SMS is charged per segment, and the full body
+          // can run to several paragraphs.
+          body: `${request.title}: ${request.shortBody}`,
+          targets: [contact.phoneNumber],
+          schoolId: request.schoolId,
+          status: "pending",
+          createdAt: FieldValue.serverTimestamp(),
+        });
+        sms++;
+        writes++;
+      }
+    }
+
+    if (writes > 0) await batch.commit();
+  }
+
+  return { emails, sms };
+}
+
+/**
  * Marks the fanned-out documents with the outcome of the push attempt.
  *
  * Delivery status is recorded once per send, not per recipient acknowledgment
@@ -469,6 +560,15 @@ exports.processNotificationRequest = onDocumentCreated(
       const outcome = await sendPush(request, tokenOwners, notificationIds);
       await recordDeliveryOutcome(notificationIds, outcome);
 
+      // Channel copies are best-effort: a failure here must not mark an
+      // otherwise-delivered notification as failed.
+      let copies = { emails: 0, sms: 0 };
+      try {
+        copies = await queueChannelCopies(request, recipientIds);
+      } catch (err) {
+        console.error("channel copies failed:", err.message);
+      }
+
       await snapshot.ref.update({
         status: "sent",
         recipientCount: recipientIds.length,
@@ -476,6 +576,8 @@ exports.processNotificationRequest = onDocumentCreated(
         successCount: outcome.successCount,
         failureCount: outcome.failureCount,
         prunedTokens: outcome.prunedTokens,
+        emailCopies: copies.emails,
+        smsCopies: copies.sms,
         sentAt: FieldValue.serverTimestamp(),
       });
     } catch (err) {
@@ -688,5 +790,6 @@ module.exports.__internal = {
   resolveRecipients,
   channelFor,
   chunk,
+  queueChannelCopies,
   MANDATORY_CATEGORIES,
 };

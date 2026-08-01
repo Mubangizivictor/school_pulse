@@ -212,6 +212,7 @@ import 'package:school_pulse/features/notifications/presentation/screens/notific
 import 'package:school_pulse/features/notifications/presentation/screens/notification_details_loader_screen.dart';
 import 'package:school_pulse/features/notifications/testing/notification_test_service/notification_test_screen.dart';
 import 'package:school_pulse/features/notifications/presentation/screens/notification_delivery_report_screen.dart';
+import 'package:school_pulse/features/notifications/presentation/screens/school_notification_settings_screen.dart';
 import 'package:school_pulse/features/notifications/presentation/screens/notification_center_grouped_screen.dart';
 import 'package:school_pulse/features/notifications/presentation/screens/notification_filter_screen.dart';
 import 'package:school_pulse/features/notifications/presentation/screens/notification_search_screen.dart';
@@ -1019,6 +1020,13 @@ final router = GoRouter(
               path: 'reports',
               builder: (context, state) =>
                   const NotificationDeliveryReportScreen(),
+            ),
+            // School-wide notification policy. Gated to roles holding
+            // notification.manage_settings.
+            GoRoute(
+              path: 'school-settings',
+              builder: (context, state) =>
+                  const SchoolNotificationSettingsScreen(),
             ),
             GoRoute(
               path: 'add',
