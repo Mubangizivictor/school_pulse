@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/core/enums/student_status.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 
@@ -13,27 +15,30 @@ class ManualAttendanceScreen extends StatefulWidget {
 
 class _ManualAttendanceScreenState extends State<ManualAttendanceScreen> {
   final List<Map<String, dynamic>> _students = [
-    {'name': 'Akera Brian', 'id': 'SH-2026-0481', 'selected': true},
-    {'name': 'Kato Mercy', 'id': 'SH-2026-0482', 'selected': true},
-    {'name': 'Nansubuga Grace', 'id': 'SH-2026-0483', 'selected': false},
-    {'name': 'Tumusiime David', 'id': 'SH-2026-0484', 'selected': false},
-    {'name': 'Mugisha Samuel', 'id': 'SH-2026-0485', 'selected': false},
+    {'name': 'Akera Brian', 'id': 'SH-2026-0481', 'status': StudentStatus.present},
+    {'name': 'Kato Mercy', 'id': 'SH-2026-0482', 'status': StudentStatus.present},
+    {'name': 'Nansubuga Grace', 'id': 'SH-2026-0483', 'status': StudentStatus.absent},
+    {'name': 'Tumusiime David', 'id': 'SH-2026-0484', 'status': StudentStatus.absent},
+    {'name': 'Mugisha Samuel', 'id': 'SH-2026-0485', 'status': StudentStatus.absent},
   ];
 
-  bool _selectAll = false;
+  String _searchQuery = '';
 
-  void _toggleSelectAll(bool? value) {
+  void _markAllPresent() {
     setState(() {
-      _selectAll = value ?? false;
       for (var student in _students) {
-        student['selected'] = _selectAll;
+        student['status'] = StudentStatus.present;
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    int selectedCount = _students.where((s) => s['selected'] == true).length;
+    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
+    final filteredStudents = _students.where((s) => 
+      s['name'].toLowerCase().contains(_searchQuery.toLowerCase()) || 
+      s['id'].toLowerCase().contains(_searchQuery.toLowerCase())
+    ).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -63,11 +68,11 @@ class _ManualAttendanceScreenState extends State<ManualAttendanceScreen> {
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: AppColors.border(context)),
                         ),
-                        child: const Row(
+                        child: Row(
                           children: [
-                            Icon(Icons.calendar_today, size: 16),
-                            SizedBox(width: 8),
-                            Text('1/6/2026', style: TextStyle(fontSize: 14)),
+                            Icon(Icons.calendar_today, size: 16, color: Theme.of(context).colorScheme.primary),
+                            const SizedBox(width: 8),
+                            const Text('1/6/2026', style: TextStyle(fontSize: 14)),
                           ],
                         ),
                       ),
@@ -79,18 +84,9 @@ class _ManualAttendanceScreenState extends State<ManualAttendanceScreen> {
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search students...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: const Icon(Icons.filter_list),
-                filled: true,
-                fillColor: AppColors.surfaceElevated(context),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
+            child: AppSearchField(
+              hintText: 'Search students...',
+              onChanged: (value) => setState(() => _searchQuery = value),
             ),
           ),
           const SizedBox(height: AppSpacing.m),
@@ -98,56 +94,56 @@ class _ManualAttendanceScreenState extends State<ManualAttendanceScreen> {
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
             child: Row(
               children: [
-                Checkbox(
-                  value: _selectAll,
-                  onChanged: _toggleSelectAll,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                Text(
+                  '${filteredStudents.length} Students',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                 ),
-                const Text('Select All', style: TextStyle(fontWeight: FontWeight.bold)),
                 const Spacer(),
-                Text('${_students.length} students', style: const TextStyle(color: Colors.grey)),
+                TextButton.icon(
+                  onPressed: _markAllPresent,
+                  icon: const Icon(Icons.done_all, size: 18),
+                  label: const Text('Mark all present'),
+                ),
               ],
             ),
           ),
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
-              itemCount: _students.length,
-              itemBuilder: (context, index) {
-                final student = _students[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    children: [
-                      const CircleAvatar(
-                        radius: 20,
-                        backgroundImage: NetworkImage('https://i.pravatar.cc/150'),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+            child: filteredStudents.isEmpty 
+              ? const EmptyState(
+                  icon: Icons.search_off, 
+                  title: 'No results', 
+                  message: 'No students found matching your search query.',
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
+                  itemCount: filteredStudents.length,
+                  itemBuilder: (context, index) {
+                    final student = filteredStudents[index];
+                    return FadeInSlide(
+                      delay: Duration(milliseconds: index * 30),
+                      child: AppCard(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        child: Row(
                           children: [
-                            Text(student['name'], style: const TextStyle(fontWeight: FontWeight.w600)),
-                            Text(student['id'], style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                            AvatarInitials(name: student['name'], size: 40),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(student['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                                  Text(student['id'], style: Theme.of(context).textTheme.labelSmall),
+                                ],
+                              ),
+                            ),
+                            _buildStatusToggle(student, semanticColors),
                           ],
                         ),
                       ),
-                      Checkbox(
-                        value: student['selected'],
-                        onChanged: (value) {
-                          setState(() {
-                            student['selected'] = value ?? false;
-                            _selectAll = _students.every((s) => s['selected'] == true);
-                          });
-                        },
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                    );
+                  },
+                ),
           ),
           Container(
             padding: const EdgeInsets.all(AppSpacing.l),
@@ -155,26 +151,45 @@ class _ManualAttendanceScreenState extends State<ManualAttendanceScreen> {
               color: AppColors.surfaceElevated(context),
               border: Border(top: BorderSide(color: AppColors.border(context))),
             ),
-            child: Row(
-              children: [
-                Text(
-                  '$selectedCount Selected',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const Spacer(),
-                SizedBox(
-                  width: 160,
-                  child: PrimaryButton(
-                    label: 'Save Attendance',
-                    onPressed: () => context.push('/staff/attendance/summary'),
-                  ),
-                ),
-              ],
+            child: SafeArea(
+              top: false,
+              child: PrimaryButton(
+                label: 'Save Attendance',
+                onPressed: () => context.push('/staff/attendance/summary'),
+              ),
             ),
           ),
         ],
       ),
-      bottomNavigationBar: null,
+    );
+  }
+
+  Widget _buildStatusToggle(Map<String, dynamic> student, SemanticColors colors) {
+    final currentStatus = student['status'] as StudentStatus;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _StatusButton(
+          icon: Icons.check,
+          color: colors.success,
+          isSelected: currentStatus == StudentStatus.present,
+          onTap: () => setState(() => student['status'] = StudentStatus.present),
+        ),
+        const SizedBox(width: 4),
+        _StatusButton(
+          icon: Icons.access_time,
+          color: colors.warning,
+          isSelected: currentStatus == StudentStatus.late,
+          onTap: () => setState(() => student['status'] = StudentStatus.late),
+        ),
+        const SizedBox(width: 4),
+        _StatusButton(
+          icon: Icons.close,
+          color: colors.error,
+          isSelected: currentStatus == StudentStatus.absent,
+          onTap: () => setState(() => student['status'] = StudentStatus.absent),
+        ),
+      ],
     );
   }
 
@@ -195,11 +210,45 @@ class _ManualAttendanceScreenState extends State<ManualAttendanceScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-              const Icon(Icons.keyboard_arrow_down, size: 20),
+              const Icon(Icons.keyboard_arrow_down, size: 20, color: Colors.grey),
             ],
           ),
         ),
       ],
+    );
+  }
+}
+
+class _StatusButton extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _StatusButton({
+    required this.icon,
+    required this.color,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: isSelected ? color : color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: isSelected ? Colors.white : color,
+        ),
+      ),
     );
   }
 }

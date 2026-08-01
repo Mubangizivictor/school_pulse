@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/core/enums/student_status.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
@@ -12,7 +14,6 @@ import 'package:school_pulse/features/matron/presentation/bloc/matron_event.dart
 import 'package:school_pulse/features/matron/presentation/bloc/matron_state.dart';
 
 const _kAttendanceTypes = ['Morning', 'Evening', 'Weekend', 'Holiday', 'Study', 'Activity'];
-const _kAttendanceStatuses = ['Present', 'Absent', 'Late', 'Sick'];
 
 class BoardingAttendanceScreen extends StatefulWidget {
   const BoardingAttendanceScreen({super.key});
@@ -26,7 +27,8 @@ class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
   String? selectedDormName;
   String selectedType = 'Evening';
   DateTime selectedDate = DateTime.now();
-  Map<String, String> attendanceMap = {};
+  Map<String, StudentStatus> attendanceMap = {};
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -53,6 +55,8 @@ class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -83,120 +87,110 @@ class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
                 }
                 if (state is AttendanceLoaded) {
                   for (var record in state.attendance) {
-                    attendanceMap[record.studentId] = record.status;
+                    attendanceMap[record.studentId] = StudentStatus.values.firstWhere(
+                      (e) => e.name.toLowerCase() == record.status.toLowerCase(),
+                      orElse: () => StudentStatus.present,
+                    );
                   }
                 }
 
                 if (selectedDormId == null) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.how_to_reg_outlined, size: 64, color: AppColors.textMuted(context)),
-                        const SizedBox(height: AppSpacing.m),
-                        const Text(
-                          'Select a Dormitory',
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          'Choose a dormitory above to begin roll call.',
-                          style: TextStyle(color: AppColors.textMuted(context)),
-                        ),
-                      ],
-                    ),
+                  return const EmptyState(
+                    icon: Icons.how_to_reg_outlined,
+                    title: 'Select a Dormitory',
+                    message: 'Choose a dormitory above to begin roll call.',
                   );
                 }
 
-                if (state is MatronLoading) {
-                  return const Center(child: CircularProgressIndicator());
+                if (state is MatronLoading && students.isEmpty) {
+                  return const _AttendanceSkeleton();
                 }
 
                 if (students.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.people_outline, size: 64, color: AppColors.textMuted(context)),
-                        const SizedBox(height: AppSpacing.m),
-                        const Text(
-                          'No Boarders Found',
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          'This dormitory has no allocated students.',
-                          style: TextStyle(color: AppColors.textMuted(context)),
-                        ),
-                      ],
-                    ),
+                  return const EmptyState(
+                    icon: Icons.people_outline,
+                    title: 'No Boarders Found',
+                    message: 'This dormitory has no allocated students.',
                   );
                 }
 
-                final missingCount = students.where((s) => (attendanceMap[s.id] ?? 'Present') == 'Absent').length;
+                final filteredStudents = students.where((s) => 
+                  s.name.toLowerCase().contains(_searchQuery.toLowerCase()) || 
+                  (s.id).toLowerCase().contains(_searchQuery.toLowerCase())
+                ).toList();
+
+                final missingCount = students.where((s) => (attendanceMap[s.id] ?? StudentStatus.present) == StudentStatus.absent).length;
 
                 return Column(
                   children: [
                     if (missingCount > 0)
-                      Container(
-                        width: double.infinity,
-                        margin: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.s),
-                        padding: const EdgeInsets.all(AppSpacing.m),
-                        decoration: BoxDecoration(
-                          color: AppColors.errorRed.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.errorRed.withValues(alpha: 0.2)),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.info_outline, color: AppColors.errorRed, size: 16),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                '$missingCount marked absent — will alert parents on save.',
-                                style: TextStyle(color: AppColors.errorRed, fontWeight: FontWeight.w600, fontSize: 13),
-                              ),
-                            ),
-                          ],
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.s),
+                        child: AlertBanner(
+                          title: 'Absentees Detected',
+                          message: '$missingCount marked absent — will alert parents on save.',
+                          color: semanticColors.error,
+                          icon: Icons.warning_amber_rounded,
                         ),
                       ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.s),
+                      child: AppSearchField(
+                        hintText: 'Search boarders...',
+                        onChanged: (value) => setState(() => _searchQuery = value),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.s),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '${filteredStudents.length} Students',
+                            style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          TextButton.icon(
+                            onPressed: () {
+                              setState(() {
+                                for (var s in filteredStudents) {
+                                  attendanceMap[s.id] = StudentStatus.present;
+                                }
+                              });
+                            },
+                            icon: const Icon(Icons.done_all, size: 18),
+                            label: const Text('Mark all present'),
+                          ),
+                        ],
+                      ),
+                    ),
                     Expanded(
                       child: ListView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
-                        itemCount: students.length,
+                        itemCount: filteredStudents.length,
                         itemBuilder: (context, index) {
-                          final student = students[index];
-                          final status = attendanceMap[student.id] ?? 'Present';
-                          return AppCard(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 20,
-                                  backgroundImage: student.photoUrl != null ? NetworkImage(student.photoUrl!) : null,
-                                  child: student.photoUrl == null ? const Icon(Icons.person) : null,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(student.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                                      Text('Bed: ${student.bedNumber ?? 'N/A'}', style: TextStyle(color: AppColors.textMuted(context), fontSize: 12)),
-                                    ],
+                          final student = filteredStudents[index];
+                          final status = attendanceMap[student.id] ?? StudentStatus.present;
+                          return FadeInSlide(
+                            delay: Duration(milliseconds: index * 30),
+                            child: AppCard(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              child: Row(
+                                children: [
+                                  AvatarInitials(name: student.name, size: 40),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(student.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                        Text('Bed: ${student.bedNumber ?? 'N/A'}', style: Theme.of(context).textTheme.labelSmall),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                DropdownButton<String>(
-                                  value: status,
-                                  underline: const SizedBox(),
-                                  icon: const Icon(Icons.keyboard_arrow_down, size: 20),
-                                  items: _kAttendanceStatuses
-                                      .map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 13))))
-                                      .toList(),
-                                  onChanged: (val) {
-                                    if (val == null) return;
-                                    setState(() => attendanceMap[student.id] = val);
-                                  },
-                                ),
-                              ],
+                                  _buildStatusToggle(student.id, status, semanticColors),
+                                ],
+                              ),
                             ),
                           );
                         },
@@ -210,6 +204,34 @@ class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
           _buildBottomBar(),
         ],
       ),
+    );
+  }
+
+  Widget _buildStatusToggle(String studentId, StudentStatus currentStatus, SemanticColors colors) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _StatusButton(
+          icon: Icons.check,
+          color: colors.success,
+          isSelected: currentStatus == StudentStatus.present,
+          onTap: () => setState(() => attendanceMap[studentId] = StudentStatus.present),
+        ),
+        const SizedBox(width: 4),
+        _StatusButton(
+          icon: Icons.access_time,
+          color: colors.warning,
+          isSelected: currentStatus == StudentStatus.late,
+          onTap: () => setState(() => attendanceMap[studentId] = StudentStatus.late),
+        ),
+        const SizedBox(width: 4),
+        _StatusButton(
+          icon: Icons.close,
+          color: colors.error,
+          isSelected: currentStatus == StudentStatus.absent,
+          onTap: () => setState(() => attendanceMap[studentId] = StudentStatus.absent),
+        ),
+      ],
     );
   }
 
@@ -374,9 +396,12 @@ class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
         color: AppColors.surfaceElevated(context),
         border: Border(top: BorderSide(color: AppColors.border(context))),
       ),
-      child: PrimaryButton(
-        label: 'Save Attendance',
-        onPressed: selectedDormId == null ? null : () => _saveAttendance(context),
+      child: SafeArea(
+        top: false,
+        child: PrimaryButton(
+          label: 'Save Attendance',
+          onPressed: selectedDormId == null ? null : () => _saveAttendance(context),
+        ),
       ),
     );
   }
@@ -393,13 +418,83 @@ class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
           dormitoryId: selectedDormId!,
           date: selectedDate,
           type: selectedType,
-          status: attendanceMap[s.id] ?? 'Present',
+          status: (attendanceMap[s.id] ?? StudentStatus.present).name,
           recordedBy: recordedBy,
         );
       }).toList();
 
       context.read<MatronBloc>().add(BulkRecordAttendanceEvent(records));
     }
+  }
+}
+
+class _AttendanceSkeleton extends StatelessWidget {
+  const _AttendanceSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.s),
+          child: Skeleton(height: 50, borderRadius: 12),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.s),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Skeleton(width: 100, height: 20),
+              const Skeleton(width: 120, height: 20),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
+            itemCount: 10,
+            itemBuilder: (context, index) => const Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: Skeleton(height: 60, borderRadius: 12),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatusButton extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _StatusButton({
+    required this.icon,
+    required this.color,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: isSelected ? color : color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: isSelected ? Colors.white : color,
+        ),
+      ),
+    );
   }
 }
 

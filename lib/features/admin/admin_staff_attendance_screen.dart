@@ -60,7 +60,7 @@ class _AdminStaffAttendanceScreenState extends State<AdminStaffAttendanceScreen>
         stream: di.sl<StaffAttendanceRepository>().watchToday(),
         builder: (context, snapshot) {
           if (_staff == null || snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const _AttendanceSkeleton();
           }
           final records = snapshot.data ?? const {};
           final staff = _staff!;
@@ -227,14 +227,9 @@ class _AdminStaffAttendanceScreenState extends State<AdminStaffAttendanceScreen>
   }
 
   Widget _buildSearchField() {
-    return TextField(
-      controller: _searchController,
+    return AppSearchField(
+      hintText: 'Search staff name...',
       onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
-      decoration: const InputDecoration(
-        hintText: 'Search staff name...',
-        prefixIcon: Icon(Icons.search),
-        isDense: true,
-      ),
     );
   }
 
@@ -319,5 +314,46 @@ class _AdminStaffAttendanceScreenState extends State<AdminStaffAttendanceScreen>
         const SnackBar(content: Text('Staff roster copied to clipboard as CSV')),
       );
     }
+  }
+}
+
+class _AttendanceSkeleton extends StatelessWidget {
+  const _AttendanceSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 1.3,
+            children: List.generate(4, (_) => const Skeleton(borderRadius: 16)),
+          ),
+          const SizedBox(height: 24),
+          const AppCard(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Skeleton(width: 150, height: 20),
+                    Skeleton(width: 200, height: 40),
+                  ],
+                ),
+                SizedBox(height: 24),
+                Skeleton(height: 400),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

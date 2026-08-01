@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:school_pulse/core/enums/student_status.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
@@ -132,24 +133,14 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
               children: [
                 _buildClassSelector(),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Search students...',
-                      prefixIcon: const Icon(Icons.search),
-                      isDense: true,
-                      filled: true,
-                      fillColor: Theme.of(context).colorScheme.surface,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.s),
+                  child: AppSearchField(
+                    hintText: 'Search students...',
                     onChanged: (value) => setState(() => _searchQuery = value),
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.s),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -172,38 +163,44 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                   ),
                 ),
                 Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: filteredStudents.length,
-                    itemBuilder: (context, index) {
-                      final student = filteredStudents[index];
-                      final status = _attendance[student.id] ?? StudentStatus.present;
+                  child: filteredStudents.isEmpty 
+                    ? const EmptyState(
+                        icon: Icons.search_off, 
+                        title: 'No results', 
+                        message: 'No students found matching your search query.',
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
+                        itemCount: filteredStudents.length,
+                        itemBuilder: (context, index) {
+                          final student = filteredStudents[index];
+                          final status = _attendance[student.id] ?? StudentStatus.present;
 
-                      return FadeInSlide(
-                        delay: Duration(milliseconds: index * 50),
-                        child: AppCard(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          child: Row(
-                            children: [
-                              AvatarInitials(name: student.name, size: 40),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(student.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                    Text(student.studentId, style: Theme.of(context).textTheme.labelSmall),
-                                  ],
-                                ),
+                          return FadeInSlide(
+                            delay: Duration(milliseconds: index * 30),
+                            child: AppCard(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              child: Row(
+                                children: [
+                                  AvatarInitials(name: student.name, size: 40),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(student.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                        Text(student.studentId, style: Theme.of(context).textTheme.labelSmall),
+                                      ],
+                                    ),
+                                  ),
+                                  _buildStatusToggle(student.id, status, semanticColors, isLoading),
+                                ],
                               ),
-                              _buildStatusToggle(student.id, status, semanticColors, isLoading),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                            ),
+                          );
+                        },
+                      ),
                 ),
                 _buildSubmitBar(isLoading),
               ],
@@ -300,7 +297,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
 
   Widget _buildSubmitBar(bool isLoading) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.l),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         boxShadow: [
@@ -311,24 +308,27 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
           ),
         ],
       ),
-      child: PrimaryButton(
-        label: 'Submit Attendance',
-        isLoading: isLoading,
-        onPressed: () {
-          if (_attendance.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('No students to submit attendance for')),
-            );
-            return;
-          }
-
-          context.read<TeacherBloc>().add(
-                TeacherAttendanceSubmitted(
-                  className: _selectedClass,
-                  attendance: _attendance.map((key, value) => MapEntry(key, value.name)),
-                ),
+      child: SafeArea(
+        top: false,
+        child: PrimaryButton(
+          label: 'Submit Attendance',
+          isLoading: isLoading,
+          onPressed: () {
+            if (_attendance.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('No students to submit attendance for')),
               );
-        },
+              return;
+            }
+
+            context.read<TeacherBloc>().add(
+                  TeacherAttendanceSubmitted(
+                    className: _selectedClass,
+                    attendance: _attendance.map((key, value) => MapEntry(key, value.name)),
+                  ),
+                );
+          },
+        ),
       ),
     );
   }
@@ -343,7 +343,7 @@ class _AttendanceSkeleton extends StatelessWidget {
       children: [
         const Skeleton(height: 70),
         Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.l),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -354,7 +354,7 @@ class _AttendanceSkeleton extends StatelessWidget {
         ),
         Expanded(
           child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
             itemCount: 10,
             itemBuilder: (context, index) => const Padding(
               padding: EdgeInsets.only(bottom: 8),
