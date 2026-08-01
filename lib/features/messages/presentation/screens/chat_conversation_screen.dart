@@ -57,7 +57,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
       appBar: AppBar(
+        backgroundColor: isDark ? AppColors.bgDark : Colors.white,
+        elevation: 0,
+        leadingWidth: 40,
         titleSpacing: 0,
         title: InkWell(
           onTap: () => context.push('/messages/chat/${widget.chatId}/info'),
@@ -66,13 +70,13 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
               const CircleAvatar(
                 radius: 18,
                 backgroundColor: AppColors.electricBlue,
-                child: Text('P7', style: TextStyle(color: Colors.white, fontSize: 12)),
+                child: Text('P7', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
               ),
               const SizedBox(width: AppSpacing.s),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('P7 - Parents Group', style: AppTypography.titleMedium),
+                  Text('P7 - Parents Group', style: AppTypography.titleMedium.copyWith(fontSize: 16)),
                   Text('32 members', style: AppTypography.labelSmall.copyWith(color: AppColors.textMuted(context))),
                 ],
               ),
@@ -82,34 +86,35 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
         actions: [
           IconButton(icon: const Icon(Icons.videocam_outlined), onPressed: () {}),
           IconButton(icon: const Icon(Icons.phone_outlined), onPressed: () {}),
-          PopupMenuButton(
-            itemBuilder: (context) => [
-              const PopupMenuItem(child: Text('Group Info')),
-              const PopupMenuItem(child: Text('Starred Messages')),
-              const PopupMenuItem(child: Text('Mute Notifications')),
-              const PopupMenuItem(child: Text('Clear Chat')),
-            ],
-          ),
+          const SizedBox(width: 4),
         ],
       ),
       body: Column(
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
-            color: isDark ? Colors.blue.withValues(alpha: 0.1) : Colors.blue.withValues(alpha: 0.05),
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            color: isDark ? AppColors.electricBlue.withValues(alpha: 0.1) : Colors.blue.withValues(alpha: 0.05),
             child: Row(
               children: [
-                const Icon(Icons.pin_drop, size: 14, color: AppColors.electricBlue),
-                const SizedBox(width: 8),
+                const Icon(Icons.push_pin, size: 14, color: AppColors.electricBlue),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    'Pinned: PTA meeting this Friday at 4PM',
-                    style: AppTypography.labelSmall.copyWith(color: AppColors.electricBlue),
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Pinned: PTA meeting this Friday at 4PM',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: AppColors.electricBlue,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close, size: 14),
+                  icon: const Icon(Icons.close, size: 16, color: AppColors.electricBlue),
                   onPressed: () {},
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -138,41 +143,67 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s, vertical: AppSpacing.s),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : Colors.white,
-        border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
+        color: isDark ? AppColors.bgDark : Colors.white,
+        border: Border(top: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight)),
       ),
       child: SafeArea(
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             IconButton(
-              icon: const Icon(Icons.add_circle_outline),
+              icon: Icon(Icons.add_circle_outline, color: AppColors.electricBlue, size: 28),
               onPressed: () => _showAttachmentMenu(context),
             ),
             Expanded(
               child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 4),
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
                 decoration: BoxDecoration(
-                  color: isDark ? AppColors.backgroundDark : AppColors.surfaceContainer(context),
+                  color: isDark ? AppColors.surfaceDark : AppColors.bgLight,
                   borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
                 ),
                 child: TextField(
                   controller: _messageController,
-                  decoration: const InputDecoration(
+                  maxLines: 4,
+                  minLines: 1,
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                  decoration: InputDecoration(
                     hintText: 'Type a message...',
+                    hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
                     focusedBorder: InputBorder.none,
                     contentPadding: EdgeInsets.symmetric(vertical: 10),
+                    suffixIcon: Icon(Icons.emoji_emotions_outlined, color: Colors.grey, size: 20),
                   ),
                 ),
               ),
             ),
             const SizedBox(width: AppSpacing.s),
-            CircleAvatar(
-              backgroundColor: AppColors.electricBlue,
-              child: IconButton(
-                icon: const Icon(Icons.mic, color: Colors.white),
-                onPressed: () {},
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: CircleAvatar(
+                radius: 22,
+                backgroundColor: AppColors.electricBlue,
+                child: IconButton(
+                  icon: Icon(_messageController.text.isEmpty ? Icons.mic : Icons.send, color: Colors.white, size: 20),
+                  onPressed: () {
+                    if (_messageController.text.isNotEmpty) {
+                      setState(() {
+                        _messages.add(ChatMessage(
+                          id: DateTime.now().toString(),
+                          senderId: 'me',
+                          senderName: 'Me',
+                          content: _messageController.text,
+                          timestamp: DateTime.now(),
+                          isMe: true,
+                        ));
+                        _messageController.clear();
+                      });
+                    }
+                  },
+                ),
               ),
             ),
           ],

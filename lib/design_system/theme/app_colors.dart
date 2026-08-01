@@ -56,8 +56,13 @@ class AppColors {
   static Color background(BuildContext context) => 
       Theme.of(context).brightness == Brightness.light ? bgLight : bgDark;
 
-  static Color surface(BuildContext context) => 
-      Theme.of(context).brightness == Brightness.light ? surfaceLight : surfaceDark;
+  static Color get backgroundDark => bgDark;
+
+  static Color surfaceContainer(BuildContext context) => 
+      Theme.of(context).brightness == Brightness.light ? Color(0xFFE8EEF7) : Color(0xFF0F1E3E);
+
+  static Color surfaceContainerHigh(BuildContext context) => 
+      Theme.of(context).brightness == Brightness.light ? Color(0xFFDEE5F0) : Color(0xFF162A50);
 
   static Color surfaceElevated(BuildContext context) => 
       Theme.of(context).brightness == Brightness.light ? surfaceLight : elevatedSurfaceDark;

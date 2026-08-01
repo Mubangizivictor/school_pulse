@@ -14,6 +14,7 @@ import 'package:school_pulse/features/student/domain/usecases/get_all_students.d
 import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 import 'bloc/discipline_bloc.dart';
 import 'bloc/discipline_event.dart';
 import 'bloc/discipline_state.dart';
@@ -108,6 +109,9 @@ class _DisciplineDashboardScreenState extends State<DisciplineDashboardScreen> w
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
+            style: IconButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+            ),
             onPressed: () {
               if (_tabController.index == 0) {
                 _showLogIncidentDialog(context);
@@ -116,6 +120,11 @@ class _DisciplineDashboardScreenState extends State<DisciplineDashboardScreen> w
               }
             },
           ),
+          const SizedBox(width: 8),
+          NotificationBellButton(
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: BlocBuilder<DisciplineBloc, DisciplineState>(

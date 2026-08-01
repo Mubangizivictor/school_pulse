@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 import 'package:school_pulse/features/admin/presentation/screens/library_settings_screen.dart';
 import 'package:school_pulse/features/library/presentation/screens/issue_resource_screen.dart';
 import 'package:school_pulse/features/library/presentation/widgets/reading_trends_chart.dart';
@@ -59,8 +60,16 @@ class _LibraryDashboardScreenState extends State<LibraryDashboardScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined),
+            style: IconButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+            ),
             onPressed: () => _showPolicySettings(context),
           ),
+          const SizedBox(width: 8),
+          NotificationBellButton(
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: BlocBuilder<LibraryBloc, LibraryState>(

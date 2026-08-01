@@ -1,18 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:school_pulse/design_system/components/pulse_button.dart';
-import 'package:school_pulse/design_system/components/pulse_text_field.dart';
-import 'package:school_pulse/design_system/components/pulse_logo.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
-import 'package:school_pulse/design_system/theme/app_gradients.dart';
-import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
+import 'package:school_pulse/features/auth/login_flow/auth_chrome.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 
+/// Staff Portal sign-in. Orange accent, email + password, remember-me and a
+/// forgot-password link, then the trust strip and privacy note.
 class StaffCredentialsScreen extends StatefulWidget {
   const StaffCredentialsScreen({super.key});
 
@@ -21,8 +19,12 @@ class StaffCredentialsScreen extends StatefulWidget {
 }
 
 class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
+  static const _accent = AppColors.brightOrange;
+
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _obscure = true;
+  bool _rememberMe = false;
 
   @override
   void dispose() {
@@ -40,8 +42,6 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
@@ -63,117 +63,106 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
       builder: (context, state) {
         final isLoading = state is AuthLoading;
 
-        return Scaffold(
-          extendBodyBehindAppBar: true,
-          appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded),
-              onPressed: () => context.pop(),
+        return AuthPortalScaffold(
+          accent: _accent,
+          children: [
+            const AuthHeroScene(
+              accent: _accent,
+              badgeIcon: Icons.badge_outlined,
             ),
-          ),
-          body: Container(
-            width: double.infinity,
-            height: double.infinity,
-            decoration: BoxDecoration(
-              gradient: isDark ? AppGradients.premiumDark : null,
-              color: isDark ? null : AppColors.bgLight,
-            ),
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(AppSpacing.x3l),
-                child: ResponsiveBuilder(
-                  builder: (context, layout) {
-                    final isDesktop = layout == ResponsiveLayout.desktop;
-                    
-                    return Container(
-                      constraints: BoxConstraints(maxWidth: isDesktop ? 450 : 400),
-                      padding: isDesktop ? const EdgeInsets.all(AppSpacing.x4l) : null,
-                        decoration: isDesktop ? BoxDecoration(
-                          color: isDark ? AppColors.surfaceDark.withValues(alpha: 0.5) : Colors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: isDark ? AppColors.white.withValues(alpha: 0.1) : AppColors.borderLight,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ) : null,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const Center(
-                            child: PulseLogo(size: 80, variant: PulseLogoVariant.auth),
-                          ),
-                          const SizedBox(height: AppSpacing.x4l),
-                          Text(
-                            "Staff Portal",
-                            style: AppTypography.headlineMedium.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: isDark ? Colors.white : AppColors.textPrimaryLight,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: AppSpacing.xs),
-                          Text(
-                            "Enter your credentials to continue",
-                            style: AppTypography.bodyMedium.copyWith(
-                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: AppSpacing.x6l),
-                          PulseTextField(
-                            label: 'Email Address',
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            prefixIcon: Icons.email_outlined,
-                            hint: 'name@school.com',
-                          ),
-                          const SizedBox(height: AppSpacing.xl),
-                          PulseTextField(
-                            label: 'Password',
-                            controller: _passwordController,
-                            isPassword: true,
-                            prefixIcon: Icons.lock_outline_rounded,
-                            hint: '••••••••',
-                          ),
-                          const SizedBox(height: AppSpacing.x4l),
-                          PulseButton(
-                            label: 'Sign In',
-                            isLoading: isLoading,
-                            onPressed: isLoading ? null : _handleLogin,
-                            isFullWidth: true,
-                          ),
-                          const SizedBox(height: AppSpacing.x2l),
-                          TextButton(
-                            onPressed: () {
-                              // Forgot password logic
-                            },
-                            child: Text(
-                              "Forgot Password?",
-                              style: AppTypography.labelLarge.copyWith(
-                                color: isDark ? AppColors.brightCyan : AppColors.royalBlue,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                ),
+            const SizedBox(height: AppSpacing.l),
+            Text(
+              'Staff Portal',
+              textAlign: TextAlign.center,
+              style: AppTypography.headlineMedium.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
               ),
             ),
-          ),
+            const SizedBox(height: AppSpacing.m),
+            Text(
+              'Enter your credentials to continue\naccessing the staff portal.',
+              textAlign: TextAlign.center,
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textSecondaryDark,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x2l),
+            AuthField(
+              label: 'Email Address',
+              hint: 'name@school.com',
+              icon: Icons.mail_outline_rounded,
+              accent: _accent,
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            AuthField(
+              label: 'Password',
+              hint: '••••••••',
+              icon: Icons.lock_outline_rounded,
+              accent: _accent,
+              controller: _passwordController,
+              isPassword: _obscure,
+              suffix: IconButton(
+                icon: Icon(
+                  _obscure
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  color: AppColors.textSecondaryDark,
+                ),
+                onPressed: () => setState(() => _obscure = !_obscure),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.l),
+            Row(
+              children: [
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: Checkbox(
+                    value: _rememberMe,
+                    onChanged: (v) => setState(() => _rememberMe = v ?? false),
+                    side: const BorderSide(color: _accent, width: 1.6),
+                    activeColor: _accent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.m),
+                Text(
+                  'Remember me',
+                  style: AppTypography.bodyMedium.copyWith(color: Colors.white),
+                ),
+                const Spacer(),
+                GestureDetector(
+                  onTap: () {},
+                  child: Text(
+                    'Forgot Password?',
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: _accent,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            AuthCtaButton(
+              label: 'Sign In',
+              gradient: const [Color(0xFFEF4A17), Color(0xFFFFB020)],
+              isLoading: isLoading,
+              onPressed: isLoading ? null : _handleLogin,
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            const AuthTrustStrip(accent: _accent),
+            const SizedBox(height: AppSpacing.xl),
+            const AuthPrivacyNote(accent: _accent),
+          ],
         );
       },
     );
   }
 }
-

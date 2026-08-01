@@ -1,8 +1,6 @@
-import 'package:dartz/dartz.dart';
-import 'package:school_pulse/core/error/failures.dart';
-import '../../domain/entities/boarding_entities.dart';
-import '../../domain/repositories/matron_repository.dart';
-import '../datasources/matron_remote_data_source.dart';
+import 'package:school_pulse/features/matron/data/sources/matron_remote_data_source.dart';
+import 'package:school_pulse/features/matron/domain/entities/matron_entities.dart';
+import 'package:school_pulse/features/matron/domain/repositories/matron_repository.dart';
 
 class MatronRepositoryImpl implements MatronRepository {
   final MatronRemoteDataSource remoteDataSource;
@@ -10,186 +8,251 @@ class MatronRepositoryImpl implements MatronRepository {
   MatronRepositoryImpl({required this.remoteDataSource});
 
   @override
-  Future<Either<Failure, BoardingDashboardData>> getDashboardData({
-    String? schoolId,
-    String? gender,
-  }) async {
-    try {
-      final data = await remoteDataSource.getDashboardData(
-        schoolId: schoolId,
-        gender: gender,
-      );
-      return Right(data);
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
+  Stream<MatronDashboardOverview> watchDashboardOverview(String schoolId) {
+    return remoteDataSource.watchDashboardOverview(schoolId);
   }
 
   @override
-  Future<Either<Failure, List<Dormitory>>> getDormitories({
-    String? gender,
-  }) async {
-    try {
-      final dorms = await remoteDataSource.getDormitories(gender: gender);
-      return Right(dorms);
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
+  Stream<List<Dormitory>> getDormitories() {
+    return remoteDataSource.getDormitories();
   }
 
   @override
-  Future<Either<Failure, List<BoardingStudent>>> getUnallocatedStudents({
-    String? gender,
-  }) async {
-    try {
-      final students = await remoteDataSource.getUnallocatedStudents(
-        gender: gender,
-      );
-      return Right(students);
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
+  Future<void> addDormitory(Dormitory dormitory) {
+    return remoteDataSource.addDormitory(dormitory);
   }
 
   @override
-  Future<Either<Failure, void>> allocateStudent(
+  Future<void> updateDormitory(Dormitory dormitory) {
+    return remoteDataSource.updateDormitory(dormitory);
+  }
+
+  @override
+  Future<void> deleteDormitory(String id) {
+    return remoteDataSource.deleteDormitory(id);
+  }
+
+  @override
+  Future<void> setDormLeadership(
+    String dormitoryId, {
+    String? roomLeaderId,
+    String? dormPrefectId,
+  }) {
+    return remoteDataSource.setDormLeadership(
+      dormitoryId,
+      roomLeaderId: roomLeaderId,
+      dormPrefectId: dormPrefectId,
+    );
+  }
+
+  @override
+  Stream<List<Bed>> getBeds(String dormitoryId) {
+    return remoteDataSource.getBeds(dormitoryId);
+  }
+
+  @override
+  Future<void> addBed(String dormitoryId, String bedNumber) {
+    return remoteDataSource.addBed(dormitoryId, bedNumber);
+  }
+
+  @override
+  Future<void> removeBed(String dormitoryId, String bedId) {
+    return remoteDataSource.removeBed(dormitoryId, bedId);
+  }
+
+  @override
+  Future<void> transferStudent({
+    required String studentId,
+    required String toDormitoryId,
+    String? toBedNumber,
+    required String transferredBy,
+    String? reason,
+  }) {
+    return remoteDataSource.transferStudent(
+      studentId: studentId,
+      toDormitoryId: toDormitoryId,
+      toBedNumber: toBedNumber,
+      transferredBy: transferredBy,
+      reason: reason,
+    );
+  }
+
+  @override
+  Stream<List<BedTransfer>> getTransferHistory(String? studentId) {
+    return remoteDataSource.getTransferHistory(studentId);
+  }
+
+  @override
+  Stream<List<BoardingStudent>> getBoardingStudents(String? dormitoryId) {
+    return remoteDataSource.getBoardingStudents(dormitoryId);
+  }
+
+  @override
+  Stream<List<BoardingStudent>> getUnallocatedStudents() {
+    return remoteDataSource.getUnallocatedStudents();
+  }
+
+  @override
+  Future<void> allocateStudentToDorm(
     String studentId,
     String dormitoryId,
     String? bedNumber,
-  ) async {
-    try {
-      await remoteDataSource.allocateStudent(studentId, dormitoryId, bedNumber);
-      return const Right(null);
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
+  ) {
+    return remoteDataSource.allocateStudentToDorm(
+      studentId,
+      dormitoryId,
+      bedNumber,
+    );
   }
 
   @override
-  Future<Either<Failure, List<BoardingStudent>>> getDormitoryStudents(
-    String dormitoryId,
-  ) async {
-    try {
-      final students = await remoteDataSource.getDormitoryStudents(dormitoryId);
-      return Right(students);
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
+  Future<void> updateStudentBed(String studentId, String? bedNumber) {
+    return remoteDataSource.updateStudentBed(studentId, bedNumber);
   }
 
   @override
-  Future<Either<Failure, void>> submitAttendance({
-    required String dormitoryId,
-    required String type,
-    required Map<String, String> attendance,
-  }) async {
-    try {
-      await remoteDataSource.submitAttendance(
-        dormitoryId: dormitoryId,
-        type: type,
-        attendance: attendance,
-      );
-      return const Right(null);
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
+  Future<void> setRoomLeader(String dormitoryId, String? studentId) {
+    return remoteDataSource.setRoomLeader(dormitoryId, studentId);
   }
 
   @override
-  Future<Either<Failure, List<WelfareRecord>>> getWelfareRecords({
-    String? schoolId,
-    String? studentId,
-    String? gender,
-    bool publicOnly = false,
-  }) async {
-    try {
-      final records = await remoteDataSource.getWelfareRecords(
-        schoolId: schoolId,
-        studentId: studentId,
-        gender: gender,
-        publicOnly: publicOnly,
-      );
-      return Right(records);
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
-  }
-
-  @override
-  Future<Either<Failure, void>> addWelfareRecord(WelfareRecord record) async {
-    try {
-      await remoteDataSource.addWelfareRecord(record);
-      return const Right(null);
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
-  }
-
-  @override
-  Future<Either<Failure, List<DisciplineCase>>> getDisciplineCases({
-    String? studentId,
-    String? gender,
-  }) async {
-    try {
-      final cases = await remoteDataSource.getDisciplineCases(
-        studentId: studentId,
-        gender: gender,
-      );
-      return Right(cases);
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
-  }
-
-  @override
-  Future<Either<Failure, void>> addDisciplineCase(
-    DisciplineCase disciplineCase,
-  ) async {
-    try {
-      await remoteDataSource.addDisciplineCase(disciplineCase);
-      return const Right(null);
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
-  }
-
-  @override
-  Future<Either<Failure, List<HygieneCheck>>> getHygieneChecks({
+  Stream<List<BoardingAttendance>> getAttendance(
+    DateTime date,
     String? dormitoryId,
-    String? gender,
-  }) async {
-    try {
-      final checks = await remoteDataSource.getHygieneChecks(
-        dormitoryId: dormitoryId,
-        gender: gender,
-      );
-      return Right(checks);
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
+    String? type,
+  ) {
+    return remoteDataSource.getAttendance(date, dormitoryId, type);
   }
 
   @override
-  Future<Either<Failure, void>> addHygieneCheck(HygieneCheck check) async {
-    try {
-      await remoteDataSource.addHygieneCheck(check);
-      return const Right(null);
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
+  Future<void> recordAttendance(BoardingAttendance attendance) {
+    return remoteDataSource.recordAttendance(attendance);
   }
 
   @override
-  Future<Either<Failure, List<BoardingStudent>>> getStudentsOnLeave({
-    String? gender,
-  }) async {
-    try {
-      final students = await remoteDataSource.getStudentsOnLeave(
-        gender: gender,
-      );
-      return Right(students);
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
+  Future<void> bulkRecordAttendance(List<BoardingAttendance> records) {
+    return remoteDataSource.bulkRecordAttendance(records);
+  }
+
+  @override
+  Stream<List<LeaveRequest>> getLeaveRequests({String? status}) {
+    return remoteDataSource.getLeaveRequests(status: status);
+  }
+
+  @override
+  Future<void> requestLeave(LeaveRequest request) {
+    return remoteDataSource.requestLeave(request);
+  }
+
+  @override
+  Future<void> updateLeaveStatus(
+    String requestId,
+    String status, {
+    String? approvedBy,
+    DateTime? actualReturnDate,
+    String? notes,
+  }) {
+    return remoteDataSource.updateLeaveStatus(
+      requestId,
+      status,
+      approvedBy: approvedBy,
+      actualReturnDate: actualReturnDate,
+      notes: notes,
+    );
+  }
+
+  @override
+  Stream<List<WelfareRecord>> watchWelfareRecords(
+    String schoolId,
+    String studentId, {
+    bool publicOnly = false,
+  }) {
+    return remoteDataSource.watchWelfareRecords(
+      schoolId,
+      studentId,
+      publicOnly: publicOnly,
+    );
+  }
+
+  @override
+  Stream<List<WelfareRecord>> watchAllWelfareRecords(
+    String schoolId, {
+    bool publicOnly = false,
+  }) {
+    return remoteDataSource.watchAllWelfareRecords(
+      schoolId,
+      publicOnly: publicOnly,
+    );
+  }
+
+  @override
+  Future<void> logWelfareRecord(WelfareRecord record) {
+    return remoteDataSource.logWelfareRecord(record);
+  }
+
+  @override
+  Stream<List<CounselingReferral>> getCounselingReferrals(String? studentId) {
+    return remoteDataSource.getCounselingReferrals(studentId);
+  }
+
+  @override
+  Future<void> logCounselingReferral(CounselingReferral referral) {
+    return remoteDataSource.logCounselingReferral(referral);
+  }
+
+  @override
+  Future<void> updateReferralStatus(
+    String referralId,
+    String status, {
+    String? followUpNotes,
+  }) {
+    return remoteDataSource.updateReferralStatus(
+      referralId,
+      status,
+      followUpNotes: followUpNotes,
+    );
+  }
+
+  @override
+  Stream<List<BehaviourObservation>> getBehaviourObservations(String? studentId) {
+    return remoteDataSource.getBehaviourObservations(studentId);
+  }
+
+  @override
+  Future<void> logBehaviourObservation(BehaviourObservation observation) {
+    return remoteDataSource.logBehaviourObservation(observation);
+  }
+
+  @override
+  Stream<List<DisciplineIncident>> getDisciplineIncidents(String? studentId) {
+    return remoteDataSource.getDisciplineIncidents(studentId);
+  }
+
+  @override
+  Future<void> logDisciplineIncident(DisciplineIncident incident) {
+    return remoteDataSource.logDisciplineIncident(incident);
+  }
+
+  @override
+  Future<void> updateDisciplineStatus(
+    String incidentId,
+    String status,
+    String actionTaken,
+  ) {
+    return remoteDataSource.updateDisciplineStatus(
+      incidentId,
+      status,
+      actionTaken,
+    );
+  }
+
+  @override
+  Stream<List<BoardingAnnouncement>> getAnnouncements() {
+    return remoteDataSource.getAnnouncements();
+  }
+
+  @override
+  Future<void> postAnnouncement(BoardingAnnouncement announcement) {
+    return remoteDataSource.postAnnouncement(announcement);
   }
 }

@@ -24,6 +24,9 @@ class StudentModel extends Student {
     super.documents,
     super.campusId,
     required super.level,
+    super.dormLeadershipRole,
+    super.dormLeadershipDormId,
+    super.dormLeadershipDormName,
   });
 
   StudentModel copyWithModelId(String newId) {
@@ -48,6 +51,9 @@ class StudentModel extends Student {
       documents: documents,
       campusId: campusId,
       level: level,
+      dormLeadershipRole: dormLeadershipRole,
+      dormLeadershipDormId: dormLeadershipDormId,
+      dormLeadershipDormName: dormLeadershipDormName,
     );
   }
 
@@ -96,6 +102,9 @@ class StudentModel extends Student {
       documents: Map<String, String>.from(map['documents'] ?? {}),
       campusId: map['campusId'],
       level: level,
+      dormLeadershipRole: map['dormLeadershipRole'],
+      dormLeadershipDormId: map['dormLeadershipDormId'],
+      dormLeadershipDormName: map['dormLeadershipDormName'],
     );
   }
 
@@ -124,6 +133,9 @@ class StudentModel extends Student {
       'documents': documents,
       'campusId': campusId,
       'level': level.name,
+      'dormLeadershipRole': dormLeadershipRole,
+      'dormLeadershipDormId': dormLeadershipDormId,
+      'dormLeadershipDormName': dormLeadershipDormName,
     };
   }
 }

@@ -7,25 +7,34 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/director/presentation/bloc/director_bloc.dart';
 import 'package:school_pulse/features/director/presentation/bloc/director_event.dart';
 import 'package:school_pulse/features/director/presentation/bloc/director_state.dart';
-import '../../domain/entities/director_dashboard_stats.dart';
+import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
+import 'package:school_pulse/features/director/domain/entities/director_dashboard_stats.dart';
 
 class DirectorDashboardScreen extends StatelessWidget {
   const DirectorDashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final actionBg = Theme.of(context).colorScheme.surfaceContainer;
     context.read<DirectorBloc>().add(DirectorDashboardRequested());
     return Scaffold(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          actions: [
+            NotificationBellButton(backgroundColor: actionBg),
+            const SizedBox(width: 8),
+          ],
+        ),
         body: CustomScrollView(
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 48),
                     _buildGreeting(context),
                     const SizedBox(height: 24),
                     _buildOverviewGrid(context),

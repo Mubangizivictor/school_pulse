@@ -3,12 +3,18 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/design_system/searchable_picker.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/features/shared/boarding/dorm_widgets.dart';
 import 'package:school_pulse/features/patron/domain/entities/patron_entities.dart';
 import 'package:school_pulse/features/patron/presentation/bloc/patron_bloc.dart';
 import 'package:school_pulse/features/patron/presentation/bloc/patron_event.dart';
 import 'package:school_pulse/features/patron/presentation/bloc/patron_state.dart';
+import 'package:school_pulse/features/student/domain/entities/student.dart';
+import 'package:school_pulse/features/student/domain/usecases/get_all_students.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 
 class BedManagementScreen extends StatefulWidget {
   final Dormitory dormitory;
@@ -19,6 +25,8 @@ class BedManagementScreen extends StatefulWidget {
 }
 
 class _BedManagementScreenState extends State<BedManagementScreen> {
+  int _tab = 0;
+
   @override
   void initState() {
     super.initState();
@@ -33,7 +41,9 @@ class _BedManagementScreenState extends State<BedManagementScreen> {
   @override
   Widget build(BuildContext context) {
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
-    return Scaffold(
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
       appBar: AppBar(
         title: Text('${widget.dormitory.name} Beds'),
         actions: [
@@ -62,33 +72,98 @@ class _BedManagementScreenState extends State<BedManagementScreen> {
           if (state is! BedsLoaded) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (state.beds.isEmpty) {
-            return const EmptyState(
-              icon: Icons.bed_outlined,
-              title: 'No Beds Registered',
-              message: 'Tap + to add beds to this dormitory.',
-            );
-          }
-          return GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 0.9,
-            ),
-            itemCount: state.beds.length,
-            itemBuilder: (context, index) => _BedTile(
-              bed: state.beds[index],
-              dormitory: widget.dormitory,
-              currentUserName: _currentUserName(context),
-            ),
+
+          final beds = state.beds;
+          final occupied = beds.where((b) => b.occupied).toList();
+          final available = beds.where((b) => !b.occupied).toList();
+
+          final visible = switch (_tab) {
+            1 => occupied,
+            2 => available,
+            _ => beds,
+          };
+
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  AppSpacing.xl,
+                  AppSpacing.xl,
+                  AppSpacing.m,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: DormStatTile(
+                        label: 'Total Beds',
+                        value: '${beds.length}',
+                        icon: Icons.bed_outlined,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.m),
+                    Expanded(
+                      child: DormStatTile(
+                        label: 'Occupied',
+                        value: '${occupied.length}',
+                        icon: Icons.person_outline,
+                        color: Colors.orange,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.m),
+                    Expanded(
+                      child: DormStatTile(
+                        label: 'Available',
+                        value: '${available.length}',
+                        icon: Icons.event_available_outlined,
+                        color: semanticColors.success,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              TabBar(
+                onTap: (i) => setState(() => _tab = i),
+                tabs: const [
+                  Tab(text: 'All Beds'),
+                  Tab(text: 'Occupied'),
+                  Tab(text: 'Available'),
+                ],
+              ),
+              Expanded(
+                child: visible.isEmpty
+                    ? const EmptyState(
+                        icon: Icons.bed_outlined,
+                        title: 'No Beds Here',
+                        message: 'Tap + to add beds to this dormitory.',
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(AppSpacing.xl),
+                        itemCount: visible.length,
+                        itemBuilder: (context, index) {
+                          final bed = visible[index];
+                          return BedListTile(
+                            bedNumber: bed.bedNumber,
+                            occupied: bed.occupied,
+                            studentName: bed.studentName,
+                            onTap: () => _BedTile(
+                              bed: bed,
+                              dormitory: widget.dormitory,
+                              currentUserName: _currentUserName(context),
+                            ).showActions(context),
+                          );
+                        },
+                      ),
+              ),
+            ],
           );
         },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddBedDialog(context),
         child: const Icon(Icons.add),
+      ),
       ),
     );
   }
@@ -157,6 +232,10 @@ class _BedTile extends StatelessWidget {
     );
   }
 
+  /// Exposes the bed action sheet to the list tile, which replaced the old
+  /// grid tile as the visual presentation.
+  void showActions(BuildContext context) => _showBedActions(context);
+
   void _showBedActions(BuildContext context) {
     final bloc = context.read<PatronBloc>();
     showModalBottomSheet(
@@ -196,47 +275,60 @@ class _BedTile extends StatelessWidget {
     );
   }
 
-  void _showAssignDialog(BuildContext context, PatronBloc bloc) {
-    final studentIdController = TextEditingController();
+  Future<void> _showAssignDialog(BuildContext context, PatronBloc bloc) async {
+    final authState = context.read<AuthBloc>().state;
+    final schoolId = authState is AuthAuthenticated ? authState.user.schoolId : '';
+    final result = await di.sl<GetAllStudents>()(schoolId: schoolId);
+    final students = result.fold(
+      (_) => <Student>[],
+      (all) => all.where((s) => s.gender.name == 'female').toList(),
+    );
+    if (!context.mounted) return;
+
+    Student? selected;
     final reasonController = TextEditingController();
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Assign / Transfer Student'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: studentIdController,
-              decoration: const InputDecoration(
-                labelText: 'Student ID',
-                helperText: 'From the Dormitory screen\'s allocation flow for new boarders; use this for moving an already-allocated student.',
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Assign / Transfer Student'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SearchablePickerField<Student>(
+                label: 'Student',
+                value: selected,
+                items: students,
+                labelBuilder: (s) => s.name,
+                subtitleBuilder: (s) => s.className,
+                onChanged: (s) => setDialogState(() => selected = s),
               ),
-            ),
-            TextField(
-              controller: reasonController,
-              decoration: const InputDecoration(labelText: 'Reason (optional)'),
+              const SizedBox(height: 12),
+              TextField(
+                controller: reasonController,
+                decoration: const InputDecoration(labelText: 'Reason (optional)'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: selected == null
+                  ? null
+                  : () {
+                      bloc.add(TransferStudentEvent(
+                        studentId: selected!.id,
+                        toDormitoryId: dormitory.id,
+                        toBedNumber: bed.bedNumber,
+                        transferredBy: currentUserName,
+                        reason: reasonController.text.trim().isEmpty ? null : reasonController.text.trim(),
+                      ));
+                      Navigator.pop(dialogContext);
+                    },
+              child: const Text('Confirm'),
             ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () {
-              if (studentIdController.text.trim().isNotEmpty) {
-                bloc.add(TransferStudentEvent(
-                  studentId: studentIdController.text.trim(),
-                  toDormitoryId: dormitory.id,
-                  toBedNumber: bed.bedNumber,
-                  transferredBy: currentUserName,
-                  reason: reasonController.text.trim().isEmpty ? null : reasonController.text.trim(),
-                ));
-              }
-              Navigator.pop(dialogContext);
-            },
-            child: const Text('Confirm'),
-          ),
-        ],
       ),
     );
   }

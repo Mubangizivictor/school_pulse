@@ -56,10 +56,16 @@ class HRDashboardScreen extends StatelessWidget {
         ],
       ),
       actions: [
-        const NotificationBellButton(),
+        NotificationBellButton(
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+        ),
         const SizedBox(width: 8),
         IconButton(
-          icon: const Icon(Icons.logout),
+          icon: const Icon(Icons.logout_rounded),
+          color: Theme.of(context).colorScheme.error,
+          style: IconButton.styleFrom(
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+          ),
           onPressed: () {
             context.read<AuthBloc>().add(LogoutPressed());
             context.go('/welcome');

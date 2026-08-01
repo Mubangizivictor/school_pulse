@@ -8,6 +8,7 @@ import 'package:school_pulse/features/library/presentation/bloc/library_event.da
 import 'package:school_pulse/features/library/presentation/bloc/library_state.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 
 class LibrarianDashboardScreen extends StatefulWidget {
   const LibrarianDashboardScreen({super.key});
@@ -29,6 +30,7 @@ class _LibrarianDashboardScreenState extends State<LibrarianDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final actionBg = Theme.of(context).colorScheme.surfaceContainer;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Library Dashboard'),
@@ -37,17 +39,19 @@ class _LibrarianDashboardScreenState extends State<LibrarianDashboardScreen> {
             icon: const Icon(Icons.search),
             tooltip: 'Student Eligibility Lookup',
             onPressed: () => context.push('/staff/librarian/lookup'),
+            style: IconButton.styleFrom(backgroundColor: actionBg),
           ),
+          const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.qr_code_scanner),
             onPressed: () {
               // TODO: Implement QR/Barcode scanner for borrowing/returns
             },
+            style: IconButton.styleFrom(backgroundColor: actionBg),
           ),
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {},
-          ),
+          const SizedBox(width: 8),
+          NotificationBellButton(backgroundColor: actionBg),
+          const SizedBox(width: 16),
         ],
       ),
       body: BlocBuilder<LibraryBloc, LibraryState>(

@@ -58,8 +58,20 @@ class StudentProfileScreen extends StatelessWidget {
                   _buildInfoTile(context, 'Blood Group', student.medicalInfo!.bloodGroup!),
               ]),
               const SizedBox(height: 24),
+              if (student.dormLeadershipRole != null) ...[
+                _buildSection(context, 'Dorm Leadership', [
+                  ListTile(
+                    leading: const Icon(Icons.star, color: Colors.amber),
+                    title: Text(student.dormLeadershipRole!),
+                    subtitle: student.dormLeadershipDormName != null
+                        ? Text(student.dormLeadershipDormName!)
+                        : null,
+                  ),
+                ]),
+                const SizedBox(height: 24),
+              ],
               if (student.emergencyContacts.isNotEmpty)
-                _buildSection(context, 'Emergency Contacts', 
+                _buildSection(context, 'Emergency Contacts',
                   student.emergencyContacts.map((c) => _buildInfoTile(context, c.relationship, '${c.name} (${c.phoneNumber})')).toList(),
                 ),
               const SizedBox(height: 24),

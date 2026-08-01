@@ -1,8 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 import '../../domain/entities/notification_category_config.dart';
 import '../../domain/entities/notification_model.dart';
-import '../../domain/entities/mock_notifications.dart';
+import '../../domain/repositories/notification_repository.dart';
 
 class NotificationSearchScreen extends StatefulWidget {
   const NotificationSearchScreen({super.key});
@@ -16,8 +22,21 @@ class _NotificationSearchScreenState extends State<NotificationSearchScreen> {
   List<NotificationItem> _searchResults = [];
   bool _isSearching = false;
 
+  /// Debounces keystrokes so a query is not issued per character - each one is
+  /// a billed read, and the intermediate results are never seen anyway.
+  Timer? _debounce;
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
   void _handleSearch(String query) {
-    if (query.isEmpty) {
+    _debounce?.cancel();
+
+    if (query.trim().isEmpty) {
       setState(() {
         _searchResults = [];
         _isSearching = false;
@@ -25,13 +44,38 @@ class _NotificationSearchScreenState extends State<NotificationSearchScreen> {
       return;
     }
 
+    setState(() => _isSearching = true);
+    _debounce = Timer(
+      const Duration(milliseconds: 300),
+      () => _runSearch(query.trim()),
+    );
+  }
+
+  Future<void> _runSearch(String query) async {
+    final authState = context.read<AuthBloc>().state;
+    final user = authState is AuthAuthenticated ? authState.user : null;
+    if (user == null) {
+      if (mounted) setState(() => _searchResults = []);
+      return;
+    }
+
+    final result = await di.sl<NotificationRepository>().getNotifications(
+          NotificationQuery(
+            schoolId: user.schoolId,
+            recipientUserId: user.id,
+            searchTerm: query,
+            // Search deliberately spans archived notifications: looking
+            // something up is exactly when a user wants their whole history.
+            includeArchived: true,
+            limit: 50,
+          ),
+        );
+
+    // The screen may have been popped while the query was in flight.
+    if (!mounted) return;
+
     setState(() {
-      _isSearching = true;
-      _searchResults = mockNotifications.where((n) {
-        return n.title.toLowerCase().contains(query.toLowerCase()) ||
-            n.description.toLowerCase().contains(query.toLowerCase()) ||
-            n.senderName.toLowerCase().contains(query.toLowerCase());
-      }).toList();
+      _searchResults = result.fold((_) => const [], (page) => page.items);
     });
   }
 

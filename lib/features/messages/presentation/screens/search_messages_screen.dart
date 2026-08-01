@@ -16,23 +16,41 @@ class _SearchMessagesScreenState extends State<SearchMessagesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
+      backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
       appBar: AppBar(
-        title: TextField(
-          controller: _searchController,
-          autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'Search messages',
-            border: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            focusedBorder: InputBorder.none,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Container(
+          height: 40,
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceDark : Colors.grey[200],
+            borderRadius: BorderRadius.circular(20),
           ),
-          onChanged: (value) => setState(() => _query = value),
+          child: TextField(
+            controller: _searchController,
+            autofocus: true,
+            style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary(context)),
+            decoration: InputDecoration(
+              hintText: 'Search messages...',
+              hintStyle: AppTypography.bodyMedium.copyWith(color: AppColors.textMuted(context)),
+              border: InputBorder.none,
+              prefixIcon: Icon(Icons.search, size: 20, color: AppColors.textMuted(context)),
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+            ),
+            onChanged: (value) => setState(() => _query = value),
+          ),
         ),
         actions: [
           if (_query.isNotEmpty)
             IconButton(
-              icon: const Icon(Icons.close),
+              icon: Icon(Icons.close, color: AppColors.textPrimary(context)),
               onPressed: () {
                 _searchController.clear();
                 setState(() => _query = '');
@@ -40,54 +58,98 @@ class _SearchMessagesScreenState extends State<SearchMessagesScreen> {
             ),
         ],
       ),
-      body: Column(
-        children: [
-          DefaultTabController(
-            length: 4,
-            child: Column(
-              children: [
-                const TabBar(
-                  isScrollable: true,
-                  tabs: [
-                    Tab(text: 'Messages'),
-                    Tab(text: 'Media'),
-                    Tab(text: 'Links'),
-                    Tab(text: 'Docs'),
-                  ],
-                ),
-                if (_query.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(AppSpacing.x3l),
-                    child: Column(
-                      children: [
-                        const Icon(Icons.search, size: 64, color: Colors.grey),
-                        const SizedBox(height: 16),
-                        Text('Search for messages, people, or groups', 
-                          textAlign: TextAlign.center,
-                          style: AppTypography.bodyMedium.copyWith(color: AppColors.textMuted(context))),
-                      ],
-                    ),
-                  )
-                else
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: 3,
-                      itemBuilder: (context, index) {
-                        return ListTile(
-                          leading: const CircleAvatar(child: Icon(Icons.person)),
-                          title: const Text('Mr. Kofi Mensah'),
-                          subtitle: Text('Please find the homework attached for Chapter 4...'),
-                          trailing: const Text('10/05/24', style: TextStyle(fontSize: 10)),
-                          onTap: () {},
-                        );
-                      },
-                    ),
-                  ),
+      body: DefaultTabController(
+        length: 4,
+        child: Column(
+          children: [
+            TabBar(
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              labelColor: AppColors.electricBlue,
+              unselectedLabelColor: AppColors.textMuted(context),
+              indicatorColor: AppColors.electricBlue,
+              indicatorSize: TabBarIndicatorSize.label,
+              labelStyle: AppTypography.titleSmall,
+              dividerColor: isDark ? AppColors.borderDark : AppColors.borderLight,
+              tabs: const [
+                Tab(text: 'Messages'),
+                Tab(text: 'Media'),
+                Tab(text: 'Links'),
+                Tab(text: 'Docs'),
               ],
             ),
-          ),
-        ],
+            Expanded(
+              child: _query.isEmpty ? _buildRecentSearches() : _buildSearchResults(),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildRecentSearches() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.m),
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('RECENT SEARCHES', style: AppTypography.labelSmall.copyWith(color: AppColors.textMuted(context))),
+            TextButton(
+              onPressed: () {},
+              child: Text('Clear All', style: AppTypography.labelSmall.copyWith(color: AppColors.electricBlue)),
+            ),
+          ],
+        ),
+        _buildRecentItem('PTA meeting notes'),
+        _buildRecentItem('Science homework'),
+        _buildRecentItem('Holiday schedule'),
+      ],
+    );
+  }
+
+  Widget _buildRecentItem(String text) {
+    return ListTile(
+      leading: Icon(Icons.history, color: AppColors.textMuted(context)),
+      title: Text(text, style: AppTypography.bodyMedium),
+      trailing: Icon(Icons.close, size: 16, color: AppColors.textMuted(context)),
+      contentPadding: EdgeInsets.zero,
+      onTap: () {
+        _searchController.text = text;
+        setState(() => _query = text);
+      },
+    );
+  }
+
+  Widget _buildSearchResults() {
+    return ListView.builder(
+      padding: const EdgeInsets.only(top: AppSpacing.s),
+      itemCount: 3,
+      itemBuilder: (context, index) {
+        return ListTile(
+          leading: const CircleAvatar(
+            backgroundColor: AppColors.royalBlue,
+            child: Icon(Icons.person, color: Colors.white),
+          ),
+          title: Row(
+            children: [
+              Expanded(child: Text('Mr. Kofi Mensah', style: AppTypography.titleSmall)),
+              Text('10/05/24', style: AppTypography.labelSmall.copyWith(color: AppColors.textMuted(context))),
+            ],
+          ),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              'Please find the homework attached for Chapter 4...',
+              style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context)),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          onTap: () {},
+        );
+      },
     );
   }
 }

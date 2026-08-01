@@ -14,48 +14,24 @@ class MessagesListScreen extends StatefulWidget {
 }
 
 class _MessagesListScreenState extends State<MessagesListScreen> {
-  final List<ChatConversation> mockConversations = [
-    ChatConversation(
-      id: '1',
-      title: 'P7 - Parents Group',
-      subtitle: 'Mrs. Amina: PTA meeting this Friday at 4PM',
-      type: ChatType.group,
-      unreadCount: 2,
-      participants: [],
-      lastMessage: ChatMessage(
-        id: 'm1',
-        senderId: 'admin',
-        senderName: 'Mrs. Amina',
-        content: 'PTA meeting this Friday at 4PM',
-        timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
-      ),
-    ),
-    ChatConversation(
-      id: '2',
-      title: 'Mr. Kofi Mensah',
-      subtitle: 'Please find the homework attached.',
-      type: ChatType.direct,
-      participants: [],
-      lastMessage: ChatMessage(
-        id: 'm2',
-        senderId: 'kofi',
-        senderName: 'Mr. Kofi Mensah',
-        content: 'Please find the homework attached.',
-        timestamp: DateTime.now().subtract(const Duration(hours: 2)),
-      ),
-    ),
-  ];
+  final List<ChatConversation> mockConversations = [];
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      backgroundColor: AppColors.bgDark,
       appBar: AppBar(
-        title: const Text('Messages'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(
+          'Messages',
+          style: AppTypography.headlineMedium.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit_square),
+            icon: const Icon(Icons.edit_square, color: Colors.white),
             onPressed: () => context.push('/messages/new'),
           ),
         ],
@@ -63,45 +39,58 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(AppSpacing.m),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search messages',
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: InkWell(
+              onTap: () => context.push('/messages/search'),
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceDark,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.search, color: Colors.white54, size: 22),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Search messages',
+                      style: AppTypography.bodyLarge.copyWith(color: Colors.white54),
+                    ),
+                  ],
                 ),
               ),
-              onTap: () => context.push('/messages/search'),
             ),
           ),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
-            child: Row(
+          SizedBox(
+            height: 48,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
                 _FilterChip(label: 'All', isSelected: true),
                 _FilterChip(label: 'Unread', isSelected: false),
                 _FilterChip(label: 'Groups', isSelected: false),
                 _FilterChip(label: 'Official', isSelected: false),
+                _FilterChip(label: 'Archived', isSelected: false, onTap: () => context.push('/messages/archived')),
               ],
             ),
           ),
           Expanded(
             child: mockConversations.isEmpty
                 ? _buildEmptyState()
-                : ListView.separated(
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.m),
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     itemCount: mockConversations.length,
-                    separatorBuilder: (context, index) => const Divider(height: 1, indent: 70),
                     itemBuilder: (context, index) {
                       final chat = mockConversations[index];
-                      return ChatListTile(
-                        chat: chat,
-                        onTap: () => context.push('/messages/chat/${chat.id}'),
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: ChatListTile(
+                          chat: chat,
+                          onTap: () => context.push('/messages/chat/${chat.id}'),
+                        ),
                       );
                     },
                   ),
@@ -119,28 +108,51 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(AppSpacing.xl),
+              padding: const EdgeInsets.all(40),
               decoration: BoxDecoration(
-                color: AppColors.electricBlue.withValues(alpha: 0.1),
+                color: AppColors.surfaceDark,
                 shape: BoxShape.circle,
+                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
               ),
-              child: const Icon(Icons.forum_outlined, size: 48, color: AppColors.electricBlue),
+              child: Icon(
+                Icons.chat_bubble_outline_rounded,
+                size: 80,
+                color: AppColors.electricBlue.withValues(alpha: 0.3),
+              ),
             ),
-            const SizedBox(height: AppSpacing.l),
-            Text('No messages yet', style: AppTypography.headlineSmall),
-            const SizedBox(height: AppSpacing.s),
+            const SizedBox(height: 32),
             Text(
-              'Direct messages from the school will appear here.',
-              textAlign: Center,
-              style: AppTypography.bodyMedium.copyWith(color: AppColors.textMuted(context)),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            ElevatedButton(
-              onPressed: () => context.push('/messages/new'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x3l, vertical: AppSpacing.m),
+              'No Conversations Yet',
+              style: AppTypography.headlineSmall.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
               ),
-              child: const Text('New Message'),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Stay connected with teachers, parents, and school staff. Start a new conversation below.',
+              textAlign: TextAlign.center,
+              style: AppTypography.bodyMedium.copyWith(
+                color: Colors.white60,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 40),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => context.push('/messages/new'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.electricBlue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Text('Start Messaging', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              ),
             ),
           ],
         ),
@@ -152,22 +164,29 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
 class _FilterChip extends StatelessWidget {
   final String label;
   final bool isSelected;
+  final VoidCallback? onTap;
 
-  const _FilterChip({required this.label, required this.isSelected});
+  const _FilterChip({required this.label, required this.isSelected, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(right: AppSpacing.s),
+      padding: const EdgeInsets.only(right: 8),
       child: ChoiceChip(
         label: Text(label),
         selected: isSelected,
-        onSelected: (_) {},
+        onSelected: (_) => onTap?.call(),
         selectedColor: AppColors.electricBlue,
+        backgroundColor: AppColors.surfaceDark,
         labelStyle: TextStyle(
-          color: isSelected ? Colors.white : AppColors.textMuted(context),
+          color: isSelected ? Colors.white : Colors.white60,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: isSelected ? AppColors.electricBlue : Colors.white.withValues(alpha: 0.05)),
+        ),
+        showCheckmark: false,
       ),
     );
   }

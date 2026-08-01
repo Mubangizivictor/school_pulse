@@ -5,7 +5,9 @@ import 'package:school_pulse/features/patron/domain/entities/patron_entities.dar
 class PatronDashboardOverview {
   final int totalStudents;
   final int studentsPresent;
+  final int studentsAbsent;
   final int studentsOnLeave;
+  final int studentsInClinic;
   final int missingStudentCount;
   final int totalBeds;
   final int occupiedBeds;
@@ -17,7 +19,9 @@ class PatronDashboardOverview {
   const PatronDashboardOverview({
     required this.totalStudents,
     required this.studentsPresent,
+    this.studentsAbsent = 0,
     required this.studentsOnLeave,
+    this.studentsInClinic = 0,
     required this.missingStudentCount,
     required this.totalBeds,
     required this.occupiedBeds,
@@ -26,6 +30,11 @@ class PatronDashboardOverview {
     required this.openDisciplineCases,
     required this.pendingWelfareConcerns,
   });
+
+  /// Boarders unaccounted for at the last roll call - surfaced as the
+  /// "Emergency" tile, since a missing boarder is the one state that needs
+  /// immediate escalation rather than routine follow-up.
+  int get emergencyCount => missingStudentCount;
 }
 
 abstract class PatronRepository {

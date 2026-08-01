@@ -7,6 +7,7 @@ import '../widgets/task_card.dart';
 import 'task_details_screen.dart';
 import 'create_task_screen.dart';
 import 'task_filter_screen.dart';
+import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 
 class TaskListScreen extends StatefulWidget {
   const TaskListScreen({super.key});
@@ -15,62 +16,56 @@ class TaskListScreen extends StatefulWidget {
   State<TaskListScreen> createState() => _TaskListScreenState();
 }
 
-class _TaskListScreenState extends State<TaskListScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _TaskListScreenState extends State<TaskListScreen> {
   int _selectedTabIndex = 0;
 
   @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final semantic = Theme.of(context).extension<SemanticColors>()!;
-    
+    final actionBg = Theme.of(context).colorScheme.surfaceContainer;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tasks'),
+        title: const Text('All Tasks'),
         actions: [
-          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
-          Stack(
-            children: [
-              IconButton(icon: const Icon(Icons.notifications_none), onPressed: () {}),
-              Positioned(
-                right: 8,
-                top: 8,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                  child: const Text('2', style: TextStyle(color: Colors.white, fontSize: 8)),
-                ),
-              ),
-            ],
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {},
+            style: IconButton.styleFrom(backgroundColor: actionBg),
           ),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.filter_list),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const TaskFilterScreen()),
+            ),
+            style: IconButton.styleFrom(backgroundColor: actionBg),
+          ),
+          const SizedBox(width: 8),
+          NotificationBellButton(backgroundColor: actionBg),
+          const SizedBox(width: 16),
         ],
       ),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
             child: Row(
               children: [
-                _buildTab('My Tasks (12)', 0),
+                _buildTab('Today', 0),
                 const SizedBox(width: 8),
-                _buildTab('Pending (7)', 1),
+                _buildTab('Upcoming', 1),
                 const SizedBox(width: 8),
-                _buildTab('Completed (25)', 2),
+                _buildTab('Overdue', 2),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
-                _buildSectionHeader('Today\'s Tasks', '5'),
-                ...mockTasks.where((t) => t.status != TaskStatus.overdue).take(4).map((task) => TaskCard(
+                _buildSectionHeader('Priority Tasks', '2'),
+                ...mockTasks.where((t) => t.priority == TaskPriority.high).map((task) => TaskCard(
                   task: task,
                   onTap: () => Navigator.push(
                     context,
@@ -78,24 +73,24 @@ class _TaskListScreenState extends State<TaskListScreen> with SingleTickerProvid
                   ),
                 )),
                 const SizedBox(height: 16),
-                _buildSectionHeader('Upcoming Tasks', '2'),
-                TaskCard(
-                  task: mockTasks[4],
+                _buildSectionHeader('General Tasks', '3'),
+                ...mockTasks.where((t) => t.priority != TaskPriority.high).take(3).map((task) => TaskCard(
+                  task: task,
                   onTap: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => TaskDetailsScreen(task: mockTasks[4])),
+                    MaterialPageRoute(builder: (_) => TaskDetailsScreen(task: task)),
                   ),
-                ),
+                )),
                 const SizedBox(height: 24),
                 PrimaryButton(
-                  label: 'Add Task',
+                  label: 'Add New Task',
                   icon: Icons.add,
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const CreateTaskScreen()),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 32),
               ],
             ),
           ),
@@ -106,23 +101,26 @@ class _TaskListScreenState extends State<TaskListScreen> with SingleTickerProvid
 
   Widget _buildTab(String label, int index) {
     final isSelected = _selectedTabIndex == index;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedTabIndex = index),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? Colors.transparent : Theme.of(context).colorScheme.outlineVariant,
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedTabIndex = index),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? Colors.transparent : Theme.of(context).colorScheme.outlineVariant,
+            ),
           ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurfaceVariant,
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ),
@@ -131,25 +129,25 @@ class _TaskListScreenState extends State<TaskListScreen> with SingleTickerProvid
 
   Widget _buildSectionHeader(String title, String count) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
+      padding: const EdgeInsets.only(bottom: 12.0, top: 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             title,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
           ),
+          const SizedBox(width: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
               count,
               style: TextStyle(
                 color: Theme.of(context).colorScheme.primary,
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: FontWeight.bold,
               ),
             ),

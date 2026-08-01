@@ -322,6 +322,11 @@ import 'package:school_pulse/features/biometrics/presentation/bloc/biometrics_bl
 import 'package:school_pulse/features/biometrics/data/models/biometric_template_isar.dart';
 import 'package:school_pulse/features/notifications/data/models/notification_isar.dart';
 import 'package:school_pulse/features/notifications/data/models/notification_token_isar.dart';
+import 'package:school_pulse/features/notifications/domain/repositories/notification_repository.dart';
+import 'package:school_pulse/features/notifications/data/repositories/notification_repository_impl.dart';
+import 'package:school_pulse/features/notifications/data/datasources/notification_local_data_source.dart';
+import 'package:school_pulse/features/notifications/data/datasources/notification_remote_data_source.dart';
+import 'package:school_pulse/features/notifications/presentation/bloc/notification_center_bloc.dart';
 
 import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source.dart';
 import 'package:school_pulse/features/verification/data/models/verification_isar_models.dart';
@@ -942,6 +947,27 @@ Future<void> init() async {
 
   sl.registerLazySingleton<NotificationsRemoteDataSource>(
     () => NotificationsRemoteDataSourceImpl(firestore: sl()),
+  );
+
+  // Notification centre (typed, offline-first). Registered alongside the older
+  // alert-based NotificationsBloc above rather than replacing it, so the
+  // screens still reading `alerts` keep working while they are migrated.
+  sl.registerFactory(() => NotificationCenterBloc(repository: sl()));
+
+  sl.registerLazySingleton<NotificationRepository>(
+    () => NotificationRepositoryImpl(
+      remoteDataSource: sl(),
+      localDataSource: sl(),
+      isConnected: () => sl<NetworkInfo>().isConnected,
+    ),
+  );
+
+  sl.registerLazySingleton<NotificationRemoteDataSource>(
+    () => NotificationRemoteDataSourceImpl(firestore: sl()),
+  );
+
+  sl.registerLazySingleton<NotificationLocalDataSource>(
+    () => NotificationLocalDataSourceImpl(isar: sl()),
   );
 
   // Features - Religion

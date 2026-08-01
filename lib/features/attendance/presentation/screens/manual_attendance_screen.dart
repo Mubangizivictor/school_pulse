@@ -166,7 +166,7 @@ class _ManualAttendanceScreenState extends State<ManualAttendanceScreen> {
                   width: 160,
                   child: PrimaryButton(
                     label: 'Save Attendance',
-                    onPressed: () => context.push('/attendance/summary'),
+                    onPressed: () => context.push('/staff/attendance/summary'),
                   ),
                 ),
               ],
@@ -174,7 +174,7 @@ class _ManualAttendanceScreenState extends State<ManualAttendanceScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: _buildBottomNav(context),
+      bottomNavigationBar: null,
     );
   }
 
@@ -199,19 +199,6 @@ class _ManualAttendanceScreenState extends State<ManualAttendanceScreen> {
             ],
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildBottomNav(BuildContext context) {
-    return BottomNavigationBar(
-      currentIndex: 1,
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.domain_outlined), label: 'Dorms'),
-        BottomNavigationBarItem(icon: Icon(Icons.assignment_outlined), label: 'Tasks'),
-        BottomNavigationBarItem(icon: Icon(Icons.bar_chart_outlined), label: 'Analytics'),
-        BottomNavigationBarItem(icon: Icon(Icons.more_horiz_outlined), label: 'More'),
       ],
     );
   }

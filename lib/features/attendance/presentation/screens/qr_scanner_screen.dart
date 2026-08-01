@@ -3,8 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 
-class QrScannerScreen extends StatelessWidget {
-  const QrScannerScreen({super.key});
+class QRScannerScreen extends StatelessWidget {
+  const QRScannerScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -24,81 +24,69 @@ class QrScannerScreen extends StatelessWidget {
             width: double.infinity,
             height: double.infinity,
           ),
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text(
-                  'Scan Student QR Code',
-                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const Text(
-                  'Position the QR code within the frame',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
-                ),
-                const SizedBox(height: 32),
-                Stack(
-                  alignment: Alignment.center,
+          SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 48.0),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // QR Frame
-                    Container(
-                      width: 260,
-                      height: 260,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.white, width: 2),
-                        borderRadius: BorderRadius.circular(24),
-                      ),
+                    const Text(
+                      'Scan Student QR Code',
+                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                     ),
-                    // Mock QR Code Image
-                    Image.network(
-                      'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=KatoMercy',
-                      width: 180,
-                      height: 180,
-                      color: Colors.white,
+                    const Text(
+                      'Position the QR code within the frame',
+                      style: TextStyle(color: Colors.white70, fontSize: 14),
                     ),
-                    // Scanning Line
-                    const _ScanningLine(),
+                    const SizedBox(height: 32),
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // QR Frame
+                        Container(
+                          width: 260,
+                          height: 260,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.white, width: 2),
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                        ),
+                        // Mock QR Code Image
+                        Image.network(
+                          'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=KatoMercy',
+                          width: 180,
+                          height: 180,
+                          color: Colors.white,
+                        ),
+                        // Scanning Line
+                        const _ScanningLine(),
+                      ],
+                    ),
+                    const SizedBox(height: 48),
+                    IconButton(
+                      icon: const Icon(Icons.flashlight_on, color: Colors.white, size: 32),
+                      onPressed: () {},
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Scanning will happen automatically',
+                      style: TextStyle(color: Colors.white70, fontSize: 14),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 48),
-                IconButton(
-                  icon: const Icon(Icons.flashlight_on, color: Colors.white, size: 32),
-                  onPressed: () {},
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Scanning will happen automatically',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
-                ),
-              ],
+              ),
             ),
           ),
           // For demo purposes, tapping the screen takes us to success
           Positioned.fill(
             child: GestureDetector(
-              onTap: () => context.push('/attendance/qr/success'),
+              onTap: () => context.push('/staff/attendance/qr-success'),
               child: Container(color: Colors.transparent),
             ),
           ),
         ],
       ),
-      bottomNavigationBar: _buildBottomNav(context),
-    );
-  }
-
-  Widget _buildBottomNav(BuildContext context) {
-    return BottomNavigationBar(
-      currentIndex: 1,
-      backgroundColor: const Color(0xFF0E1012),
-      unselectedItemColor: Colors.grey,
-      selectedItemColor: AppColors.electricBlue,
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.domain_outlined), label: 'Dorms'),
-        BottomNavigationBarItem(icon: Icon(Icons.assignment_outlined), label: 'Tasks'),
-        BottomNavigationBarItem(icon: Icon(Icons.bar_chart_outlined), label: 'Analytics'),
-        BottomNavigationBarItem(icon: Icon(Icons.more_horiz_outlined), label: 'More'),
-      ],
     );
   }
 }

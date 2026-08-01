@@ -13,10 +13,8 @@ class CreateTaskScreen extends StatefulWidget {
 class _CreateTaskScreenState extends State<CreateTaskScreen> {
   final _titleController = TextEditingController();
   final _descController = TextEditingController();
-  DateTime _selectedDate = DateTime.now();
-  TimeOfDay _selectedTime = const TimeOfDay(hour: 9, minute: 0);
-  String _priority = 'High';
-  String _category = 'Hygiene Inspection';
+  String _selectedPriority = 'High';
+  final String _category = 'Hygiene Inspection';
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +31,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SectionHeader(title: 'Task Details'),
+            const Text('Task Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 12),
             TextField(
               controller: _titleController,
@@ -73,13 +71,23 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            const SectionHeader(title: 'Assignment & Priority'),
+            const Text('Assignment & Priority', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 12),
             _buildDropdownField('Assigned to', 'Mrs. Akello Mary'),
             const SizedBox(height: 16),
-            _buildDropdownField('Priority', _priority),
+            const Text('Priority', style: TextStyle(fontSize: 14, color: Colors.grey)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildPriorityChip('Low', Colors.green),
+                const SizedBox(width: 8),
+                _buildPriorityChip('Medium', Colors.orange),
+                const SizedBox(width: 8),
+                _buildPriorityChip('High', Colors.red),
+              ],
+            ),
             const SizedBox(height: 24),
-            const SectionHeader(title: 'Schedule'),
+            const Text('Schedule', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -89,17 +97,22 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               ],
             ),
             const SizedBox(height: 24),
-            const SectionHeader(title: 'Checklist'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Checklist', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                TextButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Add Item'),
+                ),
+              ],
+            ),
             const SizedBox(height: 12),
             _buildChecklistItem('Bedrooms Cleanliness'),
             _buildChecklistItem('Bathroom Sanitation'),
             _buildChecklistItem('Common Areas'),
             _buildChecklistItem('Waste Management'),
-            TextButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.add),
-              label: const Text('Add Item'),
-            ),
             const SizedBox(height: 100),
           ],
         ),
@@ -109,6 +122,44 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         child: PrimaryButton(
           label: 'Create Task',
           onPressed: () => Navigator.pop(context),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPriorityChip(String label, Color color) {
+    final isSelected = _selectedPriority == label;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedPriority = label),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? color.withValues(alpha: 0.1) : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isSelected ? color : Theme.of(context).colorScheme.outlineVariant,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? color : Theme.of(context).colorScheme.onSurface,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -131,9 +182,9 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     return InputDecorator(
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: const Icon(Icons.calendar_today, size: 20),
+        prefixIcon: const Icon(Icons.calendar_today, size: 18),
       ),
-      child: Text(value),
+      child: Text(value, style: const TextStyle(fontSize: 13)),
     );
   }
 
@@ -141,24 +192,31 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     return InputDecorator(
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: const Icon(Icons.access_time, size: 20),
+        prefixIcon: const Icon(Icons.access_time, size: 18),
       ),
-      child: Text(value),
+      child: Text(value, style: const TextStyle(fontSize: 13)),
     );
   }
 
   Widget _buildChecklistItem(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
-      child: Row(
-        children: [
-          const Icon(Icons.drag_indicator, size: 20),
-          const SizedBox(width: 8),
-          const Icon(Icons.radio_button_unchecked, size: 20),
-          const SizedBox(width: 12),
-          Expanded(child: Text(title)),
-          IconButton(icon: const Icon(Icons.close, size: 18), onPressed: () {}),
-        ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.drag_indicator, size: 20, color: Colors.grey),
+            const SizedBox(width: 8),
+            const Icon(Icons.radio_button_unchecked, size: 20, color: Colors.grey),
+            const SizedBox(width: 12),
+            Expanded(child: Text(title, style: const TextStyle(fontSize: 14))),
+            const Icon(Icons.close, size: 18, color: Colors.grey),
+          ],
+        ),
       ),
     );
   }

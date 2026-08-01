@@ -27,6 +27,12 @@ class Student extends Equatable {
   final String? campusId;
   final EducationLevel level;
 
+  // Boarding dorm leadership (Room Leader / Dorm Prefect), set by the
+  // Matron/Patron boarding modules - null if the student holds no role.
+  final String? dormLeadershipRole;
+  final String? dormLeadershipDormId;
+  final String? dormLeadershipDormName;
+
   const Student({
     required this.id,
     required this.schoolId,
@@ -48,6 +54,9 @@ class Student extends Equatable {
     this.documents = const {},
     this.campusId,
     required this.level,
+    this.dormLeadershipRole,
+    this.dormLeadershipDormId,
+    this.dormLeadershipDormName,
   });
 
   factory Student.empty([String id = '']) {
@@ -91,6 +100,9 @@ class Student extends Equatable {
         documents,
         campusId,
         level,
+        dormLeadershipRole,
+        dormLeadershipDormId,
+        dormLeadershipDormName,
       ];
 
   Student copyWith({

@@ -1,22 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
+import 'package:school_pulse/features/shared/boarding/boarding_dashboard_widgets.dart';
 import 'package:school_pulse/features/patron/domain/repositories/patron_repository.dart';
 import 'package:school_pulse/features/patron/presentation/bloc/patron_bloc.dart';
 import 'package:school_pulse/features/patron/presentation/bloc/patron_event.dart';
 import 'package:school_pulse/features/patron/presentation/bloc/patron_state.dart';
-import 'package:school_pulse/features/patron/presentation/screens/boarding_attendance_screen.dart';
-import 'package:school_pulse/features/patron/presentation/screens/communication_screen.dart';
-import 'package:school_pulse/features/patron/presentation/screens/discipline_management_screen.dart';
-import 'package:school_pulse/features/patron/presentation/screens/dormitory_management_screen.dart';
-import 'package:school_pulse/features/patron/presentation/screens/leave_management_screen.dart';
-import 'package:school_pulse/features/patron/presentation/screens/reports_screen.dart';
-import 'package:school_pulse/features/patron/presentation/screens/welfare_management_screen.dart';
 
+/// Boys' boarding dashboard. Mirrors the Matron (girls) dashboard exactly -
+/// the only difference is the gender the data source scopes every query to.
 class PatronDashboard extends StatefulWidget {
   const PatronDashboard({super.key});
 
@@ -51,8 +50,8 @@ class _PatronDashboardState extends State<PatronDashboard> {
   // navigating to another patron screen and back leaves the dashboard
   // showing whatever it last rendered before the push, since initState()
   // never runs again. Re-running _loadData() on return keeps it fresh.
-  void _navigateAndReload(Widget screen) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => screen)).then((_) {
+  void _openSection(String location) {
+    context.push(location).then((_) {
       if (mounted) _loadData();
     });
   }
@@ -61,324 +60,304 @@ class _PatronDashboardState extends State<PatronDashboard> {
   Widget build(BuildContext context) {
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
     final authState = context.watch<AuthBloc>().state;
-    final userName = authState is AuthAuthenticated ? authState.user.name : 'User';
+    final user = authState is AuthAuthenticated ? authState.user : null;
 
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: () async => _loadData(),
         child: ListView(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            AppSpacing.x8l,
+            AppSpacing.xl,
+            AppSpacing.x4l,
+          ),
           children: [
-            const SizedBox(height: 48), // Space for status bar
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Welcome back,',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.outline,
-                            ),
-                      ),
-                      Text(
-                        userName,
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.5,
-                            ),
-                      ),
-                    ],
+            BoardingDashboardHeader(
+              userName: user?.name ?? 'User',
+              roleLabel: UserRoleDisplay.name(UserRole.boardingPatron),
+              schoolName: user?.schoolName,
+              photoUrl: user?.photoUrl,
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.chat_bubble_outline_rounded),
+                    tooltip: 'Messages',
+                    onPressed: () => context.push('/staff/messages'),
                   ),
-                ),
-                const NotificationBellButton(),
-              ],
+                  const NotificationBellButton(),
+                ],
+              ),
             ),
-            const SizedBox(height: 20),
-            _buildManagementGrid(context),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.x3l),
+
+            // 1. Boarding overview strip
             BlocBuilder<PatronBloc, PatronState>(
               buildWhen: (previous, current) => current is DashboardOverviewLoaded,
               builder: (context, state) {
-                if (state is DashboardOverviewLoaded &&
-                    (state.overview.missingStudentCount > 0 || state.overview.overdueLeaveCount > 0)) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _buildAlerts(context, state.overview, semanticColors),
-                  );
-                }
-                return const SizedBox.shrink();
+                final overview = state is DashboardOverviewLoaded ? state.overview : null;
+                return BoardingOverviewCard(
+                  isLoading: overview == null,
+                  metrics: _buildMetrics(overview, semanticColors),
+                );
               },
             ),
-            const SectionHeader(title: 'Dormitories'),
+            const SizedBox(height: AppSpacing.x3l),
+
+            // 2. Quick Actions
+            BoardingSectionHeading(
+              title: 'Quick Actions',
+              onViewAll: () => _openSection('/staff/patron/reports'),
+            ),
+            const SizedBox(height: AppSpacing.l),
+            _buildQuickActions(context),
+            const SizedBox(height: AppSpacing.x3l),
+
+            // 3. Today's Tasks
             BlocBuilder<PatronBloc, PatronState>(
-              buildWhen: (previous, current) => current is DormitoriesLoaded,
+              buildWhen: (previous, current) => current is DashboardOverviewLoaded,
               builder: (context, state) {
-                if (state is DormitoriesLoaded) {
-                  if (state.dormitories.isEmpty) {
-                    return const EmptyState(
-                      icon: Icons.hotel_outlined,
-                      title: 'No Dormitories Yet',
-                      message: 'Add a dormitory to start allocating boarders.',
-                    );
-                  }
-                  return Column(
-                    children: state.dormitories
-                        .map((dorm) => _DormitoryStatusCard(dorm: dorm))
-                        .toList(),
-                  );
+                final overview = state is DashboardOverviewLoaded ? state.overview : null;
+                if (overview == null) {
+                  return const Skeleton(height: 220, borderRadius: 16);
                 }
-                return const Skeleton(height: 96, borderRadius: 12);
+                return BoardingTasksCard(
+                  tasks: _buildTasks(overview, semanticColors),
+                  onViewAll: () => _openSection('/staff/patron/reports'),
+                );
               },
             ),
-            const SizedBox(height: 12),
-            const SectionHeader(title: 'Recent Announcements'),
+            const SizedBox(height: AppSpacing.x3l),
+
+            // 4. Urgent Alerts
             BlocBuilder<PatronBloc, PatronState>(
-              buildWhen: (previous, current) => current is AnnouncementsLoaded,
+              buildWhen: (previous, current) => current is DashboardOverviewLoaded,
               builder: (context, state) {
-                if (state is AnnouncementsLoaded) {
-                  if (state.announcements.isEmpty) {
-                    return const EmptyState(
-                      icon: Icons.campaign_outlined,
-                      title: 'No Announcements',
-                      message: 'Boarding announcements will appear here.',
-                    );
-                  }
-                  return Column(
-                    children: state.announcements.take(3).map((a) {
-                      return AppCard(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          leading: const Icon(Icons.campaign_outlined, color: Colors.orange),
-                          title: Text(a.title),
-                          subtitle: Text(a.content, maxLines: 2, overflow: TextOverflow.ellipsis),
-                        ),
-                      );
-                    }).toList(),
-                  );
+                final overview = state is DashboardOverviewLoaded ? state.overview : null;
+                if (overview == null) {
+                  return const Skeleton(height: 140, borderRadius: 16);
                 }
-                return const Skeleton(height: 72, borderRadius: 12);
+                final alerts = _buildAlerts(overview, semanticColors);
+                if (alerts.isEmpty) return const SizedBox.shrink();
+                return BoardingAlertsCard(
+                  alerts: alerts,
+                  onViewAll: () => _openSection('/staff/patron/reports'),
+                );
               },
             ),
-            const SizedBox(height: 20),
-            _AnalyticsCta(onTap: () => _navigateAndReload(const ReportsScreen())),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildAlerts(BuildContext context, PatronDashboardOverview data, SemanticColors semanticColors) {
-    final alerts = <Widget>[];
+  List<BoardingMetric> _buildMetrics(
+    PatronDashboardOverview? data,
+    SemanticColors semanticColors,
+  ) {
+    final total = data?.totalStudents ?? 0;
+
+    /// Each state is shown as a share of the roll, as in the reference.
+    String? share(int value) {
+      if (total == 0) return null;
+      return '${(value / total * 100).toStringAsFixed(1)}%';
+    }
+
+    return [
+      BoardingMetric(
+        label: 'Residents',
+        icon: Icons.groups_outlined,
+        color: Theme.of(context).colorScheme.primary,
+        value: total,
+        caption: 'Total',
+        captionUsesColor: false,
+        onTap: () => _openSection('/staff/patron/dorms'),
+      ),
+      BoardingMetric(
+        label: 'Present',
+        icon: Icons.check_circle_outline,
+        color: semanticColors.success,
+        value: data?.studentsPresent ?? 0,
+        caption: share(data?.studentsPresent ?? 0),
+        onTap: () => _openSection('/staff/patron/attendance'),
+      ),
+      BoardingMetric(
+        label: 'Absent',
+        icon: Icons.person_off_outlined,
+        color: semanticColors.error,
+        value: data?.studentsAbsent ?? 0,
+        caption: share(data?.studentsAbsent ?? 0),
+        onTap: () => _openSection('/staff/patron/attendance'),
+      ),
+      BoardingMetric(
+        label: 'On Leave',
+        icon: Icons.work_outline,
+        color: Colors.orange,
+        value: data?.studentsOnLeave ?? 0,
+        onTap: () => _openSection('/staff/patron/leave'),
+      ),
+    ];
+  }
+
+  /// Today's tasks are derived from the live overview counts rather than a
+  /// hand-maintained checklist, so a task disappears once the work behind it
+  /// is actually cleared.
+  List<BoardingTask> _buildTasks(
+    PatronDashboardOverview data,
+    SemanticColors semanticColors,
+  ) {
+    final tasks = <BoardingTask>[];
+
+    tasks.add(BoardingTask(
+      title: 'Morning Roll Call',
+      timeLabel: data.studentsPresent >= data.totalStudents && data.totalStudents > 0
+          ? 'All ${data.totalStudents} boarders accounted for'
+          : '${data.totalStudents - data.studentsPresent} still to confirm',
+      icon: Icons.how_to_reg_outlined,
+      color: semanticColors.success,
+      isDone: data.totalStudents > 0 && data.studentsPresent >= data.totalStudents,
+      onTap: () => _openSection('/staff/patron/attendance'),
+    ));
+
+    tasks.add(BoardingTask(
+      title: 'Dorm Inspection',
+      timeLabel: '${data.occupiedBeds} / ${data.totalBeds} beds occupied',
+      icon: Icons.shield_outlined,
+      color: Theme.of(context).colorScheme.primary,
+      onTap: () => _openSection('/staff/patron/dorms'),
+    ));
+
+    if (data.pendingWelfareConcerns > 0) {
+      tasks.add(BoardingTask(
+        title: 'Follow up welfare concerns',
+        timeLabel: '${data.pendingWelfareConcerns} open concern(s)',
+        icon: Icons.medical_services_outlined,
+        color: Colors.purple,
+        onTap: () => _openSection('/staff/patron/welfare'),
+      ));
+    }
+
+    if (data.pendingLeaveRequests > 0) {
+      tasks.add(BoardingTask(
+        title: 'Review ${data.pendingLeaveRequests} Leave Request(s)',
+        timeLabel: 'Awaiting your approval',
+        icon: Icons.exit_to_app,
+        color: Colors.deepOrange,
+        onTap: () => _openSection('/staff/patron/leave'),
+      ));
+    }
+
+    if (data.openDisciplineCases > 0) {
+      tasks.add(BoardingTask(
+        title: 'Open discipline cases',
+        timeLabel: '${data.openDisciplineCases} awaiting action',
+        icon: Icons.gavel_outlined,
+        color: semanticColors.error,
+        onTap: () => _openSection('/staff/patron/discipline'),
+      ));
+    }
+
+    return tasks;
+  }
+
+  /// Alerts are derived from the live overview counts, so each one clears
+  /// itself once the underlying situation is resolved.
+  List<BoardingAlert> _buildAlerts(
+    PatronDashboardOverview data,
+    SemanticColors semanticColors,
+  ) {
+    final alerts = <BoardingAlert>[];
+
     if (data.missingStudentCount > 0) {
-      alerts.add(_AlertBanner(
+      alerts.add(BoardingAlert(
+        title: 'Unaccounted',
+        detail: '${data.missingStudentCount} boarder(s) missing at roll call',
         icon: Icons.person_search_outlined,
         color: semanticColors.error,
-        message: '${data.missingStudentCount} boarder(s) unaccounted for at last roll call.',
-        onTap: () => _navigateAndReload(const BoardingAttendanceScreen()),
+        onTap: () => _openSection('/staff/patron/attendance'),
       ));
     }
     if (data.overdueLeaveCount > 0) {
-      alerts.add(_AlertBanner(
+      alerts.add(BoardingAlert(
+        title: 'Leave Expiry',
+        detail: '${data.overdueLeaveCount} student(s) overdue from leave',
         icon: Icons.watch_later_outlined,
         color: semanticColors.warning,
-        message: '${data.overdueLeaveCount} student(s) overdue from leave.',
-        onTap: () => _navigateAndReload(const LeaveManagementScreen()),
+        onTap: () => _openSection('/staff/patron/leave'),
       ));
     }
-    if (alerts.isEmpty) return const SizedBox.shrink();
-    return Column(children: alerts);
+    if (data.studentsInClinic > 0) {
+      alerts.add(BoardingAlert(
+        title: 'Clinic Review',
+        detail: '${data.studentsInClinic} boarder(s) in the clinic today',
+        icon: Icons.medical_services_outlined,
+        color: Colors.purple,
+        onTap: () => _openSection('/staff/patron/welfare'),
+      ));
+    }
+    if (data.pendingWelfareConcerns > 0) {
+      alerts.add(BoardingAlert(
+        title: 'Welfare',
+        detail: '${data.pendingWelfareConcerns} open concern(s)',
+        icon: Icons.favorite_outline,
+        color: Colors.pink,
+        onTap: () => _openSection('/staff/patron/welfare'),
+      ));
+    }
+    if (data.openDisciplineCases > 0) {
+      alerts.add(BoardingAlert(
+        title: 'Discipline',
+        detail: '${data.openDisciplineCases} case(s) awaiting action',
+        icon: Icons.gavel_outlined,
+        color: semanticColors.error,
+        onTap: () => _openSection('/staff/patron/discipline'),
+      ));
+    }
+    return alerts;
   }
 
-  Widget _buildManagementGrid(BuildContext context) {
-    return QuickActionGrid(
-      items: [
-        QuickActionItem(
-          label: 'Dormitories',
-          icon: Icons.hotel_outlined,
+  Widget _buildQuickActions(BuildContext context) {
+    return BoardingQuickActionGrid(
+      actions: [
+        BoardingQuickAction(
+          label: 'Roll Call',
+          icon: Icons.assignment_ind_outlined,
           color: Colors.blue,
-          onTap: () => _navigateAndReload(const DormitoryManagementScreen()),
+          onTap: () => _openSection('/staff/patron/attendance'),
         ),
-        QuickActionItem(
-          label: 'Beds',
-          icon: Icons.bed_outlined,
-          color: Colors.indigo,
-          onTap: () => _navigateAndReload(const DormitoryManagementScreen()),
-        ),
-        QuickActionItem(
-          label: 'Attendance',
-          icon: Icons.how_to_reg_outlined,
+        BoardingQuickAction(
+          label: 'Dorm Check',
+          icon: Icons.house_outlined,
           color: Colors.green,
-          onTap: () => _navigateAndReload(const BoardingAttendanceScreen()),
+          onTap: () => _openSection('/staff/patron/dorms'),
         ),
-        QuickActionItem(
-          label: 'Leave',
-          icon: Icons.exit_to_app,
-          color: Colors.deepOrange,
-          onTap: () => _navigateAndReload(const LeaveManagementScreen()),
-        ),
-        QuickActionItem(
+        BoardingQuickAction(
           label: 'Welfare',
           icon: Icons.favorite_outline,
-          color: Colors.pink,
-          onTap: () => _navigateAndReload(const WelfareManagementScreen()),
+          color: Colors.purple,
+          onTap: () => _openSection('/staff/patron/welfare'),
         ),
-        QuickActionItem(
-          label: 'Discipline',
-          icon: Icons.gavel_outlined,
-          color: Colors.red,
-          onTap: () => _navigateAndReload(const DisciplineManagementScreen()),
+        BoardingQuickAction(
+          label: 'Leave Requests',
+          icon: Icons.exit_to_app,
+          color: Colors.deepOrange,
+          onTap: () => _openSection('/staff/patron/leave'),
         ),
-        QuickActionItem(
-          label: 'Communication',
+        BoardingQuickAction(
+          label: 'Announcements',
           icon: Icons.campaign_outlined,
           color: Colors.teal,
-          onTap: () => _navigateAndReload(const CommunicationScreen()),
+          onTap: () => _openSection('/staff/patron/communication'),
         ),
-        QuickActionItem(
+        BoardingQuickAction(
           label: 'Reports',
-          icon: Icons.assessment_outlined,
+          icon: Icons.bar_chart_outlined,
           color: Colors.purple,
-          onTap: () => _navigateAndReload(const ReportsScreen()),
+          onTap: () => _openSection('/staff/patron/reports'),
         ),
       ],
     );
   }
 }
 
-class _AlertBanner extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final String message;
-  final VoidCallback onTap;
-
-  const _AlertBanner({
-    required this.icon,
-    required this.color,
-    required this.message,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      margin: const EdgeInsets.only(bottom: 8),
-      onTap: onTap,
-      child: Row(
-        children: [
-          Icon(icon, color: color),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(message, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
-          ),
-          Icon(Icons.chevron_right, color: color),
-        ],
-      ),
-    );
-  }
-}
-
-class _AnalyticsCta extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _AnalyticsCta({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return AppCard(
-      onTap: onTap,
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.purple.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.insights_outlined, color: Colors.purple),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Boarding Analytics',
-                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Occupancy, discipline, welfare & leave trends',
-                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
-                ),
-              ],
-            ),
-          ),
-          Icon(Icons.chevron_right, color: theme.colorScheme.outline),
-        ],
-      ),
-    );
-  }
-}
-
-class _DormitoryStatusCard extends StatelessWidget {
-  final dynamic dorm;
-
-  const _DormitoryStatusCard({required this.dorm});
-
-  @override
-  Widget build(BuildContext context) {
-    final occupancy = dorm.capacity == 0 ? 0.0 : dorm.occupantCount / dorm.capacity;
-    final isFull = dorm.occupantCount >= dorm.capacity;
-    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: AppCard(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(dorm.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                StatusBadge(
-                  label: isFull ? 'Full' : 'Available',
-                  color: isFull ? semanticColors.error : semanticColors.success,
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: occupancy,
-                minHeight: 8,
-                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                valueColor: AlwaysStoppedAnimation(
-                  occupancy > 1.0 ? semanticColors.error : Theme.of(context).colorScheme.primary,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('${dorm.occupantCount} / ${dorm.capacity} Occupants', style: Theme.of(context).textTheme.bodySmall),
-                if (dorm.roomLeaderName != null)
-                  Text(
-                    'Leader: ${dorm.roomLeaderName}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
-                  ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

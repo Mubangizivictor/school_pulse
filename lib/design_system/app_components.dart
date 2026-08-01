@@ -664,6 +664,136 @@ class _DashboardStatCardState extends State<DashboardStatCard> with SingleTicker
   }
 }
 
+class AnalyticalStatCard extends StatefulWidget {
+  final String title;
+  final double value;
+  final IconData icon;
+  final Color color;
+  final String? trend;
+  final bool? isPositiveTrend;
+  final String suffix;
+  final int decimalPlaces;
+
+  const AnalyticalStatCard({
+    super.key,
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+    this.trend,
+    this.isPositiveTrend,
+    this.suffix = '',
+    this.decimalPlaces = 0,
+  });
+
+  @override
+  State<AnalyticalStatCard> createState() => _AnalyticalStatCardState();
+}
+
+class _AnalyticalStatCardState extends State<AnalyticalStatCard> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _iconAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _iconAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.elasticOut,
+    );
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final semantic = Theme.of(context).extension<SemanticColors>()!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return AppCard(
+      padding: EdgeInsets.zero,
+      showShadow: false,
+      color: Colors.transparent,
+      borderColor: widget.color.withValues(alpha: isDark ? 0.2 : 0.15),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              widget.color.withValues(alpha: isDark ? 0.15 : 0.08),
+              widget.color.withValues(alpha: isDark ? 0.05 : 0.02),
+            ],
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: widget.color.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: ScaleTransition(
+                scale: _iconAnimation,
+                child: Icon(widget.icon, color: widget.color, size: 16),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                  if (widget.trend != null)
+                    Text(
+                      widget.trend!,
+                      style: TextStyle(
+                        color: widget.isPositiveTrend ?? true ? semantic.success : semantic.error,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            AnimatedNumberText(
+              value: widget.value,
+              suffix: widget.suffix,
+              decimalPlaces: widget.decimalPlaces,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 18,
+                    letterSpacing: -0.5,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 
 class ProgressCard extends StatelessWidget {
   final String title;
@@ -793,7 +923,7 @@ class QuickActionGrid extends StatelessWidget {
         crossAxisCount: 4,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: 0.85,
+        childAspectRatio: 1.0,
       ),
       itemCount: items.length,
       itemBuilder: (context, index) {
@@ -916,7 +1046,7 @@ class SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 24, bottom: 12),
+      padding: const EdgeInsets.only(top: 4, bottom: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

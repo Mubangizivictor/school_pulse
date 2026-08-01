@@ -33,6 +33,31 @@ class StaffShell extends StatelessWidget {
     return false;
   }
 
+  static const List<UserRole> _boardingRoles = [
+    UserRole.boardingMatron,
+    UserRole.boardingPatron,
+  ];
+
+  bool _isBoarding(BuildContext context) {
+    final state = context.read<AuthBloc>().state;
+    if (state is AuthAuthenticated) {
+      return state.user.roles.any(_boardingRoles.contains);
+    }
+    return false;
+  }
+
+  /// Matron and Patron run the same boarding workflow against different
+  /// wings, so their nav destinations are identical and only the route
+  /// prefix differs.
+  String _boardingRoot(BuildContext context) {
+    final state = context.read<AuthBloc>().state;
+    if (state is AuthAuthenticated &&
+        state.user.roles.contains(UserRole.boardingPatron)) {
+      return '/staff/patron';
+    }
+    return '/staff/matron';
+  }
+
   int _calculateSelectedIndex(BuildContext context) {
     final String location = GoRouterState.of(context).uri.path;
 
@@ -46,8 +71,17 @@ class StaffShell extends StatelessWidget {
 
     if (_isTeacher(context)) {
       if (location.startsWith('/staff/dashboard')) return 0;
-      if (location.startsWith('/staff/attendance')) return 1;
-      if (location.startsWith('/staff/marks')) return 2;
+      if (location.startsWith('/staff/marks')) return 1;
+      if (location.startsWith('/staff/tasks')) return 2;
+      if (location.startsWith('/staff/messages')) return 3;
+      if (location.startsWith('/staff/more')) return 4;
+      return 0;
+    }
+
+    if (_isBoarding(context)) {
+      final root = _boardingRoot(context);
+      if (location.startsWith('$root/dorms')) return 1;
+      if (location.startsWith('/staff/tasks')) return 2;
       if (location.startsWith('/staff/messages')) return 3;
       if (location.startsWith('/staff/more')) return 4;
       return 0;
@@ -81,8 +115,20 @@ class StaffShell extends StatelessWidget {
     if (_isTeacher(context)) {
       switch (index) {
         case 0: context.go(_homePath(context)); break;
-        case 1: context.go('/staff/attendance'); break;
-        case 2: context.go('/staff/marks'); break;
+        case 1: context.go('/staff/marks'); break;
+        case 2: context.go('/staff/tasks'); break;
+        case 3: context.go('/staff/messages'); break;
+        case 4: context.go('/staff/more'); break;
+      }
+      return;
+    }
+
+    if (_isBoarding(context)) {
+      final root = _boardingRoot(context);
+      switch (index) {
+        case 0: context.go(_homePath(context)); break;
+        case 1: context.go('$root/dorms'); break;
+        case 2: context.go('/staff/tasks'); break;
         case 3: context.go('/staff/messages'); break;
         case 4: context.go('/staff/more'); break;
       }
@@ -125,6 +171,7 @@ class StaffShell extends StatelessWidget {
     final isMobile = MediaQuery.of(context).size.width < 600;
     final isAdmin = _isAdmin(context);
     final isTeacher = _isTeacher(context);
+    final isBoarding = _isBoarding(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final List<NavigationDestination> teacherDestinations = const [
@@ -134,14 +181,14 @@ class StaffShell extends StatelessWidget {
         label: 'Home',
       ),
       NavigationDestination(
-        icon: Icon(Icons.how_to_reg_outlined, size: 24),
-        selectedIcon: Icon(Icons.how_to_reg_rounded, size: 24, color: AppColors.royalBlue),
-        label: 'Attendance',
-      ),
-      NavigationDestination(
         icon: Icon(Icons.edit_note_outlined, size: 24),
         selectedIcon: Icon(Icons.edit_note_rounded, size: 24, color: AppColors.royalBlue),
         label: 'Marks',
+      ),
+      NavigationDestination(
+        icon: Icon(Icons.assignment_outlined, size: 24),
+        selectedIcon: Icon(Icons.assignment_rounded, size: 24, color: AppColors.royalBlue),
+        label: 'Tasks',
       ),
       NavigationDestination(
         icon: Icon(Icons.chat_bubble_outline_rounded, size: 24),
@@ -178,6 +225,34 @@ class StaffShell extends StatelessWidget {
       ),
     ];
 
+    final List<NavigationDestination> boardingDestinations = const [
+      NavigationDestination(
+        icon: Icon(Icons.home_outlined, size: 24),
+        selectedIcon: Icon(Icons.home_rounded, size: 24, color: AppColors.royalBlue),
+        label: 'Home',
+      ),
+      NavigationDestination(
+        icon: Icon(Icons.bed_outlined, size: 24),
+        selectedIcon: Icon(Icons.bed_rounded, size: 24, color: AppColors.royalBlue),
+        label: 'Dorms',
+      ),
+      NavigationDestination(
+        icon: Icon(Icons.assignment_outlined, size: 24),
+        selectedIcon: Icon(Icons.assignment_rounded, size: 24, color: AppColors.royalBlue),
+        label: 'Tasks',
+      ),
+      NavigationDestination(
+        icon: Icon(Icons.chat_bubble_outline_rounded, size: 24),
+        selectedIcon: Icon(Icons.chat_bubble_rounded, size: 24, color: AppColors.royalBlue),
+        label: 'Messages',
+      ),
+      NavigationDestination(
+        icon: Icon(Icons.more_horiz_rounded, size: 24),
+        selectedIcon: Icon(Icons.more_horiz_rounded, size: 24, color: AppColors.royalBlue),
+        label: 'More',
+      ),
+    ];
+
     final List<NavigationDestination> operationalDestinations = const [
       NavigationDestination(
         icon: Icon(Icons.home_outlined, size: 24),
@@ -198,7 +273,11 @@ class StaffShell extends StatelessWidget {
 
     final destinations = isAdmin
         ? adminDestinations
-        : (isTeacher ? teacherDestinations : operationalDestinations);
+        : isTeacher
+            ? teacherDestinations
+            : isBoarding
+                ? boardingDestinations
+                : operationalDestinations;
 
     return Scaffold(
       body: Row(

@@ -9,13 +9,27 @@ class MediaLinksDocsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return DefaultTabController(
       length: 3,
       child: Scaffold(
+        backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
         appBar: AppBar(
-          title: const Text('Media, Links & Docs'),
-          bottom: const TabBar(
-            tabs: [
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Text('Media, Links & Docs', style: AppTypography.titleLarge),
+          bottom: TabBar(
+            labelColor: AppColors.electricBlue,
+            unselectedLabelColor: AppColors.textMuted(context),
+            indicatorColor: AppColors.electricBlue,
+            indicatorWeight: 3,
+            labelStyle: AppTypography.titleSmall,
+            tabs: const [
               Tab(text: 'Media'),
               Tab(text: 'Links'),
               Tab(text: 'Docs'),
@@ -37,35 +51,47 @@ class MediaLinksDocsScreen extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.m),
       children: [
-        _buildSectionHeader(context, 'This Month'),
+        _buildSectionHeader(context, 'THIS MONTH'),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
-            crossAxisSpacing: 4,
-            mainAxisSpacing: 4,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
           ),
           itemCount: 6,
           itemBuilder: (context, index) => Container(
-            color: Colors.grey[300],
-            child: Icon(Icons.image, color: Colors.grey[600]),
+            decoration: BoxDecoration(
+              color: Colors.grey[800],
+              borderRadius: BorderRadius.circular(12),
+              image: DecorationImage(
+                image: NetworkImage('https://picsum.photos/200/200?random=$index'),
+                fit: BoxFit.cover,
+              ),
+            ),
           ),
         ),
         const SizedBox(height: AppSpacing.l),
-        _buildSectionHeader(context, 'May'),
+        _buildSectionHeader(context, 'MAY'),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
-            crossAxisSpacing: 4,
-            mainAxisSpacing: 4,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
           ),
           itemCount: 3,
           itemBuilder: (context, index) => Container(
-            color: Colors.grey[300],
-            child: Icon(Icons.image, color: Colors.grey[600]),
+            decoration: BoxDecoration(
+              color: Colors.grey[800],
+              borderRadius: BorderRadius.circular(12),
+              image: DecorationImage(
+                image: NetworkImage('https://picsum.photos/200/200?random=${index + 10}'),
+                fit: BoxFit.cover,
+              ),
+            ),
           ),
         ),
       ],
@@ -76,16 +102,27 @@ class MediaLinksDocsScreen extends StatelessWidget {
     return ListView.builder(
       padding: const EdgeInsets.all(AppSpacing.m),
       itemCount: 5,
-      itemBuilder: (context, index) => ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-          child: const Icon(Icons.link, color: Colors.blue),
-        ),
-        title: const Text('https://school.edu/exam-timetable'),
-        subtitle: const Text('Exam Timetable for Term 2'),
-        onTap: () {},
-      ),
+      itemBuilder: (context, index) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Container(
+          margin: const EdgeInsets.only(bottom: AppSpacing.s),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceDark : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: AppColors.electricBlue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+              child: const Icon(Icons.link, color: AppColors.electricBlue),
+            ),
+            title: Text('https://school.edu/exam-timetable', 
+              style: AppTypography.bodyMedium.copyWith(color: AppColors.electricBlue, decoration: TextDecoration.underline)),
+            subtitle: Text('Exam Timetable for Term 2 • 10:30 AM', style: AppTypography.labelSmall),
+            onTap: () {},
+          ),
+        );
+      },
     );
   }
 
@@ -93,23 +130,34 @@ class MediaLinksDocsScreen extends StatelessWidget {
     return ListView.builder(
       padding: const EdgeInsets.all(AppSpacing.m),
       itemCount: 4,
-      itemBuilder: (context, index) => ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-          child: const Icon(Icons.picture_as_pdf, color: Colors.red),
-        ),
-        title: Text('Newsletter_June_2024.pdf'),
-        subtitle: Text('2.4 MB • 12/06/24'),
-        onTap: () {},
-      ),
+      itemBuilder: (context, index) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Container(
+          margin: const EdgeInsets.only(bottom: AppSpacing.s),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceDark : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+              child: const Icon(Icons.picture_as_pdf, color: Colors.red),
+            ),
+            title: Text('Newsletter_June_2024.pdf', style: AppTypography.titleSmall),
+            subtitle: Text('2.4 MB • 12/06/24 • 09:15 AM', style: AppTypography.labelSmall.copyWith(color: AppColors.textMuted(context))),
+            trailing: const Icon(Icons.file_download_outlined, size: 20),
+            onTap: () {},
+          ),
+        );
+      },
     );
   }
 
   Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
-      child: Text(title, style: AppTypography.labelMedium.copyWith(color: AppColors.textMuted(context))),
+      padding: const EdgeInsets.only(bottom: AppSpacing.s, left: 4),
+      child: Text(title, style: AppTypography.labelSmall.copyWith(color: AppColors.textMuted(context), letterSpacing: 1.2)),
     );
   }
 }

@@ -6,6 +6,14 @@ import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/login_flow/welcome_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/parent_login_screens.dart';
 import 'package:school_pulse/features/auth/login_flow/staff_login_screens.dart';
+import 'package:school_pulse/features/auth/login_flow/student_login_screen.dart';
+import 'package:school_pulse/features/shared/boarding/dorm_screens.dart';
+import 'package:school_pulse/features/matron/domain/entities/matron_entities.dart'
+    as matron_scr;
+import 'package:school_pulse/features/patron/domain/entities/patron_entities.dart';
+import 'package:school_pulse/features/matron/presentation/screens/bed_management_screen.dart'
+    as matron_scr;
+import 'package:school_pulse/features/patron/presentation/screens/bed_management_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/force_set_password_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/school_splash_screen.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
@@ -43,7 +51,22 @@ import 'package:school_pulse/features/parent/health_screen.dart';
 import 'package:school_pulse/features/parent/library_screen.dart';
 import 'package:school_pulse/features/parent/discipline_screen.dart';
 import 'package:school_pulse/features/parent/transport_screen.dart';
-import 'package:school_pulse/features/parent/messages_screen.dart';
+import 'package:school_pulse/features/parent/messages_screen.dart' as old_messages;
+import 'package:school_pulse/features/messages/presentation/screens/messages_list_screen.dart';
+import 'package:school_pulse/features/messages/presentation/screens/chat_conversation_screen.dart';
+import 'package:school_pulse/features/messages/presentation/screens/new_message_type_screen.dart';
+import 'package:school_pulse/features/messages/presentation/screens/select_contacts_screen.dart';
+import 'package:school_pulse/features/messages/presentation/screens/new_group_details_screen.dart';
+import 'package:school_pulse/features/messages/presentation/screens/search_messages_screen.dart';
+import 'package:school_pulse/features/messages/presentation/screens/chat_info_screen.dart';
+import 'package:school_pulse/features/messages/presentation/screens/starred_messages_screen.dart';
+import 'package:school_pulse/features/messages/presentation/screens/pinned_messages_screen.dart';
+import 'package:school_pulse/features/messages/presentation/screens/contact_profile_screen.dart';
+import 'package:school_pulse/features/messages/presentation/screens/media_links_docs_screen.dart';
+import 'package:school_pulse/features/messages/presentation/screens/message_requests_screen.dart';
+import 'package:school_pulse/features/messages/presentation/screens/broadcast_details_screen.dart';
+import 'package:school_pulse/features/messages/presentation/screens/chat_settings_screen.dart';
+import 'package:school_pulse/features/messages/presentation/screens/archived_chats_screen.dart';
 import 'package:school_pulse/features/parent/profile_screen.dart';
 import 'package:school_pulse/features/parent/more_menu_screen.dart';
 import 'package:school_pulse/features/parent/notifications_screen.dart';
@@ -61,6 +84,12 @@ import 'package:school_pulse/features/teacher/class_analytics_screen.dart';
 import 'package:school_pulse/features/teacher/homework_screen.dart';
 import 'package:school_pulse/features/teacher/report_comments_screen.dart';
 import 'package:school_pulse/features/calendar/presentation/school_calendar_screen.dart';
+import 'package:school_pulse/features/shared/tasks/presentation/screens/task_list_screen.dart';
+import 'package:school_pulse/features/shared/tasks/presentation/screens/task_details_screen.dart';
+import 'package:school_pulse/features/shared/tasks/presentation/screens/create_task_screen.dart';
+import 'package:school_pulse/features/shared/tasks/presentation/screens/task_filter_screen.dart';
+import 'package:school_pulse/features/shared/tasks/domain/entities/task_entity.dart';
+import 'package:school_pulse/features/shared/tasks/domain/entities/mock_tasks.dart';
 import 'package:school_pulse/features/lesson_plans/presentation/lesson_plans_screen.dart';
 import 'package:school_pulse/features/bursar/bursar_dashboard.dart';
 import 'package:school_pulse/features/finance/presentation/screens/bursar_student_lookup_screen.dart';
@@ -70,13 +99,33 @@ import 'package:school_pulse/features/health/presentation/bloc/health_bloc.dart'
 import 'package:school_pulse/injection_container.dart' as di;
 import 'package:school_pulse/features/librarian/librarian_dashboard.dart';
 import 'package:school_pulse/features/library/presentation/screens/library_student_lookup_screen.dart';
-import 'package:school_pulse/features/matron/matron_dashboard.dart';
+import 'package:school_pulse/features/matron/presentation/screens/matron_dashboard_screen.dart';
+import 'package:school_pulse/features/matron/presentation/screens/dormitory_management_screen.dart'
+    as matron_scr;
+import 'package:school_pulse/features/matron/presentation/screens/boarding_attendance_screen.dart'
+    as matron_scr;
+import 'package:school_pulse/features/matron/presentation/screens/leave_management_screen.dart'
+    as matron_scr;
+import 'package:school_pulse/features/matron/presentation/screens/welfare_management_screen.dart'
+    as matron_scr;
+import 'package:school_pulse/features/matron/presentation/screens/discipline_management_screen.dart'
+    as matron_scr;
+import 'package:school_pulse/features/matron/presentation/screens/communication_screen.dart'
+    as matron_scr;
+import 'package:school_pulse/features/matron/presentation/screens/reports_screen.dart'
+    as matron_scr;
 import 'package:school_pulse/features/inventory/inventory_dashboard.dart';
 import 'package:school_pulse/features/patron/presentation/screens/patron_dashboard.dart';
 import 'package:school_pulse/features/patron/presentation/screens/dormitory_management_screen.dart';
 import 'package:school_pulse/features/patron/presentation/screens/boarding_attendance_screen.dart';
 import 'package:school_pulse/features/patron/presentation/screens/welfare_management_screen.dart';
 import 'package:school_pulse/features/patron/presentation/screens/discipline_management_screen.dart';
+import 'package:school_pulse/features/patron/presentation/screens/leave_management_screen.dart'
+    as patron_scr;
+import 'package:school_pulse/features/patron/presentation/screens/communication_screen.dart'
+    as patron_scr;
+import 'package:school_pulse/features/patron/presentation/screens/reports_screen.dart'
+    as patron_scr;
 import 'package:school_pulse/features/teacher/attendance_history_screen.dart';
 import 'package:school_pulse/features/catering/presentation/catering_dashboard_screen.dart';
 import 'package:school_pulse/features/catering/presentation/screens/catering_student_lookup_screen.dart';
@@ -126,6 +175,15 @@ import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/design_system/components/pulse_logo.dart';
 
+import 'package:school_pulse/features/attendance/presentation/screens/attendance_method_screen.dart';
+import 'package:school_pulse/features/attendance/presentation/screens/nfc_scanner_screen.dart';
+import 'package:school_pulse/features/attendance/presentation/screens/nfc_success_screen.dart';
+import 'package:school_pulse/features/attendance/presentation/screens/qr_scanner_screen.dart';
+import 'package:school_pulse/features/attendance/presentation/screens/qr_success_screen.dart';
+import 'package:school_pulse/features/attendance/presentation/screens/manual_attendance_screen.dart';
+import 'package:school_pulse/features/attendance/presentation/screens/attendance_summary_screen.dart';
+import 'package:school_pulse/features/attendance/presentation/screens/attendance_list_screen.dart';
+import 'package:school_pulse/features/attendance/presentation/screens/attendance_history_screen.dart';
 import 'package:school_pulse/features/branding/presentation/screens/splash_screen.dart'
     as pulse_splash;
 import 'package:school_pulse/features/branding/presentation/screens/branded_splash_screen.dart';
@@ -148,6 +206,17 @@ import 'package:school_pulse/features/health/presentation/screens/student_health
 import 'package:school_pulse/features/health/presentation/screens/health_history_screen.dart';
 import 'package:school_pulse/features/health/presentation/screens/incident_details_screen.dart';
 import 'package:school_pulse/features/nurse/presentation/screens/medicine_inventory_screen.dart';
+
+import 'package:school_pulse/features/notifications/presentation/screens/notification_list_screen.dart';
+import 'package:school_pulse/features/notifications/presentation/screens/notification_details_screen.dart';
+import 'package:school_pulse/features/notifications/presentation/screens/notification_details_loader_screen.dart';
+import 'package:school_pulse/features/notifications/presentation/screens/notification_center_grouped_screen.dart';
+import 'package:school_pulse/features/notifications/presentation/screens/notification_filter_screen.dart';
+import 'package:school_pulse/features/notifications/presentation/screens/notification_search_screen.dart';
+import 'package:school_pulse/features/notifications/presentation/screens/notification_preferences_screen.dart';
+import 'package:school_pulse/features/notifications/presentation/screens/add_notification_screen.dart';
+import 'package:school_pulse/features/notifications/presentation/screens/attachment_viewer_screen.dart';
+import 'package:school_pulse/features/notifications/domain/entities/notification_model.dart';
 
 final router = GoRouter(
   initialLocation: '/',
@@ -227,6 +296,10 @@ final router = GoRouter(
           builder: (context, state) => const StudentFeesScreen(),
         ),
         GoRoute(
+          path: '/student/messages',
+          builder: (context, state) => const MessagesListScreen(),
+        ),
+        GoRoute(
           path: '/student/health',
           builder: (context, state) => const HealthScreen(),
         ),
@@ -269,6 +342,10 @@ final router = GoRouter(
     GoRoute(
       path: '/staff/login',
       builder: (context, state) => const StaffCredentialsScreen(),
+    ),
+    GoRoute(
+      path: '/student/login',
+      builder: (context, state) => const StudentHubScreen(),
     ),
     GoRoute(
       path: '/auth/force-setup',
@@ -315,16 +392,7 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/parent/messages',
-          builder: (context, state) {
-            final recipientId = state.uri.queryParameters['recipientId'];
-            final recipientName = state.uri.queryParameters['recipientName'];
-            final recipientRole = state.uri.queryParameters['recipientRole'];
-            return MessagesScreen(
-              initialRecipientId: recipientId,
-              initialRecipientName: recipientName,
-              initialRecipientRole: recipientRole,
-            );
-          },
+          builder: (context, state) => const MessagesListScreen(),
         ),
         GoRoute(
           path: '/parent/more',
@@ -352,7 +420,26 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/parent/notifications',
-          builder: (context, state) => const NotificationsScreen(),
+          builder: (context, state) => const NotificationListScreen(),
+          routes: [
+            GoRoute(
+              path: ':id',
+              builder: (context, state) {
+                // The list passes the notification as `extra` so the details
+                // screen paints immediately. A push tapped from the system
+                // tray has no `extra`, so that path loads by id instead -
+                // previously this did a mockNotifications.firstWhere() with no
+                // orElse, which threw on any real notification id.
+                final notification = state.extra;
+                if (notification is NotificationItem) {
+                  return NotificationDetailsScreen(notification: notification);
+                }
+                return NotificationDetailsLoaderScreen(
+                  notificationId: state.pathParameters['id'] ?? '',
+                );
+              },
+            ),
+          ],
         ),
         GoRoute(
           path: '/parent/calendar',
@@ -551,6 +638,69 @@ final router = GoRouter(
         GoRoute(
           path: '/staff/matron',
           builder: (context, state) => const MatronDashboardScreen(),
+          routes: [
+            GoRoute(
+              path: 'dorms',
+              builder: (context, state) => const matron_scr.DormitoryManagementScreen(),
+              routes: [
+                GoRoute(
+                  path: 'new',
+                  builder: (context, state) {
+                    final dorm = state.extra as matron_scr.Dormitory?;
+                    return AddDormitoryScreen(
+                      dormitoryName: dorm?.name,
+                      capacity: dorm?.capacity,
+                      location: dorm?.location,
+                    );
+                  },
+                ),
+                GoRoute(
+                  path: 'leadership',
+                  builder: (context, state) {
+                    final dorm = state.extra as matron_scr.Dormitory?;
+                    return SetDormLeadershipScreen(
+                      roomLeaderName: dorm?.roomLeaderName,
+                      dormPrefectName: dorm?.dormPrefectName,
+                    );
+                  },
+                ),
+                GoRoute(
+                  path: 'history',
+                  builder: (context, state) => const TransferHistoryScreen(),
+                ),
+                GoRoute(
+                  path: 'beds',
+                  builder: (context, state) => matron_scr.BedManagementScreen(
+                    dormitory: state.extra as matron_scr.Dormitory,
+                  ),
+                ),
+              ],
+            ),
+            GoRoute(
+              path: 'attendance',
+              builder: (context, state) => const matron_scr.BoardingAttendanceScreen(),
+            ),
+            GoRoute(
+              path: 'leave',
+              builder: (context, state) => const matron_scr.LeaveManagementScreen(),
+            ),
+            GoRoute(
+              path: 'welfare',
+              builder: (context, state) => const matron_scr.WelfareManagementScreen(),
+            ),
+            GoRoute(
+              path: 'discipline',
+              builder: (context, state) => const matron_scr.DisciplineManagementScreen(),
+            ),
+            GoRoute(
+              path: 'communication',
+              builder: (context, state) => const matron_scr.CommunicationScreen(),
+            ),
+            GoRoute(
+              path: 'reports',
+              builder: (context, state) => const matron_scr.ReportsScreen(),
+            ),
+          ],
         ),
         GoRoute(
           path: '/staff/patron',
@@ -559,10 +709,47 @@ final router = GoRouter(
             GoRoute(
               path: 'dorms',
               builder: (context, state) => const DormitoryManagementScreen(),
+              routes: [
+                GoRoute(
+                  path: 'new',
+                  builder: (context, state) {
+                    final dorm = state.extra as Dormitory?;
+                    return AddDormitoryScreen(
+                      dormitoryName: dorm?.name,
+                      capacity: dorm?.capacity,
+                      location: dorm?.location,
+                    );
+                  },
+                ),
+                GoRoute(
+                  path: 'leadership',
+                  builder: (context, state) {
+                    final dorm = state.extra as Dormitory?;
+                    return SetDormLeadershipScreen(
+                      roomLeaderName: dorm?.roomLeaderName,
+                      dormPrefectName: dorm?.dormPrefectName,
+                    );
+                  },
+                ),
+                GoRoute(
+                  path: 'history',
+                  builder: (context, state) => const TransferHistoryScreen(),
+                ),
+                GoRoute(
+                  path: 'beds',
+                  builder: (context, state) => BedManagementScreen(
+                    dormitory: state.extra as Dormitory,
+                  ),
+                ),
+              ],
             ),
             GoRoute(
               path: 'attendance',
               builder: (context, state) => const BoardingAttendanceScreen(),
+            ),
+            GoRoute(
+              path: 'leave',
+              builder: (context, state) => const patron_scr.LeaveManagementScreen(),
             ),
             GoRoute(
               path: 'welfare',
@@ -571,6 +758,14 @@ final router = GoRouter(
             GoRoute(
               path: 'discipline',
               builder: (context, state) => const DisciplineManagementScreen(),
+            ),
+            GoRoute(
+              path: 'communication',
+              builder: (context, state) => const patron_scr.CommunicationScreen(),
+            ),
+            GoRoute(
+              path: 'reports',
+              builder: (context, state) => const patron_scr.ReportsScreen(),
             ),
           ],
         ),
@@ -793,20 +988,100 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/staff/notifications',
-          builder: (context, state) => const StaffNotificationCenterScreen(),
+          builder: (context, state) => const NotificationListScreen(),
+          routes: [
+            GoRoute(
+              path: 'center',
+              builder: (context, state) => const NotificationCenterGroupedScreen(),
+            ),
+            GoRoute(
+              path: 'search',
+              builder: (context, state) => const NotificationSearchScreen(),
+            ),
+            GoRoute(
+              path: 'filter',
+              builder: (context, state) => const NotificationFilterScreen(),
+            ),
+            GoRoute(
+              path: 'preferences',
+              builder: (context, state) => const NotificationPreferencesScreen(),
+            ),
+            GoRoute(
+              path: 'add',
+              builder: (context, state) => const AddNotificationScreen(),
+            ),
+            GoRoute(
+              path: 'add-announcement',
+              builder: (context, state) => const AddNotificationScreen(isAnnouncement: true),
+            ),
+            GoRoute(
+              path: 'attachments',
+              builder: (context, state) {
+                final attachments = state.extra as List<NotificationAttachment>?;
+                return AttachmentViewerScreen(attachments: attachments);
+              },
+            ),
+            GoRoute(
+              path: 'image-viewer',
+              builder: (context, state) {
+                final imageUrl = state.extra as String?;
+                return ImageViewerScreen(imageUrl: imageUrl);
+              },
+            ),
+            GoRoute(
+              path: ':id',
+              builder: (context, state) {
+                // The list passes the notification as `extra` so the details
+                // screen paints immediately. A push tapped from the system
+                // tray has no `extra`, so that path loads by id instead -
+                // previously this did a mockNotifications.firstWhere() with no
+                // orElse, which threw on any real notification id.
+                final notification = state.extra;
+                if (notification is NotificationItem) {
+                  return NotificationDetailsScreen(notification: notification);
+                }
+                return NotificationDetailsLoaderScreen(
+                  notificationId: state.pathParameters['id'] ?? '',
+                );
+              },
+            ),
+          ],
         ),
         GoRoute(
           path: '/staff/attendance',
-          builder: (context, state) => const TeacherAttendanceScreen(),
+          builder: (context, state) => const AttendanceMethodScreen(),
           routes: [
             GoRoute(
-              path: 'history',
-              builder: (context, state) =>
-                  const TeacherAttendanceHistoryScreen(),
+              path: 'nfc',
+              builder: (context, state) => const NFCScannerScreen(),
             ),
             GoRoute(
-              path: 'qr-dashboard',
-              builder: (context, state) => const QrAttendanceDashboardScreen(),
+              path: 'nfc-success',
+              builder: (context, state) => const NFCSuccessScreen(),
+            ),
+            GoRoute(
+              path: 'qr',
+              builder: (context, state) => const QRScannerScreen(),
+            ),
+            GoRoute(
+              path: 'qr-success',
+              builder: (context, state) => const QRSuccessScreen(),
+            ),
+            GoRoute(
+              path: 'manual',
+              builder: (context, state) => const ManualAttendanceScreen(),
+            ),
+            GoRoute(
+              path: 'summary',
+              builder: (context, state) => const AttendanceSummaryScreen(),
+            ),
+            GoRoute(
+              path: 'list',
+              builder: (context, state) => const AttendanceListScreen(),
+            ),
+            GoRoute(
+              path: 'history',
+              builder: (context, state) => const AttendanceHistoryScreen(),
             ),
           ],
         ),
@@ -816,26 +1091,7 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/staff/messages',
-          builder: (context, state) {
-            final authState = context.read<AuthBloc>().state;
-            final isAdmin =
-                authState is AuthAuthenticated &&
-                UserRoleDisplay.adminConsoleRoles.contains(authState.user.role);
-
-            final recipientId = state.uri.queryParameters['recipientId'];
-            final recipientName = state.uri.queryParameters['recipientName'];
-            final recipientRole = state.uri.queryParameters['recipientRole'];
-
-            if (isAdmin && recipientId == null) {
-              return const AdminMessagesScreen();
-            }
-
-            return MessagesScreen(
-              initialRecipientId: recipientId,
-              initialRecipientName: recipientName,
-              initialRecipientRole: recipientRole,
-            );
-          },
+          builder: (context, state) => const MessagesListScreen(),
         ),
         GoRoute(
           path: '/staff/more',
@@ -866,8 +1122,112 @@ final router = GoRouter(
           builder: (context, state) => const SchoolCalendarScreen(),
         ),
         GoRoute(
+          path: '/staff/tasks',
+          builder: (context, state) => const TaskListScreen(),
+          routes: [
+            GoRoute(
+              path: 'create',
+              builder: (context, state) => const CreateTaskScreen(),
+            ),
+            GoRoute(
+              path: 'filter',
+              builder: (context, state) => const TaskFilterScreen(),
+            ),
+            GoRoute(
+              path: ':id',
+              builder: (context, state) {
+                final id = state.pathParameters['id'];
+                final task = mockTasks.firstWhere((t) => t.id == id);
+                return TaskDetailsScreen(task: task);
+              },
+            ),
+          ],
+        ),
+        GoRoute(
           path: '/staff/lesson-plans',
           builder: (context, state) => const LessonPlansScreen(),
+        ),
+      ],
+    ),
+    GoRoute(
+      path: '/messages',
+      builder: (context, state) => const MessagesListScreen(),
+      routes: [
+        GoRoute(
+          path: 'search',
+          builder: (context, state) => const SearchMessagesScreen(),
+        ),
+        GoRoute(
+          path: 'requests',
+          builder: (context, state) => const MessageRequestsScreen(),
+        ),
+        GoRoute(
+          path: 'archived',
+          builder: (context, state) => const ArchivedChatsScreen(),
+        ),
+        GoRoute(
+          path: 'starred',
+          builder: (context, state) => const StarredMessagesScreen(),
+        ),
+        GoRoute(
+          path: 'pinned',
+          builder: (context, state) => const PinnedMessagesScreen(),
+        ),
+        GoRoute(
+          path: 'settings',
+          builder: (context, state) => const ChatSettingsScreen(),
+        ),
+        GoRoute(
+          path: 'broadcast/:id',
+          builder: (context, state) => BroadcastDetailsScreen(
+            broadcastId: state.pathParameters['id']!,
+          ),
+        ),
+        GoRoute(
+          path: 'new',
+          builder: (context, state) => const NewMessageTypeScreen(),
+          routes: [
+            GoRoute(
+              path: 'contacts',
+              builder: (context, state) => const SelectContactsScreen(),
+            ),
+            GoRoute(
+              path: 'group',
+              builder: (context, state) => const SelectContactsScreen(isGroupSelection: true),
+              routes: [
+                GoRoute(
+                  path: 'details',
+                  builder: (context, state) => const NewGroupDetailsScreen(),
+                ),
+              ],
+            ),
+          ],
+        ),
+        GoRoute(
+          path: 'chat/:chatId',
+          builder: (context, state) => ChatConversationScreen(
+            chatId: state.pathParameters['chatId']!,
+          ),
+          routes: [
+            GoRoute(
+              path: 'info',
+              builder: (context, state) => ChatInfoScreen(
+                chatId: state.pathParameters['chatId']!,
+              ),
+            ),
+            GoRoute(
+              path: 'media',
+              builder: (context, state) => MediaLinksDocsScreen(
+                chatId: state.pathParameters['chatId']!,
+              ),
+            ),
+            GoRoute(
+              path: 'profile',
+              builder: (context, state) => ContactProfileScreen(
+                contactId: state.pathParameters['chatId']!,
+              ),
+            ),
+          ],
         ),
       ],
     ),

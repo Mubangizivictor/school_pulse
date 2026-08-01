@@ -8,15 +8,28 @@ class MessageRequestsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return DefaultTabController(
       length: 2,
       child: Scaffold(
+        backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
         appBar: AppBar(
-          title: const Text('Message Requests'),
-          bottom: const TabBar(
-            tabs: [
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Text('Message Requests', style: AppTypography.titleLarge),
+          bottom: TabBar(
+            labelColor: AppColors.electricBlue,
+            unselectedLabelColor: AppColors.textMuted(context),
+            indicatorColor: AppColors.electricBlue,
+            labelStyle: AppTypography.titleSmall,
+            tabs: const [
               Tab(text: 'You May Know'),
-              Tab(text: 'Others'),
+              Tab(text: 'Spam'),
             ],
           ),
         ),
@@ -31,9 +44,22 @@ class MessageRequestsScreen extends StatelessWidget {
   }
 
   Widget _buildRequestsList(BuildContext context, {bool isEmpty = false}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     if (isEmpty) {
       return Center(
-        child: Text('No requests here', style: AppTypography.bodyMedium.copyWith(color: AppColors.textMuted(context))),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.mark_email_read_outlined, size: 80, color: AppColors.textMuted(context).withValues(alpha: 0.3)),
+            const SizedBox(height: 16),
+            Text('No Spam Requests', style: AppTypography.titleMedium.copyWith(color: AppColors.textMuted(context))),
+            const SizedBox(height: 8),
+            Text('Messages from unknown senders will appear here.', 
+              textAlign: TextAlign.center,
+              style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context))),
+          ],
+        ),
       );
     }
 
@@ -41,24 +67,42 @@ class MessageRequestsScreen extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.m),
       itemCount: 3,
       itemBuilder: (context, index) {
-        return Card(
+        return Container(
           margin: const EdgeInsets.only(bottom: AppSpacing.m),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceDark : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.m),
             child: Column(
               children: [
                 Row(
                   children: [
-                    const CircleAvatar(radius: 20, child: Icon(Icons.person)),
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundColor: AppColors.electricBlue.withValues(alpha: 0.1),
+                      child: const Icon(Icons.person, color: AppColors.electricBlue),
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(index == 0 ? 'Parent - New' : index == 1 ? 'Vendor' : 'Unknown User', 
-                            style: AppTypography.titleSmall),
-                          Text('Hello, I have a question...', 
-                            style: AppTypography.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+                          Text(index == 0 ? 'Parent - New' : index == 1 ? 'Prospective Student' : 'School Vendor', 
+                            style: AppTypography.titleMedium),
+                          const SizedBox(height: 2),
+                          Text('Hello, I have a question about the upcoming admissions process...', 
+                            style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context)), 
+                            maxLines: 1, 
+                            overflow: TextOverflow.ellipsis),
                         ],
                       ),
                     ),
@@ -66,21 +110,30 @@ class MessageRequestsScreen extends StatelessWidget {
                       style: AppTypography.labelSmall.copyWith(color: AppColors.textMuted(context))),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () {},
-                        style: OutlinedButton.styleFrom(foregroundColor: Colors.red, side: const BorderSide(color: Colors.red)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red, 
+                          side: const BorderSide(color: Colors.red),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
                         child: const Text('Delete'),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {},
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.emeraldGreen,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
                         child: const Text('Accept'),
                       ),
                     ),

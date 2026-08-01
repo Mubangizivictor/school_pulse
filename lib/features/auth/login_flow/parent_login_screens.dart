@@ -4,13 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:school_pulse/core/utils.dart';
 import 'package:school_pulse/design_system/components/pulse_button.dart';
 import 'package:school_pulse/design_system/components/pulse_text_field.dart';
-import 'package:school_pulse/design_system/components/pulse_card.dart';
 import 'package:school_pulse/design_system/components/pulse_logo.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_gradients.dart';
 import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
+import 'package:school_pulse/features/auth/login_flow/auth_chrome.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
@@ -79,9 +79,9 @@ class ParentAuthLayout extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const Center(
-                        child: PulseLogo(size: 80, variant: PulseLogoVariant.auth),
+                        child: PulseLogo(width: 320, variant: PulseLogoVariant.auth),
                       ),
-                      const SizedBox(height: AppSpacing.x4l),
+                      const SizedBox(height: AppSpacing.xl),
                       Text(
                         title,
                         style: AppTypography.headlineMedium.copyWith(
@@ -100,7 +100,7 @@ class ParentAuthLayout extends StatelessWidget {
                           textAlign: TextAlign.center,
                         ),
                       ],
-                      const SizedBox(height: AppSpacing.x6l),
+                      const SizedBox(height: AppSpacing.xl),
                       child,
                     ],
                   ),
@@ -171,48 +171,89 @@ class _ChildIdScreenState extends State<ChildIdScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ParentAuthLayout(
-      title: "Parent Portal",
-      subtitle: "Enter the code provided by the school office to access your child's records.",
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          PulseTextField(
-            controller: _controller,
-            label: 'Access Code',
-            hint: 'e.g. KHA1234',
-            prefixIcon: Icons.vpn_key_outlined,
-            validator: (_) => _error,
-            textCapitalization: TextCapitalization.characters,
+    const accent = AppColors.electricBlue;
+
+    return AuthPortalScaffold(
+      accent: accent,
+      children: [
+        const AuthHeroScene(accent: accent, badgeIcon: Icons.family_restroom_rounded),
+        const SizedBox(height: AppSpacing.l),
+        Text(
+          'Parent Portal',
+          textAlign: TextAlign.center,
+          style: AppTypography.headlineMedium.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
           ),
-          const SizedBox(height: AppSpacing.l),
-          PulseCard(
-            variant: PulseCardVariant.glass,
-            backgroundColor: AppColors.electricBlue.withValues(alpha: 0.05),
-            hasBorder: false,
-            padding: const EdgeInsets.all(AppSpacing.l),
-            child: Row(
-              children: [
-                const Icon(Icons.info_outline, color: AppColors.brightCyan, size: 20),
-                const SizedBox(width: AppSpacing.m),
-                Expanded(
-                  child: Text(
-                    "Don't have a code? Please contact your school's administration office.",
-                    style: AppTypography.bodySmall.copyWith(color: AppColors.brightCyan),
-                  ),
+        ),
+        const SizedBox(height: AppSpacing.m),
+        Text(
+          "Enter the code provided by the school office\nto access your child's records.",
+          textAlign: TextAlign.center,
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textSecondaryDark,
+            height: 1.4,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.x2l),
+        AuthField(
+          label: 'Access Code',
+          hint: 'e.g. KHA1234',
+          icon: Icons.vpn_key_outlined,
+          accent: accent,
+          controller: _controller,
+          textCapitalization: TextCapitalization.characters,
+          errorText: _error,
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.l),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: accent.withValues(alpha: 0.45)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const Icon(Icons.info_outline, color: AppColors.brightCyan, size: 26),
+              const SizedBox(width: AppSpacing.l),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Don't have a code?",
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.brightCyan,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      "Please contact your school's\nadministration office.",
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textSecondaryDark,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: AppSpacing.m),
+              const Icon(Icons.support_agent_rounded, color: AppColors.brightCyan, size: 32),
+            ],
           ),
-          const SizedBox(height: AppSpacing.x4l),
-          PulseButton(
-            label: 'Continue',
-            isLoading: _isLooking,
-            onPressed: _isValid && !_isLooking ? _continue : null,
-            isFullWidth: true,
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(height: AppSpacing.x2l),
+        AuthCtaButton(
+          label: 'Continue',
+          gradient: const [AppColors.royalBlue, AppColors.brightCyan],
+          isLoading: _isLooking,
+          onPressed: _isValid && !_isLooking ? _continue : null,
+        ),
+        const SizedBox(height: AppSpacing.x2l),
+        const AuthPrivacyNote(accent: accent),
+      ],
     );
   }
 }
@@ -280,7 +321,7 @@ class _ParentPhoneScreenState extends State<ParentPhoneScreen> {
             prefixIcon: Icons.phone_android_rounded,
             validator: (_) => _error,
           ),
-          const SizedBox(height: AppSpacing.x4l),
+          const SizedBox(height: AppSpacing.l),
           PulseButton(
             label: 'Verify & Continue',
             isLoading: _isLoading,
@@ -388,7 +429,7 @@ class _ParentPinScreenState extends State<ParentPinScreen> {
                   prefixIcon: Icons.lock_reset_rounded,
                 ),
               ],
-              const SizedBox(height: AppSpacing.x4l),
+              const SizedBox(height: AppSpacing.l),
               PulseButton(
                 label: isFirstTime ? 'Save PIN & Login' : 'Sign In',
                 isLoading: isLoading,

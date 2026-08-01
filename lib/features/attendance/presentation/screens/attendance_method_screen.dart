@@ -19,66 +19,67 @@ class AttendanceMethodScreen extends StatelessWidget {
       ),
       body: Padding(
         padding: const EdgeInsets.all(AppSpacing.l),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildDropdown(context, 'Dormitory', 'Sunset House'),
-            const SizedBox(height: AppSpacing.m),
-            Row(
-              children: [
-                Expanded(child: _buildDropdown(context, 'Session', 'Evening')),
-                const SizedBox(width: AppSpacing.m),
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceElevated(context),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.border(context)),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.calendar_today, size: 16),
-                        SizedBox(width: 8),
-                        Text('1/6/2026', style: TextStyle(fontSize: 14)),
-                      ],
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildDropdown(context, 'Dormitory', 'Sunset House'),
+              const SizedBox(height: AppSpacing.m),
+              Row(
+                children: [
+                  Expanded(child: _buildDropdown(context, 'Session', 'Evening')),
+                  const SizedBox(width: AppSpacing.m),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceElevated(context),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.border(context)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.calendar_today, size: 16),
+                          SizedBox(width: 8),
+                          Text('1/6/2026', style: TextStyle(fontSize: 14)),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            const Text(
-              'Choose Attendance Method',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const Text(
-              'Select how you want to take attendance',
-              style: TextStyle(color: Colors.grey, fontSize: 14),
-            ),
-            const SizedBox(height: AppSpacing.l),
-            _MethodCard(
-              icon: Icons.nfc,
-              title: 'NFC (Tap ID Card)',
-              subtitle: 'Tap student ID card on device',
-              onTap: () => context.push('/attendance/nfc'),
-            ),
-            _MethodCard(
-              icon: Icons.qr_code_scanner,
-              title: 'QR Code Scanner',
-              subtitle: 'Scan student QR code',
-              onTap: () => context.push('/attendance/qr'),
-            ),
-            _MethodCard(
-              icon: Icons.history_edu,
-              title: 'Manual Attendance',
-              subtitle: 'Mark attendance from list',
-              onTap: () => context.push('/attendance/manual'),
-            ),
-          ],
+                ],
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              const Text(
+                'Choose Attendance Method',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const Text(
+                'Select how you want to take attendance',
+                style: TextStyle(color: Colors.grey, fontSize: 14),
+              ),
+              const SizedBox(height: AppSpacing.l),
+              _MethodCard(
+                icon: Icons.nfc,
+                title: 'NFC (Tap ID Card)',
+                subtitle: 'Tap student ID card on device',
+                onTap: () => context.push('/staff/attendance/nfc'),
+              ),
+              _MethodCard(
+                icon: Icons.qr_code_scanner,
+                title: 'QR Code Scanner',
+                subtitle: 'Scan student QR code',
+                onTap: () => context.push('/staff/attendance/qr'),
+              ),
+              _MethodCard(
+                icon: Icons.history_edu,
+                title: 'Manual Attendance',
+                subtitle: 'Mark attendance from list',
+                onTap: () => context.push('/staff/attendance/manual'),
+              ),
+            ],
+          ),
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(context),
     );
   }
 
@@ -103,19 +104,6 @@ class AttendanceMethodScreen extends StatelessWidget {
             ],
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildBottomNav(BuildContext context) {
-    return BottomNavigationBar(
-      currentIndex: 1,
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.domain_outlined), label: 'Dorms'),
-        BottomNavigationBarItem(icon: Icon(Icons.assignment_outlined), label: 'Tasks'),
-        BottomNavigationBarItem(icon: Icon(Icons.bar_chart_outlined), label: 'Analytics'),
-        BottomNavigationBarItem(icon: Icon(Icons.more_horiz_outlined), label: 'More'),
       ],
     );
   }

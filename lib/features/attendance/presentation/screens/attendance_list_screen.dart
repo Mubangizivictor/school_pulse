@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 
@@ -16,7 +17,7 @@ class AttendanceListScreen extends StatelessWidget {
             icon: const Icon(Icons.arrow_back_ios_new, size: 20),
             onPressed: () => context.pop(),
           ),
-          title: const Text('Attendance List (Summary)'),
+          title: const Text('Attendance List'),
           bottom: const TabBar(
             tabs: [
               Tab(text: 'All (25)'),
@@ -53,15 +54,9 @@ class AttendanceListScreen extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.all(AppSpacing.l),
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary(context),
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
+              child: PrimaryButton(
+                label: 'Export Report',
                 onPressed: () {},
-                child: const Text('Export Report'),
               ),
             ),
           ],
@@ -79,33 +74,36 @@ class AttendanceListScreen extends StatelessWidget {
         final bool isPresent = student['isPresent'];
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
-          child: Row(
-            children: [
-              const CircleAvatar(
-                radius: 20,
-                backgroundImage: NetworkImage('https://i.pravatar.cc/150'),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(student['name'], style: const TextStyle(fontWeight: FontWeight.w600)),
-                    Text(student['id'], style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                  ],
+          child: AppCard(
+            padding: const EdgeInsets.all(AppSpacing.m),
+            child: Row(
+              children: [
+                const CircleAvatar(
+                  radius: 20,
+                  backgroundImage: NetworkImage('https://i.pravatar.cc/150'),
                 ),
-              ),
-              if (isPresent) ...[
-                Text(
-                  student['time'],
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(student['name'], style: const TextStyle(fontWeight: FontWeight.w600)),
+                      Text(student['id'], style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                    ],
+                  ),
                 ),
-                const SizedBox(width: 8),
-                Icon(Icons.check_circle, color: AppColors.success(context), size: 20),
-              ] else ...[
-                Icon(Icons.cancel, color: AppColors.errorRed, size: 20),
+                if (isPresent) ...[
+                  Text(
+                    student['time'],
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(Icons.check_circle, color: AppColors.success(context), size: 20),
+                ] else ...[
+                  Icon(Icons.cancel, color: AppColors.errorRed, size: 20),
+                ],
               ],
-            ],
+            ),
           ),
         );
       },

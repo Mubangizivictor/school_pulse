@@ -1,203 +1,634 @@
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../domain/repositories/matron_repository.dart';
-import 'matron_event.dart';
-import 'matron_state.dart';
+import 'package:school_pulse/features/matron/domain/entities/matron_entities.dart';
+import 'package:school_pulse/features/matron/domain/repositories/matron_repository.dart';
+import 'package:school_pulse/features/matron/presentation/bloc/matron_event.dart';
+import 'package:school_pulse/features/matron/presentation/bloc/matron_state.dart';
 
 class MatronBloc extends Bloc<MatronEvent, MatronState> {
   final MatronRepository repository;
+  StreamSubscription? _dashboardSubscription;
+  StreamSubscription? _dormitorySubscription;
+  StreamSubscription? _studentSubscription;
+  StreamSubscription? _unallocatedSubscription;
+  StreamSubscription? _bedsSubscription;
+  StreamSubscription? _transferHistorySubscription;
+  StreamSubscription? _attendanceSubscription;
+  StreamSubscription? _leaveSubscription;
+  StreamSubscription? _welfareSubscription;
+  StreamSubscription? _referralSubscription;
+  StreamSubscription? _behaviourSubscription;
+  StreamSubscription? _disciplineSubscription;
+  StreamSubscription? _announcementSubscription;
 
   MatronBloc({required this.repository}) : super(MatronInitial()) {
-    on<MatronDashboardRequested>(_onMatronDashboardRequested);
-    on<DormitoriesRequested>(_onDormitoriesRequested);
-    on<UnallocatedStudentsRequested>(_onUnallocatedStudentsRequested);
-    on<AllocateStudentRequested>(_onAllocateStudentRequested);
-    on<DormitoryStudentsRequested>(_onDormitoryStudentsRequested);
-    on<SubmitAttendanceRequested>(_onSubmitAttendanceRequested);
-    on<WelfareRecordsRequested>(_onWelfareRecordsRequested);
-    on<AddWelfareRecordRequested>(_onAddWelfareRecordRequested);
-    on<DisciplineCasesRequested>(_onDisciplineCasesRequested);
-    on<AddDisciplineCaseRequested>(_onAddDisciplineCaseRequested);
-    on<HygieneChecksRequested>(_onHygieneChecksRequested);
-    on<AddHygieneCheckRequested>(_onAddHygieneCheckRequested);
-    on<StudentsOnLeaveRequested>(_onStudentsOnLeaveRequested);
+    on<LoadMatronDashboardScreen>(_onLoadDashboard);
+    on<WatchDashboardOverview>(_onWatchDashboardOverview);
+    on<WatchDormitories>(_onWatchDormitories);
+    on<WatchBoardingStudents>(_onWatchBoardingStudents);
+    on<WatchUnallocatedStudents>(_onWatchUnallocatedStudents);
+    on<AddDormitoryEvent>(_onAddDormitory);
+    on<UpdateDormitoryEvent>(_onUpdateDormitory);
+    on<DeleteDormitoryEvent>(_onDeleteDormitory);
+    on<SetDormLeadershipEvent>(_onSetDormLeadership);
+    on<AllocateStudentEvent>(_onAllocateStudent);
+    on<SetRoomLeaderEvent>(_onSetRoomLeader);
+    on<WatchBeds>(_onWatchBeds);
+    on<AddBedEvent>(_onAddBed);
+    on<RemoveBedEvent>(_onRemoveBed);
+    on<TransferStudentEvent>(_onTransferStudent);
+    on<WatchTransferHistory>(_onWatchTransferHistory);
+    on<RecordAttendanceEvent>(_onRecordAttendance);
+    on<BulkRecordAttendanceEvent>(_onBulkRecordAttendance);
+    on<WatchAttendance>(_onWatchAttendance);
+    on<WatchLeaveRequests>(_onWatchLeaveRequests);
+    on<RequestLeaveEvent>(_onRequestLeave);
+    on<UpdateLeaveStatusEvent>(_onUpdateLeaveStatus);
+    on<LogWelfareRecordEvent>(_onLogWelfareRecord);
+    on<WatchWelfareRecords>(_onWatchWelfareRecords);
+    on<WatchCounselingReferrals>(_onWatchCounselingReferrals);
+    on<LogCounselingReferralEvent>(_onLogCounselingReferral);
+    on<UpdateReferralStatusEvent>(_onUpdateReferralStatus);
+    on<WatchBehaviourObservations>(_onWatchBehaviourObservations);
+    on<LogBehaviourObservationEvent>(_onLogBehaviourObservation);
+    on<LogDisciplineIncidentEvent>(_onLogDisciplineIncident);
+    on<UpdateDisciplineStatusEvent>(_onUpdateDisciplineStatus);
+    on<WatchDisciplineIncidents>(_onWatchDisciplineIncidents);
+    on<PostAnnouncementEvent>(_onPostAnnouncement);
+    on<WatchAnnouncements>(_onWatchAnnouncements);
+    on<_DashboardOverviewUpdated>(_onDashboardOverviewUpdated);
+    on<_DormitoriesUpdated>(_onDormitoriesUpdated);
+    on<_StudentsUpdated>(_onStudentsUpdated);
+    on<_UnallocatedUpdated>(_onUnallocatedUpdated);
+    on<_BedsUpdated>(_onBedsUpdated);
+    on<_TransferHistoryUpdated>(_onTransferHistoryUpdated);
+    on<_AttendanceUpdated>(_onAttendanceUpdated);
+    on<_LeaveUpdated>(_onLeaveUpdated);
+    on<_WelfareUpdated>(_onWelfareUpdated);
+    on<_ReferralsUpdated>(_onReferralsUpdated);
+    on<_BehaviourUpdated>(_onBehaviourUpdated);
+    on<_DisciplineUpdated>(_onDisciplineUpdated);
+    on<_AnnouncementsUpdated>(_onAnnouncementsUpdated);
   }
 
-  Future<void> _onMatronDashboardRequested(
-    MatronDashboardRequested event,
+  Future<void> _onLoadDashboard(
+    LoadMatronDashboardScreen event,
     Emitter<MatronState> emit,
   ) async {
     emit(MatronLoading());
-    final result = await repository.getDashboardData(
-      schoolId: event.schoolId,
-      gender: event.gender,
-    );
-    result.fold(
-      (failure) => emit(MatronError(failure.message)),
-      (data) => emit(MatronDashboardLoaded(data)),
+  }
+
+  void _onWatchDashboardOverview(
+    WatchDashboardOverview event,
+    Emitter<MatronState> emit,
+  ) {
+    _dashboardSubscription?.cancel();
+    _dashboardSubscription = repository
+        .watchDashboardOverview(event.schoolId)
+        .listen((overview) => add(_DashboardOverviewUpdated(overview)));
+  }
+
+  void _onWatchDormitories(WatchDormitories event, Emitter<MatronState> emit) {
+    _dormitorySubscription?.cancel();
+    _dormitorySubscription = repository.getDormitories().listen(
+      (dormitories) => add(_DormitoriesUpdated(dormitories)),
     );
   }
 
-  Future<void> _onDormitoriesRequested(
-    DormitoriesRequested event,
+  void _onWatchBoardingStudents(
+    WatchBoardingStudents event,
     Emitter<MatronState> emit,
-  ) async {
-    emit(MatronLoading());
-    final result = await repository.getDormitories(gender: event.gender);
-    result.fold(
-      (failure) => emit(MatronError(failure.message)),
-      (dorms) => emit(DormitoriesLoaded(dorms)),
+  ) {
+    _studentSubscription?.cancel();
+    _studentSubscription = repository
+        .getBoardingStudents(event.dormitoryId)
+        .listen((students) => add(_StudentsUpdated(students)));
+  }
+
+  void _onWatchUnallocatedStudents(
+    WatchUnallocatedStudents event,
+    Emitter<MatronState> emit,
+  ) {
+    _unallocatedSubscription?.cancel();
+    _unallocatedSubscription = repository.getUnallocatedStudents().listen(
+      (students) => add(_UnallocatedUpdated(students)),
     );
   }
 
-  Future<void> _onUnallocatedStudentsRequested(
-    UnallocatedStudentsRequested event,
+  Future<void> _onAddDormitory(
+    AddDormitoryEvent event,
     Emitter<MatronState> emit,
   ) async {
-    emit(MatronLoading());
-    final result = await repository.getUnallocatedStudents(
-      gender: event.gender,
-    );
-    result.fold(
-      (failure) => emit(MatronError(failure.message)),
-      (students) => emit(UnallocatedStudentsLoaded(students)),
+    try {
+      await repository.addDormitory(event.dormitory);
+      emit(const MatronActionSuccess('Dormitory added successfully'));
+    } catch (e) {
+      emit(MatronError(e.toString()));
+    }
+  }
+
+  Future<void> _onUpdateDormitory(
+    UpdateDormitoryEvent event,
+    Emitter<MatronState> emit,
+  ) async {
+    try {
+      await repository.updateDormitory(event.dormitory);
+      emit(const MatronActionSuccess('Dormitory updated successfully'));
+    } catch (e) {
+      emit(MatronError(e.toString()));
+    }
+  }
+
+  Future<void> _onDeleteDormitory(
+    DeleteDormitoryEvent event,
+    Emitter<MatronState> emit,
+  ) async {
+    try {
+      await repository.deleteDormitory(event.id);
+      emit(const MatronActionSuccess('Dormitory deleted successfully'));
+    } catch (e) {
+      emit(MatronError(e.toString()));
+    }
+  }
+
+  Future<void> _onSetDormLeadership(
+    SetDormLeadershipEvent event,
+    Emitter<MatronState> emit,
+  ) async {
+    try {
+      await repository.setDormLeadership(
+        event.dormitoryId,
+        roomLeaderId: event.roomLeaderId,
+        dormPrefectId: event.dormPrefectId,
+      );
+      emit(const MatronActionSuccess('Dorm leadership updated'));
+    } catch (e) {
+      emit(MatronError(e.toString()));
+    }
+  }
+
+  Future<void> _onAllocateStudent(
+    AllocateStudentEvent event,
+    Emitter<MatronState> emit,
+  ) async {
+    try {
+      await repository.allocateStudentToDorm(
+        event.studentId,
+        event.dormitoryId,
+        event.bedNumber,
+      );
+      emit(const MatronActionSuccess('Student allocated successfully'));
+    } catch (e) {
+      emit(MatronError(e.toString()));
+    }
+  }
+
+  Future<void> _onSetRoomLeader(
+    SetRoomLeaderEvent event,
+    Emitter<MatronState> emit,
+  ) async {
+    try {
+      await repository.setRoomLeader(event.dormitoryId, event.studentId);
+      emit(const MatronActionSuccess('Room leader updated'));
+    } catch (e) {
+      emit(MatronError(e.toString()));
+    }
+  }
+
+  void _onWatchBeds(WatchBeds event, Emitter<MatronState> emit) {
+    _bedsSubscription?.cancel();
+    _bedsSubscription = repository
+        .getBeds(event.dormitoryId)
+        .listen((beds) => add(_BedsUpdated(beds)));
+  }
+
+  Future<void> _onAddBed(AddBedEvent event, Emitter<MatronState> emit) async {
+    try {
+      await repository.addBed(event.dormitoryId, event.bedNumber);
+      emit(const MatronActionSuccess('Bed added'));
+    } catch (e) {
+      emit(MatronError(e.toString()));
+    }
+  }
+
+  Future<void> _onRemoveBed(
+    RemoveBedEvent event,
+    Emitter<MatronState> emit,
+  ) async {
+    try {
+      await repository.removeBed(event.dormitoryId, event.bedId);
+      emit(const MatronActionSuccess('Bed removed'));
+    } catch (e) {
+      emit(MatronError(e.toString()));
+    }
+  }
+
+  Future<void> _onTransferStudent(
+    TransferStudentEvent event,
+    Emitter<MatronState> emit,
+  ) async {
+    try {
+      await repository.transferStudent(
+        studentId: event.studentId,
+        toDormitoryId: event.toDormitoryId,
+        toBedNumber: event.toBedNumber,
+        transferredBy: event.transferredBy,
+        reason: event.reason,
+      );
+      emit(const MatronActionSuccess('Student transferred'));
+    } catch (e) {
+      emit(MatronError(e.toString()));
+    }
+  }
+
+  void _onWatchTransferHistory(
+    WatchTransferHistory event,
+    Emitter<MatronState> emit,
+  ) {
+    _transferHistorySubscription?.cancel();
+    _transferHistorySubscription = repository
+        .getTransferHistory(event.studentId)
+        .listen((transfers) => add(_TransferHistoryUpdated(transfers)));
+  }
+
+  Future<void> _onRecordAttendance(
+    RecordAttendanceEvent event,
+    Emitter<MatronState> emit,
+  ) async {
+    try {
+      await repository.recordAttendance(event.attendance);
+      emit(const MatronActionSuccess('Attendance recorded'));
+    } catch (e) {
+      emit(MatronError(e.toString()));
+    }
+  }
+
+  Future<void> _onBulkRecordAttendance(
+    BulkRecordAttendanceEvent event,
+    Emitter<MatronState> emit,
+  ) async {
+    try {
+      await repository.bulkRecordAttendance(event.records);
+      emit(const MatronActionSuccess('Attendance records saved'));
+    } catch (e) {
+      emit(MatronError(e.toString()));
+    }
+  }
+
+  void _onWatchAttendance(WatchAttendance event, Emitter<MatronState> emit) {
+    _attendanceSubscription?.cancel();
+    _attendanceSubscription = repository
+        .getAttendance(event.date, event.dormitoryId, event.type)
+        .listen((attendance) => add(_AttendanceUpdated(attendance)));
+  }
+
+  void _onWatchLeaveRequests(
+    WatchLeaveRequests event,
+    Emitter<MatronState> emit,
+  ) {
+    _leaveSubscription?.cancel();
+    _leaveSubscription = repository
+        .getLeaveRequests(status: event.status)
+        .listen((requests) => add(_LeaveUpdated(requests)));
+  }
+
+  Future<void> _onRequestLeave(
+    RequestLeaveEvent event,
+    Emitter<MatronState> emit,
+  ) async {
+    try {
+      await repository.requestLeave(event.request);
+      emit(const MatronActionSuccess('Leave request submitted'));
+    } catch (e) {
+      emit(MatronError(e.toString()));
+    }
+  }
+
+  Future<void> _onUpdateLeaveStatus(
+    UpdateLeaveStatusEvent event,
+    Emitter<MatronState> emit,
+  ) async {
+    try {
+      await repository.updateLeaveStatus(
+        event.requestId,
+        event.status,
+        approvedBy: event.approvedBy,
+        actualReturnDate: event.actualReturnDate,
+        notes: event.notes,
+      );
+      emit(const MatronActionSuccess('Leave request updated'));
+    } catch (e) {
+      emit(MatronError(e.toString()));
+    }
+  }
+
+  Future<void> _onLogWelfareRecord(
+    LogWelfareRecordEvent event,
+    Emitter<MatronState> emit,
+  ) async {
+    try {
+      await repository.logWelfareRecord(event.record);
+      emit(const MatronActionSuccess('Welfare record saved'));
+    } catch (e) {
+      emit(MatronError(e.toString()));
+    }
+  }
+
+  void _onWatchWelfareRecords(
+    WatchWelfareRecords event,
+    Emitter<MatronState> emit,
+  ) {
+    _welfareSubscription?.cancel();
+    if (event.studentId != null) {
+      _welfareSubscription = repository
+          .watchWelfareRecords(
+            event.schoolId,
+            event.studentId!,
+            publicOnly: event.publicOnly,
+          )
+          .listen((records) => add(_WelfareUpdated(records)));
+    } else {
+      _welfareSubscription = repository
+          .watchAllWelfareRecords(event.schoolId, publicOnly: event.publicOnly)
+          .listen((records) => add(_WelfareUpdated(records)));
+    }
+  }
+
+  void _onWatchCounselingReferrals(
+    WatchCounselingReferrals event,
+    Emitter<MatronState> emit,
+  ) {
+    _referralSubscription?.cancel();
+    _referralSubscription = repository
+        .getCounselingReferrals(event.studentId)
+        .listen((referrals) => add(_ReferralsUpdated(referrals)));
+  }
+
+  Future<void> _onLogCounselingReferral(
+    LogCounselingReferralEvent event,
+    Emitter<MatronState> emit,
+  ) async {
+    try {
+      await repository.logCounselingReferral(event.referral);
+      emit(const MatronActionSuccess('Counseling referral logged'));
+    } catch (e) {
+      emit(MatronError(e.toString()));
+    }
+  }
+
+  Future<void> _onUpdateReferralStatus(
+    UpdateReferralStatusEvent event,
+    Emitter<MatronState> emit,
+  ) async {
+    try {
+      await repository.updateReferralStatus(
+        event.referralId,
+        event.status,
+        followUpNotes: event.followUpNotes,
+      );
+      emit(const MatronActionSuccess('Referral updated'));
+    } catch (e) {
+      emit(MatronError(e.toString()));
+    }
+  }
+
+  void _onWatchBehaviourObservations(
+    WatchBehaviourObservations event,
+    Emitter<MatronState> emit,
+  ) {
+    _behaviourSubscription?.cancel();
+    _behaviourSubscription = repository
+        .getBehaviourObservations(event.studentId)
+        .listen((observations) => add(_BehaviourUpdated(observations)));
+  }
+
+  Future<void> _onLogBehaviourObservation(
+    LogBehaviourObservationEvent event,
+    Emitter<MatronState> emit,
+  ) async {
+    try {
+      await repository.logBehaviourObservation(event.observation);
+      emit(const MatronActionSuccess('Behaviour observation logged'));
+    } catch (e) {
+      emit(MatronError(e.toString()));
+    }
+  }
+
+  Future<void> _onLogDisciplineIncident(
+    LogDisciplineIncidentEvent event,
+    Emitter<MatronState> emit,
+  ) async {
+    try {
+      await repository.logDisciplineIncident(event.incident);
+      emit(const MatronActionSuccess('Discipline incident logged'));
+    } catch (e) {
+      emit(MatronError(e.toString()));
+    }
+  }
+
+  Future<void> _onUpdateDisciplineStatus(
+    UpdateDisciplineStatusEvent event,
+    Emitter<MatronState> emit,
+  ) async {
+    try {
+      await repository.updateDisciplineStatus(
+        event.incidentId,
+        event.status,
+        event.actionTaken,
+      );
+      emit(const MatronActionSuccess('Discipline status updated'));
+    } catch (e) {
+      emit(MatronError(e.toString()));
+    }
+  }
+
+  void _onWatchDisciplineIncidents(
+    WatchDisciplineIncidents event,
+    Emitter<MatronState> emit,
+  ) {
+    _disciplineSubscription?.cancel();
+    _disciplineSubscription = repository
+        .getDisciplineIncidents(event.studentId)
+        .listen((incidents) => add(_DisciplineUpdated(incidents)));
+  }
+
+  Future<void> _onPostAnnouncement(
+    PostAnnouncementEvent event,
+    Emitter<MatronState> emit,
+  ) async {
+    try {
+      await repository.postAnnouncement(event.announcement);
+      emit(const MatronActionSuccess('Announcement posted'));
+    } catch (e) {
+      emit(MatronError(e.toString()));
+    }
+  }
+
+  void _onWatchAnnouncements(
+    WatchAnnouncements event,
+    Emitter<MatronState> emit,
+  ) {
+    _announcementSubscription?.cancel();
+    _announcementSubscription = repository.getAnnouncements().listen(
+      (announcements) => add(_AnnouncementsUpdated(announcements)),
     );
   }
 
-  Future<void> _onAllocateStudentRequested(
-    AllocateStudentRequested event,
+  // Internal helper events for stream updates
+  void _onDashboardOverviewUpdated(
+    _DashboardOverviewUpdated event,
     Emitter<MatronState> emit,
-  ) async {
-    emit(MatronLoading());
-    final result = await repository.allocateStudent(
-      event.studentId,
-      event.dormitoryId,
-      event.bedNumber,
-    );
-    result.fold(
-      (failure) => emit(MatronError(failure.message)),
-      (_) => emit(const MatronSuccess('Student allocated successfully')),
-    );
+  ) {
+    emit(DashboardOverviewLoaded(event.overview));
   }
 
-  Future<void> _onDormitoryStudentsRequested(
-    DormitoryStudentsRequested event,
+  void _onDormitoriesUpdated(
+    _DormitoriesUpdated event,
     Emitter<MatronState> emit,
-  ) async {
-    emit(MatronLoading());
-    final result = await repository.getDormitoryStudents(event.dormitoryId);
-    result.fold(
-      (failure) => emit(MatronError(failure.message)),
-      (students) => emit(DormitoryStudentsLoaded(students)),
-    );
+  ) {
+    emit(DormitoriesLoaded(event.dormitories));
   }
 
-  Future<void> _onSubmitAttendanceRequested(
-    SubmitAttendanceRequested event,
-    Emitter<MatronState> emit,
-  ) async {
-    emit(MatronLoading());
-    final result = await repository.submitAttendance(
-      dormitoryId: event.dormitoryId,
-      type: event.type,
-      attendance: event.attendance,
-    );
-    result.fold(
-      (failure) => emit(MatronError(failure.message)),
-      (_) => emit(const MatronSuccess('Attendance submitted successfully')),
-    );
+  void _onStudentsUpdated(_StudentsUpdated event, Emitter<MatronState> emit) {
+    emit(BoardingStudentsLoaded(event.students));
   }
 
-  Future<void> _onWelfareRecordsRequested(
-    WelfareRecordsRequested event,
+  void _onUnallocatedUpdated(
+    _UnallocatedUpdated event,
     Emitter<MatronState> emit,
-  ) async {
-    emit(MatronLoading());
-    final result = await repository.getWelfareRecords(
-      schoolId: event.schoolId,
-      studentId: event.studentId,
-      gender: event.gender,
-    );
-    result.fold(
-      (failure) => emit(MatronError(failure.message)),
-      (records) => emit(WelfareRecordsLoaded(records)),
-    );
+  ) {
+    emit(UnallocatedStudentsLoaded(event.students));
   }
 
-  Future<void> _onAddWelfareRecordRequested(
-    AddWelfareRecordRequested event,
-    Emitter<MatronState> emit,
-  ) async {
-    emit(MatronLoading());
-    final result = await repository.addWelfareRecord(event.record);
-    result.fold(
-      (failure) => emit(MatronError(failure.message)),
-      (_) => emit(const MatronSuccess('Welfare record added')),
-    );
+  void _onBedsUpdated(_BedsUpdated event, Emitter<MatronState> emit) {
+    emit(BedsLoaded(event.beds));
   }
 
-  Future<void> _onDisciplineCasesRequested(
-    DisciplineCasesRequested event,
+  void _onTransferHistoryUpdated(
+    _TransferHistoryUpdated event,
     Emitter<MatronState> emit,
-  ) async {
-    emit(MatronLoading());
-    final result = await repository.getDisciplineCases(
-      studentId: event.studentId,
-      gender: event.gender,
-    );
-    result.fold(
-      (failure) => emit(MatronError(failure.message)),
-      (cases) => emit(DisciplineCasesLoaded(cases)),
-    );
+  ) {
+    emit(TransferHistoryLoaded(event.transfers));
   }
 
-  Future<void> _onAddDisciplineCaseRequested(
-    AddDisciplineCaseRequested event,
+  void _onAttendanceUpdated(
+    _AttendanceUpdated event,
     Emitter<MatronState> emit,
-  ) async {
-    emit(MatronLoading());
-    final result = await repository.addDisciplineCase(event.disciplineCase);
-    result.fold(
-      (failure) => emit(MatronError(failure.message)),
-      (_) => emit(const MatronSuccess('Discipline case added')),
-    );
+  ) {
+    emit(AttendanceLoaded(event.attendance));
   }
 
-  Future<void> _onHygieneChecksRequested(
-    HygieneChecksRequested event,
-    Emitter<MatronState> emit,
-  ) async {
-    emit(MatronLoading());
-    final result = await repository.getHygieneChecks(
-      dormitoryId: event.dormitoryId,
-      gender: event.gender,
-    );
-    result.fold(
-      (failure) => emit(MatronError(failure.message)),
-      (checks) => emit(HygieneChecksLoaded(checks)),
-    );
+  void _onLeaveUpdated(_LeaveUpdated event, Emitter<MatronState> emit) {
+    emit(LeaveRequestsLoaded(event.requests));
   }
 
-  Future<void> _onAddHygieneCheckRequested(
-    AddHygieneCheckRequested event,
-    Emitter<MatronState> emit,
-  ) async {
-    emit(MatronLoading());
-    final result = await repository.addHygieneCheck(event.check);
-    result.fold(
-      (failure) => emit(MatronError(failure.message)),
-      (_) => emit(const MatronSuccess('Hygiene check recorded')),
-    );
+  void _onWelfareUpdated(_WelfareUpdated event, Emitter<MatronState> emit) {
+    emit(WelfareRecordsLoaded(event.records));
   }
 
-  Future<void> _onStudentsOnLeaveRequested(
-    StudentsOnLeaveRequested event,
-    Emitter<MatronState> emit,
-  ) async {
-    emit(MatronLoading());
-    final result = await repository.getStudentsOnLeave(gender: event.gender);
-    result.fold(
-      (failure) => emit(MatronError(failure.message)),
-      (students) => emit(StudentsOnLeaveLoaded(students)),
-    );
+  void _onReferralsUpdated(_ReferralsUpdated event, Emitter<MatronState> emit) {
+    emit(CounselingReferralsLoaded(event.referrals));
   }
+
+  void _onBehaviourUpdated(_BehaviourUpdated event, Emitter<MatronState> emit) {
+    emit(BehaviourObservationsLoaded(event.observations));
+  }
+
+  void _onDisciplineUpdated(
+    _DisciplineUpdated event,
+    Emitter<MatronState> emit,
+  ) {
+    emit(DisciplineIncidentsLoaded(event.incidents));
+  }
+
+  void _onAnnouncementsUpdated(
+    _AnnouncementsUpdated event,
+    Emitter<MatronState> emit,
+  ) {
+    emit(AnnouncementsLoaded(event.announcements));
+  }
+
+  @override
+  Future<void> close() {
+    _dashboardSubscription?.cancel();
+    _dormitorySubscription?.cancel();
+    _studentSubscription?.cancel();
+    _unallocatedSubscription?.cancel();
+    _bedsSubscription?.cancel();
+    _transferHistorySubscription?.cancel();
+    _attendanceSubscription?.cancel();
+    _leaveSubscription?.cancel();
+    _welfareSubscription?.cancel();
+    _referralSubscription?.cancel();
+    _behaviourSubscription?.cancel();
+    _disciplineSubscription?.cancel();
+    _announcementSubscription?.cancel();
+    return super.close();
+  }
+}
+
+// Internal events for stream listening
+class _DashboardOverviewUpdated extends MatronEvent {
+  final MatronDashboardOverview overview;
+  const _DashboardOverviewUpdated(this.overview);
+}
+
+class _DormitoriesUpdated extends MatronEvent {
+  final List<Dormitory> dormitories;
+  const _DormitoriesUpdated(this.dormitories);
+}
+
+class _StudentsUpdated extends MatronEvent {
+  final List<BoardingStudent> students;
+  const _StudentsUpdated(this.students);
+}
+
+class _UnallocatedUpdated extends MatronEvent {
+  final List<BoardingStudent> students;
+  const _UnallocatedUpdated(this.students);
+}
+
+class _BedsUpdated extends MatronEvent {
+  final List<Bed> beds;
+  const _BedsUpdated(this.beds);
+}
+
+class _TransferHistoryUpdated extends MatronEvent {
+  final List<BedTransfer> transfers;
+  const _TransferHistoryUpdated(this.transfers);
+}
+
+class _AttendanceUpdated extends MatronEvent {
+  final List<BoardingAttendance> attendance;
+  const _AttendanceUpdated(this.attendance);
+}
+
+class _LeaveUpdated extends MatronEvent {
+  final List<LeaveRequest> requests;
+  const _LeaveUpdated(this.requests);
+}
+
+class _WelfareUpdated extends MatronEvent {
+  final List<WelfareRecord> records;
+  const _WelfareUpdated(this.records);
+}
+
+class _ReferralsUpdated extends MatronEvent {
+  final List<CounselingReferral> referrals;
+  const _ReferralsUpdated(this.referrals);
+}
+
+class _BehaviourUpdated extends MatronEvent {
+  final List<BehaviourObservation> observations;
+  const _BehaviourUpdated(this.observations);
+}
+
+class _DisciplineUpdated extends MatronEvent {
+  final List<DisciplineIncident> incidents;
+  const _DisciplineUpdated(this.incidents);
+}
+
+class _AnnouncementsUpdated extends MatronEvent {
+  final List<BoardingAnnouncement> announcements;
+  const _AnnouncementsUpdated(this.announcements);
 }

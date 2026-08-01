@@ -15,15 +15,15 @@ class TaskCard extends StatelessWidget {
 
   Color _getCategoryColor(String category) {
     if (category.contains('Attendance')) return Colors.green;
-    if (category.contains('Hygiene')) return Colors.purple;
-    if (category.contains('Welfare')) return Colors.orange;
+    if (category.contains('Hygiene') || category.contains('Inspection')) return Colors.purple;
+    if (category.contains('Welfare') || category.contains('Sarah')) return Colors.orange;
     return Colors.blue;
   }
 
   IconData _getCategoryIcon(String category) {
     if (category.contains('Attendance')) return Icons.verified_user_outlined;
-    if (category.contains('Hygiene')) return Icons.cleaning_services_outlined;
-    if (category.contains('Welfare')) return Icons.favorite_border;
+    if (category.contains('Hygiene') || category.contains('Inspection')) return Icons.cleaning_services_outlined;
+    if (category.contains('Welfare') || category.contains('Sarah')) return Icons.favorite_border;
     return Icons.assignment_outlined;
   }
 
@@ -57,16 +57,18 @@ class TaskCard extends StatelessWidget {
                   task.title,
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                 ),
+                const SizedBox(height: 2),
                 Text(
                   task.category,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12,
                   ),
                 ),
                 if (isOverdue) ...[
                   const SizedBox(height: 4),
                   Text(
-                    'Overdue by 2 days', // Hardcoded for UI demo as per screenshot
+                    'Overdue by ${DateTime.now().difference(task.dueDate).inDays} days',
                     style: TextStyle(color: semantic.error, fontSize: 11, fontWeight: FontWeight.w600),
                   ),
                 ],
@@ -87,21 +89,24 @@ class TaskCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               if (task.status == TaskStatus.completed)
-                const Icon(Icons.check_circle, color: Colors.green, size: 20)
-              else if (isOverdue)
-                Text(
-                  'May 19', // Mock date for overdue
-                  style: TextStyle(color: semantic.error, fontSize: 11),
-                )
+                const Icon(Icons.check_box, color: Colors.blue, size: 22)
               else
                 Container(
                   width: 20,
                   height: 20,
                   decoration: BoxDecoration(
-                    border: Border.all(color: Theme.of(context).colorScheme.outline),
+                    border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5)),
                     borderRadius: BorderRadius.circular(4),
                   ),
+                  child: isOverdue ? Center(child: Icon(Icons.close, color: semantic.error, size: 14)) : null,
                 ),
+              if (isOverdue) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'May 19',
+                  style: TextStyle(color: semantic.error, fontSize: 10),
+                ),
+              ],
             ],
           ),
         ],

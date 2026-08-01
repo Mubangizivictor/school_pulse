@@ -163,6 +163,8 @@ class UserRoleRouting {
         return '/staff/admin';
       case UserRole.boardingPatron:
         return '/staff/patron';
+      case UserRole.boardingMatron:
+        return '/staff/matron';
       default:
         return '/staff/dashboard';
     }

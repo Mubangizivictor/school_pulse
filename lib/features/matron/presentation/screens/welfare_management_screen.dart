@@ -1,378 +1,512 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/searchable_picker.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/matron/domain/entities/matron_entities.dart';
+import 'package:school_pulse/features/matron/presentation/bloc/matron_bloc.dart';
+import 'package:school_pulse/features/matron/presentation/bloc/matron_event.dart';
+import 'package:school_pulse/features/matron/presentation/bloc/matron_state.dart';
 import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/student/domain/usecases/get_all_students.dart';
 import 'package:school_pulse/injection_container.dart' as di;
-import '../bloc/matron_bloc.dart';
-import '../bloc/matron_event.dart';
-import '../bloc/matron_state.dart';
-import '../../domain/entities/boarding_entities.dart';
+
+const _kWelfareCategories = ['Concern', 'Check-in', 'Counseling', 'Check-up', 'Observation'];
 
 class WelfareManagementScreen extends StatefulWidget {
   const WelfareManagementScreen({super.key});
 
   @override
-  State<WelfareManagementScreen> createState() =>
-      _WelfareManagementScreenState();
+  State<WelfareManagementScreen> createState() => _WelfareManagementScreenState();
 }
 
-class _WelfareManagementScreenState extends State<WelfareManagementScreen> {
-  String? _genderScope(BuildContext context) {
-    final authState = context.read<AuthBloc>().state;
-    if (authState is! AuthAuthenticated) return null;
-    return UserRoleDisplay.matronGenderScope(authState.user.role);
-  }
+class _WelfareManagementScreenState extends State<WelfareManagementScreen> with SingleTickerProviderStateMixin {
+  List<Student> _students = const [];
+  late final TabController _tabController;
 
-  String? _schoolId(BuildContext context) {
-    final authState = context.read<AuthBloc>().state;
-    return authState is AuthAuthenticated ? authState.user.schoolId : null;
+  AuthAuthenticated? get _auth {
+    final state = context.read<AuthBloc>().state;
+    return state is AuthAuthenticated ? state : null;
   }
 
   @override
   void initState() {
     super.initState();
-    context.read<MatronBloc>().add(
-      WelfareRecordsRequested(
-        schoolId: _schoolId(context),
-        gender: _genderScope(context),
-      ),
-    );
+    _tabController = TabController(length: 3, vsync: this);
+    final schoolId = _auth?.user.schoolId ?? '';
+    context.read<MatronBloc>().add(WatchWelfareRecords(schoolId: schoolId));
+    context.read<MatronBloc>().add(const WatchCounselingReferrals());
+    context.read<MatronBloc>().add(const WatchBehaviourObservations());
+    _loadStudents();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadStudents() async {
+    final auth = _auth;
+    if (auth == null || auth.user.schoolId.isEmpty) return;
+    final result = await di.sl<GetAllStudents>()(schoolId: auth.user.schoolId);
+    if (!mounted) return;
+    result.fold((_) => null, (students) {
+      setState(() {
+        _students = students.where((student) => student.gender.name == 'female').toList();
+      });
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Student Welfare')),
-      body: BlocBuilder<MatronBloc, MatronState>(
-        buildWhen: (previous, current) =>
-            current is WelfareRecordsLoaded ||
-            current is MatronLoading ||
-            current is MatronError,
-        builder: (context, state) {
-          if (state is MatronLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (state is MatronError) return Center(child: Text(state.message));
-          if (state is WelfareRecordsLoaded) {
-            if (state.records.isEmpty) {
-              return const Center(child: Text('No welfare records found.'));
-            }
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: state.records.length,
-              itemBuilder: (context, index) {
-                final record = state.records[index];
-                return _WelfareCard(record: record);
-              },
+      appBar: AppBar(
+        title: const Text('Welfare Monitoring'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Welfare Log'),
+            Tab(text: 'Referrals'),
+            Tab(text: 'Behaviour'),
+          ],
+        ),
+      ),
+      body: BlocListener<MatronBloc, MatronState>(
+        listenWhen: (_, current) => current is MatronActionSuccess || current is MatronError,
+        listener: (context, state) {
+          if (state is MatronActionSuccess) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
+          } else if (state is MatronError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.message), backgroundColor: Theme.of(context).colorScheme.error),
             );
           }
-          return const SizedBox.shrink();
         },
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            _WelfareLogTab(students: _students, auth: _auth),
+            _ReferralsTab(students: _students, auth: _auth),
+            _BehaviourTab(students: _students, auth: _auth),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddWelfareSheet(context),
-        label: const Text('Record Concern'),
-        icon: const Icon(Icons.add_comment_outlined),
+        onPressed: () {
+          switch (_tabController.index) {
+            case 0:
+              _showLogWelfareDialog(context);
+              break;
+            case 1:
+              _showLogReferralDialog(context);
+              break;
+            case 2:
+              _showLogBehaviourDialog(context);
+              break;
+          }
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('New'),
       ),
     );
   }
 
-  void _showAddWelfareSheet(BuildContext context) {
-    showModalBottomSheet(
+  void _showLogWelfareDialog(BuildContext context) {
+    final noteController = TextEditingController();
+    String selectedCategory = 'Concern';
+    Student? selectedStudent;
+    var isPrivate = false;
+
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      builder: (context) => const _AddWelfareSheet(),
-    );
-  }
-}
-
-class _WelfareCard extends StatelessWidget {
-  final WelfareRecord record;
-  const _WelfareCard({required this.record});
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                record.studentName,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              StatusBadge(
-                label: record.category,
-                color: _getCategoryColor(record.category),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(record.note),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'By: ${record.recordedBy}',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              Text(
-                DateFormat('MMM dd, yyyy').format(record.date),
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ),
-          if (record.isPrivate)
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0),
-              child: Row(
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setState) {
+          return AlertDialog(
+            title: const Text('Log Welfare Entry'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.lock_outline, size: 14, color: Colors.grey),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Private Record',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                  SearchablePickerField<Student>(
+                    label: 'Student',
+                    value: selectedStudent,
+                    items: _students,
+                    labelBuilder: (student) => student.name,
+                    subtitleBuilder: (student) => student.className,
+                    onChanged: (student) => setState(() => selectedStudent = student),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(labelText: 'Category'),
+                    initialValue: selectedCategory,
+                    items: _kWelfareCategories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                    onChanged: (val) => setState(() => selectedCategory = val!),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: noteController,
+                    decoration: const InputDecoration(labelText: 'Observations / Notes', border: OutlineInputBorder()),
+                    maxLines: 3,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Private record'),
+                    subtitle: const Text('Only boarding staff and administrators can view it'),
+                    value: isPrivate,
+                    onChanged: (value) => setState(() => isPrivate = value ?? false),
                   ),
                 ],
               ),
             ),
-        ],
-      ),
-    );
-  }
-
-  Color _getCategoryColor(String category) {
-    switch (category.toLowerCase()) {
-      case 'concern':
-        return Colors.red;
-      case 'counseling':
-        return Colors.blue;
-      case 'check-up':
-        return Colors.green;
-      case 'observation':
-        return Colors.orange;
-      default:
-        return Colors.grey;
-    }
-  }
-}
-
-class _AddWelfareSheet extends StatefulWidget {
-  const _AddWelfareSheet();
-
-  @override
-  State<_AddWelfareSheet> createState() => _AddWelfareSheetState();
-}
-
-class _AddWelfareSheetState extends State<_AddWelfareSheet> {
-  List<Student> _students = const [];
-  Student? _selectedStudent;
-  bool _loadingStudents = true;
-  String? _studentLoadError;
-  String _selectedCategory = 'Concern';
-  final _noteController = TextEditingController();
-  bool _isPrivate = false;
-
-  final List<String> _categories = [
-    'Concern',
-    'Counseling',
-    'Check-up',
-    'Observation',
-    'Health Follow-up',
-  ];
-
-  String? _genderScope(BuildContext context) {
-    final authState = context.read<AuthBloc>().state;
-    if (authState is! AuthAuthenticated) return null;
-    return UserRoleDisplay.matronGenderScope(authState.user.role);
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadStudents();
-  }
-
-  Future<void> _loadStudents() async {
-    final authState = context.read<AuthBloc>().state;
-    if (authState is! AuthAuthenticated) {
-      if (mounted) {
-        setState(() {
-          _loadingStudents = false;
-          _studentLoadError = 'You must be signed in.';
-        });
-      }
-      return;
-    }
-    final result = await di.sl<GetAllStudents>()(
-      schoolId: authState.user.schoolId,
-    );
-    if (!mounted) return;
-    result.fold(
-      (failure) => setState(() {
-        _loadingStudents = false;
-        _studentLoadError = failure.message;
-      }),
-      (students) {
-        final gender = _genderScope(context)?.toLowerCase();
-        setState(() {
-          _loadingStudents = false;
-          _studentLoadError = null;
-          _students = gender == null
-              ? students
-              : students
-                    .where((student) => student.gender.name == gender)
-                    .toList();
-        });
-      },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final authState = context.read<AuthBloc>().state;
-    if (authState is! AuthAuthenticated) {
-      return const SafeArea(
-        child: EmptyState(
-          icon: Icons.lock_outline,
-          title: 'Sign in required',
-          message: 'Sign in before recording a welfare concern.',
-        ),
-      );
-    }
-
-    return Container(
-      padding: EdgeInsets.only(
-        top: 24,
-        left: 24,
-        right: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
-      child: BlocConsumer<MatronBloc, MatronState>(
-        listener: (context, state) {
-          if (state is MatronSuccess) {
-            final messenger = ScaffoldMessenger.of(context);
-            context.read<MatronBloc>().add(
-              WelfareRecordsRequested(
-                schoolId: authState.user.schoolId,
-                gender: _genderScope(context),
-              ),
-            );
-            Navigator.pop(context);
-            messenger.showSnackBar(SnackBar(content: Text(state.message)));
-          }
-        },
-        builder: (context, state) {
-          // This is a simplified way to get students - in reality, we'd have a search or specific list
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'New Welfare Record',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 24),
-              if (_loadingStudents)
-                const LinearProgressIndicator()
-              else if (_studentLoadError != null)
-                EmptyState(
-                  icon: Icons.person_off_outlined,
-                  title: 'Could not load students',
-                  message: _studentLoadError!,
-                  ctaLabel: 'Retry',
-                  onCtaPressed: _loadStudents,
-                )
-              else
-                SearchablePickerField<Student>(
-                  label: 'Student',
-                  value: _selectedStudent,
-                  items: _students,
-                  labelBuilder: (student) => student.name,
-                  subtitleBuilder: (student) => student.className,
-                  onChanged: (student) =>
-                      setState(() => _selectedStudent = student),
-                ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: _selectedCategory,
-                decoration: const InputDecoration(
-                  labelText: 'Category',
-                  border: OutlineInputBorder(),
-                ),
-                items: _categories
-                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                    .toList(),
-                onChanged: (val) => setState(() => _selectedCategory = val!),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _noteController,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Observation / Note',
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (_) => setState(() {}),
-              ),
-              const SizedBox(height: 12),
-              CheckboxListTile(
-                title: const Text('Mark as Private'),
-                subtitle: const Text('Restricted to boarding staff and admins'),
-                value: _isPrivate,
-                onChanged: (val) => setState(() => _isPrivate = val ?? false),
-                contentPadding: EdgeInsets.zero,
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed:
-                      (_selectedStudent != null &&
-                          _noteController.text.trim().isNotEmpty)
-                      ? () {
-                          context.read<MatronBloc>().add(
-                            AddWelfareRecordRequested(
-                              WelfareRecord(
-                                id: '',
-                                schoolId: authState.user.schoolId,
-                                studentId: _selectedStudent!.id,
-                                studentName: _selectedStudent!.name,
-                                category: _selectedCategory,
-                                note: _noteController.text.trim(),
-                                date: DateTime.now(),
-                                recordedBy: authState.user.name,
-                                isPrivate: _isPrivate,
-                              ),
-                            ),
-                          );
-                        }
-                      : null,
-                  child: const Text('Save Record'),
-                ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+              ElevatedButton(
+                onPressed: selectedStudent == null || noteController.text.isEmpty
+                    ? null
+                    : () {
+                        final record = WelfareRecord(
+                          id: '',
+                          schoolId: _auth?.user.schoolId ?? '',
+                          studentId: selectedStudent!.id,
+                          studentName: selectedStudent!.name,
+                          category: selectedCategory,
+                          note: noteController.text.trim(),
+                          date: DateTime.now(),
+                          recordedBy: _auth?.user.name ?? 'Matron',
+                          isPrivate: isPrivate,
+                        );
+                        context.read<MatronBloc>().add(LogWelfareRecordEvent(record));
+                        Navigator.pop(dialogContext);
+                      },
+                child: const Text('Save Record'),
               ),
             ],
           );
         },
       ),
+    );
+  }
+
+  void _showLogReferralDialog(BuildContext context) {
+    final reasonController = TextEditingController();
+    final referredToController = TextEditingController();
+    Student? selectedStudent;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setState) {
+          return AlertDialog(
+            title: const Text('Counseling Referral'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SearchablePickerField<Student>(
+                    label: 'Student',
+                    value: selectedStudent,
+                    items: _students,
+                    labelBuilder: (student) => student.name,
+                    subtitleBuilder: (student) => student.className,
+                    onChanged: (student) => setState(() => selectedStudent = student),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: reasonController,
+                    decoration: const InputDecoration(labelText: 'Reason for Referral', border: OutlineInputBorder()),
+                    maxLines: 2,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: referredToController,
+                    decoration: const InputDecoration(labelText: 'Referred To (optional)', border: OutlineInputBorder()),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+              ElevatedButton(
+                onPressed: selectedStudent == null || reasonController.text.isEmpty
+                    ? null
+                    : () {
+                        context.read<MatronBloc>().add(LogCounselingReferralEvent(CounselingReferral(
+                              id: '',
+                              studentId: selectedStudent!.id,
+                              studentName: selectedStudent!.name,
+                              reason: reasonController.text.trim(),
+                              referredBy: _auth?.user.name ?? 'Matron',
+                              referredTo: referredToController.text.trim().isEmpty ? null : referredToController.text.trim(),
+                              referralDate: DateTime.now(),
+                            )));
+                        Navigator.pop(dialogContext);
+                      },
+                child: const Text('Submit Referral'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showLogBehaviourDialog(BuildContext context) {
+    final descController = TextEditingController();
+    String type = 'Positive';
+    Student? selectedStudent;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setState) {
+          return AlertDialog(
+            title: const Text('Behaviour Observation'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SearchablePickerField<Student>(
+                    label: 'Student',
+                    value: selectedStudent,
+                    items: _students,
+                    labelBuilder: (student) => student.name,
+                    subtitleBuilder: (student) => student.className,
+                    onChanged: (student) => setState(() => selectedStudent = student),
+                  ),
+                  const SizedBox(height: 16),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: 'Positive', label: Text('Positive')),
+                      ButtonSegment(value: 'Concern', label: Text('Concern')),
+                    ],
+                    selected: {type},
+                    onSelectionChanged: (sel) => setState(() => type = sel.first),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: descController,
+                    decoration: const InputDecoration(labelText: 'Description', border: OutlineInputBorder()),
+                    maxLines: 3,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+              ElevatedButton(
+                onPressed: selectedStudent == null || descController.text.isEmpty
+                    ? null
+                    : () {
+                        context.read<MatronBloc>().add(LogBehaviourObservationEvent(BehaviourObservation(
+                              id: '',
+                              studentId: selectedStudent!.id,
+                              studentName: selectedStudent!.name,
+                              type: type,
+                              description: descController.text.trim(),
+                              date: DateTime.now(),
+                              recordedBy: _auth?.user.name ?? 'Matron',
+                            )));
+                        Navigator.pop(dialogContext);
+                      },
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _WelfareLogTab extends StatelessWidget {
+  final List<Student> students;
+  final AuthAuthenticated? auth;
+  const _WelfareLogTab({required this.students, required this.auth});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<MatronBloc, MatronState>(
+      buildWhen: (_, current) => current is WelfareRecordsLoaded || current is MatronLoading,
+      builder: (context, state) {
+        if (state is MatronLoading) return const Center(child: CircularProgressIndicator());
+        if (state is! WelfareRecordsLoaded) return const SizedBox.shrink();
+        final records = state.records;
+        if (records.isEmpty) {
+          return const EmptyState(
+            icon: Icons.health_and_safety_outlined,
+            title: 'No welfare records',
+            message: 'Welfare entries recorded by the Matron appear here.',
+          );
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: records.length,
+          itemBuilder: (context, index) {
+            final record = records[index];
+            return AppCard(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                title: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(child: Text(record.studentName, style: const TextStyle(fontWeight: FontWeight.bold))),
+                    if (record.isPrivate) const Icon(Icons.lock_outline, size: 14, color: Colors.grey),
+                    const SizedBox(width: 6),
+                    _CategoryChip(category: record.category),
+                  ],
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
+                    Text(record.note),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(DateFormat('MMM d, yyyy').format(record.date), style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                        Text('By: ${record.recordedBy}', style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontStyle: FontStyle.italic)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _ReferralsTab extends StatelessWidget {
+  final List<Student> students;
+  final AuthAuthenticated? auth;
+  const _ReferralsTab({required this.students, required this.auth});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<MatronBloc, MatronState>(
+      buildWhen: (_, current) => current is CounselingReferralsLoaded,
+      builder: (context, state) {
+        if (state is! CounselingReferralsLoaded) return const Center(child: CircularProgressIndicator());
+        if (state.referrals.isEmpty) {
+          return const EmptyState(
+            icon: Icons.psychology_outlined,
+            title: 'No Referrals',
+            message: 'Counseling referrals will appear here.',
+          );
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: state.referrals.length,
+          itemBuilder: (context, index) {
+            final referral = state.referrals[index];
+            return AppCard(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                title: Text(referral.studentName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text(referral.reason),
+                trailing: DropdownButton<String>(
+                  value: referral.status,
+                  items: ['Pending', 'Scheduled', 'Completed', 'Declined']
+                      .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                      .toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      context.read<MatronBloc>().add(UpdateReferralStatusEvent(referral.id, val));
+                    }
+                  },
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _BehaviourTab extends StatelessWidget {
+  final List<Student> students;
+  final AuthAuthenticated? auth;
+  const _BehaviourTab({required this.students, required this.auth});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<MatronBloc, MatronState>(
+      buildWhen: (_, current) => current is BehaviourObservationsLoaded,
+      builder: (context, state) {
+        if (state is! BehaviourObservationsLoaded) return const Center(child: CircularProgressIndicator());
+        if (state.observations.isEmpty) {
+          return const EmptyState(
+            icon: Icons.visibility_outlined,
+            title: 'No Observations',
+            message: 'Positive and concerning behaviour notes appear here.',
+          );
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: state.observations.length,
+          itemBuilder: (context, index) {
+            final obs = state.observations[index];
+            final isPositive = obs.type == 'Positive';
+            return AppCard(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                leading: Icon(
+                  isPositive ? Icons.thumb_up_outlined : Icons.warning_amber_outlined,
+                  color: isPositive ? Colors.green : Colors.orange,
+                ),
+                title: Text(obs.studentName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text(obs.description),
+                trailing: Text(DateFormat('MMM d').format(obs.date), style: Theme.of(context).textTheme.labelSmall),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _CategoryChip extends StatelessWidget {
+  final String category;
+  const _CategoryChip({required this.category});
+
+  @override
+  Widget build(BuildContext context) {
+    Color color;
+    switch (category) {
+      case 'Concern':
+        color = Colors.orange;
+        break;
+      case 'Check-in':
+        color = Colors.teal;
+        break;
+      case 'Counseling':
+        color = Colors.blue;
+        break;
+      case 'Check-up':
+        color = Colors.green;
+        break;
+      case 'Observation':
+        color = Colors.purple;
+        break;
+      default:
+        color = Colors.grey;
+    }
+    return Chip(
+      label: Text(category, style: const TextStyle(color: Colors.white, fontSize: 10)),
+      backgroundColor: color,
+      padding: EdgeInsets.zero,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 }

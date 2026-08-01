@@ -38,20 +38,6 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        title: Text(
-          'Staff Portal',
-          style: AppTypography.titleLarge.copyWith(
-            color: AppColors.textPrimary(context),
-          ),
-        ),
-        backgroundColor: AppColors.surface(context),
-        elevation: 0,
-        actions: const [
-          NotificationBellButton(),
-          SizedBox(width: AppSpacing.m),
-        ],
-      ),
       body: BlocBuilder<TeacherBloc, TeacherState>(
         builder: (context, state) {
           if (state is TeacherLoading || state is TeacherInitial) {
@@ -84,24 +70,45 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 }
               },
               child: ListView(
-                padding: const EdgeInsets.all(AppSpacing.xl),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
                 children: [
-                  FadeInSlide(
-                    child: Builder(builder: (context) {
-                      final authState = context.watch<AuthBloc>().state;
-                      final name = authState is AuthAuthenticated
-                          ? authState.user.name
-                          : '';
-                      return Text(
-                        'Hello, $name',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.headlineMedium.copyWith(
-                          color: AppColors.textPrimary(context),
+                  const SizedBox(height: 48), // Space for status bar
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Welcome back,',
+                              style: AppTypography.bodyMedium.copyWith(
+                                color: AppColors.textSecondary(context),
+                              ),
+                            ),
+                            Builder(builder: (context) {
+                              final authState = context.watch<AuthBloc>().state;
+                              final name = authState is AuthAuthenticated
+                                  ? authState.user.name
+                                  : '';
+                              return Text(
+                                name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.headlineSmall.copyWith(
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.5,
+                                  color: AppColors.textPrimary(context),
+                                ),
+                              );
+                            }),
+                          ],
                         ),
-                      );
-                    }),
+                      ),
+                      const NotificationBellButton(),
+                    ],
                   ),
+                  const SizedBox(height: 20),
                   Builder(builder: (context) {
                     final authState = context.watch<AuthBloc>().state;
                     final assignedClass = authState is AuthAuthenticated ? authState.user.assignedClass : null;
@@ -118,44 +125,40 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                     );
                   }),
                   const SizedBox(height: AppSpacing.s),
-                  FadeInSlide(
-                    delay: const Duration(milliseconds: 100),
-                    child: Text(
-                      DateFormat('EEEE, d MMMM yyyy').format(DateTime.now()),
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: AppColors.textSecondary(context),
-                      ),
+                  Text(
+                    DateFormat('EEEE, d MMMM yyyy').format(DateTime.now()),
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.textSecondary(context),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.x3l),
                   _buildStatsGrid(context, state),
                   const SizedBox(height: AppSpacing.x3l),
-                  FadeInSlide(
-                    delay: const Duration(milliseconds: 600),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Class Progress',
-                          style: AppTypography.titleLarge.copyWith(
-                            color: AppColors.textPrimary(context),
-                          ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Class Progress',
+                        style: AppTypography.titleLarge.copyWith(
+                          color: AppColors.textPrimary(context),
                         ),
-                        const SizedBox(height: AppSpacing.xl),
-                        ...state.classProgress.asMap().entries.map((entry) {
-                          final progress = entry.value;
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: AppSpacing.l),
-                            child: _PulseProgressCard(
-                              title: progress.title,
-                              progress: progress.progress,
-                              subtitle: progress.subtitle,
-                              color: entry.key.isOdd ? AppColors.information(context) : AppColors.primary(context),
-                            ),
-                          );
-                        }),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      ...state.classProgress.asMap().entries.map((entry) {
+                        final progress = entry.value;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.l),
+                          child: _PulseProgressCard(
+                            title: progress.title,
+                            progress: progress.progress,
+                            subtitle: progress.subtitle,
+                            color: entry.key.isOdd
+                                ? AppColors.information(context)
+                                : AppColors.primary(context),
+                          ),
+                        );
+                      }),
+                    ],
                   ),
                   const SizedBox(height: AppSpacing.x3l),
                   FadeInSlide(
@@ -177,10 +180,17 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                             runSpacing: AppSpacing.l,
                             children: [
                               _QuickAction(
-                                label: 'Attendance',
+                                label: 'Roll Call',
                                 icon: Icons.how_to_reg,
                                 color: AppColors.information(context),
                                 onTap: () => context.push('/staff/attendance'),
+                                width: itemWidth,
+                              ),
+                              _QuickAction(
+                                label: 'Attendance History',
+                                icon: Icons.history,
+                                color: AppColors.royalBlue,
+                                onTap: () => context.push('/staff/attendance/history'),
                                 width: itemWidth,
                               ),
                               _QuickAction(
@@ -496,4 +506,3 @@ class _QuickAction extends StatelessWidget {
     );
   }
 }
-

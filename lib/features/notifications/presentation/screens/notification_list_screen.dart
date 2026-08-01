@@ -1,25 +1,79 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/notifications/domain/entities/notification_category_config.dart';
 import 'package:school_pulse/features/notifications/domain/entities/notification_model.dart';
-import 'package:school_pulse/features/notifications/domain/entities/mock_notifications.dart';
+import 'package:school_pulse/features/notifications/presentation/bloc/notification_center_bloc.dart';
+import 'package:school_pulse/features/notifications/presentation/bloc/notification_center_event.dart';
+import 'package:school_pulse/features/notifications/presentation/bloc/notification_center_state.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 
-class NotificationListScreen extends StatefulWidget {
+class NotificationListScreen extends StatelessWidget {
   const NotificationListScreen({super.key});
 
   @override
-  State<NotificationListScreen> createState() => _NotificationListScreenState();
+  Widget build(BuildContext context) {
+    // The signed-in user supplies the tenant and recipient the centre is
+    // scoped to; without one there is nothing to show.
+    final authState = context.read<AuthBloc>().state;
+    final user = authState is AuthAuthenticated ? authState.user : null;
+
+    if (user == null) {
+      return const _NotificationScaffold(
+        body: Center(
+          child: Text(
+            'Sign in to see your notifications',
+            style: TextStyle(color: Colors.white70),
+          ),
+        ),
+      );
+    }
+
+    return BlocProvider(
+      create: (_) => di.sl<NotificationCenterBloc>()
+        ..add(NotificationCenterStarted(
+          schoolId: user.schoolId,
+          userId: user.id,
+        )),
+      child: const _NotificationListView(),
+    );
+  }
 }
 
-class _NotificationListScreenState extends State<NotificationListScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+/// Tells the user these rows came from the on-device cache, so stale content
+/// is never mistaken for live content.
+class _OfflineBanner extends StatelessWidget {
+  const _OfflineBanner();
 
   @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: const Color(0xFF1E293B),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.cloud_off, color: Colors.white60, size: 16),
+          SizedBox(width: 8),
+          Text(
+            'Showing saved notifications',
+            style: TextStyle(color: Colors.white60, fontSize: 12),
+          ),
+        ],
+      ),
+    );
   }
+}
+
+/// Shared chrome so the signed-out and loaded states look identical.
+class _NotificationScaffold extends StatelessWidget {
+  final Widget body;
+
+  const _NotificationScaffold({required this.body});
 
   @override
   Widget build(BuildContext context) {
@@ -47,22 +101,7 @@ class _NotificationListScreenState extends State<NotificationListScreen> with Si
           ),
         ],
       ),
-      body: Column(
-        children: [
-          _buildTabs(),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildNotificationList(mockNotifications),
-                _buildNotificationList(mockNotifications.where((n) => n.status == NotificationStatus.unread).toList()),
-                _buildNotificationList(mockNotifications.where((n) => n.status == NotificationStatus.pinned).toList()),
-                _buildNotificationList([]), // Mentions
-              ],
-            ),
-          ),
-        ],
-      ),
+      body: body,
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/staff/notifications/add'),
         backgroundColor: const Color(0xFF6366F1),
@@ -70,8 +109,65 @@ class _NotificationListScreenState extends State<NotificationListScreen> with Si
       ),
     );
   }
+}
 
-  Widget _buildTabs() {
+class _NotificationListView extends StatefulWidget {
+  const _NotificationListView();
+
+  @override
+  State<_NotificationListView> createState() => _NotificationListViewState();
+}
+
+class _NotificationListViewState extends State<_NotificationListView>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 4, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<NotificationCenterBloc, NotificationCenterState>(
+      builder: (context, state) {
+        return _NotificationScaffold(
+          body: Column(
+            children: [
+              _buildTabs(state),
+              if (state.isOffline) const _OfflineBanner(),
+              Expanded(
+                child: state.status == NotificationCenterStatus.loading
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          color: Color(0xFF6366F1),
+                        ),
+                      )
+                    : TabBarView(
+                        controller: _tabController,
+                        children: [
+                          _buildNotificationList(state.items),
+                          _buildNotificationList(state.unread),
+                          _buildNotificationList(state.pinned),
+                          _buildNotificationList(state.mentions),
+                        ],
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTabs(NotificationCenterState state) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Center(
@@ -85,10 +181,13 @@ class _NotificationListScreenState extends State<NotificationListScreen> with Si
           unselectedLabelColor: Colors.white60,
           labelPadding: const EdgeInsets.symmetric(horizontal: 4),
           tabs: [
-            _buildTab('All', 24),
-            _buildTab('Unread', 12),
-            _buildTab('Pinned', 3),
-            _buildTab('Mentions', 0),
+            // Counts come from the live cache aggregate rather than the loaded
+            // page, so they reflect the full history, not just what is on
+            // screen.
+            _buildTab('All', state.totalCount),
+            _buildTab('Unread', state.unreadCount),
+            _buildTab('Pinned', state.pinnedCount),
+            _buildTab('Mentions', state.mentions.length),
           ],
         ),
       ),
@@ -128,21 +227,68 @@ class _NotificationListScreenState extends State<NotificationListScreen> with Si
   }
 
   Widget _buildNotificationList(List<NotificationItem> notifications) {
+    final bloc = context.read<NotificationCenterBloc>();
+
     if (notifications.isEmpty) {
-      return const Center(
-        child: Text(
-          'No notifications found',
-          style: TextStyle(color: Colors.white70),
+      // Still wrapped in a refresh indicator: an empty list is exactly when a
+      // user is most likely to pull down expecting something to appear.
+      return RefreshIndicator(
+        onRefresh: () async =>
+            bloc.add(const NotificationCenterRefreshed()),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: const [
+            SizedBox(height: 160),
+            Center(
+              child: Text(
+                'No notifications found',
+                style: TextStyle(color: Colors.white70),
+              ),
+            ),
+          ],
         ),
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: notifications.length,
-      itemBuilder: (context, index) {
-        return _NotificationTile(notification: notifications[index]);
-      },
+    final state = bloc.state;
+
+    return RefreshIndicator(
+      onRefresh: () async => bloc.add(const NotificationCenterRefreshed()),
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (scroll) {
+          // Request the next page slightly before the bottom so the list keeps
+          // moving rather than stalling at the end.
+          final atEnd = scroll.metrics.pixels >=
+              scroll.metrics.maxScrollExtent - 300;
+          if (atEnd && state.hasMore && !state.isLoadingMore) {
+            bloc.add(const NotificationCenterLoadedMore());
+          }
+          return false;
+        },
+        child: ListView.builder(
+          padding: const EdgeInsets.all(16),
+          physics: const AlwaysScrollableScrollPhysics(),
+          itemCount: notifications.length + (state.isLoadingMore ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index >= notifications.length) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Color(0xFF6366F1),
+                    ),
+                  ),
+                ),
+              );
+            }
+            return _NotificationTile(notification: notifications[index]);
+          },
+        ),
+      ),
     );
   }
 }
@@ -155,7 +301,18 @@ class _NotificationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => context.push('/staff/notifications/${notification.id}'),
+      onTap: () {
+        // Opening records openedAt and readAt as distinct timestamps, then
+        // navigates. The notification travels as `extra` so the details screen
+        // renders immediately instead of re-fetching by id.
+        context
+            .read<NotificationCenterBloc>()
+            .add(NotificationOpened(notification.id));
+        context.push(
+          '/staff/notifications/${notification.id}',
+          extra: notification,
+        );
+      },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(12),
@@ -240,42 +397,32 @@ class _NotificationTile extends StatelessWidget {
   }
 
   Widget _buildIcon() {
-    IconData iconData;
-    Color iconColor;
-    
-    switch (notification.category) {
-      case NotificationCategory.announcements:
-        iconData = Icons.campaign;
-        iconColor = const Color(0xFF6366F1);
-        break;
-      case NotificationCategory.attendance:
-        iconData = Icons.person_pin_circle;
-        iconColor = const Color(0xFF10B981);
-        break;
-      case NotificationCategory.finance:
-        iconData = Icons.payments;
-        iconColor = const Color(0xFFF59E0B);
-        break;
-      case NotificationCategory.transport:
-        iconData = Icons.directions_bus;
-        iconColor = const Color(0xFF3B82F6);
-        break;
-      case NotificationCategory.homework:
-        iconData = Icons.assignment;
-        iconColor = const Color(0xFFEC4899);
-        break;
-      default:
-        iconData = Icons.notifications;
-        iconColor = Colors.white60;
+    // Category treatment comes from the shared catalog, so a newly-added
+    // category gets its own icon and colour rather than falling back to a
+    // generic grey bell.
+    final config = NotificationCategoryCatalog.of(notification.category);
+    final iconColor = config.color;
+    final photoUrl = notification.senderIdentity.photoUrl;
+
+    // A human sender's photo identifies them faster than a category icon
+    // does; automated notifications keep the module icon.
+    if (photoUrl != null && photoUrl.isNotEmpty) {
+      return CircleAvatar(
+        radius: 18,
+        backgroundColor: iconColor.withValues(alpha: 0.2),
+        foregroundImage: NetworkImage(photoUrl),
+        // Shown while loading and if the image fails or was deleted.
+        child: Icon(config.icon, color: iconColor, size: 20),
+      );
     }
 
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: iconColor.withOpacity(0.2),
+        color: iconColor.withValues(alpha: 0.2),
         shape: BoxShape.circle,
       ),
-      child: Icon(iconData, color: iconColor, size: 20),
+      child: Icon(config.icon, color: iconColor, size: 20),
     );
   }
 }

@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:school_pulse/core/user_roles.dart';
+import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
-import '../bloc/matron_bloc.dart';
-import '../bloc/matron_event.dart';
-import '../bloc/matron_state.dart';
-import '../../domain/entities/boarding_entities.dart';
+import 'package:school_pulse/features/matron/domain/entities/matron_entities.dart';
+import 'package:school_pulse/features/matron/presentation/bloc/matron_bloc.dart';
+import 'package:school_pulse/features/matron/presentation/bloc/matron_event.dart';
+import 'package:school_pulse/features/matron/presentation/bloc/matron_state.dart';
+
+const _kAttendanceTypes = ['Morning', 'Evening', 'Weekend', 'Holiday', 'Study', 'Activity'];
+const _kAttendanceStatuses = ['Present', 'Absent', 'Late', 'Sick'];
 
 class BoardingAttendanceScreen extends StatefulWidget {
   const BoardingAttendanceScreen({super.key});
@@ -16,212 +20,222 @@ class BoardingAttendanceScreen extends StatefulWidget {
 }
 
 class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
-  String? _selectedDormId;
-  String _selectedType = 'Evening';
-  final List<String> _types = ['Morning', 'Evening', 'Night', 'Weekend'];
-
-  String? _genderScope(BuildContext context) {
-    final authState = context.read<AuthBloc>().state;
-    if (authState is! AuthAuthenticated) return null;
-    return UserRoleDisplay.matronGenderScope(authState.user.role);
-  }
+  String? selectedDormId;
+  String selectedType = 'Evening';
+  DateTime selectedDate = DateTime.now();
+  Map<String, String> attendanceMap = {};
 
   @override
   void initState() {
     super.initState();
-    context.read<MatronBloc>().add(DormitoriesRequested(gender: _genderScope(context)));
+    context.read<MatronBloc>().add(WatchDormitories());
+    _loadAttendance();
+  }
+
+  void _loadAttendance() {
+    context.read<MatronBloc>().add(WatchAttendance(
+          date: selectedDate,
+          dormitoryId: selectedDormId,
+          type: selectedType,
+        ));
+    if (selectedDormId != null) {
+      context.read<MatronBloc>().add(WatchBoardingStudents(dormitoryId: selectedDormId));
+    }
+  }
+
+  String _currentUserName(BuildContext context) {
+    final authState = context.read<AuthBloc>().state;
+    return authState is AuthAuthenticated ? authState.user.name : 'Matron';
   }
 
   @override
   Widget build(BuildContext context) {
+    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Boarding Attendance'),
-      ),
-      body: BlocBuilder<MatronBloc, MatronState>(
-        buildWhen: (previous, current) => current is DormitoriesLoaded || current is MatronLoading,
-        builder: (context, state) {
-          if (state is MatronLoading && _selectedDormId == null) return const Center(child: CircularProgressIndicator());
-          
-          List<Dormitory> dorms = [];
-          if (state is DormitoriesLoaded) dorms = state.dormitories;
+      appBar: AppBar(title: const Text('Boarding Attendance')),
+      body: Column(
+        children: [
+          _buildFilters(),
+          const Divider(height: 1),
+          Expanded(
+            child: BlocConsumer<MatronBloc, MatronState>(
+              listener: (context, state) {
+                if (state is MatronActionSuccess) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
+                }
+              },
+              buildWhen: (previous, current) =>
+                  current is BoardingStudentsLoaded || current is AttendanceLoaded || current is MatronLoading,
+              builder: (context, state) {
+                List<BoardingStudent> students = [];
+                if (state is BoardingStudentsLoaded) {
+                  students = state.students;
+                }
+                if (state is AttendanceLoaded) {
+                  for (var record in state.attendance) {
+                    attendanceMap[record.studentId] = record.status;
+                  }
+                }
 
-          return Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
+                if (selectedDormId == null) {
+                  return const EmptyState(
+                    icon: Icons.how_to_reg_outlined,
+                    title: 'Select a Dormitory',
+                    message: 'Choose a dormitory above to begin roll call.',
+                  );
+                }
+
+                if (students.isEmpty) {
+                  return const EmptyState(
+                    icon: Icons.people_outline,
+                    title: 'No Boarders Found',
+                    message: 'This dormitory has no allocated students.',
+                  );
+                }
+
+                final missingCount = students.where((s) => (attendanceMap[s.id] ?? 'Present') == 'Absent').length;
+
+                return Column(
                   children: [
+                    if (missingCount > 0)
+                      Container(
+                        width: double.infinity,
+                        color: semanticColors.error.withValues(alpha: 0.1),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: Text(
+                          '$missingCount marked absent - will alert parents on save.',
+                          style: TextStyle(color: semanticColors.error, fontWeight: FontWeight.w600),
+                        ),
+                      ),
                     Expanded(
-                      flex: 2,
-                      child: DropdownButtonFormField<String>(
-                        initialValue: _selectedDormId,
-                        decoration: const InputDecoration(labelText: 'Dormitory', border: OutlineInputBorder()),
-                        items: dorms.map((d) => DropdownMenuItem(value: d.id, child: Text(d.name))).toList(),
-                        onChanged: (val) {
-                          setState(() => _selectedDormId = val);
-                          if (val != null) {
-                            context.read<MatronBloc>().add(DormitoryStudentsRequested(val));
-                          }
+                      child: ListView.builder(
+                        itemCount: students.length,
+                        itemBuilder: (context, index) {
+                          final student = students[index];
+                          final status = attendanceMap[student.id] ?? 'Present';
+                          return ListTile(
+                            leading: CircleAvatar(
+                              backgroundImage: student.photoUrl != null ? NetworkImage(student.photoUrl!) : null,
+                              child: student.photoUrl == null ? const Icon(Icons.person) : null,
+                            ),
+                            title: Text(student.name),
+                            subtitle: Text('Bed: ${student.bedNumber ?? 'N/A'}'),
+                            trailing: DropdownButton<String>(
+                              value: status,
+                              items: _kAttendanceStatuses
+                                  .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                                  .toList(),
+                              onChanged: (val) {
+                                if (val == null) return;
+                                setState(() => attendanceMap[student.id] = val);
+                              },
+                            ),
+                          );
                         },
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        initialValue: _selectedType,
-                        decoration: const InputDecoration(labelText: 'Type', border: OutlineInputBorder()),
-                        items: _types.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
-                        onChanged: (val) => setState(() => _selectedType = val!),
-                      ),
-                    ),
                   ],
-                ),
-              ),
-              Expanded(
-                child: _selectedDormId == null
-                    ? const Center(child: Text('Select a dormitory to begin roll call'))
-                    : const _AttendanceList(),
-              ),
-            ],
-          );
-        },
+                );
+              },
+            ),
+          ),
+        ],
       ),
-      bottomNavigationBar: _selectedDormId == null ? null : _SubmitBar(dormitoryId: _selectedDormId!, type: _selectedType),
-    );
-  }
-}
-
-class _AttendanceList extends StatefulWidget {
-  const _AttendanceList();
-
-  @override
-  State<_AttendanceList> createState() => _AttendanceListState();
-}
-
-class _AttendanceListState extends State<_AttendanceList> {
-  final Map<String, String> _attendance = {};
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocConsumer<MatronBloc, MatronState>(
-      listener: (context, state) {
-        if (state is DormitoryStudentsLoaded) {
-          for (var s in state.students) {
-            _attendance[s.id] = s.status ?? 'Present';
-          }
-        }
-      },
-      buildWhen: (previous, current) => current is DormitoryStudentsLoaded || current is MatronLoading,
-      builder: (context, state) {
-        if (state is MatronLoading) return const Center(child: CircularProgressIndicator());
-        if (state is DormitoryStudentsLoaded) {
-          return ListView.builder(
-            itemCount: state.students.length,
-            itemBuilder: (context, index) {
-              final student = state.students[index];
-              final currentStatus = _attendance[student.id] ?? 'Present';
-
-              return ListTile(
-                title: Text(student.name),
-                subtitle: Text(student.bedNumber != null ? 'Bed: ${student.bedNumber}' : 'No Bed Assigned'),
-                trailing: SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'Present', label: Text('P'), icon: Icon(Icons.check, size: 16)),
-                    ButtonSegment(value: 'Absent', label: Text('A'), icon: Icon(Icons.close, size: 16)),
-                    ButtonSegment(value: 'Leave', label: Text('L'), icon: Icon(Icons.exit_to_app, size: 16)),
-                  ],
-                  selected: {currentStatus},
-                  onSelectionChanged: (val) {
-                    setState(() => _attendance[student.id] = val.first);
-                    // Pass to parent or store in a way _SubmitBar can access
-                    _AttendanceProvider.of(context).update(student.id, val.first);
-                  },
-                ),
-              );
-            },
-          );
-        }
-        return const SizedBox.shrink();
-      },
-    );
-  }
-}
-
-// Simple InheritedWidget to share attendance state with the submit bar
-class _AttendanceProvider extends InheritedWidget {
-  final Function(String, String) update;
-  final Map<String, String> attendance;
-
-  const _AttendanceProvider({
-    required this.update,
-    required this.attendance,
-    required super.child,
-  });
-
-  static _AttendanceProvider of(BuildContext context) {
-    return context.dependOnInheritedWidgetOfExactType<_AttendanceProvider>()!;
-  }
-
-  @override
-  bool updateShouldNotify(covariant InheritedWidget oldWidget) => true;
-}
-
-class _SubmitBar extends StatefulWidget {
-  final String dormitoryId;
-  final String type;
-  const _SubmitBar({required this.dormitoryId, required this.type});
-
-  @override
-  State<_SubmitBar> createState() => _SubmitBarState();
-}
-
-class _SubmitBarState extends State<_SubmitBar> {
-  final Map<String, String> _attendance = {};
-
-  void _update(String id, String status) {
-    _attendance[id] = status;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _AttendanceProvider(
-      update: _update,
-      attendance: _attendance,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -5))],
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: FilledButton(
+          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+          onPressed: selectedDormId == null ? null : () => _saveAttendance(context),
+          child: const Text('Save Attendance'),
         ),
-        child: SafeArea(
-          child: BlocConsumer<MatronBloc, MatronState>(
-            listener: (context, state) {
-              if (state is MatronSuccess) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
-                Navigator.pop(context);
-              }
-            },
+      ),
+    );
+  }
+
+  Widget _buildFilters() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          BlocBuilder<MatronBloc, MatronState>(
+            buildWhen: (p, c) => c is DormitoriesLoaded,
             builder: (context, state) {
-              return SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: state is MatronLoading
-                      ? null
-                      : () {
-                          context.read<MatronBloc>().add(SubmitAttendanceRequested(
-                                dormitoryId: widget.dormitoryId,
-                                type: widget.type.toLowerCase(),
-                                attendance: _attendance,
-                              ));
-                        },
-                  child: state is MatronLoading ? const CircularProgressIndicator() : const Text('Submit Roll Call'),
-                ),
+              List<Dormitory> dorms = [];
+              if (state is DormitoriesLoaded) {
+                dorms = state.dormitories;
+              }
+              return DropdownButtonFormField<String>(
+                initialValue: selectedDormId,
+                decoration: const InputDecoration(labelText: 'Dormitory', border: OutlineInputBorder()),
+                items: dorms.map((d) => DropdownMenuItem(value: d.id, child: Text(d.name))).toList(),
+                onChanged: (val) {
+                  setState(() {
+                    selectedDormId = val;
+                    attendanceMap.clear();
+                  });
+                  _loadAttendance();
+                },
               );
             },
           ),
-        ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  initialValue: selectedType,
+                  decoration: const InputDecoration(labelText: 'Session', border: OutlineInputBorder()),
+                  items: _kAttendanceTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                  onChanged: (val) {
+                    setState(() => selectedType = val!);
+                    _loadAttendance();
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate,
+                      firstDate: DateTime.now().subtract(const Duration(days: 90)),
+                      lastDate: DateTime.now(),
+                    );
+                    if (date != null) {
+                      setState(() => selectedDate = date);
+                      _loadAttendance();
+                    }
+                  },
+                  icon: const Icon(Icons.calendar_today),
+                  label: Text('${selectedDate.day}/${selectedDate.month}/${selectedDate.year}'),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
+  }
+
+  void _saveAttendance(BuildContext context) {
+    final state = context.read<MatronBloc>().state;
+    if (state is BoardingStudentsLoaded) {
+      final recordedBy = _currentUserName(context);
+      final records = state.students.map((s) {
+        return BoardingAttendance(
+          id: '',
+          studentId: s.id,
+          studentName: s.name,
+          dormitoryId: selectedDormId!,
+          date: selectedDate,
+          type: selectedType,
+          status: attendanceMap[s.id] ?? 'Present',
+          recordedBy: recordedBy,
+        );
+      }).toList();
+
+      context.read<MatronBloc>().add(BulkRecordAttendanceEvent(records));
+    }
   }
 }

@@ -74,13 +74,24 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
               icon: const Icon(Icons.search),
               onPressed: () => context.push('/staff/catering/lookup'),
               tooltip: 'Meal Eligibility Lookup',
+              style: IconButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+              ),
             ),
+            const SizedBox(width: 8),
             IconButton(
               icon: const Icon(Icons.qr_code_scanner),
               onPressed: () => _scanForMeal(context),
               tooltip: 'Verify Student Meal',
+              style: IconButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+              ),
             ),
-            const NotificationBellButton(),
+            const SizedBox(width: 8),
+            NotificationBellButton(
+              backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+            ),
+            const SizedBox(width: 8),
           ],
         ),
         body: RefreshIndicator(

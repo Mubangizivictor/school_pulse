@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:school_pulse/features/shared/boarding/dorm_screens.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/design_system/searchable_picker.dart';
 import 'package:school_pulse/features/patron/domain/entities/patron_entities.dart';
 import 'package:school_pulse/features/patron/presentation/bloc/patron_bloc.dart';
 import 'package:school_pulse/features/patron/presentation/bloc/patron_event.dart';
 import 'package:school_pulse/features/patron/presentation/bloc/patron_state.dart';
-import 'package:school_pulse/features/patron/presentation/screens/bed_management_screen.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/features/shared/boarding/dorm_widgets.dart';
 
 class DormitoryManagementScreen extends StatefulWidget {
   const DormitoryManagementScreen({super.key});
@@ -23,11 +27,30 @@ class _DormitoryManagementScreenState extends State<DormitoryManagementScreen> {
     context.read<PatronBloc>().add(WatchUnallocatedStudents());
   }
 
+  final _search = TextEditingController();
+  String _query = '';
+  DormFilter _filter = DormFilter.all;
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Dormitory Management')),
+      appBar: AppBar(
+        title: const Text('Dormitory Management'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: 'Transfer History',
+            onPressed: () => context.push('/staff/patron/dorms/history'),
+          ),
+        ],
+      ),
       body: BlocConsumer<PatronBloc, PatronState>(
         listener: (context, state) {
           if (state is PatronActionSuccess) {
@@ -40,199 +63,194 @@ class _DormitoryManagementScreenState extends State<DormitoryManagementScreen> {
         },
         buildWhen: (previous, current) => current is DormitoriesLoaded || current is PatronLoading,
         builder: (context, state) {
-          if (state is DormitoriesLoaded) {
-            final dorms = state.dormitories;
-            if (dorms.isEmpty) {
-              return const EmptyState(
-                icon: Icons.hotel_outlined,
-                title: 'No Dormitories Yet',
-                message: 'Tap + to add the first boys\' dormitory.',
-              );
-            }
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: dorms.length,
-              itemBuilder: (context, index) => _DormCard(dorm: dorms[index]),
-            );
+          if (state is! DormitoriesLoaded) {
+            return const Center(child: CircularProgressIndicator());
           }
-          return const Center(child: CircularProgressIndicator());
+
+          final all = state.dormitories;
+          final dorms = all.where((d) {
+            if (_query.isNotEmpty &&
+                !d.name.toLowerCase().contains(_query.toLowerCase())) {
+              return false;
+            }
+            final ratio = d.capacity == 0 ? 0.0 : d.occupantCount / d.capacity;
+            return switch (_filter) {
+              DormFilter.all => true,
+              DormFilter.available => d.occupantCount < d.capacity,
+              DormFilter.nearlyFull => ratio >= 0.85 && ratio < 1.0,
+              DormFilter.full => d.occupantCount >= d.capacity,
+              DormFilter.unassignedLeadership =>
+                d.roomLeaderName == null || d.dormPrefectName == null,
+            };
+          }).toList();
+
+          final totalCapacity = all.fold<int>(0, (sum, d) => sum + d.capacity);
+          final totalOccupancy = all.fold<int>(0, (sum, d) => sum + d.occupantCount);
+
+          return ListView(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            children: [
+              DormSearchBar(
+                controller: _search,
+                onChanged: (v) => setState(() => _query = v),
+                onFilterPressed: () async {
+                  final picked = await DormFilterSheet.show(context, _filter);
+                  if (picked != null && mounted) {
+                    setState(() => _filter = picked);
+                  }
+                },
+              ),
+              const SizedBox(height: AppSpacing.l),
+              Row(
+                children: [
+                  Expanded(
+                    child: DormStatTile(
+                      label: 'Total Dormitories',
+                      value: '${all.length}',
+                      icon: Icons.apartment_outlined,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.m),
+                  Expanded(
+                    child: DormStatTile(
+                      label: 'Total Capacity',
+                      value: '$totalCapacity',
+                      icon: Icons.groups_outlined,
+                      color: Colors.orange,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.m),
+              Row(
+                children: [
+                  Expanded(
+                    child: DormStatTile(
+                      label: 'Total Occupancy',
+                      value: '$totalOccupancy',
+                      icon: Icons.person_outline,
+                      color: semanticColors.error,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.m),
+                  Expanded(
+                    child: DormStatTile(
+                      label: 'Availability',
+                      value: '${(totalCapacity - totalOccupancy).clamp(0, totalCapacity)}',
+                      icon: Icons.event_available_outlined,
+                      color: semanticColors.success,
+                    ),
+                  ),
+                ],
+              ),
+              if (_filter != DormFilter.all) ...[
+                const SizedBox(height: AppSpacing.l),
+                Row(
+                  children: [
+                    Chip(
+                      label: Text(_filter.label),
+                      avatar: Icon(_filter.icon, size: 16),
+                      onDeleted: () =>
+                          setState(() => _filter = DormFilter.all),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: AppSpacing.x2l),
+              if (dorms.isEmpty)
+                EmptyState(
+                  icon: Icons.hotel_outlined,
+                  title: _filter == DormFilter.all && _query.isEmpty
+                      ? 'No Dormitories Yet'
+                      : 'No Matches',
+                  message: _filter == DormFilter.all && _query.isEmpty
+                      ? 'Tap + to add the first dormitory.'
+                      : 'No dormitory matches the current search or filter.',
+                )
+              else
+                for (final dorm in dorms)
+                  DormitoryCard(
+                    name: dorm.name,
+                    occupantCount: dorm.occupantCount,
+                    capacity: dorm.capacity,
+                    roomLeaderName: dorm.roomLeaderName,
+                    dormPrefectName: dorm.dormPrefectName,
+                    accent: Theme.of(context).colorScheme.primary,
+                    onBeds: () => context.push('/staff/patron/dorms/beds', extra: dorm),
+                    onStudents: () => _showAllocationSheet(context, dorm),
+                    onLeadership: () => _showLeadershipSheet(context, dorm),
+                    onMore: () => _showDormMenu(context, dorm, semanticColors),
+                  ),
+            ],
+          );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddDormDialog(context),
-        icon: const Icon(Icons.add),
-        label: const Text('Add Dormitory'),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _openDormForm(context),
+        child: const Icon(Icons.add),
       ),
     );
   }
 
-  void _showAddDormDialog(BuildContext context, {Dormitory? dorm}) {
+  /// Overflow menu for the actions that no longer fit on the card face.
+  void _showDormMenu(
+    BuildContext context,
+    Dormitory dorm,
+    SemanticColors semanticColors,
+  ) {
     final bloc = context.read<PatronBloc>();
-    final nameController = TextEditingController(text: dorm?.name);
-    final capacityController = TextEditingController(text: dorm?.capacity.toString());
-    final locationController = TextEditingController(text: dorm?.location);
-
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(dorm == null ? 'Add Dormitory' : 'Edit Dormitory'),
-        content: Column(
+      builder: (sheetContext) => SafeArea(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Dormitory Name'),
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('Edit Dormitory'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _openDormForm(context, dorm: dorm);
+              },
             ),
-            TextField(
-              controller: capacityController,
-              decoration: const InputDecoration(labelText: 'Capacity'),
-              keyboardType: TextInputType.number,
+            ListTile(
+              leading: const Icon(Icons.workspace_premium_outlined),
+              title: const Text('Set Dorm Leadership'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                context.push(
+                  '/staff/patron/dorms/leadership',
+                  extra: dorm,
+                );
+              },
             ),
-            TextField(
-              controller: locationController,
-              decoration: const InputDecoration(labelText: 'Location (optional)'),
+            ListTile(
+              leading: const Icon(Icons.history),
+              title: const Text('Transfer History'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                context.push('/staff/patron/dorms/history');
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.delete_outline, color: semanticColors.error),
+              title: Text('Delete', style: TextStyle(color: semanticColors.error)),
+              onTap: () async {
+                Navigator.pop(sheetContext);
+                final confirmed = await confirmActionDialog(
+                  context,
+                  title: 'Delete Dormitory',
+                  message: 'Are you sure you want to delete ${dorm.name}?',
+                  isDestructive: true,
+                );
+                if (confirmed == true) {
+                  bloc.add(DeleteDormitoryEvent(dorm.id));
+                }
+              },
             ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () {
-              final newDorm = Dormitory(
-                id: dorm?.id ?? '',
-                name: nameController.text.trim(),
-                capacity: int.tryParse(capacityController.text) ?? 0,
-                occupantCount: dorm?.occupantCount ?? 0,
-                roomLeaderId: dorm?.roomLeaderId,
-                roomLeaderName: dorm?.roomLeaderName,
-                dormPrefectId: dorm?.dormPrefectId,
-                dormPrefectName: dorm?.dormPrefectName,
-                location: locationController.text.trim().isEmpty ? null : locationController.text.trim(),
-              );
-              if (dorm == null) {
-                final id = DateTime.now().millisecondsSinceEpoch.toString();
-                bloc.add(AddDormitoryEvent(
-                  Dormitory(
-                    id: id,
-                    name: newDorm.name,
-                    capacity: newDorm.capacity,
-                    occupantCount: 0,
-                    location: newDorm.location,
-                  ),
-                ));
-              } else {
-                bloc.add(UpdateDormitoryEvent(newDorm));
-              }
-              Navigator.pop(dialogContext);
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DormCard extends StatelessWidget {
-  final Dormitory dorm;
-  const _DormCard({required this.dorm});
-
-  @override
-  Widget build(BuildContext context) {
-    final occupancy = dorm.capacity > 0 ? dorm.occupantCount / dorm.capacity : 0.0;
-    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
-
-    return AppCard(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(dorm.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                    if (dorm.location != null)
-                      Text(dorm.location!, style: Theme.of(context).textTheme.bodySmall),
-                  ],
-                ),
-              ),
-              StatusBadge(
-                label: '${dorm.occupantCount}/${dorm.capacity}',
-                color: dorm.occupantCount >= dorm.capacity ? semanticColors.error : semanticColors.success,
-              ),
-              IconButton(
-                icon: const Icon(Icons.edit_outlined),
-                onPressed: () => (context.findAncestorStateOfType<_DormitoryManagementScreenState>())
-                    ?._showAddDormDialog(context, dorm: dorm),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: occupancy,
-              minHeight: 8,
-              valueColor: AlwaysStoppedAnimation(occupancy >= 1.0 ? semanticColors.error : semanticColors.success),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              const Icon(Icons.star_border, size: 16, color: Colors.grey),
-              const SizedBox(width: 6),
-              Expanded(child: Text(dorm.roomLeaderName ?? 'No Room Leader', style: Theme.of(context).textTheme.bodySmall)),
-              TextButton(
-                onPressed: () => _showLeadershipSheet(context, dorm),
-                child: const Text('Set Leadership'),
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              const Icon(Icons.military_tech_outlined, size: 16, color: Colors.grey),
-              const SizedBox(width: 6),
-              Expanded(child: Text(dorm.dormPrefectName ?? 'No Dorm Prefect', style: Theme.of(context).textTheme.bodySmall)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          OverflowBar(
-            alignment: MainAxisAlignment.end,
-            children: [
-              TextButton.icon(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => BedManagementScreen(dormitory: dorm)),
-                ),
-                icon: const Icon(Icons.bed_outlined),
-                label: const Text('Beds'),
-              ),
-              TextButton(
-                onPressed: () => _showAllocationSheet(context, dorm),
-                child: const Text('Allocate Student'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  final confirmed = await confirmActionDialog(
-                    context,
-                    title: 'Delete Dormitory',
-                    message: 'Are you sure you want to delete ${dorm.name}?',
-                    isDestructive: true,
-                  );
-                  if (confirmed == true && context.mounted) {
-                    context.read<PatronBloc>().add(DeleteDormitoryEvent(dorm.id));
-                  }
-                },
-                child: Text('Delete', style: TextStyle(color: semanticColors.error)),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }
@@ -263,6 +281,39 @@ class _DormCard extends StatelessWidget {
         );
       },
     );
+  }
+
+  /// Opens the full-page dormitory form and applies the result through the
+  /// same add/update events the old dialog used.
+  Future<void> _openDormForm(BuildContext context, {Dormitory? dorm}) async {
+    final bloc = context.read<PatronBloc>();
+    final result = await context.push<DormitoryFormResult>(
+      '/staff/patron/dorms/new',
+      extra: dorm,
+    );
+    if (result == null) return;
+
+    if (dorm == null) {
+      bloc.add(AddDormitoryEvent(Dormitory(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: result.name,
+        capacity: result.capacity,
+        occupantCount: 0,
+        location: result.location,
+      )));
+    } else {
+      bloc.add(UpdateDormitoryEvent(Dormitory(
+        id: dorm.id,
+        name: result.name,
+        capacity: result.capacity,
+        occupantCount: dorm.occupantCount,
+        roomLeaderId: dorm.roomLeaderId,
+        roomLeaderName: dorm.roomLeaderName,
+        dormPrefectId: dorm.dormPrefectId,
+        dormPrefectName: dorm.dormPrefectName,
+        location: result.location,
+      )));
+    }
   }
 }
 
@@ -303,18 +354,22 @@ class _LeadershipSheetState extends State<_LeadershipSheet> {
             children: [
               Text('Dorm Leadership', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: _roomLeaderId,
-                decoration: const InputDecoration(labelText: 'Room Leader', border: OutlineInputBorder()),
-                items: students.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
-                onChanged: (val) => setState(() => _roomLeaderId = val),
+              SearchablePickerField<BoardingStudent>(
+                label: 'Room Leader',
+                value: students.where((s) => s.id == _roomLeaderId).firstOrNull,
+                items: students,
+                labelBuilder: (s) => s.name,
+                subtitleBuilder: (s) => s.studentClass,
+                onChanged: (s) => setState(() => _roomLeaderId = s.id),
               ),
               const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: _dormPrefectId,
-                decoration: const InputDecoration(labelText: 'Dorm Prefect', border: OutlineInputBorder()),
-                items: students.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
-                onChanged: (val) => setState(() => _dormPrefectId = val),
+              SearchablePickerField<BoardingStudent>(
+                label: 'Dorm Prefect',
+                value: students.where((s) => s.id == _dormPrefectId).firstOrNull,
+                items: students,
+                labelBuilder: (s) => s.name,
+                subtitleBuilder: (s) => s.studentClass,
+                onChanged: (s) => setState(() => _dormPrefectId = s.id),
               ),
               const SizedBox(height: 24),
               SizedBox(
@@ -380,10 +435,14 @@ class _AllocationSheetState extends State<_AllocationSheet> {
             children: [
               Text('Allocate to ${widget.dorm.name}', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 24),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: 'Select Student', border: OutlineInputBorder()),
-                items: students.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
-                onChanged: (val) => setState(() => _selectedStudentId = val),
+              SearchablePickerField<BoardingStudent>(
+                label: 'Select Student',
+                value: students.where((s) => s.id == _selectedStudentId).firstOrNull,
+                items: students,
+                labelBuilder: (s) => s.name,
+                subtitleBuilder: (s) => s.studentClass,
+                searchHint: 'Search by name or class...',
+                onChanged: (s) => setState(() => _selectedStudentId = s.id),
               ),
               const SizedBox(height: 16),
               TextField(

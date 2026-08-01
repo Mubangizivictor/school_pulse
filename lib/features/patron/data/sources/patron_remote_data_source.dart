@@ -175,16 +175,30 @@ class PatronRemoteDataSourceImpl implements PatronRemoteDataSource {
         QuerySnapshot<Map<String, dynamic>> welfare,
       ) {
         int present = 0;
+        int absent = 0;
         int onLeave = 0;
+        int inClinic = 0;
+        int missing = 0;
         for (final doc in students.docs) {
           final status = doc.data()['boardingStatus'] ?? 'Present';
-          if (status == 'Present') present++;
-          if (status == 'Leave') onLeave++;
+          switch (status) {
+            case 'Present':
+              present++;
+              break;
+            case 'Absent':
+              absent++;
+              break;
+            case 'Leave':
+              onLeave++;
+              break;
+            case 'Sick':
+              inClinic++;
+              break;
+            case 'Missing':
+              missing++;
+              break;
+          }
         }
-        final missing = students.docs.where((doc) {
-          final status = doc.data()['boardingStatus'] ?? 'Present';
-          return status == 'Missing';
-        }).length;
 
         int totalBeds = 0;
         int occupiedBeds = 0;
@@ -208,7 +222,9 @@ class PatronRemoteDataSourceImpl implements PatronRemoteDataSource {
         return PatronDashboardOverview(
           totalStudents: students.docs.length,
           studentsPresent: present,
+          studentsAbsent: absent,
           studentsOnLeave: onLeave,
+          studentsInClinic: inClinic,
           missingStudentCount: missing,
           totalBeds: totalBeds,
           occupiedBeds: occupiedBeds,
@@ -307,19 +323,51 @@ class PatronRemoteDataSourceImpl implements PatronRemoteDataSource {
     String? roomLeaderId,
     String? dormPrefectId,
   }) async {
+    final dormDoc = await firestore.collection('dormitories').doc(dormitoryId).get();
+    final dormName = dormDoc.data()?['name'] ?? '';
+    final previousRoomLeaderId = dormDoc.data()?['roomLeaderId'] as String?;
+    final previousDormPrefectId = dormDoc.data()?['dormPrefectId'] as String?;
+
     final update = <String, dynamic>{};
-    if (roomLeaderId != null) {
+    final batch = firestore.batch();
+
+    if (roomLeaderId != null && roomLeaderId != previousRoomLeaderId) {
       final doc = await firestore.collection('students').doc(roomLeaderId).get();
       update['roomLeaderId'] = roomLeaderId;
       update['roomLeaderName'] = doc.data()?['fullName'] ?? doc.data()?['name'];
+      if (previousRoomLeaderId != null) {
+        batch.update(firestore.collection('students').doc(previousRoomLeaderId), {
+          'dormLeadershipRole': null,
+          'dormLeadershipDormId': null,
+          'dormLeadershipDormName': null,
+        });
+      }
+      batch.update(firestore.collection('students').doc(roomLeaderId), {
+        'dormLeadershipRole': 'Room Leader',
+        'dormLeadershipDormId': dormitoryId,
+        'dormLeadershipDormName': dormName,
+      });
     }
-    if (dormPrefectId != null) {
+    if (dormPrefectId != null && dormPrefectId != previousDormPrefectId) {
       final doc = await firestore.collection('students').doc(dormPrefectId).get();
       update['dormPrefectId'] = dormPrefectId;
       update['dormPrefectName'] = doc.data()?['fullName'] ?? doc.data()?['name'];
+      if (previousDormPrefectId != null) {
+        batch.update(firestore.collection('students').doc(previousDormPrefectId), {
+          'dormLeadershipRole': null,
+          'dormLeadershipDormId': null,
+          'dormLeadershipDormName': null,
+        });
+      }
+      batch.update(firestore.collection('students').doc(dormPrefectId), {
+        'dormLeadershipRole': 'Dorm Prefect',
+        'dormLeadershipDormId': dormitoryId,
+        'dormLeadershipDormName': dormName,
+      });
     }
     if (update.isEmpty) return;
-    await firestore.collection('dormitories').doc(dormitoryId).update(update);
+    batch.update(firestore.collection('dormitories').doc(dormitoryId), update);
+    await batch.commit();
     await auditRepository.logAction(
       title: 'Dorm leadership updated',
       description: 'Leadership roles updated for dormitory $dormitoryId.',

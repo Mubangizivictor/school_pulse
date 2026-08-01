@@ -8,6 +8,7 @@ import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_event.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_state.dart';
 import 'package:school_pulse/injection_container.dart';
+import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 import '../../domain/entities/academic_dashboard_stats.dart';
 
 class DeanDashboardScreen extends StatelessWidget {
@@ -19,15 +20,24 @@ class DeanDashboardScreen extends StatelessWidget {
       create: (context) => sl<DeanBloc>()..add(AcademicDashboardRequested()),
       child: Scaffold(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          actions: [
+            NotificationBellButton(
+              backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+            ),
+            const SizedBox(width: 8),
+          ],
+        ),
         body: CustomScrollView(
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 48),
                     _buildGreeting(context),
                     const SizedBox(height: 24),
                     _buildActionGrid(context),

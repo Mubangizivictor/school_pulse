@@ -14,6 +14,16 @@ class StaffMoreScreen extends StatelessWidget {
   static const _teacherRoles = [UserRole.classTeacher, UserRole.subjectTeacher];
   static const _boardingRoles = [UserRole.boardingPatron, UserRole.boardingMatron];
 
+  /// Matron and Patron share the same boarding screens against different
+  /// wings, so only the route prefix differs.
+  static String _boardingRoot(AuthState state) {
+    if (state is AuthAuthenticated &&
+        state.user.roles.contains(UserRole.boardingPatron)) {
+      return '/staff/patron';
+    }
+    return '/staff/matron';
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthBloc>().state;
@@ -63,6 +73,29 @@ class StaffMoreScreen extends StatelessWidget {
                       MaterialPageRoute(builder: (context) => const TeacherLibraryScreen()),
                     ),
                   ),
+                // Boarding modules that the bottom nav has no room for.
+                if (isBoardingStaff) ...[
+                  _MenuTile(
+                    icon: Icons.favorite_outline,
+                    title: 'Student Welfare',
+                    onTap: () => context.push('${_boardingRoot(authState)}/welfare'),
+                  ),
+                  _MenuTile(
+                    icon: Icons.exit_to_app,
+                    title: 'Leave Requests',
+                    onTap: () => context.push('${_boardingRoot(authState)}/leave'),
+                  ),
+                  _MenuTile(
+                    icon: Icons.gavel_outlined,
+                    title: 'Discipline',
+                    onTap: () => context.push('${_boardingRoot(authState)}/discipline'),
+                  ),
+                  _MenuTile(
+                    icon: Icons.campaign_outlined,
+                    title: 'Announcements',
+                    onTap: () => context.push('${_boardingRoot(authState)}/communication'),
+                  ),
+                ],
                 _MenuTile(
                   icon: Icons.event_note_outlined,
                   title: 'School Calendar',

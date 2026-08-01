@@ -8,79 +8,82 @@ class TaskTypeSelectionScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Select Task Type'),
+        title: const Text('Task Type'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.close),
           onPressed: () => Navigator.pop(context),
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         children: [
-          _buildTypeSection(context, 'Attendance', [
-            'Morning Roll Call',
-            'Evening Roll Call',
-            'Meal Attendance',
-            'Church/Assembly Attendance',
-          ]),
-          const SizedBox(height: 24),
-          _buildTypeSection(context, 'Hygiene & Environment', [
-            'General Cleaning',
-            'Dormitory Inspection',
-            'Compound Maintenance',
-            'Sanitation Check',
-          ]),
-          const SizedBox(height: 24),
-          _buildTypeSection(context, 'Student Welfare', [
-            'Sick Student Follow-up',
-            'Disciplinary Action',
-            'Pocket Money Distribution',
-            'Counseling Session',
-          ]),
-          const SizedBox(height: 24),
-          _buildTypeSection(context, 'Administrative', [
-            'Staff Meeting',
-            'Report Submission',
-            'Inventory Check',
-            'Leave Request Approval',
-          ]),
+          _buildCategoryItem(
+            context,
+            'Attendance & Roll Call',
+            'Morning, Evening, or Special event attendance',
+            Icons.fact_check_outlined,
+            Colors.green,
+          ),
+          _buildCategoryItem(
+            context,
+            'Hygiene & Inspection',
+            'Dormitory cleaning and sanitation checks',
+            Icons.cleaning_services_outlined,
+            Colors.purple,
+          ),
+          _buildCategoryItem(
+            context,
+            'Student Welfare',
+            'Sick bay follow-ups and student needs',
+            Icons.favorite_border,
+            Colors.orange,
+          ),
+          _buildCategoryItem(
+            context,
+            'Academic Tasks',
+            'Marking, lesson plans, and reports',
+            Icons.menu_book_outlined,
+            Colors.blue,
+          ),
+          _buildCategoryItem(
+            context,
+            'Administrative',
+            'Meetings, inventory and system tasks',
+            Icons.admin_panel_settings_outlined,
+            Colors.grey,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildTypeSection(BuildContext context, String title, List<String> items) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: items.map((item) => _buildTypeChip(context, item)).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTypeChip(BuildContext context, String label) {
-    return InkWell(
+  Widget _buildCategoryItem(
+    BuildContext context,
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+  ) {
+    return ListTile(
       onTap: () => Navigator.pop(context),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      leading: Container(
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-          borderRadius: BorderRadius.circular(20),
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(10),
         ),
-        child: Text(
-          label,
-          style: const TextStyle(fontSize: 13),
-        ),
+        child: Icon(icon, color: color, size: 24),
       ),
+      title: Text(
+        title,
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(color: Theme.of(context).colorScheme.outline, fontSize: 12),
+      ),
+      trailing: const Icon(Icons.chevron_right, size: 20),
     );
   }
 }

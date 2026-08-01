@@ -13,4 +13,8 @@ class AppSpacing {
   static const double x6l = 48.0;
   static const double x7l = 64.0;
   static const double x8l = 80.0;
+  static const double x9l = 96.0;
+  static const double x10l = 120.0;
+  static const double x11l = 140.0;
+  static const double x12l = 160.0;
 }

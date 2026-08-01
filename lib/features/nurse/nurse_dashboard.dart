@@ -18,6 +18,7 @@ import 'package:school_pulse/features/health/presentation/bloc/health_state.dart
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 
+import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
 import 'package:school_pulse/features/student/domain/entities/parent_access_code.dart';
@@ -96,31 +97,6 @@ class _NurseDashboardScreenState extends State<NurseDashboardScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('School Health Portal'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.search),
-              tooltip: 'Student Health Lookup',
-              onPressed: () => context.push('/staff/nurse/lookup'),
-            ),
-            IconButton(
-              icon: const Icon(Icons.message_outlined),
-              tooltip: 'Messages',
-              onPressed: () => context.push('/staff/messages'),
-            ),
-            IconButton(
-              icon: const Icon(Icons.support_agent_outlined),
-              tooltip: 'Contact Admin / Store',
-              onPressed: () => _showAdminContactsSheet(context),
-            ),
-            IconButton(
-              icon: const Icon(Icons.inventory_2_outlined),
-              tooltip: 'Medical Inventory',
-              onPressed: () => context.push('/staff/nurse/inventory'),
-            ),
-          ],
-        ),
         body: BlocBuilder<HealthBloc, HealthState>(
           builder: (context, state) {
             if (_schoolId.isEmpty) {
@@ -144,6 +120,9 @@ class _NurseDashboardScreenState extends State<NurseDashboardScreen> {
                         record.category == 'Sick',
                   )
                   .toList();
+              final authState = context.watch<AuthBloc>().state;
+              final userName = authState is AuthAuthenticated ? authState.user.name : 'User';
+
               return RefreshIndicator(
                 onRefresh: () async {
                   context.read<HealthBloc>().add(
@@ -151,10 +130,51 @@ class _NurseDashboardScreenState extends State<NurseDashboardScreen> {
                   );
                 },
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 15, 16, 16),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                   children: [
+                    const SizedBox(height: 48), // Space for status bar
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Welcome back,',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Theme.of(context).colorScheme.outline,
+                                    ),
+                              ),
+                              Text(
+                                userName,
+                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -0.5,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.chat_bubble_outline_rounded),
+                              onPressed: () => context.push('/staff/messages'),
+                              tooltip: 'Messages',
+                              style: IconButton.styleFrom(
+                                backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const NotificationBellButton(),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
                     _buildStatsGrid(state, semanticColors),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
                     _buildQuickActions(context),
                     const SizedBox(height: 24),
                     if (state.todayEmergencies.isNotEmpty) ...[
@@ -323,28 +343,43 @@ class _NurseDashboardScreenState extends State<NurseDashboardScreen> {
   }
 
   Widget _buildQuickActions(BuildContext context) {
-    return Row(
+    return GridView.count(
+      crossAxisCount: 3,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 16,
+      crossAxisSpacing: 8,
+      childAspectRatio: 0.9,
       children: [
-        Expanded(
-          child: _QuickActionButton(
-            icon: Icons.person_search_outlined,
-            label: 'Student Health',
-            onTap: () => _showStudentSearch(context),
-          ),
+        _QuickActionButton(
+          icon: Icons.person_search_outlined,
+          label: 'Student Health',
+          onTap: () => _showStudentSearch(context),
         ),
-        Expanded(
-          child: _QuickActionButton(
-            icon: Icons.report_problem_outlined,
-            label: 'Report Incident',
-            onTap: () => _showEmergencyDialog(context),
-          ),
+        _QuickActionButton(
+          icon: Icons.report_problem_outlined,
+          label: 'Emergency',
+          onTap: () => _showEmergencyDialog(context),
         ),
-        Expanded(
-          child: _QuickActionButton(
-            icon: Icons.history_outlined,
-            label: 'All History',
-            onTap: () => context.push('/staff/nurse/history'),
-          ),
+        _QuickActionButton(
+          icon: Icons.history_outlined,
+          label: 'All History',
+          onTap: () => context.push('/staff/nurse/history'),
+        ),
+        _QuickActionButton(
+          icon: Icons.inventory_2_outlined,
+          label: 'Inventory',
+          onTap: () => context.push('/staff/nurse/inventory'),
+        ),
+        _QuickActionButton(
+          icon: Icons.message_outlined,
+          label: 'Messages',
+          onTap: () => context.push('/staff/messages'),
+        ),
+        _QuickActionButton(
+          icon: Icons.support_agent_outlined,
+          label: 'Support',
+          onTap: () => _showAdminContactsSheet(context),
         ),
       ],
     );

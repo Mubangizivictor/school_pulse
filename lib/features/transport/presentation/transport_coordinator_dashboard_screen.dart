@@ -88,9 +88,16 @@ class _TransportCoordinatorDashboardScreenState extends State<TransportCoordinat
           IconButton(
             icon: const Icon(Icons.search),
             tooltip: 'Student Route Lookup',
+            style: IconButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+            ),
             onPressed: () => context.push('/staff/transport/lookup'),
           ),
-          const NotificationBellButton(),
+          const SizedBox(width: 8),
+          NotificationBellButton(
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: BlocListener<TransportCoordinatorBloc, TransportCoordinatorState>(

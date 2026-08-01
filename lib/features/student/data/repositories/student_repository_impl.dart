@@ -2,7 +2,7 @@ import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
 import '../../../teacher/domain/entities/homework.dart';
 import '../../../matron/domain/entities/boarding_entities.dart';
-import '../../../matron/data/datasources/matron_remote_data_source.dart';
+import '../../../matron/data/sources/matron_remote_data_source.dart';
 import '../../domain/entities/student.dart';
 import '../../domain/entities/admission_application.dart';
 import '../../domain/entities/student_enums.dart';

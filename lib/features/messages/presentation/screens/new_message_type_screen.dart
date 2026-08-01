@@ -9,54 +9,84 @@ class NewMessageTypeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
+      backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
       appBar: AppBar(
-        title: const Text('New Message'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.close, color: AppColors.textPrimary(context)),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text('New Message', style: AppTypography.titleLarge),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.m),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
         children: [
+          const SizedBox(height: AppSpacing.s),
           _TypeTile(
-            icon: Icons.person_outline,
+            icon: Icons.person_add_outlined,
             title: 'New Chat',
             subtitle: 'Start a one-on-one conversation',
-            color: Colors.blue,
+            color: AppColors.electricBlue,
             onTap: () => context.push('/messages/new/contacts'),
           ),
           _TypeTile(
-            icon: Icons.group_outlined,
+            icon: Icons.group_add_outlined,
             title: 'New Group',
             subtitle: 'Create a group conversation',
-            color: Colors.indigo,
+            color: AppColors.emeraldGreen,
             onTap: () => context.push('/messages/new/group'),
           ),
           _TypeTile(
             icon: Icons.campaign_outlined,
             title: 'New Broadcast',
-            subtitle: 'Send a message to many',
-            color: Colors.blueAccent,
+            subtitle: 'Send a message to many recipients',
+            color: AppColors.goldenYellow,
             onTap: () {},
           ),
           _TypeTile(
             icon: Icons.grid_view_outlined,
             title: 'New Channel',
             subtitle: 'Create an announcement channel',
-            color: Colors.green,
-            onTap: () {},
-          ),
-          _TypeTile(
-            icon: Icons.event_outlined,
-            title: 'New Event Conversation',
-            subtitle: 'Create a conversation for an event',
-            color: Colors.orange,
+            color: AppColors.brightCyan,
             onTap: () {},
           ),
           const SizedBox(height: AppSpacing.l),
-          Text('Frequently Contacted', style: AppTypography.labelLarge.copyWith(color: AppColors.textMuted(context))),
-          const SizedBox(height: AppSpacing.m),
-          _ContactTile(name: 'Mr. Kofi Mensah', role: 'Science Teacher', avatarUrl: null),
-          _ContactTile(name: 'Mrs. Amina', role: 'Class Teacher - P7', avatarUrl: null),
-          _ContactTile(name: 'Finance Office', role: 'School Department', avatarUrl: null),
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: AppSpacing.s),
+            child: Text(
+              'FREQUENTLY CONTACTED',
+              style: AppTypography.labelSmall.copyWith(color: AppColors.textMuted(context), letterSpacing: 1.2),
+            ),
+          ),
+          _ContactTile(
+            name: 'Mr. Kofi Mensah',
+            role: 'Science Teacher',
+            avatarText: 'KM',
+            onTap: () => context.push('/messages/chat/1'),
+          ),
+          _ContactTile(
+            name: 'Mrs. Amina',
+            role: 'Class Teacher - P7',
+            avatarText: 'AM',
+            onTap: () => context.push('/messages/chat/2'),
+          ),
+          _ContactTile(
+            name: 'Finance Office',
+            role: 'School Department',
+            avatarText: 'FO',
+            onTap: () => context.push('/messages/chat/3'),
+          ),
+          _ContactTile(
+            name: 'Nurse Office',
+            role: 'School Health',
+            avatarText: 'NO',
+            onTap: () => context.push('/messages/chat/4'),
+          ),
+          const SizedBox(height: AppSpacing.x3l),
         ],
       ),
     );
@@ -70,20 +100,46 @@ class _TypeTile extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
 
-  const _TypeTile({required this.icon, required this.title, required this.subtitle, required this.color, required this.onTap});
+  const _TypeTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      onTap: onTap,
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-        child: Icon(icon, color: color),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.s),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: BorderRadius.circular(16),
       ),
-      title: Text(title, style: AppTypography.titleMedium),
-      subtitle: Text(subtitle, style: AppTypography.bodySmall),
-      trailing: const Icon(Icons.chevron_right),
+      child: ListTile(
+        onTap: onTap,
+        contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: 4),
+        leading: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: color, size: 24),
+        ),
+        title: Text(
+          title,
+          style: AppTypography.titleSmall.copyWith(
+            color: isDark ? Colors.white : AppColors.textPrimaryLight,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context)),
+        ),
+        trailing: Icon(Icons.chevron_right, color: AppColors.textMuted(context), size: 18),
+      ),
     );
   }
 }
@@ -91,17 +147,44 @@ class _TypeTile extends StatelessWidget {
 class _ContactTile extends StatelessWidget {
   final String name;
   final String role;
-  final String? avatarUrl;
+  final String avatarText;
+  final VoidCallback onTap;
 
-  const _ContactTile({required this.name, required this.role, this.avatarUrl});
+  const _ContactTile({
+    required this.name,
+    required this.role,
+    required this.avatarText,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ListTile(
-      leading: const CircleAvatar(child: Icon(Icons.person)),
-      title: Text(name),
-      subtitle: Text(role),
-      onTap: () {},
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(vertical: 2),
+      leading: CircleAvatar(
+        radius: 24,
+        backgroundColor: isDark ? AppColors.surfaceContainerHigh(context) : Colors.grey[200],
+        child: Text(
+          avatarText,
+          style: TextStyle(
+            color: isDark ? Colors.white : AppColors.deepNavy,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      title: Text(
+        name,
+        style: AppTypography.bodyLarge.copyWith(
+          fontWeight: FontWeight.w600,
+          color: isDark ? Colors.white : AppColors.textPrimaryLight,
+        ),
+      ),
+      subtitle: Text(
+        role,
+        style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context)),
+      ),
     );
   }
 }

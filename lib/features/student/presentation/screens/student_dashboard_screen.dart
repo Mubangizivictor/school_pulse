@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/features/academic/domain/entities/attendance_record.dart';
 import 'package:school_pulse/features/academic/presentation/bloc/academic_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
@@ -23,7 +24,7 @@ import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/notifications/presentation/bloc/notifications_bloc.dart';
 import 'package:school_pulse/features/notifications/presentation/bloc/notifications_event.dart';
 import 'package:school_pulse/features/notifications/presentation/bloc/notifications_state.dart';
-import 'package:school_pulse/core/theme_provider.dart';
+import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 
 class StudentDashboardScreen extends StatefulWidget {
   const StudentDashboardScreen({super.key});
@@ -96,10 +97,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                   appBar: AppBar(
                     title: const Text('Student Portal'),
                     actions: [
-                      IconButton(
-                        icon: const Icon(Icons.notifications_none),
-                        onPressed: () => context.push('/student/notifications'),
-                      ),
+                      const NotificationBellButton(),
+                      const SizedBox(width: 8),
                       Padding(
                         padding: const EdgeInsets.only(right: 16),
                         child: Hero(

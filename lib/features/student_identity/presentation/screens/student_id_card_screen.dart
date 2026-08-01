@@ -234,6 +234,13 @@ class _IdCardPreview extends StatelessWidget {
             _buildInfoRow('Admission No', student.studentId),
             _buildInfoRow('Class', student.className),
             _buildInfoRow('System ID', identity.uniqueSystemId),
+            if (student.dormLeadershipRole != null)
+              _buildInfoRow(
+                'Dorm Role',
+                student.dormLeadershipDormName != null
+                    ? '${student.dormLeadershipRole!} - ${student.dormLeadershipDormName!}'
+                    : student.dormLeadershipRole!,
+              ),
             const SizedBox(height: 24),
             QrImageView(
               data: identity.uniqueSystemId,
