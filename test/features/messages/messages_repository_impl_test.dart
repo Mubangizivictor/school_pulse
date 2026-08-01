@@ -510,6 +510,47 @@ void main() {
     });
   });
 
+  group('reporting', () {
+    test('files a report staff can pick up, tied to the conversation', () async {
+      final id = await repository.startDirectConversation(me: parent, contact: teacherContact);
+
+      await repository.reportConversation(
+        conversationId: id,
+        reporter: parent,
+        reason: 'Inappropriate language',
+        reportedUserId: teacher.id,
+      );
+
+      final reports = await firestore.collection('message_reports').get();
+      final report = reports.docs.single.data();
+      expect(report['conversationId'], id);
+      expect(report['reportedBy'], parent.id);
+      expect(report['reportedUserId'], teacher.id);
+      expect(report['reason'], 'Inappropriate language');
+      expect(report['schoolId'], 'school-1');
+      // Staff triage on this field, so it has to start open.
+      expect(report['status'], 'open');
+    });
+  });
+
+  group('pagination', () {
+    test('the limit caps how far back a chat loads', () async {
+      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
+      for (var i = 0; i < 5; i++) {
+        await repository.sendMessage(conversationId: id, sender: teacher, content: 'Message $i');
+      }
+
+      final firstPage = await repository.watchMessages(id, teacher.id, limit: 3).first;
+      expect(firstPage, hasLength(3));
+      // Oldest first within the window, and the window holds the newest.
+      expect(firstPage.last.content, 'Message 4');
+
+      final wholeChat = await repository.watchMessages(id, teacher.id, limit: 50).first;
+      expect(wholeChat, hasLength(5));
+      expect(wholeChat.first.content, 'Message 0');
+    });
+  });
+
   group('inbox', () {
     test('pinned chats sort above newer ones', () async {
       final older = await repository.startDirectConversation(me: teacher, contact: parentContact);

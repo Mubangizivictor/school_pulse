@@ -13,6 +13,7 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
+import 'package:school_pulse/features/messages/domain/entities/chat_preferences.dart';
 import 'package:school_pulse/features/messages/domain/entities/message_models.dart';
 import 'package:school_pulse/features/messages/presentation/messaging_context.dart';
 import 'package:school_pulse/features/messages/presentation/widgets/attachment_composers.dart';
@@ -45,11 +46,26 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   Duration _recordedFor = Duration.zero;
   Timer? _recordingTicker;
 
+  /// Enter-is-send and font size come from Chat Settings.
+  ChatPreferences _preferences = const ChatPreferences();
+
+  /// Messages held in memory. Grows when the user scrolls back past the
+  /// window, so a long-running class group isn't cut off at the default.
+  int _messageLimit = 60;
+
+  /// Long-press "Select" puts the chat into multi-select; an empty set means
+  /// normal browsing.
+  final Set<String> _selectedIds = {};
+  List<ChatMessage> _visibleMessages = const [];
+
   @override
   void initState() {
     super.initState();
     // The send/mic button swaps on the first character typed.
     _messageController.addListener(_onComposerChanged);
+    ChatPreferences.load().then((preferences) {
+      if (mounted) setState(() => _preferences = preferences);
+    });
   }
 
   @override
@@ -109,8 +125,83 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     });
   }
 
+  void _toggleSelected(String messageId) {
+    setState(() {
+      if (!_selectedIds.remove(messageId)) _selectedIds.add(messageId);
+    });
+  }
+
+  List<ChatMessage> get _selectedMessages =>
+      _visibleMessages.where((m) => _selectedIds.contains(m.id)).toList();
+
+  /// Replaces the chat header while messages are selected, so the actions
+  /// apply to the whole selection rather than one bubble.
+  PreferredSizeWidget _buildSelectionAppBar(
+    bool isDark,
+    UserEntity user,
+    ChatConversation conversation,
+  ) {
+    final selected = _selectedMessages;
+    final allMine = selected.isNotEmpty && selected.every((m) => m.isMe);
+
+    return AppBar(
+      backgroundColor: isDark ? AppColors.bgDark : Colors.white,
+      elevation: 0,
+      leading: IconButton(
+        icon: const Icon(Icons.close),
+        onPressed: () => setState(_selectedIds.clear),
+      ),
+      title: Text('${selected.length} selected', style: AppTypography.titleMedium),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.copy),
+          tooltip: 'Copy',
+          onPressed: () {
+            Clipboard.setData(ClipboardData(
+              text: selected.map((m) => '${m.senderName}: ${m.content}').join('\n'),
+            ));
+            setState(_selectedIds.clear);
+            context.showMessagingSnack('Copied to clipboard');
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.star_border),
+          tooltip: 'Star',
+          onPressed: () async {
+            for (final message in selected) {
+              await context.messages
+                  .setStarred(conversation.id, message.id, user.id, !message.isStarred);
+            }
+            if (mounted) setState(_selectedIds.clear);
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.forward),
+          tooltip: 'Forward',
+          onPressed: () => _forwardMany(user, selected),
+        ),
+        // Only your own messages can be deleted, so the action disappears
+        // rather than failing when the selection includes someone else's.
+        if (allMine)
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+            tooltip: 'Delete',
+            onPressed: () => _confirmDeleteMany(conversation.id, selected),
+          ),
+      ],
+    );
+  }
+
   Widget _buildChat(BuildContext context, UserEntity user, ChatConversation conversation) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (_selectedIds.isNotEmpty) {
+      return Scaffold(
+        backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
+        appBar: _buildSelectionAppBar(isDark, user, conversation),
+        body: _buildChatBody(context, isDark, user, conversation),
+      );
+    }
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
@@ -177,18 +268,30 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
           const SizedBox(width: 4),
         ],
       ),
-      body: Column(
+      body: _buildChatBody(context, isDark, user, conversation),
+    );
+  }
+
+  Widget _buildChatBody(
+    BuildContext context,
+    bool isDark,
+    UserEntity user,
+    ChatConversation conversation,
+  ) {
+    return Column(
         children: [
           if (conversation.pinnedMessageContent != null)
             _buildPinnedBanner(context, isDark, conversation),
           Expanded(
             child: StreamBuilder<List<ChatMessage>>(
-              stream: context.messages.watchMessages(widget.chatId, user.id),
+              stream: context.messages
+                  .watchMessages(widget.chatId, user.id, limit: _messageLimit),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
                 final messages = snapshot.data!;
+                _visibleMessages = messages;
                 if (messages.isEmpty) {
                   return Center(
                     child: Padding(
@@ -201,7 +304,18 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                     ),
                   );
                 }
-                return ListView.builder(
+                return NotificationListener<ScrollNotification>(
+                  // The list is reversed, so "scrolled to the end" means the
+                  // user has reached the oldest message they have; fetch the
+                  // next window rather than stopping dead at the limit.
+                  onNotification: (notification) {
+                    if (notification.metrics.extentAfter < 200 &&
+                        messages.length >= _messageLimit) {
+                      setState(() => _messageLimit += 60);
+                    }
+                    return false;
+                  },
+                  child: ListView.builder(
                   padding: const EdgeInsets.all(AppSpacing.m),
                   reverse: true,
                   itemCount: messages.length,
@@ -210,6 +324,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                     return MessageBubble(
                       message: message,
                       isGroup: conversation.type != ChatType.direct,
+                      textScale: _preferences.textScale,
+                      isSelected: _selectedIds.contains(message.id),
+                      selectionMode: _selectedIds.isNotEmpty,
+                      onToggleSelected: () => _toggleSelected(message.id),
+                      onSelect: () => _toggleSelected(message.id),
                       onReply: () => setState(() {
                         _replyTo = message;
                         _editing = null;
@@ -240,17 +359,20 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                       onOpenContact: (contactId) => _openSharedContact(user, contactId),
                     );
                   },
+                  ),
                 );
               },
             ),
           ),
           if (_uploading) const LinearProgressIndicator(minHeight: 2),
-          if (conversation.canPost(user.id))
+          // The composer is out of the way while a selection is active.
+          if (_selectedIds.isNotEmpty)
+            const SizedBox.shrink()
+          else if (conversation.canPost(user.id))
             _buildInputArea(isDark, user, conversation)
           else
             _buildReadOnlyNotice(isDark),
         ],
-      ),
     );
   }
 
@@ -354,8 +476,14 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                     ),
                     child: TextField(
                       controller: _messageController,
-                      maxLines: 4,
+                      // "Enter is send" turns the return key into a send
+                      // button; otherwise it stays a newline.
+                      maxLines: _preferences.enterIsSend ? 1 : 4,
                       minLines: 1,
+                      textInputAction:
+                          _preferences.enterIsSend ? TextInputAction.send : TextInputAction.newline,
+                      onSubmitted:
+                          _preferences.enterIsSend ? (_) => _send(user, conversation) : null,
                       textCapitalization: TextCapitalization.sentences,
                       style: TextStyle(color: isDark ? Colors.white : Colors.black87),
                       decoration: const InputDecoration(
@@ -495,6 +623,55 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     );
     if (!mounted) return;
     context.showMessagingSnack('Forwarded to ${selected.length} chat(s)');
+  }
+
+  Future<void> _forwardMany(UserEntity user, List<ChatMessage> messages) async {
+    final conversations = await context.messages.watchConversations(user.id).first;
+    if (!mounted) return;
+
+    final selected = await showModalBottomSheet<List<String>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _ForwardSheet(conversations: conversations),
+    );
+    if (selected == null || selected.isEmpty || !mounted) return;
+
+    for (final message in messages) {
+      await context.messages.forwardMessage(
+        message: message,
+        conversationIds: selected,
+        sender: user,
+      );
+    }
+    if (!mounted) return;
+    setState(_selectedIds.clear);
+    context.showMessagingSnack('Forwarded to ${selected.length} chat(s)');
+  }
+
+  Future<void> _confirmDeleteMany(String conversationId, List<ChatMessage> messages) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(messages.length == 1
+            ? 'Delete message?'
+            : 'Delete ${messages.length} messages?'),
+        content: const Text('They will be removed for everyone in the chat.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    for (final message in messages) {
+      await context.messages.deleteMessage(conversationId, message.id);
+    }
+    if (mounted) setState(_selectedIds.clear);
   }
 
   Future<void> _confirmDelete(String conversationId, ChatMessage message) async {

@@ -180,7 +180,7 @@ class ContactProfileScreen extends StatelessWidget {
                   Icons.report_gmailerrorred,
                   'Report Contact',
                   Colors.red,
-                  () => context.showMessagingSnack('Reported to the school administrator'),
+                  () => _report(context, user, data),
                 ),
               ],
             ),
@@ -221,6 +221,56 @@ class ContactProfileScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// Only meaningful once there is a conversation to point staff at - there
+  /// is nothing to review about a directory entry on its own.
+  Future<void> _report(BuildContext context, UserEntity user, _ProfileData data) async {
+    final conversationId = data.conversationId;
+    if (conversationId == null) {
+      context.showMessagingSnack('Open a chat with this person first, then report it');
+      return;
+    }
+
+    final reasonController = TextEditingController();
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Report ${data.contact.name}?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('A school administrator will review this conversation.'),
+            const SizedBox(height: AppSpacing.m),
+            TextField(
+              controller: reasonController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'What is the problem?',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Report', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (submitted != true || !context.mounted) return;
+
+    await context.messages.reportConversation(
+      conversationId: conversationId,
+      reporter: user,
+      reason: reasonController.text.trim(),
+      reportedUserId: data.contact.id,
+    );
+    if (!context.mounted) return;
+    context.showMessagingSnack('Reported to the school administrator');
   }
 
   Future<void> _block(BuildContext context, UserEntity user, _ProfileData data) async {

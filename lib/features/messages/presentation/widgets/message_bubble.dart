@@ -34,10 +34,30 @@ class MessageBubble extends StatelessWidget {
   /// Opens a chat with the person on a shared contact card.
   final ValueChanged<String>? onOpenContact;
 
+  /// Enters multi-select from the long-press menu.
+  final VoidCallback? onSelect;
+
+  /// Adds or removes this bubble from an active selection.
+  final VoidCallback? onToggleSelected;
+
+  final bool isSelected;
+
+  /// While true a plain tap selects instead of opening the message, and
+  /// long-press does nothing.
+  final bool selectionMode;
+
+  /// Message text multiplier from Chat Settings › Font size.
+  final double textScale;
+
   const MessageBubble({
     super.key,
     required this.message,
     this.isGroup = true,
+    this.onSelect,
+    this.onToggleSelected,
+    this.isSelected = false,
+    this.selectionMode = false,
+    this.textScale = 1.0,
     this.onReply,
     this.onForward,
     this.onStar,
@@ -54,8 +74,10 @@ class MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Padding(
+    return Container(
       padding: const EdgeInsets.only(bottom: AppSpacing.m),
+      // A selected row is tinted edge to edge, the way a list selection reads.
+      color: isSelected ? AppColors.electricBlue.withValues(alpha: 0.12) : null,
       child: Column(
         crossAxisAlignment: message.isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
@@ -71,7 +93,10 @@ class MessageBubble extends StatelessWidget {
               ),
             ),
           GestureDetector(
-            onLongPress: message.isDeleted ? null : () => _showMessageActions(context),
+            onTap: selectionMode ? onToggleSelected : null,
+            onLongPress: message.isDeleted || selectionMode
+                ? null
+                : () => _showMessageActions(context),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               constraints: BoxConstraints(
@@ -104,6 +129,7 @@ class MessageBubble extends StatelessWidget {
                   else if (message.content.isNotEmpty)
                     Text(
                       message.content,
+                      textScaler: TextScaler.linear(textScale),
                       style: TextStyle(
                         color: message.isMe ? Colors.white : (isDark ? Colors.white : Colors.black87),
                       ),
@@ -702,6 +728,7 @@ class MessageBubble extends StatelessWidget {
         onDelete: onDelete,
         onPin: onPin,
         onReact: onReact,
+        onSelect: onSelect,
       ),
     );
   }
@@ -850,6 +877,7 @@ class MessageActionsMenu extends StatelessWidget {
   final VoidCallback? onDelete;
   final VoidCallback? onPin;
   final ValueChanged<String>? onReact;
+  final VoidCallback? onSelect;
 
   const MessageActionsMenu({
     super.key,
@@ -862,6 +890,7 @@ class MessageActionsMenu extends StatelessWidget {
     this.onDelete,
     this.onPin,
     this.onReact,
+    this.onSelect,
   });
 
   @override
@@ -926,6 +955,8 @@ class MessageActionsMenu extends StatelessWidget {
                 color: Colors.red,
                 onTap: onDelete!,
               ),
+            if (onSelect != null)
+              _ActionItem(icon: Icons.check_circle_outline, label: 'Select', onTap: onSelect!),
             const SizedBox(height: 8),
             TextButton(
               onPressed: () => Navigator.pop(context),

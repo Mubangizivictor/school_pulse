@@ -127,7 +127,25 @@ class _BroadcastDetailsScreenState extends State<BroadcastDetailsScreen> {
             ),
             child: Column(
               children: [
-                if (recipients.isEmpty)
+                // A broadcast is one-way: recipients must not be able to
+                // enumerate each other, so only its admins see the list.
+                if (!amAdmin)
+                  Padding(
+                    padding: const EdgeInsets.all(AppSpacing.l),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.lock_outline, size: 18, color: Colors.white54),
+                        const SizedBox(width: AppSpacing.m),
+                        Expanded(
+                          child: Text(
+                            'Recipients are only visible to whoever manages this list.',
+                            style: AppTypography.bodyMedium.copyWith(color: Colors.white60),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else if (recipients.isEmpty)
                   Padding(
                     padding: const EdgeInsets.all(AppSpacing.l),
                     child:
@@ -176,7 +194,7 @@ class _BroadcastDetailsScreenState extends State<BroadcastDetailsScreen> {
                       );
                     },
                   ),
-                if (recipients.length > _previewCount) ...[
+                if (amAdmin && recipients.length > _previewCount) ...[
                   const Divider(height: 1, color: Colors.white10),
                   TextButton(
                     onPressed: () => setState(() => _showAllRecipients = !_showAllRecipients),

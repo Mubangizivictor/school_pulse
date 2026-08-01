@@ -245,6 +245,25 @@ class MessagesRepositoryImpl implements MessagesRepository {
     });
   }
 
+  @override
+  Future<void> reportConversation({
+    required String conversationId,
+    required UserEntity reporter,
+    required String reason,
+    String? reportedUserId,
+  }) {
+    return firestore.collection('message_reports').add({
+      'conversationId': conversationId,
+      'schoolId': reporter.schoolId,
+      'reportedBy': reporter.id,
+      'reportedByName': reporter.name,
+      'reportedUserId': reportedUserId,
+      'reason': reason,
+      'status': 'open',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   // --- One conversation --------------------------------------------------
 
   @override

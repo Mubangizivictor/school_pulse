@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
@@ -99,14 +102,18 @@ class ChatInfoScreen extends StatelessWidget {
                     Positioned(
                       right: 0,
                       bottom: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.electricBlue,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: isDark ? AppColors.bgDark : Colors.white, width: 3),
+                      child: GestureDetector(
+                        onTap: () => _changeAvatar(context, user, conversation),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.electricBlue,
+                            shape: BoxShape.circle,
+                            border:
+                                Border.all(color: isDark ? AppColors.bgDark : Colors.white, width: 3),
+                          ),
+                          child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
                         ),
-                        child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
                       ),
                     ),
                 ],
@@ -220,7 +227,7 @@ class ChatInfoScreen extends StatelessWidget {
         _buildDangerTile(
           Icons.report_gmailerrorred,
           isGroup ? 'Report Group' : 'Report Contact',
-          () => context.showMessagingSnack('Reported to the school administrator'),
+          () => _report(context, user, conversation),
         ),
         const SizedBox(height: AppSpacing.x3l),
       ],
@@ -324,6 +331,79 @@ class ChatInfoScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Files a report against this chat for staff to review. The reason is
+  /// asked for rather than assumed - an empty report is not much use to
+  /// whoever picks it up.
+  Future<void> _report(
+    BuildContext context,
+    UserEntity user,
+    ChatConversation conversation,
+  ) async {
+    final reasonController = TextEditingController();
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Report to the school'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('A school administrator will review this conversation.'),
+            const SizedBox(height: AppSpacing.m),
+            TextField(
+              controller: reasonController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'What is the problem?',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Report', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (submitted != true || !context.mounted) return;
+
+    await context.messages.reportConversation(
+      conversationId: conversation.id,
+      reporter: user,
+      reason: reasonController.text.trim(),
+      reportedUserId: conversation.type == ChatType.direct
+          ? _otherParticipant(conversation, user.id)?.id
+          : null,
+    );
+    if (!context.mounted) return;
+    context.showMessagingSnack('Reported to the school administrator');
+  }
+
+  Future<void> _changeAvatar(
+    BuildContext context,
+    UserEntity user,
+    ChatConversation conversation,
+  ) async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 70);
+    if (picked == null || !context.mounted) return;
+
+    try {
+      final url = await context.messages.uploadAttachment(
+        schoolId: user.schoolId,
+        conversationId: conversation.id,
+        file: File(picked.path),
+        fileName: 'avatar.jpg',
+      );
+      if (!context.mounted) return;
+      await context.messages.updateGroupInfo(conversation.id, avatarUrl: url);
+    } catch (e) {
+      if (context.mounted) context.showMessagingSnack('Could not update the photo: $e');
+    }
   }
 
   Future<void> _editGroup(BuildContext context, ChatConversation conversation) async {

@@ -4,6 +4,7 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
+import 'package:school_pulse/features/messages/domain/entities/chat_preferences.dart';
 import 'package:school_pulse/features/messages/domain/entities/message_models.dart';
 import 'package:school_pulse/features/messages/presentation/messaging_context.dart';
 import 'package:school_pulse/features/messages/presentation/widgets/chat_list_tile.dart';
@@ -22,6 +23,34 @@ enum _InboxFilter { all, unread, groups, official }
 
 class _MessagesListScreenState extends State<MessagesListScreen> {
   _InboxFilter _filter = _InboxFilter.all;
+
+  /// Chat Settings › "Keep chats archived". When it is off, an archived chat
+  /// has to come back the moment a new message lands in it.
+  ChatPreferences _preferences = const ChatPreferences();
+
+  @override
+  void initState() {
+    super.initState();
+    ChatPreferences.load().then((preferences) {
+      if (mounted) setState(() => _preferences = preferences);
+    });
+  }
+
+  /// Firestore has no way to express "unarchive on new activity", so it is
+  /// reconciled here: anything archived that has gone unread again is
+  /// un-archived once, after the frame that noticed it.
+  void _reconcileArchived(List<ChatConversation> conversations, String userId) {
+    if (_preferences.keepArchived) return;
+    final resurfacing =
+        conversations.where((c) => c.isArchived && c.unreadCount > 0).toList();
+    if (resurfacing.isEmpty) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final chat in resurfacing) {
+        context.messages.setArchived(chat.id, userId, false);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -125,6 +154,7 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                     return const Center(child: CircularProgressIndicator());
                   }
 
+                  _reconcileArchived(snapshot.data!, user.id);
                   final conversations = _applyFilter(snapshot.data!);
                   if (conversations.isEmpty) {
                     return _buildEmptyState();

@@ -3,15 +3,9 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
+import 'package:school_pulse/features/messages/domain/entities/chat_preferences.dart';
 import 'package:school_pulse/features/messages/presentation/messaging_context.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-/// Keys for the device-local chat preferences. These are per-device by
-/// design (font size, media visibility) rather than synced to the account.
-const String _kEnterIsSendKey = 'messages.enter_is_send';
-const String _kMediaVisibilityKey = 'messages.media_visibility';
-const String _kKeepArchivedKey = 'messages.keep_archived';
-const String _kFontSizeKey = 'messages.font_size';
 
 class ChatSettingsScreen extends StatefulWidget {
   const ChatSettingsScreen({super.key});
@@ -37,10 +31,10 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
-      _enterIsSend = prefs.getBool(_kEnterIsSendKey) ?? false;
-      _mediaVisibility = prefs.getBool(_kMediaVisibilityKey) ?? true;
-      _keepArchived = prefs.getBool(_kKeepArchivedKey) ?? true;
-      _fontSize = prefs.getString(_kFontSizeKey) ?? 'Medium';
+      _enterIsSend = prefs.getBool(ChatPreferences.enterIsSendKey) ?? false;
+      _mediaVisibility = prefs.getBool(ChatPreferences.mediaVisibilityKey) ?? true;
+      _keepArchived = prefs.getBool(ChatPreferences.keepArchivedKey) ?? true;
+      _fontSize = prefs.getString(ChatPreferences.fontSizeKey) ?? 'Medium';
       _loaded = true;
     });
   }
@@ -98,14 +92,14 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                     subtitle: 'Enter key will send your message',
                     value: _enterIsSend,
                     onChanged: (val) =>
-                        _setBool(_kEnterIsSendKey, val, (v) => _enterIsSend = v),
+                        _setBool(ChatPreferences.enterIsSendKey, val, (v) => _enterIsSend = v),
                   ),
                   _buildSwitchItem(
                     title: 'Media visibility',
                     subtitle: 'Show newly downloaded media in your phone\'s gallery',
                     value: _mediaVisibility,
                     onChanged: (val) =>
-                        _setBool(_kMediaVisibilityKey, val, (v) => _mediaVisibility = v),
+                        _setBool(ChatPreferences.mediaVisibilityKey, val, (v) => _mediaVisibility = v),
                   ),
                   const SizedBox(height: 16),
                   _buildSectionHeader('Archived Chats'),
@@ -113,7 +107,7 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                     title: 'Keep chats archived',
                     subtitle: 'Archived chats will remain archived when you receive a new message',
                     value: _keepArchived,
-                    onChanged: (val) => _setBool(_kKeepArchivedKey, val, (v) => _keepArchived = v),
+                    onChanged: (val) => _setBool(ChatPreferences.keepArchivedKey, val, (v) => _keepArchived = v),
                   ),
                   const SizedBox(height: 16),
                   _buildSectionHeader('History'),
@@ -289,7 +283,7 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
         title: Text('Font size', style: AppTypography.titleLarge.copyWith(color: Colors.white)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: ['Small', 'Medium', 'Large'].map((size) {
+          children: ChatPreferences.fontSizes.map((size) {
             return ListTile(
               title: Text(size, style: const TextStyle(color: Colors.white)),
               trailing: _fontSize == size
@@ -299,7 +293,7 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                 Navigator.pop(dialogContext);
                 setState(() => _fontSize = size);
                 final prefs = await SharedPreferences.getInstance();
-                await prefs.setString(_kFontSizeKey, size);
+                await prefs.setString(ChatPreferences.fontSizeKey, size);
               },
             );
           }).toList(),

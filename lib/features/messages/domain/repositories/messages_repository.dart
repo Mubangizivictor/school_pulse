@@ -66,6 +66,15 @@ abstract class MessagesRepository {
   Future<void> archiveAllChats(String userId);
   Future<void> deleteAllChats(String userId);
 
+  /// Files a report for school staff to review. Writes a record rather than
+  /// only acknowledging on screen, so "Report" means something.
+  Future<void> reportConversation({
+    required String conversationId,
+    required UserEntity reporter,
+    required String reason,
+    String? reportedUserId,
+  });
+
   // --- One conversation --------------------------------------------------
 
   Stream<List<ChatMessage>> watchMessages(String conversationId, String userId, {int limit});

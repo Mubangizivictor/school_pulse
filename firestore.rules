@@ -468,6 +468,20 @@ service cloud.firestore {
       }
     }
 
+    // Reports raised from a chat's "Report" action. Anyone may file one
+    // about a conversation they are in; only staff can read or resolve them,
+    // and nobody can edit a report after filing it.
+    match /message_reports/{reportId} {
+      allow read, update: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isSignedIn() &&
+        request.resource.data.reportedBy == request.auth.uid &&
+        isSameSchool(request.resource.data.schoolId) &&
+        request.auth.uid in get(
+          /databases/$(database)/documents/conversations/$(request.resource.data.conversationId)
+        ).data.participantIds;
+      allow delete: if false;
+    }
+
     // Backs Search / Starred / Pinned, which read collectionGroup('messages')
     // instead of walking one conversation at a time. `messages` is only ever
     // a subcollection of `conversations`, so this wildcard can't widen
