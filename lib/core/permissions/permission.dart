@@ -104,4 +104,50 @@ class Permission {
   static const notificationDelete = 'notification.delete';
   static const notificationSeedTestData = 'notification.seed_test_data';
   static const notificationRunDeliveryTest = 'notification.run_delivery_test';
+
+  // Subject Teacher panel (enforced) - every one of these is meaningless on
+  // its own: it is only ever evaluated together with the scope carried by the
+  // staff role assignment it was granted through (subject + class + stream +
+  // academic year), never as a bare "user is a teacher" check. See
+  // `PermissionScope` and `ActiveResponsibilityContext`.
+  static const subjectStudentsView = 'subject.students.view';
+  static const subjectStudentEnroll = 'subject.student.enroll';
+  static const subjectStudentRemove = 'subject.student.remove';
+  static const subjectStudentHistoricalView = 'subject.student.historical.view';
+
+  static const subjectLessonView = 'subject.lesson.view';
+  static const subjectLessonStart = 'subject.lesson.start';
+  static const subjectLessonComplete = 'subject.lesson.complete';
+  static const subjectLessonCancel = 'subject.lesson.cancel';
+  static const subjectLessonReschedule = 'subject.lesson.reschedule';
+
+  static const subjectAttendanceTake = 'subject.attendance.take';
+  static const subjectAttendanceEdit = 'subject.attendance.edit';
+  static const subjectAttendanceEditHistorical = 'subject.attendance.edit_historical';
+
+  static const subjectLessonNoteCreate = 'subject.lesson_note.create';
+  static const subjectLessonNoteEdit = 'subject.lesson_note.edit';
+
+  static const subjectResourceUpload = 'subject.resource.upload';
+  static const subjectResourceShare = 'subject.resource.share';
+
+  static const subjectAssessmentCreate = 'subject.assessment.create';
+  static const subjectMarksView = 'subject.marks.view';
+  static const subjectMarksEnter = 'subject.marks.enter';
+  static const subjectMarksEdit = 'subject.marks.edit';
+  static const subjectMarksEditSubmitted = 'subject.marks.edit_submitted';
+  static const subjectMarksSubmit = 'subject.marks.submit';
+  static const subjectMarksImport = 'subject.marks.import';
+  static const subjectMarksExport = 'subject.marks.export';
+
+  static const subjectReportView = 'subject.report.view';
+  static const subjectReportGenerate = 'subject.report.generate';
+  static const subjectAnalyticsView = 'subject.analytics.view';
+
+  static const subjectParentMessage = 'subject.parent.message';
+  static const subjectStudentMessage = 'subject.student.message';
+  static const subjectAnnouncementSend = 'subject.announcement.send';
+
+  static const subjectTimetableView = 'subject.timetable.view';
+  static const subjectTimetableEdit = 'subject.timetable.edit';
 }
