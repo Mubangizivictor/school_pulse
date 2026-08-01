@@ -1,17 +1,55 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/notifications/domain/entities/notification_category_config.dart';
 import 'package:school_pulse/features/notifications/domain/entities/notification_model.dart';
-import 'package:school_pulse/features/notifications/domain/entities/mock_notifications.dart';
+import 'package:school_pulse/features/notifications/presentation/bloc/notification_center_bloc.dart';
+import 'package:school_pulse/features/notifications/presentation/bloc/notification_center_event.dart';
+import 'package:school_pulse/features/notifications/presentation/bloc/notification_center_state.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 
-class NotificationCenterGroupedScreen extends StatefulWidget {
+class NotificationCenterGroupedScreen extends StatelessWidget {
   const NotificationCenterGroupedScreen({super.key});
 
   @override
-  State<NotificationCenterGroupedScreen> createState() => _NotificationCenterGroupedScreenState();
+  Widget build(BuildContext context) {
+    final authState = context.read<AuthBloc>().state;
+    final user = authState is AuthAuthenticated ? authState.user : null;
+
+    if (user == null) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF0F172A),
+        body: Center(
+          child: Text(
+            'Sign in to see your notifications',
+            style: TextStyle(color: Colors.white70),
+          ),
+        ),
+      );
+    }
+
+    return BlocProvider(
+      create: (_) => di.sl<NotificationCenterBloc>()
+        ..add(NotificationCenterStarted(
+          schoolId: user.schoolId,
+          userId: user.id,
+        )),
+      child: const _GroupedCenterView(),
+    );
+  }
 }
 
-class _NotificationCenterGroupedScreenState extends State<NotificationCenterGroupedScreen> {
+class _GroupedCenterView extends StatefulWidget {
+  const _GroupedCenterView();
+
+  @override
+  State<_GroupedCenterView> createState() => _GroupedCenterViewState();
+}
+
+class _GroupedCenterViewState extends State<_GroupedCenterView> {
   final Map<NotificationCategory, bool> _expandedSections = {
     NotificationCategory.announcements: true,
     NotificationCategory.attendance: true,
@@ -20,94 +58,152 @@ class _NotificationCenterGroupedScreenState extends State<NotificationCenterGrou
 
   NotificationCategory? _selectedCategory;
 
+  /// Sections rendered, in order. Colours and icons match what this screen
+  /// drew inline before; they now come from the shared catalog so a newly
+  /// added category cannot end up untreated.
+  static const _sections = [
+    NotificationCategory.announcements,
+    NotificationCategory.attendance,
+    NotificationCategory.finance,
+    NotificationCategory.transport,
+    NotificationCategory.messages,
+    NotificationCategory.homework,
+  ];
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text('Notification Center', style: TextStyle(color: Colors.white)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.white),
-            onPressed: () => context.push('/staff/notifications/search'),
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildCategoryGrid(),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Today',
-                  style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold),
-                ),
-                TextButton(
-                  onPressed: () {},
-                  child: const Text('Mark all as read', style: TextStyle(color: Color(0xFF6366F1), fontSize: 12)),
-                ),
-              ],
+    return BlocBuilder<NotificationCenterBloc, NotificationCenterState>(
+      builder: (context, state) {
+        final grouped = state.groupedByCategory;
+
+        return Scaffold(
+          backgroundColor: const Color(0xFF0F172A),
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => context.pop(),
             ),
-            const SizedBox(height: 16),
-            if (_selectedCategory == null || _selectedCategory == NotificationCategory.announcements)
-              _buildGroupedSection(
-                context,
-                NotificationCategory.announcements,
-                'Announcements',
-                const Color(0xFF6366F1),
-                Icons.campaign,
-                2,
-                mockNotifications.where((n) => n.category == NotificationCategory.announcements).toList(),
+            title: const Text('Notification Center', style: TextStyle(color: Colors.white)),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.search, color: Colors.white),
+                onPressed: () => context.push('/staff/notifications/search'),
               ),
-            if (_selectedCategory == null) const SizedBox(height: 12),
-            if (_selectedCategory == null || _selectedCategory == NotificationCategory.attendance)
-              _buildGroupedSection(
-                context,
-                NotificationCategory.attendance,
-                'Attendance',
-                const Color(0xFF10B981),
-                Icons.person_pin_circle,
-                2,
-                mockNotifications.where((n) => n.category == NotificationCategory.attendance).toList(),
+            ],
+          ),
+          body: RefreshIndicator(
+            onRefresh: () async => context
+                .read<NotificationCenterBloc>()
+                .add(const NotificationCenterRefreshed()),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildCategoryGrid(state),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Today',
+                        style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold),
+                      ),
+                      TextButton(
+                        onPressed: state.unreadCount == 0
+                            ? null
+                            : () => _markAllRead(context),
+                        child: Text(
+                          'Mark all as read',
+                          style: TextStyle(
+                            color: state.unreadCount == 0
+                                ? Colors.white24
+                                : const Color(0xFF6366F1),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (state.status == NotificationCenterStatus.loading)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 48),
+                      child: Center(
+                        child: CircularProgressIndicator(color: Color(0xFF6366F1)),
+                      ),
+                    )
+                  else if (grouped.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 48),
+                      child: Center(
+                        child: Text(
+                          'No notifications yet',
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                      ),
+                    )
+                  else
+                    // Only sections that actually have notifications are drawn,
+                    // so the screen does not show a wall of empty headers.
+                    ..._sections
+                        .where((category) =>
+                            (_selectedCategory == null ||
+                                _selectedCategory == category) &&
+                            (grouped[category]?.isNotEmpty ?? false))
+                        .expand((category) {
+                      final config = NotificationCategoryCatalog.of(category);
+                      final items = grouped[category]!;
+                      final unread = items
+                          .where((n) => n.status == NotificationStatus.unread)
+                          .length;
+                      return [
+                        _buildGroupedSection(
+                          context,
+                          category,
+                          config.displayName,
+                          config.color,
+                          config.icon,
+                          unread,
+                          items,
+                        ),
+                        const SizedBox(height: 12),
+                      ];
+                    }),
+                ],
               ),
-            if (_selectedCategory == null) const SizedBox(height: 12),
-            if (_selectedCategory == null || _selectedCategory == NotificationCategory.finance)
-              _buildGroupedSection(
-                context,
-                NotificationCategory.finance,
-                'Finance',
-                const Color(0xFFF59E0B),
-                Icons.payments,
-                1,
-                mockNotifications.where((n) => n.category == NotificationCategory.finance).toList(),
-              ),
-          ],
-        ),
-      ),
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildCategoryGrid() {
-    final categories = [
-      {'label': 'All', 'icon': Icons.apps, 'color': const Color(0xFF6366F1), 'category': null},
-      {'label': 'Announcements', 'icon': Icons.campaign, 'color': const Color(0xFF6366F1), 'category': NotificationCategory.announcements, 'count': 5},
-      {'label': 'Attendance', 'icon': Icons.person_pin_circle, 'color': const Color(0xFF10B981), 'category': NotificationCategory.attendance, 'count': 2},
-      {'label': 'Finance', 'icon': Icons.payments, 'color': const Color(0xFFF59E0B), 'category': NotificationCategory.finance, 'count': 4},
-      {'label': 'Transport', 'icon': Icons.directions_bus, 'color': const Color(0xFF3B82F6), 'category': NotificationCategory.transport},
-      {'label': 'Messages', 'icon': Icons.message, 'color': const Color(0xFFEC4899), 'category': NotificationCategory.messages, 'count': 2},
-      {'label': 'Homework', 'icon': Icons.assignment, 'color': const Color(0xFF8B5CF6), 'category': NotificationCategory.homework, 'count': 1},
-      {'label': 'Others', 'icon': Icons.more_horiz, 'color': const Color(0xFF94A3B8), 'category': NotificationCategory.others},
+  void _markAllRead(BuildContext context) {
+    context.read<NotificationCenterBloc>().add(
+          NotificationAllMarkedRead(
+            // Respects the active filter: "mark all read" inside a category
+            // view should not silently clear the rest of the centre.
+            categories: _selectedCategory == null ? const {} : {_selectedCategory!},
+          ),
+        );
+  }
+
+  Widget _buildCategoryGrid(NotificationCenterState state) {
+    // Same eight tiles as before; the badge numbers are now real unread counts
+    // from the live cache rather than hardcoded values.
+    const tiles = <NotificationCategory?>[
+      null, // "All"
+      NotificationCategory.announcements,
+      NotificationCategory.attendance,
+      NotificationCategory.finance,
+      NotificationCategory.transport,
+      NotificationCategory.messages,
+      NotificationCategory.homework,
+      NotificationCategory.others,
     ];
 
     return GridView.builder(
@@ -119,19 +215,39 @@ class _NotificationCenterGroupedScreenState extends State<NotificationCenterGrou
         crossAxisSpacing: 12,
         childAspectRatio: 0.8,
       ),
-      itemCount: categories.length,
+      itemCount: tiles.length,
       itemBuilder: (context, index) {
-        final cat = categories[index];
-        final category = cat['category'] as NotificationCategory?;
+        final category = tiles[index];
         final isSelected = _selectedCategory == category;
 
+        if (category == null) {
+          return _buildCategoryItem(
+            'All',
+            Icons.apps,
+            const Color(0xFF6366F1),
+            isSelected: isSelected,
+            count: state.unreadCount == 0 ? null : state.unreadCount,
+            onTap: () => setState(() => _selectedCategory = null),
+          );
+        }
+
+        final config = NotificationCategoryCatalog.of(category);
+        final unread = state.items
+            .where((n) =>
+                n.category == category &&
+                n.status == NotificationStatus.unread)
+            .length;
+
         return _buildCategoryItem(
-          cat['label'] as String,
-          cat['icon'] as IconData,
-          cat['color'] as Color,
+          config.displayName,
+          config.icon,
+          config.color,
           isSelected: isSelected,
-          count: cat['count'] as int?,
-          onTap: () => setState(() => _selectedCategory = category),
+          // A zero badge is noise; omit it rather than drawing "0".
+          count: unread == 0 ? null : unread,
+          onTap: () => setState(
+            () => _selectedCategory = isSelected ? null : category,
+          ),
         );
       },
     );
@@ -249,7 +365,11 @@ class _NotificationCenterGroupedScreenState extends State<NotificationCenterGrou
 
   Widget _buildSimpleTile(BuildContext context, NotificationItem item, Color iconColor) {
     return InkWell(
-      onTap: () => context.push('/staff/notifications/${item.id}'),
+      onTap: () {
+        // Pass the notification so the details screen paints immediately;
+        // marking read happens there.
+        context.push('/staff/notifications/${item.id}', extra: item);
+      },
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
