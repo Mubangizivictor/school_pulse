@@ -1,7 +1,49 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../domain/entities/notification_model.dart';
+
+/// Downloads [attachment] to a temporary file and hands it to the platform
+/// viewer. Returns a message to show, or null on success.
+///
+/// Shared by both screens in this file so the download rules (empty URL,
+/// non-200, already-cached) are stated once.
+Future<String?> _downloadAndOpen({
+  required String url,
+  required String fileName,
+}) async {
+  if (url.isEmpty) return 'This attachment is unavailable.';
+
+  try {
+    final directory = await getTemporaryDirectory();
+    final file = File('${directory.path}/$fileName');
+
+    // Re-opening an already-downloaded file avoids paying for the transfer
+    // twice, which matters on a metered connection.
+    if (!await file.exists()) {
+      final response = await http
+          .get(Uri.parse(url))
+          .timeout(const Duration(seconds: 30));
+      if (response.statusCode != 200) {
+        return 'This attachment is unavailable.';
+      }
+      await file.writeAsBytes(response.bodyBytes, flush: true);
+    }
+
+    final result = await OpenFilex.open(file.path);
+    if (result.type != ResultType.done) {
+      return 'No app on this device can open ${fileName.split('.').last} files.';
+    }
+    return null;
+  } catch (e) {
+    return 'Could not open this attachment.';
+  }
+}
 
 class AttachmentViewerScreen extends StatelessWidget {
   final List<NotificationAttachment>? attachments;
@@ -60,10 +102,11 @@ class AttachmentViewerScreen extends StatelessWidget {
                 }
                 
                 return _buildAttachmentItem(
-                  attachment.name, 
-                  '${attachment.size} • ${attachment.type}', 
-                  color, 
+                  attachment.name,
+                  '${attachment.size} • ${attachment.type}',
+                  color,
                   icon,
+                  attachment.url,
                 );
               },
             ),
@@ -93,7 +136,7 @@ class AttachmentViewerScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAttachmentItem(String name, String details, Color color, IconData icon) {
+  Widget _buildAttachmentItem(String name, String details, Color color, IconData icon, String url) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -121,9 +164,21 @@ class AttachmentViewerScreen extends StatelessWidget {
               ],
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.download, color: Colors.white70),
-            onPressed: () {},
+          Builder(
+            builder: (buttonContext) => IconButton(
+              icon: const Icon(Icons.download, color: Colors.white70),
+              onPressed: () async {
+                final error = await _downloadAndOpen(
+                  url: url,
+                  fileName: name,
+                );
+                if (error != null && buttonContext.mounted) {
+                  ScaffoldMessenger.of(buttonContext).showSnackBar(
+                    SnackBar(content: Text(error)),
+                  );
+                }
+              },
+            ),
           ),
         ],
       ),
@@ -149,7 +204,22 @@ class ImageViewerScreen extends StatelessWidget {
         title: const Text('Image Viewer', style: TextStyle(color: Colors.white, fontSize: 14)),
         centerTitle: true,
         actions: [
-          IconButton(icon: const Icon(Icons.download, color: Colors.white), onPressed: () {}),
+          Builder(
+            builder: (buttonContext) => IconButton(
+              icon: const Icon(Icons.download, color: Colors.white),
+              onPressed: () async {
+                final error = await _downloadAndOpen(
+                  url: imageUrl ?? '',
+                  fileName: 'notification_image.jpg',
+                );
+                if (error != null && buttonContext.mounted) {
+                  ScaffoldMessenger.of(buttonContext).showSnackBar(
+                    SnackBar(content: Text(error)),
+                  );
+                }
+              },
+            ),
+          ),
         ],
       ),
       body: Stack(

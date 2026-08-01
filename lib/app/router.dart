@@ -211,6 +211,7 @@ import 'package:school_pulse/features/notifications/presentation/screens/notific
 import 'package:school_pulse/features/notifications/presentation/screens/notification_details_screen.dart';
 import 'package:school_pulse/features/notifications/presentation/screens/notification_details_loader_screen.dart';
 import 'package:school_pulse/features/notifications/testing/notification_test_service/notification_test_screen.dart';
+import 'package:school_pulse/features/notifications/presentation/screens/notification_delivery_report_screen.dart';
 import 'package:school_pulse/features/notifications/presentation/screens/notification_center_grouped_screen.dart';
 import 'package:school_pulse/features/notifications/presentation/screens/notification_filter_screen.dart';
 import 'package:school_pulse/features/notifications/presentation/screens/notification_search_screen.dart';
@@ -1012,6 +1013,12 @@ final router = GoRouter(
             GoRoute(
               path: 'test',
               builder: (context, state) => const NotificationTestScreen(),
+            ),
+            // Delivery outcomes for notifications this user sent.
+            GoRoute(
+              path: 'reports',
+              builder: (context, state) =>
+                  const NotificationDeliveryReportScreen(),
             ),
             GoRoute(
               path: 'add',

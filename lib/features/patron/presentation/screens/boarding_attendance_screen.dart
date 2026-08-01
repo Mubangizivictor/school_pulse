@@ -147,12 +147,12 @@ class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.info_outline, color: AppColors.errorRed, size: 16),
+                            Icon(Icons.info_outline, color: AppColors.errorRed, size: 16),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 '$missingCount marked absent — will alert parents on save.',
-                                style: const TextStyle(color: AppColors.errorRed, fontWeight: FontWeight.w600, fontSize: 13),
+                                style: TextStyle(color: AppColors.errorRed, fontWeight: FontWeight.w600, fontSize: 13),
                               ),
                             ),
                           ],

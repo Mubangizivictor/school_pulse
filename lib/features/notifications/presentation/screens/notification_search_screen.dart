@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/injection_container.dart' as di;
@@ -25,6 +26,50 @@ class _NotificationSearchScreenState extends State<NotificationSearchScreen> {
   /// Debounces keystrokes so a query is not issued per character - each one is
   /// a billed read, and the intermediate results are never seen anyway.
   Timer? _debounce;
+
+  /// Recent searches, newest first. Persisted per user so the list survives
+  /// leaving the screen; previously these were five hardcoded strings.
+  List<String> _recentSearches = [];
+
+  static const _recentSearchesKey = 'notification_recent_searches';
+  static const _maxRecentSearches = 8;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRecentSearches();
+  }
+
+  Future<void> _loadRecentSearches() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _recentSearches = prefs.getStringList(_recentSearchesKey) ?? const [];
+    });
+  }
+
+  /// Records [term] as a recent search, most recent first and de-duplicated.
+  Future<void> _rememberSearch(String term) async {
+    final trimmed = term.trim();
+    if (trimmed.isEmpty) return;
+
+    final updated = [
+      trimmed,
+      ..._recentSearches.where((s) => s.toLowerCase() != trimmed.toLowerCase()),
+    ].take(_maxRecentSearches).toList();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_recentSearchesKey, updated);
+    if (!mounted) return;
+    setState(() => _recentSearches = updated);
+  }
+
+  Future<void> _clearRecentSearches() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_recentSearchesKey);
+    if (!mounted) return;
+    setState(() => _recentSearches = const []);
+  }
 
   @override
   void dispose() {
@@ -77,6 +122,10 @@ class _NotificationSearchScreenState extends State<NotificationSearchScreen> {
     setState(() {
       _searchResults = result.fold((_) => const [], (page) => page.items);
     });
+
+    // Recorded only after a query actually ran, so half-typed words do not
+    // pile up in the recent list.
+    unawaited(_rememberSearch(query));
   }
 
   @override
@@ -151,8 +200,17 @@ class _NotificationSearchScreenState extends State<NotificationSearchScreen> {
             children: [
               const Text('Recent Searches', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
               TextButton(
-                onPressed: () {},
-                child: const Text('Clear all', style: TextStyle(color: Color(0xFF6366F1), fontSize: 12)),
+                onPressed:
+                    _recentSearches.isEmpty ? null : _clearRecentSearches,
+                child: Text(
+                  'Clear all',
+                  style: TextStyle(
+                    color: _recentSearches.isEmpty
+                        ? Colors.white24
+                        : const Color(0xFF6366F1),
+                    fontSize: 12,
+                  ),
+                ),
               ),
             ],
           ),
@@ -160,7 +218,14 @@ class _NotificationSearchScreenState extends State<NotificationSearchScreen> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: ['Bus arrival', 'Fees', 'John Kato', 'Exam', 'Homework'].map((s) => _buildSearchChip(s)).toList(),
+            children: _recentSearches.isEmpty
+                ? [
+                    const Text(
+                      'Your recent searches will appear here',
+                      style: TextStyle(color: Colors.white30, fontSize: 12),
+                    ),
+                  ]
+                : _recentSearches.map(_buildSearchChip).toList(),
           ),
           const SizedBox(height: 32),
           const Text('Popular Searches', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),

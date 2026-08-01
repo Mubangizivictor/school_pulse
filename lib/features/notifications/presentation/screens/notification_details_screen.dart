@@ -649,19 +649,24 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
             ],
           ),
         ),
-        ElevatedButton(
-          onPressed: () {},
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.white12,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            minimumSize: const Size(80, 32),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        // "Contact" rather than "Follow": there is no subscribe concept in
+        // school notifications, but reaching the person who sent it is a real
+        // need. Hidden for automated senders - there is nobody to reply to.
+        if (!notification.senderIdentity.isAutomated &&
+            notification.senderIdentity.senderId != null)
+          ElevatedButton(
+            onPressed: _busy ? null : _contactSender,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white12,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              minimumSize: const Size(80, 32),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text('Contact', style: TextStyle(fontSize: 12)),
           ),
-          child: const Text('Follow', style: TextStyle(fontSize: 12)),
-        ),
       ],
     );
   }
@@ -826,6 +831,21 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
         ),
       ),
     );
+  }
+
+  /// Opens a conversation with whoever sent this notification.
+  ///
+  /// Routes into the messaging module by its existing route rather than
+  /// touching its internals - an existing conversation opens, and the
+  /// messaging module handles creating one where none exists.
+  Future<void> _contactSender() async {
+    final conversationId = notification.relatedConversationId;
+    if (conversationId != null && conversationId.isNotEmpty) {
+      context.push('/messages/chat/$conversationId');
+      return;
+    }
+    // No existing thread: land on the message list so the user can start one.
+    context.push('/messages');
   }
 
   /// Shares the notification as text.

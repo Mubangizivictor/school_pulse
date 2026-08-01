@@ -7,6 +7,7 @@ import 'package:school_pulse/core/permissions/role_permission_defaults.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/notifications/domain/entities/notification_category_config.dart';
 import 'package:school_pulse/features/notifications/domain/entities/notification_model.dart';
 import 'package:school_pulse/features/notifications/domain/services/notification_sender.dart';
 import 'package:school_pulse/injection_container.dart' as di;
@@ -265,6 +266,143 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// Shows how the notification will appear before it is sent.
+  ///
+  /// Renders the same title/body/sender the recipient will see, so a typo in a
+  /// school-wide broadcast is caught before it reaches thousands of devices.
+  void _showPreview() {
+    final user = _user;
+    final (category, _, priority) = _classify();
+    final config = NotificationCategoryCatalog.of(category);
+    final title = _titleController.text.trim();
+    final body = _messageController.text.trim();
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF1E293B),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Preview',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'How this will appear to ${_audience().description}',
+                style: const TextStyle(color: Colors.white54, fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F172A),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: config.color.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(config.icon, color: config.color, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title.isEmpty ? 'Title goes here' : title,
+                            style: TextStyle(
+                              color: title.isEmpty
+                                  ? Colors.white24
+                                  : Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            body.isEmpty ? 'Message goes here' : body,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: body.isEmpty
+                                  ? Colors.white24
+                                  : Colors.white70,
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Text(
+                                user?.name ?? 'You',
+                                style: const TextStyle(
+                                  color: Color(0xFF10B981),
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const Spacer(),
+                              if (priority == NotificationPriority.urgent ||
+                                  priority == NotificationPriority.high)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE11D48)
+                                        .withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    priority.name.toUpperCase(),
+                                    style: const TextStyle(
+                                      color: Color(0xFFE11D48),
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(sheetContext),
+                  child: const Text('Close'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -282,7 +420,7 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () {},
+            onPressed: _sending ? null : _showPreview,
             child: const Text('Preview', style: TextStyle(color: Color(0xFF6366F1))),
           ),
         ],
