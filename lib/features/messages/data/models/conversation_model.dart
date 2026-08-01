@@ -65,6 +65,7 @@ class ConversationModel {
       isMuted: List<String>.from(data['mutedBy'] ?? const []).contains(currentUserId),
       isArchived: List<String>.from(data['archivedBy'] ?? const []).contains(currentUserId),
       isAccepted: List<String>.from(data['acceptedBy'] ?? const []).contains(currentUserId),
+      isSpam: List<String>.from(data['spamBy'] ?? const []).contains(currentUserId),
       schoolId: data['schoolId'] as String? ?? '',
       description: data['description'] as String?,
       adminIds: List<String>.from(data['adminIds'] ?? const []),

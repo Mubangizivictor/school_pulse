@@ -79,7 +79,24 @@ abstract class MessagesRepository {
     String? fileSize,
     String? mediaUrl,
     ChatMessage? replyTo,
+    List<String>? pollOptions,
+    Duration? audioDuration,
+    double? latitude,
+    double? longitude,
+    String? sharedContactId,
+    String? sharedContactRole,
+    DateTime? eventStart,
+    String? eventLocation,
   });
+
+  /// Casts (or moves) this user's vote. Passing the option they already
+  /// picked withdraws it, the same way tapping a reaction twice clears it.
+  Future<void> voteInPoll(
+    String conversationId,
+    String messageId,
+    String userId,
+    int optionIndex,
+  );
 
   /// Uploads to `chat_attachments/{schoolId}/{conversationId}/...` and returns
   /// the download URL to hand back to [sendMessage].

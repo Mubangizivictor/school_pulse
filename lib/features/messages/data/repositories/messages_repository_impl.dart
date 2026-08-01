@@ -274,6 +274,14 @@ class MessagesRepositoryImpl implements MessagesRepository {
     String? fileSize,
     String? mediaUrl,
     ChatMessage? replyTo,
+    List<String>? pollOptions,
+    Duration? audioDuration,
+    double? latitude,
+    double? longitude,
+    String? sharedContactId,
+    String? sharedContactRole,
+    DateTime? eventStart,
+    String? eventLocation,
   }) async {
     final conversationRef = _conversations.doc(conversationId);
     final conversation = await conversationRef.get();
@@ -297,6 +305,14 @@ class MessagesRepositoryImpl implements MessagesRepository {
         replyToId: replyTo?.id,
         replyToSender: replyTo?.senderName,
         replyToContent: replyTo?.content,
+        pollOptions: pollOptions,
+        audioDuration: audioDuration,
+        latitude: latitude,
+        longitude: longitude,
+        sharedContactId: sharedContactId,
+        sharedContactRole: sharedContactRole,
+        eventStart: eventStart,
+        eventLocation: eventLocation,
       ),
     );
 
@@ -470,6 +486,42 @@ class MessagesRepositoryImpl implements MessagesRepository {
   }
 
   @override
+  Future<void> voteInPoll(
+    String conversationId,
+    String messageId,
+    String userId,
+    int optionIndex,
+  ) async {
+    final ref = _messagesOf(conversationId).doc(messageId);
+    await firestore.runTransaction((transaction) async {
+      final doc = await transaction.get(ref);
+      if (!doc.exists) return;
+
+      final votes = Map<String, dynamic>.from(doc.data()!['pollVotes'] ?? const {});
+      String? previous;
+      for (final entry in votes.entries) {
+        if (List<String>.from(entry.value ?? const []).contains(userId)) {
+          previous = entry.key;
+          break;
+        }
+      }
+
+      // Per-option array edits rather than one whole-map write, so two people
+      // voting at the same instant can't overwrite each other.
+      final updates = <String, dynamic>{};
+      if (previous != null) {
+        updates['pollVotes.$previous'] = FieldValue.arrayRemove([userId]);
+      }
+      if (previous != '$optionIndex') {
+        updates['pollVotes.$optionIndex'] = FieldValue.arrayUnion([userId]);
+      }
+      if (updates.isEmpty) return;
+
+      transaction.update(ref, updates);
+    });
+  }
+
+  @override
   Future<void> forwardMessage({
     required ChatMessage message,
     required List<String> conversationIds,
@@ -484,6 +536,16 @@ class MessagesRepositoryImpl implements MessagesRepository {
         fileName: message.fileName,
         fileSize: message.fileSize,
         mediaUrl: message.mediaUrl,
+        // A forwarded poll starts a fresh vote rather than carrying the
+        // original chat's tallies across.
+        pollOptions: message.pollOptions,
+        audioDuration: message.audioDuration,
+        latitude: message.latitude,
+        longitude: message.longitude,
+        sharedContactId: message.sharedContactId,
+        sharedContactRole: message.sharedContactRole,
+        eventStart: message.eventStart,
+        eventLocation: message.eventLocation,
       );
     }
   }

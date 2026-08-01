@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/messages/domain/entities/message_models.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Quick reactions offered on long-press. Kept short on purpose - a school
 /// chat doesn't need a full emoji keyboard.
@@ -25,6 +28,12 @@ class MessageBubble extends StatelessWidget {
   final VoidCallback? onPin;
   final ValueChanged<String>? onReact;
 
+  /// Casts a vote on a poll bubble, by option index.
+  final ValueChanged<int>? onVote;
+
+  /// Opens a chat with the person on a shared contact card.
+  final ValueChanged<String>? onOpenContact;
+
   const MessageBubble({
     super.key,
     required this.message,
@@ -37,6 +46,8 @@ class MessageBubble extends StatelessWidget {
     this.onDelete,
     this.onPin,
     this.onReact,
+    this.onVote,
+    this.onOpenContact,
   });
 
   @override
@@ -81,7 +92,7 @@ class MessageBubble extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (message.replyToId != null) _buildQuote(context, isDark),
-                  if (message.mediaUrl != null && !message.isDeleted) _buildMedia(context),
+                  if (!message.isDeleted) _buildAttachment(context, isDark),
                   if (message.isDeleted)
                     Text(
                       'This message was deleted',
@@ -192,29 +203,407 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildMedia(BuildContext context) {
-    if (message.type != MessageType.image) {
-      // Any other uploaded file renders as a download row.
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 6),
+  /// Renders whatever hangs above the message text - a photo, a voice note,
+  /// a document row, or one of the location / contact / poll / event cards.
+  /// Plain text messages get nothing.
+  Widget _buildAttachment(BuildContext context, bool isDark) {
+    switch (message.type) {
+      case MessageType.text:
+        return const SizedBox.shrink();
+      case MessageType.image:
+      case MessageType.video:
+        return message.mediaUrl == null ? const SizedBox.shrink() : _buildImage(context);
+      case MessageType.audio:
+        return message.mediaUrl == null
+            ? const SizedBox.shrink()
+            : Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: VoiceNoteBubble(
+                  url: message.mediaUrl!,
+                  duration: message.audioDuration,
+                  onDark: message.isMe,
+                ),
+              );
+      case MessageType.file:
+        return _buildFileRow(context);
+      case MessageType.location:
+        return _buildLocationCard(context);
+      case MessageType.contact:
+        return _buildContactCard(context);
+      case MessageType.poll:
+        return _buildPoll(context, isDark);
+      case MessageType.event:
+        return _buildEventCard(context);
+    }
+  }
+
+  Color _accent() => message.isMe ? Colors.white : AppColors.electricBlue;
+
+  Color _onBubble(BuildContext context) =>
+      message.isMe ? Colors.white : AppColors.textPrimary(context);
+
+  /// Panel behind a card inside the bubble - lighter on the sender's blue,
+  /// darker on the recipient's grey.
+  BoxDecoration _cardDecoration() => BoxDecoration(
+        color: message.isMe ? Colors.white.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(10),
+      );
+
+  Widget _buildFileRow(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: GestureDetector(
+        onTap: message.mediaUrl == null ? null : () => _openUrl(context, message.mediaUrl!),
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: _cardDecoration(),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(_fileIcon(message.fileName), size: 24, color: _accent()),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      message.fileName ?? 'Attachment',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: _onBubble(context),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (message.fileSize != null)
+                      Text(
+                        message.fileSize!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: message.isMe ? Colors.white70 : AppColors.textMuted(context),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.file_download_outlined, size: 18, color: _accent()),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  IconData _fileIcon(String? fileName) {
+    final extension = (fileName ?? '').toLowerCase().split('.').last;
+    switch (extension) {
+      case 'pdf':
+        return Icons.picture_as_pdf;
+      case 'doc':
+      case 'docx':
+        return Icons.description;
+      case 'xls':
+      case 'xlsx':
+      case 'csv':
+        return Icons.table_chart;
+      case 'ppt':
+      case 'pptx':
+        return Icons.slideshow;
+      case 'zip':
+      case 'rar':
+        return Icons.folder_zip;
+      default:
+        return Icons.insert_drive_file;
+    }
+  }
+
+  Widget _buildLocationCard(BuildContext context) {
+    if (message.latitude == null || message.longitude == null) {
+      return const SizedBox.shrink();
+    }
+    final coordinates =
+        '${message.latitude!.toStringAsFixed(5)}, ${message.longitude!.toStringAsFixed(5)}';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: GestureDetector(
+        onTap: () => _openUrl(
+          context,
+          // Geo URIs open the default map app on Android; iOS follows the
+          // https form, which works on both.
+          'https://maps.google.com/?q=${message.latitude},${message.longitude}',
+        ),
+        child: Container(
+          width: 220,
+          padding: const EdgeInsets.all(10),
+          decoration: _cardDecoration(),
+          child: Row(
+            children: [
+              Icon(Icons.location_on, color: _accent()),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Shared location',
+                        style: TextStyle(color: _onBubble(context), fontWeight: FontWeight.w600)),
+                    Text(
+                      coordinates,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: message.isMe ? Colors.white70 : AppColors.textMuted(context),
+                      ),
+                    ),
+                    Text('Tap to open in Maps',
+                        style: TextStyle(fontSize: 11, color: _accent(), fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContactCard(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: GestureDetector(
+        onTap: message.sharedContactId == null || onOpenContact == null
+            ? null
+            : () => onOpenContact!(message.sharedContactId!),
+        child: Container(
+          width: 220,
+          padding: const EdgeInsets.all(10),
+          decoration: _cardDecoration(),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: message.isMe
+                    ? Colors.white.withValues(alpha: 0.25)
+                    : AppColors.electricBlue.withValues(alpha: 0.15),
+                child: Icon(Icons.person, size: 20, color: _accent()),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      message.content,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: _onBubble(context), fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      _roleLabel(message.sharedContactRole),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: message.isMe ? Colors.white70 : AppColors.textMuted(context),
+                      ),
+                    ),
+                    if (onOpenContact != null)
+                      Text('Tap to message',
+                          style:
+                              TextStyle(fontSize: 11, color: _accent(), fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEventCard(BuildContext context) {
+    if (message.eventStart == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Container(
+        width: 220,
+        padding: const EdgeInsets.all(10),
+        decoration: _cardDecoration(),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.insert_drive_file,
-                size: 20, color: message.isMe ? Colors.white : AppColors.electricBlue),
+            Icon(Icons.event, color: _accent()),
             const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                message.fileName ?? 'Attachment',
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: message.isMe ? Colors.white : null),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    DateFormat('EEE, d MMM y').format(message.eventStart!),
+                    style: TextStyle(color: _onBubble(context), fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    DateFormat('h:mm a').format(message.eventStart!),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: message.isMe ? Colors.white70 : AppColors.textMuted(context),
+                    ),
+                  ),
+                  if (message.eventLocation != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Row(
+                        children: [
+                          Icon(Icons.place_outlined, size: 12, color: _accent()),
+                          const SizedBox(width: 2),
+                          Flexible(
+                            child: Text(
+                              message.eventLocation!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: message.isMe ? Colors.white70 : AppColors.textMuted(context),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPoll(BuildContext context, bool isDark) {
+    final options = message.pollOptions ?? const [];
+    if (options.isEmpty) return const SizedBox.shrink();
+
+    final tallies = message.pollVotes ?? const {};
+    final total = tallies.values.fold<int>(0, (sum, count) => sum + count);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 6),
+      child: SizedBox(
+        width: 240,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var i = 0; i < options.length; i++)
+              _buildPollOption(context, i, options[i], tallies['$i'] ?? 0, total),
+            const SizedBox(height: 2),
+            Text(
+              total == 1 ? '1 vote' : '$total votes',
+              style: TextStyle(
+                fontSize: 11,
+                color: message.isMe ? Colors.white70 : AppColors.textMuted(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPollOption(
+    BuildContext context,
+    int index,
+    String label,
+    int votes,
+    int total,
+  ) {
+    final chosen = message.myPollVote == index;
+    // Bar fills proportionally once anyone has voted.
+    final share = total == 0 ? 0.0 : votes / total;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: GestureDetector(
+        onTap: onVote == null ? null : () => onVote!(index),
+        child: Stack(
+          children: [
+            Container(
+              height: 34,
+              decoration: _cardDecoration(),
+            ),
+            // The filled portion, drawn over the track.
+            FractionallySizedBox(
+              widthFactor: share,
+              child: Container(
+                height: 34,
+                decoration: BoxDecoration(
+                  color: message.isMe
+                      ? Colors.white.withValues(alpha: 0.3)
+                      : AppColors.electricBlue.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            SizedBox(
+              height: 34,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Row(
+                  children: [
+                    Icon(
+                      chosen ? Icons.check_circle : Icons.radio_button_unchecked,
+                      size: 14,
+                      color: _accent(),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: _onBubble(context),
+                          fontWeight: chosen ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '$votes',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: message.isMe ? Colors.white70 : AppColors.textMuted(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _roleLabel(String? roleName) {
+    if (roleName == null || roleName.isEmpty) return 'School contact';
+    final role = UserRole.values.where((r) => r.name == roleName);
+    return role.isEmpty ? roleName : UserRoleDisplay.name(role.first);
+  }
+
+  Future<void> _openUrl(BuildContext context, String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null || !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open $url')),
       );
     }
+  }
 
+  Widget _buildImage(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: GestureDetector(
@@ -316,6 +705,139 @@ class MessageBubble extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Play/pause row for a voice note, with a scrub bar and a running time.
+///
+/// Each bubble owns its own player so two voice notes can't fight over one:
+/// [AudioPlayer] holds a platform decoder, hence the dispose in [dispose].
+class VoiceNoteBubble extends StatefulWidget {
+  final String url;
+  final Duration? duration;
+
+  /// True inside the sender's blue bubble, where everything is white.
+  final bool onDark;
+
+  const VoiceNoteBubble({
+    super.key,
+    required this.url,
+    this.duration,
+    required this.onDark,
+  });
+
+  @override
+  State<VoiceNoteBubble> createState() => _VoiceNoteBubbleState();
+}
+
+class _VoiceNoteBubbleState extends State<VoiceNoteBubble> {
+  final AudioPlayer _player = AudioPlayer();
+  bool _loaded = false;
+  bool _failed = false;
+
+  @override
+  void dispose() {
+    _player.dispose();
+    super.dispose();
+  }
+
+  /// The clip is only fetched on the first tap - loading every voice note in
+  /// a scrollback would be a lot of wasted data on a school network.
+  Future<void> _toggle() async {
+    if (_failed) return;
+    try {
+      if (!_loaded) {
+        await _player.setUrl(widget.url);
+        _loaded = true;
+      }
+      if (_player.playing) {
+        await _player.pause();
+      } else {
+        // Replay from the start once it has run to the end.
+        if (_player.processingState == ProcessingState.completed) {
+          await _player.seek(Duration.zero);
+        }
+        await _player.play();
+      }
+    } catch (_) {
+      if (mounted) setState(() => _failed = true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = widget.onDark ? Colors.white : AppColors.electricBlue;
+    final muted = widget.onDark ? Colors.white70 : AppColors.textMuted(context);
+
+    return Container(
+      width: 220,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: widget.onDark
+            ? Colors.white.withValues(alpha: 0.15)
+            : Colors.black.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: StreamBuilder<PlayerState>(
+        stream: _player.playerStateStream,
+        builder: (context, snapshot) {
+          final playing = snapshot.data?.playing ?? false;
+          return Row(
+            children: [
+              GestureDetector(
+                onTap: _toggle,
+                child: Icon(
+                  _failed
+                      ? Icons.error_outline
+                      : (playing ? Icons.pause_circle_filled : Icons.play_circle_fill),
+                  size: 32,
+                  color: foreground,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: StreamBuilder<Duration>(
+                  stream: _player.positionStream,
+                  builder: (context, positionSnapshot) {
+                    final total = _player.duration ?? widget.duration ?? Duration.zero;
+                    final position = positionSnapshot.data ?? Duration.zero;
+                    final progress = total.inMilliseconds == 0
+                        ? 0.0
+                        : (position.inMilliseconds / total.inMilliseconds).clamp(0.0, 1.0);
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 3,
+                          backgroundColor: muted.withValues(alpha: 0.3),
+                          valueColor: AlwaysStoppedAnimation(foreground),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _failed
+                              ? 'Unavailable'
+                              : formatClipDuration(position > Duration.zero ? position : total),
+                          style: TextStyle(fontSize: 11, color: muted),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// m:ss, the way a chat app shows clip length.
+String formatClipDuration(Duration duration) {
+  final minutes = duration.inMinutes;
+  final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+  return '$minutes:$seconds';
 }
 
 class MessageActionsMenu extends StatelessWidget {

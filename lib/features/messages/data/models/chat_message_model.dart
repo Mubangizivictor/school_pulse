@@ -48,7 +48,17 @@ class ChatMessageModel {
       fileSize: data['fileSize'] as String?,
       mediaUrl: data['mediaUrl'] as String?,
       pollOptions: data['pollOptions'] != null ? List<String>.from(data['pollOptions']) : null,
-      pollVotes: data['pollVotes'] != null ? Map<String, int>.from(data['pollVotes']) : null,
+      pollVotes: _pollTallies(data['pollVotes']),
+      myPollVote: _myPollVote(data['pollVotes'], currentUserId),
+      audioDuration: data['audioDurationMs'] != null
+          ? Duration(milliseconds: (data['audioDurationMs'] as num).toInt())
+          : null,
+      latitude: (data['latitude'] as num?)?.toDouble(),
+      longitude: (data['longitude'] as num?)?.toDouble(),
+      sharedContactId: data['sharedContactId'] as String?,
+      sharedContactRole: data['sharedContactRole'] as String?,
+      eventStart: (data['eventStart'] as Timestamp?)?.toDate(),
+      eventLocation: data['eventLocation'] as String?,
       isDeleted: data['isDeleted'] as bool? ?? false,
       editedAt: (data['editedAt'] as Timestamp?)?.toDate(),
       replyToId: data['replyToId'] as String?,
@@ -74,6 +84,14 @@ class ChatMessageModel {
     String? replyToId,
     String? replyToSender,
     String? replyToContent,
+    List<String>? pollOptions,
+    Duration? audioDuration,
+    double? latitude,
+    double? longitude,
+    String? sharedContactId,
+    String? sharedContactRole,
+    DateTime? eventStart,
+    String? eventLocation,
   }) {
     return {
       'senderId': senderId,
@@ -95,7 +113,42 @@ class ChatMessageModel {
       'replyToId': ?replyToId,
       'replyToSender': ?replyToSender,
       'replyToContent': ?replyToContent,
+      'audioDurationMs': ?audioDuration?.inMilliseconds,
+      'latitude': ?latitude,
+      'longitude': ?longitude,
+      'sharedContactId': ?sharedContactId,
+      'sharedContactRole': ?sharedContactRole,
+      'eventStart': ?(eventStart == null ? null : Timestamp.fromDate(eventStart)),
+      'eventLocation': ?eventLocation,
+      if (pollOptions != null) ...{
+        'pollOptions': pollOptions,
+        // Every option starts with an empty voter list so the bubble can
+        // render 0-vote rows without a null check.
+        'pollVotes': {for (var i = 0; i < pollOptions.length; i++) '$i': <String>[]},
+      },
     };
+  }
+
+  /// Poll votes are stored as `{optionIndex: [uid, ...]}` rather than a plain
+  /// tally so a person can only ever hold one vote and can change it - the
+  /// same shape, and the same reason, as message reactions.
+  static Map<String, int>? _pollTallies(dynamic raw) {
+    if (raw == null) return null;
+    final votes = Map<String, dynamic>.from(raw);
+    return {
+      for (final entry in votes.entries) entry.key: List<String>.from(entry.value ?? const []).length,
+    };
+  }
+
+  static int? _myPollVote(dynamic raw, String currentUserId) {
+    if (raw == null) return null;
+    final votes = Map<String, dynamic>.from(raw);
+    for (final entry in votes.entries) {
+      if (List<String>.from(entry.value ?? const []).contains(currentUserId)) {
+        return int.tryParse(entry.key);
+      }
+    }
+    return null;
   }
 
   static MessageType _typeFromName(String? name) {

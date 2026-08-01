@@ -1,15 +1,21 @@
+import 'dart:async';
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/messages/domain/entities/message_models.dart';
 import 'package:school_pulse/features/messages/presentation/messaging_context.dart';
+import 'package:school_pulse/features/messages/presentation/widgets/attachment_composers.dart';
 import 'package:school_pulse/features/messages/presentation/widgets/message_bubble.dart';
 
 class ChatConversationScreen extends StatefulWidget {
@@ -32,6 +38,13 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   /// Guards against re-issuing the read receipt write on every stream tick.
   bool _markingRead = false;
 
+  /// Voice note in progress. [_recordingPath] being non-null is what swaps
+  /// the composer for the recording bar.
+  final AudioRecorder _recorder = AudioRecorder();
+  String? _recordingPath;
+  Duration _recordedFor = Duration.zero;
+  Timer? _recordingTicker;
+
   @override
   void initState() {
     super.initState();
@@ -43,6 +56,9 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   void dispose() {
     _messageController.removeListener(_onComposerChanged);
     _messageController.dispose();
+    _recordingTicker?.cancel();
+    // Leaving the chat mid-recording must release the microphone.
+    _recorder.dispose();
     super.dispose();
   }
 
@@ -219,6 +235,9 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                           .setMessagePinned(conversation.id, message, !message.isPinned),
                       onReact: (emoji) =>
                           context.messages.react(conversation.id, message.id, user.id, emoji),
+                      onVote: (option) =>
+                          context.messages.voteInPoll(conversation.id, message.id, user.id, option),
+                      onOpenContact: (contactId) => _openSharedContact(user, contactId),
                     );
                   },
                 );
@@ -313,7 +332,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (draft != null) _buildDraftBanner(isDark, draft),
+            if (draft != null && _recordingPath == null) _buildDraftBanner(isDark, draft),
+            if (_recordingPath != null)
+              _buildRecordingBar(isDark, user, conversation)
+            else
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -358,7 +380,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                       icon: Icon(_composerHadText ? Icons.send : Icons.mic, color: Colors.white, size: 20),
                       onPressed: _composerHadText
                           ? () => _send(user, conversation)
-                          : () => context.showMessagingSnack('Voice notes are not available yet'),
+                          : _startRecording,
                     ),
                   ),
                 ),
@@ -521,13 +543,148 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
           conversation,
         );
       case AttachmentKind.document:
+        await _sendDocument(user, conversation);
       case AttachmentKind.audio:
+        await _startRecording();
       case AttachmentKind.location:
+        await _sendLocation(user, conversation);
       case AttachmentKind.contact:
+        await _sendContact(user, conversation);
       case AttachmentKind.poll:
+        await _sendPoll(user, conversation);
       case AttachmentKind.event:
-        context.showMessagingSnack('${kind.label} attachments are not available yet');
+        await _sendEvent(user, conversation);
     }
+  }
+
+  Future<void> _sendDocument(UserEntity user, ChatConversation conversation) async {
+    final result = await FilePicker.pickFiles();
+    final picked = result?.files.singleOrNull;
+    if (picked?.path == null || !mounted) return;
+
+    await _uploadAndSend(
+      user: user,
+      conversation: conversation,
+      file: File(picked!.path!),
+      fileName: picked.name,
+      type: MessageType.file,
+      failureMessage: 'Could not send document',
+    );
+  }
+
+  Future<void> _sendLocation(UserEntity user, ChatConversation conversation) async {
+    if (!await _ensureLocationPermission()) return;
+
+    setState(() => _uploading = true);
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium),
+      );
+      if (!mounted) return;
+      await context.messages.sendMessage(
+        conversationId: conversation.id,
+        sender: user,
+        content: '',
+        type: MessageType.location,
+        latitude: position.latitude,
+        longitude: position.longitude,
+      );
+    } catch (e) {
+      if (mounted) context.showMessagingSnack('Could not get your location: $e');
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
+  }
+
+  /// Location is only ever requested at the moment the user taps Location -
+  /// never at launch - so a denial has to be explained here.
+  Future<bool> _ensureLocationPermission() async {
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      if (mounted) context.showMessagingSnack('Turn on location services to share your location');
+      return false;
+    }
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      if (mounted) context.showMessagingSnack('Location permission is needed to share where you are');
+      return false;
+    }
+    return true;
+  }
+
+  Future<void> _sendContact(UserEntity user, ChatConversation conversation) async {
+    final contacts = await context.messages.getContacts(user.schoolId, excludeId: user.id);
+    if (!mounted) return;
+
+    final picked = await showModalBottomSheet<MessageContact>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => ContactPickerSheet(contacts: contacts),
+    );
+    if (picked == null || !mounted) return;
+
+    await context.messages.sendMessage(
+      conversationId: conversation.id,
+      sender: user,
+      content: picked.name,
+      type: MessageType.contact,
+      sharedContactId: picked.id,
+      sharedContactRole: picked.role,
+    );
+  }
+
+  Future<void> _sendPoll(UserEntity user, ChatConversation conversation) async {
+    final draft = await showModalBottomSheet<PollDraft>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => const PollComposerSheet(),
+    );
+    if (draft == null || !mounted) return;
+
+    await context.messages.sendMessage(
+      conversationId: conversation.id,
+      sender: user,
+      content: draft.question,
+      type: MessageType.poll,
+      pollOptions: draft.options,
+    );
+  }
+
+  Future<void> _sendEvent(UserEntity user, ChatConversation conversation) async {
+    final draft = await showModalBottomSheet<EventDraft>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => const EventComposerSheet(),
+    );
+    if (draft == null || !mounted) return;
+
+    await context.messages.sendMessage(
+      conversationId: conversation.id,
+      sender: user,
+      content: draft.title,
+      type: MessageType.event,
+      eventStart: draft.start,
+      eventLocation: draft.location,
+    );
+  }
+
+  /// Opens (or reuses) a chat with the person on a shared contact card.
+  Future<void> _openSharedContact(UserEntity user, String contactId) async {
+    if (contactId == user.id) return;
+    final contact = await context.messages.getContact(contactId);
+    if (contact == null || !mounted) {
+      if (mounted) context.showMessagingSnack('That contact is no longer in the directory');
+      return;
+    }
+    final id = await context.messages.startDirectConversation(me: user, contact: contact);
+    if (!mounted) return;
+    context.push('/messages/chat/$id');
   }
 
   Future<void> _sendImage(
@@ -538,30 +695,152 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     final picked = await ImagePicker().pickImage(source: source, imageQuality: 70);
     if (picked == null || !mounted) return;
 
+    await _uploadAndSend(
+      user: user,
+      conversation: conversation,
+      file: File(picked.path),
+      fileName: picked.name,
+      type: MessageType.image,
+      failureMessage: 'Could not send photo',
+    );
+  }
+
+  /// Upload-then-post, shared by photos, documents and voice notes: the file
+  /// goes to Storage first, and only the resulting URL is written to the
+  /// message.
+  Future<void> _uploadAndSend({
+    required UserEntity user,
+    required ChatConversation conversation,
+    required File file,
+    required String fileName,
+    required MessageType type,
+    required String failureMessage,
+    Duration? audioDuration,
+  }) async {
     setState(() => _uploading = true);
     try {
-      final file = File(picked.path);
       final url = await context.messages.uploadAttachment(
         schoolId: user.schoolId,
         conversationId: conversation.id,
         file: file,
-        fileName: picked.name,
+        fileName: fileName,
       );
       if (!mounted) return;
       await context.messages.sendMessage(
         conversationId: conversation.id,
         sender: user,
         content: '',
-        type: MessageType.image,
+        type: type,
         mediaUrl: url,
-        fileName: picked.name,
+        fileName: fileName,
         fileSize: _readableSize(await file.length()),
+        audioDuration: audioDuration,
       );
     } catch (e) {
-      if (mounted) context.showMessagingSnack('Could not send photo: $e');
+      if (mounted) context.showMessagingSnack('$failureMessage: $e');
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
+  }
+
+  // --- Voice notes -------------------------------------------------------
+
+  Future<void> _startRecording() async {
+    if (!await _recorder.hasPermission()) {
+      if (mounted) context.showMessagingSnack('Microphone permission is needed to record a voice note');
+      return;
+    }
+
+    final directory = await getTemporaryDirectory();
+    final path = '${directory.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+    await _recorder.start(const RecordConfig(), path: path);
+    if (!mounted) return;
+
+    setState(() {
+      _recordingPath = path;
+      _recordedFor = Duration.zero;
+    });
+    _recordingTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _recordedFor += const Duration(seconds: 1));
+    });
+  }
+
+  Future<void> _stopRecording({
+    required bool send,
+    UserEntity? user,
+    ChatConversation? conversation,
+  }) async {
+    _recordingTicker?.cancel();
+    _recordingTicker = null;
+
+    final path = await _recorder.stop();
+    final duration = _recordedFor;
+    if (!mounted) return;
+    setState(() {
+      _recordingPath = null;
+      _recordedFor = Duration.zero;
+    });
+
+    if (path == null) return;
+    final file = File(path);
+
+    // Cancelled, or a mis-tap too short to be a message.
+    if (!send || duration < const Duration(seconds: 1)) {
+      if (send) context.showMessagingSnack('Hold longer to record a voice note');
+      if (await file.exists()) await file.delete();
+      return;
+    }
+    if (user == null || conversation == null || !mounted) return;
+
+    await _uploadAndSend(
+      user: user,
+      conversation: conversation,
+      file: file,
+      fileName: 'Voice note.m4a',
+      type: MessageType.audio,
+      audioDuration: duration,
+      failureMessage: 'Could not send voice note',
+    );
+  }
+
+  /// Replaces the composer row while a voice note is being recorded.
+  Widget _buildRecordingBar(bool isDark, UserEntity user, ChatConversation conversation) {
+    return Row(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+          tooltip: 'Discard',
+          onPressed: () => _stopRecording(send: false),
+        ),
+        const SizedBox(width: 4),
+        Container(
+          width: 10,
+          height: 10,
+          decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            'Recording  ${formatClipDuration(_recordedFor)}',
+            style: AppTypography.bodyMedium.copyWith(
+              color: isDark ? Colors.white : Colors.black87,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: CircleAvatar(
+            radius: 22,
+            backgroundColor: AppColors.electricBlue,
+            child: IconButton(
+              icon: const Icon(Icons.send, color: Colors.white, size: 20),
+              onPressed: () => _stopRecording(send: true, user: user, conversation: conversation),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   String _readableSize(int bytes) {

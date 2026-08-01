@@ -239,6 +239,215 @@ void main() {
     });
   });
 
+  group('rich attachments', () {
+    test('a poll starts with every option on zero and no vote of my own', () async {
+      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
+      await repository.sendMessage(
+        conversationId: id,
+        sender: teacher,
+        content: 'Which day suits the trip?',
+        type: MessageType.poll,
+        pollOptions: ['Friday', 'Saturday'],
+      );
+
+      final poll = (await repository.watchMessages(id, parent.id).first).single;
+      expect(poll.pollOptions, ['Friday', 'Saturday']);
+      expect(poll.pollVotes, {'0': 0, '1': 0});
+      expect(poll.myPollVote, isNull);
+      // The inbox preview names the type rather than showing a blank line.
+      final conversation = await repository.watchConversation(id, parent.id).first;
+      expect(conversation!.lastMessage.content, '📊 Poll');
+    });
+
+    test('a person holds one poll vote and can move or withdraw it', () async {
+      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
+      await repository.sendMessage(
+        conversationId: id,
+        sender: teacher,
+        content: 'Which day suits the trip?',
+        type: MessageType.poll,
+        pollOptions: ['Friday', 'Saturday'],
+      );
+      final poll = (await repository.watchMessages(id, parent.id).first).single;
+
+      await repository.voteInPoll(id, poll.id, parent.id, 0);
+      var voted = (await repository.watchMessages(id, parent.id).first).single;
+      expect(voted.myPollVote, 0);
+      expect(voted.pollVotes, {'0': 1, '1': 0});
+
+      await repository.voteInPoll(id, poll.id, parent.id, 1);
+      voted = (await repository.watchMessages(id, parent.id).first).single;
+      expect(voted.myPollVote, 1);
+      expect(voted.pollVotes, {'0': 0, '1': 1});
+
+      // Voting for the same option again withdraws it.
+      await repository.voteInPoll(id, poll.id, parent.id, 1);
+      voted = (await repository.watchMessages(id, parent.id).first).single;
+      expect(voted.myPollVote, isNull);
+      expect(voted.pollVotes, {'0': 0, '1': 0});
+    });
+
+    test('two people voting are counted separately', () async {
+      final id = await repository.createConversation(
+        me: teacher,
+        type: ChatType.group,
+        title: 'P7 - Parents Group',
+        members: [parentContact, otherParentContact],
+      );
+      await repository.sendMessage(
+        conversationId: id,
+        sender: teacher,
+        content: 'Which day suits the trip?',
+        type: MessageType.poll,
+        pollOptions: ['Friday', 'Saturday'],
+      );
+      final poll = (await repository.watchMessages(id, teacher.id).first).single;
+
+      await repository.voteInPoll(id, poll.id, parent.id, 0);
+      await repository.voteInPoll(id, poll.id, otherParent.id, 0);
+
+      final voted = (await repository.watchMessages(id, teacher.id).first).single;
+      expect(voted.pollVotes, {'0': 2, '1': 0});
+      expect(voted.myPollVote, isNull, reason: 'the teacher has not voted');
+    });
+
+    test('a voice note keeps its duration', () async {
+      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
+      await repository.sendMessage(
+        conversationId: id,
+        sender: teacher,
+        content: '',
+        type: MessageType.audio,
+        mediaUrl: 'https://example.test/voice.m4a',
+        fileName: 'Voice note.m4a',
+        audioDuration: const Duration(seconds: 12),
+      );
+
+      final message = (await repository.watchMessages(id, parent.id).first).single;
+      expect(message.audioDuration, const Duration(seconds: 12));
+
+      final conversation = await repository.watchConversation(id, parent.id).first;
+      expect(conversation!.lastMessage.content, '🎤 Voice message');
+    });
+
+    test('a shared location round-trips its coordinates', () async {
+      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
+      await repository.sendMessage(
+        conversationId: id,
+        sender: teacher,
+        content: '',
+        type: MessageType.location,
+        latitude: 0.3476,
+        longitude: 32.5825,
+      );
+
+      final message = (await repository.watchMessages(id, parent.id).first).single;
+      expect(message.latitude, closeTo(0.3476, 0.00001));
+      expect(message.longitude, closeTo(32.5825, 0.00001));
+    });
+
+    test('a shared contact carries the id needed to open a chat', () async {
+      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
+      await repository.sendMessage(
+        conversationId: id,
+        sender: teacher,
+        content: 'Abena Owusu',
+        type: MessageType.contact,
+        sharedContactId: 'parent-2',
+        sharedContactRole: 'parent',
+      );
+
+      final message = (await repository.watchMessages(id, parent.id).first).single;
+      expect(message.sharedContactId, 'parent-2');
+      expect(message.sharedContactRole, 'parent');
+      expect(message.content, 'Abena Owusu');
+    });
+
+    test('an event keeps its start time and place', () async {
+      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
+      final start = DateTime(2026, 9, 4, 16, 30);
+      await repository.sendMessage(
+        conversationId: id,
+        sender: teacher,
+        content: 'PTA meeting',
+        type: MessageType.event,
+        eventStart: start,
+        eventLocation: 'Assembly hall',
+      );
+
+      final message = (await repository.watchMessages(id, parent.id).first).single;
+      expect(message.eventStart, start);
+      expect(message.eventLocation, 'Assembly hall');
+    });
+
+    test('a document shows its filename in the inbox preview', () async {
+      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
+      await repository.sendMessage(
+        conversationId: id,
+        sender: teacher,
+        content: '',
+        type: MessageType.file,
+        mediaUrl: 'https://example.test/newsletter.pdf',
+        fileName: 'Newsletter.pdf',
+        fileSize: '2.4 MB',
+      );
+
+      final conversation = await repository.watchConversation(id, parent.id).first;
+      expect(conversation!.lastMessage.content, '📄 Newsletter.pdf');
+    });
+
+    test('forwarding a poll resets the votes', () async {
+      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
+      await repository.sendMessage(
+        conversationId: id,
+        sender: teacher,
+        content: 'Which day suits the trip?',
+        type: MessageType.poll,
+        pollOptions: ['Friday', 'Saturday'],
+      );
+      final poll = (await repository.watchMessages(id, teacher.id).first).single;
+      await repository.voteInPoll(id, poll.id, parent.id, 0);
+      final voted = (await repository.watchMessages(id, teacher.id).first).single;
+
+      final other = await repository.startDirectConversation(me: teacher, contact: otherParentContact);
+      await repository.forwardMessage(
+        message: voted,
+        conversationIds: [other],
+        sender: teacher,
+      );
+
+      final forwarded = (await repository.watchMessages(other, teacher.id).first).single;
+      expect(forwarded.pollOptions, ['Friday', 'Saturday']);
+      expect(forwarded.pollVotes, {'0': 0, '1': 0});
+    });
+  });
+
+  group('message requests', () {
+    test('marking spam is per-user and does not accept the chat', () async {
+      final id = await repository.startDirectConversation(me: parent, contact: otherParentContact);
+
+      await repository.markSpam(id, otherParent.id);
+
+      final forRecipient = await repository.watchConversation(id, otherParent.id).first;
+      expect(forRecipient!.isSpam, isTrue);
+      expect(forRecipient.isAccepted, isFalse);
+
+      final forSender = await repository.watchConversation(id, parent.id).first;
+      expect(forSender!.isSpam, isFalse);
+    });
+
+    test('accepting clears the spam flag and moves it into the inbox', () async {
+      final id = await repository.startDirectConversation(me: parent, contact: otherParentContact);
+      await repository.markSpam(id, otherParent.id);
+
+      await repository.acceptRequest(id, otherParent.id);
+
+      final accepted = await repository.watchConversation(id, otherParent.id).first;
+      expect(accepted!.isAccepted, isTrue);
+      expect(accepted.isSpam, isFalse);
+    });
+  });
+
   group('groups', () {
     test('creates a group with the creator as its only admin', () async {
       final id = await repository.createConversation(

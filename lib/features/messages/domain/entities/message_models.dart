@@ -67,7 +67,29 @@ class ChatMessage {
   final String? fileSize;
   final String? mediaUrl;
   final List<String>? pollOptions;
+
+  /// Option index (as a string, because Firestore map keys are strings) ->
+  /// number of votes.
   final Map<String, int>? pollVotes;
+
+  /// The option the signed-in user voted for, if any.
+  final int? myPollVote;
+
+  /// Length of a voice note. Shown on the bubble before it is played.
+  final Duration? audioDuration;
+
+  /// Shared location.
+  final double? latitude;
+  final double? longitude;
+
+  /// A school directory entry shared into the chat, so the recipient can
+  /// open a conversation with them in one tap.
+  final String? sharedContactId;
+  final String? sharedContactRole;
+
+  /// Event card. [content] carries the title.
+  final DateTime? eventStart;
+  final String? eventLocation;
 
   /// Set once the sender tombstones the message - the bubble still renders,
   /// but with "This message was deleted" instead of the original body.
@@ -105,6 +127,14 @@ class ChatMessage {
     this.mediaUrl,
     this.pollOptions,
     this.pollVotes,
+    this.myPollVote,
+    this.audioDuration,
+    this.latitude,
+    this.longitude,
+    this.sharedContactId,
+    this.sharedContactRole,
+    this.eventStart,
+    this.eventLocation,
     this.isDeleted = false,
     this.editedAt,
     this.replyToId,
@@ -141,6 +171,14 @@ class ChatMessage {
       mediaUrl: mediaUrl,
       pollOptions: pollOptions,
       pollVotes: pollVotes,
+      myPollVote: myPollVote,
+      audioDuration: audioDuration,
+      latitude: latitude,
+      longitude: longitude,
+      sharedContactId: sharedContactId,
+      sharedContactRole: sharedContactRole,
+      eventStart: eventStart,
+      eventLocation: eventLocation,
       isDeleted: isDeleted ?? this.isDeleted,
       editedAt: editedAt ?? this.editedAt,
       replyToId: replyToId,
@@ -199,6 +237,9 @@ class ChatConversation {
   /// groups, and for anything a staff member opened.
   final bool isAccepted;
 
+  /// Filed under the Spam tab of Message Requests by this user.
+  final bool isSpam;
+
   const ChatConversation({
     required this.id,
     required this.title,
@@ -221,6 +262,7 @@ class ChatConversation {
     this.pinnedMessageContent,
     this.pinnedMessageSender,
     this.isAccepted = true,
+    this.isSpam = false,
   });
 
   bool get hasMessages => lastMessage.id.isNotEmpty;
