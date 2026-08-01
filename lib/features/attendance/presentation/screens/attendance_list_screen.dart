@@ -1,14 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 
-class AttendanceListScreen extends StatelessWidget {
+class AttendanceListScreen extends StatefulWidget {
   const AttendanceListScreen({super.key});
 
   @override
+  State<AttendanceListScreen> createState() => _AttendanceListScreenState();
+}
+
+class _AttendanceListScreenState extends State<AttendanceListScreen> {
+  String _searchQuery = '';
+
+  @override
   Widget build(BuildContext context) {
+    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
+
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -17,7 +27,7 @@ class AttendanceListScreen extends StatelessWidget {
             icon: const Icon(Icons.arrow_back_ios_new, size: 20),
             onPressed: () => context.pop(),
           ),
-          title: const Text('Attendance List'),
+          title: const Text('Attendance Report'),
           bottom: const TabBar(
             tabs: [
               Tab(text: 'All (25)'),
@@ -30,33 +40,45 @@ class AttendanceListScreen extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.all(AppSpacing.l),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search students...',
-                  prefixIcon: const Icon(Icons.search),
-                  filled: true,
-                  fillColor: AppColors.surfaceElevated(context),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(child: _buildFilter(context, 'Dormitory', 'Sunset House')),
+                      const SizedBox(width: AppSpacing.m),
+                      Expanded(child: _buildFilter(context, 'Session', 'Evening')),
+                    ],
                   ),
-                ),
+                  const SizedBox(height: AppSpacing.m),
+                  AppSearchField(
+                    hintText: 'Search students...',
+                    onChanged: (value) => setState(() => _searchQuery = value),
+                  ),
+                ],
               ),
             ),
             Expanded(
               child: TabBarView(
                 children: [
-                  _buildList(context, _mockStudents),
-                  _buildList(context, _mockStudents.where((s) => s['isPresent']).toList()),
-                  _buildList(context, _mockStudents.where((s) => !s['isPresent']).toList()),
+                  _buildList(context, _mockStudents, semanticColors),
+                  _buildList(context, _mockStudents.where((s) => s['isPresent']).toList(), semanticColors),
+                  _buildList(context, _mockStudents.where((s) => !s['isPresent']).toList(), semanticColors),
                 ],
               ),
             ),
-            Padding(
+            Container(
               padding: const EdgeInsets.all(AppSpacing.l),
-              child: PrimaryButton(
-                label: 'Export Report',
-                onPressed: () {},
+              decoration: BoxDecoration(
+                color: AppColors.surfaceElevated(context),
+                border: Border(top: BorderSide(color: AppColors.border(context))),
+              ),
+              child: SafeArea(
+                top: false,
+                child: PrimaryButton(
+                  label: 'Export Detailed Report',
+                  icon: Icons.ios_share,
+                  onPressed: () {},
+                ),
               ),
             ),
           ],
@@ -65,43 +87,93 @@ class AttendanceListScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildList(BuildContext context, List<Map<String, dynamic>> students) {
+  Widget _buildFilter(BuildContext context, String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceElevated(context),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border(context)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+              const Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.grey),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildList(BuildContext context, List<Map<String, dynamic>> students, SemanticColors colors) {
+    final filtered = students.where((s) => 
+      s['name'].toLowerCase().contains(_searchQuery.toLowerCase()) || 
+      s['id'].toLowerCase().contains(_searchQuery.toLowerCase())
+    ).toList();
+
+    if (filtered.isEmpty) {
+      return const EmptyState(
+        icon: Icons.search_off,
+        title: 'No results found',
+        message: 'Try adjusting your search or filters.',
+      );
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
-      itemCount: students.length,
+      itemCount: filtered.length,
       itemBuilder: (context, index) {
-        final student = students[index];
+        final student = filtered[index];
         final bool isPresent = student['isPresent'];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
+        
+        return FadeInSlide(
+          delay: Duration(milliseconds: index * 30),
           child: AppCard(
-            padding: const EdgeInsets.all(AppSpacing.m),
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               children: [
-                const CircleAvatar(
-                  radius: 20,
-                  backgroundImage: NetworkImage('https://i.pravatar.cc/150'),
-                ),
+                AvatarInitials(name: student['name'], size: 40),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(student['name'], style: const TextStyle(fontWeight: FontWeight.w600)),
-                      Text(student['id'], style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                      Text(
+                        student['name'], 
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)
+                      ),
+                      Text(
+                        student['id'], 
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.grey)
+                      ),
                     ],
                   ),
                 ),
-                if (isPresent) ...[
-                  Text(
-                    student['time'],
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(Icons.check_circle, color: AppColors.success(context), size: 20),
-                ] else ...[
-                  Icon(Icons.cancel, color: AppColors.errorRed, size: 20),
-                ],
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    StatusBadge(
+                      label: isPresent ? 'Present' : 'Absent',
+                      color: isPresent ? colors.success : colors.error,
+                      icon: isPresent ? Icons.check_circle : Icons.cancel,
+                    ),
+                    if (isPresent && student['time'].isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        student['time'],
+                        style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ],
+                ),
               ],
             ),
           ),
@@ -117,5 +189,6 @@ class AttendanceListScreen extends StatelessWidget {
     {'name': 'Tumusiime David', 'id': 'SH-2026-0484', 'time': '08:45 PM', 'isPresent': true},
     {'name': 'Mugisha Samuel', 'id': 'SH-2026-0485', 'time': '08:47 PM', 'isPresent': true},
     {'name': 'Ochieng Denis', 'id': 'SH-2026-0422', 'time': '', 'isPresent': false},
+    {'name': 'Auma Esther', 'id': 'SH-2026-0423', 'time': '', 'isPresent': false},
   ];
 }

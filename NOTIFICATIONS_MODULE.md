@@ -15,24 +15,39 @@ changed is that they now read real data and their buttons do something.
 | Check | Result |
 |---|---|
 | `flutter analyze` | **0 errors** (was 3 pre-existing errors at start) |
-| Notification tests | **69 passing** |
+| Notification tests | **98 passing** (263 in the full suite) |
 | iOS build (iPhone 16 Pro Max) | **Succeeds** |
 | App launches and runs | **Yes** |
 | Dead buttons in notification screens | **0** (was 8) |
-| Real push delivery (fg / bg / terminated) | **NOT VERIFIED** — see below |
+| Real push delivery (fg / bg / terminated) | **BLOCKED** — see below |
 
-### Not verified
+### Not verified — and currently blocked
 
-**Push delivery has never been tested end to end.** A simulator has no APNs
-token, so it cannot receive push at all. This requires:
+**Push delivery cannot be tested on this machine.** Two independent blockers:
+
+1. **A simulator has no APNs token**, so it can never receive push.
+2. **The physical iPhone build fails at code signing.** Verified 1 Aug 2026:
+
+   > Cannot create a iOS App Development provisioning profile for
+   > `com.example.schoolPulse`. Personal development teams, including
+   > "VICTOR MUBANGIZI", do not support the Push Notifications capability.
+
+   A free/personal Apple team **cannot use the Push Notifications
+   entitlement at all**. This needs a paid Apple Developer Program
+   membership. The bundle id is also still the placeholder
+   `com.example.schoolPulse`.
+
+**Android has no such restriction** — FCM on a real Android device needs no
+paid membership, so that is the cheapest way to prove delivery today.
+
+Once unblocked:
 
 1. `firebase deploy --only functions`
 2. `firebase deploy --only firestore:rules,firestore:indexes`
-3. A physical device
-4. Open `/staff/notifications/test` → "Send real push to my devices"
-5. Repeat with the app **open**, **backgrounded**, and **fully closed**
+3. Real device → `/staff/notifications/test` → "Send real push to my devices"
+4. Repeat with the app **open**, **backgrounded**, and **fully closed**
 
-Until that is done, treat push as built-but-unproven.
+Until then, treat push as built-but-unproven.
 
 **Firestore rules were not emulator-validated.** They are brace-balanced and
 syntactically checked, but `firebase emulators:exec` requires JDK 21 and this
@@ -130,22 +145,27 @@ pushed, and refused entirely in release builds.
 
 ## Known gaps
 
-These are **not built**, and are the honest remainder of the original spec:
+These are the honest remainder. Everything else in the original spec is built.
 
-- **Notification templates** with placeholder substitution (`templates/`
-  directories are empty).
-- **Digests** — the preference toggle exists and the policy batches low-priority
-  notifications, but no digest is actually composed or sent.
-- **Email / SMS channel copies** — preference toggles exist; no delivery path.
-- **Per-class audience picking** in the compose screen — "Specific Class" falls
-  back to staff rather than silently broadcasting school-wide.
-- **School admin notification settings screen** — the policy model and rules
-  exist and are read, but there is no UI to edit them.
-- **Web / Windows / macOS push** — untested; channels and presenter are
+- **Digest delivery.** The digest is composed and tested
+  (`NotificationDigestBuilder`), and the preference toggles exist, but nothing
+  yet *schedules* a daily/weekly send. It needs a Cloud Function on a timer.
+- **Email / SMS sending.** Copies are queued into `email_queue` / `sms_queue`
+  for recipients who opted in, but `processSmsQueue` is still the project's
+  pre-existing placeholder and there is no email worker. Plugging in a provider
+  is the remaining step.
+- **Template editing UI.** The 17 built-in templates render and are covered by
+  tests; a school can override them in Firestore, but there is no screen for
+  authoring overrides.
+- **Web / Windows / macOS push** — untested. Channels and the presenter are
   Android/iOS-shaped.
+- **iOS push entitlement** — blocked on a paid Apple Developer membership (see
+  Verification status).
 
-## Unrelated issue found
+## Unrelated issues found
 
-`boarding_attendance` throws an unhandled `failed-precondition` — it needs a
-composite index on `type` + `date`. This is in the matron/patron module, not
-notifications. Not fixed.
+- `boarding_attendance` needed a composite index on `type` + `date`; it was
+  throwing `failed-precondition` and crashing that screen. **Index added** to
+  `firestore.indexes.json` — deploy to take effect.
+- The nurse dashboard was rewritten (header, quick actions) and its tests still
+  asserted the previous copy. **Tests updated** to match the new UI.
