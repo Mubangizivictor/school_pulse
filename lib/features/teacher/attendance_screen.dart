@@ -3,13 +3,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/core/enums/student_status.dart';
 import 'package:school_pulse/design_system/app_components.dart';
-import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_event.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_state.dart';
+import 'package:school_pulse/design_system/utils/feedback_utils.dart';
 
 class TeacherAttendanceScreen extends StatefulWidget {
   const TeacherAttendanceScreen({super.key});
@@ -53,14 +55,22 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
-
     return Scaffold(
+      backgroundColor: AppColors.background(context),
       appBar: AppBar(
-        title: const Text('Take Attendance'),
+        title: Text(
+          'Take Attendance',
+          style: AppTypography.headlineSmall.copyWith(
+            color: AppColors.textPrimary(context),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: IconThemeData(color: AppColors.textPrimary(context)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.history),
+            icon: Icon(Icons.history, color: AppColors.primary(context)),
             onPressed: () => context.go('/staff/attendance/history'),
           ),
         ],
@@ -81,9 +91,9 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
               _attendance.clear();
             });
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Attendance submitted successfully'),
-                backgroundColor: Colors.green,
+              SnackBar(
+                content: const Text('Attendance submitted successfully'),
+                backgroundColor: AppColors.success(context),
                 behavior: SnackBarBehavior.floating,
               ),
             );
@@ -112,7 +122,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(state.message),
+                  Text(state.message, style: TextStyle(color: AppColors.textPrimary(context))),
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () => context.read<TeacherBloc>().add(TeacherAttendanceRequested(_selectedClass)),
@@ -146,7 +156,10 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                     children: [
                       Text(
                         '${filteredStudents.length} Students',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                        style: AppTypography.titleSmall.copyWith(
+                          color: AppColors.textPrimary(context),
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       TextButton.icon(
                         onPressed: isLoading ? null : () {
@@ -156,8 +169,8 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                             }
                           });
                         },
-                        icon: const Icon(Icons.done_all, size: 18),
-                        label: const Text('Mark all present'),
+                        icon: Icon(Icons.done_all, size: 18, color: AppColors.primary(context)),
+                        label: Text('Mark all present', style: TextStyle(color: AppColors.primary(context))),
                       ),
                     ],
                   ),
@@ -181,6 +194,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                             child: AppCard(
                               margin: const EdgeInsets.only(bottom: 8),
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              color: AppColors.surfaceElevated(context),
                               child: Row(
                                 children: [
                                   AvatarInitials(name: student.name, size: 40),
@@ -189,12 +203,23 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(student.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                        Text(student.studentId, style: Theme.of(context).textTheme.labelSmall),
+                                        Text(
+                                          student.name,
+                                          style: TextStyle(
+                                            color: AppColors.textPrimary(context),
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Text(
+                                          student.studentId,
+                                          style: AppTypography.labelSmall.copyWith(
+                                            color: AppColors.textMuted(context),
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
-                                  _buildStatusToggle(student.id, status, semanticColors, isLoading),
+                                  _buildStatusToggle(student.id, status, isLoading),
                                 ],
                               ),
                             ),
@@ -229,14 +254,20 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1))),
+        color: AppColors.surfaceElevated(context),
+        border: Border(bottom: BorderSide(color: AppColors.border(context).withValues(alpha: 0.1))),
       ),
       child: Row(
         children: [
-          const Icon(Icons.class_outlined, size: 20),
+          Icon(Icons.class_outlined, size: 20, color: AppColors.textSecondary(context)),
           const SizedBox(width: 12),
-          const Text('Class:', style: TextStyle(fontWeight: FontWeight.w500)),
+          Text(
+            'Class:',
+            style: TextStyle(
+              color: AppColors.textPrimary(context),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: SingleChildScrollView(
@@ -267,27 +298,27 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
     );
   }
 
-  Widget _buildStatusToggle(String studentId, StudentStatus currentStatus, SemanticColors colors, bool isLoading) {
+  Widget _buildStatusToggle(String studentId, StudentStatus currentStatus, bool isLoading) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         _StatusButton(
           icon: Icons.check,
-          color: colors.success,
+          color: AppColors.success(context),
           isSelected: currentStatus == StudentStatus.present,
           onTap: isLoading ? () {} : () => setState(() => _attendance[studentId] = StudentStatus.present),
         ),
         const SizedBox(width: 4),
         _StatusButton(
           icon: Icons.access_time,
-          color: colors.warning,
+          color: AppColors.warning(context),
           isSelected: currentStatus == StudentStatus.late,
           onTap: isLoading ? () {} : () => setState(() => _attendance[studentId] = StudentStatus.late),
         ),
         const SizedBox(width: 4),
         _StatusButton(
           icon: Icons.close,
-          color: colors.error,
+          color: AppColors.danger(context),
           isSelected: currentStatus == StudentStatus.absent,
           onTap: isLoading ? () {} : () => setState(() => _attendance[studentId] = StudentStatus.absent),
         ),
@@ -299,10 +330,10 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.l),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: AppColors.surfaceElevated(context),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: AppColors.shadow(context),
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),

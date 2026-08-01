@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 
 class Skeleton extends StatelessWidget {
   final double? height;
@@ -501,11 +504,50 @@ class _AnimatedNumberTextState extends State<AnimatedNumberText> with SingleTick
   }
 }
 
+/// Direction a [FadeInSlide] travels from as it appears.
+///
+/// Named for where the motion starts: `bt` slides up from below, `tb` down
+/// from above, and so on.
+enum FadeInDirection {
+  /// Bottom to top.
+  bt,
+
+  /// Top to bottom.
+  tb,
+
+  /// Left to right.
+  lr,
+
+  /// Right to left.
+  rl;
+
+  /// Starting displacement, as a fraction of the travel distance
+  /// [FadeInSlide] applies.
+  Offset get offset {
+    switch (this) {
+      case FadeInDirection.bt:
+        return const Offset(0, 0.1);
+      case FadeInDirection.tb:
+        return const Offset(0, -0.1);
+      case FadeInDirection.lr:
+        return const Offset(-0.1, 0);
+      case FadeInDirection.rl:
+        return const Offset(0.1, 0);
+    }
+  }
+}
+
 class FadeInSlide extends StatelessWidget {
   final Widget child;
   final Duration duration;
   final Duration delay;
+
+  /// Explicit displacement. Ignored when [direction] is set.
   final Offset offset;
+
+  /// Convenience alternative to [offset] for the four common directions.
+  /// Takes precedence when both are given.
+  final FadeInDirection? direction;
 
   const FadeInSlide({
     super.key,
@@ -513,7 +555,12 @@ class FadeInSlide extends StatelessWidget {
     this.duration = const Duration(milliseconds: 600),
     this.delay = Duration.zero,
     this.offset = const Offset(0, 0.1),
+    this.direction,
   });
+
+  /// The displacement actually animated. Kept as a getter so [direction] and
+  /// [offset] cannot drift apart.
+  Offset get _effectiveOffset => direction?.offset ?? offset;
 
   @override
   Widget build(BuildContext context) {
@@ -525,12 +572,13 @@ class FadeInSlide extends StatelessWidget {
           duration: duration,
           curve: Curves.easeOutCubic,
           builder: (context, value, child) {
+            final from = _effectiveOffset;
             return Opacity(
               opacity: value,
               child: Transform.translate(
                 offset: Offset(
-                  offset.dx * (1 - value) * 100,
-                  offset.dy * (1 - value) * 100,
+                  from.dx * (1 - value) * 100,
+                  from.dy * (1 - value) * 100,
                 ),
                 child: child,
               ),
@@ -1072,6 +1120,96 @@ class SectionHeader extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// Theme preference row for the "More"/Settings screens.
+///
+/// Reads and writes [ThemeProvider] directly so any screen can drop it in
+/// without plumbing the provider through its own state - which is the point,
+/// since the student, parent and staff More screens all need the same row.
+class ThemeSwitchTile extends StatelessWidget {
+  const ThemeSwitchTile({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+
+    return ListTile(
+      leading: Icon(
+        switch (themeProvider.themeMode) {
+          ThemeMode.light => Icons.light_mode_rounded,
+          ThemeMode.dark => Icons.dark_mode_rounded,
+          ThemeMode.system => Icons.brightness_auto_rounded,
+        },
+        color: AppColors.primary(context),
+      ),
+      title: const Text('App Theme'),
+      trailing: Text(
+        switch (themeProvider.themeMode) {
+          ThemeMode.light => 'Light',
+          ThemeMode.dark => 'Dark',
+          ThemeMode.system => 'System',
+        },
+        style: TextStyle(color: AppColors.textSecondary(context), fontSize: 13),
+      ),
+      onTap: () => _showSelector(context, themeProvider),
+    );
+  }
+
+  void _showSelector(BuildContext context, ThemeProvider themeProvider) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.background(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'Select Theme',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary(sheetContext),
+                ),
+              ),
+            ),
+            _option(sheetContext, themeProvider, ThemeMode.system,
+                Icons.brightness_auto_rounded, 'System Default'),
+            _option(sheetContext, themeProvider, ThemeMode.light,
+                Icons.light_mode_rounded, 'Light Mode'),
+            _option(sheetContext, themeProvider, ThemeMode.dark,
+                Icons.dark_mode_rounded, 'Dark Mode'),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _option(
+    BuildContext context,
+    ThemeProvider themeProvider,
+    ThemeMode mode,
+    IconData icon,
+    String label,
+  ) {
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(label),
+      trailing: themeProvider.themeMode == mode
+          ? Icon(Icons.check, color: AppColors.primary(context))
+          : null,
+      onTap: () {
+        themeProvider.setThemeMode(mode);
+        Navigator.pop(context);
+      },
     );
   }
 }

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
@@ -33,7 +36,19 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Homework & Assignments')),
+      backgroundColor: AppColors.background(context),
+      appBar: AppBar(
+        title: Text(
+          'Homework & Assignments',
+          style: AppTypography.headlineSmall.copyWith(
+            color: AppColors.textPrimary(context),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: IconThemeData(color: AppColors.textPrimary(context)),
+      ),
       body: BlocConsumer<TeacherBloc, TeacherState>(
         listener: (context, state) {
           if (state is TeacherOperationSuccess) {
@@ -42,13 +57,16 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
             );
           } else if (state is TeacherError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: AppColors.danger(context),
+              ),
             );
           }
         },
         builder: (context, state) {
           if (state is TeacherLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(child: CircularProgressIndicator(color: AppColors.primary(context)));
           }
 
           if (state is TeacherHomeworkLoaded) {
@@ -58,18 +76,21 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
                 title: 'No assignments yet',
                 message: 'Manage and track homework for your classes here.',
                 ctaLabel: 'Add Assignment',
-                onCtaPressed: () => _showAddHomeworkDialog(context),
+                onCtaPressed: () => _showHomeworkSheet(context),
               );
             }
 
             return RefreshIndicator(
               onRefresh: () async => _refreshHomework(),
               child: ListView.builder(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AppSpacing.l),
                 itemCount: state.homeworkList.length,
                 itemBuilder: (context, index) {
                   final homework = state.homeworkList[index];
-                  return _HomeworkCard(homework: homework);
+                  return _HomeworkCard(
+                    homework: homework,
+                    onEdit: () => _showHomeworkSheet(context, homework: homework),
+                  );
                 },
               ),
             );
@@ -79,43 +100,71 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddHomeworkDialog(context),
-        child: const Icon(Icons.add),
+        onPressed: () => _showHomeworkSheet(context),
+        backgroundColor: AppColors.primary(context),
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
 
-  void _showAddHomeworkDialog(BuildContext context) {
+  void _showHomeworkSheet(BuildContext context, {Homework? homework}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => const _AddHomeworkSheet(),
+      backgroundColor: AppColors.surfaceElevated(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.xl)),
+      ),
+      builder: (context) => _HomeworkSheet(homework: homework),
     );
   }
 }
 
-class _AddHomeworkSheet extends StatefulWidget {
-  const _AddHomeworkSheet();
+class _HomeworkSheet extends StatefulWidget {
+  final Homework? homework;
+  const _HomeworkSheet({this.homework});
 
   @override
-  State<_AddHomeworkSheet> createState() => _AddHomeworkSheetState();
+  State<_HomeworkSheet> createState() => _HomeworkSheetState();
 }
 
-class _AddHomeworkSheetState extends State<_AddHomeworkSheet> {
+class _HomeworkSheetState extends State<_HomeworkSheet> {
   final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
-  final _descController = TextEditingController();
-  final _subjectController = TextEditingController();
-  DateTime _dueDate = DateTime.now().add(const Duration(days: 1));
+  late TextEditingController _titleController;
+  late TextEditingController _descController;
+  late TextEditingController _subjectController;
+  late DateTime _dueDate;
+  final List<String> _attachments = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(text: widget.homework?.title);
+    _descController = TextEditingController(text: widget.homework?.description);
+    _subjectController = TextEditingController(text: widget.homework?.subject);
+    _dueDate = widget.homework?.dueDate ?? DateTime.now().add(const Duration(days: 1));
+    if (widget.homework?.attachments != null) {
+      _attachments.addAll(widget.homework!.attachments!);
+    }
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descController.dispose();
+    _subjectController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isEditing = widget.homework != null;
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
-        left: 20,
-        right: 20,
-        top: 20,
+        left: AppSpacing.xl,
+        right: AppSpacing.xl,
+        top: AppSpacing.xl,
       ),
       child: Form(
         key: _formKey,
@@ -125,33 +174,52 @@ class _AddHomeworkSheetState extends State<_AddHomeworkSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'New Assignment',
-                style: Theme.of(context).textTheme.headlineSmall,
+                isEditing ? 'Edit Assignment' : 'New Assignment',
+                style: AppTypography.headlineSmall.copyWith(
+                  color: AppColors.textPrimary(context),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.xl),
               TextFormField(
                 controller: _titleController,
-                decoration: const InputDecoration(labelText: 'Title'),
+                decoration: InputDecoration(
+                  labelText: 'Title',
+                  labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                ),
+                style: TextStyle(color: AppColors.textPrimary(context)),
                 validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.m),
               TextFormField(
                 controller: _subjectController,
-                decoration: const InputDecoration(labelText: 'Subject'),
+                decoration: InputDecoration(
+                  labelText: 'Subject',
+                  labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                ),
+                style: TextStyle(color: AppColors.textPrimary(context)),
                 validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.m),
               TextFormField(
                 controller: _descController,
-                decoration: const InputDecoration(labelText: 'Instructions'),
+                decoration: InputDecoration(
+                  labelText: 'Instructions',
+                  labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                ),
+                style: TextStyle(color: AppColors.textPrimary(context)),
                 maxLines: 3,
                 validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.m),
               ListTile(
-                title: const Text('Due Date'),
-                subtitle: Text(DateFormat('MMM dd, yyyy').format(_dueDate)),
-                trailing: const Icon(Icons.calendar_today),
+                contentPadding: EdgeInsets.zero,
+                title: Text('Due Date', style: TextStyle(color: AppColors.textPrimary(context))),
+                subtitle: Text(
+                  DateFormat('MMM dd, yyyy').format(_dueDate),
+                  style: TextStyle(color: AppColors.textSecondary(context)),
+                ),
+                trailing: Icon(Icons.calendar_today, color: AppColors.primary(context)),
                 onTap: () async {
                   final picked = await showDatePicker(
                     context: context,
@@ -164,12 +232,41 @@ class _AddHomeworkSheetState extends State<_AddHomeworkSheet> {
                   }
                 },
               ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _submit,
-                child: const Text('Create Assignment'),
+              const SizedBox(height: AppSpacing.m),
+              Text(
+                'Attachments',
+                style: AppTypography.titleSmall.copyWith(
+                  color: AppColors.textPrimary(context),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              const SizedBox(height: 20),
+              ..._attachments.map((a) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      a,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: AppColors.textPrimary(context)),
+                    ),
+                    trailing: IconButton(
+                      icon: Icon(Icons.close, size: 20, color: AppColors.danger(context)),
+                      onPressed: () => setState(() => _attachments.remove(a)),
+                    ),
+                  )),
+              TextButton.icon(
+                onPressed: () {
+                  // Mock adding an attachment
+                  setState(() => _attachments.add('attachment_${_attachments.length + 1}.pdf'));
+                },
+                icon: Icon(Icons.attach_file, color: AppColors.primary(context)),
+                label: Text('Add Attachment', style: TextStyle(color: AppColors.primary(context))),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              PrimaryButton(
+                label: isEditing ? 'Save Changes' : 'Create Assignment',
+                onPressed: _submit,
+              ),
+              const SizedBox(height: AppSpacing.xl),
             ],
           ),
         ),
@@ -181,18 +278,31 @@ class _AddHomeworkSheetState extends State<_AddHomeworkSheet> {
     if (_formKey.currentState?.validate() ?? false) {
       final authState = context.read<AuthBloc>().state;
       if (authState is AuthAuthenticated) {
-        context.read<TeacherBloc>().add(TeacherHomeworkCreated(
-              Homework(
-                id: '',
-                title: _titleController.text,
-                description: _descController.text,
-                className: authState.user.assignedClass ?? 'General',
-                subject: _subjectController.text,
-                dueDate: _dueDate,
-                createdAt: DateTime.now(),
-                teacherId: authState.user.id,
-              ),
-            ));
+        if (widget.homework != null) {
+          context.read<TeacherBloc>().add(TeacherHomeworkUpdated(
+                widget.homework!.copyWith(
+                  title: _titleController.text,
+                  description: _descController.text,
+                  subject: _subjectController.text,
+                  dueDate: _dueDate,
+                  attachments: _attachments,
+                ),
+              ));
+        } else {
+          context.read<TeacherBloc>().add(TeacherHomeworkCreated(
+                Homework(
+                  id: '',
+                  title: _titleController.text,
+                  description: _descController.text,
+                  className: authState.user.assignedClass ?? 'General',
+                  subject: _subjectController.text,
+                  dueDate: _dueDate,
+                  createdAt: DateTime.now(),
+                  teacherId: authState.user.id,
+                  attachments: _attachments,
+                ),
+              ));
+        }
         Navigator.pop(context);
       }
     }
@@ -201,81 +311,102 @@ class _AddHomeworkSheetState extends State<_AddHomeworkSheet> {
 
 class _HomeworkCard extends StatelessWidget {
   final Homework homework;
+  final VoidCallback onEdit;
 
-  const _HomeworkCard({required this.homework});
+  const _HomeworkCard({required this.homework, required this.onEdit});
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    homework.title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+    return AppCard(
+      margin: const EdgeInsets.only(bottom: AppSpacing.m),
+      onTap: onEdit,
+      color: AppColors.surfaceElevated(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  homework.title,
+                  style: AppTypography.titleMedium.copyWith(
+                    color: AppColors.textPrimary(context),
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    homework.className,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                ),
-              ],
+              ),
+              StatusBadge(
+                label: homework.className,
+                color: AppColors.primary(context),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s),
+          Text(
+            homework.description,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.textSecondary(context),
             ),
-            const SizedBox(height: 8),
-            Text(
-              homework.description,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 12),
+          ),
+          if (homework.attachments != null && homework.attachments!.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.m),
             Row(
               children: [
-                Icon(Icons.calendar_today, size: 14, color: Colors.grey[600]),
+                Icon(Icons.attach_file, size: 14, color: AppColors.primary(context)),
                 const SizedBox(width: 4),
                 Text(
-                  'Due: ${DateFormat('MMM dd, yyyy').format(homework.dueDate)}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
-                const Spacer(),
-                Text(
-                  homework.subject,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
-                  onPressed: () {
-                    context.read<TeacherBloc>().add(TeacherHomeworkDeleted(homework.id));
-                  },
+                  '${homework.attachments!.length} attachment(s)',
+                  style: TextStyle(fontSize: 12, color: AppColors.primary(context)),
                 ),
               ],
             ),
           ],
-        ),
+          const SizedBox(height: AppSpacing.m),
+          Row(
+            children: [
+              Icon(Icons.calendar_today, size: 14, color: AppColors.textMuted(context)),
+              const SizedBox(width: 4),
+              Text(
+                'Due: ${DateFormat('MMM dd, yyyy').format(homework.dueDate)}',
+                style: TextStyle(fontSize: 12, color: AppColors.textMuted(context)),
+              ),
+              const Spacer(),
+              Text(
+                homework.subject,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.primary(context),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s),
+              IconButton(
+                icon: Icon(Icons.delete_outline, size: 20, color: AppColors.danger(context)),
+                onPressed: () => _confirmDelete(context),
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
+
+  void _confirmDelete(BuildContext context) async {
+    final confirmed = await confirmActionDialog(
+      context,
+      title: 'Delete Assignment',
+      message: 'Are you sure you want to delete this assignment? This action cannot be undone.',
+      confirmLabel: 'Delete',
+      isDestructive: true,
+    );
+
+    if (confirmed == true && context.mounted) {
+      context.read<TeacherBloc>().add(TeacherHomeworkDeleted(homework.id));
+    }
+  }
 }
+

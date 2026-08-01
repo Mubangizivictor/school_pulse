@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/searchable_picker.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/matron/domain/entities/matron_entities.dart';
@@ -81,7 +82,7 @@ class _WelfareManagementScreenState extends State<WelfareManagementScreen> with 
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
           } else if (state is MatronError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Theme.of(context).colorScheme.error),
+              SnackBar(content: Text(state.message), backgroundColor: AppColors.error),
             );
           }
         },
@@ -462,7 +463,7 @@ class _BehaviourTab extends StatelessWidget {
               child: ListTile(
                 leading: Icon(
                   isPositive ? Icons.thumb_up_outlined : Icons.warning_amber_outlined,
-                  color: isPositive ? Colors.green : Colors.orange,
+                  color: isPositive ? AppColors.success(context) : AppColors.warning(context),
                 ),
                 title: Text(obs.studentName, style: const TextStyle(fontWeight: FontWeight.bold)),
                 subtitle: Text(obs.description),
@@ -485,22 +486,22 @@ class _CategoryChip extends StatelessWidget {
     Color color;
     switch (category) {
       case 'Concern':
-        color = Colors.orange;
+        color = AppColors.warning(context);
         break;
       case 'Check-in':
         color = Colors.teal;
         break;
       case 'Counseling':
-        color = Colors.blue;
+        color = AppColors.primary(context);
         break;
       case 'Check-up':
-        color = Colors.green;
+        color = AppColors.success(context);
         break;
       case 'Observation':
         color = Colors.purple;
         break;
       default:
-        color = Colors.grey;
+        color = AppColors.border(context);
     }
     return Chip(
       label: Text(category, style: const TextStyle(color: Colors.white, fontSize: 10)),

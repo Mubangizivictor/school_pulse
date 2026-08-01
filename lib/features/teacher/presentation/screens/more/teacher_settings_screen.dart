@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 
@@ -8,6 +10,13 @@ class TeacherSettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+    final currentThemeMode = themeProvider.themeMode;
+
+    String themeLabel = 'System';
+    if (currentThemeMode == ThemeMode.light) themeLabel = 'Light';
+    if (currentThemeMode == ThemeMode.dark) themeLabel = 'Dark';
+
     return Scaffold(
       backgroundColor: AppColors.background(context),
       appBar: AppBar(
@@ -30,10 +39,10 @@ class TeacherSettingsScreen extends StatelessWidget {
                   icon: Icons.palette_outlined,
                   title: 'App Theme',
                   trailing: Text(
-                    'Dark',
+                    themeLabel,
                     style: TextStyle(color: AppColors.textSecondary(context), fontSize: 13),
                   ),
-                  onTap: () {},
+                  onTap: () => _showThemeSelector(context),
                 ),
                 _SettingsTile(
                   icon: Icons.language_rounded,
@@ -121,6 +130,63 @@ class TeacherSettingsScreen extends StatelessWidget {
           color: AppColors.textMuted(context),
           fontWeight: FontWeight.bold,
           fontSize: 12,
+        ),
+      ),
+    );
+  }
+
+  void _showThemeSelector(BuildContext context) {
+    final themeProvider = context.read<ThemeProvider>();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.background(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'Select Theme',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary(context),
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.brightness_auto_rounded),
+              title: const Text('System Default'),
+              trailing: themeProvider.themeMode == ThemeMode.system ? Icon(Icons.check, color: AppColors.primary(context)) : null,
+              onTap: () {
+                themeProvider.setThemeMode(ThemeMode.system);
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.light_mode_rounded),
+              title: const Text('Light Mode'),
+              trailing: themeProvider.themeMode == ThemeMode.light ? Icon(Icons.check, color: AppColors.primary(context)) : null,
+              onTap: () {
+                themeProvider.setThemeMode(ThemeMode.light);
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.dark_mode_rounded),
+              title: const Text('Dark Mode'),
+              trailing: themeProvider.themeMode == ThemeMode.dark ? Icon(Icons.check, color: AppColors.primary(context)) : null,
+              onTap: () {
+                themeProvider.setThemeMode(ThemeMode.dark);
+                Navigator.pop(context);
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
         ),
       ),
     );

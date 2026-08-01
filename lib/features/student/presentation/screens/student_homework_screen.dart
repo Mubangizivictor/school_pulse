@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import '../../../../design_system/app_components.dart';
+import '../../../../design_system/theme/app_colors.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../domain/entities/student.dart';
@@ -45,8 +47,10 @@ class StudentHomeworkScreen extends StatelessWidget {
         return BlocProvider(
           create: (context) => sl<StudentHomeworkBloc>()..add(LoadStudentHomework(student.classId)),
           child: Scaffold(
+            backgroundColor: AppColors.background(context),
             appBar: AppBar(
               title: const Text('Homework & Assignments'),
+              backgroundColor: Colors.transparent,
             ),
             body: BlocBuilder<StudentHomeworkBloc, StudentHomeworkState>(
               builder: (context, state) {
@@ -54,8 +58,10 @@ class StudentHomeworkScreen extends StatelessWidget {
                   return const Center(child: CircularProgressIndicator());
                 } else if (state is StudentHomeworkLoaded) {
                   if (state.homeworkList.isEmpty) {
-                    return const Center(
-                      child: Text('No homework assigned for your class.'),
+                    return EmptyState(
+                      icon: Icons.assignment_outlined,
+                      title: 'No Homework',
+                      message: 'No homework assigned for your class.',
                     );
                   }
 
@@ -66,7 +72,7 @@ class StudentHomeworkScreen extends StatelessWidget {
                       final homework = state.homeworkList[index];
                       final isPastDue = homework.dueDate.isBefore(DateTime.now());
 
-                      return Card(
+                      return AppCard(
                         margin: const EdgeInsets.only(bottom: 16),
                         child: Padding(
                           padding: const EdgeInsets.all(16),
@@ -79,33 +85,35 @@ class StudentHomeworkScreen extends StatelessWidget {
                                   Expanded(
                                     child: Text(
                                       homework.title,
-                                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                                      style: TextStyle(
+                                        color: AppColors.textPrimary(context),
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: homework.subject.toLowerCase() == 'math' 
-                                          ? Colors.blue.withValues(alpha: 0.1) 
-                                          : Colors.green.withValues(alpha: 0.1),
+                                      color: AppColors.primarySoft(context),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
                                       homework.subject,
                                       style: TextStyle(
-                                        color: homework.subject.toLowerCase() == 'math' 
-                                            ? Colors.blue 
-                                            : Colors.green,
+                                        color: AppColors.primary(context),
                                         fontWeight: FontWeight.bold,
+                                        fontSize: 12,
                                       ),
                                     ),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 8),
-                              Text(homework.description),
+                              Text(
+                                homework.description,
+                                style: TextStyle(color: AppColors.textSecondary(context)),
+                              ),
                               const SizedBox(height: 16),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -115,13 +123,13 @@ class StudentHomeworkScreen extends StatelessWidget {
                                       Icon(
                                         Icons.calendar_today,
                                         size: 16,
-                                        color: isPastDue ? Colors.red : Colors.grey,
+                                        color: isPastDue ? AppColors.danger(context) : AppColors.textMuted(context),
                                       ),
                                       const SizedBox(width: 4),
                                       Text(
                                         'Due: ${DateFormat('MMM dd, yyyy').format(homework.dueDate)}',
                                         style: TextStyle(
-                                          color: isPastDue ? Colors.red : Colors.grey[700],
+                                          color: isPastDue ? AppColors.danger(context) : AppColors.textSecondary(context),
                                           fontWeight: isPastDue ? FontWeight.bold : FontWeight.normal,
                                         ),
                                       ),
@@ -132,8 +140,11 @@ class StudentHomeworkScreen extends StatelessWidget {
                                       onPressed: () {
                                         // TODO: Implement attachment download/view
                                       },
-                                      icon: const Icon(Icons.attach_file),
-                                      label: Text('${homework.attachments!.length} Attachments'),
+                                      icon: Icon(Icons.attach_file, color: AppColors.primary(context)),
+                                      label: Text(
+                                        '${homework.attachments!.length} Attachments',
+                                        style: TextStyle(color: AppColors.primary(context)),
+                                      ),
                                     ),
                                 ],
                               ),
@@ -144,7 +155,7 @@ class StudentHomeworkScreen extends StatelessWidget {
                     },
                   );
                 } else if (state is StudentHomeworkError) {
-                  return Center(child: Text('Error: ${state.message}'));
+                  return Center(child: Text('Error: ${state.message}', style: TextStyle(color: AppColors.danger(context))));
                 }
                 return const SizedBox.shrink();
               },
