@@ -46,18 +46,21 @@ class ResponsibilitySwitcherSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Container(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.7,
-        ),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceElevated(context),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: AppSpacing.s),
+      // Material, not a decorated Container: ListTile paints its ink splash on
+      // the nearest Material ancestor, so a plain coloured box above them
+      // swallows the ripple.
+      child: Material(
+        color: AppColors.surfaceElevated(context),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        clipBehavior: Clip.antiAlias,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.7,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: AppSpacing.s),
             Container(
               width: 36,
               height: 4,
@@ -96,7 +99,8 @@ class ResponsibilitySwitcherSheet extends StatelessWidget {
                 ],
               ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );

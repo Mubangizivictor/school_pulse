@@ -87,6 +87,13 @@ void main() {
     when(() => contextBloc.state).thenReturn(contextState);
     when(() => dashboardBloc.state).thenReturn(dashboardState);
 
+    // The dashboard is a long scroll and its slivers build lazily. A default
+    // 600x800 surface stops before My Teaching, so the tabs would never be
+    // constructed for the test to find.
+    tester.view.physicalSize = const Size(1200, 3000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
     await tester.pumpWidget(
       ChangeNotifierProvider(
         create: (_) => ThemeProvider(),
@@ -122,7 +129,8 @@ void main() {
       ),
     );
 
-    expect(find.text('Mathematics'), findsOneWidget);
+    // Named in the context card heading and again in the My Teaching row.
+    expect(find.text('Mathematics'), findsNWidgets(2));
     expect(find.textContaining('Grade 10'), findsWidgets);
     expect(find.textContaining('Term 2'), findsOneWidget);
     expect(find.text('Subject Teacher • Mathematics'), findsOneWidget);
@@ -157,8 +165,9 @@ void main() {
 
     expect(find.text('28'), findsOneWidget);
     // Present/Absent/Lessons have no source yet - a 0 there would read as
-    // "nobody came" rather than "not recorded".
-    expect(find.text('–'), findsNWidgets(3));
+    // "nobody came" rather than "not recorded". Three counts plus the two
+    // percentages under Present and Absent.
+    expect(find.text('–'), findsNWidgets(5));
   });
 
   testWidgets('counts the teacher\'s own classes in the My Teaching tabs',
