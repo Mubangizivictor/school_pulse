@@ -4,15 +4,17 @@ class ClassProgress extends Equatable {
   final String title;
   final double progress;
   final String subtitle;
+  final String className;
 
   const ClassProgress({
     required this.title,
     required this.progress,
     required this.subtitle,
+    required this.className,
   });
 
   @override
-  List<Object?> get props => [title, progress, subtitle];
+  List<Object?> get props => [title, progress, subtitle, className];
 }
 
 class TeacherDashboardStats extends Equatable {
@@ -21,6 +23,9 @@ class TeacherDashboardStats extends Equatable {
   final int submissionsDue;
   final int classesToday;
   final int activeNotifications;
+  final int attendanceTaken;
+  final int marksEntered;
+  final int reportsGenerated;
   final List<ClassProgress> classProgress;
 
   const TeacherDashboardStats({
@@ -29,6 +34,9 @@ class TeacherDashboardStats extends Equatable {
     required this.submissionsDue,
     required this.classesToday,
     required this.activeNotifications,
+    required this.attendanceTaken,
+    required this.marksEntered,
+    required this.reportsGenerated,
     required this.classProgress,
   });
 
@@ -39,6 +47,9 @@ class TeacherDashboardStats extends Equatable {
         submissionsDue,
         classesToday,
         activeNotifications,
+        attendanceTaken,
+        marksEntered,
+        reportsGenerated,
         classProgress,
       ];
 }

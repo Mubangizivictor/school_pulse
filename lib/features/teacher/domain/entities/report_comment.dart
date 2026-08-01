@@ -7,6 +7,7 @@ class ReportComment extends Equatable {
   final String term;
   final String year;
   final String comment;
+  final List<String> recommendations;
   final String teacherId;
   final DateTime updatedAt;
 
@@ -17,6 +18,7 @@ class ReportComment extends Equatable {
     required this.term,
     required this.year,
     required this.comment,
+    this.recommendations = const [],
     required this.teacherId,
     required this.updatedAt,
   });
@@ -29,6 +31,7 @@ class ReportComment extends Equatable {
         term,
         year,
         comment,
+        recommendations,
         teacherId,
         updatedAt,
       ];
@@ -40,6 +43,7 @@ class ReportComment extends Equatable {
     String? term,
     String? year,
     String? comment,
+    List<String>? recommendations,
     String? teacherId,
     DateTime? updatedAt,
   }) {
@@ -50,6 +54,7 @@ class ReportComment extends Equatable {
       term: term ?? this.term,
       year: year ?? this.year,
       comment: comment ?? this.comment,
+      recommendations: recommendations ?? this.recommendations,
       teacherId: teacherId ?? this.teacherId,
       updatedAt: updatedAt ?? this.updatedAt,
     );

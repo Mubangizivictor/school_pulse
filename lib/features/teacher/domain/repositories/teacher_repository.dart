@@ -7,6 +7,7 @@ import '../usecases/get_attendance_history.dart';
 
 import '../entities/homework.dart';
 import '../entities/report_comment.dart';
+import '../entities/competency_rating.dart';
 
 abstract class TeacherRepository {
   Future<Either<Failure, List<TeacherStudent>>> getStudentsByClass(String className);
@@ -43,4 +44,22 @@ abstract class TeacherRepository {
     required String year,
   });
   Future<Either<Failure, void>> saveReportComment(ReportComment comment);
+
+  // Competency Ratings
+  Future<Either<Failure, List<CompetencyRating>>> getCompetencyRatings({
+    required String className,
+    required String term,
+    required String year,
+    required String competency,
+  });
+  Future<Either<Failure, void>> saveCompetencyRating(CompetencyRating rating);
+
+  // Report Generation
+  Future<Either<Failure, void>> generateReports({
+    required String className,
+    required String term,
+    required String year,
+    required List<String> studentIds,
+    required List<String> enabledSections,
+  });
 }

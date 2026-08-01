@@ -1,0 +1,17 @@
+# Isar 3.x drags in analyzer 5.13.0 (see the dependency_overrides in
+# pubspec.yaml), which predates null-aware collection elements - `'k': ?v`
+# inside a map literal. Left unscoped, isar_generator takes every file under
+# lib/ as an input and dies on the first one using that syntax, even though
+# the file has nothing to do with Isar and `flutter analyze` is perfectly
+# happy with it.
+#
+# Restricting the generator to the files that actually declare @collection
+# keeps the old analyzer away from the rest of the codebase.
+targets:
+  $default:
+    builders:
+      isar_generator:
+        generate_for:
+          include:
+            - lib/features/*/data/models/*_isar*.dart
+            - lib/features/exams/data/models/isar_assessment_mark.dart

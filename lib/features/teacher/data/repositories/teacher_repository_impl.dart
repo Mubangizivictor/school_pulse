@@ -3,6 +3,7 @@ import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/enums/student_status.dart';
 import 'package:school_pulse/features/teacher/domain/entities/homework.dart';
 import 'package:school_pulse/features/teacher/domain/entities/report_comment.dart';
+import 'package:school_pulse/features/teacher/domain/entities/competency_rating.dart';
 import 'package:school_pulse/features/teacher/data/datasources/teacher_remote_data_source.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/teacher_repository.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_state.dart';
@@ -148,6 +149,58 @@ class TeacherRepositoryImpl implements TeacherRepository {
   Future<Either<Failure, void>> saveReportComment(ReportComment comment) async {
     try {
       await remoteDataSource.saveReportComment(comment);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<CompetencyRating>>> getCompetencyRatings({
+    required String className,
+    required String term,
+    required String year,
+    required String competency,
+  }) async {
+    try {
+      final ratings = await remoteDataSource.getCompetencyRatings(
+        className: className,
+        term: term,
+        year: year,
+        competency: competency,
+      );
+      return Right(ratings);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> saveCompetencyRating(CompetencyRating rating) async {
+    try {
+      await remoteDataSource.saveCompetencyRating(rating);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> generateReports({
+    required String className,
+    required String term,
+    required String year,
+    required List<String> studentIds,
+    required List<String> enabledSections,
+  }) async {
+    try {
+      await remoteDataSource.generateReports(
+        className: className,
+        term: term,
+        year: year,
+        studentIds: studentIds,
+        enabledSections: enabledSections,
+      );
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString()));

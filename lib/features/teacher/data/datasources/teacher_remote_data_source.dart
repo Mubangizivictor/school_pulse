@@ -4,6 +4,7 @@ import '../../domain/usecases/get_attendance_history.dart';
 import '../../domain/entities/teacher_dashboard_stats.dart';
 import '../../domain/entities/homework.dart';
 import '../../domain/entities/report_comment.dart';
+import '../../domain/entities/competency_rating.dart';
 
 abstract class TeacherRemoteDataSource {
   Future<List<TeacherStudent>> getStudentsByClass(String className);
@@ -36,6 +37,23 @@ abstract class TeacherRemoteDataSource {
     required String year,
   });
   Future<void> saveReportComment(ReportComment comment);
+
+  // Competency Ratings
+  Future<List<CompetencyRating>> getCompetencyRatings({
+    required String className,
+    required String term,
+    required String year,
+    required String competency,
+  });
+  Future<void> saveCompetencyRating(CompetencyRating rating);
+
+  Future<void> generateReports({
+    required String className,
+    required String term,
+    required String year,
+    required List<String> studentIds,
+    required List<String> enabledSections,
+  });
 }
 
 /// UCE-style aggregate grade for a percentage score.
@@ -195,10 +213,14 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
         submissionsDue: data['submissionsDue'] ?? 0,
         classesToday: data['classesToday'] ?? 0,
         activeNotifications: data['activeNotifications'] ?? 0,
+        attendanceTaken: data['attendanceTaken'] ?? 0,
+        marksEntered: data['marksEntered'] ?? 0,
+        reportsGenerated: data['reportsGenerated'] ?? 0,
         classProgress: (data['classProgress'] as List? ?? []).map((cp) => ClassProgress(
           title: cp['title'] ?? '',
           progress: (cp['progress'] ?? 0.0).toDouble(),
           subtitle: cp['subtitle'] ?? '',
+          className: cp['className'] ?? '',
         )).toList(),
       );
     }
@@ -210,6 +232,9 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
       submissionsDue: 0,
       classesToday: 0,
       activeNotifications: 0,
+      attendanceTaken: 0,
+      marksEntered: 0,
+      reportsGenerated: 0,
       classProgress: [],
     );
   }
@@ -291,6 +316,7 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
         term: data['term'] ?? '',
         year: data['year'] ?? '',
         comment: data['comment'] ?? '',
+        recommendations: (data['recommendations'] as List?)?.map((e) => e as String).toList() ?? [],
         teacherId: data['teacherId'] ?? '',
         updatedAt: (data['updatedAt'] as Timestamp).toDate(),
       );
@@ -306,8 +332,87 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
       'term': comment.term,
       'year': comment.year,
       'comment': comment.comment,
+      'recommendations': comment.recommendations,
       'teacherId': comment.teacherId,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+  }
+
+  @override
+  Future<List<CompetencyRating>> getCompetencyRatings({
+    required String className,
+    required String term,
+    required String year,
+    required String competency,
+  }) async {
+    final snapshot = await firestore
+        .collection('competency_ratings')
+        .where('className', isEqualTo: className)
+        .where('term', isEqualTo: term)
+        .where('year', isEqualTo: year)
+        .where('competency', isEqualTo: competency)
+        .get();
+
+    return snapshot.docs.map((doc) {
+      final data = doc.data();
+      return CompetencyRating(
+        id: doc.id,
+        studentId: data['studentId'] ?? '',
+        className: data['className'] ?? '',
+        term: data['term'] ?? '',
+        year: data['year'] ?? '',
+        competency: data['competency'] ?? '',
+        level: data['level'] ?? 1,
+        teacherId: data['teacherId'] ?? '',
+        updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+      );
+    }).toList();
+  }
+
+  @override
+  Future<void> saveCompetencyRating(CompetencyRating rating) async {
+    final docId = '${rating.studentId}_${rating.term}_${rating.year}_${rating.competency.replaceAll(' ', '_')}';
+    await firestore.collection('competency_ratings').doc(docId).set({
+      'studentId': rating.studentId,
+      'className': rating.className,
+      'term': rating.term,
+      'year': rating.year,
+      'competency': rating.competency,
+      'level': rating.level,
+      'teacherId': rating.teacherId,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  @override
+  Future<void> generateReports({
+    required String className,
+    required String term,
+    required String year,
+    required List<String> studentIds,
+    required List<String> enabledSections,
+  }) async {
+    final batch = firestore.batch();
+
+    for (final studentId in studentIds) {
+      // In a real app, this might trigger a Cloud Function or 
+      // create a 'report_card' doc that the PDF generator listens to.
+      // For now, we'll create the shell record that makes it visible to parents/deans.
+      final docId = '${studentId}_${term}_${year}';
+      final docRef = firestore.collection('report_cards').doc(docId);
+
+      batch.set(docRef, {
+        'studentId': studentId,
+        'className': className,
+        'term': term,
+        'year': year,
+        'status': 'pending',
+        'enabledSections': enabledSections,
+        'generatedAt': FieldValue.serverTimestamp(),
+        'isLockedForFees': false,
+      }, SetOptions(merge: true));
+    }
+
+    await batch.commit();
   }
 }
