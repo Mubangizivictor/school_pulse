@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:school_pulse/features/notifications/notification_coordinator.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:school_pulse/app/router.dart';
@@ -65,6 +68,13 @@ void main() async {
   await NotificationService().initialize();
 
   await di.init();
+
+  // Notification pipeline: register channels and bind the FCM listeners.
+  // Deliberately after di.init() (it needs the container) and deliberately
+  // not awaited beyond this - the cold-launch check below is the only part
+  // that touches the network, and it is timeout-guarded inside.
+  await di.sl<NotificationCoordinator>().initialize();
+  unawaited(di.sl<NotificationCoordinator>().checkInitialMessage());
 
   final themeProvider = ThemeProvider();
   await themeProvider.initialize();
@@ -200,6 +210,15 @@ class SchoolPulseAppView extends StatelessWidget {
           listener: (context, state) {
             if (state is AuthAuthenticated) {
               NotificationService().syncToken(state.user.id);
+              // Registers this device, starts the badge stream, drains any
+              // offline read/acknowledge queue, and replays a deep link that
+              // was stashed while signed out.
+              di.sl<NotificationCoordinator>().onSignedIn(state.user);
+            } else if (state is AuthUnauthenticated) {
+              // Revoking the token is what actually stops delivery; clearing
+              // the tray stops the next user of a shared device seeing the
+              // previous user's alerts.
+              di.sl<NotificationCoordinator>().onSignedOut();
             }
           },
         ),

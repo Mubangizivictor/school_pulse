@@ -327,6 +327,10 @@ import 'package:school_pulse/features/notifications/data/repositories/notificati
 import 'package:school_pulse/features/notifications/data/datasources/notification_local_data_source.dart';
 import 'package:school_pulse/features/notifications/data/datasources/notification_remote_data_source.dart';
 import 'package:school_pulse/features/notifications/presentation/bloc/notification_center_bloc.dart';
+import 'package:school_pulse/app/router.dart' as app_router;
+import 'package:school_pulse/features/notifications/notification_coordinator.dart';
+import 'package:school_pulse/features/notifications/push/handlers/notification_push_handler.dart';
+import 'package:school_pulse/features/notifications/routing/deep_link_router/notification_deep_link_router.dart';
 import 'package:school_pulse/features/notifications/local/notification_presenter.dart';
 import 'package:school_pulse/features/notifications/push/token_management/notification_token_manager.dart';
 import 'package:school_pulse/features/notifications/push/notification_badge_service.dart';
@@ -1008,6 +1012,45 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton(() => NotificationSeedRunner(isar: sl()));
+
+  // Push handler and coordinator. The handler reads the live session from the
+  // coordinator rather than holding its own copy, so there is one source of
+  // truth for who is signed in when a push arrives.
+  sl.registerLazySingleton(
+    () => NotificationPushHandler(
+      messaging: FirebaseMessaging.instance,
+      repository: sl(),
+      presenter: sl(),
+      currentUser: () => sl<NotificationCoordinator>().session,
+      navigate: (notification) async {
+        // Navigation goes through the deep-link router, which re-checks
+        // authentication, tenancy and permission before producing a route -
+        // a push payload is never navigated to verbatim.
+        final resolution = await const NotificationDeepLinkRouter().resolve(
+          notification: notification,
+          user: sl<NotificationCoordinator>().user,
+        );
+        final destination = resolution.destination;
+        if (destination != null) {
+          app_router.router.push(destination.route, extra: destination.extra);
+        } else {
+          // Refused: fall back to the notification centre rather than silently
+          // doing nothing on a tap.
+          app_router.router.push('/staff/notifications');
+        }
+      },
+    ),
+  );
+
+  sl.registerLazySingleton(
+    () => NotificationCoordinator(
+      plugin: sl(),
+      tokenManager: sl(),
+      badgeService: sl(),
+      repository: sl(),
+      pushHandler: sl(),
+    ),
+  );
 
   // Features - Religion
   sl.registerFactory(() => ReligionBloc(repository: sl()));
