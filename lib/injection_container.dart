@@ -331,6 +331,7 @@ import 'package:school_pulse/app/router.dart' as app_router;
 import 'package:school_pulse/features/notifications/notification_coordinator.dart';
 import 'package:school_pulse/features/notifications/push/handlers/notification_push_handler.dart';
 import 'package:school_pulse/features/notifications/routing/deep_link_router/notification_deep_link_router.dart';
+import 'package:school_pulse/features/notifications/data/notification_image_cache.dart';
 import 'package:school_pulse/features/notifications/local/notification_presenter.dart';
 import 'package:school_pulse/features/notifications/push/token_management/notification_token_manager.dart';
 import 'package:school_pulse/features/notifications/push/notification_badge_service.dart';
@@ -984,8 +985,24 @@ Future<void> init() async {
   // Push delivery pipeline.
   sl.registerLazySingleton(() => FlutterLocalNotificationsPlugin());
 
+  // Image cache. Wifi detection is approximated by the existing connectivity
+  // check: InternetConnectionChecker reports reachability, not connection
+  // type, so "connected" is treated as unmetered only when the platform
+  // exposes nothing better. Erring toward not downloading would leave images
+  // permanently blank for users who are always on mobile data.
   sl.registerLazySingleton(
-    () => NotificationPresenter(plugin: sl()),
+    () => NotificationImageCache(
+      isOnWifi: () => sl<NetworkInfo>().isConnected,
+    ),
+  );
+
+  sl.registerLazySingleton(
+    () => NotificationPresenter(
+      plugin: sl(),
+      // Rich push needs a local file path - the OS cannot render a remote URL -
+      // so the presenter resolves images through the cache before display.
+      resolveLocalImage: (url) => sl<NotificationImageCache>().resolve(url),
+    ),
   );
 
   sl.registerLazySingleton(
