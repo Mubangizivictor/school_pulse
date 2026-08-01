@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
+import 'package:school_pulse/features/messages/domain/entities/message_models.dart';
+import 'package:school_pulse/features/messages/presentation/messaging_context.dart';
 
-class BroadcastDetailsScreen extends StatelessWidget {
+/// Info screen for a broadcast list or announcement channel - who receives
+/// it, when it was created, and (for its admins) how to take it down.
+class BroadcastDetailsScreen extends StatefulWidget {
   final String broadcastId;
 
   const BroadcastDetailsScreen({
@@ -12,9 +20,15 @@ class BroadcastDetailsScreen extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  State<BroadcastDetailsScreen> createState() => _BroadcastDetailsScreenState();
+}
 
+class _BroadcastDetailsScreenState extends State<BroadcastDetailsScreen> {
+  static const int _previewCount = 5;
+  bool _showAllRecipients = false;
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgDark,
       appBar: AppBar(
@@ -28,145 +42,229 @@ class BroadcastDetailsScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit_outlined, color: Colors.white),
-            onPressed: () {},
-          ),
-        ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.l),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Column(
-                children: [
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: AppColors.electricBlue.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.electricBlue.withValues(alpha: 0.2), width: 1),
-                    ),
-                    child: const Icon(
-                      Icons.campaign_rounded,
-                      size: 50,
-                      color: AppColors.electricBlue,
-                    ),
+      body: MessagingUserBuilder(
+        builder: (context, user) => StreamBuilder<ChatConversation?>(
+          stream: context.messages.watchConversation(widget.broadcastId, user.id),
+          builder: (context, snapshot) {
+            final conversation = snapshot.data;
+            if (conversation == null) {
+              return Center(
+                child: snapshot.connectionState == ConnectionState.waiting
+                    ? const CircularProgressIndicator()
+                    : Text('Broadcast not found',
+                        style: AppTypography.bodyMedium.copyWith(color: Colors.white60)),
+              );
+            }
+            return _buildBody(context, user, conversation);
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody(BuildContext context, UserEntity user, ChatConversation conversation) {
+    final recipients = conversation.participants.where((p) => p.id != user.id).toList();
+    final visible = _showAllRecipients ? recipients : recipients.take(_previewCount).toList();
+    final amAdmin = conversation.isAdmin(user.id);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppSpacing.l),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Column(
+              children: [
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: AppColors.electricBlue.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.electricBlue.withValues(alpha: 0.2), width: 1),
+                    image: conversation.avatarUrl != null
+                        ? DecorationImage(
+                            image: NetworkImage(conversation.avatarUrl!), fit: BoxFit.cover)
+                        : null,
                   ),
-                  const SizedBox(height: AppSpacing.l),
-                  Text(
-                    'School Announcement List',
-                    style: AppTypography.headlineSmall.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                  child: conversation.avatarUrl != null
+                      ? null
+                      : const Icon(Icons.campaign_rounded, size: 50, color: AppColors.electricBlue),
+                ),
+                const SizedBox(height: AppSpacing.l),
+                Text(
+                  conversation.title,
+                  textAlign: TextAlign.center,
+                  style: AppTypography.headlineSmall.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    'Broadcast • 128 recipients',
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: Colors.white60,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  '${conversation.type == ChatType.channel ? 'Channel' : 'Broadcast'} • '
+                  '${recipients.length} recipients',
+                  style: AppTypography.bodyMedium.copyWith(color: Colors.white60),
+                ),
+              ],
             ),
-            const SizedBox(height: AppSpacing.x3l),
-            Text(
-              'Recipients',
-              style: AppTypography.titleMedium.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.electricBlue,
-              ),
+          ),
+          const SizedBox(height: AppSpacing.x3l),
+          Text(
+            'Recipients',
+            style: AppTypography.titleMedium.copyWith(
+              fontWeight: FontWeight.bold,
+              color: AppColors.electricBlue,
             ),
-            const SizedBox(height: AppSpacing.m),
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.surfaceDark,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-              ),
-              child: Column(
-                children: [
+          ),
+          const SizedBox(height: AppSpacing.m),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.surfaceDark,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+            ),
+            child: Column(
+              children: [
+                if (recipients.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(AppSpacing.l),
+                    child:
+                        Text('No recipients yet', style: AppTypography.bodyMedium.copyWith(color: Colors.white60)),
+                  )
+                else
                   ListView.separated(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    itemCount: 5,
+                    itemCount: visible.length,
                     separatorBuilder: (context, index) => Divider(
                       height: 1,
                       color: Colors.white.withValues(alpha: 0.05),
                       indent: 72,
                     ),
                     itemBuilder: (context, index) {
+                      final recipient = visible[index];
+                      final role = UserRole.values.where((r) => r.name == recipient.role);
                       return ListTile(
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                         leading: CircleAvatar(
                           radius: 24,
-                          backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=school$index'),
+                          backgroundColor: AppColors.electricBlue.withValues(alpha: 0.15),
+                          child: Text(
+                            recipient.name.isEmpty ? '?' : recipient.name[0].toUpperCase(),
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          ),
                         ),
                         title: Text(
-                          'Parent Name $index',
-                          style: AppTypography.bodyLarge.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                          recipient.name,
+                          style: AppTypography.bodyLarge
+                              .copyWith(color: Colors.white, fontWeight: FontWeight.bold),
                         ),
                         subtitle: Text(
-                          'Grade ${index + 1} Parent',
+                          role.isEmpty ? recipient.role : UserRoleDisplay.name(role.first),
                           style: AppTypography.bodySmall.copyWith(color: Colors.white60),
                         ),
-                        trailing: Text(
-                          'Delivered',
-                          style: AppTypography.labelSmall.copyWith(color: Colors.greenAccent),
-                        ),
+                        trailing: amAdmin
+                            ? IconButton(
+                                icon: const Icon(Icons.person_remove_outlined,
+                                    size: 18, color: Colors.redAccent),
+                                onPressed: () =>
+                                    context.messages.removeMember(conversation.id, recipient.id),
+                              )
+                            : null,
                       );
                     },
                   ),
+                if (recipients.length > _previewCount) ...[
                   const Divider(height: 1, color: Colors.white10),
                   TextButton(
-                    onPressed: () {},
+                    onPressed: () => setState(() => _showAllRecipients = !_showAllRecipients),
                     child: Text(
-                      'View all 128 recipients',
-                      style: AppTypography.bodyMedium.copyWith(color: AppColors.electricBlue, fontWeight: FontWeight.bold),
+                      _showAllRecipients
+                          ? 'Show fewer'
+                          : 'View all ${recipients.length} recipients',
+                      style: AppTypography.bodyMedium
+                          .copyWith(color: AppColors.electricBlue, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
-              ),
+              ],
             ),
-            const SizedBox(height: AppSpacing.x3l),
+          ),
+          const SizedBox(height: AppSpacing.x3l),
+          if (conversation.description != null && conversation.description!.isNotEmpty)
             _buildInfoTile(
               context,
               icon: Icons.info_outline,
               title: 'Description',
-              subtitle: 'Weekly updates and important announcements for all parents in the primary section.',
+              subtitle: conversation.description!,
             ),
-            _buildInfoTile(
-              context,
-              icon: Icons.calendar_today_outlined,
-              title: 'Created',
-              subtitle: 'October 12, 2023',
-            ),
-            const SizedBox(height: AppSpacing.x3l),
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: () {},
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.redAccent,
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.l),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: const BorderSide(color: Colors.redAccent, width: 1),
-                  ),
+          _buildInfoTile(
+            context,
+            icon: Icons.calendar_today_outlined,
+            title: 'Created',
+            subtitle: conversation.createdAt == null
+                ? 'Unknown'
+                : DateFormat('MMMM d, y').format(conversation.createdAt!),
+          ),
+          _buildInfoTile(
+            context,
+            icon: Icons.admin_panel_settings_outlined,
+            title: 'Who can send messages?',
+            subtitle: conversation.messagePolicy == MessagePolicy.everyone ? 'All members' : 'Admins only',
+          ),
+          const SizedBox(height: AppSpacing.x3l),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              onPressed: () => _confirmDelete(context, user, conversation, amAdmin),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.redAccent,
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.l),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: const BorderSide(color: Colors.redAccent, width: 1),
                 ),
-                child: const Text('Delete Broadcast List', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+              child: Text(
+                amAdmin ? 'Delete Broadcast List' : 'Leave Broadcast List',
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
+  }
+
+  Future<void> _confirmDelete(
+    BuildContext context,
+    UserEntity user,
+    ChatConversation conversation,
+    bool amAdmin,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(amAdmin ? 'Delete broadcast list?' : 'Leave broadcast list?'),
+        content: Text(amAdmin
+            ? 'Recipients will stop receiving messages from this list.'
+            : 'You will stop receiving messages from this list.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(amAdmin ? 'Delete' : 'Leave', style: const TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    await context.messages.leaveConversation(conversation.id, user.id);
+    if (!context.mounted) return;
+    context.go('/messages');
   }
 
   Widget _buildInfoTile(
@@ -200,7 +298,9 @@ class BroadcastDetailsScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: AppTypography.titleSmall.copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
+                  Text(title,
+                      style: AppTypography.titleSmall
+                          .copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     subtitle,

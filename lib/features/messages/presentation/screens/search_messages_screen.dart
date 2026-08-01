@@ -1,7 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
+import 'package:school_pulse/features/messages/domain/entities/message_models.dart';
+import 'package:school_pulse/features/messages/presentation/messaging_context.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+const String _kRecentSearchesKey = 'messages.recent_searches';
 
 class SearchMessagesScreen extends StatefulWidget {
   const SearchMessagesScreen({super.key});
@@ -13,6 +22,76 @@ class SearchMessagesScreen extends StatefulWidget {
 class _SearchMessagesScreenState extends State<SearchMessagesScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
+  Timer? _debounce;
+
+  List<ChatMessageRef> _results = const [];
+  bool _searching = false;
+  List<String> _recent = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRecent();
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadRecent() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() => _recent = prefs.getStringList(_kRecentSearchesKey) ?? const []);
+  }
+
+  Future<void> _rememberSearch(String term) async {
+    final prefs = await SharedPreferences.getInstance();
+    final updated = [term, ..._recent.where((r) => r != term)].take(8).toList();
+    await prefs.setStringList(_kRecentSearchesKey, updated);
+    if (!mounted) return;
+    setState(() => _recent = updated);
+  }
+
+  Future<void> _clearRecent() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_kRecentSearchesKey);
+    if (!mounted) return;
+    setState(() => _recent = const []);
+  }
+
+  /// Firestore charges per read, so wait for a pause in typing before firing.
+  void _onQueryChanged(String value) {
+    setState(() => _query = value);
+    _debounce?.cancel();
+    if (value.trim().isEmpty) {
+      setState(() => _results = const []);
+      return;
+    }
+    _debounce = Timer(const Duration(milliseconds: 350), () => _runSearch(value.trim()));
+  }
+
+  Future<void> _runSearch(String term) async {
+    final user = context.messagingUser;
+    if (user == null) return;
+
+    setState(() => _searching = true);
+    try {
+      final results = await context.messages.searchMessages(user.id, term);
+      if (!mounted) return;
+      setState(() {
+        _results = results;
+        _searching = false;
+      });
+      await _rememberSearch(term);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _searching = false);
+      context.showMessagingSnack('Search failed: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +123,7 @@ class _SearchMessagesScreenState extends State<SearchMessagesScreen> {
               prefixIcon: Icon(Icons.search, size: 20, color: AppColors.textMuted(context)),
               contentPadding: const EdgeInsets.symmetric(vertical: 10),
             ),
-            onChanged: (value) => setState(() => _query = value),
+            onChanged: _onQueryChanged,
           ),
         ),
         actions: [
@@ -53,7 +132,7 @@ class _SearchMessagesScreenState extends State<SearchMessagesScreen> {
               icon: Icon(Icons.close, color: AppColors.textPrimary(context)),
               onPressed: () {
                 _searchController.clear();
-                setState(() => _query = '');
+                _onQueryChanged('');
               },
             ),
         ],
@@ -79,7 +158,22 @@ class _SearchMessagesScreenState extends State<SearchMessagesScreen> {
               ],
             ),
             Expanded(
-              child: _query.isEmpty ? _buildRecentSearches() : _buildSearchResults(),
+              child: _query.isEmpty
+                  ? _buildRecentSearches()
+                  : TabBarView(
+                      children: [
+                        _buildResults(_results),
+                        _buildResults(_results
+                            .where((r) => r.message.type == MessageType.image ||
+                                r.message.type == MessageType.video)
+                            .toList()),
+                        _buildResults(
+                            _results.where((r) => r.message.content.contains('http')).toList()),
+                        _buildResults(_results
+                            .where((r) => r.message.type == MessageType.file)
+                            .toList()),
+                      ],
+                    ),
             ),
           ],
         ),
@@ -88,23 +182,30 @@ class _SearchMessagesScreenState extends State<SearchMessagesScreen> {
   }
 
   Widget _buildRecentSearches() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.m),
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('RECENT SEARCHES', style: AppTypography.labelSmall.copyWith(color: AppColors.textMuted(context))),
-            TextButton(
-              onPressed: () {},
-              child: Text('Clear All', style: AppTypography.labelSmall.copyWith(color: AppColors.electricBlue)),
-            ),
+            Text('RECENT SEARCHES',
+                style: AppTypography.labelSmall.copyWith(color: AppColors.textMuted(context))),
+            if (_recent.isNotEmpty)
+              TextButton(
+                onPressed: _clearRecent,
+                child: Text('Clear All',
+                    style: AppTypography.labelSmall.copyWith(color: AppColors.electricBlue)),
+              ),
           ],
         ),
-        _buildRecentItem('PTA meeting notes'),
-        _buildRecentItem('Science homework'),
-        _buildRecentItem('Holiday schedule'),
+        if (_recent.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.m),
+            child: Text('Your recent searches will show up here.',
+                style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context))),
+          )
+        else
+          ..._recent.map(_buildRecentItem),
       ],
     );
   }
@@ -113,41 +214,76 @@ class _SearchMessagesScreenState extends State<SearchMessagesScreen> {
     return ListTile(
       leading: Icon(Icons.history, color: AppColors.textMuted(context)),
       title: Text(text, style: AppTypography.bodyMedium),
-      trailing: Icon(Icons.close, size: 16, color: AppColors.textMuted(context)),
+      trailing: IconButton(
+        icon: Icon(Icons.close, size: 16, color: AppColors.textMuted(context)),
+        onPressed: () async {
+          final prefs = await SharedPreferences.getInstance();
+          final updated = _recent.where((r) => r != text).toList();
+          await prefs.setStringList(_kRecentSearchesKey, updated);
+          if (!mounted) return;
+          setState(() => _recent = updated);
+        },
+      ),
       contentPadding: EdgeInsets.zero,
       onTap: () {
         _searchController.text = text;
-        setState(() => _query = text);
+        _onQueryChanged(text);
       },
     );
   }
 
-  Widget _buildSearchResults() {
+  Widget _buildResults(List<ChatMessageRef> results) {
+    if (_searching) return const Center(child: CircularProgressIndicator());
+    if (results.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Text('No matches for "$_query"',
+              textAlign: TextAlign.center,
+              style: AppTypography.bodyMedium.copyWith(color: AppColors.textMuted(context))),
+        ),
+      );
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.only(top: AppSpacing.s),
-      itemCount: 3,
+      itemCount: results.length,
       itemBuilder: (context, index) {
+        final ref = results[index];
         return ListTile(
-          leading: const CircleAvatar(
+          leading: CircleAvatar(
             backgroundColor: AppColors.royalBlue,
-            child: Icon(Icons.person, color: Colors.white),
+            child: Text(
+              ref.message.senderName.isEmpty ? '?' : ref.message.senderName[0].toUpperCase(),
+              style: const TextStyle(color: Colors.white),
+            ),
           ),
           title: Row(
             children: [
-              Expanded(child: Text('Mr. Kofi Mensah', style: AppTypography.titleSmall)),
-              Text('10/05/24', style: AppTypography.labelSmall.copyWith(color: AppColors.textMuted(context))),
+              Expanded(child: Text(ref.message.senderName, style: AppTypography.titleSmall)),
+              Text(DateFormat('dd/MM/yy').format(ref.message.timestamp),
+                  style: AppTypography.labelSmall.copyWith(color: AppColors.textMuted(context))),
             ],
           ),
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              'Please find the homework attached for Chapter 4...',
-              style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context)),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  ref.message.content.isEmpty
+                      ? (ref.message.fileName ?? 'Attachment')
+                      : ref.message.content,
+                  style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context)),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text('in ${ref.conversationTitle}',
+                    style: AppTypography.labelSmall.copyWith(color: AppColors.electricBlue)),
+              ],
             ),
           ),
-          onTap: () {},
+          onTap: () => context.push('/messages/chat/${ref.conversationId}'),
         );
       },
     );

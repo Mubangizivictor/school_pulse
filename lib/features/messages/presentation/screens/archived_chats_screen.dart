@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/features/messages/presentation/messaging_context.dart';
 import 'package:school_pulse/features/messages/presentation/widgets/chat_list_tile.dart';
 import 'package:school_pulse/features/messages/domain/entities/message_models.dart';
 
@@ -10,40 +12,6 @@ class ArchivedChatsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Mock archived chats
-    final List<ChatConversation> archivedChats = [
-      ChatConversation(
-        id: 'archived_1',
-        title: 'Old Class Project',
-        type: ChatType.group,
-        unreadCount: 0,
-        avatarUrl: 'https://i.pravatar.cc/150?u=project',
-        participants: [],
-        lastMessage: ChatMessage(
-          id: 'm_arch_1',
-          senderId: 'user1',
-          senderName: 'User',
-          content: 'Thanks for the help everyone!',
-          timestamp: DateTime.now().subtract(const Duration(days: 30)),
-        ),
-      ),
-      ChatConversation(
-        id: 'archived_2',
-        title: 'Coach Mike',
-        type: ChatType.direct,
-        unreadCount: 0,
-        avatarUrl: 'https://i.pravatar.cc/150?u=coach',
-        participants: [],
-        lastMessage: ChatMessage(
-          id: 'm_arch_2',
-          senderId: 'coach',
-          senderName: 'Coach Mike',
-          content: 'See you next season.',
-          timestamp: DateTime.now().subtract(const Duration(days: 45)),
-        ),
-      ),
-    ];
-
     return Scaffold(
       backgroundColor: AppColors.bgDark,
       appBar: AppBar(
@@ -58,58 +26,109 @@ class ArchivedChatsScreen extends StatelessWidget {
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      body: archivedChats.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(32),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceDark,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.archive_outlined,
-                      size: 80,
-                      color: AppColors.electricBlue.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  Text(
-                    'No archived chats',
-                    style: AppTypography.titleMedium.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.s),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 48),
-                    child: Text(
-                      'These chats stay archived when new messages are received.',
-                      textAlign: TextAlign.center,
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: Colors.white60,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : ListView.builder(
+      body: MessagingUserBuilder(
+        builder: (context, user) => StreamBuilder<List<ChatConversation>>(
+          stream: context.messages.watchConversations(user.id),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final archived = snapshot.data!.where((c) => c.isArchived).toList();
+            if (archived.isEmpty) return _buildEmptyState();
+
+            return ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: archivedChats.length,
+              itemCount: archived.length,
               itemBuilder: (context, index) {
+                final chat = archived[index];
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: ChatListTile(
-                    chat: archivedChats[index],
-                    onTap: () {},
+                    chat: chat,
+                    onTap: () => context.push('/messages/chat/${chat.id}'),
+                    // Long-press is the only way back out of the archive.
+                    onLongPress: () => _confirmUnarchive(context, user.id, chat),
                   ),
                 );
               },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  void _confirmUnarchive(BuildContext context, String userId, ChatConversation chat) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surfaceDark,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.unarchive_outlined, color: Colors.white70),
+              title: const Text('Unarchive', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                context.messages.setArchived(chat.id, userId, false);
+              },
             ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
+              title: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                context.messages.leaveConversation(chat.id, userId);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(32),
+            decoration: const BoxDecoration(
+              color: AppColors.surfaceDark,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.archive_outlined,
+              size: 80,
+              color: AppColors.electricBlue.withValues(alpha: 0.3),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          Text(
+            'No archived chats',
+            style: AppTypography.titleMedium.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 48),
+            child: Text(
+              'These chats stay archived when new messages are received.',
+              textAlign: TextAlign.center,
+              style: AppTypography.bodyMedium.copyWith(
+                color: Colors.white60,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

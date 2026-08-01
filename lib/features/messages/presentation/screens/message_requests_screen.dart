@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
+import 'package:school_pulse/features/messages/domain/entities/message_models.dart';
+import 'package:school_pulse/features/messages/presentation/messaging_context.dart';
 
+/// Chats started by another parent or student that the signed-in user hasn't
+/// accepted yet. Anything involving a staff account is school business and
+/// never lands here - see MessagesRepositoryImpl.startDirectConversation.
 class MessageRequestsScreen extends StatelessWidget {
   const MessageRequestsScreen({super.key});
 
@@ -33,40 +40,73 @@ class MessageRequestsScreen extends StatelessWidget {
             ],
           ),
         ),
-        body: TabBarView(
-          children: [
-            _buildRequestsList(context),
-            _buildRequestsList(context, isEmpty: true),
-          ],
+        body: MessagingUserBuilder(
+          builder: (context, user) => StreamBuilder<List<ChatConversation>>(
+            stream: context.messages.watchConversations(user.id),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final pending = snapshot.data!
+                  .where((c) => c.type == ChatType.direct && !c.isAccepted)
+                  .toList();
+
+              return TabBarView(
+                children: [
+                  _buildRequestsList(context, user.id, pending, spam: false),
+                  _buildRequestsList(context, user.id, pending, spam: true),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildRequestsList(BuildContext context, {bool isEmpty = false}) {
+  Widget _buildRequestsList(
+    BuildContext context,
+    String userId,
+    List<ChatConversation> requests, {
+    required bool spam,
+  }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    if (isEmpty) {
+    // Marking spam accepts nothing but does hide the chat from the inbox, so
+    // the two tabs split on whether the user archived it away.
+    final items = requests.where((c) => c.isArchived == spam).toList();
+
+    if (items.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.mark_email_read_outlined, size: 80, color: AppColors.textMuted(context).withValues(alpha: 0.3)),
-            const SizedBox(height: 16),
-            Text('No Spam Requests', style: AppTypography.titleMedium.copyWith(color: AppColors.textMuted(context))),
-            const SizedBox(height: 8),
-            Text('Messages from unknown senders will appear here.', 
-              textAlign: TextAlign.center,
-              style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context))),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.mark_email_read_outlined,
+                  size: 80, color: AppColors.textMuted(context).withValues(alpha: 0.3)),
+              const SizedBox(height: 16),
+              Text(spam ? 'No Spam Requests' : 'No Pending Requests',
+                  style: AppTypography.titleMedium.copyWith(color: AppColors.textMuted(context))),
+              const SizedBox(height: 8),
+              Text(
+                spam
+                    ? 'Messages you mark as spam will appear here.'
+                    : 'Chats started by people outside your usual contacts will appear here.',
+                textAlign: TextAlign.center,
+                style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context)),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     return ListView.builder(
       padding: const EdgeInsets.all(AppSpacing.m),
-      itemCount: 3,
+      itemCount: items.length,
       itemBuilder: (context, index) {
+        final request = items[index];
         return Container(
           margin: const EdgeInsets.only(bottom: AppSpacing.m),
           decoration: BoxDecoration(
@@ -96,18 +136,23 @@ class MessageRequestsScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(index == 0 ? 'Parent - New' : index == 1 ? 'Prospective Student' : 'School Vendor', 
-                            style: AppTypography.titleMedium),
+                          Text(request.title, style: AppTypography.titleMedium),
                           const SizedBox(height: 2),
-                          Text('Hello, I have a question about the upcoming admissions process...', 
-                            style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context)), 
-                            maxLines: 1, 
-                            overflow: TextOverflow.ellipsis),
+                          Text(
+                            request.hasMessages ? request.lastMessage.content : 'Wants to message you',
+                            style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context)),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ],
                       ),
                     ),
-                    Text(index == 0 ? '10:10 AM' : index == 1 ? 'Yesterday' : 'Sun', 
-                      style: AppTypography.labelSmall.copyWith(color: AppColors.textMuted(context))),
+                    Text(
+                      request.hasMessages
+                          ? DateFormat('dd/MM').format(request.lastMessage.timestamp)
+                          : '',
+                      style: AppTypography.labelSmall.copyWith(color: AppColors.textMuted(context)),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -115,9 +160,9 @@ class MessageRequestsScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () {},
+                        onPressed: () => context.messages.leaveConversation(request.id, userId),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red, 
+                          foregroundColor: Colors.red,
                           side: const BorderSide(color: Colors.red),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
@@ -125,9 +170,31 @@ class MessageRequestsScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 12),
+                    if (!spam) ...[
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () async {
+                            await context.messages.markSpam(request.id, userId);
+                            if (!context.mounted) return;
+                            await context.messages.setArchived(request.id, userId, true);
+                          },
+                          style: OutlinedButton.styleFrom(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text('Spam'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () async {
+                          await context.messages.acceptRequest(request.id, userId);
+                          if (!context.mounted) return;
+                          await context.messages.setArchived(request.id, userId, false);
+                          if (!context.mounted) return;
+                          context.push('/messages/chat/${request.id}');
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.emeraldGreen,
                           foregroundColor: Colors.white,

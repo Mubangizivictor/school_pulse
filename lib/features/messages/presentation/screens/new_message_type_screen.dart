@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
+import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
+import 'package:school_pulse/features/messages/domain/entities/message_models.dart';
+import 'package:school_pulse/features/messages/presentation/messaging_context.dart';
 
 class NewMessageTypeScreen extends StatelessWidget {
   const NewMessageTypeScreen({super.key});
@@ -22,74 +26,93 @@ class NewMessageTypeScreen extends StatelessWidget {
         ),
         title: Text('New Message', style: AppTypography.titleLarge),
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
-        children: [
-          const SizedBox(height: AppSpacing.s),
-          _TypeTile(
-            icon: Icons.person_add_outlined,
-            title: 'New Chat',
-            subtitle: 'Start a one-on-one conversation',
-            color: AppColors.electricBlue,
-            onTap: () => context.push('/messages/new/contacts'),
-          ),
-          _TypeTile(
-            icon: Icons.group_add_outlined,
-            title: 'New Group',
-            subtitle: 'Create a group conversation',
-            color: AppColors.emeraldGreen,
-            onTap: () => context.push('/messages/new/group'),
-          ),
-          _TypeTile(
-            icon: Icons.campaign_outlined,
-            title: 'New Broadcast',
-            subtitle: 'Send a message to many recipients',
-            color: AppColors.goldenYellow,
-            onTap: () {},
-          ),
-          _TypeTile(
-            icon: Icons.grid_view_outlined,
-            title: 'New Channel',
-            subtitle: 'Create an announcement channel',
-            color: AppColors.brightCyan,
-            onTap: () {},
-          ),
-          const SizedBox(height: AppSpacing.l),
-          Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: AppSpacing.s),
-            child: Text(
-              'FREQUENTLY CONTACTED',
-              style: AppTypography.labelSmall.copyWith(color: AppColors.textMuted(context), letterSpacing: 1.2),
+      body: MessagingUserBuilder(
+        builder: (context, user) => ListView(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
+          children: [
+            const SizedBox(height: AppSpacing.s),
+            _TypeTile(
+              icon: Icons.person_add_outlined,
+              title: 'New Chat',
+              subtitle: 'Start a one-on-one conversation',
+              color: AppColors.electricBlue,
+              onTap: () => context.push('/messages/new/contacts'),
             ),
-          ),
-          _ContactTile(
-            name: 'Mr. Kofi Mensah',
-            role: 'Science Teacher',
-            avatarText: 'KM',
-            onTap: () => context.push('/messages/chat/1'),
-          ),
-          _ContactTile(
-            name: 'Mrs. Amina',
-            role: 'Class Teacher - P7',
-            avatarText: 'AM',
-            onTap: () => context.push('/messages/chat/2'),
-          ),
-          _ContactTile(
-            name: 'Finance Office',
-            role: 'School Department',
-            avatarText: 'FO',
-            onTap: () => context.push('/messages/chat/3'),
-          ),
-          _ContactTile(
-            name: 'Nurse Office',
-            role: 'School Health',
-            avatarText: 'NO',
-            onTap: () => context.push('/messages/chat/4'),
-          ),
-          const SizedBox(height: AppSpacing.x3l),
-        ],
+            _TypeTile(
+              icon: Icons.group_add_outlined,
+              title: 'New Group',
+              subtitle: 'Create a group conversation',
+              color: AppColors.emeraldGreen,
+              onTap: () => context.push('/messages/new/group'),
+            ),
+            _TypeTile(
+              icon: Icons.campaign_outlined,
+              title: 'New Broadcast',
+              subtitle: 'Send a message to many recipients',
+              color: AppColors.goldenYellow,
+              onTap: () => context.push('/messages/new/broadcast'),
+            ),
+            _TypeTile(
+              icon: Icons.grid_view_outlined,
+              title: 'New Channel',
+              subtitle: 'Create an announcement channel',
+              color: AppColors.brightCyan,
+              onTap: () => context.push('/messages/new/channel'),
+            ),
+            const SizedBox(height: AppSpacing.l),
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: AppSpacing.s),
+              child: Text(
+                'FREQUENTLY CONTACTED',
+                style:
+                    AppTypography.labelSmall.copyWith(color: AppColors.textMuted(context), letterSpacing: 1.2),
+              ),
+            ),
+            FutureBuilder<List<MessageContact>>(
+              future: context.messages.getRecentContacts(user.id, limit: 4),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Padding(
+                    padding: EdgeInsets.all(AppSpacing.l),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                final contacts = snapshot.data!;
+                if (contacts.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.m),
+                    child: Text(
+                      'People you message will show up here.',
+                      style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context)),
+                    ),
+                  );
+                }
+                return Column(
+                  children: contacts
+                      .map((contact) => _ContactTile(
+                            contact: contact,
+                            onTap: () => _openChat(context, user, contact),
+                          ))
+                      .toList(),
+                );
+              },
+            ),
+            const SizedBox(height: AppSpacing.x3l),
+          ],
+        ),
       ),
     );
+  }
+
+  Future<void> _openChat(BuildContext context, UserEntity user, MessageContact contact) async {
+    try {
+      final id = await context.messages.startDirectConversation(me: user, contact: contact);
+      if (!context.mounted) return;
+      context.push('/messages/chat/$id');
+    } catch (e) {
+      if (!context.mounted) return;
+      context.showMessagingSnack('Could not open the chat: $e');
+    }
   }
 }
 
@@ -145,21 +168,16 @@ class _TypeTile extends StatelessWidget {
 }
 
 class _ContactTile extends StatelessWidget {
-  final String name;
-  final String role;
-  final String avatarText;
+  final MessageContact contact;
   final VoidCallback onTap;
 
-  const _ContactTile({
-    required this.name,
-    required this.role,
-    required this.avatarText,
-    required this.onTap,
-  });
+  const _ContactTile({required this.contact, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final role = UserRole.values.where((r) => r.name == contact.role);
+
     return ListTile(
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(vertical: 2),
@@ -167,7 +185,7 @@ class _ContactTile extends StatelessWidget {
         radius: 24,
         backgroundColor: isDark ? AppColors.surfaceContainerHigh(context) : Colors.grey[200],
         child: Text(
-          avatarText,
+          contact.initials,
           style: TextStyle(
             color: isDark ? Colors.white : AppColors.deepNavy,
             fontWeight: FontWeight.bold,
@@ -175,14 +193,14 @@ class _ContactTile extends StatelessWidget {
         ),
       ),
       title: Text(
-        name,
+        contact.name,
         style: AppTypography.bodyLarge.copyWith(
           fontWeight: FontWeight.w600,
           color: isDark ? Colors.white : AppColors.textPrimaryLight,
         ),
       ),
       subtitle: Text(
-        role,
+        role.isEmpty ? contact.role : UserRoleDisplay.name(role.first),
         style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context)),
       ),
     );

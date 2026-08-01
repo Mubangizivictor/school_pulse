@@ -3,9 +3,14 @@ import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
+import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/messages/domain/entities/message_models.dart';
+import 'package:school_pulse/features/messages/presentation/messaging_context.dart';
 import 'package:school_pulse/features/messages/presentation/widgets/chat_list_tile.dart';
 
+/// The inbox. Shared by every role - parents, students and staff all route
+/// here (/parent/messages, /student/messages, /staff/messages and the
+/// top-level /messages), so it must never assume a role-specific shape.
 class MessagesListScreen extends StatefulWidget {
   const MessagesListScreen({super.key});
 
@@ -13,13 +18,13 @@ class MessagesListScreen extends StatefulWidget {
   State<MessagesListScreen> createState() => _MessagesListScreenState();
 }
 
+enum _InboxFilter { all, unread, groups, official }
+
 class _MessagesListScreenState extends State<MessagesListScreen> {
-  final List<ChatConversation> mockConversations = [];
+  _InboxFilter _filter = _InboxFilter.all;
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
       backgroundColor: AppColors.bgDark,
       appBar: AppBar(
@@ -36,66 +41,211 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: InkWell(
-              onTap: () => context.push('/messages/search'),
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceDark,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.search, color: Colors.white54, size: 22),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Search messages',
-                      style: AppTypography.bodyLarge.copyWith(color: Colors.white54),
-                    ),
-                  ],
+      body: MessagingUserBuilder(
+        builder: (context, user) => Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: InkWell(
+                onTap: () => context.push('/messages/search'),
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceDark,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.search, color: Colors.white54, size: 22),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Search messages',
+                        style: AppTypography.bodyLarge.copyWith(color: Colors.white54),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-          SizedBox(
-            height: 48,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [
-                _FilterChip(label: 'All', isSelected: true),
-                _FilterChip(label: 'Unread', isSelected: false),
-                _FilterChip(label: 'Groups', isSelected: false),
-                _FilterChip(label: 'Official', isSelected: false),
-                _FilterChip(label: 'Archived', isSelected: false, onTap: () => context.push('/messages/archived')),
-              ],
+            SizedBox(
+              height: 48,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  _FilterChip(
+                    label: 'All',
+                    isSelected: _filter == _InboxFilter.all,
+                    onTap: () => setState(() => _filter = _InboxFilter.all),
+                  ),
+                  _FilterChip(
+                    label: 'Unread',
+                    isSelected: _filter == _InboxFilter.unread,
+                    onTap: () => setState(() => _filter = _InboxFilter.unread),
+                  ),
+                  _FilterChip(
+                    label: 'Groups',
+                    isSelected: _filter == _InboxFilter.groups,
+                    onTap: () => setState(() => _filter = _InboxFilter.groups),
+                  ),
+                  _FilterChip(
+                    label: 'Official',
+                    isSelected: _filter == _InboxFilter.official,
+                    onTap: () => setState(() => _filter = _InboxFilter.official),
+                  ),
+                  _FilterChip(
+                    label: 'Archived',
+                    isSelected: false,
+                    onTap: () => context.push('/messages/archived'),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Expanded(
-            child: mockConversations.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
+            Expanded(
+              child: StreamBuilder<List<ChatConversation>>(
+                stream: context.messages.watchConversations(user.id),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return _buildError(snapshot.error!);
+                  }
+                  if (!snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final conversations = _applyFilter(snapshot.data!);
+                  if (conversations.isEmpty) {
+                    return _buildEmptyState();
+                  }
+                  return ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    itemCount: mockConversations.length,
+                    itemCount: conversations.length,
                     itemBuilder: (context, index) {
-                      final chat = mockConversations[index];
+                      final chat = conversations[index];
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 8),
                         child: ChatListTile(
                           chat: chat,
                           onTap: () => context.push('/messages/chat/${chat.id}'),
+                          onLongPress: () => _showChatActions(context, user, chat),
                         ),
                       );
                     },
-                  ),
-          ),
-        ],
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<ChatConversation> _applyFilter(List<ChatConversation> all) {
+    // Archived chats live behind their own screen; everything else is
+    // filtered by the chip row.
+    final visible = all.where((c) => !c.isArchived);
+    switch (_filter) {
+      case _InboxFilter.all:
+        return visible.toList();
+      case _InboxFilter.unread:
+        return visible.where((c) => c.unreadCount > 0).toList();
+      case _InboxFilter.groups:
+        return visible.where((c) => c.type == ChatType.group).toList();
+      case _InboxFilter.official:
+        // "Official" is the school's one-way traffic: broadcast lists and
+        // announcement channels.
+        return visible
+            .where((c) => c.type == ChatType.broadcast || c.type == ChatType.channel)
+            .toList();
+    }
+  }
+
+  void _showChatActions(BuildContext context, UserEntity user, ChatConversation chat) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surfaceDark,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.m),
+              child: Text(
+                chat.title,
+                style: AppTypography.titleMedium.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+            ListTile(
+              leading: Icon(chat.isPinned ? Icons.push_pin : Icons.push_pin_outlined, color: Colors.white70),
+              title: Text(chat.isPinned ? 'Unpin' : 'Pin to top', style: const TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                context.messages.setPinned(chat.id, user.id, !chat.isPinned);
+              },
+            ),
+            ListTile(
+              leading: Icon(
+                chat.isMuted ? Icons.notifications_off : Icons.notifications_none,
+                color: Colors.white70,
+              ),
+              title: Text(chat.isMuted ? 'Unmute' : 'Mute', style: const TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                context.messages.setMuted(chat.id, user.id, !chat.isMuted);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.archive_outlined, color: Colors.white70),
+              title: const Text('Archive', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                context.messages.setArchived(chat.id, user.id, true);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
+              title: Text(
+                chat.type == ChatType.direct ? 'Delete chat' : 'Exit group',
+                style: const TextStyle(color: Colors.redAccent),
+              ),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                context.messages.leaveConversation(chat.id, user.id);
+              },
+            ),
+            const SizedBox(height: AppSpacing.s),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildError(Object error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x3l),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.cloud_off, size: 56, color: Colors.white.withValues(alpha: 0.3)),
+            const SizedBox(height: AppSpacing.m),
+            Text(
+              'Could not load your messages',
+              style: AppTypography.titleMedium.copyWith(color: Colors.white),
+            ),
+            const SizedBox(height: AppSpacing.s),
+            Text(
+              '$error',
+              textAlign: TextAlign.center,
+              style: AppTypography.bodySmall.copyWith(color: Colors.white54),
+            ),
+          ],
+        ),
       ),
     );
   }
