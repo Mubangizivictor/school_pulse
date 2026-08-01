@@ -327,6 +327,13 @@ import 'package:school_pulse/features/notifications/data/repositories/notificati
 import 'package:school_pulse/features/notifications/data/datasources/notification_local_data_source.dart';
 import 'package:school_pulse/features/notifications/data/datasources/notification_remote_data_source.dart';
 import 'package:school_pulse/features/notifications/presentation/bloc/notification_center_bloc.dart';
+import 'package:school_pulse/features/notifications/local/notification_presenter.dart';
+import 'package:school_pulse/features/notifications/push/token_management/notification_token_manager.dart';
+import 'package:school_pulse/features/notifications/push/notification_badge_service.dart';
+import 'package:school_pulse/features/notifications/testing/notification_test_service/notification_test_service.dart';
+import 'package:school_pulse/features/notifications/testing/seed_runner/notification_seed_runner.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source.dart';
 import 'package:school_pulse/features/verification/data/models/verification_isar_models.dart';
@@ -969,6 +976,38 @@ Future<void> init() async {
   sl.registerLazySingleton<NotificationLocalDataSource>(
     () => NotificationLocalDataSourceImpl(isar: sl()),
   );
+
+  // Push delivery pipeline.
+  sl.registerLazySingleton(() => FlutterLocalNotificationsPlugin());
+
+  sl.registerLazySingleton(
+    () => NotificationPresenter(plugin: sl()),
+  );
+
+  sl.registerLazySingleton(
+    () => NotificationTokenManager(
+      messaging: FirebaseMessaging.instance,
+      firestore: sl(),
+      isar: sl(),
+    ),
+  );
+
+  sl.registerLazySingleton(
+    () => NotificationBadgeService(repository: sl(), plugin: sl()),
+  );
+
+  // Delivery testing and development seed data. Registered unconditionally;
+  // NotificationSeedRunner itself refuses to run under kReleaseMode, so the
+  // guard lives with the behaviour rather than with the wiring.
+  sl.registerLazySingleton(
+    () => NotificationTestService(
+      plugin: sl(),
+      presenter: sl(),
+      functions: FirebaseFunctions.instance,
+    ),
+  );
+
+  sl.registerLazySingleton(() => NotificationSeedRunner(isar: sl()));
 
   // Features - Religion
   sl.registerFactory(() => ReligionBloc(repository: sl()));

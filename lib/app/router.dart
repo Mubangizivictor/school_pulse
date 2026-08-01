@@ -210,6 +210,7 @@ import 'package:school_pulse/features/nurse/presentation/screens/medicine_invent
 import 'package:school_pulse/features/notifications/presentation/screens/notification_list_screen.dart';
 import 'package:school_pulse/features/notifications/presentation/screens/notification_details_screen.dart';
 import 'package:school_pulse/features/notifications/presentation/screens/notification_details_loader_screen.dart';
+import 'package:school_pulse/features/notifications/testing/notification_test_service/notification_test_screen.dart';
 import 'package:school_pulse/features/notifications/presentation/screens/notification_center_grouped_screen.dart';
 import 'package:school_pulse/features/notifications/presentation/screens/notification_filter_screen.dart';
 import 'package:school_pulse/features/notifications/presentation/screens/notification_search_screen.dart';
@@ -1005,6 +1006,12 @@ final router = GoRouter(
             GoRoute(
               path: 'preferences',
               builder: (context, state) => const NotificationPreferencesScreen(),
+            ),
+            // Delivery test tool. Reachable at /staff/notifications/test;
+            // it only ever sends to the signed-in user's own devices.
+            GoRoute(
+              path: 'test',
+              builder: (context, state) => const NotificationTestScreen(),
             ),
             GoRoute(
               path: 'add',
