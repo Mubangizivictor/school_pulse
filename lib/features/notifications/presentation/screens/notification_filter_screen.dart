@@ -10,6 +10,9 @@ class NotificationFilterScreen extends StatefulWidget {
 
 class _NotificationFilterScreenState extends State<NotificationFilterScreen> {
   bool _hasAttachments = false;
+  final Set<String> _selectedCategories = {'Announcements', 'Attendance', 'Finance'};
+  String _selectedPriority = 'All';
+  String _selectedStatus = 'All';
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +28,14 @@ class _NotificationFilterScreenState extends State<NotificationFilterScreen> {
         title: const Text('Filter Notifications', style: TextStyle(color: Colors.white)),
         actions: [
           TextButton(
-            onPressed: () {},
+            onPressed: () {
+              setState(() {
+                _selectedCategories.clear();
+                _selectedPriority = 'All';
+                _selectedStatus = 'All';
+                _hasAttachments = false;
+              });
+            },
             child: const Text('Reset', style: TextStyle(color: Color(0xFF6366F1))),
           ),
         ],
@@ -35,11 +45,21 @@ class _NotificationFilterScreenState extends State<NotificationFilterScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Categories', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                Text('Select all', style: TextStyle(color: Color(0xFF6366F1), fontSize: 12)),
+                const Text('Categories', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedCategories.addAll([
+                        'Announcements', 'Attendance', 'Finance', 'Transport',
+                        'Messages', 'Homework', 'Library', 'Others'
+                      ]);
+                    });
+                  },
+                  child: const Text('Select all', style: TextStyle(color: Color(0xFF6366F1), fontSize: 12)),
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -68,11 +88,21 @@ class _NotificationFilterScreenState extends State<NotificationFilterScreen> {
             const SizedBox(height: 24),
             const Text('Priority', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
-            _buildChipGroup(['All', 'High', 'Medium', 'Low'], [null, Colors.red, Colors.orange, Colors.green]),
+            _buildChipGroup(
+              ['All', 'High', 'Medium', 'Low'],
+              [null, Colors.red, Colors.orange, Colors.green],
+              _selectedPriority,
+              (val) => setState(() => _selectedPriority = val),
+            ),
             const SizedBox(height: 24),
             const Text('Status', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
-            _buildChipGroup(['All', 'Unread', 'Read', 'Pinned'], [null, null, null, null]),
+            _buildChipGroup(
+              ['All', 'Unread', 'Read', 'Pinned'],
+              [null, null, null, null],
+              _selectedStatus,
+              (val) => setState(() => _selectedStatus = val),
+            ),
             const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -129,42 +159,56 @@ class _NotificationFilterScreenState extends State<NotificationFilterScreen> {
       itemCount: categories.length,
       itemBuilder: (context, index) {
         final cat = categories[index];
-        final isSelected = index < 3;
-        return Column(
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: isSelected ? (cat['color'] as Color) : Colors.white12,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(cat['icon'] as IconData, color: isSelected ? Colors.white : Colors.white70, size: 24),
-                ),
-                if (cat['count'] != null)
-                  Positioned(
-                    top: -4,
-                    right: -4,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.white24,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(cat['count'].toString(), style: const TextStyle(color: Colors.white, fontSize: 10)),
+        final name = cat['name'] as String;
+        final isSelected = _selectedCategories.contains(name);
+        final color = cat['color'] as Color;
+        return InkWell(
+          onTap: () {
+            setState(() {
+              if (isSelected) {
+                _selectedCategories.remove(name);
+              } else {
+                _selectedCategories.add(name);
+              }
+            });
+          },
+          child: Column(
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: isSelected ? color.withOpacity(0.2) : Colors.white12,
+                      borderRadius: BorderRadius.circular(12),
+                      border: isSelected ? Border.all(color: color, width: 2) : null,
                     ),
+                    child: Icon(cat['icon'] as IconData, color: isSelected ? color : Colors.white70, size: 24),
                   ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              cat['name'] as String,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70, fontSize: 10),
-            ),
-          ],
+                  if (cat['count'] != null && isSelected)
+                    Positioned(
+                      top: -4,
+                      right: -4,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(cat['count'].toString(), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                name,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: isSelected ? Colors.white : Colors.white70, fontSize: 10, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -195,33 +239,37 @@ class _NotificationFilterScreenState extends State<NotificationFilterScreen> {
     );
   }
 
-  Widget _buildChipGroup(List<String> labels, List<Color?> colors) {
+  Widget _buildChipGroup(List<String> labels, List<Color?> colors, String selectedValue, ValueChanged<String> onSelected) {
     return Wrap(
       spacing: 12,
       runSpacing: 12,
       children: List.generate(labels.length, (index) {
-        final isSelected = index == 0;
+        final label = labels[index];
+        final isSelected = selectedValue == label;
         final color = colors[index];
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF6366F1) : Colors.white12,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: isSelected ? const Color(0xFF6366F1) : Colors.white10),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (color != null) ...[
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-                ),
-                const SizedBox(width: 8),
+        return InkWell(
+          onTap: () => onSelected(label),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: isSelected ? const Color(0xFF6366F1) : Colors.white12,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: isSelected ? const Color(0xFF6366F1) : Colors.white10),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (color != null) ...[
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Text(label, style: TextStyle(color: isSelected ? Colors.white : Colors.white70, fontSize: 13)),
               ],
-              Text(labels[index], style: TextStyle(color: isSelected ? Colors.white : Colors.white70, fontSize: 13)),
-            ],
+            ),
           ),
         );
       }),

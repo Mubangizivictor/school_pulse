@@ -34,6 +34,10 @@ class _NotificationListScreenState extends State<NotificationListScreen> with Si
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.grid_view, color: Colors.white),
+            onPressed: () => context.push('/staff/notifications/center'),
+          ),
+          IconButton(
             icon: const Icon(Icons.search, color: Colors.white),
             onPressed: () => context.push('/staff/notifications/search'),
           ),
@@ -70,19 +74,23 @@ class _NotificationListScreenState extends State<NotificationListScreen> with Si
   Widget _buildTabs() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      child: TabBar(
-        controller: _tabController,
-        isScrollable: true,
-        dividerColor: Colors.transparent,
-        indicatorColor: Colors.transparent,
-        labelColor: Colors.white,
-        unselectedLabelColor: Colors.white60,
-        tabs: [
-          _buildTab('All', 24),
-          _buildTab('Unread', 12),
-          _buildTab('Pinned', 3),
-          _buildTab('Mentions', 0),
-        ],
+      child: Center(
+        child: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          dividerColor: Colors.transparent,
+          indicatorColor: Colors.transparent,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white60,
+          labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+          tabs: [
+            _buildTab('All', 24),
+            _buildTab('Unread', 12),
+            _buildTab('Pinned', 3),
+            _buildTab('Mentions', 0),
+          ],
+        ),
       ),
     );
   }
@@ -90,7 +98,7 @@ class _NotificationListScreenState extends State<NotificationListScreen> with Si
   Widget _buildTab(String label, int count) {
     return Tab(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: const Color(0xFF1E293B),
           borderRadius: BorderRadius.circular(20),
@@ -129,31 +137,12 @@ class _NotificationListScreenState extends State<NotificationListScreen> with Si
       );
     }
 
-    // Group by date
-    final today = notifications.where((n) => n.timestamp.day == DateTime.now().day).toList();
-    final yesterday = notifications.where((n) => n.timestamp.day == DateTime.now().subtract(const Duration(days: 1)).day).toList();
-
-    return ListView(
+    return ListView.builder(
       padding: const EdgeInsets.all(16),
-      children: [
-        if (today.isNotEmpty) ...[
-          const Text(
-            'Today',
-            style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          ...today.map((n) => _NotificationTile(notification: n)),
-        ],
-        if (yesterday.isNotEmpty) ...[
-          const SizedBox(height: 24),
-          const Text(
-            'Yesterday',
-            style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          ...yesterday.map((n) => _NotificationTile(notification: n)),
-        ],
-      ],
+      itemCount: notifications.length,
+      itemBuilder: (context, index) {
+        return _NotificationTile(notification: notifications[index]);
+      },
     );
   }
 }

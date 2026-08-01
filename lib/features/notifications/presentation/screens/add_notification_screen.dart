@@ -12,6 +12,49 @@ class AddNotificationScreen extends StatefulWidget {
 class _AddNotificationScreenState extends State<AddNotificationScreen> {
   String _selectedCategory = 'School Announcement';
   String _selectedAudience = 'All Students & Staff';
+  
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _messageController = TextEditingController();
+  
+  int _titleLength = 0;
+  int _messageLength = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController.addListener(() {
+      setState(() => _titleLength = _titleController.text.length);
+    });
+    _messageController.addListener(() {
+      setState(() => _messageLength = _messageController.text.length);
+    });
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  void _submitNotification() {
+    if (_titleController.text.isEmpty || _messageController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill in all required fields')),
+      );
+      return;
+    }
+
+    // In a real app, this would call a repository/service
+    // For now, we'll just show a success message and pop
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Notification sent successfully!'),
+        backgroundColor: Colors.green,
+      ),
+    );
+    context.pop();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,13 +90,21 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
               (val) => setState(() => _selectedCategory = val!),
             ),
             const SizedBox(height: 20),
-            _buildTextField('Title', 'Sports Day 2025', maxLength: 50),
+            _buildTextField(
+              'Title',
+              'Sports Day 2025',
+              controller: _titleController,
+              maxLength: 50,
+              currentLength: _titleLength,
+            ),
             const SizedBox(height: 20),
             _buildTextField(
               'Message',
               'We are excited to inform you that our Annual Sports Day will take place on Saturday, 24th May 2025 at 8:00 AM. All students are expected to participate.',
+              controller: _messageController,
               maxLines: 6,
               maxLength: 1000,
+              currentLength: _messageLength,
             ),
             const SizedBox(height: 20),
             const Text('Add Image (Optional)', style: TextStyle(color: Colors.white60, fontSize: 12)),
@@ -115,7 +166,7 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: () => context.pop(),
+                onPressed: _submitNotification,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6366F1),
                   foregroundColor: Colors.white,
@@ -163,7 +214,7 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
     );
   }
 
-  Widget _buildTextField(String label, String hint, {int maxLines = 1, int? maxLength}) {
+  Widget _buildTextField(String label, String hint, {required TextEditingController controller, int maxLines = 1, int? maxLength, int currentLength = 0}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -172,11 +223,12 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
           children: [
             Text(label, style: const TextStyle(color: Colors.white60, fontSize: 12)),
             if (maxLength != null)
-              Text('0/$maxLength', style: const TextStyle(color: Colors.white30, fontSize: 10)),
+              Text('$currentLength/$maxLength', style: const TextStyle(color: Colors.white30, fontSize: 10)),
           ],
         ),
         const SizedBox(height: 8),
         TextField(
+          controller: controller,
           maxLines: maxLines,
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(

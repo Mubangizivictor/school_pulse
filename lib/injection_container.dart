@@ -218,7 +218,7 @@ import 'package:school_pulse/features/library/presentation/bloc/library_bloc.dar
 // Matron
 import 'package:school_pulse/features/matron/domain/repositories/matron_repository.dart';
 import 'package:school_pulse/features/matron/data/repositories/matron_repository_impl.dart';
-import 'package:school_pulse/features/matron/data/datasources/matron_remote_data_source.dart';
+import 'package:school_pulse/features/matron/data/sources/matron_remote_data_source.dart';
 import 'package:school_pulse/features/matron/presentation/bloc/matron_bloc.dart';
 
 // Patron
@@ -320,6 +320,8 @@ import 'package:school_pulse/features/biometrics/data/datasources/mock_biometric
 import 'package:school_pulse/features/biometrics/domain/usecases/biometric_usecases.dart';
 import 'package:school_pulse/features/biometrics/presentation/bloc/biometrics_bloc.dart';
 import 'package:school_pulse/features/biometrics/data/models/biometric_template_isar.dart';
+import 'package:school_pulse/features/notifications/data/models/notification_isar.dart';
+import 'package:school_pulse/features/notifications/data/models/notification_token_isar.dart';
 
 import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source.dart';
 import 'package:school_pulse/features/verification/data/models/verification_isar_models.dart';
@@ -910,7 +912,7 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<MatronRemoteDataSource>(
-    () => MatronRemoteDataSourceImpl(firestore: sl()),
+    () => MatronRemoteDataSourceImpl(firestore: sl(), auditRepository: sl()),
   );
 
   // Features - Patron
@@ -1282,6 +1284,8 @@ Future<void> init() async {
     VerificationEventIsarSchema,
     AuthorizedDeviceIsarSchema,
     OperatorPermissionSnapshotIsarSchema,
+    NotificationIsarSchema,
+    NotificationTokenIsarSchema,
   ], directory: dir.path);
   sl.registerLazySingleton(() => isar);
 

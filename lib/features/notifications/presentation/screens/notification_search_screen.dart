@@ -1,8 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../domain/entities/notification_category_config.dart';
+import '../../domain/entities/notification_model.dart';
+import '../../domain/entities/mock_notifications.dart';
 
-class NotificationSearchScreen extends StatelessWidget {
+class NotificationSearchScreen extends StatefulWidget {
   const NotificationSearchScreen({super.key});
+
+  @override
+  State<NotificationSearchScreen> createState() => _NotificationSearchScreenState();
+}
+
+class _NotificationSearchScreenState extends State<NotificationSearchScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  List<NotificationItem> _searchResults = [];
+  bool _isSearching = false;
+
+  void _handleSearch(String query) {
+    if (query.isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _isSearching = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+      _searchResults = mockNotifications.where((n) {
+        return n.title.toLowerCase().contains(query.toLowerCase()) ||
+            n.description.toLowerCase().contains(query.toLowerCase()) ||
+            n.senderName.toLowerCase().contains(query.toLowerCase());
+      }).toList();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,73 +47,177 @@ class NotificationSearchScreen extends StatelessWidget {
           onPressed: () => context.pop(),
         ),
         title: TextField(
+          controller: _searchController,
           autofocus: true,
           style: const TextStyle(color: Colors.white),
+          onChanged: _handleSearch,
           decoration: const InputDecoration(
             hintText: 'Search by title, sender, student...',
             hintStyle: TextStyle(color: Colors.white24),
             border: InputBorder.none,
           ),
         ),
+        actions: [
+          if (_searchController.text.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.close, color: Colors.white60),
+              onPressed: () {
+                _searchController.clear();
+                _handleSearch('');
+              },
+            ),
+        ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+      body: _isSearching ? _buildSearchResults() : _buildSearchSuggestions(),
+    );
+  }
+
+  Widget _buildSearchResults() {
+    if (_searchResults.isEmpty) {
+      return const Center(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Recent Searches', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
-                TextButton(
-                  onPressed: () {},
-                  child: const Text('Clear all', style: TextStyle(color: Color(0xFF6366F1), fontSize: 12)),
-                ),
-              ],
+            Icon(Icons.search_off, color: Colors.white24, size: 64),
+            SizedBox(height: 16),
+            Text('No results found', style: TextStyle(color: Colors.white60)),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _searchResults.length,
+      itemBuilder: (context, index) {
+        final notification = _searchResults[index];
+        return _SearchTile(notification: notification);
+      },
+    );
+  }
+
+  Widget _buildSearchSuggestions() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Recent Searches', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+              TextButton(
+                onPressed: () {},
+                child: const Text('Clear all', style: TextStyle(color: Color(0xFF6366F1), fontSize: 12)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: ['Bus arrival', 'Fees', 'John Kato', 'Exam', 'Homework'].map((s) => _buildSearchChip(s)).toList(),
+          ),
+          const SizedBox(height: 32),
+          const Text('Popular Searches', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          _buildPopularSearch('Attendance'),
+          _buildPopularSearch('Fee Payment'),
+          _buildPopularSearch('Homework'),
+          _buildPopularSearch('Transport'),
+          _buildPopularSearch('Announcements'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchChip(String label) {
+    return InkWell(
+      onTap: () {
+        _searchController.text = label;
+        _handleSearch(label);
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white12,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+      ),
+    );
+  }
+
+  Widget _buildPopularSearch(String label) {
+    return InkWell(
+      onTap: () {
+        _searchController.text = label;
+        _handleSearch(label);
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            const Icon(Icons.trending_up, color: Colors.white24, size: 20),
+            const SizedBox(width: 16),
+            Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
+            const Spacer(),
+            const Icon(Icons.chevron_right, color: Colors.white24, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SearchTile extends StatelessWidget {
+  final NotificationItem notification;
+
+  const _SearchTile({required this.notification});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => context.push('/staff/notifications/${notification.id}'),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: Colors.white12)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: _getCategoryColor(notification.category).withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(_getCategoryIcon(notification.category), color: _getCategoryColor(notification.category), size: 18),
             ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: ['Bus arrival', 'Fees', 'John Kato', 'Exam', 'Homework'].map((s) => _buildSearchChip(s)).toList(),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(notification.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  Text(notification.senderName, style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                ],
+              ),
             ),
-            const SizedBox(height: 32),
-            const Text('Popular Searches', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            _buildPopularSearch('Attendance'),
-            _buildPopularSearch('Fee Payment'),
-            _buildPopularSearch('Homework'),
-            _buildPopularSearch('Transport'),
-            _buildPopularSearch('Announcements'),
+            const Icon(Icons.chevron_right, color: Colors.white24),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSearchChip(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white12,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-    );
-  }
+  // Category treatment comes from the shared catalog so newly-added categories
+  // pick up an icon and colour automatically. The values returned for the
+  // original eight categories are unchanged.
+  Color _getCategoryColor(NotificationCategory category) =>
+      NotificationCategoryCatalog.of(category).color;
 
-  Widget _buildPopularSearch(String label) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        children: [
-          const Icon(Icons.trending_up, color: Colors.white24, size: 20),
-          const SizedBox(width: 16),
-          Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
-          const Spacer(),
-          const Icon(Icons.chevron_right, color: Colors.white24, size: 20),
-        ],
-      ),
-    );
-  }
+  IconData _getCategoryIcon(NotificationCategory category) =>
+      NotificationCategoryCatalog.of(category).icon;
 }

@@ -41,7 +41,11 @@ class NotificationBellButton extends StatelessWidget {
         }.toList();
       }
     }
-    final notificationRoute = role == UserRole.parent ? '/parent/notifications' : '/staff/notifications';
+    final notificationRoute = role == UserRole.parent 
+        ? '/parent/notifications' 
+        : role == UserRole.student 
+            ? '/student/notifications' 
+            : '/staff/notifications';
 
     return StreamBuilder<List<StaffAlert>>(
       stream: StaffAlertsRepository().watchAllForUser(uid: uid, groups: groups),

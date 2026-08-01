@@ -1,11 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../domain/entities/notification_model.dart';
+
 class AttachmentViewerScreen extends StatelessWidget {
-  const AttachmentViewerScreen({super.key});
+  final List<NotificationAttachment>? attachments;
+  const AttachmentViewerScreen({super.key, this.attachments});
 
   @override
   Widget build(BuildContext context) {
+    final displayAttachments = attachments ?? [
+      NotificationAttachment(name: 'Exam_Timetable_Term2_2025.pdf', size: '2.4 MB', type: 'PDF', url: ''),
+      NotificationAttachment(name: 'Bus_Route_Updates_May.xlsx', size: '512 KB', type: 'XLSX', url: ''),
+      NotificationAttachment(name: 'Sports_Day_Poster.jpg', size: '1.8 MB', type: 'JPG', url: ''),
+      NotificationAttachment(name: 'Fee_Structure_2025.docx', size: '320 KB', type: 'DOCX', url: ''),
+    ];
+
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
@@ -20,14 +30,42 @@ class AttachmentViewerScreen extends StatelessWidget {
       body: Column(
         children: [
           Expanded(
-            child: ListView(
+            child: ListView.builder(
               padding: const EdgeInsets.all(16),
-              children: [
-                _buildAttachmentItem('Exam_Timetable_Term2_2025.pdf', '2.4 MB • PDF', Colors.red, Icons.picture_as_pdf),
-                _buildAttachmentItem('Bus_Route_Updates_May.xlsx', '512 KB • XLSX', Colors.green, Icons.table_chart),
-                _buildAttachmentItem('Sports_Day_Poster.jpg', '1.8 MB • JPG', Colors.blue, Icons.image),
-                _buildAttachmentItem('Fee_Structure_2025.docx', '320 KB • DOCX', Colors.purple, Icons.description),
-              ],
+              itemCount: displayAttachments.length,
+              itemBuilder: (context, index) {
+                final attachment = displayAttachments[index];
+                Color color;
+                IconData icon;
+                
+                switch (attachment.type.toUpperCase()) {
+                  case 'PDF':
+                    color = Colors.red;
+                    icon = Icons.picture_as_pdf;
+                    break;
+                  case 'XLSX':
+                  case 'XLS':
+                    color = Colors.green;
+                    icon = Icons.table_chart;
+                    break;
+                  case 'JPG':
+                  case 'PNG':
+                  case 'JPEG':
+                    color = Colors.blue;
+                    icon = Icons.image;
+                    break;
+                  default:
+                    color = Colors.purple;
+                    icon = Icons.description;
+                }
+                
+                return _buildAttachmentItem(
+                  attachment.name, 
+                  '${attachment.size} • ${attachment.type}', 
+                  color, 
+                  icon,
+                );
+              },
             ),
           ),
           Container(
@@ -94,7 +132,8 @@ class AttachmentViewerScreen extends StatelessWidget {
 }
 
 class ImageViewerScreen extends StatelessWidget {
-  const ImageViewerScreen({super.key});
+  final String? imageUrl;
+  const ImageViewerScreen({super.key, this.imageUrl});
 
   @override
   Widget build(BuildContext context) {
@@ -107,7 +146,7 @@ class ImageViewerScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => context.pop(),
         ),
-        title: const Text('1 of 3', style: TextStyle(color: Colors.white, fontSize: 14)),
+        title: const Text('Image Viewer', style: TextStyle(color: Colors.white, fontSize: 14)),
         centerTitle: true,
         actions: [
           IconButton(icon: const Icon(Icons.download, color: Colors.white), onPressed: () {}),
@@ -117,8 +156,9 @@ class ImageViewerScreen extends StatelessWidget {
         children: [
           Center(
             child: Image.network(
-              'https://images.unsplash.com/photo-1577891729319-86adcd962860?q=80&w=2069&auto=format&fit=crop',
+              imageUrl ?? 'https://images.unsplash.com/photo-1577891729319-86adcd962860?q=80&w=2069&auto=format&fit=crop',
               fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.white54, size: 64),
             ),
           ),
           Positioned(
@@ -128,11 +168,7 @@ class ImageViewerScreen extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildBottomIcon(Icons.search),
-                const SizedBox(width: 40),
-                _buildBottomIcon(Icons.chevron_left),
-                const SizedBox(width: 40),
-                _buildBottomIcon(Icons.chevron_right),
+                _buildBottomIcon(Icons.zoom_in),
                 const SizedBox(width: 40),
                 _buildBottomIcon(Icons.share),
               ],
