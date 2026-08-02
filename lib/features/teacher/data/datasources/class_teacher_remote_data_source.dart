@@ -55,6 +55,19 @@ abstract class ClassTeacherRemoteDataSource {
     String? streamId,
   });
 
+  /// Approved marks for every subject the class sits, for one term.
+  ///
+  /// Only marks the Assessment engine has approved: draft and submitted-but-
+  /// unapproved marks are excluded, because an average over marks a subject
+  /// teacher is still editing is a number nobody should act on.
+  Future<List<ClassMarkRow>> getApprovedClassMarks({
+    required String schoolId,
+    required String classId,
+    required String academicYearId,
+    required String termId,
+    String? streamId,
+  });
+
   /// Announcements posted to this class, newest first.
   Future<List<ClassAnnouncement>> getAnnouncements({
     required String schoolId,
@@ -155,6 +168,21 @@ abstract class ClassTeacherRemoteDataSource {
     required String termId,
     required String staffId,
     String? streamId,
+  });
+}
+
+/// One approved mark, flattened to what the class view needs.
+class ClassMarkRow {
+  final String studentId;
+  final String subjectId;
+  final String subjectName;
+  final double percentage;
+
+  const ClassMarkRow({
+    required this.studentId,
+    required this.subjectId,
+    this.subjectName = '',
+    required this.percentage,
   });
 }
 
@@ -317,6 +345,52 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
       excusedCount: (counts['excused'] as num?)?.toInt() ?? 0,
       submittedAt: _toDate(data['submittedAt']),
     );
+  }
+
+  @override
+  Future<List<ClassMarkRow>> getApprovedClassMarks({
+    required String schoolId,
+    required String classId,
+    required String academicYearId,
+    required String termId,
+    String? streamId,
+  }) async {
+    Query<Map<String, dynamic>> query = _school(schoolId)
+        .collection('student_marks')
+        .where('classId', isEqualTo: classId)
+        .where('academicYearId', isEqualTo: academicYearId)
+        .where('termId', isEqualTo: termId)
+        .where('markStatus', isEqualTo: 'approved');
+
+    if (streamId != null && streamId.isNotEmpty) {
+      query = query.where('streamId', isEqualTo: streamId);
+    }
+
+    final snapshot = await query.get();
+    final rows = <ClassMarkRow>[];
+
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      final score = (data['score'] as num?)?.toDouble();
+      final maximum = (data['maximumMark'] as num?)?.toDouble();
+      if (score == null) continue;
+
+      // Percentage is derived here rather than trusted from the document:
+      // components carry different maxima, and a raw score compared across
+      // them would be meaningless.
+      final percentage = (maximum != null && maximum > 0)
+          ? (score / maximum) * 100
+          : score;
+
+      rows.add(ClassMarkRow(
+        studentId: data['studentId'] as String? ?? '',
+        subjectId: data['subjectId'] as String? ?? '',
+        subjectName: data['subjectName'] as String? ?? '',
+        percentage: percentage,
+      ));
+    }
+
+    return rows;
   }
 
   @override

@@ -2,11 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:get_it/get_it.dart';
-import 'package:provider/provider.dart';
-import 'package:school_pulse/core/theme_provider.dart';
-import 'package:school_pulse/core/user_roles.dart';
-import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/services/staff_id_card_service.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
@@ -17,13 +14,14 @@ class StaffProfileScreen extends StatelessWidget {
 
   Future<void> _printIdCard(BuildContext context, UserEntity user) async {
     final idCardService = GetIt.I<StaffIdCardService>();
-    final schoolName = context.read<ThemeProvider>().config?.schoolName ?? 'School Pulse Academy';
+    // Assuming school name from context or a constant for UI purposes
+    const schoolName = 'School Pulse Academy';
     try {
       final pdfData = await idCardService.generateStaffIdCardPdf(
         schoolName: schoolName,
         staffName: user.name,
         staffCode: user.staffCode ?? user.id,
-        roleLabel: UserRoleDisplay.name(user.role),
+        roleLabel: user.role.name,
       );
       await idCardService.printIdCard(pdfData);
     } catch (e) {
@@ -38,78 +36,104 @@ class StaffProfileScreen extends StatelessWidget {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         if (state is! AuthAuthenticated) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            backgroundColor: Color(0xFF070914),
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
         final user = state.user;
 
         return Scaffold(
-          backgroundColor: AppColors.background(context),
+          backgroundColor: const Color(0xFF070914),
           appBar: AppBar(
-            title: const Text('My Profile'),
             backgroundColor: Colors.transparent,
             elevation: 0,
-            iconTheme: IconThemeData(color: AppColors.textPrimary(context)),
-            titleTextStyle: TextStyle(
-              color: AppColors.textPrimary(context),
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => context.pop(),
+            ),
+            title: Text(
+              'My Profile',
+              style: AppTypography.titleLarge.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
             ),
             actions: [
               IconButton(
-                icon: Icon(Icons.badge_outlined, color: AppColors.primary(context)),
+                icon: const Icon(Icons.badge_outlined, color: Color(0xFF3B82F6)),
                 tooltip: 'Print Staff ID Card',
                 onPressed: () => _printIdCard(context, user),
               ),
             ],
           ),
           body: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Center(child: AvatarInitials(name: user.name, size: 80)),
+                const SizedBox(height: 24),
+                Stack(
+                  alignment: Alignment.bottomRight,
+                  children: [
+                    const CircleAvatar(
+                      radius: 50,
+                      backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=47'),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF3B82F6),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 16),
                 Text(
                   user.name,
-                  style: TextStyle(
-                    color: AppColors.textPrimary(context),
-                    fontSize: 24,
+                  style: AppTypography.headlineSmall.copyWith(
+                    color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
-                  UserRoleDisplay.name(user.role),
-                  style: TextStyle(
-                    color: AppColors.textSecondary(context),
-                    fontSize: 14,
+                  user.role.name,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: const Color(0xFF64748B),
                   ),
                 ),
                 const SizedBox(height: 32),
-                _buildInfoCard(context, [
-                  _InfoRow(label: 'Email Address', value: user.email),
-                  _InfoRow(label: 'Phone Number', value: user.phoneNumber ?? '—'),
-                  if (user.assignedClass != null) _InfoRow(label: 'Assigned Class', value: user.assignedClass!),
-                  if (user.subjects != null && user.subjects!.isNotEmpty)
-                    _InfoRow(
-                      label: 'Subjects',
-                      value: user.subjects!.map((s) => '${s.subjectName} (${s.className})').join(', '),
-                    ),
+                
+                _buildInfoSection('PERSONAL INFORMATION', [
+                  _ProfileInfoItem(label: 'Full Name', value: user.name),
+                  _ProfileInfoItem(label: 'Email Address', value: user.email),
+                  _ProfileInfoItem(label: 'Phone Number', value: user.phoneNumber ?? '—'),
                 ]),
+                
                 const SizedBox(height: 24),
-                _buildThemeToggle(context),
-                const SizedBox(height: 24),
-                AppCard(
-                  padding: EdgeInsets.zero,
-                  child: ListTile(
-                    leading: Icon(Icons.lock_outline, color: AppColors.textPrimary(context)),
-                    title: Text(
-                      'Security Settings',
-                      style: TextStyle(color: AppColors.textPrimary(context), fontWeight: FontWeight.w500),
+                _buildInfoSection('WORK INFORMATION', [
+                  _ProfileInfoItem(label: 'Staff ID', value: user.staffCode ?? user.id),
+                  if (user.assignedClass != null) _ProfileInfoItem(label: 'Primary Class', value: user.assignedClass!),
+                  _ProfileInfoItem(label: 'Date Joined', value: 'Aug 12, 2022'),
+                ]),
+                
+                const SizedBox(height: 40),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {},
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF3B82F6),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    trailing: Icon(Icons.chevron_right, size: 20, color: AppColors.textMuted(context)),
-                    onTap: () => context.push('/staff/security-settings'),
+                    child: Text(
+                      'Edit Profile',
+                      style: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 40),
               ],
             ),
           ),
@@ -118,93 +142,64 @@ class StaffProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildThemeToggle(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return AppCard(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Icon(
-                isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
-                color: AppColors.textPrimary(context),
-                size: 20,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Dark Mode',
-                style: TextStyle(
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textPrimary(context),
-                ),
-              ),
-            ],
+  Widget _buildInfoSection(String title, List<Widget> items) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          child: Text(
+            title,
+            style: AppTypography.labelSmall.copyWith(
+              color: const Color(0xFF64748B),
+              letterSpacing: 1.2,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          Switch(
-            value: themeProvider.themeMode == ThemeMode.dark,
-            activeColor: AppColors.primary(context),
-            onChanged: (value) {
-              themeProvider.setThemeMode(value ? ThemeMode.dark : ThemeMode.light);
-            },
+        ),
+        Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF151929),
+            borderRadius: BorderRadius.circular(16),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoCard(BuildContext context, List<Widget> rows) {
-    return AppCard(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: rows.asMap().entries.map((entry) {
-          final idx = entry.key;
-          final row = entry.value;
-          return Column(
-            children: [
-              row,
-              if (idx < rows.length - 1)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Divider(height: 1),
-                ),
-            ],
-          );
-        }).toList(),
-      ),
+          child: Column(
+            children: items,
+          ),
+        ),
+      ],
     );
   }
 }
 
-class _InfoRow extends StatelessWidget {
+class _ProfileInfoItem extends StatelessWidget {
   final String label;
   final String value;
 
-  const _InfoRow({required this.label, required this.value});
+  const _ProfileInfoItem({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: TextStyle(color: AppColors.textSecondary(context)),
-        ),
-        Flexible(
-          child: Text(
-            value,
-            textAlign: TextAlign.right,
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-              color: AppColors.textPrimary(context),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: AppTypography.bodySmall.copyWith(color: const Color(0xFF64748B)),
+          ),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: AppTypography.bodyMedium.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-import 'package:school_pulse/core/theme_provider.dart';
-import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
@@ -15,125 +13,218 @@ class StaffMoreScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthBloc>().state;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    String name = 'Staff Member';
+    String role = 'Department';
+    String? profileImageUrl;
+
+    if (authState is AuthAuthenticated) {
+      name = authState.user.name;
+      role = authState.user.role.name;
+      // In a real app, you'd get the actual image URL
+      profileImageUrl = 'https://i.pravatar.cc/150?img=47';
+    }
 
     return Scaffold(
-      backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: const Text('More'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        children: [
-          const SizedBox(height: 16),
-          _buildProfileHeader(context, authState),
-          const SizedBox(height: 24),
-          Text(
-            'More Options:',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary(context),
-            ),
-          ),
-          const SizedBox(height: 12),
-          AppCard(
-            padding: EdgeInsets.zero,
-            child: Column(
+      backgroundColor: const Color(0xFF070914),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          children: [
+            const SizedBox(height: 20),
+            // Profile Section
+            Row(
               children: [
-                _MoreMenuItem(
-                  icon: Icons.person_outline_rounded,
-                  title: 'My Profile',
-                  onTap: () => context.push('/staff/profile'),
+                CircleAvatar(
+                  radius: 35,
+                  backgroundImage: profileImageUrl != null ? NetworkImage(profileImageUrl) : null,
+                  backgroundColor: const Color(0xFF151929),
+                  child: profileImageUrl == null ? const Icon(Icons.person, size: 40, color: Colors.white) : null,
                 ),
-                _MoreMenuItem(
-                  icon: Icons.menu_book_outlined,
-                  title: 'My Subjects',
-                  onTap: () => context.push('/staff/more/subjects'),
-                ),
-                _MoreMenuItem(
-                  icon: Icons.calendar_today_outlined,
-                  title: 'Timetable',
-                  onTap: () => context.push('/staff/more/timetable'),
-                ),
-                _MoreMenuItem(
-                  icon: Icons.campaign_outlined,
-                  title: 'Announcements',
-                  onTap: () => context.push('/staff/more/announcements'),
-                ),
-                _MoreMenuItem(
-                  icon: Icons.chat_bubble_outline_rounded,
-                  title: 'Messages',
-                  onTap: () => context.push('/staff/messages'),
-                ),
-                _MoreMenuItem(
-                  icon: Icons.assignment_outlined,
-                  title: 'Homework Center',
-                  onTap: () => context.push('/staff/homework'),
-                ),
-                _MoreMenuItem(
-                  icon: Icons.bar_chart_rounded,
-                  title: 'Reports',
-                  onTap: () => context.push('/staff/reports'),
-                ),
-                _MoreMenuItem(
-                  icon: Icons.file_download_outlined,
-                  title: 'Downloads',
-                  onTap: () => context.push('/staff/more/downloads'),
-                ),
-                _MoreMenuItem(
-                  icon: Icons.event_busy_outlined,
-                  title: 'Leave Requests',
-                  onTap: () => context.push('/staff/more/leave-requests'),
-                ),
-                _MoreMenuItem(
-                  icon: Icons.settings_outlined,
-                  title: 'Settings',
-                  onTap: () => context.push('/staff/more/settings'),
-                ),
-                _MoreMenuItem(
-                  icon: isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                  title: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
-                  onTap: () {
-                    final provider = context.read<ThemeProvider>();
-                    provider.setThemeMode(isDark ? ThemeMode.light : ThemeMode.dark);
-                  },
-                ),
-                _MoreMenuItem(
-                  icon: Icons.help_outline_rounded,
-                  title: 'Help & Support',
-                  onTap: () => context.push('/staff/more/support'),
-                ),
-                _MoreMenuItem(
-                  icon: Icons.info_outline_rounded,
-                  title: 'About School Pulse',
-                  onTap: () => context.push('/staff/more/about'),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: AppTypography.headlineSmall.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        role,
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: const Color(0xFF64748B),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      GestureDetector(
+                        onTap: () => context.push('/staff/profile'),
+                        child: Text(
+                          'Edit Profile',
+                          style: AppTypography.labelLarge.copyWith(
+                            color: const Color(0xFF3B82F6),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 24),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: OutlinedButton.icon(
-              onPressed: () => _handleLogout(context),
-              icon: Icon(Icons.logout_rounded, color: AppColors.danger(context)),
-              label: Text(
-                'Logout',
-                style: TextStyle(color: AppColors.danger(context), fontWeight: FontWeight.bold),
-              ),
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: AppColors.danger(context)),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            const SizedBox(height: 32),
+            
+            _buildSectionTitle('ACCOUNT'),
+            _buildMenuItem(
+              icon: Icons.person_outline,
+              title: 'Personal Information',
+              onTap: () => context.push('/staff/profile'),
+            ),
+            _buildMenuItem(
+              icon: Icons.notifications_none,
+              title: 'Notifications',
+              onTap: () => context.push('/staff/notifications'),
+            ),
+            _buildMenuItem(
+              icon: Icons.security_outlined,
+              title: 'Security & Privacy',
+              onTap: () {},
+            ),
+            
+            const SizedBox(height: 24),
+            _buildSectionTitle('SCHOOL'),
+            _buildMenuItem(
+              icon: Icons.calendar_today_outlined,
+              title: 'School Calendar',
+              onTap: () => context.push('/staff/calendar'),
+            ),
+            _buildMenuItem(
+              icon: Icons.campaign_outlined,
+              title: 'Announcements',
+              onTap: () => context.push('/staff/more/announcements'),
+            ),
+            _buildMenuItem(
+              icon: Icons.info_outline,
+              title: 'School Directory',
+              onTap: () {},
+            ),
+            
+            const SizedBox(height: 24),
+            _buildSectionTitle('SETTINGS'),
+            _buildMenuItem(
+              icon: Icons.language,
+              title: 'Language',
+              trailing: 'English',
+              onTap: () {},
+            ),
+            _buildMenuItem(
+              icon: Icons.dark_mode_outlined,
+              title: 'Dark Mode',
+              isToggle: true,
+              onTap: () {},
+            ),
+            
+            const SizedBox(height: 24),
+            _buildSectionTitle('SUPPORT'),
+            _buildMenuItem(
+              icon: Icons.help_outline,
+              title: 'Help Center',
+              onTap: () {},
+            ),
+            _buildMenuItem(
+              icon: Icons.description_outlined,
+              title: 'Terms of Service',
+              onTap: () {},
+            ),
+            
+            const SizedBox(height: 32),
+            // Logout Button
+            Padding(
+              padding: const EdgeInsets.only(bottom: 40),
+              child: InkWell(
+                onTap: () => _handleLogout(context),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2D161A),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF5E262D)),
+                  ),
+                  child: Center(
+                    child: Text(
+                      'Logout',
+                      style: AppTypography.labelLarge.copyWith(
+                        color: const Color(0xFFEF4444),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Text(
+        title,
+        style: AppTypography.labelSmall.copyWith(
+          color: const Color(0xFF64748B),
+          letterSpacing: 1.2,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenuItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    String? trailing,
+    bool isToggle = false,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF151929),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        onTap: onTap,
+        leading: Icon(icon, color: Colors.white, size: 22),
+        title: Text(
+          title,
+          style: AppTypography.bodyMedium.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w500,
           ),
-          const SizedBox(height: 48),
-        ],
+        ),
+        trailing: isToggle 
+          ? Switch.adaptive(
+              value: true, 
+              onChanged: (v) {},
+              activeColor: const Color(0xFF3B82F6),
+            )
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (trailing != null)
+                  Text(
+                    trailing,
+                    style: AppTypography.bodySmall.copyWith(color: const Color(0xFF64748B)),
+                  ),
+                const Icon(Icons.chevron_right, color: Color(0xFF64748B), size: 20),
+              ],
+            ),
       ),
     );
   }
@@ -142,13 +233,17 @@ class StaffMoreScreen extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to log out?'),
+        backgroundColor: const Color(0xFF151929),
+        title: const Text('Logout', style: TextStyle(color: Colors.white)),
+        content: const Text('Are you sure you want to log out?', style: TextStyle(color: Color(0xFF64748B))),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B))),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text('Logout', style: TextStyle(color: AppColors.danger(context))),
+            child: const Text('Logout', style: TextStyle(color: Color(0xFFEF4444))),
           ),
         ],
       ),
@@ -158,98 +253,5 @@ class StaffMoreScreen extends StatelessWidget {
       context.read<AuthBloc>().add(LogoutPressed());
       context.go('/welcome');
     }
-  }
-
-  Widget _buildProfileHeader(BuildContext context, AuthState state) {
-    String name = 'Mrs. Achieng Mary';
-    String role = 'Class Teacher - P3 East';
-    
-    if (state is AuthAuthenticated) {
-      name = state.user.name;
-      role = '${state.user.role.name} ${state.user.assignedClass != null ? "- ${state.user.assignedClass}" : ""}';
-    }
-
-    return Row(
-      children: [
-        CircleAvatar(
-          radius: 30,
-          backgroundColor: AppColors.primary(context).withValues(alpha: 0.1),
-          child: Icon(Icons.person, size: 40, color: AppColors.primary(context)),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                name,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                role,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary(context),
-                ),
-              ),
-              GestureDetector(
-                onTap: () => context.push('/staff/profile'),
-                child: Text(
-                  'View Profile',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.primary(context),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _MoreMenuItem extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final VoidCallback onTap;
-
-  const _MoreMenuItem({
-    required this.icon,
-    required this.title,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        ListTile(
-          leading: Icon(icon, color: AppColors.textPrimary(context), size: 22),
-          title: Text(
-            title,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          trailing: const Icon(Icons.chevron_right_rounded, size: 20),
-          onTap: onTap,
-          dense: true,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        ),
-        Divider(
-          height: 1,
-          indent: 56,
-          endIndent: 16,
-          color: AppColors.border(context).withValues(alpha: 0.5),
-        ),
-      ],
-    );
   }
 }
