@@ -8,6 +8,7 @@ import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/services/staff_id_card_service.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/core/user_roles.dart';
 
 class StaffProfileScreen extends StatelessWidget {
   const StaffProfileScreen({super.key});
@@ -96,7 +97,7 @@ class StaffProfileScreen extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  user.role.name,
+                  UserRoleDisplay.name(user.role),
                   style: AppTypography.bodyMedium.copyWith(
                     color: const Color(0xFF64748B),
                   ),

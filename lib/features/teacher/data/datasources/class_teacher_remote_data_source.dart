@@ -5,6 +5,7 @@ import '../../domain/entities/class_attendance.dart';
 import '../../domain/entities/class_behaviour.dart';
 import '../../domain/entities/class_dashboard_summary.dart';
 import '../../domain/entities/class_homework.dart';
+import '../../domain/entities/class_report_entry.dart';
 import '../../domain/entities/class_student_summary.dart';
 import '../../domain/entities/lesson.dart';
 
@@ -53,6 +54,23 @@ abstract class ClassTeacherRemoteDataSource {
     required String academicYearId,
     required DateTime date,
     String? streamId,
+  });
+
+  /// The class teacher's report sections for every student in the class.
+  Future<List<ClassReportEntry>> getReportEntries({
+    required String schoolId,
+    required String classId,
+    required String academicYearId,
+    required String termId,
+  });
+
+  Future<void> saveReportEntry(ClassReportEntry entry);
+
+  /// The school's report configuration - which sections apply and what the
+  /// competency and conduct scales are called. Null when none is configured.
+  Future<ReportProfile?> getReportProfile({
+    required String schoolId,
+    required String academicYearId,
   });
 
   /// Approved marks for every subject the class sits, for one term.
@@ -344,6 +362,164 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
       lateCount: (counts['late'] as num?)?.toInt() ?? 0,
       excusedCount: (counts['excused'] as num?)?.toInt() ?? 0,
       submittedAt: _toDate(data['submittedAt']),
+    );
+  }
+
+  @override
+  Future<List<ClassReportEntry>> getReportEntries({
+    required String schoolId,
+    required String classId,
+    required String academicYearId,
+    required String termId,
+  }) async {
+    final snapshot = await _reportEntries(schoolId)
+        .where('classId', isEqualTo: classId)
+        .where('academicYearId', isEqualTo: academicYearId)
+        .where('termId', isEqualTo: termId)
+        .get();
+
+    return snapshot.docs
+        .map((d) => _reportEntryFromDoc(d.id, schoolId, d.data()))
+        .toList();
+  }
+
+  @override
+  Future<void> saveReportEntry(ClassReportEntry entry) async {
+    await _reportEntries(entry.schoolId).doc(entry.id).set({
+      'schoolId': entry.schoolId,
+      'campusId': entry.campusId,
+      'classId': entry.classId,
+      'streamId': entry.streamId,
+      'academicYearId': entry.academicYearId,
+      'termId': entry.termId,
+      'studentId': entry.studentId,
+      'studentName': entry.studentName,
+      'status': entry.status.name,
+      'competencies': entry.competencies
+          .map((c) => {
+                'domainId': c.domainId,
+                'domainLabel': c.domainLabel,
+                'levelCode': c.levelCode,
+                'evidenceNote': c.evidenceNote,
+              })
+          .toList(),
+      'conduct': entry.conduct
+          .map((c) => {
+                'criterionId': c.criterionId,
+                'criterionLabel': c.criterionLabel,
+                'ratingCode': c.ratingCode,
+              })
+          .toList(),
+      'overallConductCode': entry.overallConductCode,
+      'teacherComment': entry.teacherComment,
+      'recommendations': entry.recommendations,
+      'attendanceVerified': entry.attendanceVerified,
+      'returnReason': entry.returnReason,
+      'updatedBy': entry.updatedBy,
+      'updatedAt': FieldValue.serverTimestamp(),
+      'submittedAt': entry.submittedAt == null
+          ? null
+          : Timestamp.fromDate(entry.submittedAt!),
+      'roleAssignmentId': entry.roleAssignmentId,
+    }, SetOptions(merge: true));
+  }
+
+  @override
+  Future<ReportProfile?> getReportProfile({
+    required String schoolId,
+    required String academicYearId,
+  }) async {
+    final doc = await _school(schoolId)
+        .collection('configs')
+        .doc('classReportProfile')
+        .get();
+
+    final data = doc.data();
+    if (!doc.exists || data == null) return null;
+
+    List<({String id, String label})> pairs(String key) {
+      return ((data[key] as List?) ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map((e) => (
+                id: e['id'] as String? ?? '',
+                label: e['label'] as String? ?? '',
+              ))
+          .where((e) => e.id.isNotEmpty)
+          .toList();
+    }
+
+    List<({String code, String label})> codes(String key) {
+      return ((data[key] as List?) ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map((e) => (
+                code: e['code'] as String? ?? '',
+                label: e['label'] as String? ?? '',
+              ))
+          .where((e) => e.code.isNotEmpty)
+          .toList();
+    }
+
+    return ReportProfile(
+      id: doc.id,
+      name: data['name'] as String? ?? '',
+      enabledSections: ((data['enabledSections'] as List?) ?? const [])
+          .whereType<String>()
+          .map(ReportSection.fromId)
+          .whereType<ReportSection>()
+          .toSet(),
+      competencyDomains: pairs('competencyDomains'),
+      competencyLevels: codes('competencyLevels'),
+      conductCriteria: pairs('conductCriteria'),
+      conductRatings: codes('conductRatings'),
+      commentMinLength: (data['commentMinLength'] as num?)?.toInt() ?? 20,
+      requiresCompleteness: data['requiresCompleteness'] as bool? ?? true,
+    );
+  }
+
+  ClassReportEntry _reportEntryFromDoc(
+    String id,
+    String schoolId,
+    Map<String, dynamic> data,
+  ) {
+    return ClassReportEntry(
+      id: id,
+      schoolId: schoolId,
+      campusId: data['campusId'] as String? ?? '',
+      classId: data['classId'] as String? ?? '',
+      streamId: data['streamId'] as String?,
+      academicYearId: data['academicYearId'] as String? ?? '',
+      termId: data['termId'] as String? ?? '',
+      studentId: data['studentId'] as String? ?? '',
+      studentName: data['studentName'] as String? ?? '',
+      status: ReportEntryStatus.fromId(data['status'] as String?),
+      competencies: ((data['competencies'] as List?) ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map((e) => CompetencyEntry(
+                domainId: e['domainId'] as String? ?? '',
+                domainLabel: e['domainLabel'] as String? ?? '',
+                levelCode: e['levelCode'] as String?,
+                evidenceNote: e['evidenceNote'] as String?,
+              ))
+          .toList(),
+      conduct: ((data['conduct'] as List?) ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map((e) => ConductEntry(
+                criterionId: e['criterionId'] as String? ?? '',
+                criterionLabel: e['criterionLabel'] as String? ?? '',
+                ratingCode: e['ratingCode'] as String?,
+              ))
+          .toList(),
+      overallConductCode: data['overallConductCode'] as String?,
+      teacherComment: data['teacherComment'] as String?,
+      recommendations:
+          (data['recommendations'] as List?)?.whereType<String>().toList() ??
+              const [],
+      attendanceVerified: data['attendanceVerified'] as bool? ?? false,
+      returnReason: data['returnReason'] as String?,
+      updatedBy: data['updatedBy'] as String?,
+      updatedAt: _toDate(data['updatedAt']),
+      submittedAt: _toDate(data['submittedAt']),
+      roleAssignmentId: data['roleAssignmentId'] as String? ?? '',
     );
   }
 

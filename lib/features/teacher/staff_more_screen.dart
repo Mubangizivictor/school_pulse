@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
+import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
@@ -19,7 +20,7 @@ class StaffMoreScreen extends StatelessWidget {
 
     if (authState is AuthAuthenticated) {
       name = authState.user.name;
-      role = authState.user.role.name;
+      role = UserRoleDisplay.name(authState.user.role);
       // In a real app, you'd get the actual image URL
       profileImageUrl = 'https://i.pravatar.cc/150?img=47';
     }
