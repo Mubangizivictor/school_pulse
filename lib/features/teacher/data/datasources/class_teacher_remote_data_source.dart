@@ -6,6 +6,7 @@ import '../../domain/entities/class_behaviour.dart';
 import '../../domain/entities/class_dashboard_summary.dart';
 import '../../domain/entities/class_homework.dart';
 import '../../domain/entities/class_report_entry.dart';
+import '../../domain/entities/class_task.dart';
 import '../../domain/entities/class_student_summary.dart';
 import '../../domain/entities/lesson.dart';
 
@@ -55,6 +56,17 @@ abstract class ClassTeacherRemoteDataSource {
     required DateTime date,
     String? streamId,
   });
+
+  /// The teacher's own task list. Scoped by ownership rather than class -
+  /// see [ClassTask] for why.
+  Future<List<ClassTask>> getTasks({
+    required String schoolId,
+    required String ownerUserId,
+  });
+
+  Future<void> saveTask(ClassTask task);
+
+  Future<void> deleteTask({required String schoolId, required String taskId});
 
   /// The class teacher's report sections for every student in the class.
   Future<List<ClassReportEntry>> getReportEntries({
@@ -362,6 +374,117 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
       lateCount: (counts['late'] as num?)?.toInt() ?? 0,
       excusedCount: (counts['excused'] as num?)?.toInt() ?? 0,
       submittedAt: _toDate(data['submittedAt']),
+    );
+  }
+
+  CollectionReference<Map<String, dynamic>> _tasks(String schoolId) =>
+      _school(schoolId).collection('class_tasks');
+
+  @override
+  Future<List<ClassTask>> getTasks({
+    required String schoolId,
+    required String ownerUserId,
+  }) async {
+    final snapshot = await _tasks(schoolId)
+        .where('ownerUserId', isEqualTo: ownerUserId)
+        .orderBy('dueAt')
+        .get();
+
+    return snapshot.docs.map((d) => _taskFromDoc(d.id, schoolId, d.data())).toList();
+  }
+
+  @override
+  Future<void> saveTask(ClassTask task) async {
+    await _tasks(task.schoolId).doc(task.id).set({
+      'schoolId': task.schoolId,
+      'campusId': task.campusId,
+      'classId': task.classId,
+      'academicYearId': task.academicYearId,
+      'termId': task.termId,
+      'title': task.title,
+      'description': task.description,
+      'category': task.category,
+      'priority': task.priority.name,
+      'status': task.status.name,
+      'dueAt': Timestamp.fromDate(task.dueAt),
+      'studentId': task.studentId,
+      'subjectName': task.subjectName,
+      'checklist': task.checklist
+          .map((c) => {
+                'id': c.id,
+                'title': c.title,
+                'isCompleted': c.isCompleted,
+              })
+          .toList(),
+      'attachments': task.attachments,
+      'recurrence': {
+        ...task.recurrence.toMap(),
+        'endDate': task.recurrence.endDate == null
+            ? null
+            : Timestamp.fromDate(task.recurrence.endDate!),
+      },
+      'remindAt':
+          task.remindAt == null ? null : Timestamp.fromDate(task.remindAt!),
+      'ownerUserId': task.ownerUserId,
+      'collaboratorUserIds': task.collaboratorUserIds,
+      'createdAt': Timestamp.fromDate(task.createdAt),
+      'completedAt':
+          task.completedAt == null ? null : Timestamp.fromDate(task.completedAt!),
+      'completedBy': task.completedBy,
+      'roleAssignmentId': task.roleAssignmentId,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  @override
+  Future<void> deleteTask({
+    required String schoolId,
+    required String taskId,
+  }) async {
+    await _tasks(schoolId).doc(taskId).delete();
+  }
+
+  ClassTask _taskFromDoc(String id, String schoolId, Map<String, dynamic> data) {
+    final recurrence = (data['recurrence'] as Map<String, dynamic>?) ?? const {};
+
+    return ClassTask(
+      id: id,
+      schoolId: schoolId,
+      campusId: data['campusId'] as String? ?? '',
+      classId: data['classId'] as String?,
+      academicYearId: data['academicYearId'] as String? ?? '',
+      termId: data['termId'] as String?,
+      title: data['title'] as String? ?? '',
+      description: data['description'] as String? ?? '',
+      category: data['category'] as String? ?? 'Other',
+      priority: ClassTaskPriority.fromId(data['priority'] as String?),
+      status: ClassTaskStatus.fromId(data['status'] as String?),
+      dueAt: _toDate(data['dueAt']) ?? DateTime(1970),
+      studentId: data['studentId'] as String?,
+      subjectName: data['subjectName'] as String?,
+      checklist: ((data['checklist'] as List?) ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map((e) => ClassTaskChecklistItem(
+                id: e['id'] as String? ?? '',
+                title: e['title'] as String? ?? '',
+                isCompleted: e['isCompleted'] as bool? ?? false,
+              ))
+          .toList(),
+      attachments:
+          (data['attachments'] as List?)?.whereType<String>().toList() ?? const [],
+      recurrence: TaskRecurrence.fromMap({
+        ...recurrence,
+        'endDate': _toDate(recurrence['endDate']),
+      }),
+      remindAt: _toDate(data['remindAt']),
+      ownerUserId: data['ownerUserId'] as String? ?? '',
+      collaboratorUserIds:
+          (data['collaboratorUserIds'] as List?)?.whereType<String>().toList() ??
+              const [],
+      createdAt: _toDate(data['createdAt']) ?? DateTime(1970),
+      completedAt: _toDate(data['completedAt']),
+      completedBy: data['completedBy'] as String?,
+      roleAssignmentId: data['roleAssignmentId'] as String? ?? '',
     );
   }
 

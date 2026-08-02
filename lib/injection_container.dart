@@ -282,6 +282,7 @@ import 'package:school_pulse/features/teacher/data/repositories/class_attendance
 import 'package:school_pulse/features/teacher/data/repositories/class_communication_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_performance_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_report_repository_impl.dart';
+import 'package:school_pulse/features/teacher/data/repositories/class_task_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_work_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_dashboard_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_student_repository_impl.dart';
@@ -299,6 +300,7 @@ import 'package:school_pulse/features/teacher/domain/repositories/class_attendan
 import 'package:school_pulse/features/teacher/domain/repositories/class_communication_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/class_performance_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/class_report_repository.dart';
+import 'package:school_pulse/features/teacher/domain/repositories/class_task_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/class_work_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/class_dashboard_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/class_student_repository.dart';
@@ -319,6 +321,7 @@ import 'package:school_pulse/features/teacher/presentation/bloc/class_students/c
 import 'package:school_pulse/features/teacher/presentation/bloc/class_announcements/class_announcements_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_performance/class_performance_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_reports/class_reports_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_tasks/class_tasks_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_work/class_work_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_bloc.dart';
@@ -1376,6 +1379,18 @@ Future<void> init() async {
       remoteDataSource: sl(),
       studentRepository: sl(),
       assignmentService: sl(),
+      auditService: sl(),
+      networkInfo: sl(),
+    ),
+  );
+
+  sl.registerLazySingleton(
+    () => ClassTasksBloc(taskRepository: sl()),
+  );
+
+  sl.registerLazySingleton<ClassTaskRepository>(
+    () => ClassTaskRepositoryImpl(
+      remoteDataSource: sl(),
       auditService: sl(),
       networkInfo: sl(),
     ),
