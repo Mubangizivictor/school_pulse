@@ -2,18 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
-import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
-import 'package:school_pulse/design_system/theme/app_radius.dart';
-import 'package:school_pulse/design_system/components/pulse_card.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
-import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
-import 'package:school_pulse/features/teacher/presentation/bloc/teacher_event.dart';
-import 'package:school_pulse/features/teacher/presentation/bloc/teacher_state.dart';
+import 'package:school_pulse/features/shared/boarding/boarding_dashboard_widgets.dart';
+import 'package:school_pulse/features/teacher/domain/entities/class_dashboard_summary.dart';
+import 'package:school_pulse/features/teacher/domain/entities/lesson.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_event.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_state.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_dashboard/class_teacher_dashboard_bloc.dart';
 
 class TeacherDashboardScreen extends StatefulWidget {
   const TeacherDashboardScreen({super.key});
@@ -26,399 +28,575 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
   @override
   void initState() {
     super.initState();
+    _requestContext();
+  }
+
+  void _requestContext({bool forceRefresh = false}) {
     final authState = context.read<AuthBloc>().state;
-    if (authState is AuthAuthenticated) {
-      context.read<TeacherBloc>().add(TeacherDashboardRequested(authState.user.id));
-    }
+    if (authState is! AuthAuthenticated) return;
+    context.read<ClassTeacherContextBloc>().add(
+          ClassContextRequested(
+            schoolId: authState.user.schoolId,
+            userId: authState.user.id,
+            forceRefresh: forceRefresh,
+          ),
+        );
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final authState = context.watch<AuthBloc>().state;
+    final user = authState is AuthAuthenticated ? authState.user : null;
 
     return Scaffold(
       backgroundColor: AppColors.background(context),
-      body: BlocBuilder<TeacherBloc, TeacherState>(
-        builder: (context, state) {
-          if (state is TeacherLoading || state is TeacherInitial) {
+      body: BlocConsumer<ClassTeacherContextBloc, ClassTeacherContextState>(
+        listenWhen: (previous, current) =>
+            previous.active?.roleAssignmentId != current.active?.roleAssignmentId ||
+            previous.notice != current.notice,
+        listener: (context, contextState) {
+          final active = contextState.active;
+          if (active != null) {
+            // Every responsibility change reloads the figures, so the previous
+            // class's numbers never linger under the new one.
+            context
+                .read<ClassTeacherDashboardBloc>()
+                .add(ClassDashboardRequested(active));
+          }
+          final notice = contextState.notice;
+          if (notice != null) {
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(SnackBar(content: Text(notice)));
+            context
+                .read<ClassTeacherContextBloc>()
+                .add(const ClassContextNoticeCleared());
+          }
+        },
+        builder: (context, contextState) {
+          if (contextState.isLoading) {
             return const _TeacherDashboardSkeleton();
           }
 
-          if (state is TeacherError) {
-            return EmptyState(
-              icon: Icons.cloud_off,
-              title: 'Could not load dashboard',
-              message: state.message,
-              ctaLabel: 'Retry',
-              onCtaPressed: () {
-                final authState = context.read<AuthBloc>().state;
-                if (authState is AuthAuthenticated) {
+          if (contextState.unavailableReason != null) {
+            return _unavailableState(context, contextState);
+          }
+
+          final active = contextState.active;
+          if (active == null) return const _TeacherDashboardSkeleton();
+
+          return BlocBuilder<ClassTeacherDashboardBloc, ClassTeacherDashboardState>(
+            builder: (context, state) {
+              if (state.isLoading && !state.hasSummary) {
+                return const _TeacherDashboardSkeleton();
+              }
+
+              if (!state.hasSummary && state.errorMessage != null) {
+                return EmptyState(
+                  icon: Icons.cloud_off,
+                  title: 'Could not load dashboard',
+                  message: state.errorMessage!,
+                  ctaLabel: 'Retry',
+                  onCtaPressed: () => context
+                      .read<ClassTeacherDashboardBloc>()
+                      .add(ClassDashboardRequested(active, forceRefresh: true)),
+                );
+              }
+
+              return RefreshIndicator(
+                onRefresh: () async {
+                  _requestContext(forceRefresh: true);
                   context
-                      .read<TeacherBloc>()
-                      .add(TeacherDashboardRequested(authState.user.id));
-                }
-              },
-            );
-          }
-
-          if (state is TeacherLoaded) {
-            return RefreshIndicator(
-              onRefresh: () async {
-                final authState = context.read<AuthBloc>().state;
-                if (authState is AuthAuthenticated) {
-                  context.read<TeacherBloc>().add(TeacherDashboardRequested(authState.user.id));
-                }
-              },
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-                children: [
-                  const SizedBox(height: 48), // Space for status bar
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Welcome back,',
-                              style: AppTypography.bodyMedium.copyWith(
-                                color: AppColors.textSecondary(context),
-                              ),
+                      .read<ClassTeacherDashboardBloc>()
+                      .add(ClassDashboardRequested(active, forceRefresh: true));
+                },
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.xl,
+                    AppSpacing.x8l,
+                    AppSpacing.xl,
+                    AppSpacing.x4l,
+                  ),
+                  children: [
+                    BoardingDashboardHeader(
+                      userName: user?.name ?? 'Class Teacher',
+                      roleLabel: _roleLabel(contextState, user?.schoolName),
+                      photoUrl: user?.photoUrl,
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              Theme.of(context).brightness == Brightness.dark
+                                  ? Icons.wb_sunny_outlined
+                                  : Icons.nightlight_round_outlined,
                             ),
-                            Builder(builder: (context) {
-                              final authState = context.watch<AuthBloc>().state;
-                              final name = authState is AuthAuthenticated
-                                  ? authState.user.name
-                                  : '';
-                              return Text(
-                                name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTypography.headlineSmall.copyWith(
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -0.5,
-                                  color: AppColors.textPrimary(context),
-                                ),
+                            onPressed: () {
+                              final provider = context.read<ThemeProvider>();
+                              provider.setThemeMode(
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? ThemeMode.light
+                                    : ThemeMode.dark,
                               );
-                            }),
-                          ],
-                        ),
-                      ),
-                      const NotificationBellButton(),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Builder(builder: (context) {
-                    final authState = context.watch<AuthBloc>().state;
-                    final assignedClass = authState is AuthAuthenticated ? authState.user.assignedClass : null;
-                    if (assignedClass == null) return const SizedBox.shrink();
-                    return Padding(
-                      padding: const EdgeInsets.only(top: AppSpacing.s),
-                      child: Text(
-                        'Class Teacher - $assignedClass',
-                        style: AppTypography.titleSmall.copyWith(
-                          color: AppColors.primary(context),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    );
-                  }),
-                  const SizedBox(height: AppSpacing.s),
-                  Text(
-                    DateFormat('EEEE, d MMMM yyyy').format(DateTime.now()),
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: AppColors.textSecondary(context),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.x3l),
-                  _buildStatsGrid(context, state),
-                  const SizedBox(height: AppSpacing.x3l),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Class Progress',
-                        style: AppTypography.titleLarge.copyWith(
-                          color: AppColors.textPrimary(context),
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-                      ...state.classProgress.asMap().entries.map((entry) {
-                        final progress = entry.value;
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: AppSpacing.l),
-                          child: _PulseProgressCard(
-                            title: progress.title,
-                            progress: progress.progress,
-                            subtitle: progress.subtitle,
-                            color: entry.key.isOdd
-                                ? AppColors.information(context)
-                                : AppColors.primary(context),
+                            },
                           ),
-                        );
-                      }),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.x3l),
-                  FadeInSlide(
-                    delay: const Duration(milliseconds: 900),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Quick Actions',
-                          style: AppTypography.titleLarge.copyWith(
-                            color: AppColors.textPrimary(context),
+                          IconButton(
+                            icon: const Icon(Icons.chat_bubble_outline_rounded),
+                            onPressed: () => context.push('/staff/messages'),
+                            tooltip: 'Messages',
                           ),
-                        ),
-                        const SizedBox(height: AppSpacing.xl),
-                        LayoutBuilder(builder: (context, constraints) {
-                          final itemWidth = (constraints.maxWidth - AppSpacing.l) / 2;
-                          return Wrap(
-                            spacing: AppSpacing.l,
-                            runSpacing: AppSpacing.l,
-                            children: [
-                              _QuickAction(
-                                label: 'Roll Call',
-                                icon: Icons.how_to_reg,
-                                color: AppColors.information(context),
-                                onTap: () => context.push('/staff/attendance'),
-                                width: itemWidth,
-                              ),
-                              _QuickAction(
-                                label: 'Attendance History',
-                                icon: Icons.history,
-                                color: AppColors.royalBlue,
-                                onTap: () => context.push('/staff/attendance/history'),
-                                width: itemWidth,
-                              ),
-                              _QuickAction(
-                                label: 'Enter Marks',
-                                icon: Icons.edit_note,
-                                color: AppColors.warning(context),
-                                onTap: () => context.push('/staff/marks'),
-                                width: itemWidth,
-                              ),
-                              _QuickAction(
-                                label: 'Homework',
-                                icon: Icons.assignment_outlined,
-                                color: AppColors.success(context),
-                                onTap: () => context.push('/staff/homework'),
-                                width: itemWidth,
-                              ),
-                              _QuickAction(
-                                label: 'Analytics',
-                                icon: Icons.analytics_outlined,
-                                color: AppColors.royalBlue,
-                                onTap: () => context.push('/staff/class-analytics'),
-                                width: itemWidth,
-                              ),
-                              _QuickAction(
-                                label: 'QR Attendance',
-                                icon: Icons.qr_code_scanner,
-                                color: Colors.deepPurple,
-                                onTap: () => context.push('/staff/attendance/qr-dashboard'),
-                                width: itemWidth,
-                              ),
-                            ],
-                          );
-                        }),
-                      ],
+                          const NotificationBellButton(),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.x6l),
-                ],
-              ),
-            );
-          }
+                    const SizedBox(height: AppSpacing.x3l),
 
-          return const SizedBox.shrink();
+                    // 1. Overview metrics
+                    BoardingOverviewCard(
+                      metrics: _buildMetrics(context, state),
+                    ),
+                    const SizedBox(height: AppSpacing.x3l),
+
+                    // 2. Quick Actions
+                    const SizedBox(height: 10),
+                    _buildQuickActions(context),
+                    const SizedBox(height: AppSpacing.x3l),
+
+                    // 3. Today's Schedule
+                    _buildSchedule(context, state),
+                    const SizedBox(height: AppSpacing.x3l),
+
+                    // 4. Recent Activities
+                    _buildRecentActivities(context, state),
+                    const SizedBox(height: AppSpacing.x6l),
+                  ],
+                ),
+              );
+            },
+          );
         },
       ),
     );
   }
 
-  Widget _buildStatsGrid(BuildContext context, TeacherLoaded state) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isMobile = screenWidth < 600;
+  /// "P5 East • Kabale Campus" - built from the verified assignment rather
+  /// than from a field on the user record, which cannot say which of several
+  /// responsibilities is in effect.
+  String _roleLabel(ClassTeacherContextState state, String? schoolName) {
+    final active = state.active;
+    if (active == null) return 'Class Teacher';
+    final placement = [active.className, active.streamName]
+        .where((e) => e != null && e.isNotEmpty)
+        .join(' ');
+    final where = schoolName ?? '';
+    return [
+      placement.isEmpty ? 'Class Teacher' : placement,
+      if (where.isNotEmpty) where,
+    ].join(' • ');
+  }
 
-    final stats = [
-      (
-        title: 'Students Today',
-        value: state.studentsToday.toDouble(),
-        suffix: '/${state.totalStudents}',
+  /// Each unavailable reason is its own explanation, because the teacher's
+  /// next step differs: waiting on an admin, asking for a suspension to be
+  /// lifted, or simply retrying.
+  Widget _unavailableState(
+    BuildContext context,
+    ClassTeacherContextState state,
+  ) {
+    final (icon, title, message) = switch (state.unavailableReason!) {
+      ClassContextUnavailableReason.noClassAssignment => (
+          Icons.class_outlined,
+          'No class assigned',
+          'You are not currently the Class Teacher for any class. Your school '
+              'administrator assigns this.',
+        ),
+      ClassContextUnavailableReason.assignmentSuspended => (
+          Icons.pause_circle_outline,
+          'Class responsibility suspended',
+          'Your Class Teacher assignment has been suspended. Contact your '
+              'school administrator.',
+        ),
+      ClassContextUnavailableReason.assignmentExpired => (
+          Icons.event_busy_outlined,
+          'Class responsibility ended',
+          'Your Class Teacher assignment has reached its end date.',
+        ),
+      ClassContextUnavailableReason.noAcademicYear => (
+          Icons.calendar_today_outlined,
+          'No academic year set',
+          'Your school has not opened an academic year yet. Class work becomes '
+              'available once it does.',
+        ),
+      ClassContextUnavailableReason.loadFailed => (
+          Icons.cloud_off,
+          'Could not load your class',
+          state.errorMessage ?? 'Pull down to retry.',
+        ),
+    };
+
+    return EmptyState(
+      icon: icon,
+      title: title,
+      message: message,
+      ctaLabel: 'Retry',
+      onCtaPressed: () => _requestContext(forceRefresh: true),
+    );
+  }
+
+  List<BoardingMetric> _buildMetrics(
+    BuildContext context,
+    ClassTeacherDashboardState state,
+  ) {
+    final total = state.totalStudents ?? 0;
+    final present = state.presentToday;
+    final absent = state.absentToday;
+
+    String share(double? percentage) =>
+        percentage == null ? 'Not taken' : '${percentage.toStringAsFixed(1)}%';
+
+    return [
+      BoardingMetric(
+        label: 'Students',
         icon: Icons.people_outline,
         color: AppColors.primary(context),
-        trend: null,
+        value: total,
+        caption: 'Total',
+        captionUsesColor: false,
+        onTap: () => context.push('/staff/students'),
       ),
-      (
-        title: 'Submissions',
-        value: state.submissionsDue.toDouble(),
-        suffix: null,
+      BoardingMetric(
+        label: 'Present Today',
+        icon: Icons.how_to_reg_outlined,
+        color: AppColors.success(context),
+        value: present ?? 0,
+        // "Not taken" rather than 0% - an unmarked register and a class with
+        // nobody present are different facts.
+        caption: share(state.presentPercentage),
+        onTap: () => context.push('/staff/attendance'),
+      ),
+      BoardingMetric(
+        label: 'Absent Today',
+        icon: Icons.person_off_outlined,
+        color: AppColors.danger(context),
+        value: absent ?? 0,
+        caption: share(state.absentPercentage),
+        onTap: () => context.push('/staff/attendance'),
+      ),
+      BoardingMetric(
+        label: 'Assignments',
         icon: Icons.assignment_outlined,
         color: AppColors.warning(context),
-        trend: 'Due today',
-      ),
-      (
-        title: 'Classes Today',
-        value: state.classesToday.toDouble(),
-        suffix: null,
-        icon: Icons.calendar_today_outlined,
-        color: AppColors.information(context),
-        trend: null,
-      ),
-      (
-        title: 'Notifications',
-        value: state.activeNotifications.toDouble(),
-        suffix: null,
-        icon: Icons.notifications_active_outlined,
-        color: AppColors.errorRed,
-        trend: null,
+        value: state.pendingAssignments ?? 0,
+        caption: 'Pending',
+        onTap: () => context.push('/staff/tasks'),
       ),
     ];
+  }
 
-    if (isMobile) {
-      return Column(
-        children: [
-          Row(
-            children: [
-              Expanded(child: _StatCard(stat: stats[0])),
-              const SizedBox(width: AppSpacing.l),
-              Expanded(child: _StatCard(stat: stats[1])),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.l),
-          Row(
-            children: [
-              Expanded(child: _StatCard(stat: stats[2])),
-              const SizedBox(width: AppSpacing.l),
-              Expanded(child: _StatCard(stat: stats[3])),
-            ],
-          ),
-        ],
-      );
-    }
-
-    return Row(
-      children: stats.map((stat) => Expanded(
-        child: Padding(
-          padding: EdgeInsets.only(right: stat == stats.last ? 0 : AppSpacing.l),
-          child: _StatCard(stat: stat),
+  Widget _buildQuickActions(BuildContext context) {
+    return BoardingQuickActionGrid(
+      actions: [
+        BoardingQuickAction(
+          label: 'Roll Call',
+          icon: Icons.how_to_reg,
+          color: AppColors.success(context),
+          onTap: () => context.push('/staff/attendance'),
         ),
-      )).toList(),
+        BoardingQuickAction(
+          label: 'Submit Marks',
+          icon: Icons.edit_note,
+          color: AppColors.primary(context),
+          onTap: () => context.push('/staff/marks'),
+        ),
+        BoardingQuickAction(
+          label: 'Resources',
+          icon: Icons.folder_open,
+          color: AppColors.information(context),
+          onTap: () => context.push('/staff/resources'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSchedule(BuildContext context, ClassTeacherDashboardState state) {
+    final schedule = state.todaysSchedule;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        BoardingSectionHeading(
+          title: "Today's Schedule",
+          onViewAll: () => context.push('/staff/timetable'),
+        ),
+        const SizedBox(height: AppSpacing.l),
+        AppCard(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: schedule.isEmpty
+              ? _EmptyRow(
+                  icon: Icons.event_available_outlined,
+                  message: 'No lessons scheduled for your class today.',
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (var i = 0; i < schedule.length; i++) ...[
+                      if (i > 0) const Divider(height: AppSpacing.x4l),
+                      _ScheduleItem(
+                        time: _timeRange(schedule[i]),
+                        subject: schedule[i].subjectName.isEmpty
+                            ? schedule[i].title
+                            : schedule[i].subjectName,
+                        classRoom: _lessonSubtitle(schedule[i]),
+                        status: schedule[i].status.label,
+                        statusColor: _statusColor(context, schedule[i].status),
+                      ),
+                    ],
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
+
+  static String _timeRange(Lesson lesson) {
+    final format = DateFormat('HH:mm');
+    return '${format.format(lesson.scheduledStart)} - '
+        '${format.format(lesson.scheduledEnd)}';
+  }
+
+  /// The room where the timetable gives one, otherwise the class placement -
+  /// the line is never left blank.
+  static String _lessonSubtitle(Lesson lesson) {
+    final room = lesson.room;
+    if (room != null && room.isNotEmpty) return room;
+    return [lesson.className, lesson.streamName]
+        .where((e) => e != null && e.isNotEmpty)
+        .join(' ');
+  }
+
+  static Color _statusColor(BuildContext context, LessonStatus status) =>
+      switch (status) {
+        LessonStatus.ongoing => AppColors.success(context),
+        LessonStatus.completed => AppColors.textMuted(context),
+        LessonStatus.cancelled ||
+        LessonStatus.missed =>
+          AppColors.danger(context),
+        LessonStatus.substituted ||
+        LessonStatus.rescheduled =>
+          AppColors.warning(context),
+        _ => AppColors.primary(context),
+      };
+
+  Widget _buildRecentActivities(
+    BuildContext context,
+    ClassTeacherDashboardState state,
+  ) {
+    final activities = state.recentActivities;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        BoardingSectionHeading(
+          title: 'Recent Activities',
+          onViewAll: () => context.push('/staff/activities'),
+        ),
+        const SizedBox(height: AppSpacing.l),
+        if (activities.isEmpty)
+          AppCard(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: _EmptyRow(
+              icon: Icons.history_outlined,
+              message: 'Nothing has happened in your class yet.',
+            ),
+          )
+        else
+          for (var i = 0; i < activities.length && i < 5; i++) ...[
+            if (i > 0) const SizedBox(height: AppSpacing.l),
+            _ActivityCard(activity: activities[i]),
+          ],
+      ],
     );
   }
 }
 
-class _StatCard extends StatelessWidget {
-  final ({String title, double value, String? suffix, IconData icon, Color color, String? trend}) stat;
+/// One audit row as the activity feed shows it. Same card shape the approved
+/// dashboard used for its single static entry.
+class _ActivityCard extends StatelessWidget {
+  final ClassActivityEntry activity;
 
-  const _StatCard({required this.stat});
+  const _ActivityCard({required this.activity});
 
   @override
   Widget build(BuildContext context) {
-    return PulseCard(
-      variant: PulseCardVariant.elevated,
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final theme = Theme.of(context);
+
+    return AppCard(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.l,
+        vertical: AppSpacing.xl,
+      ),
+      onTap: () {},
+      child: Row(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.m),
-                decoration: BoxDecoration(
-                  color: stat.color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppRadius.m),
-                ),
-                child: Icon(stat.icon, color: stat.color, size: 20),
-              ),
-              if (stat.trend != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.warning(context).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    stat.trend!,
-                    style: AppTypography.labelSmall.copyWith(
-                      color: AppColors.warning(context),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          Text(
-            '${stat.value.toInt()}${stat.suffix ?? ''}',
-            style: AppTypography.headlineSmall.copyWith(
-              fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary(context),
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.primarySoft(context),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              _iconFor(activity.action),
+              color: AppColors.primary(context),
+              size: 22,
             ),
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            stat.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTypography.labelMedium.copyWith(
-              color: AppColors.textSecondary(context),
+          const SizedBox(width: AppSpacing.l),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  activity.title,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: AppColors.textPrimary(context),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  activity.description.isEmpty
+                      ? _relativeTime(activity.occurredAt)
+                      : activity.description,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary(context),
+                    fontSize: 12.5,
+                  ),
+                ),
+              ],
             ),
+          ),
+          Icon(
+            Icons.chevron_right,
+            color: AppColors.textMuted(context),
           ),
         ],
       ),
     );
   }
+
+  static IconData _iconFor(String action) {
+    if (action.startsWith('attendance')) return Icons.how_to_reg;
+    if (action.startsWith('homework')) return Icons.assignment_outlined;
+    if (action.startsWith('behaviour')) return Icons.flag_outlined;
+    if (action.startsWith('achievement')) return Icons.emoji_events_outlined;
+    if (action.startsWith('announcement')) return Icons.campaign_outlined;
+    if (action.startsWith('message')) return Icons.chat_bubble_outline;
+    if (action.startsWith('report') ||
+        action.startsWith('competency') ||
+        action.startsWith('conduct') ||
+        action.startsWith('comment')) {
+      return Icons.description_outlined;
+    }
+    if (action.startsWith('task')) return Icons.checklist_outlined;
+    if (action.startsWith('resource')) return Icons.folder_open;
+    return Icons.history;
+  }
+
+  static String _relativeTime(DateTime when) {
+    final difference = DateTime.now().difference(when);
+    if (difference.inMinutes < 1) return 'Just now';
+    if (difference.inMinutes < 60) return '${difference.inMinutes}m ago';
+    if (difference.inHours < 24) return '${difference.inHours}h ago';
+    if (difference.inDays < 7) return '${difference.inDays}d ago';
+    return DateFormat('d MMM').format(when);
+  }
 }
 
-class _PulseProgressCard extends StatelessWidget {
-  final String title;
-  final double progress;
-  final String subtitle;
-  final Color color;
+/// The in-card empty line used where the approved layout keeps its card but
+/// has nothing to put in it. Same typography as the rows it replaces.
+class _EmptyRow extends StatelessWidget {
+  final IconData icon;
+  final String message;
 
-  const _PulseProgressCard({
-    required this.title,
-    required this.progress,
-    required this.subtitle,
-    required this.color,
+  const _EmptyRow({required this.icon, required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: AppColors.textMuted(context)),
+        const SizedBox(width: AppSpacing.l),
+        Expanded(
+          child: Text(
+            message,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: AppColors.textSecondary(context),
+              fontSize: 12.5,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ScheduleItem extends StatelessWidget {
+  final String time;
+  final String subject;
+  final String classRoom;
+  final String status;
+  final Color statusColor;
+
+  const _ScheduleItem({
+    required this.time,
+    required this.subject,
+    required this.classRoom,
+    required this.status,
+    required this.statusColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    return PulseCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: AppTypography.titleMedium.copyWith(
-              color: AppColors.textPrimary(context),
-            ),
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                time,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: AppColors.textMuted(context),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subject,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: AppColors.textPrimary(context),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                classRoom,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppColors.textSecondary(context),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: AppSpacing.l),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.s),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: color.withValues(alpha: 0.1),
-              color: color,
-              minHeight: 8,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.m),
-          Text(
-            subtitle,
-            style: AppTypography.labelSmall.copyWith(
-              color: AppColors.textSecondary(context),
-            ),
-          ),
-        ],
-      ),
+        ),
+        StatusBadge(
+          label: status,
+          color: statusColor,
+        ),
+      ],
     );
   }
 }
@@ -429,80 +607,37 @@ class _TeacherDashboardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(AppSpacing.xl),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.x8l,
+        AppSpacing.xl,
+        AppSpacing.x4l,
+      ),
       children: [
-        const Skeleton(width: 200, height: 32),
-        const SizedBox(height: AppSpacing.m),
-        const Skeleton(width: 150, height: 20),
+        const Skeleton(width: 250, height: 80, borderRadius: 12),
         const SizedBox(height: AppSpacing.x3l),
+        const Skeleton(height: 160, borderRadius: 16),
+        const SizedBox(height: AppSpacing.x3l),
+        const Skeleton(width: 120, height: 20),
+        const SizedBox(height: AppSpacing.l),
         GridView.count(
-          crossAxisCount: 2,
+          crossAxisCount: 3,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: AppSpacing.l,
           crossAxisSpacing: AppSpacing.l,
-          childAspectRatio: 1.3,
-          children: List.generate(4, (index) => const Skeleton(borderRadius: AppRadius.l)),
+          childAspectRatio: 1.35,
+          children: List.generate(6, (index) => const Skeleton(borderRadius: 12)),
         ),
         const SizedBox(height: AppSpacing.x3l),
-        const Skeleton(width: 120, height: 24),
-        const SizedBox(height: AppSpacing.xl),
-        const Skeleton(height: 120, borderRadius: AppRadius.l),
+        const Skeleton(width: 150, height: 20),
         const SizedBox(height: AppSpacing.l),
-        const Skeleton(height: 120, borderRadius: AppRadius.l),
+        const Skeleton(height: 180, borderRadius: 16),
+        const SizedBox(height: AppSpacing.x3l),
+        const Skeleton(width: 150, height: 20),
+        const SizedBox(height: AppSpacing.l),
+        const Skeleton(height: 80, borderRadius: 16),
       ],
-    );
-  }
-}
-
-class _QuickAction extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-  final double? width;
-
-  const _QuickAction({
-    required this.label,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-    this.width,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return PulseCard(
-      onTap: onTap,
-      padding: EdgeInsets.zero,
-      backgroundColor: AppColors.surfaceElevated(context),
-      child: Container(
-        width: width,
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.m),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 28),
-            ),
-            const SizedBox(height: AppSpacing.m),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.labelMedium.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary(context),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -23,6 +23,7 @@ import 'package:school_pulse/features/student/presentation/bloc/students_bloc.da
 import 'package:school_pulse/features/notifications/presentation/bloc/notifications_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_dashboard/class_teacher_dashboard_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_dashboard/subject_teacher_dashboard_bloc.dart';
 import 'package:school_pulse/features/director/presentation/bloc/director_bloc.dart';
@@ -150,6 +151,9 @@ class SchoolPulseApp extends StatelessWidget {
         // same active class.
         BlocProvider(
           create: (_) => di.sl<ClassTeacherContextBloc>(),
+        ),
+        BlocProvider(
+          create: (_) => di.sl<ClassTeacherDashboardBloc>(),
         ),
         BlocProvider(
           create: (_) => di.sl<DirectorBloc>(),
