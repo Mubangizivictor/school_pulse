@@ -13,6 +13,7 @@ import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_event.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_state.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_dashboard/subject_teacher_dashboard_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/widgets/class_label.dart';
 import 'package:school_pulse/features/teacher/presentation/widgets/responsibility_switcher_sheet.dart';
 
 class SubjectTeacherDashboard extends StatefulWidget {
@@ -635,7 +636,7 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
         .where((e) => e != null && e.isNotEmpty)
         .join(' ');
     final shortName =
-        className.isEmpty ? assignment.roleType.label : className.split(' ').first;
+        classInitials(className, fallback: assignment.roleType.label);
     final isActive = assignment.id == state.active?.roleAssignmentId;
 
     return InkWell(
