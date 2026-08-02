@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../domain/entities/class_announcement.dart';
 import '../../domain/entities/class_attendance.dart';
 import '../../domain/entities/class_behaviour.dart';
 import '../../domain/entities/class_dashboard_summary.dart';
@@ -53,6 +54,16 @@ abstract class ClassTeacherRemoteDataSource {
     required DateTime date,
     String? streamId,
   });
+
+  /// Announcements posted to this class, newest first.
+  Future<List<ClassAnnouncement>> getAnnouncements({
+    required String schoolId,
+    required String classId,
+    required String academicYearId,
+    String? streamId,
+  });
+
+  Future<void> saveAnnouncement(ClassAnnouncement announcement);
 
   /// Class work set for this class, newest due date first.
   Future<List<ClassHomework>> getHomework({
@@ -188,6 +199,9 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
   CollectionReference<Map<String, dynamic>> _behaviour(String schoolId) =>
       _school(schoolId).collection('class_behaviour_records');
 
+  CollectionReference<Map<String, dynamic>> _announcements(String schoolId) =>
+      _school(schoolId).collection('class_announcements');
+
   Query<Map<String, dynamic>> _rosterQuery({
     required String schoolId,
     required String classId,
@@ -302,6 +316,92 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
       lateCount: (counts['late'] as num?)?.toInt() ?? 0,
       excusedCount: (counts['excused'] as num?)?.toInt() ?? 0,
       submittedAt: _toDate(data['submittedAt']),
+    );
+  }
+
+  @override
+  Future<List<ClassAnnouncement>> getAnnouncements({
+    required String schoolId,
+    required String classId,
+    required String academicYearId,
+    String? streamId,
+  }) async {
+    Query<Map<String, dynamic>> query = _announcements(schoolId)
+        .where('classId', isEqualTo: classId)
+        .where('academicYearId', isEqualTo: academicYearId);
+
+    if (streamId != null && streamId.isNotEmpty) {
+      query = query.where('streamId', isEqualTo: streamId);
+    }
+
+    final snapshot = await query.orderBy('createdAt', descending: true).get();
+    return snapshot.docs
+        .map((d) => _announcementFromDoc(d.id, schoolId, d.data()))
+        .toList();
+  }
+
+  @override
+  Future<void> saveAnnouncement(ClassAnnouncement announcement) async {
+    await _announcements(announcement.schoolId).doc(announcement.id).set({
+      'schoolId': announcement.schoolId,
+      'campusId': announcement.campusId,
+      'classId': announcement.classId,
+      'className': announcement.className,
+      'streamId': announcement.streamId,
+      'academicYearId': announcement.academicYearId,
+      'termId': announcement.termId,
+      'title': announcement.title,
+      'body': announcement.body,
+      'status': announcement.status.name,
+      'audience': announcement.audience.name,
+      'attachments': announcement.attachments,
+      'scheduledFor': announcement.scheduledFor == null
+          ? null
+          : Timestamp.fromDate(announcement.scheduledFor!),
+      'expiresAt': announcement.expiresAt == null
+          ? null
+          : Timestamp.fromDate(announcement.expiresAt!),
+      'publishedAt': announcement.publishedAt == null
+          ? null
+          : Timestamp.fromDate(announcement.publishedAt!),
+      'recipientCount': announcement.recipientCount,
+      'createdBy': announcement.createdBy,
+      'createdAt': Timestamp.fromDate(announcement.createdAt),
+      'updatedBy': announcement.updatedBy,
+      'updatedAt': FieldValue.serverTimestamp(),
+      'roleAssignmentId': announcement.roleAssignmentId,
+    }, SetOptions(merge: true));
+  }
+
+  ClassAnnouncement _announcementFromDoc(
+    String id,
+    String schoolId,
+    Map<String, dynamic> data,
+  ) {
+    return ClassAnnouncement(
+      id: id,
+      schoolId: schoolId,
+      campusId: data['campusId'] as String? ?? '',
+      classId: data['classId'] as String? ?? '',
+      className: data['className'] as String? ?? '',
+      streamId: data['streamId'] as String?,
+      academicYearId: data['academicYearId'] as String? ?? '',
+      termId: data['termId'] as String? ?? '',
+      title: data['title'] as String? ?? '',
+      body: data['body'] as String? ?? '',
+      status: ClassAnnouncementStatus.fromId(data['status'] as String?),
+      audience: ClassAnnouncementAudience.fromId(data['audience'] as String?),
+      attachments:
+          (data['attachments'] as List?)?.whereType<String>().toList() ?? const [],
+      scheduledFor: _toDate(data['scheduledFor']),
+      expiresAt: _toDate(data['expiresAt']),
+      publishedAt: _toDate(data['publishedAt']),
+      recipientCount: (data['recipientCount'] as num?)?.toInt() ?? 0,
+      createdBy: data['createdBy'] as String? ?? '',
+      createdAt: _toDate(data['createdAt']) ?? DateTime(1970),
+      updatedBy: data['updatedBy'] as String?,
+      updatedAt: _toDate(data['updatedAt']),
+      roleAssignmentId: data['roleAssignmentId'] as String? ?? '',
     );
   }
 
