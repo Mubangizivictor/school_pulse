@@ -277,6 +277,7 @@ import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_r
 import 'package:school_pulse/features/teacher/data/models/subject_teacher_isar_models.dart';
 import 'package:school_pulse/features/teacher/data/repositories/lesson_attendance_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/lesson_repository_impl.dart';
+import 'package:school_pulse/features/teacher/data/repositories/marks_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/staff_assignment_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/subject_student_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/services/academic_calendar_service_impl.dart';
@@ -285,6 +286,7 @@ import 'package:school_pulse/features/teacher/data/services/subject_audit_servic
 import 'package:school_pulse/features/teacher/data/services/subject_sync_service_impl.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/lesson_attendance_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/lesson_repository.dart';
+import 'package:school_pulse/features/teacher/domain/repositories/marks_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/staff_assignment_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/subject_student_repository.dart';
 import 'package:school_pulse/features/teacher/domain/services/academic_calendar_service.dart';
@@ -1252,6 +1254,15 @@ Future<void> init() async {
     () => SubjectTeacherDashboardBloc(
       studentRepository: sl(),
       lessonRepository: sl(),
+    ),
+  );
+
+  sl.registerLazySingleton<MarksRepository>(
+    () => MarksRepositoryImpl(
+      remoteDataSource: sl(),
+      studentRepository: sl(),
+      auditService: sl(),
+      networkInfo: sl(),
     ),
   );
 

@@ -491,6 +491,112 @@ async function main() {
   }
   console.log(`Lessons: ${lessonCount}`);
 
+  // --- assessments and marks ----------------------------------------------
+  // Three per subject/class in the current term, deliberately at different
+  // points in the cycle so the Marks tab shows every state a teacher meets:
+  // one open and empty to type into, one part-marked, one already submitted
+  // and therefore read-only.
+  const assessmentPlan = [
+    { key: 'test1', name: 'Beginning of Term Test', max: 40, status: 'submitted', fill: 'all' },
+    { key: 'cw1', name: 'Coursework 1', max: 20, status: 'open', fill: 'partial' },
+    { key: 'midterm', name: 'Mid-Term Examination', max: 100, status: 'open', fill: 'none' },
+  ];
+
+  let assessmentCount = 0;
+  let markCount = 0;
+
+  for (const pair of assignedPairs) {
+    const [subjectId, className] = pair.split('|');
+    const subject = subjects.find((s) => s.id === subjectId);
+    const owner = assignments.find(
+      (a) => a.subjectId === subjectId && a.classId === className,
+    );
+
+    const cohort = schoolStudents.filter((s) => {
+      if (s.classId !== className) return false;
+      const mandatory = mandatoryNames.has(subject?.name);
+      return mandatory || Math.abs(hash(`${s.id}${subjectId}`)) % 3 !== 0;
+    });
+
+    for (const spec of assessmentPlan) {
+      const assessmentId = `${subjectId}_${className}_${spec.key}`.replace(/[^\w-]/g, '-');
+      const componentId = `${assessmentId}_main`;
+
+      await setDoc(`schools/${schoolId}/subject_assessments/${assessmentId}`, {
+        schoolId,
+        campusId: '',
+        academicYearId,
+        termId: currentTermId,
+        subjectId,
+        classId: className,
+        streamId: null,
+        assessmentTypeId: spec.key,
+        assessmentTypeName: spec.name,
+        title: `${spec.name} - ${subject?.name || ''}`,
+        maximumMark: spec.max,
+        passMark: Math.round(spec.max * 0.4),
+        gradingSystemId: null,
+        status: spec.status,
+        assessmentDate: new Date(currentTerm.start),
+        entryOpensAt: new Date(currentTerm.start),
+        submissionDeadline: new Date(currentTerm.end),
+        requiresApproval: true,
+        roleAssignmentId: owner ? owner.id : 'seed',
+        components: [
+          {
+            id: componentId,
+            name: 'Overall',
+            maximumMark: spec.max,
+            weight: 100,
+            isRequired: true,
+            entryStatus: spec.status,
+          },
+        ],
+      });
+      assessmentCount += 1;
+
+      if (spec.fill === 'none') continue;
+
+      for (const student of cohort) {
+        const seed = Math.abs(hash(`${student.id}${assessmentId}`));
+        // Partial fill leaves genuine gaps, so the review step has something
+        // to refuse and the "still unmarked" count is not always zero.
+        if (spec.fill === 'partial' && seed % 3 === 0) continue;
+
+        // A couple of absentees per class, carrying no score - that
+        // distinction is the whole point of the status field.
+        const absent = seed % 17 === 0;
+        const score = absent ? null : Math.round(spec.max * (0.35 + (seed % 60) / 100));
+
+        await setDoc(
+          `schools/${schoolId}/student_marks/${assessmentId}_${componentId}_${student.id}`,
+          {
+            schoolId,
+            assessmentId,
+            componentId,
+            studentId: student.id,
+            subjectId,
+            classId: className,
+            streamId: null,
+            academicYearId,
+            termId: currentTermId,
+            score,
+            entryStatus: absent ? 'absent' : 'scored',
+            remark: null,
+            maximumMark: spec.max,
+            markStatus: spec.status === 'submitted' ? 'submitted' : 'draft',
+            roleAssignmentId: owner ? owner.id : 'seed',
+            staffId: owner ? owner.teacher.id : 'seed',
+            enteredAt: new Date(currentTerm.start),
+          },
+        );
+        markCount += 1;
+      }
+    }
+  }
+  console.log(`Assessments: ${assessmentCount}`);
+  console.log(`Marks: ${markCount}`);
+
   console.log(`\n${plan.length} documents ${shouldApply ? `written (${written} confirmed)` : 'would be written'}.`);
   if (!shouldApply) {
     console.log('Re-run with --apply to write them.');

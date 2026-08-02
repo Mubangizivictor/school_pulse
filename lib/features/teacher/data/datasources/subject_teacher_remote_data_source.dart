@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/entities/lesson.dart';
 import '../../domain/entities/lesson_attendance.dart';
 import '../../domain/entities/staff_role_assignment.dart';
+import '../../domain/entities/subject_assessment.dart';
 import '../../domain/entities/subject_audit_log.dart';
 import '../../domain/entities/subject_enrollment.dart';
 
@@ -89,6 +90,33 @@ abstract class SubjectTeacherRemoteDataSource {
   });
 
   Future<void> saveLessonAttendance(LessonAttendance attendance);
+
+  Future<List<SubjectAssessment>> getAssessments({
+    required String schoolId,
+    required String subjectId,
+    required String classId,
+    required String academicYearId,
+    String? termId,
+  });
+
+  Future<List<StudentMarkEntry>> getMarks({
+    required String schoolId,
+    required String assessmentId,
+    required String componentId,
+  });
+
+  /// One document per student/component, so a re-save corrects rather than
+  /// duplicates, and an approved mark can be recognised and refused by the
+  /// rules on the way in.
+  Future<void> saveMarks({
+    required String schoolId,
+    required SubjectAssessment assessment,
+    required AssessmentComponent component,
+    required List<StudentMarkEntry> entries,
+    required String roleAssignmentId,
+    required String staffId,
+    required String markStatus,
+  });
 }
 
 class SubjectTeacherRemoteDataSourceImpl implements SubjectTeacherRemoteDataSource {
@@ -446,6 +474,147 @@ class SubjectTeacherRemoteDataSourceImpl implements SubjectTeacherRemoteDataSour
       submittedAt: _toDate(data['submittedAt']),
       deviceId: data['deviceId'] as String?,
       updatedAt: _toDate(data['updatedAt']) ?? DateTime.now(),
+    );
+  }
+
+  CollectionReference<Map<String, dynamic>> _assessments(String schoolId) =>
+      _school(schoolId).collection('subject_assessments');
+
+  CollectionReference<Map<String, dynamic>> _marks(String schoolId) =>
+      _school(schoolId).collection('student_marks');
+
+  @override
+  Future<List<SubjectAssessment>> getAssessments({
+    required String schoolId,
+    required String subjectId,
+    required String classId,
+    required String academicYearId,
+    String? termId,
+  }) async {
+    Query<Map<String, dynamic>> query = _assessments(schoolId)
+        .where('subjectId', isEqualTo: subjectId)
+        .where('classId', isEqualTo: classId)
+        .where('academicYearId', isEqualTo: academicYearId);
+    if (termId != null && termId.isNotEmpty) {
+      query = query.where('termId', isEqualTo: termId);
+    }
+
+    final snapshot = await query.get();
+    return snapshot.docs
+        .map((d) => _assessmentFromDoc(d.id, schoolId, d.data()))
+        .toList();
+  }
+
+  @override
+  Future<List<StudentMarkEntry>> getMarks({
+    required String schoolId,
+    required String assessmentId,
+    required String componentId,
+  }) async {
+    final snapshot = await _marks(schoolId)
+        .where('assessmentId', isEqualTo: assessmentId)
+        .where('componentId', isEqualTo: componentId)
+        .get();
+
+    return snapshot.docs.map((d) {
+      final data = d.data();
+      return StudentMarkEntry(
+        studentId: data['studentId'] as String? ?? '',
+        componentId: data['componentId'] as String? ?? componentId,
+        score: (data['score'] as num?)?.toDouble(),
+        status: MarkEntryStatus.fromId(data['entryStatus'] as String?),
+        remark: data['remark'] as String?,
+        enteredAt: _toDate(data['enteredAt']),
+      );
+    }).toList();
+  }
+
+  @override
+  Future<void> saveMarks({
+    required String schoolId,
+    required SubjectAssessment assessment,
+    required AssessmentComponent component,
+    required List<StudentMarkEntry> entries,
+    required String roleAssignmentId,
+    required String staffId,
+    required String markStatus,
+  }) async {
+    if (entries.isEmpty) return;
+    final batch = firestore.batch();
+
+    for (final entry in entries) {
+      // Deterministic id per student/component: a re-save corrects the same
+      // row rather than adding a second mark for the same paper.
+      final docId = '${assessment.id}_${component.id}_${entry.studentId}';
+      batch.set(
+        _marks(schoolId).doc(docId),
+        {
+          'schoolId': schoolId,
+          'assessmentId': assessment.id,
+          'componentId': component.id,
+          'studentId': entry.studentId,
+          'subjectId': assessment.subjectId,
+          'classId': assessment.classId,
+          'streamId': assessment.streamId,
+          'academicYearId': assessment.academicYearId,
+          'termId': assessment.termId,
+          'score': entry.score,
+          'entryStatus': entry.status.name,
+          'remark': entry.remark,
+          'maximumMark': component.maximumMark,
+          // Read back by the rules to refuse a teacher overwriting an
+          // approved or published mark.
+          'markStatus': markStatus,
+          'roleAssignmentId': roleAssignmentId,
+          'staffId': staffId,
+          'enteredAt': Timestamp.fromDate(entry.enteredAt ?? DateTime.now()),
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge: true),
+      );
+    }
+
+    await batch.commit();
+  }
+
+  SubjectAssessment _assessmentFromDoc(
+    String id,
+    String schoolId,
+    Map<String, dynamic> data,
+  ) {
+    final rawComponents = (data['components'] as List?) ?? const [];
+    return SubjectAssessment(
+      id: id,
+      schoolId: schoolId,
+      campusId: data['campusId'] as String? ?? '',
+      academicYearId: data['academicYearId'] as String? ?? '',
+      termId: data['termId'] as String? ?? '',
+      subjectId: data['subjectId'] as String? ?? '',
+      classId: data['classId'] as String? ?? '',
+      streamId: data['streamId'] as String?,
+      assessmentTypeId: data['assessmentTypeId'] as String? ?? '',
+      assessmentTypeName: data['assessmentTypeName'] as String? ?? '',
+      title: data['title'] as String? ?? '',
+      maximumMark: (data['maximumMark'] as num?)?.toDouble() ?? 100,
+      passMark: (data['passMark'] as num?)?.toDouble(),
+      gradingSystemId: data['gradingSystemId'] as String?,
+      status: AssessmentAvailability.fromId(data['status'] as String?),
+      assessmentDate: _toDate(data['assessmentDate']),
+      entryOpensAt: _toDate(data['entryOpensAt']),
+      submissionDeadline: _toDate(data['submissionDeadline']),
+      requiresApproval: data['requiresApproval'] as bool? ?? true,
+      components: rawComponents.whereType<Map<String, dynamic>>().map((c) {
+        return AssessmentComponent(
+          id: c['id'] as String? ?? '',
+          assessmentId: id,
+          name: c['name'] as String? ?? '',
+          maximumMark: (c['maximumMark'] as num?)?.toDouble() ?? 0,
+          weight: (c['weight'] as num?)?.toDouble() ?? 0,
+          isRequired: c['isRequired'] as bool? ?? true,
+          entryStatus: AssessmentAvailability.fromId(c['entryStatus'] as String?),
+          deadline: _toDate(c['deadline']),
+        );
+      }).toList(),
     );
   }
 
