@@ -402,7 +402,17 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
       academicYearId: data['academicYearId'] as String? ?? academicYearId,
       status: ClassStudentStatus.fromId(data['status'] as String?),
       gender: data['gender'] as String?,
-      residency: ResidencyType.fromId(data['residency'] as String?),
+      // `isBoarder` is the older field several modules still write; falling
+      // back to it keeps the roster filter working on students who predate
+      // the explicit `residency` value.
+      residency: ResidencyType.fromId(
+        data['residency'] as String? ??
+            switch (data['isBoarder']) {
+              true => 'boarding',
+              false => 'day',
+              _ => null,
+            },
+      ),
       houseId: data['houseId'] as String?,
       houseName: data['houseName'] as String?,
       hasHealthAlert: data['hasHealthAlert'] as bool? ?? false,

@@ -1349,5 +1349,208 @@ service cloud.firestore {
         && (schoolAcademicAdmin() || resource.data.userId == request.auth.uid);
       allow update, delete: if false;
     }
+
+    // ---- Class Teacher panel -------------------------------------------
+    //
+    // Same shape as the subject.* blocks above and for the same reason: a
+    // permission is never enough on its own. Every write proves entitlement
+    // through an assignment whose own classId matches the document's, which
+    // is what stops the Primary 7 class teacher writing against Primary 6.
+    // `null` is passed for subjectId throughout because a Class Teacher
+    // assignment has no subject - the class is the whole scope.
+
+    match /schools/{schoolId}/class_attendance_sessions/{sessionId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+
+      // One register per class per day, keyed on a deterministic id, so a
+      // resubmission overwrites rather than creating a second register the
+      // school would then have to reconcile.
+      allow create, update: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          null,
+                          request.resource.data.classId,
+                          request.resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'class.attendance.take')
+          // A submitted register may only be touched again by a holder of
+          // the edit permission - an ordinary re-save must not quietly
+          // rewrite attendance the school has already acted on.
+          && (!(resource != null && resource.data.status == 'submitted')
+              || grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                                  'class.attendance.edit'))
+          // Locked registers belong to the academic office alone.
+          && !(resource != null && resource.data.status == 'locked')
+        ));
+
+      // Registers are corrected through the audited edit path, never removed.
+      allow delete: if false;
+    }
+
+    match /schools/{schoolId}/class_attendance_corrections/{correctionId} {
+      // A teacher raises a correction request; only the academic office
+      // decides one. Backdating attendance is not a teacher's call.
+      allow create: if isSameSchool(schoolId)
+        && isStaff()
+        && request.resource.data.requestedByUserId == request.auth.uid
+        && request.resource.data.status == 'pending';
+      allow read: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || resource.data.requestedByUserId == request.auth.uid);
+      allow update: if isSameSchool(schoolId) && schoolAcademicAdmin();
+      allow delete: if false;
+    }
+
+    match /schools/{schoolId}/class_homework/{homeworkId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+
+      allow create, update: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          null,
+                          request.resource.data.classId,
+                          request.resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'class.homework.create')
+          // Publishing is what reaches students and parents, so it carries
+          // its own permission beyond merely being able to draft.
+          && (request.resource.data.status == 'draft'
+              || grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                                  'class.homework.publish'))
+        ));
+
+      allow delete: if isSameSchool(schoolId) && schoolAcademicAdmin();
+    }
+
+    match /schools/{schoolId}/class_behaviour_records/{recordId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+
+      allow create: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          null,
+                          request.resource.data.classId,
+                          request.resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'class.behaviour.record')
+        ));
+
+      // A teacher may close their own follow-up, but the official outcome of
+      // a discipline case is the discipline office's decision, so the fields
+      // a teacher can touch are enumerated rather than left open.
+      allow update: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          null,
+                          resource.data.classId,
+                          resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'class.behaviour.record')
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['note', 'followUpRequired', 'followUpClosed',
+                        'followUpNote', 'updatedBy', 'updatedAt'])
+        ));
+
+      // Finalised conduct records are part of a student's file.
+      allow delete: if false;
+    }
+
+    match /schools/{schoolId}/class_announcements/{announcementId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+
+      allow create, update: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          null,
+                          request.resource.data.classId,
+                          request.resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'class.announcement.create')
+          && (request.resource.data.status == 'draft'
+              || grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                                  'class.announcement.publish'))
+        ));
+
+      allow delete: if isSameSchool(schoolId) && schoolAcademicAdmin();
+    }
+
+    match /schools/{schoolId}/class_report_entries/{entryId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+
+      // The class teacher's own sections of a report. Everything the Report
+      // Card Engine owns - marks, grades, totals, publication status - is
+      // absent from the allowed set, so a teacher cannot promote their own
+      // draft to published by writing the field directly.
+      allow create, update: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          null,
+                          request.resource.data.classId,
+                          request.resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'class.report.entry')
+          && request.resource.data.status in
+              ['draft', 'in_progress', 'class_teacher_completed']
+          // A report already approved upstream is out of the teacher's hands.
+          && !(resource != null && resource.data.status in
+                ['academic_office_approved', 'leadership_approved',
+                 'published', 'archived'])
+        ));
+
+      allow delete: if false;
+    }
+
+    match /schools/{schoolId}/class_tasks/{taskId} {
+      // Tasks are the teacher's own working list, so ownership rather than
+      // assignment scope is the test - but still never cross-school.
+      allow read: if isSameSchool(schoolId)
+        && isStaff()
+        && (resource.data.ownerUserId == request.auth.uid
+            || request.auth.uid in resource.data.get('collaboratorUserIds', [])
+            || schoolAcademicAdmin());
+
+      allow create: if isSameSchool(schoolId)
+        && isStaff()
+        && request.resource.data.ownerUserId == request.auth.uid;
+
+      allow update: if isSameSchool(schoolId)
+        && isStaff()
+        && (resource.data.ownerUserId == request.auth.uid
+            || request.auth.uid in resource.data.get('collaboratorUserIds', []));
+
+      allow delete: if isSameSchool(schoolId)
+        && isStaff()
+        && resource.data.ownerUserId == request.auth.uid;
+    }
+
+    match /schools/{schoolId}/class_resources/{resourceId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+
+      allow create: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          null,
+                          request.resource.data.classId,
+                          request.resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'class.resource.upload')
+        ));
+
+      allow update: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          resource.data.uploadedByUserId == request.auth.uid
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'class.resource.upload')
+        ));
+
+      // Detaching a resource from a class is an update; removing the stored
+      // original is the owner's or an admin's, never a side effect of
+      // tidying one class's folder.
+      allow delete: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          resource.data.uploadedByUserId == request.auth.uid
+          && grantsPermission(schoolId, resource.data.roleAssignmentId,
+                              'class.resource.delete')
+        ));
+    }
   }
 }

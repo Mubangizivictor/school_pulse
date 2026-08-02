@@ -5,11 +5,22 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
+import 'package:school_pulse/core/permissions/permission.dart';
 import 'package:school_pulse/core/utils.dart';
 
 class AdminSeeder {
   static const String defaultPassword = "Test@123";
   static const String demoSchoolId = 'school-pulse-academy';
+
+  /// Matches the `academicYearId` stamped on every seeded student, so the
+  /// roster query a teacher panel runs actually finds them.
+  static const String currentAcademicYearId = '2026';
+  static const String currentTermId = '2026-t2';
+
+  /// The class Victor is Class Teacher for. Held as the class *name* because
+  /// that is what `students.classId` carries throughout this seed, and the
+  /// Health module renders that same field as a label.
+  static const String classTeacherClassId = 'Primary 7';
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   static Future<void> deleteAllData() async {
@@ -66,12 +77,20 @@ class AdminSeeder {
 
       await _seedAdmin();
       await _seedSuperAdmin();
+      // The calendar comes before everything academic: no year and term means
+      // no scope, and every teacher-facing query resolves through them.
+      await _seedAcademicCalendar();
       // A new school onboarding registers its classes/streams and subjects
       // before staff accounts can be assigned to them - do that here first.
       await _seedSchoolStructure();
       await _seedStudents();
       await _seedParentAccessCodes();
       final staffUids = await _seedStaff();
+
+      // Responsibilities have to follow the staff accounts they hang off, and
+      // precede any class content that references them.
+      await _seedRoleAssignments(staffUids);
+      await _seedClassTeacherContent(staffUids);
 
       await _seedDormitories();
       await _seedFeesAndPayments();
@@ -111,33 +130,101 @@ class AdminSeeder {
     }, SetOptions(merge: true));
   }
 
-  static Future<void> _seedSchoolStructure() async {
-    final classes = [
-      {'name': 'Primary 1', 'streamCount': 1, 'studentCount': 0},
-      {'name': 'Primary 2', 'streamCount': 1, 'studentCount': 0},
-      {'name': 'Primary 3', 'streamCount': 1, 'studentCount': 0},
-      {'name': 'Primary 4', 'streamCount': 2, 'studentCount': 0},
-      {'name': 'Primary 5', 'streamCount': 2, 'studentCount': 0},
-      {'name': 'Primary 6', 'streamCount': 2, 'studentCount': 0},
-      {'name': 'Primary 7', 'streamCount': 2, 'studentCount': 0},
-    ];
-    for (var c in classes) {
-      await _db.collection('classes').add(c);
-    }
+  /// The academic year every scoped query in the app hangs off.
+  ///
+  /// Nothing in either teacher panel can be scoped without a *current* year
+  /// and term - `AcademicCalendarService.getCurrentPeriod()` reads exactly
+  /// these two collections, and without them the panels correctly render
+  /// "No academic year set" rather than guessing. The id is '2026' to match
+  /// the `academicYearId` already stamped on every seeded student.
+  static Future<void> _seedAcademicCalendar() async {
+    await _db.collection('academic_years').doc(currentAcademicYearId).set({
+      'name': '2026',
+      'startDate': Timestamp.fromDate(DateTime(2026, 2, 1)),
+      'endDate': Timestamp.fromDate(DateTime(2026, 12, 4)),
+      'isCurrent': true,
+      'isArchived': false,
+    });
 
-    const subjects = [
-      'Mathematics',
-      'English',
-      'Science',
-      'SST',
-      'Religious Education',
-      'Physical Education',
-      'Art & Craft',
+    final terms = [
+      ('$currentAcademicYearId-t1', 'Term 1', 1, DateTime(2026, 2, 1), DateTime(2026, 5, 1), false),
+      (currentTermId, 'Term 2', 2, DateTime(2026, 5, 25), DateTime(2026, 8, 28), true),
+      ('$currentAcademicYearId-t3', 'Term 3', 3, DateTime(2026, 9, 21), DateTime(2026, 12, 4), false),
     ];
-    for (var s in subjects) {
-      await _db.collection('subjects').add({'name': s});
+
+    for (final (id, name, order, start, end, isCurrent) in terms) {
+      await _db.collection('academic_terms').doc(id).set({
+        'academicYearId': currentAcademicYearId,
+        'name': name,
+        'order': order,
+        'startDate': Timestamp.fromDate(start),
+        'endDate': Timestamp.fromDate(end),
+        'isCurrent': isCurrent,
+      });
     }
   }
+
+  static Future<void> _seedSchoolStructure() async {
+    await _db.collection('educational_levels').doc('level-primary').set({
+      'name': 'Primary',
+      'code': 'PRI',
+      'order': 1,
+      'description': 'Primary 1 to Primary 7',
+      'isActive': true,
+    });
+
+    // Written with stable ids rather than `.add()`: a random id regenerated on
+    // every reseed cannot be referenced by a role assignment, a timetable row
+    // or a report profile, which is what made the structure unusable to the
+    // teacher panels before.
+    for (final className in _classNames) {
+      await _db.collection('classes').doc(_classSlug(className)).set({
+        'name': className,
+        'code': className.replaceAll('Primary ', 'P'),
+        'levelId': 'level-primary',
+        'capacity': 40,
+        'description': '',
+        'isActive': true,
+      });
+    }
+
+    // Streams exist on the upper classes only, matching how the school is
+    // described elsewhere in this seed. Primary 7 deliberately has none, so
+    // the Class Teacher assignment below covers the whole class - the case
+    // where `streamId` is absent and must not narrow the roster.
+    for (final className in ['Primary 4', 'Primary 5', 'Primary 6']) {
+      for (final stream in ['East', 'West']) {
+        final slug = '${_classSlug(className)}-${stream.toLowerCase()}';
+        await _db.collection('class_streams').doc(slug).set({
+          'name': stream,
+          'code': stream[0],
+          'classId': className,
+          'capacity': 20,
+          'isActive': true,
+        });
+      }
+    }
+
+    for (var s in _subjectNames) {
+      await _db.collection('subjects').doc(_subjectSlug(s)).set({'name': s});
+    }
+  }
+
+  static String _classSlug(String className) =>
+      className.toLowerCase().replaceAll(' ', '-');
+
+  static String _subjectSlug(String subject) =>
+      subject.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-');
+
+  static const List<String> _subjectNames = [
+    'Mathematics',
+    'English',
+    'Science',
+    'SST',
+    'Religious Education',
+    'Physical Education',
+    'Art & Craft',
+  ];
 
   static Future<void> _seedAdmin() async {
     const adminEmail = "mubangizivic@gmail.com";
@@ -299,10 +386,14 @@ class AdminSeeder {
         'admissionNumber': s['studentId'],
         'gender': (s['gender'] as String).toLowerCase(),
         'dateOfBirth': Timestamp.fromDate(DateTime(2012, 1, 1)),
-        'academicYearId': '2026',
+        'academicYearId': currentAcademicYearId,
         'status': 'active',
         'level': 'primary',
         'isBoarder': s['isBoarder'],
+        // The Class Teacher roster filters on this; `isBoarder` stays for the
+        // modules that already read it.
+        'residency': (s['isBoarder'] as bool) ? 'boarding' : 'day',
+        'hasHealthAlert': false,
       });
     }
   }
@@ -519,6 +610,404 @@ class AdminSeeder {
 
     return uids;
   }
+
+  /// The responsibilities a staff member actually holds.
+  ///
+  /// Nothing else in the app grants a teacher access to a class or a subject:
+  /// `role: 'classTeacher'` on the user document is a label, while these rows
+  /// are the authority. Both teacher panels resolve every query through them,
+  /// so without this a fully seeded school still shows "No class assigned".
+  ///
+  /// Victor holds three at once against one staff profile - the multi-role
+  /// case the panel exists to demonstrate - and the Class Teacher row is the
+  /// only one of its kind for him, matching the default one-class rule in
+  /// `ClassTeacherAssignmentService.validateAssignable`.
+  static Future<void> _seedRoleAssignments(Map<String, String> staffUids) async {
+    final victorUid = staffUids['victor@gmail.com'];
+    if (victorUid == null) {
+      debugPrint('⚠️ Skipping role assignments: Victor was not seeded.');
+      return;
+    }
+
+    final assignments = _db
+        .collection('schools')
+        .doc(demoSchoolId)
+        .collection('staff_role_assignments');
+
+    Future<void> write(
+      String id, {
+      required String roleType,
+      required Set<String> permissions,
+      String? subjectId,
+      String? subjectName,
+      String? classId,
+      String? className,
+    }) {
+      return assignments.doc(id).set({
+        'schoolId': demoSchoolId,
+        'campusId': 'main',
+        'staffId': victorUid,
+        'userId': victorUid,
+        'roleType': roleType,
+        'academicYearId': currentAcademicYearId,
+        'subjectId': subjectId,
+        'subjectName': subjectName,
+        'classId': classId,
+        'className': className,
+        'startDate': Timestamp.fromDate(DateTime(2026, 2, 1)),
+        'endDate': null,
+        'status': 'active',
+        'permissionScope': {
+          'permissions': permissions.toList(),
+          'subjectId': subjectId,
+          'classId': classId,
+          'academicYearId': currentAcademicYearId,
+          'termIds': <String>[],
+        },
+        'assignedBy': 'seed',
+        'assignedAt': FieldValue.serverTimestamp(),
+      });
+    }
+
+    await write(
+      'victor-class-teacher-p7',
+      roleType: 'classTeacher',
+      classId: classTeacherClassId,
+      className: classTeacherClassId,
+      permissions: _classTeacherPermissions,
+    );
+
+    await write(
+      'victor-subject-maths-p6',
+      roleType: 'subjectTeacher',
+      subjectId: _subjectSlug('Mathematics'),
+      subjectName: 'Mathematics',
+      classId: 'Primary 6',
+      className: 'Primary 6',
+      permissions: _subjectTeacherPermissions,
+    );
+
+    await write(
+      'victor-subject-maths-p7',
+      roleType: 'subjectTeacher',
+      subjectId: _subjectSlug('Mathematics'),
+      subjectName: 'Mathematics',
+      classId: classTeacherClassId,
+      className: classTeacherClassId,
+      permissions: _subjectTeacherPermissions,
+    );
+
+    debugPrint('✅ Seeded 3 role assignments for victor@gmail.com');
+  }
+
+  /// The full Class Teacher grant. A real school narrows this per teacher -
+  /// the point of seeding all of it is that every tab in the panel is
+  /// reachable in the demo rather than half of them showing a permission
+  /// state.
+  static const Set<String> _classTeacherPermissions = {
+    Permission.classStudentsView,
+    Permission.classStudentProfileView,
+    Permission.classStudentHistoricalView,
+    Permission.classStudentNoteWrite,
+    Permission.classAttendanceTake,
+    Permission.classAttendanceEdit,
+    Permission.classAttendanceView,
+    Permission.classHomeworkCreate,
+    Permission.classHomeworkPublish,
+    Permission.classHomeworkEdit,
+    Permission.classBehaviourRecord,
+    Permission.classBehaviourView,
+    Permission.classAchievementRecord,
+    Permission.classHealthAlertView,
+    Permission.classLeaveView,
+    Permission.classParentMessage,
+    Permission.classAnnouncementCreate,
+    Permission.classAnnouncementPublish,
+    Permission.classPerformanceView,
+    Permission.classInterventionNoteWrite,
+    Permission.classReportEntry,
+    Permission.classReportCompetencyEntry,
+    Permission.classReportConductEntry,
+    Permission.classReportCommentWrite,
+    Permission.classReportRecommendationWrite,
+    Permission.classReportSubmit,
+    Permission.classReportGenerate,
+    Permission.classTaskManage,
+    Permission.classResourceUpload,
+    Permission.classResourceShare,
+    Permission.classTimetableView,
+  };
+
+  /// Deliberately narrower than the class grant, and deliberately without
+  /// `class.*` anything: switching to a subject responsibility must not carry
+  /// class-teacher authority across with it.
+  static const Set<String> _subjectTeacherPermissions = {
+    Permission.subjectStudentsView,
+    Permission.subjectLessonView,
+    Permission.subjectLessonStart,
+    Permission.subjectLessonComplete,
+    Permission.subjectAttendanceTake,
+    Permission.subjectAttendanceEdit,
+    Permission.subjectLessonNoteCreate,
+    Permission.subjectMarksView,
+    Permission.subjectMarksEnter,
+    Permission.subjectMarksSubmit,
+    Permission.subjectAnalyticsView,
+    Permission.subjectTimetableView,
+  };
+
+  /// Everything the Class Teacher panel reads for Primary 7.
+  ///
+  /// Today's register is deliberately *not* written: the dashboard should open
+  /// saying "Not taken" so Roll Call is a live flow to demonstrate rather than
+  /// an already-closed one. The preceding weeks are submitted, so attendance
+  /// history and rates still have something real to show.
+  static Future<void> _seedClassTeacherContent(
+    Map<String, String> staffUids,
+  ) async {
+    final victorUid = staffUids['victor@gmail.com'];
+    if (victorUid == null) return;
+
+    final school = _db.collection('schools').doc(demoSchoolId);
+    final roster = _students
+        .where((s) => s['className'] == classTeacherClassId)
+        .toList();
+    if (roster.isEmpty) return;
+
+    await _seedClassTimetable(school, victorUid);
+    await _seedClassAttendanceHistory(school, victorUid, roster);
+    await _seedClassHomework(school, victorUid);
+    await _seedClassBehaviour(school, victorUid, roster);
+    await _seedClassReportEntries(school, victorUid, roster);
+
+    debugPrint(
+      '✅ Seeded Class Teacher content for $classTeacherClassId '
+      '(${roster.length} students, today left unmarked)',
+    );
+  }
+
+  /// Today's periods across every subject - the Class Teacher sees the whole
+  /// class day, not only the lessons they personally take.
+  static Future<void> _seedClassTimetable(
+    DocumentReference<Map<String, dynamic>> school,
+    String victorUid,
+  ) async {
+    final now = DateTime.now();
+    final periods = [
+      ('Mathematics', 8, 0, victorUid, 'Room 7'),
+      ('English', 9, 0, 'staff-english', 'Room 7'),
+      ('Science', 10, 30, 'staff-science', 'Lab 1'),
+      ('SST', 11, 30, 'staff-sst', 'Room 7'),
+      ('Physical Education', 14, 0, 'staff-pe', 'Field'),
+    ];
+
+    for (final (subject, hour, minute, staffId, room) in periods) {
+      final start = DateTime(now.year, now.month, now.day, hour, minute);
+      final end = start.add(const Duration(minutes: 45));
+      // Status follows the wall clock, so the dashboard shows a genuinely
+      // ongoing lesson at the time of the demo rather than a fixed one.
+      final status = now.isAfter(end)
+          ? 'completed'
+          : (now.isAfter(start) ? 'ongoing' : 'scheduled');
+
+      await school.collection('lessons').doc(
+        'p7-${_subjectSlug(subject)}-${start.toIso8601String().split('T').first}',
+      ).set({
+        'schoolId': demoSchoolId,
+        'campusId': 'main',
+        'academicYearId': currentAcademicYearId,
+        'termId': currentTermId,
+        'subjectId': _subjectSlug(subject),
+        'subjectName': subject,
+        'classId': classTeacherClassId,
+        'className': classTeacherClassId,
+        'timetableSlotId': 'slot-$hour',
+        'teacherStaffId': staffId,
+        'title': '$subject - $classTeacherClassId',
+        'scheduledStart': Timestamp.fromDate(start),
+        'scheduledEnd': Timestamp.fromDate(end),
+        'room': room,
+        'status': status,
+        'enrolledCount': 0,
+        'attendanceSubmitted': false,
+      });
+    }
+  }
+
+  /// Three weeks of submitted registers, weekdays only, with a plausible
+  /// spread of absence rather than a flat 100%.
+  static Future<void> _seedClassAttendanceHistory(
+    DocumentReference<Map<String, dynamic>> school,
+    String victorUid,
+    List<Map<String, Object>> roster,
+  ) async {
+    final today = DateTime.now();
+
+    for (var back = 1; back <= 21; back++) {
+      final day = DateTime(today.year, today.month, today.day - back);
+      if (day.weekday == DateTime.saturday || day.weekday == DateTime.sunday) {
+        continue;
+      }
+
+      final entries = <Map<String, dynamic>>[];
+      final counts = {'present': 0, 'absent': 0, 'late': 0, 'excused': 0};
+
+      for (var i = 0; i < roster.length; i++) {
+        // Deterministic but uneven: a couple absent, one late, occasionally
+        // an authorised absence.
+        final seed = (back * 7 + i * 3) % 23;
+        final status = switch (seed) {
+          0 || 1 => 'absent',
+          2 => 'late',
+          3 when back.isEven => 'excused',
+          _ => 'present',
+        };
+        counts[status] = (counts[status] ?? 0) + 1;
+        entries.add({
+          'studentId': roster[i]['id'],
+          'status': status,
+          'note': null,
+          'markedAt': Timestamp.fromDate(
+            DateTime(day.year, day.month, day.day, 8, 5),
+          ),
+        });
+      }
+
+      final submittedAt = DateTime(day.year, day.month, day.day, 8, 12);
+      await school.collection('class_attendance_sessions').doc(
+        // Must match `classSessionId()` in class_teacher_remote_data_source,
+        // which is what makes a re-submission collide instead of duplicating.
+        '${classTeacherClassId}_all_daily_'
+        '${day.year}-${_two(day.month)}-${_two(day.day)}',
+      ).set({
+        'schoolId': demoSchoolId,
+        'campusId': 'main',
+        'classId': classTeacherClassId,
+        'className': classTeacherClassId,
+        'streamId': null,
+        'academicYearId': currentAcademicYearId,
+        'termId': currentTermId,
+        'sessionType': 'daily',
+        'date': Timestamp.fromDate(DateTime(day.year, day.month, day.day)),
+        'status': 'submitted',
+        'counts': counts,
+        'entries': entries,
+        'submittedAt': Timestamp.fromDate(submittedAt),
+        'submittedBy': victorUid,
+        'roleAssignmentId': 'victor-class-teacher-p7',
+        'deviceId': 'seed',
+      });
+    }
+  }
+
+  static Future<void> _seedClassHomework(
+    DocumentReference<Map<String, dynamic>> school,
+    String victorUid,
+  ) async {
+    final now = DateTime.now();
+    final items = [
+      ('Fractions revision worksheet', 'Mathematics', 2, 'published'),
+      ('Read chapter 4 and summarise', 'English', 4, 'published'),
+      ('Collect three leaf samples', 'Science', -1, 'overdue'),
+      ('Draft the term project outline', 'SST', 9, 'draft'),
+    ];
+
+    for (var i = 0; i < items.length; i++) {
+      final (title, subject, dueInDays, status) = items[i];
+      await school.collection('class_homework').doc('p7-homework-$i').set({
+        'schoolId': demoSchoolId,
+        'campusId': 'main',
+        'classId': classTeacherClassId,
+        'className': classTeacherClassId,
+        'academicYearId': currentAcademicYearId,
+        'termId': currentTermId,
+        'title': title,
+        'description': '$subject work set for $classTeacherClassId.',
+        'subjectName': subject,
+        'dueDate': Timestamp.fromDate(now.add(Duration(days: dueInDays))),
+        'status': status,
+        'priority': dueInDays < 0 ? 'high' : 'normal',
+        'attachments': <String>[],
+        'createdBy': victorUid,
+        'createdAt': FieldValue.serverTimestamp(),
+        'roleAssignmentId': 'victor-class-teacher-p7',
+      });
+    }
+  }
+
+  static Future<void> _seedClassBehaviour(
+    DocumentReference<Map<String, dynamic>> school,
+    String victorUid,
+    List<Map<String, Object>> roster,
+  ) async {
+    final now = DateTime.now();
+    final records = [
+      (0, 'achievement', 'Led the class debate team to the district final', false),
+      (1, 'positive', 'Consistently helps classmates with revision', false),
+      (2, 'concern', 'Repeated late submission of homework', true),
+      (3, 'concern', 'Disruptive during the Science period', true),
+    ];
+
+    for (final (index, category, note, followUp) in records) {
+      if (index >= roster.length) continue;
+      await school.collection('class_behaviour_records').doc('p7-behaviour-$index').set({
+        'schoolId': demoSchoolId,
+        'campusId': 'main',
+        'classId': classTeacherClassId,
+        'academicYearId': currentAcademicYearId,
+        'termId': currentTermId,
+        'studentId': roster[index]['id'],
+        'studentName': roster[index]['name'],
+        'category': category,
+        'note': note,
+        'followUpRequired': followUp,
+        'followUpClosed': false,
+        'recordedBy': victorUid,
+        'recordedAt': Timestamp.fromDate(now.subtract(Duration(days: index + 1))),
+        'roleAssignmentId': 'victor-class-teacher-p7',
+      });
+    }
+  }
+
+  /// Report entry rows in mixed states, so the Reports tab opens with real
+  /// completed / pending / returned figures rather than all zeros.
+  static Future<void> _seedClassReportEntries(
+    DocumentReference<Map<String, dynamic>> school,
+    String victorUid,
+    List<Map<String, Object>> roster,
+  ) async {
+    for (var i = 0; i < roster.length; i++) {
+      final status = switch (i % 5) {
+        0 => 'returned',
+        1 || 2 => 'in_progress',
+        3 => 'draft',
+        _ => 'class_teacher_completed',
+      };
+
+      await school.collection('class_report_entries').doc(
+        '${roster[i]['id']}_$currentTermId',
+      ).set({
+        'schoolId': demoSchoolId,
+        'campusId': 'main',
+        'classId': classTeacherClassId,
+        'academicYearId': currentAcademicYearId,
+        'termId': currentTermId,
+        'studentId': roster[i]['id'],
+        'studentName': roster[i]['name'],
+        'status': status,
+        'competenciesComplete': status == 'class_teacher_completed',
+        'conductComplete': status == 'class_teacher_completed',
+        'commentComplete': status == 'class_teacher_completed',
+        'returnReason':
+            status == 'returned' ? 'Conduct ratings incomplete.' : null,
+        'updatedBy': victorUid,
+        'updatedAt': FieldValue.serverTimestamp(),
+        'roleAssignmentId': 'victor-class-teacher-p7',
+      });
+    }
+  }
+
+  static String _two(int value) => value.toString().padLeft(2, '0');
 
   static Future<String?> _seedNewHireViaCloudFunction() async {
     try {
