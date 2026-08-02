@@ -51,6 +51,16 @@ abstract class ClassTeacherRemoteDataSource {
     String? streamId,
   });
 
+  /// How each student was marked in today's register, keyed by student id.
+  /// Empty when no register exists - which the roster shows as "not marked"
+  /// rather than defaulting anybody to absent.
+  Future<Map<String, String>> getSessionStatuses({
+    required String schoolId,
+    required String classId,
+    required DateTime date,
+    String? streamId,
+  });
+
   /// Every period on the class timetable for [date], across all subjects -
   /// the Class Teacher sees the whole class day, not only their own lessons.
   Future<List<Lesson>> getClassSchedule({
@@ -237,6 +247,28 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
       excusedCount: (counts['excused'] as num?)?.toInt() ?? 0,
       submittedAt: _toDate(data['submittedAt']),
     );
+  }
+
+  @override
+  Future<Map<String, String>> getSessionStatuses({
+    required String schoolId,
+    required String classId,
+    required DateTime date,
+    String? streamId,
+  }) async {
+    final doc = await _attendanceSessions(schoolId)
+        .doc(classSessionId(classId: classId, streamId: streamId, date: date))
+        .get();
+
+    final data = doc.data();
+    if (!doc.exists || data == null) return const {};
+
+    final entries = (data['entries'] as List?) ?? const [];
+    return {
+      for (final entry in entries.whereType<Map<String, dynamic>>())
+        if ((entry['studentId'] as String? ?? '').isNotEmpty)
+          entry['studentId'] as String: entry['status'] as String? ?? 'notMarked',
+    };
   }
 
   @override
