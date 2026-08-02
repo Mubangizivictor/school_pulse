@@ -58,6 +58,15 @@ async function seed() {
         studentIds: ['studentA'],
       },
       studentUserA: { role: 'student', schoolId: 'schoolA', studentId: 'studentA', studentIds: [] },
+      otherTeacherA: {
+        role: 'classTeacher', roles: ['classTeacher'], schoolId: 'schoolA', studentIds: [],
+      },
+      drafterA: {
+        role: 'classTeacher', roles: ['classTeacher'], schoolId: 'schoolA', studentIds: [],
+      },
+      teacherB: {
+        role: 'classTeacher', roles: ['classTeacher'], schoolId: 'schoolB', studentIds: [],
+      },
     };
 
     await Promise.all(
@@ -106,6 +115,56 @@ async function seed() {
       }),
       setDoc(doc(db, 'invoices', 'invoiceA'), {
         schoolId: 'schoolA', status: 'pending', amount: 100,
+      }),
+
+      // Class Teacher fixtures. teacherA holds P7 with the class.* grant;
+      // otherTeacherA holds P6 and must never reach P7.
+      setDoc(doc(db, 'schools/schoolA/staff_role_assignments/assignP7'), {
+        schoolId: 'schoolA', campusId: 'main', staffId: 'teacherA', userId: 'teacherA',
+        roleType: 'classTeacher', academicYearId: '2026', classId: 'p7', status: 'active',
+        permissionScope: {
+          permissions: [
+            'class.attendance.take', 'class.attendance.edit',
+            'class.homework.create', 'class.homework.publish',
+            'class.behaviour.record', 'class.announcement.create',
+            'class.announcement.publish', 'class.report.entry',
+          ],
+          classId: 'p7', academicYearId: '2026', termIds: [],
+        },
+      }),
+      setDoc(doc(db, 'schools/schoolA/staff_role_assignments/assignP6'), {
+        schoolId: 'schoolA', campusId: 'main', staffId: 'otherTeacherA', userId: 'otherTeacherA',
+        roleType: 'classTeacher', academicYearId: '2026', classId: 'p6', status: 'active',
+        permissionScope: {
+          permissions: ['class.attendance.take', 'class.report.entry'],
+          classId: 'p6', academicYearId: '2026', termIds: [],
+        },
+      }),
+      // Drafting but not publishing - the pair the publish rule separates.
+      setDoc(doc(db, 'schools/schoolA/staff_role_assignments/assignDrafter'), {
+        schoolId: 'schoolA', campusId: 'main', staffId: 'drafterA', userId: 'drafterA',
+        roleType: 'classTeacher', academicYearId: '2026', classId: 'p5', status: 'active',
+        permissionScope: {
+          permissions: ['class.homework.create', 'class.announcement.create'],
+          classId: 'p5', academicYearId: '2026', termIds: [],
+        },
+      }),
+      setDoc(doc(db, 'schools/schoolA/class_attendance_sessions/p7_all_daily_2026-06-01'), {
+        schoolId: 'schoolA', classId: 'p7', academicYearId: '2026', termId: 't2',
+        status: 'submitted', roleAssignmentId: 'assignP7', entries: [],
+      }),
+      setDoc(doc(db, 'schools/schoolA/class_attendance_sessions/p7_all_daily_2026-05-01'), {
+        schoolId: 'schoolA', classId: 'p7', academicYearId: '2026', termId: 't2',
+        status: 'locked', roleAssignmentId: 'assignP7', entries: [],
+      }),
+      setDoc(doc(db, 'schools/schoolA/class_report_entries/approvedEntry'), {
+        schoolId: 'schoolA', classId: 'p7', academicYearId: '2026', termId: 't2',
+        studentId: 'studentA', status: 'academicOfficeApproved',
+        roleAssignmentId: 'assignP7',
+      }),
+      setDoc(doc(db, 'schools/schoolA/subject_audit_logs/auditA'), {
+        schoolId: 'schoolA', userId: 'teacherA', action: 'attendance.submitted',
+        classId: 'p7', academicYearId: '2026',
       }),
     ]);
   });
@@ -317,5 +376,160 @@ describe('SaaS owner / platform layer', () => {
   test('platform_config is owner-readable and never client-writable, even by the owner', async () => {
     await assertFails(setDoc(doc(dbFor('ownerA'), 'platform_config', 'ownerSeed'), { seeded: true }));
     await assertFails(getDoc(doc(dbFor('adminA'), 'platform_config', 'ownerSeed')));
+  });
+
+  describe('Class Teacher panel', () => {
+    const p7Session = 'schools/schoolA/class_attendance_sessions/p7_all_daily_2026-06-02';
+    const p6Session = 'schools/schoolA/class_attendance_sessions/p6_all_daily_2026-06-02';
+
+    function register(overrides = {}) {
+      return {
+        schoolId: 'schoolA', classId: 'p7', academicYearId: '2026', termId: 't2',
+        status: 'draft', roleAssignmentId: 'assignP7', entries: [], counts: {},
+        ...overrides,
+      };
+    }
+
+    test('a teacher may write the register of the class they hold', async () => {
+      await assertSucceeds(setDoc(doc(dbFor('teacherA'), p7Session), register()));
+    });
+
+    test('a teacher cannot write the register of another class', async () => {
+      // Holding class.attendance.take says nothing about *which* class.
+      await assertFails(setDoc(doc(dbFor('teacherA'), p6Session), register({
+        classId: 'p6',
+      })));
+    });
+
+    test('a teacher cannot borrow another teacher\'s assignment id', async () => {
+      await assertFails(setDoc(doc(dbFor('otherTeacherA'), p7Session), register()));
+    });
+
+    test('a submitted register needs the edit permission to change', async () => {
+      // otherTeacherA has take but not edit, and it is not their class either.
+      await assertFails(updateDoc(
+        doc(dbFor('otherTeacherA'), 'schools/schoolA/class_attendance_sessions/p7_all_daily_2026-06-01'),
+        { status: 'submitted', roleAssignmentId: 'assignP6' },
+      ));
+    });
+
+    test('a locked register has no teacher path at all', async () => {
+      await assertFails(updateDoc(
+        doc(dbFor('teacherA'), 'schools/schoolA/class_attendance_sessions/p7_all_daily_2026-05-01'),
+        { status: 'submitted', roleAssignmentId: 'assignP7' },
+      ));
+    });
+
+    test('registers are corrected, never deleted', async () => {
+      await assertFails(deleteDoc(
+        doc(dbFor('teacherA'), 'schools/schoolA/class_attendance_sessions/p7_all_daily_2026-06-01'),
+      ));
+    });
+
+    test('a teacher who may draft homework cannot publish it', async () => {
+      const drafter = dbFor('drafterA');
+      await assertSucceeds(setDoc(doc(drafter, 'schools/schoolA/class_homework/hwDraft'), {
+        schoolId: 'schoolA', classId: 'p5', academicYearId: '2026',
+        title: 'Reading', status: 'draft', roleAssignmentId: 'assignDrafter',
+      }));
+      await assertFails(setDoc(doc(drafter, 'schools/schoolA/class_homework/hwLive'), {
+        schoolId: 'schoolA', classId: 'p5', academicYearId: '2026',
+        title: 'Reading', status: 'published', roleAssignmentId: 'assignDrafter',
+      }));
+    });
+
+    test('a teacher holding publish may publish to their own class', async () => {
+      await assertSucceeds(setDoc(doc(dbFor('teacherA'), 'schools/schoolA/class_homework/hwP7'), {
+        schoolId: 'schoolA', classId: 'p7', academicYearId: '2026',
+        title: 'Fractions', status: 'published', roleAssignmentId: 'assignP7',
+      }));
+    });
+
+    test('the same split applies to announcements', async () => {
+      await assertFails(setDoc(doc(dbFor('drafterA'), 'schools/schoolA/class_announcements/annLive'), {
+        schoolId: 'schoolA', classId: 'p5', academicYearId: '2026',
+        title: 'Meeting', status: 'published', roleAssignmentId: 'assignDrafter',
+      }));
+    });
+
+    test('a teacher cannot write themselves into an approved report state', async () => {
+      await assertFails(setDoc(doc(dbFor('teacherA'), 'schools/schoolA/class_report_entries/newEntry'), {
+        schoolId: 'schoolA', classId: 'p7', academicYearId: '2026', termId: 't2',
+        studentId: 'studentB', status: 'published', roleAssignmentId: 'assignP7',
+      }));
+    });
+
+    test('a report already approved upstream is out of the teacher\'s hands', async () => {
+      await assertFails(updateDoc(
+        doc(dbFor('teacherA'), 'schools/schoolA/class_report_entries/approvedEntry'),
+        { status: 'inProgress', roleAssignmentId: 'assignP7' },
+      ));
+    });
+
+    test('report entries are never deleted', async () => {
+      await assertFails(deleteDoc(
+        doc(dbFor('teacherA'), 'schools/schoolA/class_report_entries/approvedEntry'),
+      ));
+    });
+
+    test('another school never reaches these collections', async () => {
+      await assertFails(getDoc(
+        doc(dbFor('teacherB'), 'schools/schoolA/class_attendance_sessions/p7_all_daily_2026-06-01'),
+      ));
+      await assertFails(setDoc(doc(dbFor('teacherB'), p7Session), register()));
+    });
+
+    test('a teacher reads only their own responsibilities', async () => {
+      await assertSucceeds(getDoc(
+        doc(dbFor('teacherA'), 'schools/schoolA/staff_role_assignments/assignP7'),
+      ));
+      await assertFails(getDoc(
+        doc(dbFor('teacherA'), 'schools/schoolA/staff_role_assignments/assignP6'),
+      ));
+    });
+
+    test('a teacher cannot grant themselves a responsibility', async () => {
+      await assertFails(setDoc(
+        doc(dbFor('teacherA'), 'schools/schoolA/staff_role_assignments/selfGranted'),
+        {
+          schoolId: 'schoolA', staffId: 'teacherA', userId: 'teacherA',
+          roleType: 'classTeacher', academicYearId: '2026', classId: 'p6',
+          status: 'active',
+          permissionScope: { permissions: ['class.attendance.take'], classId: 'p6' },
+        },
+      ));
+    });
+
+    test('audit rows cannot be edited or deleted, by anyone', async () => {
+      await assertFails(updateDoc(
+        doc(dbFor('teacherA'), 'schools/schoolA/subject_audit_logs/auditA'),
+        { action: 'nothing.happened' },
+      ));
+      await assertFails(deleteDoc(
+        doc(dbFor('teacherA'), 'schools/schoolA/subject_audit_logs/auditA'),
+      ));
+      await assertFails(deleteDoc(
+        doc(dbFor('adminA'), 'schools/schoolA/subject_audit_logs/auditA'),
+      ));
+    });
+
+    test('a correction request cannot be raised pre-approved', async () => {
+      await assertFails(setDoc(
+        doc(dbFor('teacherA'), 'schools/schoolA/class_attendance_corrections/selfApproved'),
+        {
+          schoolId: 'schoolA', sessionId: 'p7_all_daily_2026-05-01', classId: 'p7',
+          academicYearId: '2026', studentId: 'studentA',
+          requestedByUserId: 'teacherA', status: 'approved',
+        },
+      ));
+      await assertSucceeds(setDoc(
+        doc(dbFor('teacherA'), 'schools/schoolA/class_attendance_corrections/pendingOne'),
+        {
+          schoolId: 'schoolA', sessionId: 'p7_all_daily_2026-05-01', classId: 'p7',
+          academicYearId: '2026', studentId: 'studentA',
+          requestedByUserId: 'teacherA', status: 'pending',
+        },
+      ));
+    });
   });
 });

@@ -848,3 +848,330 @@ exports.dispatchScheduledNotifications = notificationFunctions.dispatchScheduled
 exports.escalateUnacknowledgedAlerts = notificationFunctions.escalateUnacknowledgedAlerts;
 exports.purgeExpiredNotifications = notificationFunctions.purgeExpiredNotifications;
 exports.sendTestNotification = notificationFunctions.sendTestNotification;
+
+// ---------------------------------------------------------------------------
+// Class Teacher panel - the three actions that must not be a client write.
+//
+// Each of these decides something a teacher would otherwise be deciding about
+// their own authority: whether a report reaches parents, whether a historical
+// register may be rewritten, and whether one staff member may hold a second
+// class. The Admin SDK bypasses Firestore rules entirely, so the checks in
+// here are the only gate.
+// ---------------------------------------------------------------------------
+
+const ACADEMIC_ADMIN_ROLES = ["director", "headTeacher", "deputyHead", "schoolAdmin"];
+
+/** Loads the caller's profile and refuses anyone outside the named roles. */
+async function requireRole(auth, roles, action) {
+  if (!auth) {
+    throw new HttpsError("unauthenticated", "You must be signed in.");
+  }
+
+  const callerDoc = await admin.firestore().collection("users").doc(auth.uid).get();
+  const caller = callerDoc.exists ? callerDoc.data() : {};
+  const callerRoles = Array.isArray(caller.roles)
+    ? caller.roles
+    : [caller.role].filter(Boolean);
+
+  if (!callerRoles.some((role) => roles.includes(role))) {
+    throw new HttpsError("permission-denied", action);
+  }
+  if (!caller.schoolId) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Your account is not assigned to a school."
+    );
+  }
+
+  return { uid: auth.uid, schoolId: caller.schoolId, roles: callerRoles };
+}
+
+/** Appends to the same audit trail the app writes, so one trail covers both. */
+async function writeAudit(schoolId, entry) {
+  await admin
+    .firestore()
+    .collection("schools")
+    .doc(schoolId)
+    .collection("subject_audit_logs")
+    .add({
+      schoolId,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      platform: "cloud_function",
+      ...entry,
+    });
+}
+
+/**
+ * Publishes report cards to parents.
+ *
+ * Kept server-side because publication is the moment a report becomes a
+ * record a family acts on, and because the fee-release policy has to be read
+ * at the same instant - a client that could write `status: published` could
+ * also skip that read.
+ */
+exports.publishClassReports = onCall(async (request) => {
+  const caller = await requireRole(
+    request.auth,
+    ACADEMIC_ADMIN_ROLES,
+    "Only the academic office can publish reports."
+  );
+
+  const { classId, academicYearId, termId, studentIds } = request.data || {};
+  if (!classId || !academicYearId || !termId) {
+    throw new HttpsError(
+      "invalid-argument",
+      "classId, academicYearId and termId are required."
+    );
+  }
+
+  const db = admin.firestore();
+  const school = db.collection("schools").doc(caller.schoolId);
+
+  // Finance's hold list, read here rather than trusted from the caller.
+  const policyDoc = await school.collection("configs").doc("reportReleasePolicy").get();
+  const policy = policyDoc.exists ? policyDoc.data() : {};
+  const withheld = new Set(policy.withheldStudentIds || []);
+
+  let query = school
+    .collection("class_report_entries")
+    .where("classId", "==", classId)
+    .where("academicYearId", "==", academicYearId)
+    .where("termId", "==", termId);
+
+  const snapshot = await query.get();
+  const batch = db.batch();
+  const published = [];
+  const skipped = [];
+
+  snapshot.forEach((doc) => {
+    const data = doc.data();
+    if (Array.isArray(studentIds) && studentIds.length > 0
+        && !studentIds.includes(data.studentId)) {
+      return;
+    }
+
+    // A report the class teacher has not finished is not publishable, and a
+    // student on the finance hold list is not released however this was
+    // called.
+    if (data.status !== "classTeacherCompleted"
+        && data.status !== "academicOfficeApproved"
+        && data.status !== "leadershipApproved") {
+      skipped.push({ studentId: data.studentId, reason: "not_ready" });
+      return;
+    }
+    if (withheld.has(data.studentId)) {
+      skipped.push({ studentId: data.studentId, reason: "release_withheld" });
+      return;
+    }
+
+    batch.update(doc.ref, {
+      status: "published",
+      publishedAt: admin.firestore.FieldValue.serverTimestamp(),
+      publishedBy: caller.uid,
+    });
+    published.push(data.studentId);
+  });
+
+  if (published.length > 0) await batch.commit();
+
+  await writeAudit(caller.schoolId, {
+    userId: caller.uid,
+    action: "report.published",
+    entityType: "class_report_entry",
+    entityId: classId,
+    academicYearId,
+    termId,
+    classId,
+    newValue: { publishedCount: published.length, skipped },
+  });
+
+  return { published: published.length, skipped };
+});
+
+/**
+ * Decides a teacher's request to change a register they may no longer edit.
+ *
+ * The teacher raises the request from the app; only this can act on it. Doing
+ * it client-side would mean the person who wants the change is also the person
+ * approving it.
+ */
+exports.decideAttendanceCorrection = onCall(async (request) => {
+  const caller = await requireRole(
+    request.auth,
+    ACADEMIC_ADMIN_ROLES,
+    "Only the academic office can decide attendance corrections."
+  );
+
+  const { correctionId, approve, decisionNote } = request.data || {};
+  if (!correctionId || typeof approve !== "boolean") {
+    throw new HttpsError(
+      "invalid-argument",
+      "correctionId and approve are required."
+    );
+  }
+
+  const db = admin.firestore();
+  const school = db.collection("schools").doc(caller.schoolId);
+  const correctionRef = school.collection("class_attendance_corrections").doc(correctionId);
+  const correctionDoc = await correctionRef.get();
+
+  if (!correctionDoc.exists) {
+    throw new HttpsError("not-found", "That correction request no longer exists.");
+  }
+
+  const correction = correctionDoc.data();
+  if (correction.status !== "pending") {
+    throw new HttpsError(
+      "failed-precondition",
+      "That correction request has already been decided."
+    );
+  }
+
+  await correctionRef.update({
+    status: approve ? "approved" : "rejected",
+    decidedByUserId: caller.uid,
+    decidedAt: admin.firestore.FieldValue.serverTimestamp(),
+    decisionNote: decisionNote || null,
+  });
+
+  if (approve) {
+    // Applied here rather than handed back to the teacher's device: the
+    // register is locked to them, and a client write would need a permission
+    // that would then also let them skip the approval.
+    const sessionRef = school
+      .collection("class_attendance_sessions")
+      .doc(correction.sessionId);
+    const sessionDoc = await sessionRef.get();
+
+    if (sessionDoc.exists) {
+      const session = sessionDoc.data();
+      const entries = (session.entries || []).map((entry) =>
+        entry.studentId === correction.studentId
+          ? { ...entry, status: correction.requestedStatusCode }
+          : entry
+      );
+
+      await sessionRef.update({
+        entries,
+        lastCorrectedAt: admin.firestore.FieldValue.serverTimestamp(),
+        lastCorrectedBy: caller.uid,
+      });
+    }
+  }
+
+  await writeAudit(caller.schoolId, {
+    userId: caller.uid,
+    action: approve ? "attendance.correction_approved" : "attendance.correction_rejected",
+    entityType: "class_attendance_session",
+    entityId: correction.sessionId,
+    classId: correction.classId,
+    academicYearId: correction.academicYearId,
+    studentId: correction.studentId,
+    previousValue: { status: correction.previousStatusCode },
+    newValue: { status: correction.requestedStatusCode },
+    reason: correction.reason,
+  });
+
+  return { status: approve ? "approved" : "rejected" };
+});
+
+/**
+ * Gives one staff member a second concurrent Class Teacher assignment.
+ *
+ * The default is one class per staff member per academic year and campus.
+ * This is the only way past that, and it is deliberately awkward: it needs an
+ * admin, an explicit reason, and it writes an audit row naming both classes.
+ */
+exports.overrideClassTeacherAssignment = onCall(async (request) => {
+  const caller = await requireRole(
+    request.auth,
+    ACADEMIC_ADMIN_ROLES,
+    "Only school administrators can override the one-class rule."
+  );
+
+  const { staffId, classId, className, academicYearId, campusId, reason } =
+    request.data || {};
+
+  if (!staffId || !classId || !academicYearId) {
+    throw new HttpsError(
+      "invalid-argument",
+      "staffId, classId and academicYearId are required."
+    );
+  }
+  if (!reason || reason.trim().length < 10) {
+    throw new HttpsError(
+      "invalid-argument",
+      "Give a reason of at least 10 characters for the override."
+    );
+  }
+
+  const db = admin.firestore();
+  const assignments = db
+    .collection("schools")
+    .doc(caller.schoolId)
+    .collection("staff_role_assignments");
+
+  const existing = await assignments
+    .where("staffId", "==", staffId)
+    .where("roleType", "==", "classTeacher")
+    .where("academicYearId", "==", academicYearId)
+    .where("status", "==", "active")
+    .get();
+
+  const conflicting = existing.docs
+    .map((d) => d.data())
+    .filter((a) => (a.campusId || "") === (campusId || ""));
+
+  // Nothing to override - the ordinary assignment path should have been used,
+  // and silently accepting would hide that from the audit trail.
+  if (conflicting.length === 0) {
+    throw new HttpsError(
+      "failed-precondition",
+      "This staff member holds no class this year. Assign the class normally."
+    );
+  }
+
+  const newAssignment = await assignments.add({
+    schoolId: caller.schoolId,
+    campusId: campusId || "",
+    staffId,
+    userId: staffId,
+    roleType: "classTeacher",
+    academicYearId,
+    classId,
+    className: className || classId,
+    startDate: admin.firestore.FieldValue.serverTimestamp(),
+    endDate: null,
+    status: "active",
+    permissionScope: {
+      permissions: [],
+      classId,
+      academicYearId,
+      termIds: [],
+    },
+    assignedBy: caller.uid,
+    assignedAt: admin.firestore.FieldValue.serverTimestamp(),
+    overrideReason: reason.trim(),
+    isMultiClassOverride: true,
+  });
+
+  await writeAudit(caller.schoolId, {
+    userId: caller.uid,
+    action: "assignment.multi_class_override",
+    entityType: "staff_role_assignment",
+    entityId: newAssignment.id,
+    classId,
+    academicYearId,
+    newValue: {
+      staffId,
+      addedClass: classId,
+      alreadyHeld: conflicting.map((a) => a.classId),
+    },
+    reason: reason.trim(),
+  });
+
+  return {
+    assignmentId: newAssignment.id,
+    classesHeld: conflicting.length + 1,
+  };
+});
