@@ -8,6 +8,7 @@ import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/teacher/domain/entities/active_responsibility_context.dart';
+import 'package:school_pulse/features/teacher/domain/entities/lesson.dart';
 import 'package:school_pulse/features/teacher/domain/entities/staff_role_assignment.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_event.dart';
@@ -502,22 +503,152 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
             ),
           ],
         ),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceElevated(context),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
-          ),
-          child: _buildNoLessonRow(context),
+        BlocBuilder<SubjectTeacherDashboardBloc, SubjectTeacherDashboardState>(
+          builder: (context, stats) {
+            final lesson = stats.featuredLesson;
+            return Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceElevated(context),
+                borderRadius: BorderRadius.circular(16),
+                border:
+                    Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
+              ),
+              child: lesson == null
+                  ? _buildNoLessonRow(context)
+                  : _buildLessonRow(context, lesson),
+            );
+          },
         ),
       ],
     );
   }
 
-  /// Shown until the timetable feed lands. Previously this card displayed a
-  /// hardcoded 10:00 Mathematics lesson in Room 12 to every teacher on every
-  /// day, which is worse than saying nothing.
+  /// The approved lesson card: times on the left, subject and room in the
+  /// middle, the action on the right. Everything in it now comes from the
+  /// timetable rather than the hardcoded 10:00 Mathematics lesson in Room 12
+  /// that every teacher used to see on every day of the year.
+  Widget _buildLessonRow(BuildContext context, Lesson lesson) {
+    final ongoing = lesson.status == LessonStatus.ongoing;
+    return Row(
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _formatTime(lesson.scheduledStart),
+              style: TextStyle(
+                color: AppColors.primary(context),
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text('-', style: TextStyle(color: AppColors.textMuted(context))),
+            const SizedBox(height: 4),
+            Text(
+              _formatTime(lesson.scheduledEnd),
+              style: TextStyle(
+                color: AppColors.primary(context),
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(width: 16),
+        Container(width: 1, height: 40, color: AppColors.border(context)),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      lesson.subjectName,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.textPrimary(context),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary(context).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      lesson.status.label.toUpperCase(),
+                      style: TextStyle(
+                        color: AppColors.primary(context),
+                        fontSize: 8,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                [lesson.className, lesson.streamName]
+                    .where((e) => e != null && e.isNotEmpty)
+                    .join(' '),
+                style: TextStyle(
+                  color: AppColors.textSecondary(context),
+                  fontSize: 12,
+                ),
+              ),
+              if (lesson.room != null && lesson.room!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.location_on_outlined,
+                        color: AppColors.textMuted(context), size: 14),
+                    const SizedBox(width: 4),
+                    Text(
+                      lesson.room!,
+                      style: TextStyle(
+                        color: AppColors.textMuted(context),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+        ElevatedButton.icon(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary(context),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            minimumSize: const Size(0, 36),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          onPressed: () => context.push('/staff/lessons/details/${lesson.id}'),
+          icon: Icon(ongoing ? Icons.how_to_reg : Icons.play_arrow, size: 18),
+          label: Text(
+            ongoing ? 'Attendance' : 'Start Lesson',
+            style: const TextStyle(fontSize: 11),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatTime(DateTime time) {
+    final hour = time.hour % 12 == 0 ? 12 : time.hour % 12;
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$hour:$minute ${time.hour < 12 ? 'AM' : 'PM'}';
+  }
+
   Widget _buildNoLessonRow(BuildContext context) {
     return Row(
       children: [

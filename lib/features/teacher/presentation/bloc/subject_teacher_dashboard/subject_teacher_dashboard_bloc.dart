@@ -1,9 +1,14 @@
+import 'package:dartz/dartz.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:school_pulse/core/error/failures.dart';
 
+import '../../../domain/entities/subject_enrollment.dart';
+
 import '../../../domain/entities/active_responsibility_context.dart';
+import '../../../domain/entities/lesson.dart';
+import '../../../domain/repositories/lesson_repository.dart';
 import '../../../domain/repositories/subject_student_repository.dart';
 
 abstract class SubjectTeacherDashboardEvent extends Equatable {
@@ -44,6 +49,9 @@ class SubjectTeacherDashboardState extends Equatable {
   final int? absentToday;
   final int? lessonsToday;
 
+  /// Today's periods for this assignment, in time order.
+  final List<Lesson> todaysLessons;
+
   const SubjectTeacherDashboardState({
     this.isLoading = false,
     this.errorMessage,
@@ -52,7 +60,23 @@ class SubjectTeacherDashboardState extends Equatable {
     this.presentToday,
     this.absentToday,
     this.lessonsToday,
+    this.todaysLessons = const [],
   });
+
+  /// The lesson to surface on the dashboard: one in progress if there is one,
+  /// otherwise the next one still to come, otherwise the last one of the day
+  /// so the card does not go blank the moment teaching finishes.
+  Lesson? get featuredLesson {
+    if (todaysLessons.isEmpty) return null;
+    final ongoing =
+        todaysLessons.where((l) => l.status == LessonStatus.ongoing).firstOrNull;
+    if (ongoing != null) return ongoing;
+
+    final now = DateTime.now();
+    final upcoming =
+        todaysLessons.where((l) => l.scheduledEnd.isAfter(now)).firstOrNull;
+    return upcoming ?? todaysLessons.last;
+  }
 
   const SubjectTeacherDashboardState.initial() : this(isLoading: true);
 
@@ -80,6 +104,7 @@ class SubjectTeacherDashboardState extends Equatable {
     int? presentToday,
     int? absentToday,
     int? lessonsToday,
+    List<Lesson>? todaysLessons,
     bool clearError = false,
   }) {
     return SubjectTeacherDashboardState(
@@ -90,6 +115,7 @@ class SubjectTeacherDashboardState extends Equatable {
       presentToday: presentToday ?? this.presentToday,
       absentToday: absentToday ?? this.absentToday,
       lessonsToday: lessonsToday ?? this.lessonsToday,
+      todaysLessons: todaysLessons ?? this.todaysLessons,
     );
   }
 
@@ -102,15 +128,19 @@ class SubjectTeacherDashboardState extends Equatable {
         presentToday,
         absentToday,
         lessonsToday,
+        todaysLessons,
       ];
 }
 
 class SubjectTeacherDashboardBloc
     extends Bloc<SubjectTeacherDashboardEvent, SubjectTeacherDashboardState> {
   final SubjectStudentRepository studentRepository;
+  final LessonRepository lessonRepository;
 
-  SubjectTeacherDashboardBloc({required this.studentRepository})
-      : super(const SubjectTeacherDashboardState.initial()) {
+  SubjectTeacherDashboardBloc({
+    required this.studentRepository,
+    required this.lessonRepository,
+  }) : super(const SubjectTeacherDashboardState.initial()) {
     on<DashboardRequested>(_onRequested);
   }
 
@@ -126,23 +156,40 @@ class SubjectTeacherDashboardBloc
       roleAssignmentId: event.context.roleAssignmentId,
     ));
 
-    final students =
-        await studentRepository.getSubjectStudents(context: event.context);
+    // Both reads go out together; neither depends on the other.
+    final results = await Future.wait([
+      studentRepository.getSubjectStudents(context: event.context),
+      lessonRepository.getTodaysLessons(context: event.context),
+    ]);
 
-    // The teacher may have switched again while this was in flight.
+    // The teacher may have switched again while these were in flight.
     if (state.roleAssignmentId != event.context.roleAssignmentId) return;
 
+    final students =
+        results[0] as Either<Failure, List<SubjectStudentSummary>>;
+    final lessons = results[1] as Either<Failure, List<Lesson>>;
+
+    var next = state.copyWith(isLoading: false);
+    String? error;
+
     students.fold(
-      (failure) => emit(state.copyWith(
-        isLoading: false,
-        errorMessage: _messageFor(failure),
-      )),
-      (list) => emit(state.copyWith(
-        isLoading: false,
-        studentsEnrolled: list.length,
-        clearError: true,
-      )),
+      (failure) => error ??= _messageFor(failure),
+      (list) => next = next.copyWith(studentsEnrolled: list.length),
     );
+
+    lessons.fold(
+      // A timetable that will not load must not blank out the student count
+      // that did.
+      (failure) => error ??= _messageFor(failure),
+      (list) => next = next.copyWith(
+        lessonsToday: list.length,
+        todaysLessons: list,
+      ),
+    );
+
+    emit(error == null
+        ? next.copyWith(clearError: true)
+        : next.copyWith(errorMessage: error));
   }
 
   String _messageFor(Failure failure) => switch (failure) {
