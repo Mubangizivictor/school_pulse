@@ -282,6 +282,7 @@ import 'package:school_pulse/features/teacher/data/repositories/class_attendance
 import 'package:school_pulse/features/teacher/data/repositories/class_communication_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_performance_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_report_repository_impl.dart';
+import 'package:school_pulse/features/teacher/data/repositories/class_resource_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_task_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_work_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_dashboard_repository_impl.dart';
@@ -300,6 +301,7 @@ import 'package:school_pulse/features/teacher/domain/repositories/class_attendan
 import 'package:school_pulse/features/teacher/domain/repositories/class_communication_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/class_performance_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/class_report_repository.dart';
+import 'package:school_pulse/features/teacher/domain/repositories/class_resource_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/class_task_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/class_work_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/class_dashboard_repository.dart';
@@ -1391,6 +1393,16 @@ Future<void> init() async {
   sl.registerLazySingleton<ClassTaskRepository>(
     () => ClassTaskRepositoryImpl(
       remoteDataSource: sl(),
+      auditService: sl(),
+      networkInfo: sl(),
+    ),
+  );
+
+  sl.registerLazySingleton<ClassResourceRepository>(
+    () => ClassResourceRepositoryImpl(
+      firestore: sl(),
+      storage: sl(),
+      assignmentService: sl(),
       auditService: sl(),
       networkInfo: sl(),
     ),
