@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../domain/entities/class_attendance.dart';
+import '../../domain/entities/class_behaviour.dart';
 import '../../domain/entities/class_dashboard_summary.dart';
+import '../../domain/entities/class_homework.dart';
 import '../../domain/entities/class_student_summary.dart';
 import '../../domain/entities/lesson.dart';
 
@@ -51,6 +53,33 @@ abstract class ClassTeacherRemoteDataSource {
     required DateTime date,
     String? streamId,
   });
+
+  /// Class work set for this class, newest due date first.
+  Future<List<ClassHomework>> getHomework({
+    required String schoolId,
+    required String classId,
+    required String academicYearId,
+    String? streamId,
+  });
+
+  Future<void> saveHomework(ClassHomework homework);
+
+  /// Behaviour and achievement records for the class, newest first.
+  /// [studentId] narrows to one student's file.
+  Future<List<ClassBehaviourRecord>> getBehaviourRecords({
+    required String schoolId,
+    required String classId,
+    required String academicYearId,
+    String? studentId,
+    int limit = 100,
+  });
+
+  Future<void> saveBehaviourRecord(ClassBehaviourRecord record);
+
+  /// The behaviour categories the school configured, or empty when it has
+  /// configured none and the shared defaults should stand.
+  Future<List<({String id, String name, String colorHex, bool isActive})>>
+      getBehaviourCategories({required String schoolId});
 
   /// One class register, or null when it has not been started.
   Future<ClassAttendanceSession?> getAttendanceSession({
@@ -273,6 +302,183 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
       lateCount: (counts['late'] as num?)?.toInt() ?? 0,
       excusedCount: (counts['excused'] as num?)?.toInt() ?? 0,
       submittedAt: _toDate(data['submittedAt']),
+    );
+  }
+
+  @override
+  Future<List<ClassHomework>> getHomework({
+    required String schoolId,
+    required String classId,
+    required String academicYearId,
+    String? streamId,
+  }) async {
+    Query<Map<String, dynamic>> query = _homework(schoolId)
+        .where('classId', isEqualTo: classId)
+        .where('academicYearId', isEqualTo: academicYearId);
+
+    if (streamId != null && streamId.isNotEmpty) {
+      query = query.where('streamId', isEqualTo: streamId);
+    }
+
+    final snapshot = await query.orderBy('dueDate', descending: true).get();
+    return snapshot.docs
+        .map((d) => _homeworkFromDoc(d.id, schoolId, d.data()))
+        .toList();
+  }
+
+  @override
+  Future<void> saveHomework(ClassHomework homework) async {
+    await _homework(homework.schoolId).doc(homework.id).set({
+      'schoolId': homework.schoolId,
+      'campusId': homework.campusId,
+      'classId': homework.classId,
+      'className': homework.className,
+      'streamId': homework.streamId,
+      'academicYearId': homework.academicYearId,
+      'termId': homework.termId,
+      'title': homework.title,
+      'description': homework.description,
+      'instructions': homework.instructions,
+      'subjectName': homework.subjectName,
+      'dueDate': Timestamp.fromDate(homework.dueDate),
+      'status': homework.status.name,
+      'priority': homework.priority.name,
+      'attachments': homework.attachments,
+      'createdBy': homework.createdBy,
+      'createdAt': Timestamp.fromDate(homework.createdAt),
+      'updatedBy': homework.updatedBy,
+      'updatedAt': FieldValue.serverTimestamp(),
+      'publishedAt': homework.publishedAt == null
+          ? null
+          : Timestamp.fromDate(homework.publishedAt!),
+      'roleAssignmentId': homework.roleAssignmentId,
+    }, SetOptions(merge: true));
+  }
+
+  @override
+  Future<List<ClassBehaviourRecord>> getBehaviourRecords({
+    required String schoolId,
+    required String classId,
+    required String academicYearId,
+    String? studentId,
+    int limit = 100,
+  }) async {
+    Query<Map<String, dynamic>> query = _behaviour(schoolId)
+        .where('classId', isEqualTo: classId)
+        .where('academicYearId', isEqualTo: academicYearId);
+
+    if (studentId != null && studentId.isNotEmpty) {
+      query = query.where('studentId', isEqualTo: studentId);
+    }
+
+    final snapshot =
+        await query.orderBy('recordedAt', descending: true).limit(limit).get();
+    return snapshot.docs
+        .map((d) => _behaviourFromDoc(d.id, schoolId, d.data()))
+        .toList();
+  }
+
+  @override
+  Future<void> saveBehaviourRecord(ClassBehaviourRecord record) async {
+    await _behaviour(record.schoolId).doc(record.id).set({
+      'schoolId': record.schoolId,
+      'campusId': record.campusId,
+      'classId': record.classId,
+      'streamId': record.streamId,
+      'academicYearId': record.academicYearId,
+      'termId': record.termId,
+      'studentId': record.studentId,
+      'studentName': record.studentName,
+      'category': record.categoryCode,
+      'note': record.note,
+      'recommendation': record.recommendation,
+      'followUpRequired': record.followUpRequired,
+      'followUpClosed': record.followUpClosed,
+      'followUpNote': record.followUpNote,
+      'recordedBy': record.recordedBy,
+      'recordedAt': Timestamp.fromDate(record.recordedAt),
+      'updatedBy': record.updatedBy,
+      'updatedAt': FieldValue.serverTimestamp(),
+      'roleAssignmentId': record.roleAssignmentId,
+    }, SetOptions(merge: true));
+  }
+
+  @override
+  Future<List<({String id, String name, String colorHex, bool isActive})>>
+      getBehaviourCategories({required String schoolId}) async {
+    final snapshot =
+        await _school(schoolId).collection('class_behaviour_categories').get();
+    return snapshot.docs.map((d) {
+      final data = d.data();
+      return (
+        id: d.id,
+        name: data['name'] as String? ?? d.id,
+        colorHex: data['colorHex'] as String? ?? '',
+        isActive: data['isActive'] as bool? ?? true,
+      );
+    }).toList();
+  }
+
+  ClassHomework _homeworkFromDoc(
+    String id,
+    String schoolId,
+    Map<String, dynamic> data,
+  ) {
+    return ClassHomework(
+      id: id,
+      schoolId: schoolId,
+      campusId: data['campusId'] as String? ?? '',
+      classId: data['classId'] as String? ?? '',
+      className: data['className'] as String? ?? '',
+      streamId: data['streamId'] as String?,
+      academicYearId: data['academicYearId'] as String? ?? '',
+      termId: data['termId'] as String? ?? '',
+      title: data['title'] as String? ?? '',
+      description: data['description'] as String? ?? '',
+      instructions: data['instructions'] as String?,
+      subjectName: data['subjectName'] as String?,
+      dueDate: _toDate(data['dueDate']) ?? DateTime(1970),
+      status: ClassHomeworkStatus.fromId(data['status'] as String?),
+      priority: ClassHomeworkPriority.fromId(data['priority'] as String?),
+      attachments:
+          (data['attachments'] as List?)?.whereType<String>().toList() ?? const [],
+      createdBy: data['createdBy'] as String? ?? '',
+      createdAt: _toDate(data['createdAt']) ?? DateTime(1970),
+      updatedBy: data['updatedBy'] as String?,
+      updatedAt: _toDate(data['updatedAt']),
+      publishedAt: _toDate(data['publishedAt']),
+      roleAssignmentId: data['roleAssignmentId'] as String? ?? '',
+    );
+  }
+
+  ClassBehaviourRecord _behaviourFromDoc(
+    String id,
+    String schoolId,
+    Map<String, dynamic> data,
+  ) {
+    return ClassBehaviourRecord(
+      id: id,
+      schoolId: schoolId,
+      campusId: data['campusId'] as String? ?? '',
+      classId: data['classId'] as String? ?? '',
+      streamId: data['streamId'] as String?,
+      academicYearId: data['academicYearId'] as String? ?? '',
+      termId: data['termId'] as String? ?? '',
+      studentId: data['studentId'] as String? ?? '',
+      studentName: data['studentName'] as String? ?? '',
+      categoryCode: data['category'] as String? ?? '',
+      note: data['note'] as String? ?? '',
+      recommendation: data['recommendation'] as String?,
+      followUpRequired: data['followUpRequired'] as bool? ?? false,
+      followUpClosed: data['followUpClosed'] as bool? ?? false,
+      followUpNote: data['followUpNote'] as String?,
+      disciplineCaseId: data['disciplineCaseId'] as String?,
+      disciplineStatus: data['disciplineStatus'] as String?,
+      recordedBy: data['recordedBy'] as String? ?? '',
+      recordedAt: _toDate(data['recordedAt']) ?? DateTime(1970),
+      updatedBy: data['updatedBy'] as String?,
+      updatedAt: _toDate(data['updatedAt']),
+      roleAssignmentId: data['roleAssignmentId'] as String? ?? '',
     );
   }
 

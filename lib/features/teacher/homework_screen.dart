@@ -4,12 +4,10 @@ import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
-import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
-import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
-import 'package:school_pulse/features/teacher/presentation/bloc/teacher_event.dart';
-import 'package:school_pulse/features/teacher/presentation/bloc/teacher_state.dart';
-import 'package:school_pulse/features/teacher/domain/entities/homework.dart';
+import 'package:school_pulse/features/teacher/domain/entities/class_homework.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_state.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_work/class_work_bloc.dart';
 import 'package:intl/intl.dart';
 
 class HomeworkScreen extends StatefulWidget {
@@ -23,14 +21,13 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
   @override
   void initState() {
     super.initState();
-    _refreshHomework();
+    _refresh();
   }
 
-  void _refreshHomework() {
-    final authState = context.read<AuthBloc>().state;
-    if (authState is AuthAuthenticated) {
-      context.read<TeacherBloc>().add(TeacherHomeworkRequested(authState.user.id));
-    }
+  void _refresh() {
+    final active = context.read<ClassTeacherContextBloc>().state.active;
+    if (active == null) return;
+    context.read<ClassWorkBloc>().add(ClassWorkRequested(active));
   }
 
   @override
@@ -49,65 +46,94 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
         elevation: 0,
         iconTheme: IconThemeData(color: AppColors.textPrimary(context)),
       ),
-      body: BlocConsumer<TeacherBloc, TeacherState>(
-        listener: (context, state) {
-          if (state is TeacherOperationSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
+      body: BlocBuilder<ClassTeacherContextBloc, ClassTeacherContextState>(
+        builder: (context, contextState) {
+          if (contextState.active == null) {
+            return const EmptyState(
+              icon: Icons.class_outlined,
+              title: 'No class assigned',
+              message: 'You are not currently the Class Teacher for any class, '
+                  'so there is no class work to set.',
             );
-          } else if (state is TeacherError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: AppColors.danger(context),
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          if (state is TeacherLoading) {
-            return Center(child: CircularProgressIndicator(color: AppColors.primary(context)));
           }
 
-          if (state is TeacherHomeworkLoaded) {
-            if (state.homeworkList.isEmpty) {
-              return EmptyState(
-                icon: Icons.assignment_outlined,
-                title: 'No assignments yet',
-                message: 'Manage and track homework for your classes here.',
-                ctaLabel: 'Add Assignment',
-                onCtaPressed: () => _showHomeworkSheet(context),
+          return BlocConsumer<ClassWorkBloc, ClassWorkState>(
+            listenWhen: (previous, current) =>
+                previous.errorMessage != current.errorMessage ||
+                previous.successMessage != current.successMessage,
+            listener: (context, state) {
+              final message = state.successMessage ?? state.errorMessage;
+              if (message == null) return;
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(SnackBar(
+                  content: Text(message),
+                  backgroundColor: state.successMessage != null
+                      ? AppColors.success(context)
+                      : AppColors.danger(context),
+                ));
+              context.read<ClassWorkBloc>().add(const ClassWorkFeedbackCleared());
+            },
+            builder: (context, state) {
+              if (state.isLoading) {
+                return Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.primary(context),
+                  ),
+                );
+              }
+
+              if (state.homework.isEmpty) {
+                return EmptyState(
+                  icon: Icons.assignment_outlined,
+                  title: 'No assignments yet',
+                  message: 'Manage and track homework for your class here.',
+                  ctaLabel: 'Add Assignment',
+                  onCtaPressed: () => _showHomeworkSheet(context, state),
+                );
+              }
+
+              return RefreshIndicator(
+                onRefresh: () async => _refresh(),
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(AppSpacing.l),
+                  itemCount: state.homework.length,
+                  itemBuilder: (context, index) {
+                    final homework = state.homework[index];
+                    return _HomeworkCard(
+                      homework: homework,
+                      canPublish: state.canPublish,
+                      onEdit: () =>
+                          _showHomeworkSheet(context, state, homework: homework),
+                      onPublish: () => context
+                          .read<ClassWorkBloc>()
+                          .add(ClassHomeworkPublished(homework)),
+                    );
+                  },
+                ),
               );
-            }
-
-            return RefreshIndicator(
-              onRefresh: () async => _refreshHomework(),
-              child: ListView.builder(
-                padding: const EdgeInsets.all(AppSpacing.l),
-                itemCount: state.homeworkList.length,
-                itemBuilder: (context, index) {
-                  final homework = state.homeworkList[index];
-                  return _HomeworkCard(
-                    homework: homework,
-                    onEdit: () => _showHomeworkSheet(context, homework: homework),
-                  );
-                },
-              ),
-            );
-          }
-
-          return const SizedBox.shrink();
+            },
+          );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showHomeworkSheet(context),
-        backgroundColor: AppColors.primary(context),
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
+      floatingActionButton:
+          BlocBuilder<ClassWorkBloc, ClassWorkState>(builder: (context, state) {
+        if (state.context == null) return const SizedBox.shrink();
+        return FloatingActionButton(
+          onPressed: () => _showHomeworkSheet(context, state),
+          backgroundColor: AppColors.primary(context),
+          child: const Icon(Icons.add, color: Colors.white),
+        );
+      }),
     );
   }
 
-  void _showHomeworkSheet(BuildContext context, {Homework? homework}) {
+  void _showHomeworkSheet(
+    BuildContext context,
+    ClassWorkState state, {
+    ClassHomework? homework,
+  }) {
+    final bloc = context.read<ClassWorkBloc>();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -115,14 +141,19 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.xl)),
       ),
-      builder: (context) => _HomeworkSheet(homework: homework),
+      builder: (sheetContext) => BlocProvider.value(
+        value: bloc,
+        child: _HomeworkSheet(homework: homework, canPublish: state.canPublish),
+      ),
     );
   }
 }
 
 class _HomeworkSheet extends StatefulWidget {
-  final Homework? homework;
-  const _HomeworkSheet({this.homework});
+  final ClassHomework? homework;
+  final bool canPublish;
+
+  const _HomeworkSheet({this.homework, required this.canPublish});
 
   @override
   State<_HomeworkSheet> createState() => _HomeworkSheetState();
@@ -141,11 +172,11 @@ class _HomeworkSheetState extends State<_HomeworkSheet> {
     super.initState();
     _titleController = TextEditingController(text: widget.homework?.title);
     _descController = TextEditingController(text: widget.homework?.description);
-    _subjectController = TextEditingController(text: widget.homework?.subject);
-    _dueDate = widget.homework?.dueDate ?? DateTime.now().add(const Duration(days: 1));
-    if (widget.homework?.attachments != null) {
-      _attachments.addAll(widget.homework!.attachments!);
-    }
+    _subjectController =
+        TextEditingController(text: widget.homework?.subjectName);
+    _dueDate =
+        widget.homework?.dueDate ?? DateTime.now().add(const Duration(days: 1));
+    _attachments.addAll(widget.homework?.attachments ?? const []);
   }
 
   @override
@@ -214,12 +245,16 @@ class _HomeworkSheetState extends State<_HomeworkSheet> {
               const SizedBox(height: AppSpacing.m),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text('Due Date', style: TextStyle(color: AppColors.textPrimary(context))),
+                title: Text(
+                  'Due Date',
+                  style: TextStyle(color: AppColors.textPrimary(context)),
+                ),
                 subtitle: Text(
                   DateFormat('MMM dd, yyyy').format(_dueDate),
                   style: TextStyle(color: AppColors.textSecondary(context)),
                 ),
-                trailing: Icon(Icons.calendar_today, color: AppColors.primary(context)),
+                trailing:
+                    Icon(Icons.calendar_today, color: AppColors.primary(context)),
                 onTap: () async {
                   final picked = await showDatePicker(
                     context: context,
@@ -249,23 +284,38 @@ class _HomeworkSheetState extends State<_HomeworkSheet> {
                       style: TextStyle(color: AppColors.textPrimary(context)),
                     ),
                     trailing: IconButton(
-                      icon: Icon(Icons.close, size: 20, color: AppColors.danger(context)),
+                      icon: Icon(Icons.close,
+                          size: 20, color: AppColors.danger(context)),
                       onPressed: () => setState(() => _attachments.remove(a)),
                     ),
                   )),
+              // File upload lands with the Resources phase, which owns storage
+              // and its validation; linking one here instead of inventing a
+              // filename keeps this honest in the meantime.
               TextButton.icon(
-                onPressed: () {
-                  // Mock adding an attachment
-                  setState(() => _attachments.add('attachment_${_attachments.length + 1}.pdf'));
-                },
+                onPressed: _addLink,
                 icon: Icon(Icons.attach_file, color: AppColors.primary(context)),
-                label: Text('Add Attachment', style: TextStyle(color: AppColors.primary(context))),
+                label: Text(
+                  'Add Link',
+                  style: TextStyle(color: AppColors.primary(context)),
+                ),
               ),
               const SizedBox(height: AppSpacing.xl),
-              PrimaryButton(
-                label: isEditing ? 'Save Changes' : 'Create Assignment',
-                onPressed: _submit,
-              ),
+              if (widget.canPublish) ...[
+                PrimaryButton(
+                  label: isEditing ? 'Save & Publish' : 'Create & Publish',
+                  onPressed: () => _submit(publish: true),
+                ),
+                const SizedBox(height: AppSpacing.m),
+                SecondaryButton(
+                  label: 'Save as Draft',
+                  onPressed: () => _submit(publish: false),
+                ),
+              ] else
+                PrimaryButton(
+                  label: isEditing ? 'Save Changes' : 'Save as Draft',
+                  onPressed: () => _submit(publish: false),
+                ),
               const SizedBox(height: AppSpacing.xl),
             ],
           ),
@@ -274,58 +324,100 @@ class _HomeworkSheetState extends State<_HomeworkSheet> {
     );
   }
 
-  void _submit() {
-    if (_formKey.currentState?.validate() ?? false) {
-      final authState = context.read<AuthBloc>().state;
-      if (authState is AuthAuthenticated) {
-        if (widget.homework != null) {
-          context.read<TeacherBloc>().add(TeacherHomeworkUpdated(
-                widget.homework!.copyWith(
-                  title: _titleController.text,
-                  description: _descController.text,
-                  subject: _subjectController.text,
-                  dueDate: _dueDate,
-                  attachments: _attachments,
-                ),
-              ));
-        } else {
-          context.read<TeacherBloc>().add(TeacherHomeworkCreated(
-                Homework(
-                  id: '',
-                  title: _titleController.text,
-                  description: _descController.text,
-                  className: authState.user.assignedClass ?? 'General',
-                  subject: _subjectController.text,
-                  dueDate: _dueDate,
-                  createdAt: DateTime.now(),
-                  teacherId: authState.user.id,
-                  attachments: _attachments,
-                ),
-              ));
-        }
-        Navigator.pop(context);
-      }
-    }
+  Future<void> _addLink() async {
+    final controller = TextEditingController();
+    final link = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.surfaceElevated(dialogContext),
+        title: const Text('Add a link'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.url,
+          decoration: const InputDecoration(hintText: 'https://...'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final text = controller.text.trim();
+              if (text.isEmpty) return;
+              Navigator.of(dialogContext).pop(text);
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+
+    if (link != null) setState(() => _attachments.add(link));
+  }
+
+  void _submit({required bool publish}) {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    final existing = widget.homework;
+    final homework = existing == null
+        // A blank id is what tells the repository this is new; it stamps the
+        // school, class and year from the verified context rather than
+        // trusting anything this form holds.
+        ? ClassHomework(
+            id: '',
+            schoolId: '',
+            classId: '',
+            academicYearId: '',
+            title: _titleController.text,
+            description: _descController.text,
+            subjectName: _subjectController.text,
+            dueDate: _dueDate,
+            attachments: _attachments,
+            createdAt: DateTime.now(),
+          )
+        : existing.copyWith(
+            title: _titleController.text,
+            description: _descController.text,
+            subjectName: _subjectController.text,
+            dueDate: _dueDate,
+            attachments: _attachments,
+          );
+
+    context
+        .read<ClassWorkBloc>()
+        .add(ClassHomeworkSaved(homework, publish: publish));
+    Navigator.of(context).pop();
   }
 }
 
 class _HomeworkCard extends StatelessWidget {
-  final Homework homework;
+  final ClassHomework homework;
+  final bool canPublish;
   final VoidCallback onEdit;
+  final VoidCallback onPublish;
 
-  const _HomeworkCard({required this.homework, required this.onEdit});
+  const _HomeworkCard({
+    required this.homework,
+    required this.canPublish,
+    required this.onEdit,
+    required this.onPublish,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final status = homework.effectiveStatus();
+    final color = _colorFor(context, status);
+
     return AppCard(
       margin: const EdgeInsets.only(bottom: AppSpacing.m),
+      padding: const EdgeInsets.all(AppSpacing.l),
       onTap: onEdit,
-      color: AppColors.surfaceElevated(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
                 child: Text(
@@ -336,58 +428,53 @@ class _HomeworkCard extends StatelessWidget {
                   ),
                 ),
               ),
-              StatusBadge(
-                label: homework.className,
-                color: AppColors.primary(context),
-              ),
+              StatusBadge(label: status.label, color: color),
             ],
           ),
-          const SizedBox(height: AppSpacing.s),
-          Text(
-            homework.description,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.textSecondary(context),
+          if (homework.subjectName?.isNotEmpty ?? false) ...[
+            const SizedBox(height: 2),
+            Text(
+              homework.subjectName!,
+              style: AppTypography.labelSmall.copyWith(
+                color: AppColors.textMuted(context),
+              ),
             ),
-          ),
-          if (homework.attachments != null && homework.attachments!.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.m),
-            Row(
-              children: [
-                Icon(Icons.attach_file, size: 14, color: AppColors.primary(context)),
-                const SizedBox(width: 4),
-                Text(
-                  '${homework.attachments!.length} attachment(s)',
-                  style: TextStyle(fontSize: 12, color: AppColors.primary(context)),
-                ),
-              ],
+          ],
+          if (homework.description.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.s),
+            Text(
+              homework.description,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.textSecondary(context),
+              ),
             ),
           ],
           const SizedBox(height: AppSpacing.m),
           Row(
             children: [
-              Icon(Icons.calendar_today, size: 14, color: AppColors.textMuted(context)),
+              Icon(Icons.event_outlined,
+                  size: 16, color: AppColors.textMuted(context)),
               const SizedBox(width: 4),
               Text(
-                'Due: ${DateFormat('MMM dd, yyyy').format(homework.dueDate)}',
-                style: TextStyle(fontSize: 12, color: AppColors.textMuted(context)),
-              ),
-              const Spacer(),
-              Text(
-                homework.subject,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.primary(context),
+                'Due ${DateFormat('MMM dd, yyyy').format(homework.dueDate)}',
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.textSecondary(context),
                 ),
               ),
-              const SizedBox(width: AppSpacing.s),
-              IconButton(
-                icon: Icon(Icons.delete_outline, size: 20, color: AppColors.danger(context)),
-                onPressed: () => _confirmDelete(context),
-                visualDensity: VisualDensity.compact,
-              ),
+              const Spacer(),
+              // Offered only on drafts, and only to a teacher who holds the
+              // publish permission - drafting and reaching parents are
+              // deliberately different rights.
+              if (homework.isDraft && canPublish)
+                TextButton(
+                  onPressed: onPublish,
+                  child: Text(
+                    'Publish',
+                    style: TextStyle(color: AppColors.primary(context)),
+                  ),
+                ),
             ],
           ),
         ],
@@ -395,18 +482,15 @@ class _HomeworkCard extends StatelessWidget {
     );
   }
 
-  void _confirmDelete(BuildContext context) async {
-    final confirmed = await confirmActionDialog(
-      context,
-      title: 'Delete Assignment',
-      message: 'Are you sure you want to delete this assignment? This action cannot be undone.',
-      confirmLabel: 'Delete',
-      isDestructive: true,
-    );
-
-    if (confirmed == true && context.mounted) {
-      context.read<TeacherBloc>().add(TeacherHomeworkDeleted(homework.id));
-    }
-  }
+  static Color _colorFor(BuildContext context, ClassHomeworkStatus status) =>
+      switch (status) {
+        ClassHomeworkStatus.overdue => AppColors.danger(context),
+        ClassHomeworkStatus.dueSoon => AppColors.warning(context),
+        ClassHomeworkStatus.active ||
+        ClassHomeworkStatus.published =>
+          AppColors.success(context),
+        ClassHomeworkStatus.completed => AppColors.information(context),
+        ClassHomeworkStatus.cancelled => AppColors.danger(context),
+        _ => AppColors.textMuted(context),
+      };
 }
-
