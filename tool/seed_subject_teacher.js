@@ -422,17 +422,31 @@ async function main() {
     for (let offset = -7; offset <= 7; offset += 1) {
       const day = new Date(today);
       day.setUTCDate(day.getUTCDate() + offset);
-      // Weekdays only.
-      if (day.getUTCDay() === 0 || day.getUTCDay() === 6) continue;
+
+      // Weekdays only - except today, which always gets a period. Otherwise
+      // seeding on a Saturday leaves the dashboard with nothing to show and
+      // the start-lesson flow undemonstrable until Monday.
+      const isToday = offset === 0;
+      if (!isToday && (day.getUTCDay() === 0 || day.getUTCDay() === 6)) continue;
 
       // Each assignment gets one period per weekday, chosen deterministically
       // so the timetable is stable across runs.
       const period = periods[Math.abs(hash(`${a.id}${day.getUTCDay()}`)) % periods.length];
       // Roughly two periods a week per assignment rather than one a day.
-      if (Math.abs(hash(`${a.id}-${offset}`)) % 5 > 1) continue;
+      if (!isToday && Math.abs(hash(`${a.id}-${offset}`)) % 5 > 1) continue;
 
       const start = new Date(day);
-      start.setUTCHours(period.hour, period.minute, 0, 0);
+      if (isToday) {
+        // Straddle the current time so there is both something startable and
+        // something upcoming to look at.
+        const anchor = new Date(now);
+        anchor.setUTCMinutes(0, 0, 0);
+        const shift = Math.abs(hash(a.id)) % 3 === 0 ? -1 : 1;
+        anchor.setUTCHours(anchor.getUTCHours() + shift);
+        start.setUTCHours(anchor.getUTCHours(), 0, 0, 0);
+      } else {
+        start.setUTCHours(period.hour, period.minute, 0, 0);
+      }
       const end = new Date(start);
       end.setUTCMinutes(end.getUTCMinutes() + 45);
 
