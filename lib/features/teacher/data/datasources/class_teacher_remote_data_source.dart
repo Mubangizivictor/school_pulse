@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../domain/entities/class_attendance.dart';
 import '../../domain/entities/class_dashboard_summary.dart';
 import '../../domain/entities/class_student_summary.dart';
 import '../../domain/entities/lesson.dart';
@@ -50,6 +51,32 @@ abstract class ClassTeacherRemoteDataSource {
     required DateTime date,
     String? streamId,
   });
+
+  /// One class register, or null when it has not been started.
+  Future<ClassAttendanceSession?> getAttendanceSession({
+    required String schoolId,
+    required String sessionId,
+  });
+
+  /// Writes the register. Keyed on the deterministic session id, so a second
+  /// submission for the same class and day overwrites rather than creating a
+  /// duplicate the school would have to reconcile.
+  Future<void> saveAttendanceSession(ClassAttendanceSession session);
+
+  /// Submitted registers between two dates, newest first - the history and
+  /// term-summary views.
+  Future<List<ClassAttendanceSession>> getAttendanceSessions({
+    required String schoolId,
+    required String classId,
+    required String academicYearId,
+    required DateTime from,
+    required DateTime to,
+    String? streamId,
+  });
+
+  /// Raises a correction request for a register the teacher may no longer
+  /// edit directly. Only the academic office decides one.
+  Future<void> createCorrectionRequest(AttendanceCorrectionRequest request);
 
   /// How each student was marked in today's register, keyed by student id.
   /// Empty when no register exists - which the roster shows as "not marked"
@@ -246,6 +273,154 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
       lateCount: (counts['late'] as num?)?.toInt() ?? 0,
       excusedCount: (counts['excused'] as num?)?.toInt() ?? 0,
       submittedAt: _toDate(data['submittedAt']),
+    );
+  }
+
+  @override
+  Future<ClassAttendanceSession?> getAttendanceSession({
+    required String schoolId,
+    required String sessionId,
+  }) async {
+    final doc = await _attendanceSessions(schoolId).doc(sessionId).get();
+    final data = doc.data();
+    if (!doc.exists || data == null) return null;
+    return _sessionFromDoc(doc.id, schoolId, data);
+  }
+
+  @override
+  Future<void> saveAttendanceSession(ClassAttendanceSession session) async {
+    await _attendanceSessions(session.schoolId).doc(session.id).set({
+      'schoolId': session.schoolId,
+      'campusId': session.campusId,
+      'classId': session.classId,
+      'className': session.className,
+      'streamId': session.streamId,
+      'academicYearId': session.academicYearId,
+      'termId': session.termId,
+      'sessionType': session.sessionType,
+      'date': Timestamp.fromDate(session.date),
+      'status': session.status.name,
+      'entries': session.entries
+          .map((e) => {
+                'studentId': e.studentId,
+                'status': e.statusCode,
+                'note': e.note,
+                'markedAt':
+                    e.markedAt == null ? null : Timestamp.fromDate(e.markedAt!),
+              })
+          .toList(),
+      // Denormalised so the dashboard reads one document instead of counting
+      // an entries array on every refresh.
+      'counts': _countsFor(session),
+      'submittedAt': session.submittedAt == null
+          ? null
+          : Timestamp.fromDate(session.submittedAt!),
+      'submittedBy': session.submittedBy,
+      'roleAssignmentId': session.roleAssignmentId,
+      'deviceId': session.deviceId,
+      'lastCorrectedAt': session.lastCorrectedAt == null
+          ? null
+          : Timestamp.fromDate(session.lastCorrectedAt!),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  @override
+  Future<List<ClassAttendanceSession>> getAttendanceSessions({
+    required String schoolId,
+    required String classId,
+    required String academicYearId,
+    required DateTime from,
+    required DateTime to,
+    String? streamId,
+  }) async {
+    Query<Map<String, dynamic>> query = _attendanceSessions(schoolId)
+        .where('classId', isEqualTo: classId)
+        .where('academicYearId', isEqualTo: academicYearId)
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(from))
+        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(to));
+
+    if (streamId != null && streamId.isNotEmpty) {
+      query = query.where('streamId', isEqualTo: streamId);
+    }
+
+    final snapshot = await query.orderBy('date', descending: true).get();
+    return snapshot.docs
+        .map((d) => _sessionFromDoc(d.id, schoolId, d.data()))
+        .toList();
+  }
+
+  @override
+  Future<void> createCorrectionRequest(
+    AttendanceCorrectionRequest request,
+  ) async {
+    await _school(request.schoolId)
+        .collection('class_attendance_corrections')
+        .doc(request.id)
+        .set({
+      'schoolId': request.schoolId,
+      'sessionId': request.sessionId,
+      'classId': request.classId,
+      'academicYearId': request.academicYearId,
+      'studentId': request.studentId,
+      'previousStatusCode': request.previousStatusCode,
+      'requestedStatusCode': request.requestedStatusCode,
+      'reason': request.reason,
+      'requestedByUserId': request.requestedByUserId,
+      'requestedByStaffId': request.requestedByStaffId,
+      'roleAssignmentId': request.roleAssignmentId,
+      'requestedAt': Timestamp.fromDate(request.requestedAt),
+      // The rules pin this to 'pending' on create: a teacher cannot raise a
+      // request that is already approved.
+      'status': 'pending',
+    });
+  }
+
+  static Map<String, int> _countsFor(ClassAttendanceSession session) {
+    final counts = <String, int>{};
+    for (final entry in session.entries) {
+      if (!entry.isMarked) continue;
+      counts[entry.statusCode] = (counts[entry.statusCode] ?? 0) + 1;
+    }
+    // The dashboard reads these four names, so they are always present even
+    // at zero rather than missing and read as null.
+    for (final key in ['present', 'absent', 'late', 'excused']) {
+      counts.putIfAbsent(key, () => 0);
+    }
+    return counts;
+  }
+
+  ClassAttendanceSession _sessionFromDoc(
+    String id,
+    String schoolId,
+    Map<String, dynamic> data,
+  ) {
+    final rawEntries = (data['entries'] as List?) ?? const [];
+    return ClassAttendanceSession(
+      id: id,
+      schoolId: schoolId,
+      campusId: data['campusId'] as String? ?? '',
+      classId: data['classId'] as String? ?? '',
+      className: data['className'] as String? ?? '',
+      streamId: data['streamId'] as String?,
+      academicYearId: data['academicYearId'] as String? ?? '',
+      termId: data['termId'] as String? ?? '',
+      sessionType: data['sessionType'] as String? ?? 'daily',
+      date: _toDate(data['date']) ?? DateTime(1970),
+      status: ClassAttendanceSessionStatus.fromId(data['status'] as String?),
+      entries: rawEntries.whereType<Map<String, dynamic>>().map((e) {
+        return ClassAttendanceEntry(
+          studentId: e['studentId'] as String? ?? '',
+          statusCode: e['status'] as String? ?? '',
+          note: e['note'] as String?,
+          markedAt: _toDate(e['markedAt']),
+        );
+      }).toList(),
+      submittedAt: _toDate(data['submittedAt']),
+      submittedBy: data['submittedBy'] as String?,
+      roleAssignmentId: data['roleAssignmentId'] as String? ?? '',
+      deviceId: data['deviceId'] as String? ?? '',
+      lastCorrectedAt: _toDate(data['lastCorrectedAt']),
     );
   }
 

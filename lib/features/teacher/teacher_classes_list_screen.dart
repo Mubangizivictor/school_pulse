@@ -3,33 +3,33 @@ import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
+import 'package:school_pulse/design_system/components/pulse_card.dart';
+import 'package:school_pulse/design_system/components/pulse_text_field.dart';
 
 class TeacherClassesListScreen extends StatelessWidget {
   const TeacherClassesListScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
-      backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
+      backgroundColor: AppColors.background(context),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.menu, color: AppColors.textPrimary(context)),
+          onPressed: () {},
+        ),
         title: Text(
-          'My Classes',
+          'Classes',
           style: AppTypography.headlineSmall.copyWith(
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            color: AppColors.textPrimary(context),
             fontWeight: FontWeight.bold,
           ),
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.search, color: isDark ? Colors.white : Colors.black),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: Icon(Icons.filter_list, color: isDark ? Colors.white : Colors.black),
+            icon: Icon(Icons.add_box_outlined, color: AppColors.primary(context)),
             onPressed: () {},
           ),
         ],
@@ -37,32 +37,93 @@ class TeacherClassesListScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.xl),
         children: [
+          _buildMyClassesHeader(context),
+          const SizedBox(height: AppSpacing.xl),
+          Row(
+            children: [
+              Expanded(
+                child: PulseTextField(
+                  hint: 'Search classes...',
+                  prefixIcon: Icons.search,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.m),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.m),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceElevated(context),
+                  borderRadius: BorderRadius.circular(AppSpacing.m),
+                  border: Border.all(color: AppColors.border(context)),
+                ),
+                child: Icon(Icons.filter_list, color: AppColors.textPrimary(context)),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xl),
           _buildClassCard(
             context,
-            className: 'Class 4 East',
-            subject: 'Mathematics',
-            studentCount: 42,
-            performance: 78,
-            attendance: 95,
-            isDark: isDark,
+            classId: 'p5_east',
+            className: 'P5 East',
+            studentCount: 32,
           ),
           _buildClassCard(
             context,
-            className: 'Class 5 West',
-            subject: 'Science',
-            studentCount: 38,
-            performance: 82,
-            attendance: 92,
-            isDark: isDark,
+            classId: 'p4_west',
+            className: 'P4 West',
+            studentCount: 28,
           ),
           _buildClassCard(
             context,
-            className: 'Class 6 North',
-            subject: 'English',
-            studentCount: 45,
-            performance: 75,
-            attendance: 88,
-            isDark: isDark,
+            classId: 'p4_blue',
+            className: 'P4 Blue',
+            studentCount: 30,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMyClassesHeader(BuildContext context) {
+    return PulseCard(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      backgroundColor: AppColors.surfaceElevated(context),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'My Classes',
+                  style: AppTypography.titleLarge.copyWith(
+                    color: AppColors.textPrimary(context),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '3',
+                  style: AppTypography.headlineMedium.copyWith(
+                    color: AppColors.primary(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                Text(
+                  'Classes Assigned',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.textMuted(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.l),
+            decoration: BoxDecoration(
+              color: AppColors.primary(context).withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.school, color: AppColors.primary(context), size: 32),
           ),
         ],
       ),
@@ -71,138 +132,63 @@ class TeacherClassesListScreen extends StatelessWidget {
 
   Widget _buildClassCard(
     BuildContext context, {
+    required String classId,
     required String className,
-    required String subject,
     required int studentCount,
-    required int performance,
-    required int attendance,
-    required bool isDark,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.xl),
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-        borderRadius: BorderRadius.circular(AppSpacing.xl),
-        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
+      margin: const EdgeInsets.only(bottom: AppSpacing.m),
+      child: PulseCard(
+        onTap: () => context.push('/staff/classes/$classId'),
+        padding: const EdgeInsets.all(AppSpacing.l),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.m),
+              decoration: BoxDecoration(
+                color: AppColors.primary(context).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppSpacing.m),
+              ),
+              child: Icon(Icons.groups, color: AppColors.primary(context), size: 24),
+            ),
+            const SizedBox(width: AppSpacing.l),
+            Expanded(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     className,
-                    style: AppTypography.titleLarge.copyWith(
-                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    style: AppTypography.titleMedium.copyWith(
+                      color: AppColors.textPrimary(context),
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
-                    subject,
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    '$studentCount Students',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: AppColors.textMuted(context),
                     ),
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: AppSpacing.s),
-                decoration: BoxDecoration(
-                  color: AppColors.royalBlue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppSpacing.m),
-                ),
-                child: Text(
-                  '$studentCount Students',
-                  style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.royalBlue,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatItem(
-                  label: 'Avg Performance',
-                  value: '$performance%',
-                  icon: Icons.trending_up,
-                  color: AppColors.successGreen,
-                  isDark: isDark,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.xl),
-              Expanded(
-                child: _buildStatItem(
-                  label: 'Avg Attendance',
-                  value: '$attendance%',
-                  icon: Icons.calendar_today,
-                  color: AppColors.royalBlue,
-                  isDark: isDark,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isDark ? AppColors.elevatedSurfaceDark : AppColors.bgLight,
-                foregroundColor: AppColors.royalBlue,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppSpacing.m),
-                  side: BorderSide(color: AppColors.royalBlue.withValues(alpha: 0.5)),
-                ),
-              ),
-              child: const Text('View Details'),
             ),
-          ),
-        ],
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.success(context).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                'Active',
+                style: AppTypography.labelSmall.copyWith(color: AppColors.success(context), fontSize: 10, fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.s),
+            Icon(Icons.chevron_right, color: AppColors.textMuted(context)),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildStatItem({
-    required String label,
-    required String value,
-    required IconData icon,
-    required Color color,
-    required bool isDark,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: AppTypography.bodySmall.copyWith(
-                color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: AppTypography.titleMedium.copyWith(
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
 }

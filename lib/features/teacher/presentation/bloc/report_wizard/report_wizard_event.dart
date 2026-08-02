@@ -50,4 +50,6 @@ class ReportWizardStudentsSelected extends ReportWizardEvent {
   List<Object?> get props => [studentIds];
 }
 
+class ReportWizardSubmitRequested extends ReportWizardEvent {}
+
 class ReportWizardReset extends ReportWizardEvent {}

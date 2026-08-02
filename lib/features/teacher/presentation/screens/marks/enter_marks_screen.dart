@@ -1,27 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 
 class EnterMarksScreen extends StatelessWidget {
   const EnterMarksScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = const Color(0xFF0F172A);
-    final surfaceColor = const Color(0xFF1E293B);
-
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: AppColors.background(context),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.chevron_left, color: Colors.white),
+          icon: Icon(Icons.chevron_left, color: AppColors.textPrimary(context)),
           onPressed: () => context.pop(),
         ),
         title: Column(
           children: [
-            const Text('Enter Marks', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-            const Text('Mid Term Test • Section A', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+            Text('Enter Marks',
+                style: TextStyle(
+                    color: AppColors.textPrimary(context),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold)),
+            Text('Mid Term Test • Section A',
+                style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12)),
           ],
         ),
         centerTitle: true,
@@ -33,15 +36,20 @@ class EnterMarksScreen extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('8 / 28 Entered', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                Text('8 / 28 Entered',
+                    style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12)),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(20)),
-                  child: const Row(
+                  decoration: BoxDecoration(
+                      color: AppColors.surfaceElevated(context),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5))),
+                  child: Row(
                     children: [
-                      Icon(Icons.search, color: Colors.grey, size: 14),
-                      SizedBox(width: 4),
-                      Text('Search students...', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      Icon(Icons.search, color: AppColors.textMuted(context), size: 14),
+                      const SizedBox(width: 4),
+                      Text('Search students...',
+                          style: TextStyle(color: AppColors.textMuted(context), fontSize: 12)),
                     ],
                   ),
                 ),
@@ -52,12 +60,14 @@ class EnterMarksScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             child: Row(
               children: [
-                const Text('#', style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+                Text('#', style: TextStyle(color: AppColors.textMuted(context), fontSize: 12)),
                 const SizedBox(width: 12),
-                const Expanded(child: Text('Student Name', style: TextStyle(color: Color(0xFF64748B), fontSize: 12))),
-                const Text('/ 20', style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+                Expanded(
+                    child: Text('Student Name',
+                        style: TextStyle(color: AppColors.textMuted(context), fontSize: 12))),
+                Text('/ 20', style: TextStyle(color: AppColors.textMuted(context), fontSize: 12)),
                 const SizedBox(width: 24),
-                const Text('Mark', style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+                Text('Mark', style: TextStyle(color: AppColors.textMuted(context), fontSize: 12)),
               ],
             ),
           ),
@@ -66,41 +76,56 @@ class EnterMarksScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               itemCount: 8,
               itemBuilder: (context, index) {
-                final studentNames = ['Akena Brian', 'Nanyonga Faith', 'Odhiambo James', 'Tusiime Kevin', 'Nabirye Amanda', 'Kamya Sharon', 'Mugisha Ethan', 'Ssekidde Daniel'];
+                final studentNames = [
+                  'Akena Brian',
+                  'Nanyonga Faith',
+                  'Odhiambo James',
+                  'Tusiime Kevin',
+                  'Nabirye Amanda',
+                  'Kamya Sharon',
+                  'Mugisha Ethan',
+                  'Ssekidde Daniel'
+                ];
                 final marks = ['16', '14', '9', '18', '', '', '', ''];
-                return _buildStudentMarkRow(index + 1, studentNames[index], marks[index], surfaceColor);
+                return _buildStudentMarkRow(context, index + 1, studentNames[index], marks[index]);
               },
             ),
           ),
-          _buildBottomActions(context, surfaceColor),
+          _buildBottomActions(context),
         ],
       ),
     );
   }
 
-  Widget _buildStudentMarkRow(int rank, String name, String mark, Color surfaceColor) {
+  Widget _buildStudentMarkRow(BuildContext context, int rank, String name, String mark) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.white10)),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppColors.border(context).withValues(alpha: 0.3))),
       ),
       child: Row(
         children: [
-          Text(rank.toString(), style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+          Text(rank.toString(),
+              style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12)),
           const SizedBox(width: 12),
-          const CircleAvatar(radius: 14, backgroundColor: Colors.grey),
+          CircleAvatar(radius: 14, backgroundColor: AppColors.disabled(context)),
           const SizedBox(width: 12),
-          Expanded(child: Text(name, style: const TextStyle(color: Colors.white, fontSize: 14))),
+          Expanded(
+              child: Text(name,
+                  style: TextStyle(color: AppColors.textPrimary(context), fontSize: 14))),
           Container(
             width: 60,
             height: 36,
             decoration: BoxDecoration(
-              color: mark.isEmpty ? Colors.transparent : Colors.white10,
-              border: Border.all(color: mark.isEmpty ? Colors.white24 : Colors.transparent),
+              color: mark.isEmpty ? Colors.transparent : AppColors.primary(context).withValues(alpha: 0.1),
+              border: Border.all(
+                  color: mark.isEmpty ? AppColors.border(context) : AppColors.primary(context)),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Center(
-              child: Text(mark, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              child: Text(mark,
+                  style: TextStyle(
+                      color: AppColors.textPrimary(context), fontWeight: FontWeight.bold)),
             ),
           ),
         ],
@@ -108,12 +133,12 @@ class EnterMarksScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBottomActions(BuildContext context, Color surfaceColor) {
+  Widget _buildBottomActions(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: surfaceColor,
-        border: const Border(top: BorderSide(color: Colors.white10)),
+        color: AppColors.surfaceElevated(context),
+        border: Border(top: BorderSide(color: AppColors.border(context))),
       ),
       child: Row(
         children: [
@@ -121,11 +146,11 @@ class EnterMarksScreen extends StatelessWidget {
             child: OutlinedButton(
               onPressed: () {},
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.white24),
+                side: BorderSide(color: AppColors.border(context)),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text('Save Draft', style: TextStyle(color: Colors.white)),
+              child: Text('Save Draft', style: TextStyle(color: AppColors.textPrimary(context))),
             ),
           ),
           const SizedBox(width: 16),
@@ -133,11 +158,13 @@ class EnterMarksScreen extends StatelessWidget {
             child: ElevatedButton(
               onPressed: () => context.push('/staff/marks/review'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4338CA),
+                backgroundColor: AppColors.primary(context),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
               ),
-              child: const Text('Review & Submit', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              child: const Text('Review & Submit',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ),
         ],
@@ -145,3 +172,4 @@ class EnterMarksScreen extends StatelessWidget {
     );
   }
 }
+

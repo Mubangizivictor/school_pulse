@@ -1,30 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
-import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 
 class ReportsDashboardScreen extends StatelessWidget {
   const ReportsDashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final semantic = Theme.of(context).extension<SemanticColors>()!;
-    
     return Scaffold(
+      backgroundColor: AppColors.background(context),
       appBar: AppBar(
-        title: const Column(
+        backgroundColor: AppColors.surfaceElevated(context),
+        foregroundColor: AppColors.textPrimary(context),
+        elevation: 0,
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('REPORTS DASHBOARD', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-            Text('Manage Class Reports', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text('REPORTS DASHBOARD',
+                style: TextStyle(
+                    color: AppColors.textMuted(context),
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2)),
+            Text('Manage Class Reports',
+                style: TextStyle(color: AppColors.textPrimary(context), fontSize: 18, fontWeight: FontWeight.bold)),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings_outlined),
+            icon: Icon(Icons.settings_outlined, color: AppColors.textPrimary(context)),
             onPressed: () {},
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(
+            color: AppColors.border(context).withValues(alpha: 0.5),
+            height: 1,
+          ),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -32,23 +47,24 @@ class ReportsDashboardScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             AppCard(
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
+              color: AppColors.primary(context).withValues(alpha: 0.05),
               child: Column(
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'Active Term',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        style: TextStyle(color: AppColors.textPrimary(context), fontWeight: FontWeight.bold),
                       ),
-                      StatusBadge(label: 'In Progress', color: semantic.info),
+                      StatusBadge(label: 'In Progress', color: AppColors.information(context)),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  const Text(
+                  Text(
                     'Term 2, 2024/2025',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                    style: TextStyle(
+                        color: AppColors.textPrimary(context), fontSize: 20, fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -58,7 +74,7 @@ class ReportsDashboardScreen extends StatelessWidget {
                           label: 'Students',
                           value: '32',
                           icon: Icons.people_outline,
-                          color: Colors.blue,
+                          color: AppColors.primary(context),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -67,7 +83,7 @@ class ReportsDashboardScreen extends StatelessWidget {
                           label: 'Completed',
                           value: '0',
                           icon: Icons.check_circle_outline,
-                          color: semantic.success,
+                          color: AppColors.success(context),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -76,7 +92,7 @@ class ReportsDashboardScreen extends StatelessWidget {
                           label: 'Pending',
                           value: '32',
                           icon: Icons.pending_actions,
-                          color: semantic.warning,
+                          color: AppColors.warning(context),
                         ),
                       ),
                     ],
@@ -84,33 +100,36 @@ class ReportsDashboardScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   PrimaryButton(
                     label: 'Start Report Entry',
-                    onPressed: () => context.push('/teacher/reports/select-class'),
+                    onPressed: () => context.push('/staff/reports/select-class'),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
-            const SectionHeader(title: 'Previous Terms'),
+            SectionHeader(title: 'Previous Terms', color: AppColors.textPrimary(context)),
             const SizedBox(height: 12),
             _TermHistoryCard(
               term: 'Term 1, 2024/2025',
               status: 'Completed',
-              statusColor: semantic.success,
+              statusColor: AppColors.success(context),
               date: 'Sep - Dec 2024',
+              onTap: () => context.push('/staff/reports/select-class'),
             ),
             const SizedBox(height: 12),
             _TermHistoryCard(
               term: 'Term 3, 2023/2024',
               status: 'Completed',
-              statusColor: semantic.success,
+              statusColor: AppColors.success(context),
               date: 'May - Aug 2024',
+              onTap: () => context.push('/staff/reports/select-class'),
             ),
             const SizedBox(height: 12),
             _TermHistoryCard(
               term: 'Term 2, 2023/2024',
               status: 'Completed',
-              statusColor: semantic.success,
+              statusColor: AppColors.success(context),
               date: 'Jan - Apr 2024',
+              onTap: () => context.push('/staff/reports/select-class'),
             ),
           ],
         ),
@@ -137,17 +156,19 @@ class _StatMiniCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: AppColors.surfaceElevated(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).dividerColor),
+        border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, size: 16, color: color),
           const SizedBox(height: 8),
-          Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          Text(label, style: TextStyle(fontSize: 10, color: Theme.of(context).hintColor)),
+          Text(value,
+              style: TextStyle(
+                  color: AppColors.textPrimary(context), fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(label, style: TextStyle(fontSize: 10, color: AppColors.textSecondary(context))),
         ],
       ),
     );
@@ -159,18 +180,20 @@ class _TermHistoryCard extends StatelessWidget {
   final String status;
   final Color statusColor;
   final String date;
+  final VoidCallback onTap;
 
   const _TermHistoryCard({
     required this.term,
     required this.status,
     required this.statusColor,
     required this.date,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return AppCard(
-      onTap: () {},
+      onTap: onTap,
       child: Row(
         children: [
           Container(
@@ -186,8 +209,9 @@ class _TermHistoryCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(term, style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text(date, style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor)),
+                Text(term,
+                    style: TextStyle(color: AppColors.textPrimary(context), fontWeight: FontWeight.bold)),
+                Text(date, style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
               ],
             ),
           ),
@@ -197,3 +221,4 @@ class _TermHistoryCard extends StatelessWidget {
     );
   }
 }
+

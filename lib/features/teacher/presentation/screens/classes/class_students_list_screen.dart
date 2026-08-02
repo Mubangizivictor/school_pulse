@@ -48,8 +48,8 @@ class ClassStudentsListScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(AppSpacing.xl),
             child: PulseTextField(
-              hintText: 'Search students...',
-              prefixIcon: const Icon(Icons.search),
+              hint: 'Search students...',
+              prefixIcon: Icons.search,
             ),
           ),
           _buildFilters(isDark),

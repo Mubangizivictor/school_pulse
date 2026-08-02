@@ -31,26 +31,24 @@ class _TeacherStudentProfileScreenState extends State<TeacherStudentProfileScree
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
-      backgroundColor: isDark ? AppColors.bgDark : AppColors.backgroundLight,
+      backgroundColor: AppColors.background(context),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black),
+          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
           onPressed: () => context.pop(),
         ),
         title: Text(
           'Student Profile',
           style: AppTypography.headlineSmall.copyWith(
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            color: AppColors.textPrimary(context),
           ),
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.more_horiz, color: isDark ? Colors.white : Colors.black),
+            icon: Icon(Icons.more_horiz, color: AppColors.textPrimary(context)),
             onPressed: () {},
           ),
         ],
@@ -70,14 +68,14 @@ class _TeacherStudentProfileScreenState extends State<TeacherStudentProfileScree
                   Text(
                     student.name,
                     style: AppTypography.headlineMedium.copyWith(
-                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      color: AppColors.textPrimary(context),
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
                     'Admission No: ${student.admissionNumber}',
                     style: AppTypography.bodyMedium.copyWith(
-                      color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                      color: AppColors.textMuted(context),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.m),
@@ -87,16 +85,16 @@ class _TeacherStudentProfileScreenState extends State<TeacherStudentProfileScree
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.successGreen.withValues(alpha: 0.1),
+                          color: AppColors.success(context).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(AppSpacing.s),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.circle, size: 8, color: AppColors.successGreen),
+                            Icon(Icons.circle, size: 8, color: AppColors.success(context)),
                             const SizedBox(width: 4),
                             Text(
                               'Present',
-                              style: AppTypography.labelMedium.copyWith(color: AppColors.successGreen),
+                              style: AppTypography.labelMedium.copyWith(color: AppColors.success(context)),
                             ),
                           ],
                         ),
@@ -105,7 +103,7 @@ class _TeacherStudentProfileScreenState extends State<TeacherStudentProfileScree
                       Text(
                         'Age: 10 yrs',
                         style: AppTypography.labelMedium.copyWith(
-                          color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                          color: AppColors.textMuted(context),
                         ),
                       ),
                     ],
@@ -114,9 +112,9 @@ class _TeacherStudentProfileScreenState extends State<TeacherStudentProfileScree
               ),
             ),
             const SizedBox(height: AppSpacing.x3l),
-            _buildProfileTabs(isDark),
+            _buildProfileTabs(),
             const SizedBox(height: AppSpacing.xl),
-            _buildPersonalInfo(isDark),
+            _buildPersonalInfo(),
             const SizedBox(height: AppSpacing.x3l),
             SizedBox(
               width: double.infinity,
@@ -125,7 +123,7 @@ class _TeacherStudentProfileScreenState extends State<TeacherStudentProfileScree
                 icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
                 label: const Text('Message Parent', style: TextStyle(color: Colors.white)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.royalBlue,
+                  backgroundColor: AppColors.primary(context),
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.l),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.m)),
                 ),
@@ -137,57 +135,53 @@ class _TeacherStudentProfileScreenState extends State<TeacherStudentProfileScree
     );
   }
 
-  Widget _buildProfileTabs(bool isDark) {
+  Widget _buildProfileTabs() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        _ProfileTabItem(icon: Icons.person, label: 'Profile', isSelected: true, isDark: isDark),
+        _ProfileTabItem(icon: Icons.person, label: 'Profile', isSelected: true),
         _ProfileTabItem(
           icon: Icons.calendar_today,
           label: 'Attendance',
-          isDark: isDark,
           onTap: () => context.push('/staff/students/${widget.studentId}/attendance'),
         ),
         _ProfileTabItem(
           icon: Icons.analytics_outlined,
           label: 'Performance',
-          isDark: isDark,
           onTap: () => context.push('/staff/students/${widget.studentId}/performance'),
         ),
         _ProfileTabItem(
           icon: Icons.gavel,
           label: 'Behaviour',
-          isDark: isDark,
           onTap: () => context.push('/staff/students/${widget.studentId}/behaviour'),
         ),
         _ProfileTabItem(
           icon: Icons.grid_view,
           label: 'More',
-          isDark: isDark,
           onTap: () => context.push('/staff/students/${widget.studentId}/more-options'),
         ),
       ],
     );
   }
 
-  Widget _buildPersonalInfo(bool isDark) {
+  Widget _buildPersonalInfo() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Personal Information',
           style: AppTypography.titleLarge.copyWith(
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            color: AppColors.textPrimary(context),
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: AppSpacing.l),
-        _InfoRow(label: 'Date of Birth', value: '12 May 2014', isDark: isDark),
-        _InfoRow(label: 'Gender', value: 'Male', isDark: isDark),
-        _InfoRow(label: 'Phone (Parent)', value: '+256 700 123456', isDark: isDark),
-        _InfoRow(label: 'Address', value: 'Gulu, Uganda', isDark: isDark),
-        _InfoRow(label: 'House', value: 'Blue House', isDark: isDark),
-        _InfoRow(label: 'Blood Group', value: 'O+', isDark: isDark),
+        _InfoRow(label: 'Date of Birth', value: '12 May 2014'),
+        _InfoRow(label: 'Gender', value: 'Male'),
+        _InfoRow(label: 'Phone (Parent)', value: '+256 700 123456'),
+        _InfoRow(label: 'Address', value: 'Gulu, Uganda'),
+        _InfoRow(label: 'House', value: 'Blue House'),
+        _InfoRow(label: 'Blood Group', value: 'O+'),
       ],
     );
   }
@@ -197,14 +191,12 @@ class _ProfileTabItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool isSelected;
-  final bool isDark;
   final VoidCallback? onTap;
 
   const _ProfileTabItem({
     required this.icon,
     required this.label,
     this.isSelected = false,
-    required this.isDark,
     this.onTap,
   });
 
@@ -217,12 +209,13 @@ class _ProfileTabItem extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(AppSpacing.m),
             decoration: BoxDecoration(
-              color: isSelected ? AppColors.royalBlue : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight),
+              color: isSelected ? AppColors.primary(context) : AppColors.surfaceElevated(context),
               borderRadius: BorderRadius.circular(AppSpacing.m),
+              border: isSelected ? null : Border.all(color: AppColors.border(context)),
             ),
             child: Icon(
               icon,
-              color: isSelected ? Colors.white : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+              color: isSelected ? Colors.white : AppColors.textMuted(context),
               size: 20,
             ),
           ),
@@ -230,7 +223,7 @@ class _ProfileTabItem extends StatelessWidget {
           Text(
             label,
             style: AppTypography.labelSmall.copyWith(
-              color: isSelected ? AppColors.royalBlue : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+              color: isSelected ? AppColors.primary(context) : AppColors.textMuted(context),
             ),
           ),
         ],
@@ -242,9 +235,8 @@ class _ProfileTabItem extends StatelessWidget {
 class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
-  final bool isDark;
 
-  const _InfoRow({required this.label, required this.value, required this.isDark});
+  const _InfoRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -256,13 +248,13 @@ class _InfoRow extends StatelessWidget {
           Text(
             label,
             style: AppTypography.bodyMedium.copyWith(
-              color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+              color: AppColors.textMuted(context),
             ),
           ),
           Text(
             value,
             style: AppTypography.bodyMedium.copyWith(
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              color: AppColors.textPrimary(context),
               fontWeight: FontWeight.bold,
             ),
           ),

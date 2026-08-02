@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 
 class ImportMarksScreen extends StatelessWidget {
   const ImportMarksScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = const Color(0xFF0F172A);
-    final surfaceColor = const Color(0xFF1E293B);
-
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: AppColors.background(context),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.chevron_left, color: Colors.white),
+          icon: Icon(Icons.chevron_left, color: AppColors.textPrimary(context)),
           onPressed: () => context.pop(),
         ),
-        title: const Text('Import Marks', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+        title: Text('Import Marks',
+            style: TextStyle(
+                color: AppColors.textPrimary(context), fontSize: 18, fontWeight: FontWeight.bold)),
         centerTitle: true,
       ),
       body: Padding(
@@ -30,35 +30,47 @@ class ImportMarksScreen extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 40),
               decoration: BoxDecoration(
-                color: surfaceColor,
+                color: AppColors.surfaceElevated(context),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white10, style: BorderStyle.solid),
+                border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
               ),
               child: Column(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), shape: BoxShape.circle),
-                    child: const Icon(Icons.description, color: Colors.green, size: 40),
+                    decoration: BoxDecoration(
+                        color: AppColors.success(context).withValues(alpha: 0.1),
+                        shape: BoxShape.circle),
+                    child: Icon(Icons.description, color: AppColors.success(context), size: 40),
                   ),
                   const SizedBox(height: 16),
-                  const Text('Upload Excel / CSV File', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  Text('Upload Excel / CSV File',
+                      style: TextStyle(
+                          color: AppColors.textPrimary(context),
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-                  const Text('Drag and drop or tap to browse', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                  Text('Drag and drop or tap to browse',
+                      style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12)),
                 ],
               ),
             ),
             const SizedBox(height: 32),
-            const Text('Format Guide', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+            Text('Format Guide',
+                style: TextStyle(
+                    color: AppColors.textPrimary(context),
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-            _buildGuideItem('First column: Student ID or Admission No.'),
-            _buildGuideItem('First row: Student Name (optional)'),
-            _buildGuideItem('Other columns: Marks'),
+            _buildGuideItem(context, 'First column: Student ID or Admission No.'),
+            _buildGuideItem(context, 'First row: Student Name (optional)'),
+            _buildGuideItem(context, 'Other columns: Marks'),
             const SizedBox(height: 24),
             TextButton.icon(
               onPressed: () {},
-              icon: const Icon(Icons.download, color: Color(0xFF818CF8), size: 18),
-              label: const Text('Download Sample File', style: TextStyle(color: Color(0xFF818CF8), fontSize: 14)),
+              icon: Icon(Icons.download, color: AppColors.primary(context), size: 18),
+              label: Text('Download Sample File',
+                  style: TextStyle(color: AppColors.primary(context), fontSize: 14)),
             ),
             const Spacer(),
             SizedBox(
@@ -66,11 +78,13 @@ class ImportMarksScreen extends StatelessWidget {
               child: ElevatedButton(
                 onPressed: () => context.pop(),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4338CA),
+                  backgroundColor: AppColors.primary(context),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
                 ),
-                child: const Text('Import', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                child: const Text('Import',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -79,16 +93,17 @@ class ImportMarksScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildGuideItem(String text) {
+  Widget _buildGuideItem(BuildContext context, String text) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          const Icon(Icons.circle, color: Color(0xFF818CF8), size: 6),
+          Icon(Icons.circle, color: AppColors.primary(context), size: 6),
           const SizedBox(width: 12),
-          Text(text, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+          Text(text, style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12)),
         ],
       ),
     );
   }
 }
+

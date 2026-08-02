@@ -1,9 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/report_wizard/report_wizard_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/report_wizard/report_wizard_event.dart';
 
-class SelectTermProfileScreen extends StatelessWidget {
+class SelectTermProfileScreen extends StatefulWidget {
   const SelectTermProfileScreen({super.key});
+
+  @override
+  State<SelectTermProfileScreen> createState() => _SelectTermProfileScreenState();
+}
+
+class _SelectTermProfileScreenState extends State<SelectTermProfileScreen> {
+  String selectedYear = '2024/2025';
+  String selectedTerm = 'Term 2 (Jan - Apr 2025)';
+  String selectedProfile = 'Primary Competency & Percentage';
 
   @override
   Widget build(BuildContext context) {
@@ -23,10 +35,12 @@ class SelectTermProfileScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value: '2024/2025',
+                  value: selectedYear,
                   decoration: const InputDecoration(hintText: 'Select Year'),
                   items: ['2024/2025', '2023/2024'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                  onChanged: (v) {},
+                  onChanged: (v) {
+                    if (v != null) setState(() => selectedYear = v);
+                  },
                 ),
                 const SizedBox(height: 24),
                 const Text(
@@ -35,12 +49,14 @@ class SelectTermProfileScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value: 'Term 2 (Jan - Apr 2025)',
+                  value: selectedTerm,
                   decoration: const InputDecoration(hintText: 'Select Term'),
                   items: ['Term 1 (Sep - Dec 2024)', 'Term 2 (Jan - Apr 2025)', 'Term 3 (May - Aug 2025)']
                       .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                       .toList(),
-                  onChanged: (v) {},
+                  onChanged: (v) {
+                    if (v != null) setState(() => selectedTerm = v);
+                  },
                 ),
                 const SizedBox(height: 24),
                 const Text(
@@ -49,12 +65,14 @@ class SelectTermProfileScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value: 'Primary Competency & Percentage',
+                  value: selectedProfile,
                   decoration: const InputDecoration(hintText: 'Select Profile'),
                   items: ['Primary Competency & Percentage', 'Secondary Standard', 'Early Years Foundation']
                       .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                       .toList(),
-                  onChanged: (v) {},
+                  onChanged: (v) {
+                    if (v != null) setState(() => selectedProfile = v);
+                  },
                 ),
                 const SizedBox(height: 16),
                 AppCard(
@@ -86,7 +104,16 @@ class SelectTermProfileScreen extends StatelessWidget {
             padding: const EdgeInsets.all(16.0),
             child: PrimaryButton(
               label: 'Continue',
-              onPressed: () => context.push('/teacher/reports/sections'),
+              onPressed: () {
+                context.read<ReportWizardBloc>().add(
+                      ReportWizardTermProfileSelected(
+                        year: selectedYear,
+                        term: selectedTerm,
+                        profile: selectedProfile,
+                      ),
+                    );
+                context.push('/staff/reports/sections');
+              },
             ),
           ),
         ],

@@ -32,7 +32,7 @@ class TeacherSupportScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                SearchTextField(
+                AppSearchField(
                   hintText: 'Search for help articles...',
                   onChanged: (v) {},
                 ),

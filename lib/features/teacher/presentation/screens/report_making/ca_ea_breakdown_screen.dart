@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 
 class CaEaBreakdownScreen extends StatelessWidget {
   const CaEaBreakdownScreen({super.key});
@@ -16,10 +17,14 @@ class CaEaBreakdownScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                const Center(
+                Center(
                   child: Text(
                     'Mathematics',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.success(context),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -29,7 +34,7 @@ class CaEaBreakdownScreen extends StatelessWidget {
                       child: _BreakdownCard(
                         title: 'CA (40%)',
                         score: '40 / 40',
-                        color: Colors.blue,
+                        color: AppColors.primary(context),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -37,35 +42,56 @@ class CaEaBreakdownScreen extends StatelessWidget {
                       child: _BreakdownCard(
                         title: 'EA (60%)',
                         score: '60 / 60',
-                        color: Colors.purple,
+                        color: AppColors.secondary(context),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 24),
-                const Text(
+                Text(
                   'CA Components',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: AppColors.textPrimary(context),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 _ComponentItem(label: 'Class Tests (20)', value: '20'),
                 _ComponentItem(label: 'Quizzes (10)', value: '10'),
                 _ComponentItem(label: 'Assignments (10)', value: '10'),
-                const Divider(height: 32),
+                Divider(height: 32, color: AppColors.border(context)),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Total (CA)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    const Text('40 / 40', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text(
+                      'Total (CA)',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
+                    Text(
+                      '40 / 40',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 32),
                 AppCard(
-                  color: Colors.green.withValues(alpha: 0.1),
-                  borderColor: Colors.green.withValues(alpha: 0.3),
-                  child: const Text(
+                  color: AppColors.success(context).withValues(alpha: 0.1),
+                  borderColor: AppColors.success(context).withValues(alpha: 0.3),
+                  child: Text(
                     'This will contribute 40% (up to 40 points) to the final score.',
-                    style: TextStyle(color: Colors.green, fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                      color: AppColors.success(context),
+                      fontWeight: FontWeight.w500,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -109,7 +135,14 @@ class _BreakdownCard extends StatelessWidget {
         children: [
           Text(title, style: TextStyle(color: color, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Text(score, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+          Text(
+            score,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
         ],
       ),
     );
@@ -129,8 +162,17 @@ class _ComponentItem extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.grey)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(
+            label,
+            style: TextStyle(color: AppColors.textSecondary(context)),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
         ],
       ),
     );

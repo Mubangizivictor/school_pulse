@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/components/pulse_text_field.dart';
 
 class TeacherChangePasswordScreen extends StatelessWidget {
   const TeacherChangePasswordScreen({super.key});
@@ -22,9 +23,9 @@ class TeacherChangePasswordScreen extends StatelessWidget {
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
             const SizedBox(height: 8),
-            const AppTextField(
-              hintText: 'Enter current password',
-              obscureText: true,
+            const PulseTextField(
+              hint: 'Enter current password',
+              isPassword: true,
               prefixIcon: Icons.lock_outline_rounded,
             ),
             const SizedBox(height: 20),
@@ -33,9 +34,9 @@ class TeacherChangePasswordScreen extends StatelessWidget {
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
             const SizedBox(height: 8),
-            const AppTextField(
-              hintText: 'Enter new password',
-              obscureText: true,
+            const PulseTextField(
+              hint: 'Enter new password',
+              isPassword: true,
               prefixIcon: Icons.lock_outline_rounded,
             ),
             const SizedBox(height: 20),
@@ -44,9 +45,9 @@ class TeacherChangePasswordScreen extends StatelessWidget {
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
             const SizedBox(height: 8),
-            const AppTextField(
-              hintText: 'Confirm new password',
-              obscureText: true,
+            const PulseTextField(
+              hint: 'Confirm new password',
+              isPassword: true,
               prefixIcon: Icons.lock_outline_rounded,
             ),
             const SizedBox(height: 24),
@@ -57,7 +58,6 @@ class TeacherChangePasswordScreen extends StatelessWidget {
             PrimaryButton(
               label: 'Update Password',
               onPressed: () {},
-              style: PrimaryButtonStyle.filled,
             ),
           ],
         ),

@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import '../../domain/entities/homework.dart';
 import '../../domain/entities/report_comment.dart';
+import '../../domain/entities/competency_rating.dart';
 
 abstract class TeacherEvent extends Equatable {
   const TeacherEvent();
@@ -138,4 +139,29 @@ class TeacherReportCommentSaved extends TeacherEvent {
   const TeacherReportCommentSaved(this.comment);
   @override
   List<Object?> get props => [comment];
+}
+
+// Competency Rating Events
+class TeacherCompetencyRatingsRequested extends TeacherEvent {
+  final String className;
+  final String term;
+  final String year;
+  final String competency;
+
+  const TeacherCompetencyRatingsRequested({
+    required this.className,
+    required this.term,
+    required this.year,
+    required this.competency,
+  });
+
+  @override
+  List<Object?> get props => [className, term, year, competency];
+}
+
+class TeacherCompetencyRatingSaved extends TeacherEvent {
+  final CompetencyRating rating;
+  const TeacherCompetencyRatingSaved(this.rating);
+  @override
+  List<Object?> get props => [rating];
 }

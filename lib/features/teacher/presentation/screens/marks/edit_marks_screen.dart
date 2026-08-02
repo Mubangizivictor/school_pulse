@@ -1,24 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 
 class EditMarksScreen extends StatelessWidget {
-  const EditMarksScreen({super.key});
+  final String studentId;
+  const EditMarksScreen({super.key, required this.studentId});
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = const Color(0xFF0F172A);
-    final surfaceColor = const Color(0xFF1E293B);
-
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: AppColors.background(context),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.chevron_left, color: Colors.white),
+          icon: Icon(Icons.chevron_left, color: AppColors.textPrimary(context)),
           onPressed: () => context.pop(),
         ),
-        title: const Text('Edit Mark', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+        title: Text('Edit Mark',
+            style: TextStyle(
+                color: AppColors.textPrimary(context), fontSize: 18, fontWeight: FontWeight.bold)),
         centerTitle: true,
       ),
       body: Padding(
@@ -26,59 +27,67 @@ class EditMarksScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Mid Term Test • Section A', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+            Text('Mid Term Test • Section A',
+                style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12)),
             const SizedBox(height: 24),
             Row(
               children: [
-                const CircleAvatar(radius: 20, backgroundColor: Colors.grey),
+                CircleAvatar(radius: 20, backgroundColor: AppColors.disabled(context)),
                 const SizedBox(width: 12),
-                const Column(
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Akena Brian', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                    Text('ADM/2022/001', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                    Text('Akena Brian',
+                        style: TextStyle(
+                            color: AppColors.textPrimary(context),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold)),
+                    Text('ADM/2022/001',
+                        style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12)),
                   ],
                 ),
               ],
             ),
             const SizedBox(height: 32),
-            const Text('Mark (out of 20)', style: TextStyle(color: Colors.white, fontSize: 14)),
+            Text('Mark (out of 20)',
+                style: TextStyle(color: AppColors.textPrimary(context), fontSize: 14)),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: surfaceColor,
+                color: AppColors.surfaceElevated(context),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white10),
+                border: Border.all(color: AppColors.border(context)),
               ),
-              child: const TextField(
-                style: TextStyle(color: Colors.white),
+              child: TextField(
+                style: TextStyle(color: AppColors.textPrimary(context)),
                 decoration: InputDecoration(
                   border: InputBorder.none,
                   hintText: '16',
-                  hintStyle: TextStyle(color: Colors.white),
+                  hintStyle: TextStyle(color: AppColors.textMuted(context)),
                 ),
                 keyboardType: TextInputType.number,
               ),
             ),
             const SizedBox(height: 24),
-            const Text('Remarks (Optional)', style: TextStyle(color: Colors.white, fontSize: 14)),
+            Text('Remarks (Optional)',
+                style: TextStyle(color: AppColors.textPrimary(context), fontSize: 14)),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               height: 120,
               decoration: BoxDecoration(
-                color: surfaceColor,
+                color: AppColors.surfaceElevated(context),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white10),
+                border: Border.all(color: AppColors.border(context)),
               ),
-              child: const TextField(
-                style: TextStyle(color: Colors.white),
+              child: TextField(
+                style: TextStyle(color: AppColors.textPrimary(context)),
                 maxLines: 5,
                 decoration: InputDecoration(
                   border: InputBorder.none,
                   hintText: 'Add remarks...',
-                  hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
+                  hintStyle: TextStyle(color: AppColors.textMuted(context), fontSize: 14),
                 ),
               ),
             ),
@@ -89,11 +98,11 @@ class EditMarksScreen extends StatelessWidget {
                   child: OutlinedButton(
                     onPressed: () => context.pop(),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.white24),
+                      side: BorderSide(color: AppColors.border(context)),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text('Cancel', style: TextStyle(color: Colors.white)),
+                    child: Text('Cancel', style: TextStyle(color: AppColors.textPrimary(context))),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -101,11 +110,13 @@ class EditMarksScreen extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () => context.pop(),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4338CA),
+                      backgroundColor: AppColors.primary(context),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
                     ),
-                    child: const Text('Save Changes', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    child: const Text('Save Changes',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
@@ -116,3 +127,4 @@ class EditMarksScreen extends StatelessWidget {
     );
   }
 }
+

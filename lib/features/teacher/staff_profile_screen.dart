@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/services/staff_id_card_service.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
@@ -42,11 +43,20 @@ class StaffProfileScreen extends StatelessWidget {
         final user = state.user;
 
         return Scaffold(
+          backgroundColor: AppColors.background(context),
           appBar: AppBar(
             title: const Text('My Profile'),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            iconTheme: IconThemeData(color: AppColors.textPrimary(context)),
+            titleTextStyle: TextStyle(
+              color: AppColors.textPrimary(context),
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
             actions: [
               IconButton(
-                icon: const Icon(Icons.badge_outlined),
+                icon: Icon(Icons.badge_outlined, color: AppColors.primary(context)),
                 tooltip: 'Print Staff ID Card',
                 onPressed: () => _printIdCard(context, user),
               ),
@@ -60,13 +70,18 @@ class StaffProfileScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 Text(
                   user.name,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: AppColors.textPrimary(context),
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text(
                   UserRoleDisplay.name(user.role),
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.outline,
-                      ),
+                  style: TextStyle(
+                    color: AppColors.textSecondary(context),
+                    fontSize: 14,
+                  ),
                 ),
                 const SizedBox(height: 32),
                 _buildInfoCard(context, [
@@ -85,9 +100,12 @@ class StaffProfileScreen extends StatelessWidget {
                 AppCard(
                   padding: EdgeInsets.zero,
                   child: ListTile(
-                    leading: const Icon(Icons.lock_outline),
-                    title: const Text('Security Settings'),
-                    trailing: const Icon(Icons.chevron_right, size: 20),
+                    leading: Icon(Icons.lock_outline, color: AppColors.textPrimary(context)),
+                    title: Text(
+                      'Security Settings',
+                      style: TextStyle(color: AppColors.textPrimary(context), fontWeight: FontWeight.w500),
+                    ),
+                    trailing: Icon(Icons.chevron_right, size: 20, color: AppColors.textMuted(context)),
                     onTap: () => context.push('/staff/security-settings'),
                   ),
                 ),
@@ -102,14 +120,33 @@ class StaffProfileScreen extends StatelessWidget {
 
   Widget _buildThemeToggle(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return AppCard(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text('Dark Mode', style: TextStyle(fontWeight: FontWeight.w500)),
+          Row(
+            children: [
+              Icon(
+                isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+                color: AppColors.textPrimary(context),
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Dark Mode',
+                style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textPrimary(context),
+                ),
+              ),
+            ],
+          ),
           Switch(
             value: themeProvider.themeMode == ThemeMode.dark,
+            activeColor: AppColors.primary(context),
             onChanged: (value) {
               themeProvider.setThemeMode(value ? ThemeMode.dark : ThemeMode.light);
             },
@@ -153,12 +190,18 @@ class _InfoRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(color: Theme.of(context).colorScheme.outline)),
+        Text(
+          label,
+          style: TextStyle(color: AppColors.textSecondary(context)),
+        ),
         Flexible(
           child: Text(
             value,
             textAlign: TextAlign.right,
-            style: const TextStyle(fontWeight: FontWeight.w500),
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+              color: AppColors.textPrimary(context),
+            ),
           ),
         ),
       ],

@@ -40,7 +40,7 @@ class ClassBehaviourScreen extends StatelessWidget {
       ),
       body: Column(
         children: [
-          _buildBehaviourSummary(isDark),
+          _buildBehaviourSummary(context, isDark),
           Expanded(
             child: ListView.separated(
               padding: const EdgeInsets.all(AppSpacing.xl),
@@ -52,7 +52,7 @@ class ClassBehaviourScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(AppSpacing.xl),
             child: PulseButton(
-              text: 'Log New Incident',
+              label: 'Log New Incident',
               icon: Icons.add_moderator,
               onPressed: () {},
             ),
@@ -62,7 +62,7 @@ class ClassBehaviourScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBehaviourSummary(bool isDark) {
+  Widget _buildBehaviourSummary(BuildContext context, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
@@ -73,7 +73,7 @@ class ClassBehaviourScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildSummaryItem('24', 'Merits', AppColors.successGreen, isDark),
-          _buildSummaryItem('3', 'Demerits', AppColors.danger(null), isDark),
+          _buildSummaryItem('3', 'Demerits', AppColors.danger(context), isDark),
           _buildSummaryItem('A', 'Class Grade', AppColors.royalBlue, isDark),
         ],
       ),

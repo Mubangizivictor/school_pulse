@@ -7,6 +7,8 @@ import 'package:school_pulse/features/teacher/domain/usecases/get_attendance_his
 import 'package:school_pulse/features/teacher/domain/usecases/get_teacher_dashboard_stats.dart';
 import 'package:school_pulse/features/teacher/domain/usecases/manage_homework.dart';
 import 'package:school_pulse/features/teacher/domain/usecases/manage_report_comments.dart';
+import 'package:school_pulse/features/teacher/domain/usecases/manage_competency_ratings.dart';
+import '../../domain/entities/ongoing_lesson.dart';
 import 'teacher_event.dart';
 import 'teacher_state.dart';
 
@@ -22,6 +24,8 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
   final DeleteHomework deleteHomework;
   final GetReportComments getReportComments;
   final SaveReportComment saveReportComment;
+  final GetCompetencyRatings getCompetencyRatings;
+  final SaveCompetencyRating saveCompetencyRating;
 
   TeacherBloc({
     required this.getStudentsByClass,
@@ -35,6 +39,8 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
     required this.deleteHomework,
     required this.getReportComments,
     required this.saveReportComment,
+    required this.getCompetencyRatings,
+    required this.saveCompetencyRating,
   }) : super(TeacherInitial()) {
     on<TeacherDashboardRequested>(_onTeacherDashboardRequested);
     on<TeacherAttendanceRequested>(_onTeacherAttendanceRequested);
@@ -48,6 +54,8 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
     on<TeacherHomeworkDeleted>(_onTeacherHomeworkDeleted);
     on<TeacherReportCommentsRequested>(_onTeacherReportCommentsRequested);
     on<TeacherReportCommentSaved>(_onTeacherReportCommentSaved);
+    on<TeacherCompetencyRatingsRequested>(_onTeacherCompetencyRatingsRequested);
+    on<TeacherCompetencyRatingSaved>(_onTeacherCompetencyRatingSaved);
   }
 
   Future<void> _onTeacherHomeworkRequested(
@@ -151,6 +159,45 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
     );
   }
 
+  Future<void> _onTeacherCompetencyRatingsRequested(
+    TeacherCompetencyRatingsRequested event,
+    Emitter<TeacherState> emit,
+  ) async {
+    emit(TeacherLoading());
+    final studentsResult = await getStudentsByClass(event.className);
+    final ratingsResult = await getCompetencyRatings(
+      className: event.className,
+      term: event.term,
+      year: event.year,
+      competency: event.competency,
+    );
+
+    studentsResult.fold(
+      (failure) => emit(TeacherError(failure.message)),
+      (students) {
+        ratingsResult.fold(
+          (failure) => emit(TeacherError(failure.message)),
+          (ratings) => emit(TeacherCompetencyRatingsLoaded(
+            students: students,
+            ratings: ratings,
+          )),
+        );
+      },
+    );
+  }
+
+  Future<void> _onTeacherCompetencyRatingSaved(
+    TeacherCompetencyRatingSaved event,
+    Emitter<TeacherState> emit,
+  ) async {
+    emit(TeacherLoading());
+    final result = await saveCompetencyRating(event.rating);
+    result.fold(
+      (failure) => emit(TeacherError(failure.message)),
+      (_) => emit(const TeacherOperationSuccess('Rating saved successfully')),
+    );
+  }
+
   Future<void> _onTeacherMarksSubmitted(
     TeacherMarksSubmitted event,
     Emitter<TeacherState> emit,
@@ -234,7 +281,19 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
         submissionsDue: stats.submissionsDue,
         classesToday: stats.classesToday,
         activeNotifications: stats.activeNotifications,
+        attendanceTaken: stats.attendanceTaken,
+        marksEntered: stats.marksEntered,
+        reportsGenerated: stats.reportsGenerated,
         classProgress: stats.classProgress,
+        ongoingLesson: const OngoingLesson(
+          id: '1',
+          subjectName: 'Mathematics',
+          className: 'Grade 10A',
+          topic: 'Calculus: Derivatives',
+          startTime: '08:30',
+          endTime: '09:15',
+          room: 'Block B, R12',
+        ),
       )),
     );
   }

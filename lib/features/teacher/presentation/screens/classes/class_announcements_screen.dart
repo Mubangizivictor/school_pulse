@@ -51,7 +51,7 @@ class ClassAnnouncementsScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(AppSpacing.xl),
             child: PulseButton(
-              text: 'New Announcement',
+              label: 'New Announcement',
               icon: Icons.add,
               onPressed: () {},
             ),

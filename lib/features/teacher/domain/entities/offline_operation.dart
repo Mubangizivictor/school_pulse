@@ -28,6 +28,19 @@ class OfflineOperationType {
 
   static const attendanceDraft = 'attendance.draft';
   static const attendanceSubmit = 'attendance.submit';
+
+  /// The class register, distinct from the per-lesson one above: a class
+  /// teacher's daily roll call and a subject teacher's lesson register are
+  /// different records and must not replay into each other.
+  static const classAttendanceDraft = 'class_attendance.draft';
+  static const classAttendanceSubmit = 'class_attendance.submit';
+
+  /// Correcting a register the teacher may no longer edit. Present here so
+  /// the type is nameable, but deliberately absent from [offlineCreatable]:
+  /// replaying an approval-bearing request from a device that has been away
+  /// for a week would let a revoked teacher act on stale authority.
+  static const classAttendanceCorrection = 'class_attendance.correction';
+
   static const lessonStart = 'lesson.start';
   static const lessonComplete = 'lesson.complete';
   static const lessonNoteSave = 'lesson_note.save';
@@ -42,6 +55,8 @@ class OfflineOperationType {
   static const Set<String> offlineCreatable = {
     attendanceDraft,
     attendanceSubmit,
+    classAttendanceDraft,
+    classAttendanceSubmit,
     lessonStart,
     lessonComplete,
     lessonNoteSave,

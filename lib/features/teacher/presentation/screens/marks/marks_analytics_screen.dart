@@ -1,23 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 
 class MarksAnalyticsScreen extends StatelessWidget {
   const MarksAnalyticsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = const Color(0xFF0F172A);
-    final surfaceColor = const Color(0xFF1E293B);
-
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: AppColors.background(context),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Performance Analytics', style: TextStyle(color: Colors.white)),
+        title: Text('Performance Analytics', style: TextStyle(color: AppColors.textPrimary(context))),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => context.pop(),
+          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
+          onPressed: () => Navigator.of(context).pop(),
         ),
       ),
       body: SingleChildScrollView(
@@ -25,55 +22,63 @@ class MarksAnalyticsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildOverviewCard(surfaceColor),
+            _buildOverviewCard(context),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'Grade Distribution',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: AppColors.textPrimary(context),
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 16),
-            _buildGradeDistribution(surfaceColor),
+            _buildGradeDistribution(context),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'Top Performing Students',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: AppColors.textPrimary(context),
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 16),
-            _buildTopStudents(surfaceColor),
+            _buildTopStudents(context),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildOverviewCard(Color surfaceColor) {
+  Widget _buildOverviewCard(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: surfaceColor,
+        color: AppColors.surfaceElevated(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
       ),
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildStat('Avg Score', '78%', Colors.blue),
-              _buildStat('Pass Rate', '92%', Colors.green),
-              _buildStat('Highest', '98%', Colors.orange),
+              _buildStat(context, 'Avg Score', '78%', AppColors.primary(context)),
+              _buildStat(context, 'Pass Rate', '92%', AppColors.success(context)),
+              _buildStat(context, 'Highest', '98%', AppColors.secondary(context)),
             ],
           ),
           const SizedBox(height: 20),
-          const Divider(color: Colors.white10),
+          Divider(color: AppColors.border(context).withValues(alpha: 0.5)),
           const SizedBox(height: 20),
-          const Row(
+          Row(
             children: [
-              Icon(Icons.trending_up, color: Colors.green, size: 20),
-              SizedBox(width: 8),
+              Icon(Icons.trending_up, color: AppColors.success(context), size: 20),
+              const SizedBox(width: 8),
               Text(
                 'Performance improved by 4.2% since last term',
-                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12),
               ),
             ],
           ),
@@ -82,59 +87,64 @@ class MarksAnalyticsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStat(String label, String value, Color color) {
+  Widget _buildStat(BuildContext context, String label, String value, Color color) {
     return Column(
       children: [
         Text(value, style: TextStyle(color: color, fontSize: 24, fontWeight: FontWeight.bold)),
         const SizedBox(height: 4),
-        Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+        Text(label, style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12)),
       ],
     );
   }
 
-  Widget _buildGradeDistribution(Color surfaceColor) {
+  Widget _buildGradeDistribution(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: surfaceColor,
+        color: AppColors.surfaceElevated(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
       ),
       height: 200,
-      child: const Center(
-        child: Text('[Chart: Distribution of Grades A-F]', style: TextStyle(color: Color(0xFF94A3B8))),
+      child: Center(
+        child: Text('[Chart: Distribution of Grades A-F]',
+            style: TextStyle(color: AppColors.textSecondary(context))),
       ),
     );
   }
 
-  Widget _buildTopStudents(Color surfaceColor) {
+  Widget _buildTopStudents(BuildContext context) {
     return Column(
       children: List.generate(5, (index) {
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: surfaceColor,
+            color: AppColors.surfaceElevated(context),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
+            border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
           ),
           child: Row(
             children: [
               CircleAvatar(
-                backgroundColor: Colors.blue.withOpacity(0.2),
-                child: Text('${index + 1}', style: const TextStyle(color: Colors.blue)),
+                backgroundColor: AppColors.primary(context).withValues(alpha: 0.1),
+                child: Text('${index + 1}', style: TextStyle(color: AppColors.primary(context))),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Student Name', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    Text('Grade 10A', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                    Text('Student Name',
+                        style: TextStyle(
+                            color: AppColors.textPrimary(context), fontWeight: FontWeight.bold)),
+                    Text('Grade 10A',
+                        style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12)),
                   ],
                 ),
               ),
-              Text('${98 - index * 2}%', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+              Text('${98 - index * 2}%',
+                  style: TextStyle(color: AppColors.success(context), fontWeight: FontWeight.bold)),
             ],
           ),
         );
@@ -142,3 +152,4 @@ class MarksAnalyticsScreen extends StatelessWidget {
     );
   }
 }
+

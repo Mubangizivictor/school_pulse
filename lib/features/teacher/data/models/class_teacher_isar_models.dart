@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:isar/isar.dart';
 
+import '../../domain/entities/class_attendance.dart';
 import '../../domain/entities/class_dashboard_summary.dart';
 import '../../domain/entities/class_student_summary.dart';
 
@@ -170,6 +173,103 @@ class ClassDashboardCacheIsar {
       ..pendingReports = summary.pendingReports
       ..pendingBehaviourFollowUps = summary.pendingBehaviourFollowUps
       ..unreadMessages = summary.unreadMessages
+      ..cachedAt = DateTime.now();
+  }
+}
+
+/// A class register held on the device.
+///
+/// This is the offline case the whole panel is built around: a teacher marks
+/// the roll in a classroom with no signal, and the register has to survive
+/// until the phone reaches the staffroom. Entries are stored as JSON rather
+/// than a linked collection because a register is read and written whole -
+/// there is no query that wants one student's mark across every day.
+@collection
+class ClassAttendanceDraftIsar {
+  Id get isarId => Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String sessionId;
+
+  @Index()
+  late String schoolId;
+
+  late String campusId;
+  late String classId;
+  late String className;
+  String? streamId;
+  late String academicYearId;
+  late String termId;
+  late String sessionType;
+  late DateTime date;
+  late String status;
+  late String entriesJson;
+  DateTime? submittedAt;
+  String? submittedBy;
+  late String roleAssignmentId;
+  late String deviceId;
+  DateTime? lastCorrectedAt;
+  late DateTime cachedAt;
+
+  ClassAttendanceSession toEntity() {
+    final raw = jsonDecode(entriesJson);
+    final entries = (raw is List ? raw : const [])
+        .whereType<Map<String, dynamic>>()
+        .map((e) => ClassAttendanceEntry(
+              studentId: e['studentId'] as String? ?? '',
+              statusCode: e['status'] as String? ?? '',
+              note: e['note'] as String?,
+              markedAt: DateTime.tryParse(e['markedAt'] as String? ?? ''),
+            ))
+        .toList();
+
+    return ClassAttendanceSession(
+      id: sessionId,
+      schoolId: schoolId,
+      campusId: campusId,
+      classId: classId,
+      className: className,
+      streamId: streamId,
+      academicYearId: academicYearId,
+      termId: termId,
+      sessionType: sessionType,
+      date: date,
+      status: ClassAttendanceSessionStatus.fromId(status),
+      entries: entries,
+      submittedAt: submittedAt,
+      submittedBy: submittedBy,
+      roleAssignmentId: roleAssignmentId,
+      deviceId: deviceId,
+      lastCorrectedAt: lastCorrectedAt,
+    );
+  }
+
+  static ClassAttendanceDraftIsar fromEntity(ClassAttendanceSession session) {
+    return ClassAttendanceDraftIsar()
+      ..sessionId = session.id
+      ..schoolId = session.schoolId
+      ..campusId = session.campusId
+      ..classId = session.classId
+      ..className = session.className
+      ..streamId = session.streamId
+      ..academicYearId = session.academicYearId
+      ..termId = session.termId
+      ..sessionType = session.sessionType
+      ..date = session.date
+      ..status = session.status.name
+      ..entriesJson = jsonEncode(session.entries
+          .map((e) => {
+                'studentId': e.studentId,
+                'status': e.statusCode,
+                'note': e.note,
+                'markedAt': e.markedAt?.toIso8601String(),
+              })
+          .toList())
+      ..submittedAt = session.submittedAt
+      ..submittedBy = session.submittedBy
+      ..roleAssignmentId = session.roleAssignmentId
+      ..deviceId = session.deviceId
+      ..lastCorrectedAt = session.lastCorrectedAt
       ..cachedAt = DateTime.now();
   }
 }

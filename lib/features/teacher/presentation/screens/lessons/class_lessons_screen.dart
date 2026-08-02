@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/app_components.dart';
 
 class ClassLessonsScreen extends StatelessWidget {
   final String classId;
@@ -7,26 +9,27 @@ class ClassLessonsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = const Color(0xFF0F172A);
-    final surfaceColor = const Color(0xFF1E293B);
-
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: AppColors.background(context),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.surfaceElevated(context),
+        foregroundColor: AppColors.textPrimary(context),
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => context.pop(),
-        ),
-        title: const Column(
+        title: Column(
           children: [
             Text('Grade 10A (Science)',
-                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-            Text('Mathematics • Section A', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                style: TextStyle(color: AppColors.textPrimary(context), fontSize: 16, fontWeight: FontWeight.bold)),
+            Text('Mathematics • Section A', style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12)),
           ],
         ),
         centerTitle: true,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(
+            color: AppColors.border(context).withValues(alpha: 0.5),
+            height: 1,
+          ),
+        ),
       ),
       body: Column(
         children: [
@@ -34,11 +37,11 @@ class ClassLessonsScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             child: Row(
               children: [
-                _buildTab('Lessons', true),
+                _buildTab(context, 'Lessons', true),
                 const SizedBox(width: 12),
-                _buildTab('Notes', false),
+                _buildTab(context, 'Notes', false, () => context.push('/staff/lessons/notes/123')),
                 const SizedBox(width: 12),
-                _buildTab('Resources', false),
+                _buildTab(context, 'Resources', false, () => context.push('/staff/lessons/resources/123')),
               ],
             ),
           ),
@@ -46,44 +49,44 @@ class ClassLessonsScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               children: [
-                const Text('This Week',
-                    style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+                Text('This Week',
+                    style: TextStyle(color: AppColors.textPrimary(context), fontSize: 14, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
                 _buildTimelineItem(
+                  context,
                   'Mon, 20 May 2025',
                   '10:00 AM - 10:45 AM',
                   'Linear Equations',
                   'Completed',
-                  Colors.greenAccent,
-                  surfaceColor,
+                  AppColors.success(context),
                 ),
                 _buildTimelineItem(
+                  context,
                   'Tue, 21 May 2025',
                   '10:00 AM - 10:45 AM',
                   'Quadratic Equations',
                   'Scheduled',
-                  Colors.blueAccent,
-                  surfaceColor,
+                  AppColors.primary(context),
                 ),
                 _buildTimelineItem(
+                  context,
                   'Wed, 22 May 2025',
                   '10:00 AM - 10:45 AM',
                   'Inequalities',
                   'Scheduled',
-                  Colors.blueAccent,
-                  surfaceColor,
+                  AppColors.primary(context),
                 ),
                 const SizedBox(height: 24),
-                const Text('Next Week',
-                    style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+                Text('Next Week',
+                    style: TextStyle(color: AppColors.textPrimary(context), fontSize: 14, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
                 _buildTimelineItem(
+                  context,
                   'Mon, 27 May 2025',
                   '10:00 AM - 10:45 AM',
                   'Functions',
                   'Scheduled',
-                  Colors.blueAccent,
-                  surfaceColor,
+                  AppColors.primary(context),
                 ),
               ],
             ),
@@ -92,70 +95,68 @@ class ClassLessonsScreen extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {},
-        backgroundColor: const Color(0xFF4338CA),
-        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: AppColors.primary(context),
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.add),
       ),
     );
   }
 
-  Widget _buildTab(String label, bool isActive) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      decoration: BoxDecoration(
-        color: isActive ? const Color(0xFF4338CA) : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
-        border: isActive ? null : Border.all(color: Colors.white24),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(color: isActive ? Colors.white : Colors.white60, fontSize: 13, fontWeight: FontWeight.w500),
+  Widget _buildTab(BuildContext context, String label, bool isActive, [VoidCallback? onTap]) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? AppColors.primary(context) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: isActive ? null : Border.all(color: AppColors.border(context)),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isActive ? Colors.white : AppColors.textSecondary(context),
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildTimelineItem(
-      String date, String time, String title, String status, Color statusColor, Color surfaceColor) {
+  Widget _buildTimelineItem(BuildContext context, String date, String time, String title, String status,
+      Color statusColor) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(date, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+          Text(date, style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12)),
           const SizedBox(height: 8),
-          InkWell(
-            onTap: () => {},
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: surfaceColor,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.05)),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(time, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
-                        const SizedBox(height: 4),
-                        Text(title,
-                            style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
+          AppCard(
+            onTap: () => context.push('/staff/lessons/details/123'),
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(time, style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12)),
+                      const SizedBox(height: 4),
+                      Text(title,
+                          style: TextStyle(
+                            color: AppColors.textPrimary(context),
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          )),
+                    ],
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(status, style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold)),
-                  ),
-                  const SizedBox(width: 8),
-                  const Icon(Icons.chevron_right, color: Colors.white54, size: 20),
-                ],
-              ),
+                ),
+                StatusBadge(label: status, color: statusColor),
+                const SizedBox(width: 8),
+                Icon(Icons.chevron_right, color: AppColors.textMuted(context), size: 20),
+              ],
             ),
           ),
         ],
@@ -163,3 +164,4 @@ class ClassLessonsScreen extends StatelessWidget {
     );
   }
 }
+

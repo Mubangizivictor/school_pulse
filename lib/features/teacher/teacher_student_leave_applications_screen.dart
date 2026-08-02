@@ -13,7 +13,7 @@ class TeacherStudentLeaveApplicationsScreen extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.bgDark : AppColors.backgroundLight,
+      backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -39,7 +39,7 @@ class TeacherStudentLeaveApplicationsScreen extends StatelessWidget {
                   reason: 'Sick Leave',
                   dateRange: '12 - 14 May 2024',
                   status: 'Pending',
-                  statusColor: AppColors.warningOrange,
+                  statusColor: AppColors.goldenYellow,
                   isDark: isDark,
                 ),
                 _LeaveApplicationTile(

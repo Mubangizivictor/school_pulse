@@ -40,8 +40,8 @@ class ClassMoreOptionsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.xl),
         children: [
-          _buildOptionItem(context, 'Behaviour Records', Icons.gavel, AppColors.successGreen, isDark, () {}),
-          _buildOptionItem(context, 'Class Notes', Icons.description, AppColors.royalBlue, isDark, () {}),
+          _buildOptionItem(context, 'Behaviour Records', Icons.gavel, AppColors.successGreen, isDark, () => context.push('/staff/classes/$classId/behaviour')),
+          _buildOptionItem(context, 'Class Resources', Icons.description, AppColors.royalBlue, isDark, () => context.push('/staff/classes/$classId/resources')),
           _buildOptionItem(context, 'Lesson Plans', Icons.menu_book, AppColors.electricBlue, isDark, () {}),
           _buildOptionItem(context, 'Photos & Media', Icons.photo_library, AppColors.brightOrange, isDark, () {}),
           _buildOptionItem(context, 'Student Documents', Icons.folder_shared, AppColors.brightCyan, isDark, () {}),

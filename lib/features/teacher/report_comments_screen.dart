@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
@@ -45,7 +46,16 @@ class _ReportCommentsScreenState extends State<ReportCommentsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Report Comments')),
+      backgroundColor: AppColors.background(context),
+      appBar: AppBar(
+        title: Text(
+          'Report Comments',
+          style: TextStyle(color: AppColors.textPrimary(context)),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: IconThemeData(color: AppColors.textPrimary(context)),
+      ),
       body: Column(
         children: [
           _buildClassSelector(),
@@ -54,20 +64,23 @@ class _ReportCommentsScreenState extends State<ReportCommentsScreen> {
               listener: (context, state) {
                 if (state is TeacherOperationSuccess) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(state.message)),
+                    SnackBar(
+                      content: Text(state.message),
+                      backgroundColor: AppColors.success(context),
+                    ),
                   );
                 }
               },
               builder: (context, state) {
                 if (state is TeacherLoading) {
-                  return const Center(child: CircularProgressIndicator());
+                  return Center(child: CircularProgressIndicator(color: AppColors.primary(context)));
                 }
 
                 if (state is TeacherReportCommentsLoaded) {
                   return ListView.separated(
                     padding: const EdgeInsets.all(16),
                     itemCount: state.students.length,
-                    separatorBuilder: (context, index) => const Divider(),
+                    separatorBuilder: (context, index) => Divider(color: AppColors.border(context).withValues(alpha: 0.5)),
                     itemBuilder: (context, index) {
                       final student = state.students[index];
                       final comment = state.comments.firstWhere(
@@ -110,11 +123,17 @@ class _ReportCommentsScreenState extends State<ReportCommentsScreen> {
   Widget _buildClassSelector() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: Card(
+      child: AppCard(
         child: ListTile(
-          title: const Text('Selected Class'),
-          subtitle: Text(_selectedClass ?? 'None'),
-          trailing: const Icon(Icons.arrow_drop_down),
+          title: Text(
+            'Selected Class',
+            style: TextStyle(color: AppColors.textPrimary(context), fontWeight: FontWeight.bold),
+          ),
+          subtitle: Text(
+            _selectedClass ?? 'None',
+            style: TextStyle(color: AppColors.textSecondary(context)),
+          ),
+          trailing: Icon(Icons.arrow_drop_down, color: AppColors.textPrimary(context)),
           onTap: () {
             // Logic to select class if teacher has multiple
           },
@@ -183,10 +202,17 @@ class _StudentCommentTileState extends State<_StudentCommentTile> {
           children: [
             Text(
               widget.student.name,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary(context),
+              ),
             ),
             IconButton(
-              icon: Icon(_isEditing ? Icons.check : Icons.edit, size: 20),
+              icon: Icon(
+                _isEditing ? Icons.check : Icons.edit,
+                size: 20,
+                color: _isEditing ? AppColors.success(context) : AppColors.primary(context),
+              ),
               onPressed: () {
                 if (_isEditing) {
                   widget.onSave(_controller.text);
@@ -200,16 +226,27 @@ class _StudentCommentTileState extends State<_StudentCommentTile> {
           TextField(
             controller: _controller,
             maxLines: 3,
-            decoration: const InputDecoration(
+            style: TextStyle(color: AppColors.textPrimary(context)),
+            decoration: InputDecoration(
               hintText: 'Enter report comment...',
-              border: OutlineInputBorder(),
+              hintStyle: TextStyle(color: AppColors.textMuted(context)),
+              filled: true,
+              fillColor: AppColors.surfaceElevated(context),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: AppColors.border(context)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: AppColors.border(context)),
+              ),
             ),
           )
         else
           Text(
             _controller.text.isEmpty ? 'No comment added' : _controller.text,
             style: TextStyle(
-              color: _controller.text.isEmpty ? Colors.grey : Colors.black87,
+              color: _controller.text.isEmpty ? AppColors.textMuted(context) : AppColors.textSecondary(context),
               fontStyle: _controller.text.isEmpty ? FontStyle.italic : FontStyle.normal,
             ),
           ),

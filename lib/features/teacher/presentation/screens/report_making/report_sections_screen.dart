@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/report_wizard/report_wizard_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/report_wizard/report_wizard_event.dart';
 
 class ReportSectionsScreen extends StatefulWidget {
   const ReportSectionsScreen({super.key});
@@ -31,9 +35,9 @@ class _ReportSectionsScreenState extends State<ReportSectionsScreen> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                const Text(
+                Text(
                   'This report will include the following sections:',
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(color: AppColors.textSecondary(context)),
                 ),
                 const SizedBox(height: 16),
                 ...sections.map((section) => Padding(
@@ -42,15 +46,27 @@ class _ReportSectionsScreenState extends State<ReportSectionsScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         child: CheckboxListTile(
                           contentPadding: EdgeInsets.zero,
-                          title: Text(section['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: section['subtitle'] != null ? Text(section['subtitle']) : null,
+                          title: Text(
+                            section['title'],
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary(context),
+                            ),
+                          ),
+                          subtitle: section['subtitle'] != null
+                              ? Text(
+                                  section['subtitle'],
+                                  style: TextStyle(color: AppColors.textSecondary(context)),
+                                )
+                              : null,
                           value: section['enabled'],
                           onChanged: (val) {
                             setState(() {
                               section['enabled'] = val;
                             });
                           },
-                          activeColor: Theme.of(context).colorScheme.primary,
+                          activeColor: AppColors.primary(context),
+                          checkColor: AppColors.white,
                         ),
                       ),
                     )),
@@ -61,7 +77,14 @@ class _ReportSectionsScreenState extends State<ReportSectionsScreen> {
             padding: const EdgeInsets.all(16.0),
             child: PrimaryButton(
               label: 'Continue',
-              onPressed: () => context.push('/teacher/reports/select-students'),
+              onPressed: () {
+                final enabledTitles = sections
+                    .where((s) => s['enabled'] == true)
+                    .map((s) => s['title'] as String)
+                    .toList();
+                context.read<ReportWizardBloc>().add(ReportWizardSectionsUpdated(enabledTitles));
+                context.push('/staff/reports/select-students');
+              },
             ),
           ),
         ],

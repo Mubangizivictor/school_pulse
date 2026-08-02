@@ -52,7 +52,7 @@ class ClassAssignmentsScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(AppSpacing.xl),
             child: PulseButton(
-              text: 'Create Assignment',
+              label: 'Create Assignment',
               icon: Icons.add,
               onPressed: () {},
             ),

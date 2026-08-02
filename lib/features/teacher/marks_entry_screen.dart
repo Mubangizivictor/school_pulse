@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
@@ -113,8 +114,15 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background(context),
       appBar: AppBar(
-        title: const Text('Enter Marks'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text('Enter Marks', style: TextStyle(color: AppColors.textPrimary(context))),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
       ),
       body: BlocConsumer<TeacherBloc, TeacherState>(
         listener: (context, state) {
@@ -129,7 +137,7 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
               SnackBar(
                 content: Text(
                     'Saved marks for ${state.savedCount} student${state.savedCount == 1 ? '' : 's'}'),
-                backgroundColor: Colors.green,
+                backgroundColor: AppColors.success(context),
                 behavior: SnackBarBehavior.floating,
               ),
             );
@@ -140,8 +148,7 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
             return const EmptyState(
               icon: Icons.class_outlined,
               title: 'No classes assigned',
-              message:
-                  'Your account has no class or subject assignments. Ask your '
+              message: 'Your account has no class or subject assignments. Ask your '
                   'school admin to assign you a class before entering marks.',
             );
           }
@@ -186,7 +193,9 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
                                   student.name,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textPrimary(context)),
                                 ),
                               ),
                               const SizedBox(width: 16),
@@ -196,14 +205,24 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
                                   controller: _controllerFor(student.id),
                                   keyboardType: TextInputType.number,
                                   textAlign: TextAlign.center,
+                                  style: TextStyle(color: AppColors.textPrimary(context)),
                                   inputFormatters: [
                                     FilteringTextInputFormatter.digitsOnly,
                                     LengthLimitingTextInputFormatter(3),
                                   ],
                                   decoration: InputDecoration(
                                     hintText: '0-100',
+                                    hintStyle: TextStyle(color: AppColors.textMuted(context)),
                                     contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                    border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(color: AppColors.border(context))),
+                                    enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(color: AppColors.border(context))),
+                                    focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(color: AppColors.primary(context))),
                                   ),
                                 ),
                               ),
@@ -247,8 +266,8 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1))),
+        color: AppColors.surfaceElevated(context),
+        border: Border(bottom: BorderSide(color: AppColors.border(context).withValues(alpha: 0.1))),
       ),
       child: Column(
         children: [
@@ -261,7 +280,11 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
                 _selectedClass = v!;
                 _students = [];
                 // Update subjects for the new class
-                final classSubjects = user.subjects?.where((s) => s.className == v).map((s) => s.subjectName).toList() ?? [];
+                final classSubjects = user.subjects
+                        ?.where((s) => s.className == v)
+                        .map((s) => s.subjectName)
+                        .toList() ??
+                    [];
                 _selectedSubject = classSubjects.isNotEmpty ? classSubjects.first : 'General';
               });
               _requestMarks();
@@ -296,10 +319,10 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: AppColors.surfaceElevated(context),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: AppColors.shadow(context),
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),
@@ -324,10 +347,12 @@ class _MarksEntrySkeleton extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
-            children: List.generate(3, (index) => const Padding(
-              padding: EdgeInsets.only(bottom: 12),
-              child: Skeleton(height: 50, borderRadius: 8),
-            )),
+            children: List.generate(
+                3,
+                (index) => const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: Skeleton(height: 50, borderRadius: 8),
+                    )),
           ),
         ),
         Expanded(
@@ -362,19 +387,27 @@ class _DropdownRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        SizedBox(width: 80, child: Text(label, style: const TextStyle(fontWeight: FontWeight.w500))),
+        SizedBox(
+            width: 80,
+            child: Text(label,
+                style: TextStyle(fontWeight: FontWeight.w500, color: AppColors.textPrimary(context)))),
         Expanded(
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              border: Border.all(color: Theme.of(context).dividerColor),
+              border: Border.all(color: AppColors.border(context)),
               borderRadius: BorderRadius.circular(8),
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
                 value: value,
                 isExpanded: true,
-                items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                dropdownColor: AppColors.surfaceElevated(context),
+                style: TextStyle(color: AppColors.textPrimary(context)),
+                items: items
+                    .map((e) => DropdownMenuItem(
+                        value: e, child: Text(e, style: TextStyle(color: AppColors.textPrimary(context)))))
+                    .toList(),
                 onChanged: onChanged,
               ),
             ),
@@ -384,3 +417,4 @@ class _DropdownRow extends StatelessWidget {
     );
   }
 }
+

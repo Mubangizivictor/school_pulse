@@ -10,21 +10,19 @@ class TeacherStudentMoreOptionsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
-      backgroundColor: isDark ? AppColors.bgDark : AppColors.backgroundLight,
+      backgroundColor: AppColors.background(context),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black),
+          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
           onPressed: () => context.pop(),
         ),
         title: Text(
           'More Options',
           style: AppTypography.headlineSmall.copyWith(
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            color: AppColors.textPrimary(context),
           ),
         ),
       ),
@@ -34,45 +32,37 @@ class TeacherStudentMoreOptionsScreen extends StatelessWidget {
           _OptionTile(
             icon: Icons.health_and_safety_outlined,
             label: 'Health Information',
-            isDark: isDark,
             onTap: () => context.push('/staff/students/$studentId/health'),
           ),
           _OptionTile(
             icon: Icons.contact_phone_outlined,
             label: 'Contact Information',
-            isDark: isDark,
           ),
           _OptionTile(
             icon: Icons.description_outlined,
             label: 'Documents',
-            isDark: isDark,
           ),
           _OptionTile(
             icon: Icons.people_outline,
             label: 'Sibling Information',
-            isDark: isDark,
           ),
           _OptionTile(
             icon: Icons.exit_to_app_outlined,
             label: 'Leave Applications',
-            isDark: isDark,
             onTap: () => context.push('/staff/students/$studentId/leave-applications'),
           ),
           _OptionTile(
             icon: Icons.note_alt_outlined,
             label: 'Notes',
-            isDark: isDark,
           ),
           _OptionTile(
             icon: Icons.chat_bubble_outline,
             label: 'Communications',
-            isDark: isDark,
             onTap: () => context.push('/staff/students/$studentId/communications'),
           ),
           _OptionTile(
             icon: Icons.history_outlined,
             label: 'Timeline',
-            isDark: isDark,
           ),
         ],
       ),
@@ -83,30 +73,29 @@ class TeacherStudentMoreOptionsScreen extends StatelessWidget {
 class _OptionTile extends StatelessWidget {
   final IconData icon;
   final String label;
-  final bool isDark;
   final VoidCallback? onTap;
 
-  const _OptionTile({required this.icon, required this.label, required this.isDark, this.onTap});
+  const _OptionTile({required this.icon, required this.label, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.m),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+        color: AppColors.surfaceElevated(context),
         borderRadius: BorderRadius.circular(AppSpacing.l),
-        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+        border: Border.all(color: AppColors.border(context)),
       ),
       child: ListTile(
         onTap: onTap,
-        leading: Icon(icon, color: AppColors.royalBlue),
+        leading: Icon(icon, color: AppColors.primary(context)),
         title: Text(
           label,
           style: AppTypography.bodyLarge.copyWith(
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            color: AppColors.textPrimary(context),
           ),
         ),
-        trailing: Icon(Icons.chevron_right, color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+        trailing: Icon(Icons.chevron_right, color: AppColors.textMuted(context)),
       ),
     );
   }

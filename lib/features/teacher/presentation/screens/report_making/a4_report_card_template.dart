@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:school_pulse/design_system/theme.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 
 class A4ReportCardTemplate extends StatelessWidget {
   const A4ReportCardTemplate({super.key});
@@ -38,7 +38,7 @@ class A4ReportCardTemplate extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildHeader(),
+                  _buildHeader(context),
                   const SizedBox(height: 24),
                   _buildStudentInfo(),
                   const SizedBox(height: 24),
@@ -72,11 +72,11 @@ class A4ReportCardTemplate extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Icon(Icons.school, size: 60, color: SemanticColors.primary),
+        Icon(Icons.school, size: 60, color: AppColors.primary(context)),
         const Expanded(
           child: Column(
             children: [

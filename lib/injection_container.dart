@@ -305,6 +305,8 @@ import 'package:school_pulse/features/teacher/domain/services/class_teacher_assi
 import 'package:school_pulse/features/teacher/domain/services/subject_audit_service.dart';
 import 'package:school_pulse/features/teacher/domain/services/subject_sync_service.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_dashboard/class_teacher_dashboard_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_attendance/class_attendance_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_attendance/class_attendance_history_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_students/class_students_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_bloc.dart';
@@ -1297,11 +1299,30 @@ Future<void> init() async {
     ),
   );
 
+  sl.registerLazySingleton(
+    () => ClassAttendanceBloc(
+      attendanceRepository: sl(),
+      studentRepository: sl(),
+    ),
+  );
+
+  sl.registerLazySingleton(
+    () => ClassAttendanceHistoryBloc(attendanceRepository: sl()),
+  );
+
   sl.registerLazySingleton<ClassAttendanceRepository>(
     () => ClassAttendanceRepositoryImpl(
       remoteDataSource: sl(),
+      localDataSource: sl(),
+      // Shares the Subject Teacher panel's offline queue: one device, one
+      // replay order, so a class register and a lesson register cannot be
+      // pushed out of sequence relative to each other.
+      queueDataSource: sl(),
+      structureRepository: sl(),
       assignmentService: sl(),
+      auditService: sl(),
       networkInfo: sl(),
+      deviceIdService: sl(),
     ),
   );
 
@@ -1668,6 +1689,7 @@ Future<void> init() async {
     LessonAttendanceIsarSchema,
     ClassStudentIsarSchema,
     ClassDashboardCacheIsarSchema,
+    ClassAttendanceDraftIsarSchema,
   ], directory: dir.path);
   sl.registerLazySingleton(() => isar);
 

@@ -65,9 +65,17 @@ class _TeacherTimetableScreenState extends State<TeacherTimetableScreen> with Si
                   selected: isSelected,
                   onSelected: (_) {},
                   selectedColor: AppColors.primary(context),
+                  backgroundColor: AppColors.surfaceElevated(context),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  side: BorderSide(
+                    color: isSelected ? AppColors.primary(context) : AppColors.border(context),
+                  ),
                   labelStyle: TextStyle(
-                    color: isSelected ? Colors.white : AppColors.textPrimary(context),
+                    color: isSelected 
+                        ? (Theme.of(context).brightness == Brightness.dark ? Colors.black : Colors.white)
+                        : AppColors.textSecondary(context),
                     fontWeight: FontWeight.bold,
+                    fontSize: 12,
                   ),
                 ),
               );
@@ -168,7 +176,7 @@ class _TimetableSlot extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.restaurant_rounded, size: 16, color: Colors.grey),
+            Icon(Icons.restaurant_rounded, size: 16, color: AppColors.textMuted(context)),
             const SizedBox(width: 8),
             Text(
               '$subject ($time)',

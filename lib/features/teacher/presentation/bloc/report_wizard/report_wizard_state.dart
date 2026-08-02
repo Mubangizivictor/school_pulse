@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+enum ReportWizardStatus { initial, loading, success, failure }
+
 class ReportWizardState extends Equatable {
   final String? selectedClassId;
   final String? selectedClassName;
@@ -8,6 +10,8 @@ class ReportWizardState extends Equatable {
   final String? selectedProfile;
   final List<String> enabledSections;
   final List<String> selectedStudentIds;
+  final ReportWizardStatus status;
+  final String? errorMessage;
 
   const ReportWizardState({
     this.selectedClassId,
@@ -24,6 +28,8 @@ class ReportWizardState extends Equatable {
       'Next Steps / Recommendations',
     ],
     this.selectedStudentIds = const [],
+    this.status = ReportWizardStatus.initial,
+    this.errorMessage,
   });
 
   ReportWizardState copyWith({
@@ -34,6 +40,8 @@ class ReportWizardState extends Equatable {
     String? selectedProfile,
     List<String>? enabledSections,
     List<String>? selectedStudentIds,
+    ReportWizardStatus? status,
+    String? errorMessage,
   }) {
     return ReportWizardState(
       selectedClassId: selectedClassId ?? this.selectedClassId,
@@ -43,6 +51,8 @@ class ReportWizardState extends Equatable {
       selectedProfile: selectedProfile ?? this.selectedProfile,
       enabledSections: enabledSections ?? this.enabledSections,
       selectedStudentIds: selectedStudentIds ?? this.selectedStudentIds,
+      status: status ?? this.status,
+      errorMessage: errorMessage ?? this.errorMessage,
     );
   }
 
@@ -55,5 +65,7 @@ class ReportWizardState extends Equatable {
         selectedProfile,
         enabledSections,
         selectedStudentIds,
+        status,
+        errorMessage,
       ];
 }

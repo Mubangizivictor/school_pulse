@@ -60,7 +60,7 @@ class ClassPerformanceScreen extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.x3l),
             PulseButton(
-              text: 'View Detailed Analysis',
+              label: 'View Detailed Analysis',
               onPressed: () {},
             ),
           ],

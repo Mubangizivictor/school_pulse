@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/report_wizard/report_wizard_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/report_wizard/report_wizard_event.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/report_wizard/report_wizard_state.dart';
 
 class SelectStudentsScreen extends StatefulWidget {
   const SelectStudentsScreen({super.key});
@@ -11,14 +16,14 @@ class SelectStudentsScreen extends StatefulWidget {
 
 class _SelectStudentsScreenState extends State<SelectStudentsScreen> {
   final List<Map<String, dynamic>> students = [
-    {'name': 'Abiola Peter', 'selected': true},
-    {'name': 'Adong Grace', 'selected': true},
-    {'name': 'Aguil Brian', 'selected': true},
-    {'name': 'Ampiire Doris', 'selected': true},
-    {'name': 'Atim Charles', 'selected': true},
-    {'name': 'Namatuga Grace', 'selected': true},
-    {'name': 'Tumusiime David', 'selected': true},
-    {'name': 'Mugisha Samuel', 'selected': true},
+    {'id': 's1', 'name': 'Abiola Peter', 'selected': true},
+    {'id': 's2', 'name': 'Adong Grace', 'selected': true},
+    {'id': 's3', 'name': 'Aguil Brian', 'selected': true},
+    {'id': 's4', 'name': 'Ampiire Doris', 'selected': true},
+    {'id': 's5', 'name': 'Atim Charles', 'selected': true},
+    {'id': 's6', 'name': 'Namatuga Grace', 'selected': true},
+    {'id': 's7', 'name': 'Tumusiime David', 'selected': true},
+    {'id': 's8', 'name': 'Mugisha Samuel', 'selected': true},
   ];
 
   bool allSelected = true;
@@ -39,7 +44,13 @@ class _SelectStudentsScreenState extends State<SelectStudentsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: CheckboxListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Select All', style: TextStyle(fontWeight: FontWeight.bold)),
+              title: Text(
+                'Select All',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary(context),
+                ),
+              ),
               value: allSelected,
               onChanged: (val) {
                 setState(() {
@@ -49,10 +60,11 @@ class _SelectStudentsScreenState extends State<SelectStudentsScreen> {
                   }
                 });
               },
-              activeColor: Theme.of(context).colorScheme.primary,
+              activeColor: AppColors.primary(context),
+              checkColor: AppColors.white,
             ),
           ),
-          const Divider(),
+          Divider(color: AppColors.border(context)),
           Expanded(
             child: ListView.separated(
               padding: const EdgeInsets.all(16),
@@ -63,10 +75,21 @@ class _SelectStudentsScreenState extends State<SelectStudentsScreen> {
                 return AppCard(
                   padding: EdgeInsets.zero,
                   child: CheckboxListTile(
-                    title: Text(student['name'], style: const TextStyle(fontWeight: FontWeight.w600)),
-                    secondary: const CircleAvatar(
+                    title: Text(
+                      student['name'],
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
+                    secondary: CircleAvatar(
                       radius: 18,
-                      child: Icon(Icons.person, size: 20),
+                      backgroundColor: AppColors.primarySoft(context),
+                      child: Icon(
+                        Icons.person,
+                        size: 20,
+                        color: AppColors.primary(context),
+                      ),
                     ),
                     value: student['selected'],
                     onChanged: (val) {
@@ -75,7 +98,8 @@ class _SelectStudentsScreenState extends State<SelectStudentsScreen> {
                         allSelected = students.every((s) => s['selected']);
                       });
                     },
-                    activeColor: Theme.of(context).colorScheme.primary,
+                    activeColor: AppColors.primary(context),
+                    checkColor: AppColors.white,
                   ),
                 );
               },
@@ -83,9 +107,25 @@ class _SelectStudentsScreenState extends State<SelectStudentsScreen> {
           ),
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: PrimaryButton(
-              label: 'Continue',
-              onPressed: () => context.push('/teacher/reports/subject-progress'),
+            child: BlocBuilder<ReportWizardBloc, ReportWizardState>(
+              builder: (context, state) {
+                final selectedCount = students.where((s) => s['selected'] == true).length;
+                return PrimaryButton(
+                  label: 'Continue${selectedCount > 0 ? ' ($selectedCount)' : ''}',
+                  onPressed: selectedCount == 0
+                      ? null
+                      : () {
+                          final selectedIds = students
+                              .where((s) => s['selected'] == true)
+                              .map((s) => s['id'] as String)
+                              .toList();
+                          context
+                              .read<ReportWizardBloc>()
+                              .add(ReportWizardStudentsSelected(selectedIds));
+                          context.push('/staff/reports/subject-progress');
+                        },
+                );
+              },
             ),
           ),
         ],

@@ -3,6 +3,8 @@ import '../../domain/entities/teacher_dashboard_stats.dart';
 import '../../domain/usecases/get_attendance_history.dart';
 import '../../domain/entities/homework.dart';
 import '../../domain/entities/report_comment.dart';
+import '../../domain/entities/competency_rating.dart';
+import '../../domain/entities/ongoing_lesson.dart';
 
 abstract class TeacherState extends Equatable {
   const TeacherState();
@@ -22,7 +24,11 @@ class TeacherLoaded extends TeacherState {
   final int submissionsDue;
   final int classesToday;
   final int activeNotifications;
+  final int attendanceTaken;
+  final int marksEntered;
+  final int reportsGenerated;
   final List<ClassProgress> classProgress;
+  final OngoingLesson? ongoingLesson;
 
   const TeacherLoaded({
     required this.studentsToday,
@@ -30,7 +36,11 @@ class TeacherLoaded extends TeacherState {
     required this.submissionsDue,
     required this.classesToday,
     required this.activeNotifications,
+    required this.attendanceTaken,
+    required this.marksEntered,
+    required this.reportsGenerated,
     required this.classProgress,
+    this.ongoingLesson,
   });
 
   @override
@@ -40,7 +50,11 @@ class TeacherLoaded extends TeacherState {
         submissionsDue,
         classesToday,
         activeNotifications,
+        attendanceTaken,
+        marksEntered,
+        reportsGenerated,
         classProgress,
+        ongoingLesson,
       ];
 }
 
@@ -119,6 +133,19 @@ class TeacherReportCommentsLoaded extends TeacherState {
 
   @override
   List<Object?> get props => [comments, students];
+}
+
+class TeacherCompetencyRatingsLoaded extends TeacherState {
+  final List<CompetencyRating> ratings;
+  final List<TeacherStudent> students;
+
+  const TeacherCompetencyRatingsLoaded({
+    required this.ratings,
+    required this.students,
+  });
+
+  @override
+  List<Object?> get props => [ratings, students];
 }
 
 class TeacherOperationSuccess extends TeacherState {

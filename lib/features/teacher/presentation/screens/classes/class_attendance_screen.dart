@@ -74,7 +74,7 @@ class ClassAttendanceScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(AppSpacing.xl),
             child: PulseButton(
-              text: 'Save Attendance',
+              label: 'Save Attendance',
               onPressed: () => context.pop(),
             ),
           ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
-import 'package:school_pulse/design_system/theme.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 
 class ReportsGeneratedSuccessScreen extends StatelessWidget {
   const ReportsGeneratedSuccessScreen({super.key});
@@ -18,13 +18,13 @@ class ReportsGeneratedSuccessScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: SemanticColors.success.withOpacity(0.1),
+                  color: AppColors.success(context).withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.check_circle,
                   size: 80,
-                  color: SemanticColors.success,
+                  color: AppColors.success(context),
                 ),
               ),
               const SizedBox(height: 32),
@@ -68,7 +68,7 @@ class ReportsGeneratedSuccessScreen extends StatelessWidget {
               const SizedBox(height: 32),
               PrimaryButton(
                 label: 'Back to Dashboard',
-                onPressed: () => context.go('/teacher/reports'),
+                onPressed: () => context.go('/staff/reports'),
               ),
             ],
           ),
@@ -94,7 +94,7 @@ class _ActionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(icon, color: SemanticColors.primary),
+      leading: Icon(icon, color: AppColors.primary(context)),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
       subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
       trailing: const Icon(Icons.chevron_right, size: 20),

@@ -1,22 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 
 class MarksHistoryScreen extends StatelessWidget {
   const MarksHistoryScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = const Color(0xFF0F172A);
-    final surfaceColor = const Color(0xFF1E293B);
-
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: AppColors.background(context),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Marks History', style: TextStyle(color: Colors.white)),
+        title: Text('Marks History', style: TextStyle(color: AppColors.textPrimary(context))),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
           onPressed: () => context.pop(),
         ),
       ),
@@ -28,19 +26,19 @@ class MarksHistoryScreen extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: surfaceColor,
+              color: AppColors.surfaceElevated(context),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.05)),
+              border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
             ),
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF312E81),
+                    color: AppColors.primary(context).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.history, color: Colors.white, size: 20),
+                  child: Icon(Icons.history, color: AppColors.primary(context), size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -49,24 +47,28 @@ class MarksHistoryScreen extends StatelessWidget {
                     children: [
                       Text(
                         index % 2 == 0 ? 'Mid Term Assessment' : 'Weekly Quiz ${10 - index}',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            color: AppColors.textPrimary(context), fontWeight: FontWeight.bold),
                       ),
                       Text(
                         'Mathematics • 24 Oct 2024',
-                        style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
+                        style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12),
                       ),
                     ],
                   ),
                 ),
-                const Column(
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text('45/45', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                    Text('Students', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10)),
+                    Text('45/45',
+                        style: TextStyle(
+                            color: AppColors.success(context), fontWeight: FontWeight.bold)),
+                    Text('Students',
+                        style: TextStyle(color: AppColors.textMuted(context), fontSize: 10)),
                   ],
                 ),
                 const SizedBox(width: 8),
-                const Icon(Icons.chevron_right, color: Color(0xFF94A3B8), size: 16),
+                Icon(Icons.chevron_right, color: AppColors.textMuted(context), size: 16),
               ],
             ),
           );
@@ -75,3 +77,4 @@ class MarksHistoryScreen extends StatelessWidget {
     );
   }
 }
+

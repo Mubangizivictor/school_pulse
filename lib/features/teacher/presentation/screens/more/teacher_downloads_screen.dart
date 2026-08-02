@@ -45,7 +45,7 @@ class _TeacherDownloadsScreenState extends State<TeacherDownloadsScreen> with Si
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: SearchTextField(
+            child: AppSearchField(
               hintText: 'Search downloads...',
               onChanged: (value) {},
             ),

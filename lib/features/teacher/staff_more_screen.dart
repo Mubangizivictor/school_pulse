@@ -1,174 +1,212 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:school_pulse/core/user_roles.dart';
+import 'package:provider/provider.dart';
+import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
-import 'package:school_pulse/features/teacher/teacher_library_screen.dart';
 
 class StaffMoreScreen extends StatelessWidget {
   const StaffMoreScreen({super.key});
 
-  static const _teacherRoles = [UserRole.classTeacher, UserRole.subjectTeacher];
-  static const _boardingRoles = [UserRole.boardingPatron, UserRole.boardingMatron];
-
-  /// Matron and Patron share the same boarding screens against different
-  /// wings, so only the route prefix differs.
-  static String _boardingRoot(AuthState state) {
-    if (state is AuthAuthenticated &&
-        state.user.roles.contains(UserRole.boardingPatron)) {
-      return '/staff/patron';
-    }
-    return '/staff/matron';
-  }
-
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthBloc>().state;
-    final isTeacher = authState is AuthAuthenticated && _teacherRoles.contains(authState.user.role);
-    final isBoardingStaff = authState is AuthAuthenticated && _boardingRoles.contains(authState.user.role);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('More')),
+      backgroundColor: AppColors.background(context),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: const Text('More'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
-          FadeInSlide(
-            child: _buildMenuSection(
-              context,
-              isTeacher ? 'Teacher Tools' : 'Tools',
-              [
-                if (isTeacher)
-                  _MenuTile(
-                    icon: Icons.menu_book_outlined,
-                    title: 'Lesson Plans',
-                    onTap: () => context.push('/staff/lesson-plans'),
-                  ),
-                if (isTeacher)
-                  _MenuTile(
-                    icon: Icons.assignment_outlined,
-                    title: 'Homework & Assignments',
-                    onTap: () => context.push('/staff/homework'),
-                  ),
-                if (isTeacher)
-                  _MenuTile(
-                    icon: Icons.comment_bank_outlined,
-                    title: 'Report Comments',
-                    onTap: () => context.push('/staff/report-comments'),
-                  ),
-                if (isTeacher)
-                  _MenuTile(
-                    icon: Icons.analytics_outlined,
-                    title: 'Class Analytics',
-                    onTap: () => context.push('/staff/class-analytics'),
-                  ),
-                if (!isBoardingStaff)
-                  _MenuTile(
-                    icon: Icons.library_books_outlined,
-                    title: 'Library & Resources',
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const TeacherLibraryScreen()),
-                    ),
-                  ),
-                // Boarding modules that the bottom nav has no room for.
-                if (isBoardingStaff) ...[
-                  _MenuTile(
-                    icon: Icons.favorite_outline,
-                    title: 'Student Welfare',
-                    onTap: () => context.push('${_boardingRoot(authState)}/welfare'),
-                  ),
-                  _MenuTile(
-                    icon: Icons.exit_to_app,
-                    title: 'Leave Requests',
-                    onTap: () => context.push('${_boardingRoot(authState)}/leave'),
-                  ),
-                  _MenuTile(
-                    icon: Icons.gavel_outlined,
-                    title: 'Discipline',
-                    onTap: () => context.push('${_boardingRoot(authState)}/discipline'),
-                  ),
-                  _MenuTile(
-                    icon: Icons.campaign_outlined,
-                    title: 'Announcements',
-                    onTap: () => context.push('${_boardingRoot(authState)}/communication'),
-                  ),
-                ],
-                _MenuTile(
-                  icon: Icons.event_note_outlined,
-                  title: 'School Calendar',
-                  onTap: () => context.push('/staff/calendar'),
+          const SizedBox(height: 16),
+          _buildProfileHeader(context, authState),
+          const SizedBox(height: 24),
+          Text(
+            'More Options:',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+          const SizedBox(height: 12),
+          AppCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                _MoreMenuItem(
+                  icon: Icons.person_outline_rounded,
+                  title: 'My Profile',
+                  onTap: () => context.push('/staff/profile'),
+                ),
+                _MoreMenuItem(
+                  icon: Icons.menu_book_outlined,
+                  title: 'My Subjects',
+                  onTap: () => context.push('/staff/more/subjects'),
+                ),
+                _MoreMenuItem(
+                  icon: Icons.calendar_today_outlined,
+                  title: 'Timetable',
+                  onTap: () => context.push('/staff/more/timetable'),
+                ),
+                _MoreMenuItem(
+                  icon: Icons.campaign_outlined,
+                  title: 'Announcements',
+                  onTap: () => context.push('/staff/more/announcements'),
+                ),
+                _MoreMenuItem(
+                  icon: Icons.chat_bubble_outline_rounded,
+                  title: 'Messages',
+                  onTap: () => context.push('/staff/messages'),
+                ),
+                _MoreMenuItem(
+                  icon: Icons.assignment_outlined,
+                  title: 'Homework Center',
+                  onTap: () => context.push('/staff/homework'),
+                ),
+                _MoreMenuItem(
+                  icon: Icons.bar_chart_rounded,
+                  title: 'Reports',
+                  onTap: () => context.push('/staff/reports'),
+                ),
+                _MoreMenuItem(
+                  icon: Icons.file_download_outlined,
+                  title: 'Downloads',
+                  onTap: () => context.push('/staff/more/downloads'),
+                ),
+                _MoreMenuItem(
+                  icon: Icons.event_busy_outlined,
+                  title: 'Leave Requests',
+                  onTap: () => context.push('/staff/more/leave-requests'),
+                ),
+                _MoreMenuItem(
+                  icon: Icons.settings_outlined,
+                  title: 'Settings',
+                  onTap: () => context.push('/staff/more/settings'),
+                ),
+                _MoreMenuItem(
+                  icon: isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                  title: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+                  onTap: () {
+                    final provider = context.read<ThemeProvider>();
+                    provider.setThemeMode(isDark ? ThemeMode.light : ThemeMode.dark);
+                  },
+                ),
+                _MoreMenuItem(
+                  icon: Icons.help_outline_rounded,
+                  title: 'Help & Support',
+                  onTap: () => context.push('/staff/more/support'),
+                ),
+                _MoreMenuItem(
+                  icon: Icons.info_outline_rounded,
+                  title: 'About School Pulse',
+                  onTap: () => context.push('/staff/more/about'),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 24),
-          FadeInSlide(
-            delay: const Duration(milliseconds: 200),
-            child: _buildMenuSection(
-              context,
-              'Administrative',
-              [
-                _MenuTile(
-                  icon: Icons.person_outline,
-                  title: 'My Profile',
-                  onTap: () => context.push('/staff/profile'),
-                ),
-                _MenuTile(
-                  icon: Icons.lock_outline,
-                  title: 'Security Settings',
-                  onTap: () => context.push('/staff/security-settings'),
-                ),
-              ],
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: OutlinedButton.icon(
+              onPressed: () => _handleLogout(context),
+              icon: Icon(Icons.logout_rounded, color: AppColors.danger(context)),
+              label: Text(
+                'Logout',
+                style: TextStyle(color: AppColors.danger(context), fontWeight: FontWeight.bold),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: AppColors.danger(context)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
             ),
           ),
-          const SizedBox(height: 32),
-          FadeInSlide(
-            delay: const Duration(milliseconds: 400),
-            child: SecondaryButton(
-              label: 'Logout',
-              onPressed: () {
-                context.read<AuthBloc>().add(LogoutPressed());
-                context.go('/login');
-              },
-              icon: Icons.logout,
-            ),
-          ),
+          const SizedBox(height: 48),
         ],
       ),
     );
   }
 
-  Widget _buildMenuSection(BuildContext context, String title, List<Widget> children) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(
-            title,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+  void _handleLogout(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to log out?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Logout', style: TextStyle(color: AppColors.danger(context))),
           ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      context.read<AuthBloc>().add(LogoutPressed());
+      context.go('/welcome');
+    }
+  }
+
+  Widget _buildProfileHeader(BuildContext context, AuthState state) {
+    String name = 'Mrs. Achieng Mary';
+    String role = 'Class Teacher - P3 East';
+    
+    if (state is AuthAuthenticated) {
+      name = state.user.name;
+      role = '${state.user.role.name} ${state.user.assignedClass != null ? "- ${state.user.assignedClass}" : ""}';
+    }
+
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 30,
+          backgroundColor: AppColors.primary(context).withValues(alpha: 0.1),
+          child: Icon(Icons.person, size: 40, color: AppColors.primary(context)),
         ),
-        AppCard(
-          padding: EdgeInsets.zero,
+        const SizedBox(width: 16),
+        Expanded(
           child: Column(
-            children: children.asMap().entries.map((entry) {
-              final idx = entry.key;
-              final child = entry.value;
-              return Column(
-                children: [
-                  child,
-                  if (idx < children.length - 1)
-                    const Divider(height: 1, indent: 56),
-                ],
-              );
-            }).toList(),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                name,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                role,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textSecondary(context),
+                ),
+              ),
+              GestureDetector(
+                onTap: () => context.push('/staff/profile'),
+                child: Text(
+                  'View Profile',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.primary(context),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -176,12 +214,12 @@ class StaffMoreScreen extends StatelessWidget {
   }
 }
 
-class _MenuTile extends StatelessWidget {
+class _MoreMenuItem extends StatelessWidget {
   final IconData icon;
   final String title;
   final VoidCallback onTap;
 
-  const _MenuTile({
+  const _MoreMenuItem({
     required this.icon,
     required this.title,
     required this.onTap,
@@ -189,11 +227,29 @@ class _MenuTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon),
-      title: Text(title),
-      trailing: const Icon(Icons.chevron_right, size: 20),
-      onTap: onTap,
+    return Column(
+      children: [
+        ListTile(
+          leading: Icon(icon, color: AppColors.textPrimary(context), size: 22),
+          title: Text(
+            title,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+          onTap: onTap,
+          dense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        ),
+        Divider(
+          height: 1,
+          indent: 56,
+          endIndent: 16,
+          color: AppColors.border(context).withValues(alpha: 0.5),
+        ),
+      ],
     );
   }
 }

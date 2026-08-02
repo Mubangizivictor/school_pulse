@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
-import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
@@ -27,17 +27,24 @@ class _ClassAnalyticsScreenState extends State<ClassAnalyticsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
-
     return Scaffold(
-      appBar: AppBar(title: const Text('Class Analytics')),
+      backgroundColor: AppColors.background(context),
+      appBar: AppBar(
+        title: Text(
+          'Class Analytics',
+          style: TextStyle(color: AppColors.textPrimary(context)),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: IconThemeData(color: AppColors.textPrimary(context)),
+      ),
       body: BlocBuilder<TeacherBloc, TeacherState>(
         builder: (context, state) {
           if (state is TeacherLoading || state is TeacherInitial) {
             return const Center(child: CircularProgressIndicator());
           }
           if (state is TeacherError) {
-            return Center(child: Text(state.message));
+            return Center(child: Text(state.message, style: TextStyle(color: AppColors.textPrimary(context))));
           }
           if (state is! TeacherLoaded) {
             return const SizedBox.shrink();
@@ -61,25 +68,25 @@ class _ClassAnalyticsScreenState extends State<ClassAnalyticsScreen> {
                     value: (attendanceRate * 100),
                     suffix: '%',
                     icon: Icons.how_to_reg_outlined,
-                    color: semanticColors.success,
+                    color: AppColors.success(context),
                   ),
                   DashboardStatCard(
                     title: 'Classes Today',
                     value: state.classesToday.toDouble(),
                     icon: Icons.class_outlined,
-                    color: semanticColors.info,
+                    color: AppColors.information(context),
                   ),
                   DashboardStatCard(
                     title: 'Total Students',
                     value: state.totalStudents.toDouble(),
                     icon: Icons.groups_outlined,
-                    color: Theme.of(context).colorScheme.primary,
+                    color: AppColors.primary(context),
                   ),
                   DashboardStatCard(
                     title: 'Submissions Due',
                     value: state.submissionsDue.toDouble(),
                     icon: Icons.pending_actions_outlined,
-                    color: semanticColors.warning,
+                    color: AppColors.warning(context),
                   ),
                 ],
               ),
@@ -87,9 +94,12 @@ class _ClassAnalyticsScreenState extends State<ClassAnalyticsScreen> {
               const SectionHeader(title: 'Class Progress'),
               const SizedBox(height: 12),
               if (state.classProgress.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  child: Text('No class progress data yet.'),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Text(
+                    'No class progress data yet.',
+                    style: TextStyle(color: AppColors.textSecondary(context)),
+                  ),
                 )
               else
                 ...state.classProgress.asMap().entries.map((entry) {
@@ -101,7 +111,7 @@ class _ClassAnalyticsScreenState extends State<ClassAnalyticsScreen> {
                       title: progress.title,
                       progress: progress.progress,
                       subtitle: progress.subtitle,
-                      color: index.isOdd ? semanticColors.info : null,
+                      color: index.isOdd ? AppColors.information(context) : AppColors.primary(context),
                     ),
                   );
                 }),

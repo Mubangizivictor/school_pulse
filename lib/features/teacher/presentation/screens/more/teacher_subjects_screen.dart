@@ -20,7 +20,7 @@ class TeacherSubjectsScreen extends StatelessWidget {
             className: 'P3 East',
             students: 32,
             periodsPerWeek: 6,
-            iconColor: Colors.purple,
+            iconColor: AppColors.electricBlue,
           ),
           const SizedBox(height: 12),
           _SubjectCard(
@@ -28,7 +28,7 @@ class TeacherSubjectsScreen extends StatelessWidget {
             className: 'P6 West',
             students: 38,
             periodsPerWeek: 5,
-            iconColor: Colors.orange,
+            iconColor: AppColors.goldenYellow,
           ),
           const SizedBox(height: 12),
           _SubjectCard(
@@ -36,7 +36,7 @@ class TeacherSubjectsScreen extends StatelessWidget {
             className: 'S1 East',
             students: 34,
             periodsPerWeek: 4,
-            iconColor: Colors.green,
+            iconColor: AppColors.successGreen,
           ),
         ],
       ),

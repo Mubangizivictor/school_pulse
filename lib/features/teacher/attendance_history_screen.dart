@@ -2,75 +2,211 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
-import 'package:school_pulse/design_system/app_theme.dart';
-import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
-import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
-import 'package:school_pulse/features/teacher/presentation/bloc/teacher_event.dart';
-import 'package:school_pulse/features/teacher/presentation/bloc/teacher_state.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/features/teacher/domain/entities/class_attendance.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_attendance/class_attendance_history_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_state.dart';
 
 class TeacherAttendanceHistoryScreen extends StatefulWidget {
   const TeacherAttendanceHistoryScreen({super.key});
 
   @override
-  State<TeacherAttendanceHistoryScreen> createState() => _TeacherAttendanceHistoryScreenState();
+  State<TeacherAttendanceHistoryScreen> createState() =>
+      _TeacherAttendanceHistoryScreenState();
 }
 
-class _TeacherAttendanceHistoryScreenState extends State<TeacherAttendanceHistoryScreen> {
+class _TeacherAttendanceHistoryScreenState
+    extends State<TeacherAttendanceHistoryScreen> {
   @override
   void initState() {
     super.initState();
-    final authState = context.read<AuthBloc>().state;
-    if (authState is AuthAuthenticated) {
-      context.read<TeacherBloc>().add(TeacherAttendanceHistoryRequested(authState.user.id));
-    }
+    _load();
+  }
+
+  void _load({HistoryRange range = HistoryRange.month}) {
+    final active = context.read<ClassTeacherContextBloc>().state.active;
+    if (active == null) return;
+    context
+        .read<ClassAttendanceHistoryBloc>()
+        .add(ClassAttendanceHistoryRequested(active, range: range));
   }
 
   @override
   Widget build(BuildContext context) {
-    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
-
     return Scaffold(
+      backgroundColor: AppColors.background(context),
       appBar: AppBar(
-        title: const Text('Attendance History'),
+        title: Text(
+          'Attendance History',
+          style: TextStyle(color: AppColors.textPrimary(context)),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: IconThemeData(color: AppColors.textPrimary(context)),
       ),
-      body: BlocBuilder<TeacherBloc, TeacherState>(
-        builder: (context, state) {
-          if (state is TeacherLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (state is TeacherError) {
-            return Center(child: Text(state.message));
-          }
-
-          if (state is TeacherAttendanceHistoryLoaded) {
-            if (state.history.isEmpty) {
-              return const Center(child: Text('No attendance history found.'));
-            }
-
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: state.history.length,
-              itemBuilder: (context, index) {
-                final record = state.history[index];
-                final isSubmitted = record.status == 'Submitted';
-                
-                return _HistoryCard(
-                  className: record.className,
-                  date: record.date,
-                  presentCount: record.presentCount,
-                  totalCount: record.totalCount,
-                  status: record.status,
-                  color: isSubmitted ? semanticColors.success : semanticColors.error,
-                );
-              },
+      body: BlocBuilder<ClassTeacherContextBloc, ClassTeacherContextState>(
+        builder: (context, contextState) {
+          if (contextState.active == null) {
+            return const EmptyState(
+              icon: Icons.class_outlined,
+              title: 'No class assigned',
+              message: 'You are not currently the Class Teacher for any class, '
+                  'so there is no attendance history to show.',
             );
           }
 
-          return const SizedBox.shrink();
+          return BlocBuilder<ClassAttendanceHistoryBloc,
+              ClassAttendanceHistoryState>(
+            builder: (context, state) {
+              if (state.isLoading) {
+                return Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.primary(context),
+                  ),
+                );
+              }
+
+              if (state.errorMessage != null && state.isEmpty) {
+                return EmptyState(
+                  icon: Icons.cloud_off,
+                  title: 'Could not load history',
+                  message: state.errorMessage!,
+                  ctaLabel: 'Retry',
+                  onCtaPressed: () => _load(range: state.range),
+                );
+              }
+
+              if (state.isEmpty) {
+                return const EmptyState(
+                  icon: Icons.event_note_outlined,
+                  title: 'No attendance history',
+                  message: 'No registers have been submitted for your class in '
+                      'this period.',
+                );
+              }
+
+              return Column(
+                children: [
+                  _buildSummary(context, state),
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: () async => _load(range: state.range),
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: state.sessions.length,
+                        itemBuilder: (context, index) {
+                          final session = state.sessions[index];
+                          final counts = session.countsBy(state.options);
+                          final present =
+                              counts[AttendanceClassification.present] ?? 0;
+                          final total = session.entries
+                              .where((e) => e.isMarked)
+                              .length;
+
+                          return _HistoryCard(
+                            className: session.className.isEmpty
+                                ? session.classId
+                                : session.className,
+                            date: session.date,
+                            presentCount: present,
+                            totalCount: total,
+                            status: session.isLocked
+                                ? 'Locked'
+                                : (session.isSubmitted ? 'Submitted' : 'Draft'),
+                            wasCorrected: session.lastCorrectedAt != null,
+                            color: session.isSubmitted
+                                ? AppColors.success(context)
+                                : AppColors.warning(context),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
         },
       ),
+    );
+  }
+
+  /// The window totals. Rate is omitted rather than shown as 0% when nothing
+  /// has been marked - an empty period and a period of total absence are not
+  /// the same claim.
+  Widget _buildSummary(BuildContext context, ClassAttendanceHistoryState state) {
+    final rate = state.attendanceRate;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _SummaryStat(
+            label: 'Days',
+            value: '${state.daysRecorded}',
+            color: AppColors.primary(context),
+          ),
+          _SummaryStat(
+            label: 'Attendance',
+            value: rate == null ? '—' : '${rate.toStringAsFixed(1)}%',
+            color: AppColors.success(context),
+          ),
+          _SummaryStat(
+            label: 'Absent',
+            value: '${state.totalUnauthorisedAbsent}',
+            color: AppColors.danger(context),
+          ),
+          _SummaryStat(
+            label: 'Excused',
+            value: '${state.totalAuthorisedAbsent}',
+            color: AppColors.warning(context),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _SummaryStat({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: AppColors.textSecondary(context),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -81,6 +217,7 @@ class _HistoryCard extends StatelessWidget {
   final int presentCount;
   final int totalCount;
   final String status;
+  final bool wasCorrected;
   final Color color;
 
   const _HistoryCard({
@@ -89,6 +226,7 @@ class _HistoryCard extends StatelessWidget {
     required this.presentCount,
     required this.totalCount,
     required this.status,
+    required this.wasCorrected,
     required this.color,
   });
 
@@ -106,7 +244,11 @@ class _HistoryCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
-              status == 'Submitted' ? Icons.check_circle_outline : Icons.error_outline,
+              status == 'Submitted'
+                  ? Icons.check_circle_outline
+                  : (status == 'Locked'
+                      ? Icons.lock_outline
+                      : Icons.edit_outlined),
               color: color,
             ),
           ),
@@ -115,11 +257,30 @@ class _HistoryCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(className, style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  className,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary(context),
+                  ),
+                ),
                 Text(
                   DateFormat('EEEE, MMM d, yyyy').format(date),
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary(context),
+                  ),
                 ),
+                // Surfaced rather than hidden: a register that was changed
+                // after submission is a different fact from one that was not.
+                if (wasCorrected)
+                  Text(
+                    'Corrected after submission',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.warning(context),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -127,10 +288,10 @@ class _HistoryCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                status == 'Submitted' ? '$presentCount/$totalCount' : 'MISSING',
+                '$presentCount/$totalCount',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: status == 'Submitted' ? null : color,
+                  color: AppColors.textPrimary(context),
                 ),
               ),
               Text(
