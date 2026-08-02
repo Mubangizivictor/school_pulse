@@ -24,7 +24,7 @@ import 'package:school_pulse/features/auth/login_flow/school_splash_screen.dart'
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
-import 'package:school_pulse/features/teacher/presentation/screens/subject_teacher_dashboard.dart';
+import 'package:school_pulse/features/teacher/presentation/screens/staff_panel_host.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/admin/user_management_screen.dart';
 import 'package:school_pulse/features/admin/broadcast_sms_screen.dart';
@@ -76,13 +76,11 @@ import 'package:school_pulse/features/parent/boarding_screen.dart';
 import 'package:school_pulse/features/parent/security_activity_screen.dart';
 import 'package:school_pulse/features/shared/shell_screen.dart';
 import 'package:school_pulse/features/shared/presentation/staff_hub_screen.dart';
-import 'package:school_pulse/features/teacher/dashboard_screen.dart';
 import 'package:school_pulse/features/student/domain/entities/admission_application.dart';
 import 'package:school_pulse/features/student/presentation/screens/admission_review_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/admissions_list_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/new_application_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/report_wizard/report_wizard_bloc.dart';
-import 'package:school_pulse/features/teacher/marks_entry_screen.dart';
 import 'package:school_pulse/features/teacher/staff_more_screen.dart';
 import 'package:school_pulse/features/teacher/staff_profile_screen.dart';
 import 'package:school_pulse/features/teacher/security_settings_screen.dart';
@@ -235,6 +233,25 @@ import 'package:school_pulse/features/teacher/presentation/screens/report_making
 import 'package:school_pulse/features/teacher/presentation/screens/report_making/generate_reports_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/report_making/reports_generated_success_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/report_making/a4_report_card_template.dart';
+import 'package:school_pulse/features/teacher/presentation/screens/marks/marks_dashboard_screen.dart';
+import 'package:school_pulse/features/teacher/presentation/screens/marks/select_assessment_screen.dart';
+import 'package:school_pulse/features/teacher/presentation/screens/marks/select_component_screen.dart';
+import 'package:school_pulse/features/teacher/presentation/screens/marks/enter_marks_screen.dart';
+import 'package:school_pulse/features/teacher/presentation/screens/marks/review_submit_screen.dart';
+import 'package:school_pulse/features/teacher/presentation/screens/marks/student_marks_detail_screen.dart';
+import 'package:school_pulse/features/teacher/presentation/screens/marks/class_marks_summary_screen.dart';
+import 'package:school_pulse/features/teacher/presentation/screens/marks/edit_marks_screen.dart';
+import 'package:school_pulse/features/teacher/presentation/screens/marks/import_marks_screen.dart';
+import 'package:school_pulse/features/teacher/presentation/screens/marks/marks_history_screen.dart';
+import 'package:school_pulse/features/teacher/presentation/screens/marks/marks_analytics_screen.dart';
+import 'package:school_pulse/features/teacher/presentation/screens/lessons/lessons_home_screen.dart';
+import 'package:school_pulse/features/teacher/presentation/screens/lessons/my_classes_screen.dart';
+import 'package:school_pulse/features/teacher/presentation/screens/lessons/class_lessons_screen.dart';
+import 'package:school_pulse/features/teacher/presentation/screens/lessons/lesson_details_screen.dart';
+import 'package:school_pulse/features/teacher/presentation/screens/lessons/take_attendance_screen.dart';
+import 'package:school_pulse/features/teacher/presentation/screens/lessons/lesson_notes_screen.dart';
+import 'package:school_pulse/features/teacher/presentation/screens/lessons/add_lesson_note_screen.dart';
+import 'package:school_pulse/features/teacher/presentation/screens/lessons/lesson_resources_screen.dart';
 
 // ... (keep existing imports)
 
@@ -526,14 +543,9 @@ final router = GoRouter(
       routes: [
         GoRoute(
           path: '/staff/dashboard',
-          builder: (context, state) {
-            final authState = context.read<AuthBloc>().state;
-            if (authState is AuthAuthenticated &&
-                authState.user.role == UserRole.subjectTeacher) {
-              return const SubjectTeacherDashboard();
-            }
-            return const TeacherDashboardScreen();
-          },
+          // Which panel opens follows the responsibility in effect, not the
+          // job title on the user record - see StaffPanelHost.
+          builder: (context, state) => const StaffPanelHost(),
         ),
         GoRoute(
           path: '/staff/students',
@@ -1400,7 +1412,87 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/staff/marks',
-          builder: (context, state) => const MarksEntryScreen(),
+          builder: (context, state) => const MarksDashboardScreen(),
+          routes: [
+            GoRoute(
+              path: 'select-assessment',
+              builder: (context, state) => const SelectAssessmentScreen(),
+            ),
+            GoRoute(
+              path: 'select-component',
+              builder: (context, state) => const SelectComponentScreen(),
+            ),
+            GoRoute(
+              path: 'enter',
+              builder: (context, state) => const EnterMarksScreen(),
+            ),
+            GoRoute(
+              path: 'review',
+              builder: (context, state) => const ReviewSubmitScreen(),
+            ),
+            GoRoute(
+              path: 'student/:id',
+              builder: (context, state) => StudentMarksDetailScreen(
+                studentId: state.pathParameters['id']!,
+              ),
+            ),
+            GoRoute(
+              path: 'summary',
+              builder: (context, state) => const ClassMarksSummaryScreen(),
+            ),
+            GoRoute(
+              path: 'edit/:id',
+              builder: (context, state) => EditMarksScreen(
+                studentId: state.pathParameters['id']!,
+              ),
+            ),
+            GoRoute(
+              path: 'import',
+              builder: (context, state) => const ImportMarksScreen(),
+            ),
+            GoRoute(
+              path: 'history',
+              builder: (context, state) => const MarksHistoryScreen(),
+            ),
+            GoRoute(
+              path: 'analytics',
+              builder: (context, state) => const MarksAnalyticsScreen(),
+            ),
+          ],
+        ),
+        GoRoute(
+          path: '/staff/lessons',
+          builder: (context, state) => const LessonsHomeScreen(),
+          routes: [
+            GoRoute(
+              path: 'my-classes',
+              builder: (context, state) => const MyClassesScreen(),
+            ),
+            GoRoute(
+              path: 'class/:id',
+              builder: (context, state) => ClassLessonsScreen(classId: state.pathParameters['id']!),
+            ),
+            GoRoute(
+              path: 'details/:id',
+              builder: (context, state) => LessonDetailsScreen(lessonId: state.pathParameters['id']!),
+            ),
+            GoRoute(
+              path: 'attendance/:id',
+              builder: (context, state) => TakeAttendanceScreen(lessonId: state.pathParameters['id']!),
+            ),
+            GoRoute(
+              path: 'notes/:id',
+              builder: (context, state) => LessonNotesScreen(lessonId: state.pathParameters['id']!),
+            ),
+            GoRoute(
+              path: 'add-note/:id',
+              builder: (context, state) => AddLessonNoteScreen(lessonId: state.pathParameters['id']!),
+            ),
+            GoRoute(
+              path: 'resources/:id',
+              builder: (context, state) => LessonResourcesScreen(lessonId: state.pathParameters['id']!),
+            ),
+          ],
         ),
         GoRoute(
           path: '/staff/messages',

@@ -150,4 +150,64 @@ class Permission {
 
   static const subjectTimetableView = 'subject.timetable.view';
   static const subjectTimetableEdit = 'subject.timetable.edit';
+
+  // Class Teacher panel (enforced) - scoped exactly like the `subject.*` set
+  // above, but against the class/stream the Class Teacher assignment names
+  // rather than a subject. A teacher who is Class Teacher for P5 East and
+  // Subject Teacher for P6 West holds both sets at once on one profile; the
+  // scope on each assignment is what keeps the two from bleeding together.
+  static const classStudentsView = 'class.students.view';
+  static const classStudentProfileView = 'class.student.profile.view';
+  static const classStudentHistoricalView = 'class.student.historical.view';
+  static const classStudentNoteWrite = 'class.student.note.write';
+  static const classStudentDocumentView = 'class.student.document.view';
+
+  static const classAttendanceTake = 'class.attendance.take';
+  static const classAttendanceEdit = 'class.attendance.edit';
+  static const classAttendanceEditHistorical = 'class.attendance.edit_historical';
+  static const classAttendanceView = 'class.attendance.view';
+
+  static const classHomeworkCreate = 'class.homework.create';
+  static const classHomeworkPublish = 'class.homework.publish';
+  static const classHomeworkEdit = 'class.homework.edit';
+
+  static const classBehaviourRecord = 'class.behaviour.record';
+  static const classBehaviourView = 'class.behaviour.view';
+  static const classAchievementRecord = 'class.achievement.record';
+
+  static const classHealthAlertView = 'class.health_alert.view';
+  static const classLeaveView = 'class.leave.view';
+
+  static const classParentMessage = 'class.parent.message';
+  static const classAnnouncementCreate = 'class.announcement.create';
+  static const classAnnouncementPublish = 'class.announcement.publish';
+
+  static const classPerformanceView = 'class.performance.view';
+  static const classComparisonView = 'class.comparison.view';
+  static const classInterventionNoteWrite = 'class.intervention_note.write';
+
+  static const classReportEntry = 'class.report.entry';
+  static const classReportCompetencyEntry = 'class.report.competency.entry';
+  static const classReportConductEntry = 'class.report.conduct.entry';
+  static const classReportCommentWrite = 'class.report.comment.write';
+  static const classReportRecommendationWrite = 'class.report.recommendation.write';
+  static const classReportSubmit = 'class.report.submit';
+  static const classReportGenerate = 'class.report.generate';
+  static const classReportShare = 'class.report.share';
+  static const classReportExport = 'class.report.export';
+
+  static const classTaskManage = 'class.task.manage';
+  static const classTaskCollaborate = 'class.task.collaborate';
+
+  static const classResourceUpload = 'class.resource.upload';
+  static const classResourceShare = 'class.resource.share';
+  static const classResourceDelete = 'class.resource.delete';
+
+  static const classTimetableView = 'class.timetable.view';
+
+  /// Lets an admin give one staff member a second concurrent Class Teacher
+  /// assignment inside the same academic year and campus. Off unless the
+  /// school grants it, and every use is reason-bearing and audited - see
+  /// `ClassTeacherAssignmentService.validateAssignable`.
+  static const classTeacherMultiAssignOverride = 'class.teacher.multi_assign.override';
 }

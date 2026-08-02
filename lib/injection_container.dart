@@ -282,6 +282,7 @@ import 'package:school_pulse/features/teacher/data/repositories/staff_assignment
 import 'package:school_pulse/features/teacher/data/repositories/subject_student_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/services/academic_calendar_service_impl.dart';
 import 'package:school_pulse/features/teacher/data/services/active_responsibility_service_impl.dart';
+import 'package:school_pulse/features/teacher/data/services/class_teacher_assignment_service_impl.dart';
 import 'package:school_pulse/features/teacher/data/services/subject_audit_service_impl.dart';
 import 'package:school_pulse/features/teacher/data/services/subject_sync_service_impl.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/lesson_attendance_repository.dart';
@@ -291,8 +292,10 @@ import 'package:school_pulse/features/teacher/domain/repositories/staff_assignme
 import 'package:school_pulse/features/teacher/domain/repositories/subject_student_repository.dart';
 import 'package:school_pulse/features/teacher/domain/services/academic_calendar_service.dart';
 import 'package:school_pulse/features/teacher/domain/services/active_responsibility_service.dart';
+import 'package:school_pulse/features/teacher/domain/services/class_teacher_assignment_service.dart';
 import 'package:school_pulse/features/teacher/domain/services/subject_audit_service.dart';
 import 'package:school_pulse/features/teacher/domain/services/subject_sync_service.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_dashboard/subject_teacher_dashboard_bloc.dart';
 
@@ -1254,6 +1257,28 @@ Future<void> init() async {
     () => SubjectTeacherDashboardBloc(
       studentRepository: sl(),
       lessonRepository: sl(),
+    ),
+  );
+
+  // Features - Class Teacher panel
+  //
+  // Shares the responsibility service with the Subject Teacher panel above:
+  // one account holds both, and both must agree on which assignment is in
+  // effect. A lazy singleton for the same reason - Home, Students, Reports
+  // and Tasks all have to read the same active class.
+  sl.registerLazySingleton(
+    () => ClassTeacherContextBloc(
+      responsibilityService: sl(),
+      assignmentService: sl(),
+      assignmentRepository: sl(),
+      calendarService: sl(),
+    ),
+  );
+
+  sl.registerLazySingleton<ClassTeacherAssignmentService>(
+    () => ClassTeacherAssignmentServiceImpl(
+      assignmentRepository: sl(),
+      responsibilityService: sl(),
     ),
   );
 
