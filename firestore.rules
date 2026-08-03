@@ -112,13 +112,22 @@ service cloud.firestore {
         )) ||
         // Admin console (User Management: edit details, toggle active/
         // inactive, reassign roles) manages OTHER staff profiles - staff
-        // accounts only, never a parent's own profile.
-        (isStaff() && resource.data.role != 'parent')
+        // accounts only, never a parent's own profile. Restricted to
+        // role-admin staff (not blanket isStaff()) since this path can
+        // write role/roles - any signed-in staff member editing any other
+        // staff member's roles would be a privilege-escalation path.
+        (hasAnyRole(['director', 'headTeacher', 'schoolAdmin']) &&
+         resource.data.role != 'parent')
       );
       // "Delete Account" in User Management removes the Firestore profile
       // (the paired Firebase Auth account persists - removing that needs
-      // the Admin SDK). Staff-on-staff only.
-      allow delete: if isStaff() && resource.data.role != 'parent';
+      // the Admin SDK). Role-admin staff only, same reasoning as update above.
+      // Deputy Head is deliberately excluded here, mirroring ADMIN_ROLES in
+      // functions/index.js (createStaffAccount) - Deputy Head shares the
+      // admin console UI but was never granted staff-invitation authority,
+      // and editing another staff member's role is equally sensitive.
+      allow delete: if hasAnyRole(['director', 'headTeacher', 'schoolAdmin']) &&
+        resource.data.role != 'parent';
     }
 
     // Sanitized directory used by parent-facing contact actions. It contains

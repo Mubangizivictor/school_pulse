@@ -57,9 +57,15 @@ exports.createStaffAccount = onCall(async (request) => {
   // only gate on who may create staff accounts - it must happen here.
   const callerDoc = await admin.firestore().collection("users").doc(auth.uid).get();
   const callerData = callerDoc.exists ? callerDoc.data() : {};
-  const callerRole = callerData.role || null;
+  // Check the full roles array, not just the legacy singular `role` field -
+  // a multi-role admin whose primary/first role isn't admin-flavored (e.g.
+  // legacy data where `role` predates a later admin role grant) must still
+  // pass this check if ANY of their roles qualifies.
+  const callerRoles = Array.isArray(callerData.roles)
+    ? callerData.roles
+    : (callerData.role ? [callerData.role] : []);
   const schoolId = callerData.schoolId || null;
-  if (!ADMIN_ROLES.includes(callerRole)) {
+  if (!callerRoles.some((r) => ADMIN_ROLES.includes(r))) {
     throw new HttpsError("permission-denied", "Only school administrators can create staff accounts.");
   }
   if (!schoolId) {
