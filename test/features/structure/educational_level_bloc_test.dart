@@ -1,0 +1,122 @@
+import 'package:bloc_test/bloc_test.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
+import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
+import 'package:school_pulse/features/structure/presentation/bloc/structure_bloc.dart';
+import 'package:school_pulse/features/structure/presentation/bloc/structure_event.dart';
+import 'package:school_pulse/features/structure/presentation/bloc/structure_state.dart';
+
+class _MockStructureRepository extends Mock implements StructureRepository {}
+
+EducationalLevel _level({String id = 'level-1', bool isActive = true}) => EducationalLevel(
+      id: id,
+      schoolId: 'school-1',
+      name: 'Primary',
+      isActive: isActive,
+    );
+
+void main() {
+  late _MockStructureRepository repository;
+
+  setUpAll(() {
+    registerFallbackValue(_level());
+  });
+
+  setUp(() {
+    repository = _MockStructureRepository();
+    when(() => repository.watchLevels(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchAcademicYears(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchAcademicTerms(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchClasses(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchStreams(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchSubjects(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchDepartments(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchDesignations(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchStaffRoles(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchFeatureToggles(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchInstitutionProfile(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchCampuses(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchHouses(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchClubs(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchFacilities(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchHostels(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchHostelRooms(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchTransportRoutes(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchTransportStops(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchTransportVehicles(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchFeeCategories(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchAssessmentTypes(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchGradingSystems(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchGradeBands(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchTimetableConfig(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchAttendanceTypes(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchAttendanceSessions(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchAnnouncementCategories(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchNotificationCategories(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchMessageTemplates(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchDocumentTemplates(any())).thenAnswer((_) => const Stream.empty());
+    when(() => repository.watchCustomFields(any())).thenAnswer((_) => const Stream.empty());
+  });
+
+  group('EducationalLevel events (previously unreachable from the UI)', () {
+    blocTest<StructureBloc, StructureState>(
+      'LevelsUpdated emits the new level list',
+      build: () => StructureBloc(repository: repository),
+      act: (bloc) => bloc.add(LevelsUpdated([_level()])),
+      expect: () => [
+        isA<StructureState>().having((s) => s.levels, 'levels', [_level()]),
+      ],
+    );
+
+    blocTest<StructureBloc, StructureState>(
+      'SaveLevelRequested calls repository.addLevel',
+      build: () {
+        when(() => repository.addLevel(any())).thenAnswer((_) async {});
+        return StructureBloc(repository: repository);
+      },
+      act: (bloc) => bloc.add(SaveLevelRequested(_level())),
+      verify: (_) {
+        verify(() => repository.addLevel(_level())).called(1);
+      },
+    );
+
+    blocTest<StructureBloc, StructureState>(
+      'DeleteLevelRequested calls repository.deleteLevel',
+      build: () {
+        when(() => repository.deleteLevel(any())).thenAnswer((_) async {});
+        return StructureBloc(repository: repository);
+      },
+      act: (bloc) => bloc.add(const DeleteLevelRequested('level-1')),
+      verify: (_) {
+        verify(() => repository.deleteLevel('level-1')).called(1);
+      },
+    );
+
+    blocTest<StructureBloc, StructureState>(
+      'ArchiveLevelRequested calls repository.archiveLevel instead of deleting',
+      build: () {
+        when(() => repository.archiveLevel(any())).thenAnswer((_) async {});
+        return StructureBloc(repository: repository);
+      },
+      act: (bloc) => bloc.add(const ArchiveLevelRequested('level-1')),
+      verify: (_) {
+        verify(() => repository.archiveLevel('level-1')).called(1);
+        verifyNever(() => repository.deleteLevel(any()));
+      },
+    );
+
+    blocTest<StructureBloc, StructureState>(
+      'LoadStructureData subscribes to watchLevels for the given school',
+      build: () {
+        when(() => repository.watchLevels('school-1'))
+            .thenAnswer((_) => Stream.value([_level()]));
+        return StructureBloc(repository: repository);
+      },
+      act: (bloc) => bloc.add(const LoadStructureData('school-1')),
+      expect: () => [
+        isA<StructureState>().having((s) => s.levels, 'levels', [_level()]),
+      ],
+    );
+  });
+}

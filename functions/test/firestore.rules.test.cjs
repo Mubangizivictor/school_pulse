@@ -624,4 +624,22 @@ describe('Structure Phase 2', () => {
   test('an unauthenticated read of config is denied', async () => {
     await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'schools/schoolA/config/feature_toggles')));
   });
+
+  test('campuses are tenant-isolated: same-school staff can write, cross-school denied', async () => {
+    await assertSucceeds(setDoc(doc(dbFor('adminA'), 'campuses', 'campusA'), {
+      schoolId: 'schoolA', name: 'Main Campus', isActive: true, order: 0,
+    }));
+    await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'campuses', 'campusA')));
+
+    await assertFails(setDoc(doc(dbFor('teacherB'), 'campuses', 'campusA'), {
+      schoolId: 'schoolA', name: 'Hacked', isActive: true, order: 0,
+    }));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'campuses', 'campusA')));
+  });
+
+  test('a parent cannot write a campus', async () => {
+    await assertFails(setDoc(doc(dbFor('parentA'), 'campuses', 'campusB'), {
+      schoolId: 'schoolA', name: 'Parent Campus', isActive: true, order: 0,
+    }));
+  });
 });
