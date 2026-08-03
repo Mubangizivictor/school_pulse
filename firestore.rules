@@ -233,7 +233,7 @@ service cloud.firestore {
       );
       allow create: if hasAnyRole(['director', 'headTeacher', 'schoolAdmin']) &&
         isSameSchool(request.resource.data.schoolId) &&
-        request.resource.data.status == 'RelationshipStatus.active';
+        request.resource.data.status == 'active';
       // Reallocation only: schoolId/studentId are permanently locked (a
       // relationship never moves to a different school or student -
       // reallocation always creates a new doc instead), status may only
@@ -243,8 +243,8 @@ service cloud.firestore {
         isSameSchool(resource.data.schoolId) &&
         request.resource.data.schoolId == resource.data.schoolId &&
         request.resource.data.studentId == resource.data.studentId &&
-        resource.data.status == 'RelationshipStatus.active' &&
-        request.resource.data.status in ['RelationshipStatus.superseded', 'RelationshipStatus.revoked'] &&
+        resource.data.status == 'active' &&
+        request.resource.data.status in ['superseded', 'revoked'] &&
         request.resource.data.supersessionReason is string &&
         request.resource.data.supersessionReason.size() > 0;
       allow delete: if false;
