@@ -27,6 +27,20 @@ class SubmitApplicationRequested extends AdmissionEvent {
   List<Object?> get props => [application];
 }
 
+/// Fired before SubmitApplicationRequested so the screen can warn the
+/// user about probable duplicates and let them decide whether to proceed
+/// - not a hard block, since a genuine sibling/re-application can share
+/// name and date of birth legitimately. Carries the fully-built
+/// application so the bloc can submit it directly once the user confirms.
+class CheckDuplicatesRequested extends AdmissionEvent {
+  final AdmissionApplication application;
+
+  const CheckDuplicatesRequested(this.application);
+
+  @override
+  List<Object?> get props => [application];
+}
+
 class ReviewApplicationRequested extends AdmissionEvent {
   final String applicationId;
   final String reviewerId;

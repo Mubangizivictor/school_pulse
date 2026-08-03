@@ -14,9 +14,31 @@ class AdmissionBloc extends Bloc<AdmissionEvent, AdmissionState> {
     required this.permissionEvaluator,
   }) : super(AdmissionInitial()) {
     on<LoadApplicationsRequested>(_onLoadApplications);
+    on<CheckDuplicatesRequested>(_onCheckDuplicates);
     on<SubmitApplicationRequested>(_onSubmitApplication);
     on<ReviewApplicationRequested>(_onReviewApplication);
     on<EnrollStudentRequested>(_onEnrollStudent);
+  }
+
+  Future<void> _onCheckDuplicates(
+    CheckDuplicatesRequested event,
+    Emitter<AdmissionState> emit,
+  ) async {
+    final result = await admissionService.checkForDuplicates(
+      event.application.schoolId,
+      event.application.studentName,
+      event.application.dateOfBirth,
+    );
+    result.fold(
+      (failure) => emit(AdmissionError(failure.message)),
+      (candidates) {
+        if (candidates.isEmpty) {
+          add(SubmitApplicationRequested(event.application));
+        } else {
+          emit(DuplicatesFound(candidates, event.application));
+        }
+      },
+    );
   }
 
   Future<void> _onLoadApplications(

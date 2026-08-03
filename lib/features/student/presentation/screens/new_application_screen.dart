@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import 'package:school_pulse/injection_container.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
 import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
 import '../../domain/entities/admission_application.dart';
@@ -54,10 +56,10 @@ class _NewApplicationViewState extends State<_NewApplicationView> {
   @override
   void initState() {
     super.initState();
-    _classesSub = _structureRepository.watchClasses().listen((classes) {
+    _classesSub = _structureRepository.watchClasses(widget.schoolId).listen((classes) {
       setState(() => _classes = classes);
     });
-    _yearsSub = _structureRepository.watchAcademicYears().listen((years) {
+    _yearsSub = _structureRepository.watchAcademicYears(widget.schoolId).listen((years) {
       setState(() {
         _academicYears = years;
         if (_selectedYear == null) {
@@ -124,20 +126,46 @@ class _NewApplicationViewState extends State<_NewApplicationView> {
       status: AdmissionStatus.application,
       appliedAt: DateTime.now(),
     );
-    context.read<AdmissionBloc>().add(SubmitApplicationRequested(application));
+    context.read<AdmissionBloc>().add(CheckDuplicatesRequested(application));
+  }
+
+  Future<void> _confirmDuplicates(BuildContext context, DuplicatesFound state) async {
+    if (!context.mounted) return;
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Possible Duplicate'),
+        content: Text(
+          'A student named "${state.pendingApplication.studentName}" with the same date '
+          'of birth already has ${state.candidates.length == 1 ? "an application" : "applications"} '
+          'on record. Submit anyway?',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Submit Anyway')),
+        ],
+      ),
+    );
+    if (proceed == true && context.mounted) {
+      context.read<AdmissionBloc>().add(SubmitApplicationRequested(state.pendingApplication));
+    } else {
+      setState(() => _busy = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<AdmissionBloc, AdmissionState>(
-      listener: (context, state) {
-        if (state is AdmissionActionSuccess) {
+      listener: (context, state) async {
+        if (state is DuplicatesFound) {
+          await _confirmDuplicates(context, state);
+        } else if (state is AdmissionActionSuccess) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
           Navigator.of(context).pop(true);
         } else if (state is AdmissionError) {
           setState(() => _busy = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+            SnackBar(content: Text(state.message), backgroundColor: AppColors.danger(context)),
           );
         }
       },
@@ -150,77 +178,125 @@ class _NewApplicationViewState extends State<_NewApplicationView> {
             children: [
               TextFormField(
                 controller: _studentNameController,
-                decoration: const InputDecoration(labelText: 'Student full name', border: OutlineInputBorder()),
+                style: TextStyle(color: AppColors.textPrimary(context)),
+                decoration: InputDecoration(
+                  labelText: 'Student full name',
+                  labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                  border: const OutlineInputBorder(),
+                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.border(context))),
+                  focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.primary(context), width: 2)),
+                ),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
               ),
               const SizedBox(height: 12),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text(_dateOfBirth == null
-                    ? 'Select date of birth'
-                    : 'Date of birth: ${_dateOfBirth!.toLocal().toString().split(' ').first}'),
-                trailing: const Icon(Icons.calendar_today_outlined),
+                title: Text(
+                  _dateOfBirth == null
+                      ? 'Select date of birth'
+                      : 'Date of birth: ${DateFormat('dd MMM yyyy').format(_dateOfBirth!)}',
+                  style: TextStyle(color: _dateOfBirth == null ? AppColors.textSecondary(context) : AppColors.textPrimary(context)),
+                ),
+                trailing: Icon(Icons.calendar_today_outlined, color: AppColors.textSecondary(context)),
                 onTap: _pickDateOfBirth,
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<Gender>(
-                initialValue: _gender,
-                decoration: const InputDecoration(labelText: 'Gender', border: OutlineInputBorder()),
+                value: _gender,
+                style: TextStyle(color: AppColors.textPrimary(context)),
+                decoration: InputDecoration(
+                  labelText: 'Gender',
+                  labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                  border: const OutlineInputBorder(),
+                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.border(context))),
+                ),
                 items: Gender.values.map((g) => DropdownMenuItem(value: g, child: Text(g.name))).toList(),
                 onChanged: (v) => setState(() => _gender = v ?? _gender),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<SchoolClass>(
-                initialValue: _selectedClass,
-                decoration: const InputDecoration(labelText: 'Target class', border: OutlineInputBorder()),
+                value: _selectedClass,
+                style: TextStyle(color: AppColors.textPrimary(context)),
+                decoration: InputDecoration(
+                  labelText: 'Target class',
+                  labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                  border: const OutlineInputBorder(),
+                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.border(context))),
+                ),
                 items: _classes
                     .map((c) => DropdownMenuItem(value: c, child: Text(c.name)))
                     .toList(),
                 onChanged: (v) => setState(() => _selectedClass = v),
                 validator: (v) => v == null ? 'Required' : null,
-                hint: _classes.isEmpty ? const Text('Loading classes…') : const Text('Select class'),
+                hint: Text(_classes.isEmpty ? 'Loading classes…' : 'Select class', style: TextStyle(color: AppColors.textSecondary(context))),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<AcademicYear>(
-                initialValue: _selectedYear,
-                decoration: const InputDecoration(labelText: 'Academic year', border: OutlineInputBorder()),
+                value: _selectedYear,
+                style: TextStyle(color: AppColors.textPrimary(context)),
+                decoration: InputDecoration(
+                  labelText: 'Academic year',
+                  labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                  border: const OutlineInputBorder(),
+                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.border(context))),
+                ),
                 items: _academicYears
                     .map((y) => DropdownMenuItem(value: y, child: Text(y.name)))
                     .toList(),
                 onChanged: (v) => setState(() => _selectedYear = v),
                 validator: (v) => v == null ? 'Required' : null,
-                hint: _academicYears.isEmpty ? const Text('Loading academic years…') : const Text('Select year'),
+                hint: Text(_academicYears.isEmpty ? 'Loading academic years…' : 'Select year', style: TextStyle(color: AppColors.textSecondary(context))),
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _previousSchoolController,
-                decoration:
-                    const InputDecoration(labelText: 'Previous school (optional)', border: OutlineInputBorder()),
+                style: TextStyle(color: AppColors.textPrimary(context)),
+                decoration: InputDecoration(
+                  labelText: 'Previous school (optional)',
+                  labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                  border: const OutlineInputBorder(),
+                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.border(context))),
+                ),
               ),
               const SizedBox(height: 20),
-              const Divider(),
+              Divider(color: AppColors.border(context)),
               const SizedBox(height: 8),
-              Text('Parent / Guardian', style: Theme.of(context).textTheme.titleMedium),
+              Text('Parent / Guardian', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.primary(context), fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _parentNameController,
-                decoration:
-                    const InputDecoration(labelText: 'Parent / guardian name', border: OutlineInputBorder()),
+                style: TextStyle(color: AppColors.textPrimary(context)),
+                decoration: InputDecoration(
+                  labelText: 'Parent / guardian name',
+                  labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                  border: const OutlineInputBorder(),
+                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.border(context))),
+                ),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _parentPhoneController,
                 keyboardType: TextInputType.phone,
-                decoration:
-                    const InputDecoration(labelText: 'Parent / guardian phone', border: OutlineInputBorder()),
+                style: TextStyle(color: AppColors.textPrimary(context)),
+                decoration: InputDecoration(
+                  labelText: 'Parent / guardian phone',
+                  labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                  border: const OutlineInputBorder(),
+                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.border(context))),
+                ),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
               ),
               const SizedBox(height: 24),
               FilledButton(
                 onPressed: _busy ? null : _submit,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary(context),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
                 child: _busy
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                     : const Text('Submit Application'),
               ),
             ],

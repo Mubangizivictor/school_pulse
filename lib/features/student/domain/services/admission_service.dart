@@ -25,6 +25,30 @@ class AdmissionService {
     return repository.createAdmissionApplication(application);
   }
 
+  /// Scoped name+DOB match against this school's existing applications -
+  /// a review-step warning, not a hard block, since a genuine sibling or
+  /// re-application can legitimately share both. Firestore can't fuzzy
+  /// match, so this pulls the (small, per-school) application set and
+  /// filters client-side.
+  Future<Either<Failure, List<AdmissionApplication>>> checkForDuplicates(
+    String schoolId,
+    String studentName,
+    DateTime dateOfBirth,
+  ) async {
+    final result = await repository.getApplications(schoolId);
+    return result.fold(Left.new, (applications) {
+      final normalizedName = studentName.trim().toLowerCase();
+      final matches = applications.where((a) {
+        final sameName = a.studentName.trim().toLowerCase() == normalizedName;
+        final sameDob = a.dateOfBirth.year == dateOfBirth.year &&
+            a.dateOfBirth.month == dateOfBirth.month &&
+            a.dateOfBirth.day == dateOfBirth.day;
+        return sameName && sameDob;
+      }).toList();
+      return Right(matches);
+    });
+  }
+
   Future<Either<Failure, List<AdmissionApplication>>> getPendingApplications(String schoolId) {
     return repository.getApplications(schoolId);
   }

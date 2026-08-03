@@ -21,6 +21,19 @@ class AdmissionApplicationsLoaded extends AdmissionState {
   List<Object?> get props => [applications];
 }
 
+/// Result of CheckDuplicatesRequested. Empty `candidates` means "no
+/// probable duplicate found" - the screen proceeds straight to submit
+/// without showing a warning.
+class DuplicatesFound extends AdmissionState {
+  final List<AdmissionApplication> candidates;
+  final AdmissionApplication pendingApplication;
+
+  const DuplicatesFound(this.candidates, this.pendingApplication);
+
+  @override
+  List<Object?> get props => [candidates, pendingApplication];
+}
+
 class AdmissionActionSuccess extends AdmissionState {
   final String message;
 
