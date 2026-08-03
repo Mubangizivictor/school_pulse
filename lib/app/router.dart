@@ -23,6 +23,7 @@ import 'package:school_pulse/features/matron/presentation/screens/bed_management
     as matron_scr;
 import 'package:school_pulse/features/patron/presentation/screens/bed_management_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/force_set_password_screen.dart';
+import 'package:school_pulse/features/auth/login_flow/onboarding/onboarding_flow_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/school_splash_screen.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
@@ -466,6 +467,11 @@ final router = GoRouter(
       path: '/auth/force-setup',
       builder: (context, state) =>
           ForceSetPasswordScreen(user: state.extra as UserEntity?),
+    ),
+    GoRoute(
+      path: '/auth/onboarding',
+      builder: (context, state) =>
+          OnboardingFlowScreen(user: state.extra as UserEntity),
     ),
     GoRoute(path: '/login', redirect: (context, state) => '/welcome'),
     ShellRoute(

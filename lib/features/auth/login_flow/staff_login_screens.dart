@@ -8,6 +8,7 @@ import 'package:school_pulse/features/auth/login_flow/auth_chrome.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/core/user_roles.dart';
 
 /// Staff Portal sign-in. Orange accent, email + password, remember-me and a
 /// forgot-password link, then the trust strip and privacy note.
@@ -46,7 +47,13 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
       listener: (context, state) {
         if (state is AuthAuthenticated) {
           if (state.user.mustChangePassword) {
-            context.go('/auth/force-setup', extra: state.user);
+            // Institution Administrators get the full first-login security
+            // and institution-confirmation flow; other staff just change
+            // their temporary password.
+            final route = state.user.role == UserRole.schoolAdmin
+                ? '/auth/onboarding'
+                : '/auth/force-setup';
+            context.go(route, extra: state.user);
           } else {
             context.go('/school-splash', extra: state.user);
           }
