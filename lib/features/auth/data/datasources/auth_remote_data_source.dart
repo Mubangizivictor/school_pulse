@@ -43,6 +43,7 @@ abstract class AuthRemoteDataSource {
     required String password,
     String? assignedClass,
     List<SubjectAssignment>? subjects,
+    String? academicYearId,
   });
 
   /// Sets a new password for the currently signed-in user and clears their
@@ -50,8 +51,8 @@ abstract class AuthRemoteDataSource {
   /// with an admin-issued temporary password.
   Future<void> completePasswordReset(String newPassword);
 
-  /// All non-parent user profiles, for the admin Staff tab.
-  Future<List<UserModel>> getStaffMembers();
+  /// All non-parent user profiles for a specific school, for the admin Staff tab.
+  Future<List<UserModel>> getStaffMembers(String schoolId);
 
   Future<void> toggleStaffActiveStatus(
     String userId,
@@ -279,6 +280,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String password,
     String? assignedClass,
     List<SubjectAssignment>? subjects,
+    String? academicYearId,
   }) async {
     try {
       final callable = functions.httpsCallable('createStaffAccount');
@@ -290,6 +292,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'password': password,
         'assignedClass': assignedClass,
         'subjects': subjects?.map((e) => e.toJson()).toList(),
+        'academicYearId': academicYearId,
       });
       return result.data['temporaryPassword'] as String;
     } catch (e) {
@@ -383,9 +386,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   @override
-  Future<List<UserModel>> getStaffMembers() async {
+  Future<List<UserModel>> getStaffMembers(String schoolId) async {
     final snapshot = await firestore
         .collection('users')
+        .where('schoolId', isEqualTo: schoolId)
         .where('role', isNotEqualTo: 'parent')
         .get();
     return snapshot.docs

@@ -423,14 +423,16 @@ class _StaffListViewState extends State<StaffListView> {
   final _structureRepository = di.sl<StructureRepository>();
   List<String> _classNames = [];
   List<String> _subjectNames = [];
+  String? _currentAcademicYearId;
   StreamSubscription<List<SchoolClass>>? _classesSub;
   StreamSubscription<List<Subject>>? _subjectsSub;
+  StreamSubscription<List<AcademicYear>>? _academicYearsSub;
 
   @override
   void initState() {
     super.initState();
     _future = _load();
-    
+
     // Get schoolId from AuthBloc state
     final authState = context.read<AuthBloc>().state;
     final schoolId = authState is AuthAuthenticated ? authState.user.schoolId : '';
@@ -441,12 +443,21 @@ class _StaffListViewState extends State<StaffListView> {
     _subjectsSub = _structureRepository.watchSubjects(schoolId).listen((subjects) {
       if (mounted) setState(() => _subjectNames = subjects.map((s) => s.name).toList());
     });
+    // Used to stamp staff_role_assignments with the active academic year at
+    // creation/edit time; if no year is marked current yet, assignments are
+    // simply not written (createStaffAccount treats it as optional).
+    _academicYearsSub = _structureRepository.watchAcademicYears(schoolId).listen((years) {
+      if (mounted) {
+        setState(() => _currentAcademicYearId = years.where((y) => y.isCurrent).firstOrNull?.id);
+      }
+    });
   }
 
   @override
   void dispose() {
     _classesSub?.cancel();
     _subjectsSub?.cancel();
+    _academicYearsSub?.cancel();
     super.dispose();
   }
 
@@ -1096,6 +1107,7 @@ class _StaffListViewState extends State<StaffListView> {
       password: passwordController.text.trim(),
       assignedClass: selectedRoles.contains(UserRole.classTeacher) ? assignedClass : null,
       subjects: selectedRoles.contains(UserRole.subjectTeacher) ? subjects : null,
+      academicYearId: _currentAcademicYearId,
     ));
 
     if (!mounted) return;

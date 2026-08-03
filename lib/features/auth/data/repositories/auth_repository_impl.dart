@@ -83,6 +83,7 @@ class AuthRepositoryImpl implements AuthRepository {
     required String password,
     String? assignedClass,
     List<SubjectAssignment>? subjects,
+    String? academicYearId,
   }) async {
     try {
       final temporaryPassword = await remoteDataSource.createStaffAccount(
@@ -93,6 +94,7 @@ class AuthRepositoryImpl implements AuthRepository {
         password: password,
         assignedClass: assignedClass,
         subjects: subjects,
+        academicYearId: academicYearId,
       );
       return Right(temporaryPassword);
     } on AuthFailure catch (e) {
@@ -115,9 +117,9 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, List<UserEntity>>> getStaffMembers() async {
+  Future<Either<Failure, List<UserEntity>>> getStaffMembers(String schoolId) async {
     try {
-      final staff = await remoteDataSource.getStaffMembers();
+      final staff = await remoteDataSource.getStaffMembers(schoolId);
       return Right(staff);
     } catch (e) {
       return Left(ServerFailure(e.toString()));

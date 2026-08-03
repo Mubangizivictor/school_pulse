@@ -23,6 +23,7 @@ class CreateStaffAccount implements UseCase<String, CreateStaffAccountParams> {
       password: params.password,
       assignedClass: params.assignedClass,
       subjects: params.subjects,
+      academicYearId: params.academicYearId,
     );
   }
 }
@@ -35,6 +36,7 @@ class CreateStaffAccountParams extends Equatable {
   final String password;
   final String? assignedClass;
   final List<SubjectAssignment>? subjects;
+  final String? academicYearId;
 
   const CreateStaffAccountParams({
     required this.name,
@@ -44,8 +46,10 @@ class CreateStaffAccountParams extends Equatable {
     required this.password,
     this.assignedClass,
     this.subjects,
+    this.academicYearId,
   });
 
   @override
-  List<Object?> get props => [name, email, schoolId, roles, password, assignedClass, subjects];
+  List<Object?> get props =>
+      [name, email, schoolId, roles, password, assignedClass, subjects, academicYearId];
 }

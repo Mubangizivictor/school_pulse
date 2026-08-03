@@ -27,9 +27,10 @@ abstract class AuthRepository {
     required String password,
     String? assignedClass,
     List<SubjectAssignment>? subjects,
+    String? academicYearId,
   });
   Future<Either<Failure, void>> completePasswordReset(String newPassword);
-  Future<Either<Failure, List<UserEntity>>> getStaffMembers();
+  Future<Either<Failure, List<UserEntity>>> getStaffMembers(String schoolId);
   Future<Either<Failure, void>> toggleStaffActiveStatus(String userId, bool isActive, {String? reason});
   Future<Either<Failure, void>> updateStaffMember(UserEntity user);
   Future<Either<Failure, void>> deleteStaffMember(String userId);

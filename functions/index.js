@@ -17,6 +17,45 @@ const STAFF_ROLES = [
   "gamesMaster", "cateringManager",
 ];
 
+// Maps a UserRole to the StaffResponsibilityType (see
+// lib/features/teacher/domain/entities/staff_role_assignment.dart) that
+// best describes it, so createStaffAccount can write a real
+// staff_role_assignments row alongside the legacy flat assignedClass/
+// subjects fields it has always written. Roles with no natural
+// responsibility type (e.g. director, schoolAdmin) fall back to "other".
+const ROLE_TO_RESPONSIBILITY_TYPE = {
+  classTeacher: "classTeacher",
+  subjectTeacher: "subjectTeacher",
+  nurse: "nurse",
+  bursar: "bursar",
+  librarian: "librarian",
+  securityHead: "securityOfficer",
+  gatekeeper: "securityOfficer",
+  transportCoordinator: "transportCoordinator",
+  storeInventory: "storeInventoryManager",
+  receptionist: "receptionist",
+  cateringManager: "cateringManager",
+};
+
+// A small, curated mirror of RolePermissionDefaults
+// (lib/core/permissions/role_permission_defaults.dart) - only the subset
+// needed to stamp a sensible default permissionScope.permissions onto a
+// staff_role_assignments row at creation time. Not a full port: the Dart
+// map is the source of truth for the app's own permission evaluator: this
+// is intentionally narrow.
+const RESPONSIBILITY_DEFAULT_PERMISSIONS = {
+  classTeacher: ["class.attendance.take", "class.attendance.view"],
+  subjectTeacher: ["subject.marks.enter", "subject.attendance.take"],
+  nurse: ["health.student.verify", "health.student.basic.read"],
+  bursar: ["finance.student.verify", "finance.student.balance.read"],
+  librarian: ["library.member.verify", "library.borrow", "library.return"],
+  securityOfficer: ["security.identity.verify", "security.entry.record", "security.exit.record"],
+  transportCoordinator: ["transport.boarding.verify", "transport.boarding.record"],
+  storeInventoryManager: [],
+  receptionist: [],
+  cateringManager: ["meals.verify", "meals.serve"],
+};
+
 // Excludes visually ambiguous characters (0/O, 1/l/I) since admins read
 // this aloud or copy it onto a note for the teacher.
 const PASSWORD_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
@@ -36,7 +75,7 @@ exports.createStaffAccount = onCall(async (request) => {
     throw new HttpsError("unauthenticated", "You must be signed in.");
   }
 
-  const { name, email, assignedClass, subjects } = request.data || {};
+  const { name, email, assignedClass, subjects, academicYearId } = request.data || {};
   // Accept the current multi-role `roles` array, falling back to a legacy
   // singular `role` from any older client build still calling this.
   const roles = Array.isArray(request.data?.roles)
@@ -115,6 +154,86 @@ exports.createStaffAccount = onCall(async (request) => {
       schoolId,
       isActive: true,
     });
+
+    // Additive: alongside the flat assignedClass/subjects fields above
+    // (kept for backward compatibility - other code may already read
+    // them), write one staff_role_assignments row per responsibility so
+    // the real effective-access resolver (used by the teacher panel and
+    // enforced in firestore.rules) becomes authoritative for NEW hires
+    // going forward. Only written when the caller supplies an
+    // academicYearId - every other assignment-writing path in this file
+    // requires one, and there is no server-side "current year" lookup to
+    // fall back to.
+    if (academicYearId) {
+      const assignmentsRef = db.collection("schools").doc(schoolId).collection("staff_role_assignments");
+      const now = admin.firestore.FieldValue.serverTimestamp();
+
+      const teachingSubjects = Array.isArray(subjects) ? subjects : [];
+      if (roles.includes("subjectTeacher") && teachingSubjects.length > 0) {
+        for (const s of teachingSubjects) {
+          batch.set(assignmentsRef.doc(), {
+            schoolId,
+            staffId: userRecord.uid,
+            userId: userRecord.uid,
+            roleType: "subjectTeacher",
+            academicYearId,
+            subjectName: s.subjectName || null,
+            className: s.className || null,
+            startDate: now,
+            status: "active",
+            permissionScope: {
+              permissions: RESPONSIBILITY_DEFAULT_PERMISSIONS.subjectTeacher,
+              termIds: [],
+            },
+            assignedBy: auth.uid,
+            assignedAt: now,
+          });
+        }
+      }
+      if (roles.includes("classTeacher") && assignedClass) {
+        batch.set(assignmentsRef.doc(), {
+          schoolId,
+          staffId: userRecord.uid,
+          userId: userRecord.uid,
+          roleType: "classTeacher",
+          academicYearId,
+          className: assignedClass,
+          startDate: now,
+          status: "active",
+          permissionScope: {
+            permissions: RESPONSIBILITY_DEFAULT_PERMISSIONS.classTeacher,
+            termIds: [],
+          },
+          assignedBy: auth.uid,
+          assignedAt: now,
+        });
+      }
+      // Non-teaching responsibilities: one row per role that maps to a
+      // responsibility type, unconstrained by subject/class (nulls in
+      // PermissionScope mean "unconstrained" per its own doc comment).
+      for (const role of roles) {
+        const responsibilityType = ROLE_TO_RESPONSIBILITY_TYPE[role];
+        if (!responsibilityType || responsibilityType === "classTeacher" || responsibilityType === "subjectTeacher") {
+          continue;
+        }
+        batch.set(assignmentsRef.doc(), {
+          schoolId,
+          staffId: userRecord.uid,
+          userId: userRecord.uid,
+          roleType: responsibilityType,
+          academicYearId,
+          startDate: now,
+          status: "active",
+          permissionScope: {
+            permissions: RESPONSIBILITY_DEFAULT_PERMISSIONS[responsibilityType] || [],
+            termIds: [],
+          },
+          assignedBy: auth.uid,
+          assignedAt: now,
+        });
+      }
+    }
+
     await batch.commit();
   } catch (err) {
     // Don't leave an orphaned Auth user with no matching profile doc - a
