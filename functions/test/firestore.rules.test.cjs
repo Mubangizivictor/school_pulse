@@ -803,3 +803,143 @@ describe('Phase 3 people/roles/permissions', () => {
     await assertSucceeds(getDocs(collection(dbFor('adminA'), 'student_access_codes')));
   });
 });
+
+describe('Phase 4 core people records', () => {
+  test('students: cross-school staff write is now denied (previously isStaff() alone with no tenancy check)', async () => {
+    await assertSucceeds(setDoc(doc(dbFor('adminA'), 'students', 'studentX'), {
+      schoolId: 'schoolA', name: 'Student X', classId: 'p6', status: 'active',
+    }));
+    await assertFails(setDoc(doc(dbFor('teacherB'), 'students', 'studentX'), {
+      schoolId: 'schoolA', name: 'Hacked', classId: 'p6', status: 'active',
+    }));
+  });
+
+  test('students: a same-school staff update cannot re-parent the doc to another school', async () => {
+    const ref = doc(dbFor('adminA'), 'students', 'studentY');
+    await assertSucceeds(setDoc(ref, { schoolId: 'schoolA', name: 'Student Y', classId: 'p6', status: 'active' }));
+    await assertFails(updateDoc(ref, { schoolId: 'schoolB' }));
+  });
+
+  test('admission_applications: same-school staff can create/read, cross-school denied, no rule gap remains', async () => {
+    await assertSucceeds(setDoc(doc(dbFor('adminA'), 'admission_applications', 'app1'), {
+      schoolId: 'schoolA', studentName: 'Applicant One', status: 'application',
+    }));
+    await assertSucceeds(getDoc(doc(dbFor('adminA'), 'admission_applications', 'app1')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'admission_applications', 'app1')));
+    await assertFails(setDoc(doc(dbFor('teacherB'), 'admission_applications', 'app2'), {
+      schoolId: 'schoolA', studentName: 'Cross-tenant', status: 'application',
+    }));
+  });
+
+  test('admission_applications cannot be re-parented via update, and are never deleted', async () => {
+    const ref = doc(dbFor('adminA'), 'admission_applications', 'app3');
+    await assertSucceeds(setDoc(ref, { schoolId: 'schoolA', studentName: 'App Three', status: 'application' }));
+    await assertFails(updateDoc(ref, { schoolId: 'schoolB' }));
+    await assertFails(deleteDoc(ref));
+  });
+
+  test('parent_student_relationships: admin can create, ordinary staff and parents cannot self-create', async () => {
+    await assertSucceeds(setDoc(doc(dbFor('adminA'), 'parent_student_relationships', 'rel1'), {
+      schoolId: 'schoolA', studentId: 'studentA', userId: 'parentA', type: 'parent', status: 'active', createdBy: 'adminA',
+    }));
+    await assertFails(setDoc(doc(dbFor('teacherA'), 'parent_student_relationships', 'rel2'), {
+      schoolId: 'schoolA', studentId: 'studentA', userId: 'parentA', type: 'parent', status: 'active', createdBy: 'teacherA',
+    }));
+    await assertFails(setDoc(doc(dbFor('parentA'), 'parent_student_relationships', 'rel3'), {
+      schoolId: 'schoolA', studentId: 'studentA', userId: 'parentA', type: 'parent', status: 'active', createdBy: 'parentA',
+    }));
+  });
+
+  test('parent_student_relationships: the linked parent and the linked student can read it, unrelated parties cannot', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'parent_student_relationships', 'rel4'), {
+        schoolId: 'schoolA', studentId: 'studentA', userId: 'parentA', type: 'parent', status: 'active', createdBy: 'adminA',
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('parentA'), 'parent_student_relationships', 'rel4')));
+    await assertSucceeds(getDoc(doc(dbFor('studentUserA'), 'parent_student_relationships', 'rel4')));
+    await assertFails(getDoc(doc(dbFor('parentOtherA'), 'parent_student_relationships', 'rel4')));
+    await assertSucceeds(getDoc(doc(dbFor('adminA'), 'parent_student_relationships', 'rel4')));
+  });
+
+  test('parent_student_relationships: reallocation requires a reason and can only move active -> superseded/revoked', async () => {
+    const ref = doc(dbFor('adminA'), 'parent_student_relationships', 'rel5');
+    await assertSucceeds(setDoc(ref, {
+      schoolId: 'schoolA', studentId: 'studentA', userId: 'parentA', type: 'parent', status: 'active', createdBy: 'adminA',
+    }));
+    // No reason supplied - denied.
+    await assertFails(updateDoc(ref, { status: 'superseded' }));
+    // Reason supplied - allowed.
+    await assertSucceeds(updateDoc(ref, {
+      status: 'superseded', supersessionReason: 'custody change', supersededBy: 'adminA',
+    }));
+    // Cannot move status back to active from superseded.
+    await assertFails(updateDoc(ref, { status: 'active' }));
+  });
+
+  test('parent_student_relationships: schoolId and studentId are locked on update', async () => {
+    const ref = doc(dbFor('adminA'), 'parent_student_relationships', 'rel6');
+    await assertSucceeds(setDoc(ref, {
+      schoolId: 'schoolA', studentId: 'studentA', userId: 'parentA', type: 'parent', status: 'active', createdBy: 'adminA',
+    }));
+    await assertFails(updateDoc(ref, { schoolId: 'schoolB', status: 'superseded', supersessionReason: 'x' }));
+    await assertFails(updateDoc(ref, { studentId: 'studentOther', status: 'superseded', supersessionReason: 'x' }));
+  });
+
+  test('parent_student_relationships are never deleted', async () => {
+    const ref = doc(dbFor('adminA'), 'parent_student_relationships', 'rel7');
+    await assertSucceeds(setDoc(ref, {
+      schoolId: 'schoolA', studentId: 'studentA', userId: 'parentA', type: 'parent', status: 'active', createdBy: 'adminA',
+    }));
+    await assertFails(deleteDoc(ref));
+  });
+
+  test('student_enrolments: staff can create, cross-tenant denied, placement fields locked on update', async () => {
+    const ref = doc(dbFor('adminA'), 'student_enrolments', 'enrol1');
+    await assertSucceeds(setDoc(ref, {
+      schoolId: 'schoolA', studentId: 'studentA', classId: 'p6', academicYearId: '2026', status: 'active',
+    }));
+    await assertFails(setDoc(doc(dbFor('teacherB'), 'student_enrolments', 'enrol2'), {
+      schoolId: 'schoolA', studentId: 'studentA', classId: 'p6', academicYearId: '2026', status: 'active',
+    }));
+    // Closing out status/endDate is fine.
+    await assertSucceeds(updateDoc(ref, { status: 'ended' }));
+    // Rewriting the placement itself is not.
+    const ref2 = doc(dbFor('adminA'), 'student_enrolments', 'enrol3');
+    await assertSucceeds(setDoc(ref2, {
+      schoolId: 'schoolA', studentId: 'studentA', classId: 'p6', academicYearId: '2026', status: 'active',
+    }));
+    await assertFails(updateDoc(ref2, { classId: 'p7' }));
+  });
+
+  test('student_enrolments: readable by staff and the linked student/parent, denied to unrelated parties', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'student_enrolments', 'enrol4'), {
+        schoolId: 'schoolA', studentId: 'studentA', classId: 'p6', academicYearId: '2026', status: 'active',
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'student_enrolments', 'enrol4')));
+    await assertSucceeds(getDoc(doc(dbFor('parentA'), 'student_enrolments', 'enrol4')));
+    await assertSucceeds(getDoc(doc(dbFor('studentUserA'), 'student_enrolments', 'enrol4')));
+    await assertFails(getDoc(doc(dbFor('parentOtherA'), 'student_enrolments', 'enrol4')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'student_enrolments', 'enrol4')));
+  });
+
+  test('student_enrolments are never deleted', async () => {
+    const ref = doc(dbFor('adminA'), 'student_enrolments', 'enrol5');
+    await assertSucceeds(setDoc(ref, {
+      schoolId: 'schoolA', studentId: 'studentA', classId: 'p6', academicYearId: '2026', status: 'active',
+    }));
+    await assertFails(deleteDoc(ref));
+  });
+
+  test('people_policies: any same-school signed-in user can read, only top-tier admins can write', async () => {
+    await assertSucceeds(setDoc(doc(dbFor('adminA'), 'people_policies', 'schoolA'), {
+      maxStandardGuardians: 2,
+    }));
+    await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'people_policies', 'schoolA')));
+    await assertSucceeds(getDoc(doc(dbFor('parentA'), 'people_policies', 'schoolA')));
+    await assertFails(setDoc(doc(dbFor('teacherA'), 'people_policies', 'schoolA'), { maxStandardGuardians: 99 }));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'people_policies', 'schoolA')));
+  });
+});
