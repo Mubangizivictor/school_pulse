@@ -10,6 +10,7 @@ import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/institution/presentation/screens/institution_switcher_sheet.dart';
 
 class StaffShell extends StatelessWidget {
   final Widget child;
@@ -58,37 +59,66 @@ class StaffShell extends StatelessWidget {
     return '/staff/matron';
   }
 
+  bool _isNurse(BuildContext context) {
+    final state = context.read<AuthBloc>().state;
+    if (state is AuthAuthenticated) {
+      return state.user.roles.contains(UserRole.nurse);
+    }
+    return false;
+  }
+
   int _calculateSelectedIndex(BuildContext context) {
     final String location = GoRouterState.of(context).uri.path;
 
+    bool isMoreSubRoute(String loc) {
+      return loc.startsWith('/staff/more') || 
+             loc.startsWith('/staff/profile') || 
+             loc.startsWith('/staff/notifications') ||
+             loc.startsWith('/staff/calendar') ||
+             loc.startsWith('/staff/tasks');
+    }
+
     if (_isAdmin(context)) {
-      if (location.contains('users')) return 1;
-      if (location.startsWith('/staff/messages')) return 2;
-      if (location.contains('config')) return 3;
+      if (location.contains('/staff/admin/structure')) return 1;
+      if (location.contains('/staff/admin/users')) {
+        final tab = GoRouterState.of(context).uri.queryParameters['tab'];
+        return tab == 'students' ? 3 : 2;
+      }
+      if (isMoreSubRoute(location)) return 4;
       if (location.startsWith('/staff/admin')) return 0;
       return 0;
     }
 
     if (_isTeacher(context)) {
       if (location.startsWith('/staff/dashboard')) return 0;
-      if (location.startsWith('/staff/marks')) return 1;
-      if (location.startsWith('/staff/tasks')) return 2;
-      if (location.startsWith('/staff/messages')) return 3;
-      if (location.startsWith('/staff/more')) return 4;
+      if (location.startsWith('/staff/students')) return 1;
+      if (location.startsWith('/staff/lessons')) return 2;
+      if (location.startsWith('/staff/marks')) return 3;
+      if (isMoreSubRoute(location)) return 4;
       return 0;
     }
 
     if (_isBoarding(context)) {
       final root = _boardingRoot(context);
-      if (location.startsWith('$root/dorms')) return 1;
-      if (location.startsWith('/staff/tasks')) return 2;
       if (location.startsWith('/staff/messages')) return 3;
-      if (location.startsWith('/staff/more')) return 4;
+      if (location.startsWith('/staff/tasks')) return 2;
+      if (location.startsWith('$root/dorms')) return 1;
+      if (isMoreSubRoute(location)) return 4;
       return 0;
     }
 
-    if (location.startsWith('/staff/messages')) return 1;
-    if (location.startsWith('/staff/more')) return 2;
+    if (_isNurse(context)) {
+      if (location.startsWith('/staff/nurse/records') || 
+          location.startsWith('/staff/nurse/visits') ||
+          location.startsWith('/staff/nurse/medications')) return 1;
+      if (location.startsWith('/staff/messages')) return 2;
+      if (isMoreSubRoute(location)) return 3;
+      return 0;
+    }
+
+    if (location.startsWith('/staff/messages')) return 2;
+    if (location.startsWith('/staff/tasks')) return 1;
+    if (isMoreSubRoute(location)) return 3;
     return 0;
   }
 
@@ -104,10 +134,11 @@ class StaffShell extends StatelessWidget {
   void _onItemTapped(int index, BuildContext context) {
     if (_isAdmin(context)) {
       switch (index) {
-        case 0: context.go('/staff/admin'); break;
-        case 1: context.go('/staff/admin/users'); break;
-        case 2: context.go('/staff/messages'); break;
-        case 3: context.go('/staff/admin/config'); break;
+        case 0: context.go(_homePath(context)); break;
+        case 1: context.go('/staff/admin/structure'); break;
+        case 2: context.go('/staff/admin/users'); break;
+        case 3: context.go('/staff/admin/users?tab=students'); break;
+        case 4: context.go('/staff/more'); break;
       }
       return;
     }
@@ -115,9 +146,9 @@ class StaffShell extends StatelessWidget {
     if (_isTeacher(context)) {
       switch (index) {
         case 0: context.go(_homePath(context)); break;
-        case 1: context.go('/staff/marks'); break;
-        case 2: context.go('/staff/tasks'); break;
-        case 3: context.go('/staff/messages'); break;
+        case 1: context.go('/staff/students'); break;
+        case 2: context.go('/staff/lessons'); break;
+        case 3: context.go('/staff/marks'); break;
         case 4: context.go('/staff/more'); break;
       }
       return;
@@ -135,10 +166,21 @@ class StaffShell extends StatelessWidget {
       return;
     }
 
+    if (_isNurse(context)) {
+      switch (index) {
+        case 0: context.go(_homePath(context)); break;
+        case 1: context.go('/staff/nurse/records'); break;
+        case 2: context.go('/staff/messages'); break;
+        case 3: context.go('/staff/more'); break;
+      }
+      return;
+    }
+
     switch (index) {
       case 0: context.go(_homePath(context)); break;
-      case 1: context.go('/staff/messages'); break;
-      case 2: context.go('/staff/more'); break;
+      case 1: context.go('/staff/tasks'); break;
+      case 2: context.go('/staff/messages'); break;
+      case 3: context.go('/staff/more'); break;
     }
   }
 
@@ -172,101 +214,133 @@ class StaffShell extends StatelessWidget {
     final isAdmin = _isAdmin(context);
     final isTeacher = _isTeacher(context);
     final isBoarding = _isBoarding(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final List<NavigationDestination> teacherDestinations = const [
-      NavigationDestination(
+    final List<NavigationDestination> teacherDestinations = [
+      const NavigationDestination(
         icon: Icon(Icons.home_outlined, size: 24),
-        selectedIcon: Icon(Icons.home_rounded, size: 24, color: AppColors.royalBlue),
+        selectedIcon: Icon(Icons.home_rounded, size: 24),
         label: 'Home',
       ),
-      NavigationDestination(
-        icon: Icon(Icons.edit_note_outlined, size: 24),
-        selectedIcon: Icon(Icons.edit_note_rounded, size: 24, color: AppColors.royalBlue),
+      const NavigationDestination(
+        icon: Icon(Icons.people_outline_rounded, size: 24),
+        selectedIcon: Icon(Icons.people_rounded, size: 24),
+        label: 'Students',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.calendar_today_outlined, size: 24),
+        selectedIcon: Icon(Icons.calendar_today_rounded, size: 24),
+        label: 'Lessons',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.edit_document, size: 24),
+        selectedIcon: Icon(Icons.edit_document, size: 24),
         label: 'Marks',
       ),
-      NavigationDestination(
-        icon: Icon(Icons.assignment_outlined, size: 24),
-        selectedIcon: Icon(Icons.assignment_rounded, size: 24, color: AppColors.royalBlue),
-        label: 'Tasks',
-      ),
-      NavigationDestination(
-        icon: Icon(Icons.chat_bubble_outline_rounded, size: 24),
-        selectedIcon: Icon(Icons.chat_bubble_rounded, size: 24, color: AppColors.royalBlue),
-        label: 'Messages',
-      ),
-      NavigationDestination(
+      const NavigationDestination(
         icon: Icon(Icons.grid_view_outlined, size: 24),
-        selectedIcon: Icon(Icons.grid_view_rounded, size: 24, color: AppColors.royalBlue),
+        selectedIcon: Icon(Icons.grid_view_rounded, size: 24),
         label: 'More',
       ),
     ];
 
-    final List<NavigationDestination> adminDestinations = const [
-      NavigationDestination(
-        icon: Icon(Icons.analytics_outlined, size: 24),
-        selectedIcon: Icon(Icons.analytics_rounded, size: 24, color: AppColors.royalBlue),
-        label: 'Insights',
+    final List<NavigationDestination> adminDestinations = [
+      const NavigationDestination(
+        icon: Icon(Icons.home_outlined, size: 24),
+        selectedIcon: Icon(Icons.home_rounded, size: 24),
+        label: 'Dashboard',
       ),
-      NavigationDestination(
+      const NavigationDestination(
+        icon: Icon(Icons.account_tree_outlined, size: 24),
+        selectedIcon: Icon(Icons.account_tree_rounded, size: 24),
+        label: 'Structure',
+      ),
+      const NavigationDestination(
         icon: Icon(Icons.people_outline_rounded, size: 24),
-        selectedIcon: Icon(Icons.people_rounded, size: 24, color: AppColors.royalBlue),
+        selectedIcon: Icon(Icons.people_rounded, size: 24),
         label: 'Users',
       ),
-      NavigationDestination(
-        icon: Icon(Icons.chat_bubble_outline_rounded, size: 24),
-        selectedIcon: Icon(Icons.chat_bubble_rounded, size: 24, color: AppColors.royalBlue),
-        label: 'Messages',
+      const NavigationDestination(
+        icon: Icon(Icons.school_outlined, size: 24),
+        selectedIcon: Icon(Icons.school_rounded, size: 24),
+        label: 'Students',
       ),
-      NavigationDestination(
-        icon: Icon(Icons.settings_outlined, size: 24),
-        selectedIcon: Icon(Icons.settings_rounded, size: 24, color: AppColors.royalBlue),
-        label: 'System',
-      ),
-    ];
-
-    final List<NavigationDestination> boardingDestinations = const [
-      NavigationDestination(
-        icon: Icon(Icons.home_outlined, size: 24),
-        selectedIcon: Icon(Icons.home_rounded, size: 24, color: AppColors.royalBlue),
-        label: 'Home',
-      ),
-      NavigationDestination(
-        icon: Icon(Icons.bed_outlined, size: 24),
-        selectedIcon: Icon(Icons.bed_rounded, size: 24, color: AppColors.royalBlue),
-        label: 'Dorms',
-      ),
-      NavigationDestination(
-        icon: Icon(Icons.assignment_outlined, size: 24),
-        selectedIcon: Icon(Icons.assignment_rounded, size: 24, color: AppColors.royalBlue),
-        label: 'Tasks',
-      ),
-      NavigationDestination(
-        icon: Icon(Icons.chat_bubble_outline_rounded, size: 24),
-        selectedIcon: Icon(Icons.chat_bubble_rounded, size: 24, color: AppColors.royalBlue),
-        label: 'Messages',
-      ),
-      NavigationDestination(
-        icon: Icon(Icons.more_horiz_rounded, size: 24),
-        selectedIcon: Icon(Icons.more_horiz_rounded, size: 24, color: AppColors.royalBlue),
+      const NavigationDestination(
+        icon: Icon(Icons.grid_view_outlined, size: 24),
+        selectedIcon: Icon(Icons.grid_view_rounded, size: 24),
         label: 'More',
       ),
     ];
 
-    final List<NavigationDestination> operationalDestinations = const [
-      NavigationDestination(
+    final List<NavigationDestination> boardingDestinations = [
+      const NavigationDestination(
         icon: Icon(Icons.home_outlined, size: 24),
-        selectedIcon: Icon(Icons.home_rounded, size: 24, color: AppColors.royalBlue),
+        selectedIcon: Icon(Icons.home_rounded, size: 24),
         label: 'Home',
       ),
-      NavigationDestination(
+      const NavigationDestination(
+        icon: Icon(Icons.bed_outlined, size: 24),
+        selectedIcon: Icon(Icons.bed_rounded, size: 24),
+        label: 'Dorms',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.assignment_outlined, size: 24),
+        selectedIcon: Icon(Icons.assignment_rounded, size: 24),
+        label: 'Tasks',
+      ),
+      const NavigationDestination(
         icon: Icon(Icons.chat_bubble_outline_rounded, size: 24),
-        selectedIcon: Icon(Icons.chat_bubble_rounded, size: 24, color: AppColors.royalBlue),
+        selectedIcon: Icon(Icons.chat_bubble_rounded, size: 24),
         label: 'Messages',
       ),
-      NavigationDestination(
+      const NavigationDestination(
         icon: Icon(Icons.grid_view_outlined, size: 24),
-        selectedIcon: Icon(Icons.grid_view_rounded, size: 24, color: AppColors.royalBlue),
+        selectedIcon: Icon(Icons.grid_view_rounded, size: 24),
+        label: 'More',
+      ),
+    ];
+
+    final List<NavigationDestination> operationalDestinations = [
+      const NavigationDestination(
+        icon: Icon(Icons.home_outlined, size: 24),
+        selectedIcon: Icon(Icons.home_rounded, size: 24),
+        label: 'Home',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.assignment_outlined, size: 24),
+        selectedIcon: Icon(Icons.assignment_rounded, size: 24),
+        label: 'Tasks',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.chat_bubble_outline_rounded, size: 24),
+        selectedIcon: Icon(Icons.chat_bubble_rounded, size: 24),
+        label: 'Messages',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.grid_view_outlined, size: 24),
+        selectedIcon: Icon(Icons.grid_view_rounded, size: 24),
+        label: 'More',
+      ),
+    ];
+
+    final List<NavigationDestination> nurseDestinations = [
+      const NavigationDestination(
+        icon: Icon(Icons.home_outlined, size: 24),
+        selectedIcon: Icon(Icons.home_rounded, size: 24),
+        label: 'Home',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.assignment_outlined, size: 24),
+        selectedIcon: Icon(Icons.assignment_rounded, size: 24),
+        label: 'Records',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.chat_bubble_outline_rounded, size: 24),
+        selectedIcon: Icon(Icons.chat_bubble_rounded, size: 24),
+        label: 'Messages',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.grid_view_outlined, size: 24),
+        selectedIcon: Icon(Icons.grid_view_rounded, size: 24),
         label: 'More',
       ),
     ];
@@ -277,7 +351,9 @@ class StaffShell extends StatelessWidget {
             ? teacherDestinations
             : isBoarding
                 ? boardingDestinations
-                : operationalDestinations;
+                : _isNurse(context)
+                    ? nurseDestinations
+                    : operationalDestinations;
 
     return Scaffold(
       body: Row(
@@ -286,10 +362,10 @@ class StaffShell extends StatelessWidget {
             Container(
               width: MediaQuery.of(context).size.width > 1200 ? 280 : 80,
               decoration: BoxDecoration(
-                color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                color: AppColors.surfaceElevated(context),
                 border: Border(
                   right: BorderSide(
-                    color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                    color: AppColors.border(context),
                     width: 1,
                   ),
                 ),
@@ -323,11 +399,17 @@ class StaffShell extends StatelessWidget {
                           ? NavigationRailLabelType.none 
                           : NavigationRailLabelType.all,
                       unselectedLabelTextStyle: AppTypography.labelMedium.copyWith(
-                        color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                        color: AppColors.textMuted(context),
                       ),
                       selectedLabelTextStyle: AppTypography.labelMedium.copyWith(
                         color: AppColors.primary(context),
                         fontWeight: FontWeight.bold,
+                      ),
+                      unselectedIconTheme: IconThemeData(
+                        color: AppColors.textMuted(context),
+                      ),
+                      selectedIconTheme: IconThemeData(
+                        color: AppColors.primary(context),
                       ),
                       destinations: destinations.map((d) => NavigationRailDestination(
                         icon: d.icon,
@@ -335,6 +417,14 @@ class StaffShell extends StatelessWidget {
                         label: Text(d.label),
                         padding: const EdgeInsets.symmetric(vertical: AppSpacing.m),
                       )).toList(),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.m),
+                    child: IconButton(
+                      icon: const Icon(Icons.swap_horiz_rounded),
+                      tooltip: 'Switch Institution',
+                      onPressed: () => InstitutionSwitcherSheet.show(context),
                     ),
                   ),
                   Padding(
@@ -355,22 +445,48 @@ class StaffShell extends StatelessWidget {
       bottomNavigationBar: isMobile
           ? Container(
               decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.shadow(context),
-                    blurRadius: 20,
-                    offset: const Offset(0, -5),
+                border: Border(
+                  top: BorderSide(
+                    color: AppColors.border(context),
+                    width: 0.5,
                   ),
-                ],
+                ),
               ),
-              child: NavigationBar(
-                height: 64,
-                backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                indicatorColor: AppColors.electricBlue.withValues(alpha: 0.1),
-                selectedIndex: _calculateSelectedIndex(context),
-                onDestinationSelected: (idx) => _onItemTapped(idx, context),
-                destinations: destinations,
-                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+              child: NavigationBarTheme(
+                data: NavigationBarThemeData(
+                  labelTextStyle: WidgetStateProperty.resolveWith((states) {
+                    if (states.contains(WidgetState.selected)) {
+                      return AppTypography.labelSmall.copyWith(
+                        color: AppColors.primary(context),
+                        fontWeight: FontWeight.w600,
+                      );
+                    }
+                    return AppTypography.labelSmall.copyWith(
+                      color: AppColors.textMuted(context),
+                    );
+                  }),
+                ),
+                child: NavigationBar(
+                  height: 64,
+                  backgroundColor: AppColors.surfaceElevated(context),
+                  indicatorColor: Colors.transparent,
+                  selectedIndex: _calculateSelectedIndex(context),
+                  onDestinationSelected: (idx) => _onItemTapped(idx, context),
+                  destinations: destinations.map((d) {
+                    final isSelected = destinations.indexOf(d) == _calculateSelectedIndex(context);
+                    return NavigationDestination(
+                      icon: Icon(
+                        isSelected
+                          ? (d.selectedIcon as Icon).icon
+                          : (d.icon as Icon).icon,
+                        color: isSelected ? AppColors.primary(context) : AppColors.textMuted(context),
+                        size: 24,
+                      ),
+                      label: d.label,
+                    );
+                  }).toList(),
+                  labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                ),
               ),
             )
           : null,
@@ -391,10 +507,10 @@ class _LogoutButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
         child: TextButton.icon(
           onPressed: onPressed,
-          icon: const Icon(Icons.logout_rounded, color: AppColors.deepOrange),
+          icon: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444)),
           label: Text(
             'Logout',
-            style: AppTypography.labelLarge.copyWith(color: AppColors.deepOrange),
+            style: AppTypography.labelLarge.copyWith(color: Color(0xFFEF4444)),
           ),
           style: TextButton.styleFrom(
             alignment: Alignment.centerLeft,
@@ -405,7 +521,7 @@ class _LogoutButton extends StatelessWidget {
     }
 
     return IconButton(
-      icon: const Icon(Icons.logout_rounded, color: AppColors.deepOrange),
+      icon: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444)),
       onPressed: onPressed,
       tooltip: 'Logout',
     );
