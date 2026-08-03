@@ -116,6 +116,44 @@ void main() {
     );
   });
 
+  group('CheckDuplicatesRequested', () {
+    blocTest<AdmissionBloc, AdmissionState>(
+      'submits directly (no DuplicatesFound emitted) when no candidates match',
+      build: () {
+        when(() => repository.getApplications(schoolId)).thenAnswer((_) async => const Right([]));
+        when(() => repository.createAdmissionApplication(any())).thenAnswer((_) async => const Right(null));
+        return bloc;
+      },
+      act: (bloc) => bloc.add(CheckDuplicatesRequested(application)),
+      expect: () => [const AdmissionActionSuccess('Application submitted')],
+    );
+
+    blocTest<AdmissionBloc, AdmissionState>(
+      'emits DuplicatesFound and does not submit when a candidate matches',
+      build: () {
+        when(() => repository.getApplications(schoolId)).thenAnswer((_) async => Right([application]));
+        return bloc;
+      },
+      act: (bloc) => bloc.add(CheckDuplicatesRequested(application)),
+      expect: () => [
+        DuplicatesFound([application], application),
+      ],
+      verify: (_) {
+        verifyNever(() => repository.createAdmissionApplication(any()));
+      },
+    );
+
+    blocTest<AdmissionBloc, AdmissionState>(
+      'emits Error when the duplicate check itself fails',
+      build: () {
+        when(() => repository.getApplications(schoolId)).thenAnswer((_) async => Left(ServerFailure('boom')));
+        return bloc;
+      },
+      act: (bloc) => bloc.add(CheckDuplicatesRequested(application)),
+      expect: () => [const AdmissionError('boom')],
+    );
+  });
+
   group('ReviewApplicationRequested', () {
     blocTest<AdmissionBloc, AdmissionState>(
       'emits ActionSuccess with an approval message when approve is true',

@@ -3,7 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/features/finance/domain/usecases/initialize_student_financials.dart';
+import 'package:school_pulse/features/student/domain/entities/admission_application.dart';
 import 'package:school_pulse/features/student/domain/entities/student.dart';
+import 'package:school_pulse/features/student/domain/entities/student_enums.dart';
 import 'package:school_pulse/features/student/domain/repositories/student_repository.dart';
 import 'package:school_pulse/features/student/domain/services/admission_service.dart';
 import 'package:school_pulse/features/student_identity/domain/entities/student_identity.dart';
@@ -224,6 +226,72 @@ void main() {
             feeStructureId: any(named: 'feeStructureId'),
             totalBilled: any(named: 'totalBilled'),
           ));
+    });
+  });
+
+  group('checkForDuplicates', () {
+    AdmissionApplication buildApplication({
+      required String id,
+      required String name,
+      required DateTime dob,
+    }) {
+      return AdmissionApplication(
+        id: id,
+        schoolId: schoolId,
+        studentName: name,
+        dateOfBirth: dob,
+        gender: Gender.female,
+        targetClassId: 'class-1',
+        academicYearId: academicYearId,
+        applicantParentName: 'Parent',
+        applicantParentPhone: '0700000000',
+        status: AdmissionStatus.application,
+        appliedAt: DateTime(2026, 1, 1),
+      );
+    }
+
+    test('returns matches with the same name and date of birth', () async {
+      final existing = buildApplication(id: 'app-1', name: 'Jane Doe', dob: DateTime(2015, 6, 1));
+      when(() => repository.getApplications(schoolId)).thenAnswer((_) async => Right([existing]));
+
+      final result = await service.checkForDuplicates(schoolId, 'Jane Doe', DateTime(2015, 6, 1));
+
+      expect(result.getOrElse(() => []), [existing]);
+    });
+
+    test('matching is case-insensitive and trims whitespace', () async {
+      final existing = buildApplication(id: 'app-1', name: 'Jane Doe', dob: DateTime(2015, 6, 1));
+      when(() => repository.getApplications(schoolId)).thenAnswer((_) async => Right([existing]));
+
+      final result = await service.checkForDuplicates(schoolId, '  jane doe  ', DateTime(2015, 6, 1));
+
+      expect(result.getOrElse(() => []), [existing]);
+    });
+
+    test('returns no matches when the name differs', () async {
+      final existing = buildApplication(id: 'app-1', name: 'Jane Doe', dob: DateTime(2015, 6, 1));
+      when(() => repository.getApplications(schoolId)).thenAnswer((_) async => Right([existing]));
+
+      final result = await service.checkForDuplicates(schoolId, 'John Doe', DateTime(2015, 6, 1));
+
+      expect(result.getOrElse(() => []), isEmpty);
+    });
+
+    test('returns no matches when the date of birth differs', () async {
+      final existing = buildApplication(id: 'app-1', name: 'Jane Doe', dob: DateTime(2015, 6, 1));
+      when(() => repository.getApplications(schoolId)).thenAnswer((_) async => Right([existing]));
+
+      final result = await service.checkForDuplicates(schoolId, 'Jane Doe', DateTime(2016, 6, 1));
+
+      expect(result.getOrElse(() => []), isEmpty);
+    });
+
+    test('propagates a repository failure', () async {
+      when(() => repository.getApplications(schoolId)).thenAnswer((_) async => Left(ServerFailure('boom')));
+
+      final result = await service.checkForDuplicates(schoolId, 'Jane Doe', DateTime(2015, 6, 1));
+
+      expect(result, Left(ServerFailure('boom')));
     });
   });
 }
