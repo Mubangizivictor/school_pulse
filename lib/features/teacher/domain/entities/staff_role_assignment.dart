@@ -15,6 +15,17 @@ enum StaffResponsibilityType {
   matron,
   sportsLeader,
   religiousLeader,
+  // Non-teaching responsibilities, added so this model can represent every
+  // staff member's assignment (Phase 3), not only teaching staff.
+  nurse,
+  bursar,
+  librarian,
+  securityOfficer,
+  transportCoordinator,
+  storeInventoryManager,
+  hrOfficer,
+  receptionist,
+  cateringManager,
   other;
 
   static StaffResponsibilityType fromId(String? id) {
@@ -37,6 +48,15 @@ extension StaffResponsibilityTypeDisplay on StaffResponsibilityType {
         StaffResponsibilityType.matron => 'Matron',
         StaffResponsibilityType.sportsLeader => 'Sports Leader',
         StaffResponsibilityType.religiousLeader => 'Religious Leader',
+        StaffResponsibilityType.nurse => 'Nurse',
+        StaffResponsibilityType.bursar => 'Bursar',
+        StaffResponsibilityType.librarian => 'Librarian',
+        StaffResponsibilityType.securityOfficer => 'Security Officer',
+        StaffResponsibilityType.transportCoordinator => 'Transport Coordinator',
+        StaffResponsibilityType.storeInventoryManager => 'Store & Inventory Manager',
+        StaffResponsibilityType.hrOfficer => 'HR Officer',
+        StaffResponsibilityType.receptionist => 'Receptionist',
+        StaffResponsibilityType.cateringManager => 'Catering Manager',
         StaffResponsibilityType.other => 'Staff',
       };
 }
