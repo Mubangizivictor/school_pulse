@@ -26,6 +26,7 @@ import 'package:school_pulse/features/visitors/presentation/bloc/visitors_bloc.d
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:school_pulse/core/access/effective_access_resolver.dart';
 import 'package:school_pulse/core/utils/device_id_service.dart';
 import 'package:school_pulse/features/visitors/data/models/visitor_isar.dart';
 import 'package:school_pulse/features/visitors/data/models/visitor_blacklist_isar.dart';
@@ -1723,6 +1724,10 @@ Future<void> init() async {
 
   sl.registerLazySingleton<PermissionEvaluator>(
     () => PermissionEvaluatorImpl(localDataSource: sl(), overrideRepository: sl()),
+  );
+
+  sl.registerLazySingleton(
+    () => EffectiveAccessResolver(permissionEvaluator: sl(), responsibilityService: sl()),
   );
 
   sl.registerLazySingleton<VerificationPolicyEvaluator>(
