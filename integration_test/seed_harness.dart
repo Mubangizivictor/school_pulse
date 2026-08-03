@@ -30,7 +30,7 @@ void main() {
     // Both the seeder's writes and the read-backs below go through Firestore
     // rules, so the harness has to be somebody. Signing in as the demo admin
     // is what the Admin dashboard button implicitly does.
-    const adminEmail = 'mubangizivic@gmail.com';
+    const adminEmail = 'admin@gmail.com';
     final auth = FirebaseAuth.instance;
     try {
       await auth.signInWithEmailAndPassword(
@@ -65,7 +65,7 @@ void main() {
   // each one rather than assuming the session survives between tests.
   setUp(() async {
     await FirebaseAuth.instance.signInWithEmailAndPassword(
-      email: 'mubangizivic@gmail.com',
+      email: 'admin@gmail.com',
       password: AdminSeeder.defaultPassword,
     );
   });
@@ -76,7 +76,7 @@ void main() {
       await AdminSeeder.seedFullData();
 
       await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: 'mubangizivic@gmail.com',
+        email: 'admin@gmail.com',
         password: AdminSeeder.defaultPassword,
       );
 

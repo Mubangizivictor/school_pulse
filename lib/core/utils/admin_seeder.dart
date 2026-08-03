@@ -116,7 +116,7 @@ class AdminSeeder {
   }
 
   static Future<void> _seedSuperAdmin() async {
-    const superAdminEmail = "superadmin@gmail.com";
+    const superAdminEmail = "mubangizivic@gmail.com";
     final cred = await _getOrCreateUser(superAdminEmail, defaultPassword);
 
     await _db.collection('users').doc(cred.user!.uid).set({
@@ -228,7 +228,7 @@ class AdminSeeder {
   ];
 
   static Future<void> _seedAdmin() async {
-    const adminEmail = "mubangizivic@gmail.com";
+    const adminEmail = "admin@gmail.com";
     final adminCred = await _getOrCreateUser(adminEmail, defaultPassword);
 
     // No 'createdAt' here - users/{uid}'s update rule only allows changing
