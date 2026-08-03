@@ -680,7 +680,7 @@ Future<void> init() async {
     ),
   );
 
-  sl.registerLazySingleton(() => ParentLinkingService(sl()));
+  sl.registerLazySingleton(() => ParentLinkingService(sl(), sl()));
 
   sl.registerFactory(
     () => AdmissionBloc(admissionService: sl(), permissionEvaluator: sl()),

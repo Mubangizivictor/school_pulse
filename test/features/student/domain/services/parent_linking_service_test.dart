@@ -2,18 +2,25 @@ import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:school_pulse/core/error/failures.dart';
+import 'package:school_pulse/features/relationships/domain/entities/parent_student_relationship.dart';
+import 'package:school_pulse/features/relationships/domain/entities/relationship_enums.dart';
+import 'package:school_pulse/features/relationships/domain/usecases/create_relationship.dart';
 import 'package:school_pulse/features/student/domain/entities/parent_access_code.dart';
 import 'package:school_pulse/features/student/domain/repositories/student_repository.dart';
 import 'package:school_pulse/features/student/domain/services/parent_linking_service.dart';
 
 class MockStudentRepository extends Mock implements StudentRepository {}
 
+class MockCreateRelationship extends Mock implements CreateRelationship {}
+
 void main() {
   late ParentLinkingService service;
   late MockStudentRepository repository;
+  late MockCreateRelationship createRelationship;
 
   const schoolId = 'school-1';
   const phone = '0700000000';
+  const createdBy = 'staff-1';
 
   setUpAll(() {
     registerFallbackValue(const ParentAccessCode(
@@ -23,11 +30,26 @@ void main() {
       studentIds: [],
       studentNames: [],
     ));
+    registerFallbackValue(const CreateRelationshipParams(
+      schoolId: schoolId,
+      studentId: 'fallback',
+      type: RelationshipType.parent,
+      createdBy: createdBy,
+    ));
   });
 
   setUp(() {
     repository = MockStudentRepository();
-    service = ParentLinkingService(repository);
+    createRelationship = MockCreateRelationship();
+    service = ParentLinkingService(repository, createRelationship);
+    when(() => createRelationship(any())).thenAnswer((_) async => Right(ParentStudentRelationship(
+          id: 'rel-1',
+          schoolId: schoolId,
+          studentId: 'student',
+          type: RelationshipType.parent,
+          createdBy: createdBy,
+          createdAt: DateTime(2026, 1, 1),
+        )));
   });
 
   group('findExistingCodeForPhone', () {
@@ -70,6 +92,7 @@ void main() {
         studentId: 'student-2',
         studentName: 'New Student',
         schoolId: schoolId,
+        createdBy: createdBy,
         phoneNumber: phone,
         parentName: 'New Parent',
       );
@@ -95,6 +118,7 @@ void main() {
         studentId: 'student-2',
         studentName: 'New Sibling',
         schoolId: schoolId,
+        createdBy: createdBy,
         phoneNumber: phone,
         parentName: 'New Parent',
       );
@@ -127,6 +151,7 @@ void main() {
         studentId: 'student-2',
         studentName: 'B',
         schoolId: schoolId,
+        createdBy: createdBy,
         phoneNumber: phone,
       );
 

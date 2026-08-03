@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/injection_container.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/app_components.dart';
 import '../../domain/entities/admission_application.dart';
 import '../../domain/entities/student_enums.dart';
 import '../../domain/services/parent_linking_service.dart';
@@ -104,18 +106,20 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
     );
     if (proceed != true || !context.mounted) return;
 
+    final authState = context.read<AuthBloc>().state;
     final linkResult = await linkingService.linkStudentToParent(
       studentId: studentId,
       studentName: application.studentName,
       schoolId: application.schoolId,
       phoneNumber: application.applicantParentPhone,
       parentName: application.applicantParentName,
+      createdBy: authState is AuthAuthenticated ? authState.user.id : '',
     );
     if (!context.mounted) return;
 
     linkResult.fold(
       (failure) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not link parent: ${failure.message}'), backgroundColor: Colors.red),
+        SnackBar(content: Text('Could not link parent: ${failure.message}'), backgroundColor: AppColors.danger(context)),
       ),
       (code) => showDialog<void>(
         context: context,
@@ -171,12 +175,12 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
         } else if (state is AdmissionError) {
           setState(() => _busy = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+            SnackBar(content: Text(state.message), backgroundColor: AppColors.danger(context)),
           );
         } else if (state is AdmissionActionDenied) {
           setState(() => _busy = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+            SnackBar(content: Text(state.message), backgroundColor: AppColors.danger(context)),
           );
         }
       },
@@ -185,7 +189,13 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            Chip(label: Text(admissionStatusLabel(application.status))),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: StatusBadge(
+                label: admissionStatusLabel(application.status).toUpperCase(),
+                color: _getStatusColor(application.status, context),
+              ),
+            ),
             const SizedBox(height: 16),
             _InfoRow('Date of birth', application.dateOfBirth.toLocal().toString().split(' ').first),
             _InfoRow('Gender', application.gender.name),
@@ -202,8 +212,13 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
               TextField(
                 controller: _commentsController,
                 maxLines: 3,
-                decoration:
-                    const InputDecoration(labelText: 'Review comments (optional)', border: OutlineInputBorder()),
+                style: TextStyle(color: AppColors.textPrimary(context)),
+                decoration: InputDecoration(
+                  labelText: 'Review comments (optional)',
+                  labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                  border: const OutlineInputBorder(),
+                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.border(context))),
+                ),
               ),
               const SizedBox(height: 12),
               Row(
@@ -211,6 +226,10 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: _busy ? null : () => _review(false),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.danger(context),
+                        side: BorderSide(color: AppColors.danger(context)),
+                      ),
                       child: const Text('Reject'),
                     ),
                   ),
@@ -218,6 +237,10 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
                   Expanded(
                     child: FilledButton(
                       onPressed: _busy ? null : () => _review(true),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.success(context),
+                        foregroundColor: Colors.white,
+                      ),
                       child: const Text('Approve'),
                     ),
                   ),
@@ -228,6 +251,10 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
                 onPressed: _busy ? null : _enroll,
                 icon: const Icon(Icons.how_to_reg),
                 label: const Text('Enroll Student'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary(context),
+                  foregroundColor: Colors.white,
+                ),
               ),
             ],
             if (_busy) ...[
@@ -238,6 +265,19 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
         ),
       ),
     );
+  }
+  Color _getStatusColor(AdmissionStatus status, BuildContext context) {
+    switch (status) {
+      case AdmissionStatus.approved:
+      case AdmissionStatus.admitted:
+        return AppColors.success(context);
+      case AdmissionStatus.application:
+        return AppColors.information(context);
+      case AdmissionStatus.review:
+        return AppColors.warning(context);
+      case AdmissionStatus.rejected:
+        return AppColors.danger(context);
+    }
   }
 }
 
@@ -293,17 +333,21 @@ class _InfoRow extends StatelessWidget {
   final String value;
   const _InfoRow(this.label, this.value);
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildInfoRow(BuildContext context, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 140, child: Text(label, style: const TextStyle(color: Colors.grey))),
-          Expanded(child: Text(value)),
+          SizedBox(width: 140, child: Text(label, style: TextStyle(color: AppColors.textMuted(context)))),
+          Expanded(child: Text(value, style: TextStyle(color: AppColors.textPrimary(context)))),
         ],
       ),
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _buildInfoRow(context, label, value);
   }
 }
