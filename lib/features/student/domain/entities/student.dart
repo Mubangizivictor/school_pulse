@@ -168,13 +168,19 @@ class EmergencyContact extends Equatable {
   final String phoneNumber;
   final String? email;
 
+  /// Optional users/{uid} if this contact also happens to hold a login
+  /// (e.g. they're already a parent on another child). Not required - most
+  /// emergency contacts have no account at all, per design.
+  final String? linkedUserId;
+
   const EmergencyContact({
     required this.name,
     required this.relationship,
     required this.phoneNumber,
     this.email,
+    this.linkedUserId,
   });
 
   @override
-  List<Object?> get props => [name, relationship, phoneNumber, email];
+  List<Object?> get props => [name, relationship, phoneNumber, email, linkedUserId];
 }

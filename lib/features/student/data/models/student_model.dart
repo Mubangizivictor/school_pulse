@@ -176,6 +176,7 @@ class EmergencyContactModel extends EmergencyContact {
     required super.relationship,
     required super.phoneNumber,
     super.email,
+    super.linkedUserId,
   });
 
   factory EmergencyContactModel.fromMap(Map<String, dynamic> map) {
@@ -184,6 +185,7 @@ class EmergencyContactModel extends EmergencyContact {
       relationship: map['relationship'] ?? '',
       phoneNumber: map['phoneNumber'] ?? '',
       email: map['email'],
+      linkedUserId: map['linkedUserId'],
     );
   }
 
@@ -193,6 +195,7 @@ class EmergencyContactModel extends EmergencyContact {
       'relationship': relationship,
       'phoneNumber': phoneNumber,
       'email': email,
+      'linkedUserId': linkedUserId,
     };
   }
 }
