@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import '../bloc/structure_bloc.dart';
 import '../bloc/structure_event.dart';
 import '../bloc/structure_state.dart';
@@ -70,6 +72,7 @@ class _LevelsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bloc = context.read<StructureBloc>();
+    final schoolId = (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
     return Scaffold(
       body: state.levels.isEmpty
           ? const StructureEmptyHint('No educational levels yet.\nAdd Kindergarten, Primary, Secondary - or whatever tiers this school offers.')
@@ -91,6 +94,7 @@ class _LevelsTab extends StatelessWidget {
                           onPressed: () => showLevelFormDialog(
                             context,
                             existing: level,
+                            schoolId: schoolId,
                             onSave: (updated) => bloc.add(SaveLevelRequested(updated)),
                           ),
                         ),
@@ -108,7 +112,7 @@ class _LevelsTab extends StatelessWidget {
               },
             ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showLevelFormDialog(context, onSave: (level) => bloc.add(SaveLevelRequested(level))),
+        onPressed: () => showLevelFormDialog(context, schoolId: schoolId, onSave: (level) => bloc.add(SaveLevelRequested(level))),
         icon: const Icon(Icons.add),
         label: const Text('Add Level'),
       ),
@@ -123,6 +127,7 @@ class _YearsAndTermsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bloc = context.read<StructureBloc>();
+    final schoolId = (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
     final dateFmt = DateFormat('MMM dd, yyyy');
     return ListView(
       padding: const EdgeInsets.all(12),
@@ -132,7 +137,7 @@ class _YearsAndTermsTab extends StatelessWidget {
           children: [
             const Text('Academic Years', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             TextButton.icon(
-              onPressed: () => showAcademicYearFormDialog(context, onSave: (y) => bloc.add(SaveAcademicYearRequested(y))),
+              onPressed: () => showAcademicYearFormDialog(context, schoolId: schoolId, onSave: (y) => bloc.add(SaveAcademicYearRequested(y))),
               icon: const Icon(Icons.add),
               label: const Text('Add Year'),
             ),
@@ -159,13 +164,14 @@ class _YearsAndTermsTab extends StatelessWidget {
                       IconButton(
                         icon: const Icon(Icons.check_circle_outline),
                         tooltip: 'Set as current year',
-                        onPressed: () => bloc.add(SetCurrentAcademicYearRequested(year.id)),
+                        onPressed: () => bloc.add(SetCurrentAcademicYearRequested(year.id, year.schoolId)),
                       ),
                     IconButton(
                       icon: const Icon(Icons.edit_outlined),
                       onPressed: () => showAcademicYearFormDialog(
                         context,
                         existing: year,
+                        schoolId: schoolId,
                         onSave: (updated) => bloc.add(SaveAcademicYearRequested(updated)),
                       ),
                     ),
@@ -191,6 +197,7 @@ class _YearsAndTermsTab extends StatelessWidget {
                   : () => showAcademicTermFormDialog(
                         context,
                         years: state.academicYears,
+                        schoolId: schoolId,
                         onSave: (t) => bloc.add(SaveAcademicTermRequested(t)),
                       ),
               icon: const Icon(Icons.add),
@@ -224,7 +231,7 @@ class _YearsAndTermsTab extends StatelessWidget {
                     IconButton(
                       icon: const Icon(Icons.check_circle_outline),
                       tooltip: 'Set as current term',
-                      onPressed: () => bloc.add(SetCurrentAcademicTermRequested(term.id)),
+                      onPressed: () => bloc.add(SetCurrentAcademicTermRequested(term.id, term.schoolId)),
                     ),
                   IconButton(
                     icon: const Icon(Icons.edit_outlined),
@@ -232,6 +239,7 @@ class _YearsAndTermsTab extends StatelessWidget {
                       context,
                       existing: term,
                       years: state.academicYears,
+                      schoolId: schoolId,
                       onSave: (updated) => bloc.add(SaveAcademicTermRequested(updated)),
                     ),
                   ),
@@ -259,6 +267,7 @@ class _ClassesAndStreamsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bloc = context.read<StructureBloc>();
+    final schoolId = (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
@@ -269,7 +278,7 @@ class _ClassesAndStreamsTab extends StatelessWidget {
             TextButton.icon(
               onPressed: state.levels.isEmpty
                   ? null
-                  : () => showClassFormDialog(context, levels: state.levels, onSave: (c) => bloc.add(SaveClassRequested(c))),
+                  : () => showClassFormDialog(context, levels: state.levels, schoolId: schoolId, onSave: (c) => bloc.add(SaveClassRequested(c))),
               icon: const Icon(Icons.add),
               label: const Text('Add Class'),
             ),
@@ -296,6 +305,7 @@ class _ClassesAndStreamsTab extends StatelessWidget {
                       context,
                       existing: schoolClass,
                       levels: state.levels,
+                      schoolId: schoolId,
                       onSave: (updated) => bloc.add(SaveClassRequested(updated)),
                     ),
                   ),
@@ -319,7 +329,7 @@ class _ClassesAndStreamsTab extends StatelessWidget {
             TextButton.icon(
               onPressed: state.classes.isEmpty
                   ? null
-                  : () => showStreamFormDialog(context, classes: state.classes, onSave: (s) => bloc.add(SaveStreamRequested(s))),
+                  : () => showStreamFormDialog(context, classes: state.classes, schoolId: schoolId, onSave: (s) => bloc.add(SaveStreamRequested(s))),
               icon: const Icon(Icons.add),
               label: const Text('Add Stream'),
             ),
@@ -345,6 +355,7 @@ class _ClassesAndStreamsTab extends StatelessWidget {
                       context,
                       existing: stream,
                       classes: state.classes,
+                      schoolId: schoolId,
                       onSave: (updated) => bloc.add(SaveStreamRequested(updated)),
                     ),
                   ),
@@ -372,6 +383,7 @@ class _SubjectsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bloc = context.read<StructureBloc>();
+    final schoolId = (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
     return Scaffold(
       body: state.subjects.isEmpty
           ? const StructureEmptyHint('No subjects defined yet.')
@@ -403,6 +415,7 @@ class _SubjectsTab extends StatelessWidget {
                             context,
                             existing: subject,
                             departments: state.departments,
+                            schoolId: schoolId,
                             onSave: (updated) => bloc.add(SaveSubjectRequested(updated)),
                           ),
                         ),
@@ -420,7 +433,7 @@ class _SubjectsTab extends StatelessWidget {
               },
             ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showSubjectFormDialog(context, departments: state.departments, onSave: (s) => bloc.add(SaveSubjectRequested(s))),
+        onPressed: () => showSubjectFormDialog(context, departments: state.departments, schoolId: schoolId, onSave: (s) => bloc.add(SaveSubjectRequested(s))),
         icon: const Icon(Icons.add),
         label: const Text('Add Subject'),
       ),

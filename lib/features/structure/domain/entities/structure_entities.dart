@@ -6,6 +6,7 @@ import 'package:equatable/equatable.dart';
 /// of these, defined per-school by the admin.
 class EducationalLevel extends Equatable {
   final String id;
+  final String schoolId;
   final String name;
   final String code;
   final int order;
@@ -14,6 +15,7 @@ class EducationalLevel extends Equatable {
 
   const EducationalLevel({
     required this.id,
+    required this.schoolId,
     required this.name,
     this.code = '',
     this.order = 0,
@@ -23,6 +25,7 @@ class EducationalLevel extends Equatable {
 
   EducationalLevel copyWith({
     String? id,
+    String? schoolId,
     String? name,
     String? code,
     int? order,
@@ -31,6 +34,7 @@ class EducationalLevel extends Equatable {
   }) {
     return EducationalLevel(
       id: id ?? this.id,
+      schoolId: schoolId ?? this.schoolId,
       name: name ?? this.name,
       code: code ?? this.code,
       order: order ?? this.order,
@@ -40,7 +44,7 @@ class EducationalLevel extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, name, code, order, description, isActive];
+  List<Object?> get props => [id, schoolId, name, code, order, description, isActive];
 }
 
 /// A school year (e.g. "2026"). Multiple years can exist at once - past
@@ -48,6 +52,7 @@ class EducationalLevel extends Equatable {
 /// current-term field on SystemConfig.
 class AcademicYear extends Equatable {
   final String id;
+  final String schoolId;
   final String name;
   final DateTime startDate;
   final DateTime endDate;
@@ -56,6 +61,7 @@ class AcademicYear extends Equatable {
 
   const AcademicYear({
     required this.id,
+    required this.schoolId,
     required this.name,
     required this.startDate,
     required this.endDate,
@@ -65,6 +71,7 @@ class AcademicYear extends Equatable {
 
   AcademicYear copyWith({
     String? id,
+    String? schoolId,
     String? name,
     DateTime? startDate,
     DateTime? endDate,
@@ -73,6 +80,7 @@ class AcademicYear extends Equatable {
   }) {
     return AcademicYear(
       id: id ?? this.id,
+      schoolId: schoolId ?? this.schoolId,
       name: name ?? this.name,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
@@ -82,13 +90,14 @@ class AcademicYear extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, name, startDate, endDate, isCurrent, isArchived];
+  List<Object?> get props => [id, schoolId, name, startDate, endDate, isCurrent, isArchived];
 }
 
 /// A term/semester/quarter within an academic year. The school decides the
 /// system (Term 1-3, Semester 1-2, Quarter 1-4, ...) - nothing is assumed.
 class AcademicTerm extends Equatable {
   final String id;
+  final String schoolId;
   final String academicYearId;
   final String name;
   final int order;
@@ -98,6 +107,7 @@ class AcademicTerm extends Equatable {
 
   const AcademicTerm({
     required this.id,
+    required this.schoolId,
     required this.academicYearId,
     required this.name,
     this.order = 0,
@@ -108,6 +118,7 @@ class AcademicTerm extends Equatable {
 
   AcademicTerm copyWith({
     String? id,
+    String? schoolId,
     String? academicYearId,
     String? name,
     int? order,
@@ -117,6 +128,7 @@ class AcademicTerm extends Equatable {
   }) {
     return AcademicTerm(
       id: id ?? this.id,
+      schoolId: schoolId ?? this.schoolId,
       academicYearId: academicYearId ?? this.academicYearId,
       name: name ?? this.name,
       order: order ?? this.order,
@@ -127,13 +139,15 @@ class AcademicTerm extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, academicYearId, name, order, startDate, endDate, isCurrent];
+  List<Object?> get props =>
+      [id, schoolId, academicYearId, name, order, startDate, endDate, isCurrent];
 }
 
 /// A class/grade (P1, S1, Baby Class, Year 8, Grade 12, Level 300, ...).
 /// Belongs to an EducationalLevel; nothing about naming is assumed.
 class SchoolClass extends Equatable {
   final String id;
+  final String schoolId;
   final String name;
   final String code;
   final String levelId;
@@ -143,6 +157,7 @@ class SchoolClass extends Equatable {
 
   const SchoolClass({
     required this.id,
+    required this.schoolId,
     required this.name,
     this.code = '',
     this.levelId = '',
@@ -153,6 +168,7 @@ class SchoolClass extends Equatable {
 
   SchoolClass copyWith({
     String? id,
+    String? schoolId,
     String? name,
     String? code,
     String? levelId,
@@ -162,6 +178,7 @@ class SchoolClass extends Equatable {
   }) {
     return SchoolClass(
       id: id ?? this.id,
+      schoolId: schoolId ?? this.schoolId,
       name: name ?? this.name,
       code: code ?? this.code,
       levelId: levelId ?? this.levelId,
@@ -172,13 +189,14 @@ class SchoolClass extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, name, code, levelId, capacity, description, isActive];
+  List<Object?> get props => [id, schoolId, name, code, levelId, capacity, description, isActive];
 }
 
 /// A stream/section within a class (East, West, A, B, Blue, ...). Named
 /// ClassStream, not Stream, to avoid colliding with dart:async's Stream.
 class ClassStream extends Equatable {
   final String id;
+  final String schoolId;
   final String name;
   final String code;
   final String classId;
@@ -187,6 +205,7 @@ class ClassStream extends Equatable {
 
   const ClassStream({
     required this.id,
+    required this.schoolId,
     required this.name,
     this.code = '',
     required this.classId,
@@ -196,6 +215,7 @@ class ClassStream extends Equatable {
 
   ClassStream copyWith({
     String? id,
+    String? schoolId,
     String? name,
     String? code,
     String? classId,
@@ -204,6 +224,7 @@ class ClassStream extends Equatable {
   }) {
     return ClassStream(
       id: id ?? this.id,
+      schoolId: schoolId ?? this.schoolId,
       name: name ?? this.name,
       code: code ?? this.code,
       classId: classId ?? this.classId,
@@ -213,13 +234,14 @@ class ClassStream extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, name, code, classId, capacity, isActive];
+  List<Object?> get props => [id, schoolId, name, code, classId, capacity, isActive];
 }
 
 /// A subject, assignable to any set of levels/classes. No subject list is
 /// hardcoded anywhere else in the app.
 class Subject extends Equatable {
   final String id;
+  final String schoolId;
   final String name;
   final String code;
   final String departmentId;
@@ -234,6 +256,7 @@ class Subject extends Equatable {
 
   const Subject({
     required this.id,
+    required this.schoolId,
     required this.name,
     this.code = '',
     this.departmentId = '',
@@ -249,6 +272,7 @@ class Subject extends Equatable {
 
   Subject copyWith({
     String? id,
+    String? schoolId,
     String? name,
     String? code,
     String? departmentId,
@@ -263,6 +287,7 @@ class Subject extends Equatable {
   }) {
     return Subject(
       id: id ?? this.id,
+      schoolId: schoolId ?? this.schoolId,
       name: name ?? this.name,
       code: code ?? this.code,
       departmentId: departmentId ?? this.departmentId,
@@ -280,6 +305,7 @@ class Subject extends Equatable {
   @override
   List<Object?> get props => [
         id,
+        schoolId,
         name,
         code,
         departmentId,
@@ -298,6 +324,7 @@ class Subject extends Equatable {
 /// or any custom department a school adds).
 class Department extends Equatable {
   final String id;
+  final String schoolId;
   final String name;
   final String code;
   final String description;
@@ -306,6 +333,7 @@ class Department extends Equatable {
 
   const Department({
     required this.id,
+    required this.schoolId,
     required this.name,
     this.code = '',
     this.description = '',
@@ -315,6 +343,7 @@ class Department extends Equatable {
 
   Department copyWith({
     String? id,
+    String? schoolId,
     String? name,
     String? code,
     String? description,
@@ -323,6 +352,7 @@ class Department extends Equatable {
   }) {
     return Department(
       id: id ?? this.id,
+      schoolId: schoolId ?? this.schoolId,
       name: name ?? this.name,
       code: code ?? this.code,
       description: description ?? this.description,
@@ -332,7 +362,8 @@ class Department extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, name, code, description, headOfDepartmentStaffId, isActive];
+  List<Object?> get props =>
+      [id, schoolId, name, code, description, headOfDepartmentStaffId, isActive];
 }
 
 /// A job title a staff member can hold (Principal, Bursar, Librarian,
@@ -341,12 +372,14 @@ class Department extends Equatable {
 /// descriptive metadata, not wired into auth/permissions.
 class StaffDesignation extends Equatable {
   final String id;
+  final String schoolId;
   final String name;
   final String description;
   final bool isActive;
 
   const StaffDesignation({
     required this.id,
+    required this.schoolId,
     required this.name,
     this.description = '',
     this.isActive = true,
@@ -354,12 +387,14 @@ class StaffDesignation extends Equatable {
 
   StaffDesignation copyWith({
     String? id,
+    String? schoolId,
     String? name,
     String? description,
     bool? isActive,
   }) {
     return StaffDesignation(
       id: id ?? this.id,
+      schoolId: schoolId ?? this.schoolId,
       name: name ?? this.name,
       description: description ?? this.description,
       isActive: isActive ?? this.isActive,
@@ -367,7 +402,7 @@ class StaffDesignation extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, name, description, isActive];
+  List<Object?> get props => [id, schoolId, name, description, isActive];
 }
 
 /// A functional role a staff member performs (Class Teacher, Exam Officer,
@@ -375,6 +410,7 @@ class StaffDesignation extends Equatable {
 /// designation might hold several such roles at once.
 class StaffRole extends Equatable {
   final String id;
+  final String schoolId;
   final String name;
   final String designationId;
   final String description;
@@ -382,6 +418,7 @@ class StaffRole extends Equatable {
 
   const StaffRole({
     required this.id,
+    required this.schoolId,
     required this.name,
     this.designationId = '',
     this.description = '',
@@ -390,6 +427,7 @@ class StaffRole extends Equatable {
 
   StaffRole copyWith({
     String? id,
+    String? schoolId,
     String? name,
     String? designationId,
     String? description,
@@ -397,6 +435,7 @@ class StaffRole extends Equatable {
   }) {
     return StaffRole(
       id: id ?? this.id,
+      schoolId: schoolId ?? this.schoolId,
       name: name ?? this.name,
       designationId: designationId ?? this.designationId,
       description: description ?? this.description,
@@ -405,5 +444,5 @@ class StaffRole extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, name, designationId, description, isActive];
+  List<Object?> get props => [id, schoolId, name, designationId, description, isActive];
 }

@@ -597,3 +597,31 @@ describe('Institution Context Phase 1', () => {
     await assertFails(deleteDoc(doc(dbFor('adminA'), 'onboarding_state', 'adminA_schoolA')));
   });
 });
+
+describe('Structure Phase 2', () => {
+  test('schools/{schoolId}/config/{document} is readable and writable by same-school staff, denied cross-school', async () => {
+    await assertSucceeds(setDoc(
+      doc(dbFor('adminA'), 'schools/schoolA/config/feature_toggles'),
+      { transport: true },
+    ));
+    await assertSucceeds(getDoc(doc(dbFor('adminA'), 'schools/schoolA/config/feature_toggles')));
+    await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'schools/schoolA/config/feature_toggles')));
+
+    await assertFails(setDoc(
+      doc(dbFor('teacherB'), 'schools/schoolA/config/feature_toggles'),
+      { transport: false },
+    ));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'schools/schoolA/config/feature_toggles')));
+  });
+
+  test('a parent cannot write schools/{schoolId}/config/{document}', async () => {
+    await assertFails(setDoc(
+      doc(dbFor('parentA'), 'schools/schoolA/config/institution_profile'),
+      { name: 'Hacked' },
+    ));
+  });
+
+  test('an unauthenticated read of config is denied', async () => {
+    await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'schools/schoolA/config/feature_toggles')));
+  });
+});

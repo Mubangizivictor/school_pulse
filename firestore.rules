@@ -71,6 +71,15 @@ service cloud.firestore {
       return isSignedIn() && myUser().schoolId == schoolId;
     }
 
+    // Institution Context Phase 1: a signed-in user has an active
+    // membership in institutionId, either as their home schoolId or via an
+    // additive institution_memberships doc (multi-institution switching).
+    function isActiveMembership(institutionId) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/institution_memberships/$(request.auth.uid + '_' + institutionId)) &&
+        get(/databases/$(database)/documents/institution_memberships/$(request.auth.uid + '_' + institutionId)).data.status == 'active';
+    }
+
     function isMe(studentId) {
       return isStudent() && myUser().studentId == studentId;
     }
@@ -388,7 +397,7 @@ service cloud.firestore {
     // broadcasts: myUser().groups is computed at login (loginParent Cloud
     // Function) from "Parents" plus "Class:<their children's classes>".
     match /alerts/{alertId} {
-      allow read: if isStaff() ||
+      allow read: if (isStaff() && isSameSchool(resource.data.schoolId)) ||
         (resource.data.studentId != null && (isParentOf(resource.data.studentId) || isMe(resource.data.studentId))) ||
         (resource.data.userId != null && isSignedIn() && resource.data.userId == request.auth.uid) ||
         (resource.data.targets is list && isParent() && resource.data.targets.hasAny(myUser().groups));
@@ -397,17 +406,18 @@ service cloud.firestore {
       // else - never a broadcast (no `targets`) and never a `studentId`
       // (which would let them CC an unrelated third parent into the
       // conversation via the studentId read clause above).
-      allow create: if isStaff() ||
+      allow create: if (isStaff() && isSameSchool(request.resource.data.schoolId)) ||
         (isParent() &&
          request.resource.data.userId is string &&
          request.resource.data.userId != request.auth.uid &&
          !('targets' in request.resource.data) &&
-         !('studentId' in request.resource.data));
+         !('studentId' in request.resource.data) &&
+         isSameSchool(request.resource.data.schoolId));
       // Marking an alert as read only ever touches the `readBy` array -
       // safe for any signed-in user to do on any alert, staff or parent.
-      allow update: if isStaff() ||
+      allow update: if (isStaff() && isSameSchool(resource.data.schoolId)) ||
         (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']));
-      allow delete: if isStaff();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
 
     // In-app messaging (the /messages module: inbox, 1:1 chats, groups,
@@ -696,8 +706,8 @@ service cloud.firestore {
 
     // Immutable system activity feed - only ever appended to, never edited.
     match /audit_logs/{id} {
-      allow read: if isStaff();
-      allow create: if isStaff();
+      allow read: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
       allow update, delete: if false;
     }
 
@@ -723,120 +733,126 @@ service cloud.firestore {
     // user (students/parents may need e.g. class names) but only
     // editable by staff.
     match /educational_levels/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /academic_years/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /academic_terms/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /classes/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /class_streams/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /subjects/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /departments/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /staff_designations/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /staff_roles/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
-    match /structure_config/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+    // Fixed as of Phase 2: feature_toggles/institution_profile/timetable_config
+    // are actually read/written at schools/{schoolId}/config/{document} (see
+    // StructureRemoteDataSourceImpl), not a flat structure_config collection -
+    // that flat rule never matched anything real and left this path with no
+    // rule at all (default-deny). schoolId here comes from the path segment,
+    // not resource.data, since these are nested tenant subdocuments.
+    match /schools/{schoolId}/config/{document} {
+      allow read: if isSignedIn() && isSameSchool(schoolId);
+      allow write: if isStaff() && isSameSchool(schoolId);
     }
     match /houses/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /clubs/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /facilities/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /hostels/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /hostel_rooms/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /transport_routes/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /transport_stops/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /transport_vehicles/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /structure_fee_categories/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /structure_assessment_types/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /structure_grading_systems/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /grade_bands/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /attendance_types/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /attendance_sessions/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /announcement_categories/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /notification_categories/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /message_templates/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /document_templates/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /custom_fields/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
 
     // Staff clock-in/out records for the attendance monitor.
@@ -945,11 +961,11 @@ service cloud.firestore {
     // Outbound delivery queues - a Cloud Function (Admin SDK, bypasses
     // rules) drains these, so clients may enqueue but never read them back.
     match /broadcast_queue/{id} {
-      allow create: if isStaff();
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
       allow read, update, delete: if false;
     }
     match /sms_queue/{id} {
-      allow create: if isStaff();
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
       allow read, update, delete: if false;
     }
     match /email_queue/{id} {
@@ -960,7 +976,7 @@ service cloud.firestore {
     match /notification_queue/{id} {
       // Enqueued by sendDirectNotification for both staff-to-X and now
       // parent-initiated 1:1 messages - see the /alerts create rule above.
-      allow create: if isSignedIn();
+      allow create: if isSignedIn() && isSameSchool(request.resource.data.schoolId);
       allow read, update, delete: if false;
     }
 
@@ -1081,8 +1097,35 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isSuperAdmin();
     }
+    // Deprecated as of Phase 1 institution model - schools/{id} is now the
+    // sole tenant source of truth (classification/divisions/displayLabel
+    // live there). No new docs are written here going forward; existing
+    // docs and this rule are left in place, not migrated, in this phase.
     match /tenants/{tenantId} {
       allow read, write: if isSuperAdmin();
+    }
+    // Additive multi-institution membership (Phase 1). Provisioned only by
+    // the provisionSchoolAdmin Cloud Function via the Admin SDK, which
+    // bypasses these rules - client writes are never allowed, matching the
+    // platform_config pattern above.
+    match /institution_memberships/{membershipId} {
+      allow read: if isSignedIn() &&
+        (request.auth.uid == resource.data.userId || isSuperAdmin());
+      allow write: if false;
+    }
+    // First-login onboarding progress, one doc per membership
+    // (userId_institutionId). Only the owning user may read/advance their
+    // own progress, and only within the institution they actually belong
+    // to - isSameSchool() (or an active membership) stops cross-tenant
+    // peeking at another institution's onboarding state.
+    match /onboarding_state/{stateId} {
+      allow read, update: if isSignedIn() &&
+        request.auth.uid == resource.data.userId &&
+        (isSameSchool(resource.data.institutionId) || isActiveMembership(resource.data.institutionId));
+      allow create: if isSignedIn() &&
+        request.auth.uid == request.resource.data.userId &&
+        (isSameSchool(request.resource.data.institutionId) || isActiveMembership(request.resource.data.institutionId));
+      allow delete: if false;
     }
     match /subscription_plans/{id} {
       allow read, write: if isSuperAdmin();

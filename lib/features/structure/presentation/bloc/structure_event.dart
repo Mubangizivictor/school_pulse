@@ -20,7 +20,12 @@ abstract class StructureEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class LoadStructureData extends StructureEvent {}
+class LoadStructureData extends StructureEvent {
+  final String schoolId;
+  const LoadStructureData(this.schoolId);
+  @override
+  List<Object?> get props => [schoolId];
+}
 
 // Internal events fed by the bloc's own stream subscriptions.
 class LevelsUpdated extends StructureEvent {
@@ -278,9 +283,10 @@ class DeleteAcademicYearRequested extends StructureEvent {
 
 class SetCurrentAcademicYearRequested extends StructureEvent {
   final String yearId;
-  const SetCurrentAcademicYearRequested(this.yearId);
+  final String schoolId;
+  const SetCurrentAcademicYearRequested(this.yearId, this.schoolId);
   @override
-  List<Object?> get props => [yearId];
+  List<Object?> get props => [yearId, schoolId];
 }
 
 class SaveAcademicTermRequested extends StructureEvent {
@@ -299,9 +305,10 @@ class DeleteAcademicTermRequested extends StructureEvent {
 
 class SetCurrentAcademicTermRequested extends StructureEvent {
   final String termId;
-  const SetCurrentAcademicTermRequested(this.termId);
+  final String schoolId;
+  const SetCurrentAcademicTermRequested(this.termId, this.schoolId);
   @override
-  List<Object?> get props => [termId];
+  List<Object?> get props => [termId, schoolId];
 }
 
 class SaveClassRequested extends StructureEvent {
@@ -390,16 +397,18 @@ class DeleteStaffRoleRequested extends StructureEvent {
 
 class UpdateFeatureTogglesRequested extends StructureEvent {
   final FeatureToggles toggles;
-  const UpdateFeatureTogglesRequested(this.toggles);
+  final String schoolId;
+  const UpdateFeatureTogglesRequested(this.toggles, this.schoolId);
   @override
-  List<Object?> get props => [toggles];
+  List<Object?> get props => [toggles, schoolId];
 }
 
 class UpdateInstitutionProfileRequested extends StructureEvent {
   final InstitutionProfile profile;
-  const UpdateInstitutionProfileRequested(this.profile);
+  final String schoolId;
+  const UpdateInstitutionProfileRequested(this.profile, this.schoolId);
   @override
-  List<Object?> get props => [profile];
+  List<Object?> get props => [profile, schoolId];
 }
 
 class SaveHouseRequested extends StructureEvent {
@@ -572,9 +581,10 @@ class DeleteGradeBandRequested extends StructureEvent {
 
 class UpdateTimetableConfigRequested extends StructureEvent {
   final TimetableConfig config;
-  const UpdateTimetableConfigRequested(this.config);
+  final String schoolId;
+  const UpdateTimetableConfigRequested(this.config, this.schoolId);
   @override
-  List<Object?> get props => [config];
+  List<Object?> get props => [config, schoolId];
 }
 
 class SaveAttendanceTypeRequested extends StructureEvent {

@@ -16,7 +16,7 @@ const List<Color> kSubjectColorSwatches = [
 
 String _colorToHex(Color color) => '#${color.toARGB32().toRadixString(16).substring(2)}';
 
-Future<void> showLevelFormDialog(BuildContext context, {EducationalLevel? existing, required void Function(EducationalLevel) onSave}) {
+Future<void> showLevelFormDialog(BuildContext context, {EducationalLevel? existing, required String schoolId, required void Function(EducationalLevel) onSave}) {
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController(text: existing?.name);
   final codeController = TextEditingController(text: existing?.code);
@@ -72,6 +72,7 @@ Future<void> showLevelFormDialog(BuildContext context, {EducationalLevel? existi
               if (!formKey.currentState!.validate()) return;
               onSave(EducationalLevel(
                 id: existing?.id ?? const Uuid().v4(),
+                schoolId: existing?.schoolId ?? schoolId,
                 name: nameController.text,
                 code: codeController.text,
                 order: int.tryParse(orderController.text) ?? 0,
@@ -88,7 +89,7 @@ Future<void> showLevelFormDialog(BuildContext context, {EducationalLevel? existi
   );
 }
 
-Future<void> showAcademicYearFormDialog(BuildContext context, {AcademicYear? existing, required void Function(AcademicYear) onSave}) {
+Future<void> showAcademicYearFormDialog(BuildContext context, {AcademicYear? existing, required String schoolId, required void Function(AcademicYear) onSave}) {
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController(text: existing?.name);
   DateTime startDate = existing?.startDate ?? DateTime(DateTime.now().year, 1, 1);
@@ -152,6 +153,7 @@ Future<void> showAcademicYearFormDialog(BuildContext context, {AcademicYear? exi
               if (!formKey.currentState!.validate()) return;
               onSave(AcademicYear(
                 id: existing?.id ?? const Uuid().v4(),
+                schoolId: existing?.schoolId ?? schoolId,
                 name: nameController.text,
                 startDate: startDate,
                 endDate: endDate,
@@ -172,6 +174,7 @@ Future<void> showAcademicTermFormDialog(
   BuildContext context, {
   AcademicTerm? existing,
   required List<AcademicYear> years,
+  required String schoolId,
   required void Function(AcademicTerm) onSave,
 }) {
   final formKey = GlobalKey<FormState>();
@@ -250,6 +253,7 @@ Future<void> showAcademicTermFormDialog(
               if (!formKey.currentState!.validate()) return;
               onSave(AcademicTerm(
                 id: existing?.id ?? const Uuid().v4(),
+                schoolId: existing?.schoolId ?? schoolId,
                 academicYearId: selectedYearId!,
                 name: nameController.text,
                 order: int.tryParse(orderController.text) ?? 0,
@@ -271,6 +275,7 @@ Future<void> showClassFormDialog(
   BuildContext context, {
   SchoolClass? existing,
   required List<EducationalLevel> levels,
+  required String schoolId,
   required void Function(SchoolClass) onSave,
 }) {
   final formKey = GlobalKey<FormState>();
@@ -338,6 +343,7 @@ Future<void> showClassFormDialog(
               if (!formKey.currentState!.validate()) return;
               onSave(SchoolClass(
                 id: existing?.id ?? const Uuid().v4(),
+                schoolId: existing?.schoolId ?? schoolId,
                 name: nameController.text,
                 code: codeController.text,
                 levelId: selectedLevelId ?? '',
@@ -359,6 +365,7 @@ Future<void> showStreamFormDialog(
   BuildContext context, {
   ClassStream? existing,
   required List<SchoolClass> classes,
+  required String schoolId,
   required void Function(ClassStream) onSave,
 }) {
   final formKey = GlobalKey<FormState>();
@@ -418,6 +425,7 @@ Future<void> showStreamFormDialog(
               if (!formKey.currentState!.validate()) return;
               onSave(ClassStream(
                 id: existing?.id ?? const Uuid().v4(),
+                schoolId: existing?.schoolId ?? schoolId,
                 name: nameController.text,
                 code: codeController.text,
                 classId: selectedClassId ?? '',
@@ -438,6 +446,7 @@ Future<void> showSubjectFormDialog(
   BuildContext context, {
   Subject? existing,
   required List<Department> departments,
+  required String schoolId,
   required void Function(Subject) onSave,
 }) {
   final formKey = GlobalKey<FormState>();
@@ -541,6 +550,7 @@ Future<void> showSubjectFormDialog(
               if (!formKey.currentState!.validate()) return;
               onSave(Subject(
                 id: existing?.id ?? const Uuid().v4(),
+                schoolId: existing?.schoolId ?? schoolId,
                 name: nameController.text,
                 code: codeController.text,
                 departmentId: selectedDepartmentId ?? '',
@@ -563,7 +573,7 @@ Future<void> showSubjectFormDialog(
   );
 }
 
-Future<void> showDepartmentFormDialog(BuildContext context, {Department? existing, required void Function(Department) onSave}) {
+Future<void> showDepartmentFormDialog(BuildContext context, {Department? existing, required String schoolId, required void Function(Department) onSave}) {
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController(text: existing?.name);
   final codeController = TextEditingController(text: existing?.code);
@@ -613,6 +623,7 @@ Future<void> showDepartmentFormDialog(BuildContext context, {Department? existin
               if (!formKey.currentState!.validate()) return;
               onSave(Department(
                 id: existing?.id ?? const Uuid().v4(),
+                schoolId: existing?.schoolId ?? schoolId,
                 name: nameController.text,
                 code: codeController.text,
                 description: descController.text,
@@ -629,7 +640,7 @@ Future<void> showDepartmentFormDialog(BuildContext context, {Department? existin
   );
 }
 
-Future<void> showDesignationFormDialog(BuildContext context, {StaffDesignation? existing, required void Function(StaffDesignation) onSave}) {
+Future<void> showDesignationFormDialog(BuildContext context, {StaffDesignation? existing, required String schoolId, required void Function(StaffDesignation) onSave}) {
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController(text: existing?.name);
   final descController = TextEditingController(text: existing?.description);
@@ -674,6 +685,7 @@ Future<void> showDesignationFormDialog(BuildContext context, {StaffDesignation? 
               if (!formKey.currentState!.validate()) return;
               onSave(StaffDesignation(
                 id: existing?.id ?? const Uuid().v4(),
+                schoolId: existing?.schoolId ?? schoolId,
                 name: nameController.text,
                 description: descController.text,
                 isActive: isActive,
@@ -692,6 +704,7 @@ Future<void> showStaffRoleFormDialog(
   BuildContext context, {
   StaffRole? existing,
   required List<StaffDesignation> designations,
+  required String schoolId,
   required void Function(StaffRole) onSave,
 }) {
   final formKey = GlobalKey<FormState>();
@@ -747,6 +760,7 @@ Future<void> showStaffRoleFormDialog(
               if (!formKey.currentState!.validate()) return;
               onSave(StaffRole(
                 id: existing?.id ?? const Uuid().v4(),
+                schoolId: existing?.schoolId ?? schoolId,
                 name: nameController.text,
                 designationId: selectedDesignationId ?? '',
                 description: descController.text,

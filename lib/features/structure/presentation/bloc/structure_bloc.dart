@@ -79,11 +79,11 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
 
     on<SaveAcademicYearRequested>((event, emit) => repository.addAcademicYear(event.year));
     on<DeleteAcademicYearRequested>((event, emit) => repository.deleteAcademicYear(event.yearId));
-    on<SetCurrentAcademicYearRequested>((event, emit) => repository.setCurrentAcademicYear(event.yearId));
+    on<SetCurrentAcademicYearRequested>((event, emit) => repository.setCurrentAcademicYear(event.yearId, event.schoolId));
 
     on<SaveAcademicTermRequested>((event, emit) => repository.addAcademicTerm(event.term));
     on<DeleteAcademicTermRequested>((event, emit) => repository.deleteAcademicTerm(event.termId));
-    on<SetCurrentAcademicTermRequested>((event, emit) => repository.setCurrentAcademicTerm(event.termId));
+    on<SetCurrentAcademicTermRequested>((event, emit) => repository.setCurrentAcademicTerm(event.termId, event.schoolId));
 
     on<SaveClassRequested>((event, emit) => repository.addClass(event.schoolClass));
     on<DeleteClassRequested>((event, emit) => repository.deleteClass(event.classId));
@@ -103,9 +103,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     on<SaveStaffRoleRequested>((event, emit) => repository.addStaffRole(event.role));
     on<DeleteStaffRoleRequested>((event, emit) => repository.deleteStaffRole(event.roleId));
 
-    on<UpdateFeatureTogglesRequested>((event, emit) => repository.updateFeatureToggles(event.toggles));
+    on<UpdateFeatureTogglesRequested>((event, emit) => repository.updateFeatureToggles(event.toggles, event.schoolId));
 
-    on<UpdateInstitutionProfileRequested>((event, emit) => repository.updateInstitutionProfile(event.profile));
+    on<UpdateInstitutionProfileRequested>((event, emit) => repository.updateInstitutionProfile(event.profile, event.schoolId));
 
     on<SaveHouseRequested>((event, emit) => repository.addHouse(event.house));
     on<DeleteHouseRequested>((event, emit) => repository.deleteHouse(event.houseId));
@@ -143,7 +143,7 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     on<SaveGradeBandRequested>((event, emit) => repository.addGradeBand(event.band));
     on<DeleteGradeBandRequested>((event, emit) => repository.deleteGradeBand(event.bandId));
 
-    on<UpdateTimetableConfigRequested>((event, emit) => repository.updateTimetableConfig(event.config));
+    on<UpdateTimetableConfigRequested>((event, emit) => repository.updateTimetableConfig(event.config, event.schoolId));
 
     on<SaveAttendanceTypeRequested>((event, emit) => repository.addAttendanceType(event.type));
     on<DeleteAttendanceTypeRequested>((event, emit) => repository.deleteAttendanceType(event.typeId));
@@ -200,127 +200,127 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     await _documentTemplatesSub?.cancel();
     await _customFieldsSub?.cancel();
 
-    _levelsSub = repository.watchLevels().listen(
+    _levelsSub = repository.watchLevels(event.schoolId).listen(
           (levels) => add(LevelsUpdated(levels)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _yearsSub = repository.watchAcademicYears().listen(
+    _yearsSub = repository.watchAcademicYears(event.schoolId).listen(
           (years) => add(AcademicYearsUpdated(years)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _termsSub = repository.watchAcademicTerms().listen(
+    _termsSub = repository.watchAcademicTerms(event.schoolId).listen(
           (terms) => add(AcademicTermsUpdated(terms)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _classesSub = repository.watchClasses().listen(
+    _classesSub = repository.watchClasses(event.schoolId).listen(
           (classes) => add(ClassesUpdated(classes)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _streamsSub = repository.watchStreams().listen(
+    _streamsSub = repository.watchStreams(event.schoolId).listen(
           (streams) => add(StreamsUpdated(streams)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _subjectsSub = repository.watchSubjects().listen(
+    _subjectsSub = repository.watchSubjects(event.schoolId).listen(
           (subjects) => add(SubjectsUpdated(subjects)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _departmentsSub = repository.watchDepartments().listen(
+    _departmentsSub = repository.watchDepartments(event.schoolId).listen(
           (departments) => add(DepartmentsUpdated(departments)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _designationsSub = repository.watchDesignations().listen(
+    _designationsSub = repository.watchDesignations(event.schoolId).listen(
           (designations) => add(DesignationsUpdated(designations)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _staffRolesSub = repository.watchStaffRoles().listen(
+    _staffRolesSub = repository.watchStaffRoles(event.schoolId).listen(
           (roles) => add(StaffRolesUpdated(roles)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _togglesSub = repository.watchFeatureToggles().listen(
+    _togglesSub = repository.watchFeatureToggles(event.schoolId).listen(
           (toggles) => add(FeatureTogglesUpdated(toggles)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _institutionProfileSub = repository.watchInstitutionProfile().listen(
+    _institutionProfileSub = repository.watchInstitutionProfile(event.schoolId).listen(
           (profile) => add(InstitutionProfileUpdated(profile)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _housesSub = repository.watchHouses().listen(
+    _housesSub = repository.watchHouses(event.schoolId).listen(
           (houses) => add(HousesUpdated(houses)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _clubsSub = repository.watchClubs().listen(
+    _clubsSub = repository.watchClubs(event.schoolId).listen(
           (clubs) => add(ClubsUpdated(clubs)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _facilitiesSub = repository.watchFacilities().listen(
+    _facilitiesSub = repository.watchFacilities(event.schoolId).listen(
           (facilities) => add(FacilitiesUpdated(facilities)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _hostelsSub = repository.watchHostels().listen(
+    _hostelsSub = repository.watchHostels(event.schoolId).listen(
           (hostels) => add(HostelsUpdated(hostels)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _hostelRoomsSub = repository.watchHostelRooms().listen(
+    _hostelRoomsSub = repository.watchHostelRooms(event.schoolId).listen(
           (rooms) => add(HostelRoomsUpdated(rooms)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _transportRoutesSub = repository.watchTransportRoutes().listen(
+    _transportRoutesSub = repository.watchTransportRoutes(event.schoolId).listen(
           (routes) => add(TransportRoutesUpdated(routes)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _transportStopsSub = repository.watchTransportStops().listen(
+    _transportStopsSub = repository.watchTransportStops(event.schoolId).listen(
           (stops) => add(TransportStopsUpdated(stops)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _transportVehiclesSub = repository.watchTransportVehicles().listen(
+    _transportVehiclesSub = repository.watchTransportVehicles(event.schoolId).listen(
           (vehicles) => add(TransportVehiclesUpdated(vehicles)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _feeCategoriesSub = repository.watchFeeCategories().listen(
+    _feeCategoriesSub = repository.watchFeeCategories(event.schoolId).listen(
           (categories) => add(FeeCategoriesUpdated(categories)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _assessmentTypesSub = repository.watchAssessmentTypes().listen(
+    _assessmentTypesSub = repository.watchAssessmentTypes(event.schoolId).listen(
           (types) => add(AssessmentTypesUpdated(types)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _gradingSystemsSub = repository.watchGradingSystems().listen(
+    _gradingSystemsSub = repository.watchGradingSystems(event.schoolId).listen(
           (systems) => add(GradingSystemsUpdated(systems)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _gradeBandsSub = repository.watchGradeBands().listen(
+    _gradeBandsSub = repository.watchGradeBands(event.schoolId).listen(
           (bands) => add(GradeBandsUpdated(bands)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _timetableConfigSub = repository.watchTimetableConfig().listen(
+    _timetableConfigSub = repository.watchTimetableConfig(event.schoolId).listen(
           (config) => add(TimetableConfigUpdated(config)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _attendanceTypesSub = repository.watchAttendanceTypes().listen(
+    _attendanceTypesSub = repository.watchAttendanceTypes(event.schoolId).listen(
           (types) => add(AttendanceTypesUpdated(types)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _attendanceSessionsSub = repository.watchAttendanceSessions().listen(
+    _attendanceSessionsSub = repository.watchAttendanceSessions(event.schoolId).listen(
           (sessions) => add(AttendanceSessionsUpdated(sessions)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _announcementCategoriesSub = repository.watchAnnouncementCategories().listen(
+    _announcementCategoriesSub = repository.watchAnnouncementCategories(event.schoolId).listen(
           (categories) => add(AnnouncementCategoriesUpdated(categories)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _notificationCategoriesSub = repository.watchNotificationCategories().listen(
+    _notificationCategoriesSub = repository.watchNotificationCategories(event.schoolId).listen(
           (categories) => add(NotificationCategoriesUpdated(categories)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _messageTemplatesSub = repository.watchMessageTemplates().listen(
+    _messageTemplatesSub = repository.watchMessageTemplates(event.schoolId).listen(
           (templates) => add(MessageTemplatesUpdated(templates)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _documentTemplatesSub = repository.watchDocumentTemplates().listen(
+    _documentTemplatesSub = repository.watchDocumentTemplates(event.schoolId).listen(
           (templates) => add(DocumentTemplatesUpdated(templates)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
-    _customFieldsSub = repository.watchCustomFields().listen(
+    _customFieldsSub = repository.watchCustomFields(event.schoolId).listen(
           (fields) => add(CustomFieldsUpdated(fields)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );

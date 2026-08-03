@@ -19,6 +19,7 @@ class EducationalLevelIsar {
   @Index(unique: true, replace: true)
   late String levelId;
 
+  late String schoolId;
   late String name;
   late String code;
   late int order;
@@ -30,6 +31,7 @@ class EducationalLevelIsar {
   factory EducationalLevelIsar.fromEntity(EducationalLevel e) {
     return EducationalLevelIsar()
       ..levelId = e.id
+      ..schoolId = e.schoolId
       ..name = e.name
       ..code = e.code
       ..order = e.order
@@ -40,6 +42,7 @@ class EducationalLevelIsar {
   EducationalLevel toEntity() {
     return EducationalLevel(
       id: levelId,
+      schoolId: schoolId,
       name: name,
       code: code,
       order: order,
@@ -56,6 +59,7 @@ class AcademicYearIsar {
   @Index(unique: true, replace: true)
   late String yearId;
 
+  late String schoolId;
   late String name;
   late DateTime startDate;
   late DateTime endDate;
@@ -67,6 +71,7 @@ class AcademicYearIsar {
   factory AcademicYearIsar.fromEntity(AcademicYear e) {
     return AcademicYearIsar()
       ..yearId = e.id
+      ..schoolId = e.schoolId
       ..name = e.name
       ..startDate = e.startDate
       ..endDate = e.endDate
@@ -77,6 +82,7 @@ class AcademicYearIsar {
   AcademicYear toEntity() {
     return AcademicYear(
       id: yearId,
+      schoolId: schoolId,
       name: name,
       startDate: startDate,
       endDate: endDate,
@@ -93,6 +99,7 @@ class AcademicTermIsar {
   @Index(unique: true, replace: true)
   late String termId;
 
+  late String schoolId;
   late String academicYearId;
   late String name;
   late int order;
@@ -105,6 +112,7 @@ class AcademicTermIsar {
   factory AcademicTermIsar.fromEntity(AcademicTerm e) {
     return AcademicTermIsar()
       ..termId = e.id
+      ..schoolId = e.schoolId
       ..academicYearId = e.academicYearId
       ..name = e.name
       ..order = e.order
@@ -116,6 +124,7 @@ class AcademicTermIsar {
   AcademicTerm toEntity() {
     return AcademicTerm(
       id: termId,
+      schoolId: schoolId,
       academicYearId: academicYearId,
       name: name,
       order: order,
@@ -133,6 +142,7 @@ class SchoolClassIsar {
   @Index(unique: true, replace: true)
   late String classId;
 
+  late String schoolId;
   late String name;
   late String code;
   late String levelId;
@@ -145,6 +155,7 @@ class SchoolClassIsar {
   factory SchoolClassIsar.fromEntity(SchoolClass e) {
     return SchoolClassIsar()
       ..classId = e.id
+      ..schoolId = e.schoolId
       ..name = e.name
       ..code = e.code
       ..levelId = e.levelId
@@ -156,6 +167,7 @@ class SchoolClassIsar {
   SchoolClass toEntity() {
     return SchoolClass(
       id: classId,
+      schoolId: schoolId,
       name: name,
       code: code,
       levelId: levelId,
@@ -173,6 +185,7 @@ class ClassStreamIsar {
   @Index(unique: true, replace: true)
   late String streamId;
 
+  late String schoolId;
   late String name;
   late String code;
   late String classId;
@@ -184,6 +197,7 @@ class ClassStreamIsar {
   factory ClassStreamIsar.fromEntity(ClassStream e) {
     return ClassStreamIsar()
       ..streamId = e.id
+      ..schoolId = e.schoolId
       ..name = e.name
       ..code = e.code
       ..classId = e.classId
@@ -194,6 +208,7 @@ class ClassStreamIsar {
   ClassStream toEntity() {
     return ClassStream(
       id: streamId,
+      schoolId: schoolId,
       name: name,
       code: code,
       classId: classId,
@@ -210,6 +225,7 @@ class SubjectIsar {
   @Index(unique: true, replace: true)
   late String subjectId;
 
+  late String schoolId;
   late String name;
   late String code;
   late String departmentId;
@@ -227,6 +243,7 @@ class SubjectIsar {
   factory SubjectIsar.fromEntity(Subject e) {
     return SubjectIsar()
       ..subjectId = e.id
+      ..schoolId = e.schoolId
       ..name = e.name
       ..code = e.code
       ..departmentId = e.departmentId
@@ -243,6 +260,7 @@ class SubjectIsar {
   Subject toEntity() {
     return Subject(
       id: subjectId,
+      schoolId: schoolId,
       name: name,
       code: code,
       departmentId: departmentId,
@@ -265,6 +283,7 @@ class DepartmentIsar {
   @Index(unique: true, replace: true)
   late String departmentId;
 
+  late String schoolId;
   late String name;
   late String code;
   late String description;
@@ -276,6 +295,7 @@ class DepartmentIsar {
   factory DepartmentIsar.fromEntity(Department e) {
     return DepartmentIsar()
       ..departmentId = e.id
+      ..schoolId = e.schoolId
       ..name = e.name
       ..code = e.code
       ..description = e.description
@@ -286,6 +306,7 @@ class DepartmentIsar {
   Department toEntity() {
     return Department(
       id: departmentId,
+      schoolId: schoolId,
       name: name,
       code: code,
       description: description,
@@ -302,6 +323,7 @@ class StaffDesignationIsar {
   @Index(unique: true, replace: true)
   late String designationId;
 
+  late String schoolId;
   late String name;
   late String description;
   late bool isActive;
@@ -311,6 +333,7 @@ class StaffDesignationIsar {
   factory StaffDesignationIsar.fromEntity(StaffDesignation e) {
     return StaffDesignationIsar()
       ..designationId = e.id
+      ..schoolId = e.schoolId
       ..name = e.name
       ..description = e.description
       ..isActive = e.isActive;
@@ -319,6 +342,7 @@ class StaffDesignationIsar {
   StaffDesignation toEntity() {
     return StaffDesignation(
       id: designationId,
+      schoolId: schoolId,
       name: name,
       description: description,
       isActive: isActive,
@@ -333,6 +357,7 @@ class StaffRoleIsar {
   @Index(unique: true, replace: true)
   late String roleId;
 
+  late String schoolId;
   late String name;
   late String designationId;
   late String description;
@@ -343,6 +368,7 @@ class StaffRoleIsar {
   factory StaffRoleIsar.fromEntity(StaffRole e) {
     return StaffRoleIsar()
       ..roleId = e.id
+      ..schoolId = e.schoolId
       ..name = e.name
       ..designationId = e.designationId
       ..description = e.description
@@ -352,6 +378,7 @@ class StaffRoleIsar {
   StaffRole toEntity() {
     return StaffRole(
       id: roleId,
+      schoolId: schoolId,
       name: name,
       designationId: designationId,
       description: description,
@@ -367,6 +394,7 @@ class HouseIsar {
   @Index(unique: true, replace: true)
   late String houseId;
 
+  late String schoolId;
   late String name;
   late String colorHex;
   late String description;
@@ -377,6 +405,7 @@ class HouseIsar {
   factory HouseIsar.fromEntity(House e) {
     return HouseIsar()
       ..houseId = e.id
+      ..schoolId = e.schoolId
       ..name = e.name
       ..colorHex = e.colorHex
       ..description = e.description
@@ -386,6 +415,7 @@ class HouseIsar {
   House toEntity() {
     return House(
       id: houseId,
+      schoolId: schoolId,
       name: name,
       colorHex: colorHex,
       description: description,
@@ -401,6 +431,7 @@ class ClubIsar {
   @Index(unique: true, replace: true)
   late String clubId;
 
+  late String schoolId;
   late String name;
   late String category;
   late String description;
@@ -412,6 +443,7 @@ class ClubIsar {
   factory ClubIsar.fromEntity(Club e) {
     return ClubIsar()
       ..clubId = e.id
+      ..schoolId = e.schoolId
       ..name = e.name
       ..category = e.category
       ..description = e.description
@@ -422,6 +454,7 @@ class ClubIsar {
   Club toEntity() {
     return Club(
       id: clubId,
+      schoolId: schoolId,
       name: name,
       category: category,
       description: description,
@@ -438,6 +471,7 @@ class FacilityIsar {
   @Index(unique: true, replace: true)
   late String facilityId;
 
+  late String schoolId;
   late String name;
   late String facilityType;
   late String location;
@@ -450,6 +484,7 @@ class FacilityIsar {
   factory FacilityIsar.fromEntity(Facility e) {
     return FacilityIsar()
       ..facilityId = e.id
+      ..schoolId = e.schoolId
       ..name = e.name
       ..facilityType = e.facilityType
       ..location = e.location
@@ -461,6 +496,7 @@ class FacilityIsar {
   Facility toEntity() {
     return Facility(
       id: facilityId,
+      schoolId: schoolId,
       name: name,
       facilityType: facilityType,
       location: location,
@@ -478,6 +514,7 @@ class HostelIsar {
   @Index(unique: true, replace: true)
   late String hostelId;
 
+  late String schoolId;
   late String name;
   late String gender;
   late String wardenName;
@@ -491,6 +528,7 @@ class HostelIsar {
   factory HostelIsar.fromEntity(Hostel e) {
     return HostelIsar()
       ..hostelId = e.id
+      ..schoolId = e.schoolId
       ..name = e.name
       ..gender = e.gender
       ..wardenName = e.wardenName
@@ -503,6 +541,7 @@ class HostelIsar {
   Hostel toEntity() {
     return Hostel(
       id: hostelId,
+      schoolId: schoolId,
       name: name,
       gender: gender,
       wardenName: wardenName,
@@ -521,6 +560,7 @@ class HostelRoomIsar {
   @Index(unique: true, replace: true)
   late String roomId;
 
+  late String schoolId;
   late String hostelId;
   late String blockName;
   late String roomNumber;
@@ -532,6 +572,7 @@ class HostelRoomIsar {
   factory HostelRoomIsar.fromEntity(HostelRoom e) {
     return HostelRoomIsar()
       ..roomId = e.id
+      ..schoolId = e.schoolId
       ..hostelId = e.hostelId
       ..blockName = e.blockName
       ..roomNumber = e.roomNumber
@@ -542,6 +583,7 @@ class HostelRoomIsar {
   HostelRoom toEntity() {
     return HostelRoom(
       id: roomId,
+      schoolId: schoolId,
       hostelId: hostelId,
       blockName: blockName,
       roomNumber: roomNumber,
@@ -558,6 +600,7 @@ class TransportRouteIsar {
   @Index(unique: true, replace: true)
   late String routeId;
 
+  late String schoolId;
   late String name;
   late String code;
   late String description;
@@ -568,6 +611,7 @@ class TransportRouteIsar {
   factory TransportRouteIsar.fromEntity(TransportRoute e) {
     return TransportRouteIsar()
       ..routeId = e.id
+      ..schoolId = e.schoolId
       ..name = e.name
       ..code = e.code
       ..description = e.description
@@ -577,6 +621,7 @@ class TransportRouteIsar {
   TransportRoute toEntity() {
     return TransportRoute(
       id: routeId,
+      schoolId: schoolId,
       name: name,
       code: code,
       description: description,
@@ -592,6 +637,7 @@ class TransportStopIsar {
   @Index(unique: true, replace: true)
   late String stopId;
 
+  late String schoolId;
   late String routeId;
   late String name;
   late int order;
@@ -604,6 +650,7 @@ class TransportStopIsar {
   factory TransportStopIsar.fromEntity(TransportStop e) {
     return TransportStopIsar()
       ..stopId = e.id
+      ..schoolId = e.schoolId
       ..routeId = e.routeId
       ..name = e.name
       ..order = e.order
@@ -615,6 +662,7 @@ class TransportStopIsar {
   TransportStop toEntity() {
     return TransportStop(
       id: stopId,
+      schoolId: schoolId,
       routeId: routeId,
       name: name,
       order: order,
@@ -632,6 +680,7 @@ class TransportVehicleIsar {
   @Index(unique: true, replace: true)
   late String vehicleId;
 
+  late String schoolId;
   late String busNumber;
   late String plateNumber;
   late int capacity;
@@ -644,6 +693,7 @@ class TransportVehicleIsar {
   factory TransportVehicleIsar.fromEntity(TransportVehicle e) {
     return TransportVehicleIsar()
       ..vehicleId = e.id
+      ..schoolId = e.schoolId
       ..busNumber = e.busNumber
       ..plateNumber = e.plateNumber
       ..capacity = e.capacity
@@ -655,6 +705,7 @@ class TransportVehicleIsar {
   TransportVehicle toEntity() {
     return TransportVehicle(
       id: vehicleId,
+      schoolId: schoolId,
       busNumber: busNumber,
       plateNumber: plateNumber,
       capacity: capacity,
@@ -672,6 +723,7 @@ class StructureFeeCategoryIsar {
   @Index(unique: true, replace: true)
   late String feeCategoryId;
 
+  late String schoolId;
   late String name;
   late String code;
   late String description;
@@ -683,6 +735,7 @@ class StructureFeeCategoryIsar {
   factory StructureFeeCategoryIsar.fromEntity(FeeCategory e) {
     return StructureFeeCategoryIsar()
       ..feeCategoryId = e.id
+      ..schoolId = e.schoolId
       ..name = e.name
       ..code = e.code
       ..description = e.description
@@ -693,6 +746,7 @@ class StructureFeeCategoryIsar {
   FeeCategory toEntity() {
     return FeeCategory(
       id: feeCategoryId,
+      schoolId: schoolId,
       name: name,
       code: code,
       description: description,
@@ -709,6 +763,7 @@ class AssessmentTypeDefIsar {
   @Index(unique: true, replace: true)
   late String assessmentTypeId;
 
+  late String schoolId;
   late String name;
   late double weightPercentage;
   late String description;
@@ -719,6 +774,7 @@ class AssessmentTypeDefIsar {
   factory AssessmentTypeDefIsar.fromEntity(AssessmentTypeDef e) {
     return AssessmentTypeDefIsar()
       ..assessmentTypeId = e.id
+      ..schoolId = e.schoolId
       ..name = e.name
       ..weightPercentage = e.weightPercentage
       ..description = e.description
@@ -728,6 +784,7 @@ class AssessmentTypeDefIsar {
   AssessmentTypeDef toEntity() {
     return AssessmentTypeDef(
       id: assessmentTypeId,
+      schoolId: schoolId,
       name: name,
       weightPercentage: weightPercentage,
       description: description,
@@ -743,6 +800,7 @@ class GradingSystemDefIsar {
   @Index(unique: true, replace: true)
   late String gradingSystemId;
 
+  late String schoolId;
   late String name;
   late String type;
   late bool isDefault;
@@ -753,6 +811,7 @@ class GradingSystemDefIsar {
   factory GradingSystemDefIsar.fromEntity(GradingSystemDef e) {
     return GradingSystemDefIsar()
       ..gradingSystemId = e.id
+      ..schoolId = e.schoolId
       ..name = e.name
       ..type = e.type
       ..isDefault = e.isDefault
@@ -762,6 +821,7 @@ class GradingSystemDefIsar {
   GradingSystemDef toEntity() {
     return GradingSystemDef(
       id: gradingSystemId,
+      schoolId: schoolId,
       name: name,
       type: type,
       isDefault: isDefault,
@@ -777,6 +837,7 @@ class GradeBandIsar {
   @Index(unique: true, replace: true)
   late String gradeBandId;
 
+  late String schoolId;
   late String gradingSystemId;
   late String grade;
   late double minScore;
@@ -789,6 +850,7 @@ class GradeBandIsar {
   factory GradeBandIsar.fromEntity(GradeBand e) {
     return GradeBandIsar()
       ..gradeBandId = e.id
+      ..schoolId = e.schoolId
       ..gradingSystemId = e.gradingSystemId
       ..grade = e.grade
       ..minScore = e.minScore
@@ -800,6 +862,7 @@ class GradeBandIsar {
   GradeBand toEntity() {
     return GradeBand(
       id: gradeBandId,
+      schoolId: schoolId,
       gradingSystemId: gradingSystemId,
       grade: grade,
       minScore: minScore,
@@ -817,6 +880,7 @@ class AttendanceTypeDefIsar {
   @Index(unique: true, replace: true)
   late String attendanceTypeId;
 
+  late String schoolId;
   late String name;
   late String colorHex;
   late bool isActive;
@@ -826,6 +890,7 @@ class AttendanceTypeDefIsar {
   factory AttendanceTypeDefIsar.fromEntity(AttendanceTypeDef e) {
     return AttendanceTypeDefIsar()
       ..attendanceTypeId = e.id
+      ..schoolId = e.schoolId
       ..name = e.name
       ..colorHex = e.colorHex
       ..isActive = e.isActive;
@@ -834,6 +899,7 @@ class AttendanceTypeDefIsar {
   AttendanceTypeDef toEntity() {
     return AttendanceTypeDef(
       id: attendanceTypeId,
+      schoolId: schoolId,
       name: name,
       colorHex: colorHex,
       isActive: isActive,
@@ -848,6 +914,7 @@ class AttendanceSessionDefIsar {
   @Index(unique: true, replace: true)
   late String attendanceSessionId;
 
+  late String schoolId;
   late String name;
   late bool isActive;
 
@@ -856,6 +923,7 @@ class AttendanceSessionDefIsar {
   factory AttendanceSessionDefIsar.fromEntity(AttendanceSessionDef e) {
     return AttendanceSessionDefIsar()
       ..attendanceSessionId = e.id
+      ..schoolId = e.schoolId
       ..name = e.name
       ..isActive = e.isActive;
   }
@@ -863,6 +931,7 @@ class AttendanceSessionDefIsar {
   AttendanceSessionDef toEntity() {
     return AttendanceSessionDef(
       id: attendanceSessionId,
+      schoolId: schoolId,
       name: name,
       isActive: isActive,
     );
@@ -876,6 +945,7 @@ class AnnouncementCategoryDefIsar {
   @Index(unique: true, replace: true)
   late String announcementCategoryId;
 
+  late String schoolId;
   late String name;
   late bool isActive;
 
@@ -884,6 +954,7 @@ class AnnouncementCategoryDefIsar {
   factory AnnouncementCategoryDefIsar.fromEntity(AnnouncementCategoryDef e) {
     return AnnouncementCategoryDefIsar()
       ..announcementCategoryId = e.id
+      ..schoolId = e.schoolId
       ..name = e.name
       ..isActive = e.isActive;
   }
@@ -891,6 +962,7 @@ class AnnouncementCategoryDefIsar {
   AnnouncementCategoryDef toEntity() {
     return AnnouncementCategoryDef(
       id: announcementCategoryId,
+      schoolId: schoolId,
       name: name,
       isActive: isActive,
     );
@@ -904,6 +976,7 @@ class NotificationCategoryDefIsar {
   @Index(unique: true, replace: true)
   late String notificationCategoryId;
 
+  late String schoolId;
   late String name;
   late bool isActive;
 
@@ -912,6 +985,7 @@ class NotificationCategoryDefIsar {
   factory NotificationCategoryDefIsar.fromEntity(NotificationCategoryDef e) {
     return NotificationCategoryDefIsar()
       ..notificationCategoryId = e.id
+      ..schoolId = e.schoolId
       ..name = e.name
       ..isActive = e.isActive;
   }
@@ -919,6 +993,7 @@ class NotificationCategoryDefIsar {
   NotificationCategoryDef toEntity() {
     return NotificationCategoryDef(
       id: notificationCategoryId,
+      schoolId: schoolId,
       name: name,
       isActive: isActive,
     );
@@ -932,6 +1007,7 @@ class MessageTemplateDefIsar {
   @Index(unique: true, replace: true)
   late String messageTemplateId;
 
+  late String schoolId;
   late String name;
   late String channel;
   late String subject;
@@ -943,6 +1019,7 @@ class MessageTemplateDefIsar {
   factory MessageTemplateDefIsar.fromEntity(MessageTemplateDef e) {
     return MessageTemplateDefIsar()
       ..messageTemplateId = e.id
+      ..schoolId = e.schoolId
       ..name = e.name
       ..channel = e.channel
       ..subject = e.subject
@@ -953,6 +1030,7 @@ class MessageTemplateDefIsar {
   MessageTemplateDef toEntity() {
     return MessageTemplateDef(
       id: messageTemplateId,
+      schoolId: schoolId,
       name: name,
       channel: channel,
       subject: subject,
@@ -969,6 +1047,7 @@ class DocumentTemplateDefIsar {
   @Index(unique: true, replace: true)
   late String documentTemplateId;
 
+  late String schoolId;
   late String name;
   late String templateType;
   late String description;
@@ -979,6 +1058,7 @@ class DocumentTemplateDefIsar {
   factory DocumentTemplateDefIsar.fromEntity(DocumentTemplateDef e) {
     return DocumentTemplateDefIsar()
       ..documentTemplateId = e.id
+      ..schoolId = e.schoolId
       ..name = e.name
       ..templateType = e.templateType
       ..description = e.description
@@ -988,6 +1068,7 @@ class DocumentTemplateDefIsar {
   DocumentTemplateDef toEntity() {
     return DocumentTemplateDef(
       id: documentTemplateId,
+      schoolId: schoolId,
       name: name,
       templateType: templateType,
       description: description,
@@ -1003,6 +1084,7 @@ class CustomFieldDefIsar {
   @Index(unique: true, replace: true)
   late String customFieldId;
 
+  late String schoolId;
   late String appliesTo;
   late String fieldName;
   late String fieldType;
@@ -1015,6 +1097,7 @@ class CustomFieldDefIsar {
   factory CustomFieldDefIsar.fromEntity(CustomFieldDef e) {
     return CustomFieldDefIsar()
       ..customFieldId = e.id
+      ..schoolId = e.schoolId
       ..appliesTo = e.appliesTo
       ..fieldName = e.fieldName
       ..fieldType = e.fieldType
@@ -1026,6 +1109,7 @@ class CustomFieldDefIsar {
   CustomFieldDef toEntity() {
     return CustomFieldDef(
       id: customFieldId,
+      schoolId: schoolId,
       appliesTo: appliesTo,
       fieldName: fieldName,
       fieldType: fieldType,
