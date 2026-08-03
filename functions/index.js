@@ -69,6 +69,41 @@ function generateTemporaryPassword() {
   return password;
 }
 
+// Same first-letters-of-school-name prefix AdmissionReviewScreen derives
+// client-side for student codes (_prefixFrom in
+// admission_review_screen.dart) - duplicated here since Cloud Functions
+// can't call Dart code, kept in sync by convention rather than a shared lib.
+function schoolPrefixFrom(schoolName) {
+  if (!schoolName || !schoolName.trim()) return "SCH";
+  return schoolName
+    .trim()
+    .split(/\s+/)
+    .map((w) => w[0])
+    .slice(0, 3)
+    .join("")
+    .toUpperCase();
+}
+
+// Staff code shape mirrors the student code convention (prefix + year +
+// sequence), e.g. SMAC260007. Uses the same transactional counter pattern
+// as getNextSequenceNumber (student_remote_data_source.dart) so concurrent
+// staff creation can never collide on the same number.
+async function generateStaffCode(schoolId, schoolPrefix) {
+  const year = new Date().getFullYear().toString().slice(-2);
+  const counterRef = admin.firestore()
+    .collection("schools").doc(schoolId)
+    .collection("counters").doc(`staff_${year}`);
+
+  const sequence = await admin.firestore().runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(counterRef);
+    const next = (snapshot.exists ? (snapshot.data().count || 0) : 0) + 1;
+    transaction.set(counterRef, { count: next }, { merge: true });
+    return next;
+  });
+
+  return `${schoolPrefix}${year}${String(sequence).padStart(4, "0")}`;
+}
+
 exports.createStaffAccount = onCall(async (request) => {
   const auth = request.auth;
   if (!auth) {
@@ -116,6 +151,10 @@ exports.createStaffAccount = onCall(async (request) => {
 
   const temporaryPassword = generateTemporaryPassword();
 
+  const schoolDoc = await admin.firestore().collection("schools").doc(schoolId).get();
+  const schoolPrefix = schoolPrefixFrom(schoolDoc.exists ? schoolDoc.data().name : null);
+  const staffCode = await generateStaffCode(schoolId, schoolPrefix);
+
   let userRecord;
   try {
     userRecord = await admin.auth().createUser({
@@ -138,6 +177,7 @@ exports.createStaffAccount = onCall(async (request) => {
       role: roles[0],
       roles,
       schoolId,
+      staffCode,
       studentIds: [],
       mustChangePassword: true,
       createdBy: auth.uid,
@@ -152,6 +192,7 @@ exports.createStaffAccount = onCall(async (request) => {
       role: roles[0],
       roles,
       schoolId,
+      staffCode,
       isActive: true,
     });
 
