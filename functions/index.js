@@ -893,6 +893,81 @@ exports.completeParentPinSetup = onCall(async (request) => {
   return { success: true };
 });
 
+/**
+ * Mints a custom-token session for a single student, verified by
+ * code+phone+PIN against a student_access_codes doc - same shape as
+ * loginParent, scoped to one studentId instead of a sibling group.
+ */
+exports.loginStudent = onCall(async (request) => {
+  const { code, phoneNumber, pin } = request.data || {};
+  if (!code || !phoneNumber || !pin) {
+    throw new HttpsError("invalid-argument", "Access code, phone number, and PIN are required.");
+  }
+
+  const codeRef = admin.firestore().collection("student_access_codes").doc(code);
+  const doc = await codeRef.get();
+  if (!doc.exists) {
+    throw new HttpsError("not-found", "Invalid access code.");
+  }
+
+  const data = doc.data();
+  if (data.isActive === false) {
+    const reason = data.deactivationReason ? `\nReason: ${data.deactivationReason}` : "";
+    throw new HttpsError("permission-denied", `This access code has been deactivated.${reason}`);
+  }
+  if (data.phoneNumber !== phoneNumber) {
+    throw new HttpsError("permission-denied", "Phone number does not match this access code.");
+  }
+  if (data.pin !== pin) {
+    throw new HttpsError("permission-denied", "Incorrect PIN.");
+  }
+
+  const uid = data.studentId;
+  if (!uid) {
+    throw new HttpsError("failed-precondition", "This access code is not linked to a student.");
+  }
+
+  await admin.firestore().collection("users").doc(uid).set({
+    role: "student",
+    studentId: uid,
+    name: data.studentName || "Student",
+    phoneNumber: data.phoneNumber,
+    schoolId: data.schoolId || "",
+    isActive: true,
+  }, { merge: true });
+
+  const token = await admin.auth().createCustomToken(uid, { role: "student" });
+  return { token, mustChangePin: !!data.mustChangePin };
+});
+
+/**
+ * Sets a student's PIN (first-time setup or reset). Runs before the
+ * student has a Firebase Auth session, so identity is proven with
+ * code+phone instead of request.auth - mirrors completeParentPinSetup.
+ */
+exports.completeStudentPinSetup = onCall(async (request) => {
+  const { code, phoneNumber, newPin } = request.data || {};
+  if (!code || !phoneNumber || !newPin) {
+    throw new HttpsError("invalid-argument", "Access code, phone number, and new PIN are required.");
+  }
+
+  const codeRef = admin.firestore().collection("student_access_codes").doc(code);
+  const doc = await codeRef.get();
+  if (!doc.exists) {
+    throw new HttpsError("not-found", "Invalid access code.");
+  }
+  const data = doc.data();
+  if (data.isActive === false) {
+    throw new HttpsError("permission-denied", "This access code has been deactivated.");
+  }
+  if (data.phoneNumber !== phoneNumber) {
+    throw new HttpsError("permission-denied", "Phone number does not match this access code.");
+  }
+
+  await codeRef.update({ pin: newPin, mustChangePin: false });
+  return { success: true };
+});
+
 // ============================================================================
 // Notification Delivery Triggers
 // ============================================================================

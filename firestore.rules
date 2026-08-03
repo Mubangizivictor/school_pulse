@@ -163,6 +163,14 @@ service cloud.firestore {
       allow write: if isStaff();
     }
 
+    // Same pattern as parent_access_codes, scoped to a single student
+    // rather than a sibling group.
+    match /student_access_codes/{code} {
+      allow get: if true;
+      allow list: if isStaff();
+      allow write: if isStaff();
+    }
+
     // Students are readable by any staff member, or by the parent(s)
     // linked to that student via users/{uid}.studentIds, or the student
     // themselves.
