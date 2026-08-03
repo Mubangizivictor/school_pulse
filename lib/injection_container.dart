@@ -1,4 +1,14 @@
 import 'package:school_pulse/features/admin/domain/repositories/role_permission_override_repository.dart';
+import 'package:school_pulse/features/relationships/data/datasources/relationship_remote_data_source.dart';
+import 'package:school_pulse/features/relationships/data/repositories/relationship_repository_impl.dart';
+import 'package:school_pulse/features/relationships/domain/repositories/relationship_repository.dart';
+import 'package:school_pulse/features/relationships/domain/usecases/create_relationship.dart';
+import 'package:school_pulse/features/relationships/domain/usecases/get_people_policy.dart';
+import 'package:school_pulse/features/relationships/domain/usecases/get_relationships_for_parent.dart';
+import 'package:school_pulse/features/relationships/domain/usecases/get_relationships_for_student.dart';
+import 'package:school_pulse/features/relationships/domain/usecases/reallocate_relationship.dart';
+import 'package:school_pulse/features/relationships/domain/usecases/record_enrolment_change.dart';
+import 'package:school_pulse/features/relationships/domain/usecases/update_people_policy.dart';
 import 'package:school_pulse/features/admin/data/repositories/role_permission_override_repository_impl.dart';
 import 'package:school_pulse/features/admin/domain/usecases/get_role_permission_overrides.dart';
 import 'package:school_pulse/features/admin/domain/usecases/save_role_permission_override.dart';
@@ -1621,6 +1631,22 @@ Future<void> init() async {
   // Admin - Staff Attendance / Subscription
   sl.registerLazySingleton(() => StaffAttendanceRepository());
   sl.registerLazySingleton(() => SubscriptionRepository());
+
+  // Features - Relationships (Phase 4: parent-student links, enrolment
+  // history, guardian-limit policy)
+  sl.registerLazySingleton<RelationshipRemoteDataSource>(
+    () => RelationshipRemoteDataSourceImpl(firestore: sl()),
+  );
+  sl.registerLazySingleton<RelationshipRepository>(
+    () => RelationshipRepositoryImpl(remoteDataSource: sl()),
+  );
+  sl.registerLazySingleton(() => CreateRelationship(sl()));
+  sl.registerLazySingleton(() => ReallocateRelationship(sl()));
+  sl.registerLazySingleton(() => GetRelationshipsForStudent(sl()));
+  sl.registerLazySingleton(() => GetRelationshipsForParent(sl()));
+  sl.registerLazySingleton(() => GetPeoplePolicy(sl()));
+  sl.registerLazySingleton(() => UpdatePeoplePolicy(sl()));
+  sl.registerLazySingleton(() => RecordEnrolmentChange(sl()));
 
   // Features - Structure
   sl.registerFactory(() => StructureBloc(repository: sl()));
