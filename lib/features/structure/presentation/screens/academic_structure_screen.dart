@@ -48,7 +48,9 @@ Future<String?> _confirmDeleteOrArchive(
 /// Levels, Academic Years/Terms, Classes/Streams, and Subjects - the core
 /// academic hierarchy every other module reads from.
 class AcademicStructureScreen extends StatefulWidget {
-  const AcademicStructureScreen({super.key});
+  final int initialTab;
+
+  const AcademicStructureScreen({super.key, this.initialTab = 0});
 
   @override
   State<AcademicStructureScreen> createState() => _AcademicStructureScreenState();
@@ -67,7 +69,8 @@ class _AcademicStructureScreenState extends State<AcademicStructureScreen> with 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this);
+    final initialIndex = widget.initialTab.clamp(0, _tabs.length - 1);
+    _tabController = TabController(length: _tabs.length, vsync: this, initialIndex: initialIndex);
   }
 
   @override

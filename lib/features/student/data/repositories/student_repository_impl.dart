@@ -309,14 +309,39 @@ class StudentRepositoryImpl implements StudentRepository {
       List<StudentModel> updatedStudents = [];
       for (var id in studentIds) {
         final student = await remoteDataSource.getStudentById(id);
-        updatedStudents.add(
-          student.copyWith(
-                classId: targetClassId,
-                streamId: targetStreamId,
-                academicYearId: targetAcademicYearId,
-              )
-              as StudentModel,
+        // Student.copyWith() returns a plain Student, not a StudentModel
+        // (StudentModel doesn't override it) - build the model explicitly
+        // rather than casting, which always failed at runtime.
+        final updated = student.copyWith(
+          classId: targetClassId,
+          streamId: targetStreamId,
+          academicYearId: targetAcademicYearId,
         );
+        updatedStudents.add(StudentModel(
+          id: updated.id,
+          schoolId: updated.schoolId,
+          name: updated.name,
+          photoUrl: updated.photoUrl,
+          studentCode: updated.studentCode,
+          admissionNumber: updated.admissionNumber,
+          qrReference: updated.qrReference,
+          dateOfBirth: updated.dateOfBirth,
+          gender: updated.gender,
+          classId: updated.classId,
+          streamId: updated.streamId,
+          academicYearId: updated.academicYearId,
+          previousSchool: updated.previousSchool,
+          status: updated.status,
+          medicalInfo: updated.medicalInfo,
+          emergencyContacts: updated.emergencyContacts,
+          parentIds: updated.parentIds,
+          documents: updated.documents,
+          campusId: updated.campusId,
+          level: updated.level,
+          dormLeadershipRole: updated.dormLeadershipRole,
+          dormLeadershipDormId: updated.dormLeadershipDormId,
+          dormLeadershipDormName: updated.dormLeadershipDormName,
+        ));
       }
       await remoteDataSource.batchUpdateStudents(updatedStudents);
 
