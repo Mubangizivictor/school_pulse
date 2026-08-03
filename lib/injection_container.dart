@@ -1,3 +1,7 @@
+import 'package:school_pulse/features/institution/data/datasources/institution_context_remote_datasource.dart';
+import 'package:school_pulse/features/institution/data/repositories/institution_context_repository_impl.dart';
+import 'package:school_pulse/features/institution/domain/repositories/institution_context_repository.dart';
+import 'package:school_pulse/features/institution/presentation/bloc/institution_context_cubit.dart';
 import 'package:school_pulse/features/appointments/domain/repositories/appointment_repository.dart';
 import 'package:school_pulse/features/appointments/domain/usecases/appointment_usecases.dart'
     hide GetStudentsByIds;
@@ -56,6 +60,9 @@ import 'package:school_pulse/features/finance/domain/services/finance_service.da
 import 'package:school_pulse/features/student/domain/services/admission_service.dart';
 import 'package:school_pulse/features/student/domain/services/parent_linking_service.dart';
 import 'package:school_pulse/features/finance/domain/usecases/initialize_student_financials.dart';
+
+import 'package:school_pulse/features/admin/domain/repositories/admin_attendance_repository.dart';
+import 'package:school_pulse/features/admin/data/repositories/admin_attendance_repository_impl.dart';
 
 // Super Admin
 import 'package:school_pulse/features/super_admin/domain/repositories/super_admin_repository.dart';
@@ -728,7 +735,13 @@ Future<void> init() async {
       studentRepository: sl(),
       visitorRepository: sl(),
       firestore: sl(),
+      financeRepository: sl(),
+      adminAttendanceRepository: sl(),
     ),
+  );
+
+  sl.registerLazySingleton<AdminAttendanceRepository>(
+    () => AdminAttendanceRepositoryImpl(firestore: sl()),
   );
 
   sl.registerLazySingleton(() => AuditRepository());
@@ -1784,6 +1797,24 @@ Future<void> init() async {
     ClassDashboardCacheIsarSchema,
     ClassAttendanceDraftIsarSchema,
     AttendanceTypeDefIsarSchema,
+    HouseIsarSchema,
+    ClubIsarSchema,
+    FacilityIsarSchema,
+    HostelIsarSchema,
+    HostelRoomIsarSchema,
+    TransportRouteIsarSchema,
+    TransportStopIsarSchema,
+    TransportVehicleIsarSchema,
+    StructureFeeCategoryIsarSchema,
+    AssessmentTypeDefIsarSchema,
+    GradingSystemDefIsarSchema,
+    GradeBandIsarSchema,
+    AttendanceSessionDefIsarSchema,
+    AnnouncementCategoryDefIsarSchema,
+    NotificationCategoryDefIsarSchema,
+    MessageTemplateDefIsarSchema,
+    DocumentTemplateDefIsarSchema,
+    CustomFieldDefIsarSchema,
   ], directory: dir.path);
   sl.registerLazySingleton(() => isar);
 
@@ -1796,4 +1827,14 @@ Future<void> init() async {
   sl.registerLazySingleton(() => InternetConnectionChecker());
   sl.registerLazySingleton<NetworkInfo>(() => NetworkInfoImpl(sl()));
   sl.registerLazySingleton(() => GoogleSheetsService());
+
+  sl.registerLazySingleton<InstitutionContextRemoteDataSource>(
+    () => InstitutionContextRemoteDataSourceImpl(firestore: sl()),
+  );
+  sl.registerLazySingleton<InstitutionContextRepository>(
+    () => InstitutionContextRepositoryImpl(remoteDataSource: sl()),
+  );
+  sl.registerFactory(
+    () => InstitutionContextCubit(repository: sl(), preferences: sl()),
+  );
 }

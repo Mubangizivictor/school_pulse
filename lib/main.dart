@@ -12,6 +12,8 @@ import 'package:school_pulse/injection_container.dart' as di;
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/institution/presentation/bloc/institution_context_cubit.dart';
+import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/academic/presentation/bloc/academic_bloc.dart';
 import 'package:school_pulse/features/finance/presentation/bloc/finance_bloc.dart';
 import 'package:school_pulse/features/health/presentation/bloc/health_bloc.dart';
@@ -110,6 +112,9 @@ class SchoolPulseApp extends StatelessWidget {
           create: (_) => di.sl<AuthBloc>()..add(AuthCheckRequested()),
         ),
         BlocProvider(
+          create: (_) => di.sl<InstitutionContextCubit>(),
+        ),
+        BlocProvider(
           create: (_) => di.sl<BrandingBloc>()..add(InitializeBranding()),
         ),
         BlocProvider(
@@ -197,7 +202,7 @@ class SchoolPulseApp extends StatelessWidget {
           create: (_) => di.sl<StoresAssetsBloc>(),
         ),
         BlocProvider(
-          create: (_) => di.sl<StructureBloc>()..add(LoadStructureData()),
+          create: (_) => di.sl<StructureBloc>(),
         ),
         BlocProvider(
           create: (_) => di.sl<SecurityBloc>(),
@@ -268,11 +273,22 @@ class SchoolPulseAppView extends StatelessWidget {
               // offline read/acknowledge queue, and replays a deep link that
               // was stashed while signed out.
               di.sl<NotificationCoordinator>().onSignedIn(state.user);
+
+              // Load structure data once authenticated.
+              context.read<StructureBloc>().add(LoadStructureData(state.user.schoolId));
+
+              // Institution Context Engine: restore the last-active tenant
+              // (for multi-institution users) or fall back to home schoolId.
+              // superAdmin has no tenant to scope to - it operates platform-wide.
+              if (state.user.role != UserRole.superAdmin) {
+                context.read<InstitutionContextCubit>().restore(state.user.schoolId);
+              }
             } else if (state is AuthUnauthenticated) {
               // Revoking the token is what actually stops delivery; clearing
               // the tray stops the next user of a shared device seeing the
               // previous user's alerts.
               di.sl<NotificationCoordinator>().onSignedOut();
+              context.read<InstitutionContextCubit>().clear();
             }
           },
         ),

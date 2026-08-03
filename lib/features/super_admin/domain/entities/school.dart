@@ -2,6 +2,62 @@ import 'package:equatable/equatable.dart';
 
 enum SchoolStatus { active, suspended, trial, archived }
 
+/// Broad institution classification. Descriptive only — never restricts
+/// which modules or features an institution can enable. [other] pairs with
+/// [School.classificationOther] for a free-text label when nothing here fits.
+enum InstitutionClassification {
+  kindergarten,
+  primary,
+  secondary,
+  combined,
+  vocational,
+  technicalInstitute,
+  college,
+  university,
+  specialNeeds,
+  trainingCentre,
+  multiCampus,
+  other,
+}
+
+/// A configurable education division within one institution tenant
+/// (e.g. "Kindergarten", "Undergraduate"). Divisions are admin-curated and
+/// bounded in number, so they're embedded on the School doc rather than
+/// stored as a separate collection.
+class InstitutionDivision extends Equatable {
+  final String id;
+  final String name;
+  final InstitutionClassification levelHint;
+  final bool isActive;
+  final Map<String, dynamic> metadata;
+
+  const InstitutionDivision({
+    required this.id,
+    required this.name,
+    this.levelHint = InstitutionClassification.other,
+    this.isActive = true,
+    this.metadata = const {},
+  });
+
+  InstitutionDivision copyWith({
+    String? name,
+    InstitutionClassification? levelHint,
+    bool? isActive,
+    Map<String, dynamic>? metadata,
+  }) {
+    return InstitutionDivision(
+      id: id,
+      name: name ?? this.name,
+      levelHint: levelHint ?? this.levelHint,
+      isActive: isActive ?? this.isActive,
+      metadata: metadata ?? this.metadata,
+    );
+  }
+
+  @override
+  List<Object?> get props => [id, name, levelHint, isActive, metadata];
+}
+
 class School extends Equatable {
   final String id;
   final String name;
@@ -15,6 +71,10 @@ class School extends Equatable {
   final DateTime subscriptionExpiry;
   final List<String> enabledFeatures;
   final Map<String, dynamic> metadata;
+  final InstitutionClassification classification;
+  final String? classificationOther;
+  final List<InstitutionDivision> divisions;
+  final String? displayLabel;
 
   const School({
     required this.id,
@@ -29,6 +89,10 @@ class School extends Equatable {
     required this.subscriptionExpiry,
     this.enabledFeatures = const [],
     this.metadata = const {},
+    this.classification = InstitutionClassification.other,
+    this.classificationOther,
+    this.divisions = const [],
+    this.displayLabel,
   });
 
   @override
@@ -45,6 +109,10 @@ class School extends Equatable {
         subscriptionExpiry,
         enabledFeatures,
         metadata,
+        classification,
+        classificationOther,
+        divisions,
+        displayLabel,
       ];
 
   School copyWith({
@@ -57,6 +125,10 @@ class School extends Equatable {
     DateTime? subscriptionExpiry,
     List<String>? enabledFeatures,
     Map<String, dynamic>? metadata,
+    InstitutionClassification? classification,
+    String? classificationOther,
+    List<InstitutionDivision>? divisions,
+    String? displayLabel,
   }) {
     return School(
       id: id,
@@ -71,6 +143,10 @@ class School extends Equatable {
       subscriptionExpiry: subscriptionExpiry ?? this.subscriptionExpiry,
       enabledFeatures: enabledFeatures ?? this.enabledFeatures,
       metadata: metadata ?? this.metadata,
+      classification: classification ?? this.classification,
+      classificationOther: classificationOther ?? this.classificationOther,
+      divisions: divisions ?? this.divisions,
+      displayLabel: displayLabel ?? this.displayLabel,
     );
   }
 }

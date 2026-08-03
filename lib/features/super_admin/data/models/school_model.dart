@@ -14,6 +14,10 @@ class SchoolModel extends School {
     required super.subscriptionExpiry,
     super.enabledFeatures,
     super.metadata,
+    super.classification,
+    super.classificationOther,
+    super.divisions,
+    super.displayLabel,
   });
 
   factory SchoolModel.fromJson(Map<String, dynamic> json) {
@@ -29,15 +33,47 @@ class SchoolModel extends School {
         orElse: () => SchoolStatus.trial,
       ),
       subscriptionPlanId: json['subscriptionPlanId'] ?? '',
-      createdAt: json['createdAt'] != null 
-          ? DateTime.fromMillisecondsSinceEpoch(json['createdAt']) 
+      createdAt: json['createdAt'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(json['createdAt'])
           : DateTime.now(),
-      subscriptionExpiry: json['subscriptionExpiry'] != null 
-          ? DateTime.fromMillisecondsSinceEpoch(json['subscriptionExpiry']) 
+      subscriptionExpiry: json['subscriptionExpiry'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(json['subscriptionExpiry'])
           : DateTime.now(),
       enabledFeatures: List<String>.from(json['enabledFeatures'] ?? []),
       metadata: Map<String, dynamic>.from(json['metadata'] ?? {}),
+      classification: InstitutionClassification.values.firstWhere(
+        (e) => e.name == json['classification'],
+        orElse: () => InstitutionClassification.other,
+      ),
+      classificationOther: json['classificationOther'] as String?,
+      divisions: (json['divisions'] as List<dynamic>? ?? [])
+          .map((d) => _divisionFromJson(Map<String, dynamic>.from(d as Map)))
+          .toList(),
+      displayLabel: json['displayLabel'] as String?,
     );
+  }
+
+  static InstitutionDivision _divisionFromJson(Map<String, dynamic> json) {
+    return InstitutionDivision(
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      levelHint: InstitutionClassification.values.firstWhere(
+        (e) => e.name == json['levelHint'],
+        orElse: () => InstitutionClassification.other,
+      ),
+      isActive: json['isActive'] ?? true,
+      metadata: Map<String, dynamic>.from(json['metadata'] ?? {}),
+    );
+  }
+
+  static Map<String, dynamic> _divisionToJson(InstitutionDivision d) {
+    return {
+      'id': d.id,
+      'name': d.name,
+      'levelHint': d.levelHint.name,
+      'isActive': d.isActive,
+      'metadata': d.metadata,
+    };
   }
 
   Map<String, dynamic> toJson() {
@@ -54,6 +90,10 @@ class SchoolModel extends School {
       'subscriptionExpiry': subscriptionExpiry.millisecondsSinceEpoch,
       'enabledFeatures': enabledFeatures,
       'metadata': metadata,
+      'classification': classification.name,
+      'classificationOther': classificationOther,
+      'divisions': divisions.map(_divisionToJson).toList(),
+      'displayLabel': displayLabel,
     };
   }
 }
