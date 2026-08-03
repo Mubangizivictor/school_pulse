@@ -8,7 +8,6 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
 import '../../domain/entities/notification_model.dart';
-import '../seed_runner/notification_seed_runner.dart';
 import 'notification_test_service.dart';
 
 /// Authorised notification delivery test screen.
@@ -33,30 +32,13 @@ class _NotificationTestScreenState extends State<NotificationTestScreen> {
 
   final List<_LogEntry> _log = [];
   bool _busy = false;
-  int _seededCount = 0;
 
   static const _testImageUrl =
       'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800';
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshSeedCount());
-  }
-
   UserEntity? get _user {
     final state = context.read<AuthBloc>().state;
     return state is AuthAuthenticated ? state.user : null;
-  }
-
-  Future<void> _refreshSeedCount() async {
-    final user = _user;
-    if (user == null) return;
-    final count = await di.sl<NotificationSeedRunner>().count(
-          schoolId: user.schoolId,
-          recipientUserId: user.id,
-        );
-    if (mounted) setState(() => _seededCount = count);
   }
 
   void _record(String label, bool success, String message) {
@@ -244,9 +226,6 @@ class _NotificationTestScreenState extends State<NotificationTestScreen> {
             ),
             const SizedBox(height: 16),
 
-            if (NotificationSeedRunner.isPermitted) _seedCard(user),
-            if (NotificationSeedRunner.isPermitted) const SizedBox(height: 16),
-
             _Card(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -269,52 +248,6 @@ class _NotificationTestScreenState extends State<NotificationTestScreen> {
 
             if (_log.isNotEmpty) _logCard(),
           ],
-        ],
-      ),
-    );
-  }
-
-  Widget _seedCard(UserEntity user) {
-    return _Card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _SectionTitle('Development seed data'),
-          const SizedBox(height: 4),
-          Text(
-            'Writes 24 sample notifications to this device only - never to '
-            'Firestore, never pushed. Currently seeded: $_seededCount.',
-            style: const TextStyle(color: Colors.white54, fontSize: 12),
-          ),
-          const SizedBox(height: 12),
-          _TestButton(
-            label: 'Seed notifications',
-            icon: Icons.dataset,
-            enabled: !_busy,
-            onPressed: () async {
-              final result = await di.sl<NotificationSeedRunner>().seed(
-                    schoolId: user.schoolId,
-                    recipientUserId: user.id,
-                    recipientRole: user.roles.first.name,
-                  );
-              _record('Seed', result.ran, result.message);
-              await _refreshSeedCount();
-            },
-          ),
-          const SizedBox(height: 8),
-          _TestButton(
-            label: 'Remove seeded notifications',
-            icon: Icons.delete_sweep,
-            enabled: !_busy,
-            onPressed: () async {
-              final result = await di.sl<NotificationSeedRunner>().remove(
-                    schoolId: user.schoolId,
-                    recipientUserId: user.id,
-                  );
-              _record('Remove seed', result.ran, result.message);
-              await _refreshSeedCount();
-            },
-          ),
         ],
       ),
     );
@@ -475,8 +408,7 @@ class _TestModeBanner extends StatelessWidget {
                 Text(
                   kReleaseMode
                       ? 'Notifications sent from here reach only your own devices.'
-                      : 'Debug build. Notifications reach only your own devices; '
-                          'seed data is local to this device.',
+                      : 'Debug build. Notifications reach only your own devices.',
                   style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
               ],

@@ -14,7 +14,7 @@
  *   OWNER_PASSWORD='a long, random, unique passphrase' \
  *   OWNER_PHONE='+15551234567' \
  *   OWNER_SETUP_SECRET='a separate long random string, just a fat-finger guard' \
- *   node functions/scripts/seedOwner.js [--yes]
+ *   node functions/scripts/bootstrap_owner.js [--yes]
  *
  * Safe to re-run: after the first successful seed, a platform_config/owner_seed
  * flag is written and every subsequent invocation refuses to run, regardless
@@ -138,6 +138,6 @@ async function main() {
 main()
   .then(() => process.exit(0))
   .catch((err) => {
-    console.error(`seedOwner failed: ${err.message}`);
+    console.error(`bootstrap_owner failed: ${err.message}`);
     process.exit(1);
   });

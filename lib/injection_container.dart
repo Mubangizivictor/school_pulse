@@ -403,7 +403,6 @@ import 'package:school_pulse/features/notifications/local/notification_presenter
 import 'package:school_pulse/features/notifications/push/token_management/notification_token_manager.dart';
 import 'package:school_pulse/features/notifications/push/notification_badge_service.dart';
 import 'package:school_pulse/features/notifications/testing/notification_test_service/notification_test_service.dart';
-import 'package:school_pulse/features/notifications/testing/seed_runner/notification_seed_runner.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
@@ -1094,9 +1093,7 @@ Future<void> init() async {
     () => NotificationBadgeService(repository: sl(), plugin: sl()),
   );
 
-  // Delivery testing and development seed data. Registered unconditionally;
-  // NotificationSeedRunner itself refuses to run under kReleaseMode, so the
-  // guard lives with the behaviour rather than with the wiring.
+  // Delivery testing tool (real push to the caller's own devices only).
   sl.registerLazySingleton(
     () => NotificationTestService(
       plugin: sl(),
@@ -1104,8 +1101,6 @@ Future<void> init() async {
       functions: FirebaseFunctions.instance,
     ),
   );
-
-  sl.registerLazySingleton(() => NotificationSeedRunner(isar: sl()));
 
   // Send requests go to Firestore for a Cloud Function to fan out; the client
   // never writes notification documents or calls FCM itself.

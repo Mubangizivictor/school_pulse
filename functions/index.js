@@ -122,6 +122,188 @@ exports.createStaffAccount = onCall(async (request) => {
 });
 
 // ============================================================================
+// School Admin provisioning
+//
+// createSchool() (super_admin_remote_datasource.dart) writes a school and a
+// tenant doc directly from the client, then drops a
+// school_admin_invitations doc and stops - Firestore rules make that
+// collection create-only for the client (isSuperAdmin() to create; nobody,
+// including the owner, can read/update/delete it back through the client
+// SDK). This trigger is the "somebody" the invitation doc's own comment
+// says is expected to pick it up: it creates the real Firebase Auth
+// account via the Admin SDK, writes the schoolAdmin profile, and scrubs the
+// plaintext temporary password out of the invitation once consumed.
+// ============================================================================
+exports.provisionSchoolAdmin = onDocumentCreated(
+  "school_admin_invitations/{invitationId}",
+  async (event) => {
+    const snap = event.data;
+    if (!snap) return;
+    const invitation = snap.data();
+    const ref = snap.ref;
+
+    // Only ever act on a fresh, unconsumed invitation. A duplicate trigger
+    // delivery (Cloud Functions' at-least-once guarantee) or a retry must
+    // not create a second Auth account or re-provision an already-handled
+    // request.
+    if (invitation.status !== "pending") return;
+
+    const email = typeof invitation.email === "string" ? invitation.email.trim() : "";
+    const schoolId = invitation.schoolId;
+    const tenantId = invitation.tenantId;
+    const tempPassword = invitation.tempPassword;
+
+    if (!email || !schoolId || !tempPassword) {
+      await ref.update({
+        status: "failed",
+        tempPassword: admin.firestore.FieldValue.delete(),
+        error: "Invitation is missing email, schoolId, or tempPassword.",
+        failedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+
+    // Claim the invitation before doing anything else, so a second
+    // concurrent delivery of the same event sees status != "pending" and
+    // exits at the guard above rather than racing this one.
+    await ref.update({ status: "processing" });
+
+    const schoolDoc = await admin.firestore().collection("schools").doc(schoolId).get();
+    if (!schoolDoc.exists) {
+      await ref.update({
+        status: "failed",
+        tempPassword: admin.firestore.FieldValue.delete(),
+        error: `School ${schoolId} does not exist.`,
+        failedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+    const schoolName = schoolDoc.data().name || "";
+
+    let userRecord;
+    let createdNewAuthUser = false;
+    try {
+      userRecord = await admin.auth().getUserByEmail(email);
+      // Existing identity case: don't create a duplicate Auth account for
+      // an email that already has one - add this school's admin membership
+      // to the existing user instead of overwriting who they are elsewhere.
+    } catch (err) {
+      if (err.code !== "auth/user-not-found") {
+        await ref.update({
+          status: "failed",
+          tempPassword: admin.firestore.FieldValue.delete(),
+          error: err.message || "Failed to look up existing account.",
+          failedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        return;
+      }
+      try {
+        userRecord = await admin.auth().createUser({
+          email,
+          password: tempPassword,
+          displayName: `${schoolName} Admin`.trim(),
+        });
+        createdNewAuthUser = true;
+      } catch (createErr) {
+        await ref.update({
+          status: "failed",
+          tempPassword: admin.firestore.FieldValue.delete(),
+          error: createErr.message || "Failed to create the admin account.",
+          failedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        return;
+      }
+    }
+
+    try {
+      const db = admin.firestore();
+      const userRef = db.collection("users").doc(userRecord.uid);
+      const existingProfile = await userRef.get();
+
+      if (existingProfile.exists) {
+        // Existing user (staff/admin elsewhere) gaining School Admin
+        // authority for this new school - add the role/school membership
+        // without clobbering whatever roles they already hold at another
+        // tenant. schoolId here is intentionally left as their existing
+        // primary school; multi-school membership beyond a single
+        // schoolId field is not modeled yet, so this grants the role
+        // without silently reassigning their home school out from under
+        // them if they're already provisioned elsewhere.
+        const existingRoles = Array.isArray(existingProfile.data().roles)
+          ? existingProfile.data().roles
+          : [];
+        const roles = existingRoles.includes("schoolAdmin")
+          ? existingRoles
+          : [...existingRoles, "schoolAdmin"];
+        await userRef.update({
+          roles,
+          // Keep the first role as the primary/legacy role only if this
+          // account had none before; otherwise leave their existing
+          // primary role untouched.
+          ...(existingRoles.length === 0 ? { role: "schoolAdmin" } : {}),
+        });
+      } else {
+        const batch = db.batch();
+        batch.set(userRef, {
+          name: `${schoolName} Admin`.trim(),
+          email,
+          role: "schoolAdmin",
+          roles: ["schoolAdmin"],
+          schoolId,
+          studentIds: [],
+          mustChangePassword: true,
+          isActive: true,
+          isPrimaryAdmin: true,
+          createdBy: "provisionSchoolAdmin",
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        batch.set(db.collection("school_contacts").doc(userRecord.uid), {
+          name: `${schoolName} Admin`.trim(),
+          role: "schoolAdmin",
+          roles: ["schoolAdmin"],
+          schoolId,
+          isActive: true,
+        });
+        await batch.commit();
+      }
+
+      await db.collection("super_admin_audit_logs").add({
+        action: "school_admin_provisioned",
+        schoolId,
+        affectedUserId: userRecord.uid,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        metadata: {
+          email,
+          tenantId: tenantId || null,
+          reusedExistingAccount: !createdNewAuthUser,
+        },
+      });
+
+      // Consumed: scrub the plaintext temporary password immediately so it
+      // never lingers in Firestore past the moment it was needed.
+      await ref.update({
+        status: "consumed",
+        tempPassword: admin.firestore.FieldValue.delete(),
+        provisionedUid: userRecord.uid,
+        consumedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    } catch (err) {
+      // Only roll back the Auth account if this invocation created it -
+      // never delete a pre-existing identity that predates this trigger.
+      if (createdNewAuthUser) {
+        await admin.auth().deleteUser(userRecord.uid).catch(() => {});
+      }
+      await ref.update({
+        status: "failed",
+        tempPassword: admin.firestore.FieldValue.delete(),
+        error: err.message || "Failed to provision the school admin profile.",
+        failedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+  }
+);
+
+// ============================================================================
 // Subscription billing - MTN Mobile Money & Airtel Money
 //
 // NOT YET LIVE: this is a structurally-correct implementation against each
