@@ -15,6 +15,7 @@ class PromotionService {
     required String targetClassId,
     String? targetStreamId,
     required String targetAcademicYearId,
+    required String recordedBy,
   }) {
     return repository.promoteStudents(
       schoolId: schoolId,
@@ -22,6 +23,7 @@ class PromotionService {
       targetClassId: targetClassId,
       targetStreamId: targetStreamId,
       targetAcademicYearId: targetAcademicYearId,
+      recordedBy: recordedBy,
     );
   }
 }

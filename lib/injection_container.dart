@@ -664,6 +664,7 @@ Future<void> init() async {
     () => StudentRepositoryImpl(
       remoteDataSource: sl(),
       matronRemoteDataSource: sl(),
+      relationshipRepository: sl(),
     ),
   );
 

@@ -34,8 +34,9 @@ abstract class StudentRemoteDataSource {
   Future<int> getNextSequenceNumber(String schoolId, String academicYearId);
   Future<String> finalizeAdmission(
     AdmissionApplicationModel application,
-    StudentModel student,
-  );
+    StudentModel student, {
+    String? recordedBy,
+  });
 
   // Document Management
   Future<String> uploadDocument(String studentId, String type, dynamic file);
@@ -237,8 +238,9 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
   @override
   Future<String> finalizeAdmission(
     AdmissionApplicationModel application,
-    StudentModel student,
-  ) async {
+    StudentModel student, {
+    String? recordedBy,
+  }) async {
     final batch = firestore.batch();
 
     // 1. Create Student record (Generate new ID)
@@ -255,6 +257,23 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
       'studentId': studentRef.id,
       'admissionNumber': student.admissionNumber,
       'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    // 3. First student_enrolments record - the initial placement, so
+    // enrolment history starts from admission rather than only from the
+    // first later change.
+    final enrolmentRef = firestore.collection('student_enrolments').doc();
+    batch.set(enrolmentRef, {
+      'schoolId': student.schoolId,
+      'studentId': studentRef.id,
+      'classId': student.classId,
+      'streamId': student.streamId,
+      'academicYearId': student.academicYearId,
+      'status': 'active',
+      'startDate': Timestamp.now(),
+      'reason': 'initial admission',
+      'recordedBy': recordedBy ?? application.reviewerId ?? '',
+      'createdAt': Timestamp.now(),
     });
 
     await batch.commit();

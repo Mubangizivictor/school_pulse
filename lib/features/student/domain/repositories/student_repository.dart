@@ -20,7 +20,10 @@ abstract class StudentRepository {
     String? parentPhone,
     String? classId,
   });
-  Future<Either<Failure, void>> updateStudent(Student student);
+  /// [recordedBy] is the acting staff uid, used to attribute a
+  /// student_enrolments history record whenever this edit actually changes
+  /// placement (classId/streamId/academicYearId).
+  Future<Either<Failure, void>> updateStudent(Student student, {required String recordedBy});
   Future<Either<Failure, void>> updateStudentStatus(
     String studentId,
     StudentStatus status,
@@ -68,6 +71,7 @@ abstract class StudentRepository {
     required String targetClassId,
     String? targetStreamId,
     required String targetAcademicYearId,
+    required String recordedBy,
   });
 
   // Parent Access Codes

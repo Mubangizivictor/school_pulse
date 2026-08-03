@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
+import '../../../relationships/domain/repositories/relationship_repository.dart';
 import '../../../teacher/domain/entities/homework.dart';
 import '../../../matron/domain/entities/boarding_entities.dart';
 import '../../../matron/data/sources/matron_remote_data_source.dart';
@@ -15,10 +16,12 @@ import '../models/admission_application_model.dart';
 class StudentRepositoryImpl implements StudentRepository {
   final StudentRemoteDataSource remoteDataSource;
   final MatronRemoteDataSource matronRemoteDataSource;
+  final RelationshipRepository relationshipRepository;
 
   StudentRepositoryImpl({
     required this.remoteDataSource,
     required this.matronRemoteDataSource,
+    required this.relationshipRepository,
   });
 
   @override
@@ -82,8 +85,9 @@ class StudentRepositoryImpl implements StudentRepository {
   }
 
   @override
-  Future<Either<Failure, void>> updateStudent(Student student) async {
+  Future<Either<Failure, void>> updateStudent(Student student, {required String recordedBy}) async {
     try {
+      final before = await remoteDataSource.getStudentById(student.id);
       final model = StudentModel(
         id: student.id,
         schoolId: student.schoolId,
@@ -107,6 +111,22 @@ class StudentRepositoryImpl implements StudentRepository {
         level: student.level,
       );
       await remoteDataSource.updateStudent(model);
+
+      final placementChanged = before.classId != student.classId ||
+          before.streamId != student.streamId ||
+          before.academicYearId != student.academicYearId;
+      if (placementChanged) {
+        await relationshipRepository.recordEnrolmentChange(
+          schoolId: student.schoolId,
+          studentId: student.id,
+          classId: student.classId,
+          streamId: student.streamId,
+          academicYearId: student.academicYearId,
+          recordedBy: recordedBy,
+          reason: 'correction',
+        );
+      }
+
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -283,6 +303,7 @@ class StudentRepositoryImpl implements StudentRepository {
     required String targetClassId,
     String? targetStreamId,
     required String targetAcademicYearId,
+    required String recordedBy,
   }) async {
     try {
       List<StudentModel> updatedStudents = [];
@@ -298,6 +319,19 @@ class StudentRepositoryImpl implements StudentRepository {
         );
       }
       await remoteDataSource.batchUpdateStudents(updatedStudents);
+
+      for (final id in studentIds) {
+        await relationshipRepository.recordEnrolmentChange(
+          schoolId: schoolId,
+          studentId: id,
+          classId: targetClassId,
+          streamId: targetStreamId,
+          academicYearId: targetAcademicYearId,
+          recordedBy: recordedBy,
+          reason: 'promotion',
+        );
+      }
+
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
