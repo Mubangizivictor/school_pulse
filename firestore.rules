@@ -1239,6 +1239,18 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Per-school customization of a role's default permission set (see
+    // RolePermissionOverride / role_management_screen.dart). One doc per
+    // role (docId == the UserRole enum name). Read is staff-wide since the
+    // effective-permission resolver on every device needs to fetch these;
+    // write is limited to the same admin set that controls
+    // staff_role_assignments, since this changes what an entire role can do.
+    match /schools/{schoolId}/role_permission_overrides/{roleId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+      allow create, update: if isSameSchool(schoolId) && schoolAcademicAdmin();
+      allow delete: if false;
+    }
+
     match /schools/{schoolId}/subject_enrollments/{enrollmentId} {
       allow read: if isSameSchool(schoolId) && isStaff();
 

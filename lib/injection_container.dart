@@ -1,3 +1,7 @@
+import 'package:school_pulse/features/admin/domain/repositories/role_permission_override_repository.dart';
+import 'package:school_pulse/features/admin/data/repositories/role_permission_override_repository_impl.dart';
+import 'package:school_pulse/features/admin/domain/usecases/get_role_permission_overrides.dart';
+import 'package:school_pulse/features/admin/domain/usecases/save_role_permission_override.dart';
 import 'package:school_pulse/features/institution/data/datasources/institution_context_remote_datasource.dart';
 import 'package:school_pulse/features/institution/data/repositories/institution_context_repository_impl.dart';
 import 'package:school_pulse/features/institution/domain/repositories/institution_context_repository.dart';
@@ -1606,6 +1610,13 @@ Future<void> init() async {
   sl.registerLazySingleton(() => UpdateStaffMember(sl()));
   sl.registerLazySingleton(() => SetNewPassword(sl()));
 
+  // Admin - Role Permission Overrides
+  sl.registerLazySingleton<RolePermissionOverrideRepository>(
+    () => RolePermissionOverrideRepositoryImpl(firestore: sl()),
+  );
+  sl.registerLazySingleton(() => GetRolePermissionOverrides(sl()));
+  sl.registerLazySingleton(() => SaveRolePermissionOverride(sl()));
+
   // Admin - Staff Attendance / Subscription
   sl.registerLazySingleton(() => StaffAttendanceRepository());
   sl.registerLazySingleton(() => SubscriptionRepository());
@@ -1711,7 +1722,7 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<PermissionEvaluator>(
-    () => PermissionEvaluatorImpl(localDataSource: sl()),
+    () => PermissionEvaluatorImpl(localDataSource: sl(), overrideRepository: sl()),
   );
 
   sl.registerLazySingleton<VerificationPolicyEvaluator>(

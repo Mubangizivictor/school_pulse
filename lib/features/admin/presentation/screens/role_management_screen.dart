@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/core/permissions/permission.dart';
 import 'package:school_pulse/core/permissions/role_permission_defaults.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/features/admin/domain/usecases/get_role_permission_overrides.dart';
+import 'package:school_pulse/features/admin/domain/usecases/save_role_permission_override.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 
 class RoleManagementScreen extends StatefulWidget {
   const RoleManagementScreen({super.key});
@@ -16,12 +22,64 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
   UserRole _selectedRole = UserRole.schoolAdmin;
   late Map<UserRole, Set<String>> _rolePermissions;
   String _searchQuery = '';
+  bool _isLoading = true;
+  bool _isSaving = false;
+
+  String get _schoolId {
+    final state = context.read<AuthBloc>().state;
+    return state is AuthAuthenticated ? state.user.schoolId : '';
+  }
 
   @override
   void initState() {
     super.initState();
-    // In a real app, this would be loaded from a repository/API
-    _rolePermissions = Map.from(RolePermissionDefaults.defaults);
+    _rolePermissions = {
+      for (final entry in RolePermissionDefaults.defaults.entries) entry.key: {...entry.value},
+    };
+    _loadOverrides();
+  }
+
+  Future<void> _loadOverrides() async {
+    final result = await di.sl<GetRolePermissionOverrides>()(_schoolId);
+    if (!mounted) return;
+    result.fold(
+      (failure) => setState(() => _isLoading = false),
+      (overrides) {
+        setState(() {
+          for (final entry in overrides.entries) {
+            _rolePermissions[entry.key] = {...entry.value.permissions};
+          }
+          _isLoading = false;
+        });
+      },
+    );
+  }
+
+  Future<void> _save() async {
+    setState(() => _isSaving = true);
+    final userId = context.read<AuthBloc>().state is AuthAuthenticated
+        ? (context.read<AuthBloc>().state as AuthAuthenticated).user.id
+        : '';
+    final result = await di.sl<SaveRolePermissionOverride>()(SaveRolePermissionOverrideParams(
+      schoolId: _schoolId,
+      role: _selectedRole,
+      permissions: _rolePermissions[_selectedRole] ?? {},
+      updatedBy: userId,
+    ));
+    if (!mounted) return;
+    setState(() => _isSaving = false);
+    result.fold(
+      (failure) => ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save: ${failure.message}'), backgroundColor: AppColors.danger(context)),
+      ),
+      (_) => ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Permissions updated successfully'),
+          backgroundColor: AppColors.success(context),
+          behavior: SnackBarBehavior.floating,
+        ),
+      ),
+    );
   }
 
   @override
@@ -33,29 +91,29 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: Row(
-        children: [
-          // Role Selector Sidebar (for larger screens) or a Dropdown for mobile
-          if (MediaQuery.of(context).size.width > 800)
-            _buildSidebar()
-          else
-            const SizedBox.shrink(),
-          
-          Expanded(
-            child: Column(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Row(
               children: [
-                if (MediaQuery.of(context).size.width <= 800)
-                  _buildRoleDropdown(),
-                _buildSearchAndFilters(),
+                if (MediaQuery.of(context).size.width > 800)
+                  _buildSidebar()
+                else
+                  const SizedBox.shrink(),
                 Expanded(
-                  child: _buildPermissionList(),
+                  child: Column(
+                    children: [
+                      if (MediaQuery.of(context).size.width <= 800)
+                        _buildRoleDropdown(),
+                      _buildSearchAndFilters(),
+                      Expanded(
+                        child: _buildPermissionList(),
+                      ),
+                      _buildFooter(),
+                    ],
+                  ),
                 ),
-                _buildFooter(),
               ],
             ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -92,7 +150,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: DropdownButtonFormField<UserRole>(
-        value: _selectedRole,
+        initialValue: _selectedRole,
         decoration: InputDecoration(
           labelText: 'Select Role to Edit',
           filled: true,
@@ -131,14 +189,13 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
   }
 
   Widget _buildPermissionList() {
-    final permissions = _getAllPermissions();
-    final filteredPermissions = permissions.where((p) => p.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
-    
-    // Group permissions by category (first part of the ID)
+    final filtered = Permission.all
+        .where((p) => p.$2.toLowerCase().contains(_searchQuery.toLowerCase()))
+        .toList();
+
     final grouped = <String, List<String>>{};
-    for (final p in filteredPermissions) {
-      final category = p.split('.').first;
-      grouped.putIfAbsent(category, () => []).add(p);
+    for (final (category, id) in filtered) {
+      grouped.putIfAbsent(category, () => []).add(id);
     }
 
     final categories = grouped.keys.toList()..sort();
@@ -211,31 +268,63 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated(context),
         border: Border(top: BorderSide(color: AppColors.border(context), width: 0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          const Icon(Icons.info_outline, size: 16),
-          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.information(context).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(Icons.info_outline, size: 20, color: AppColors.information(context)),
+          ),
+          const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              'Changes here will affect all users assigned the ${UserRoleDisplay.name(_selectedRole)} role.',
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Role Update Impact',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary(context)),
+                ),
+                Text(
+                  'Changes here will affect all users assigned the ${UserRoleDisplay.name(_selectedRole)} role immediately.',
+                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+                ),
+              ],
             ),
           ),
           const SizedBox(width: 16),
-          SecondaryButton(
-            label: 'Discard',
-            onPressed: () => Navigator.pop(context),
+          TextButton(
+            onPressed: _isSaving ? null : () => Navigator.pop(context),
+            child: Text('Discard', style: TextStyle(color: AppColors.textSecondary(context))),
           ),
           const SizedBox(width: 12),
-          PrimaryButton(
-            label: 'Save Changes',
-            onPressed: () {
-              // TODO: Implement save logic
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Permissions updated successfully')),
-              );
-            },
+          ElevatedButton(
+            onPressed: _isSaving ? null : _save,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary(context),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+            ),
+            child: _isSaving
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -247,143 +336,5 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
     if (parts.length < 2) return id;
     final name = parts.skip(1).join(' ').replaceAll('_', ' ');
     return name[0].toUpperCase() + name.substring(1);
-  }
-
-  List<String> _getAllPermissions() {
-    // Reflecting all permissions from the Permission class
-    return [
-      Permission.attendanceClassScan,
-      Permission.attendanceSubjectScan,
-      Permission.attendanceStaffScan,
-      Permission.attendanceBoardingScan,
-      Permission.attendanceGateScan,
-      Permission.attendanceOverride,
-      Permission.healthStudentVerify,
-      Permission.healthStudentBasicRead,
-      Permission.healthStudentClinicalRead,
-      Permission.healthStudentVisitCreate,
-      Permission.healthStudentEmergencyRead,
-      Permission.mealsVerify,
-      Permission.mealsServe,
-      Permission.mealsOverride,
-      Permission.mealsAuditRead,
-      Permission.transportBoardingVerify,
-      Permission.transportBoardingRecord,
-      Permission.transportDropoffRecord,
-      Permission.transportOverride,
-      Permission.libraryMemberVerify,
-      Permission.libraryBorrow,
-      Permission.libraryReturn,
-      Permission.financeStudentVerify,
-      Permission.financeStudentBalanceRead,
-      Permission.boardingRollcallScan,
-      Permission.boardingStudentVerify,
-      Permission.boardingOverride,
-      Permission.examEligibilityVerify,
-      Permission.examAttendanceScan,
-      Permission.examOverride,
-      Permission.securityIdentityVerify,
-      Permission.securityEntryRecord,
-      Permission.securityExitRecord,
-      Permission.securityOverride,
-      Permission.admissionApplicationCreate,
-      Permission.admissionApplicationReview,
-      Permission.admissionEnroll,
-      Permission.studentBasicRead,
-      Permission.studentFullRead,
-      Permission.verificationOverride,
-      Permission.verificationAuditRead,
-      Permission.verificationDeviceManage,
-      Permission.notificationView,
-      Permission.notificationSend,
-      Permission.notificationSendToParent,
-      Permission.notificationSendToStudent,
-      Permission.notificationSendToStaff,
-      Permission.notificationBroadcast,
-      Permission.notificationSchedule,
-      Permission.notificationCancel,
-      Permission.notificationUseImages,
-      Permission.notificationUseAttachments,
-      Permission.notificationSendEmergency,
-      Permission.notificationViewDeliveryReports,
-      Permission.notificationManageTemplates,
-      Permission.notificationManageSettings,
-      Permission.notificationAcknowledge,
-      Permission.notificationArchive,
-      Permission.notificationDelete,
-      Permission.notificationSeedTestData,
-      Permission.notificationRunDeliveryTest,
-      Permission.subjectStudentsView,
-      Permission.subjectStudentEnroll,
-      Permission.subjectStudentRemove,
-      Permission.subjectStudentHistoricalView,
-      Permission.subjectLessonView,
-      Permission.subjectLessonStart,
-      Permission.subjectLessonComplete,
-      Permission.subjectLessonCancel,
-      Permission.subjectLessonReschedule,
-      Permission.subjectAttendanceTake,
-      Permission.subjectAttendanceEdit,
-      Permission.subjectAttendanceEditHistorical,
-      Permission.subjectLessonNoteCreate,
-      Permission.subjectLessonNoteEdit,
-      Permission.subjectResourceUpload,
-      Permission.subjectResourceShare,
-      Permission.subjectAssessmentCreate,
-      Permission.subjectMarksView,
-      Permission.subjectMarksEnter,
-      Permission.subjectMarksEdit,
-      Permission.subjectMarksEditSubmitted,
-      Permission.subjectMarksSubmit,
-      Permission.subjectMarksImport,
-      Permission.subjectMarksExport,
-      Permission.subjectReportView,
-      Permission.subjectReportGenerate,
-      Permission.subjectAnalyticsView,
-      Permission.subjectParentMessage,
-      Permission.subjectStudentMessage,
-      Permission.subjectAnnouncementSend,
-      Permission.subjectTimetableView,
-      Permission.subjectTimetableEdit,
-      Permission.classStudentsView,
-      Permission.classStudentProfileView,
-      Permission.classStudentHistoricalView,
-      Permission.classStudentNoteWrite,
-      Permission.classStudentDocumentView,
-      Permission.classAttendanceTake,
-      Permission.classAttendanceEdit,
-      Permission.classAttendanceEditHistorical,
-      Permission.classAttendanceView,
-      Permission.classHomeworkCreate,
-      Permission.classHomeworkPublish,
-      Permission.classHomeworkEdit,
-      Permission.classBehaviourRecord,
-      Permission.classBehaviourView,
-      Permission.classAchievementRecord,
-      Permission.classHealthAlertView,
-      Permission.classLeaveView,
-      Permission.classParentMessage,
-      Permission.classAnnouncementCreate,
-      Permission.classAnnouncementPublish,
-      Permission.classPerformanceView,
-      Permission.classComparisonView,
-      Permission.classInterventionNoteWrite,
-      Permission.classReportEntry,
-      Permission.classReportCompetencyEntry,
-      Permission.classReportConductEntry,
-      Permission.classReportCommentWrite,
-      Permission.classReportRecommendationWrite,
-      Permission.classReportSubmit,
-      Permission.classReportGenerate,
-      Permission.classReportShare,
-      Permission.classReportExport,
-      Permission.classTaskManage,
-      Permission.classTaskCollaborate,
-      Permission.classResourceUpload,
-      Permission.classResourceShare,
-      Permission.classResourceDelete,
-      Permission.classTimetableView,
-      Permission.classTeacherMultiAssignOverride,
-    ];
   }
 }

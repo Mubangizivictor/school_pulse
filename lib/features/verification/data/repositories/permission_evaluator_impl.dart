@@ -2,19 +2,27 @@ import 'package:dartz/dartz.dart';
 import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/permissions/permission.dart';
 import 'package:school_pulse/core/permissions/role_permission_defaults.dart';
+import 'package:school_pulse/features/admin/domain/repositories/role_permission_override_repository.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/security/domain/entities/security_entities.dart';
 import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source.dart';
 import 'package:school_pulse/features/verification/data/models/verification_isar_models.dart';
 import 'package:school_pulse/features/verification/domain/repositories/permission_evaluator.dart';
 
+// Bumped from 1 so an existing on-device snapshot (cached under version 1,
+// computed before role-permission overrides existed) is never mistaken for
+// fresh - it must be recomputed at least once to pick up any override.
 const _permissionCacheTtl = Duration(hours: 12);
-const _permissionCatalogVersion = 1;
+const _permissionCatalogVersion = 2;
 
 class PermissionEvaluatorImpl implements PermissionEvaluator {
   final VerificationLocalDataSource localDataSource;
+  final RolePermissionOverrideRepository overrideRepository;
 
-  PermissionEvaluatorImpl({required this.localDataSource});
+  PermissionEvaluatorImpl({
+    required this.localDataSource,
+    required this.overrideRepository,
+  });
 
   @override
   Future<Either<Failure, bool>> can(
@@ -58,10 +66,19 @@ class PermissionEvaluatorImpl implements PermissionEvaluator {
 
     if (isFresh) return snapshot.permissionIds.toSet();
 
-    // Fail-open on a stale/missing cache: compute live from role defaults
-    // rather than locking the operator out on a fresh device or after a
-    // connectivity drop, then opportunistically persist the snapshot.
-    final computed = RolePermissionDefaults.permissionsFor(operatorUser.roles);
+    // Fail-open on a stale/missing cache: compute live from role defaults,
+    // replaced per-role by any admin-saved override, rather than locking
+    // the operator out on a fresh device or after a connectivity drop, then
+    // opportunistically persist the snapshot.
+    final overridesResult = await overrideRepository.getOverrides(operatorUser.schoolId);
+    final overrides = overridesResult.fold((_) => const {}, (o) => o);
+    final computed = <String>{};
+    for (final role in operatorUser.roles) {
+      final override = overrides[role];
+      computed.addAll(override != null
+          ? override.permissions
+          : (RolePermissionDefaults.defaults[role] ?? const {}));
+    }
     await localDataSource.savePermissionSnapshot(
       OperatorPermissionSnapshotIsar()
         ..operatorId = operatorUser.id

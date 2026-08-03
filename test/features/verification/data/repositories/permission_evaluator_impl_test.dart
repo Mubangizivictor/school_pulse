@@ -1,6 +1,9 @@
+import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:school_pulse/core/permissions/permission.dart';
+import 'package:school_pulse/features/admin/domain/entities/role_permission_override.dart';
+import 'package:school_pulse/features/admin/domain/repositories/role_permission_override_repository.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/security/domain/entities/security_entities.dart';
 import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source.dart';
@@ -9,9 +12,12 @@ import 'package:school_pulse/features/verification/data/repositories/permission_
 
 class MockVerificationLocalDataSource extends Mock implements VerificationLocalDataSource {}
 
+class MockRolePermissionOverrideRepository extends Mock implements RolePermissionOverrideRepository {}
+
 void main() {
   late PermissionEvaluatorImpl evaluator;
   late MockVerificationLocalDataSource localDataSource;
+  late MockRolePermissionOverrideRepository overrideRepository;
 
   const gatekeeper = UserEntity(
     id: 'op-1',
@@ -57,9 +63,15 @@ void main() {
 
   setUp(() {
     localDataSource = MockVerificationLocalDataSource();
-    evaluator = PermissionEvaluatorImpl(localDataSource: localDataSource);
+    overrideRepository = MockRolePermissionOverrideRepository();
+    evaluator = PermissionEvaluatorImpl(
+      localDataSource: localDataSource,
+      overrideRepository: overrideRepository,
+    );
     when(() => localDataSource.getPermissionSnapshot(any())).thenAnswer((_) async => null);
     when(() => localDataSource.savePermissionSnapshot(any())).thenAnswer((_) async {});
+    when(() => overrideRepository.getOverrides(any()))
+        .thenAnswer((_) async => const Right(<UserRole, RolePermissionOverride>{}));
   });
 
   group('role-level permission', () {
@@ -118,7 +130,7 @@ void main() {
           ..operatorId = ordinaryTeacher.id
           ..schoolId = ordinaryTeacher.schoolId
           ..permissionIds = [Permission.securityIdentityVerify]
-          ..version = 1
+          ..version = 2
           ..expiresAt = DateTime.now().add(const Duration(hours: 1)),
       );
 
