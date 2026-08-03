@@ -220,15 +220,24 @@ exports.provisionSchoolAdmin = onDocumentCreated(
       const userRef = db.collection("users").doc(userRecord.uid);
       const existingProfile = await userRef.get();
 
+      // Phase 1 Institution Context: additive membership record so this
+      // user can switch into this institution regardless of which school
+      // remains their "home" schoolId. Deterministic id (uid_schoolId)
+      // makes this an idempotent upsert - safe to run even if a retry
+      // reaches this point twice.
+      const membershipRef = db
+        .collection("institution_memberships")
+        .doc(`${userRecord.uid}_${schoolId}`);
+
       if (existingProfile.exists) {
         // Existing user (staff/admin elsewhere) gaining School Admin
         // authority for this new school - add the role/school membership
         // without clobbering whatever roles they already hold at another
         // tenant. schoolId here is intentionally left as their existing
         // primary school; multi-school membership beyond a single
-        // schoolId field is not modeled yet, so this grants the role
-        // without silently reassigning their home school out from under
-        // them if they're already provisioned elsewhere.
+        // schoolId field is not modeled on the user profile, but the
+        // institution_memberships doc below makes this second institution
+        // switchable via the Institution Context Engine.
         const existingRoles = Array.isArray(existingProfile.data().roles)
           ? existingProfile.data().roles
           : [];
@@ -242,6 +251,15 @@ exports.provisionSchoolAdmin = onDocumentCreated(
           // primary role untouched.
           ...(existingRoles.length === 0 ? { role: "schoolAdmin" } : {}),
         });
+        await membershipRef.set({
+          userId: userRecord.uid,
+          institutionId: schoolId,
+          roles: ["schoolAdmin"],
+          isPrimaryAdmin: existingProfile.data().schoolId === schoolId,
+          status: "active",
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
       } else {
         const batch = db.batch();
         batch.set(userRef, {
@@ -264,6 +282,30 @@ exports.provisionSchoolAdmin = onDocumentCreated(
           schoolId,
           isActive: true,
         });
+        batch.set(membershipRef, {
+          userId: userRecord.uid,
+          institutionId: schoolId,
+          roles: ["schoolAdmin"],
+          isPrimaryAdmin: true,
+          status: "active",
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        // First-login onboarding state, one doc per membership - the
+        // client's InstitutionOnboardingCubit reads/advances this so a
+        // killed app resumes mid-flow instead of restarting.
+        batch.set(
+          db.collection("onboarding_state").doc(`${userRecord.uid}_${schoolId}`),
+          {
+            userId: userRecord.uid,
+            institutionId: schoolId,
+            currentStep: "identityConfirm",
+            completedSteps: [],
+            mfaRequired: false,
+            startedAt: admin.firestore.FieldValue.serverTimestamp(),
+            completedAt: null,
+          }
+        );
         await batch.commit();
       }
 

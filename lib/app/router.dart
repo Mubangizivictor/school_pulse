@@ -12,6 +12,9 @@ import 'package:school_pulse/features/matron/presentation/screens/dormitory_mana
 import 'package:school_pulse/features/patron/presentation/screens/dormitory_management_screen.dart'
     as patron_scr;
 import 'package:school_pulse/features/admin/admin_dashboard_screen.dart';
+import 'package:school_pulse/features/institution/presentation/bloc/institution_context_cubit.dart';
+import 'package:school_pulse/features/institution/presentation/bloc/institution_context_state.dart';
+import 'package:school_pulse/app/screens/institution_suspended_screen.dart';
 import 'package:school_pulse/features/student_identity/presentation/bloc/student_identity_bloc.dart';
 import 'package:school_pulse/features/matron/domain/entities/matron_entities.dart'
     as matron_scr;
@@ -26,7 +29,7 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/staff_panel_host.dart';
 import 'package:school_pulse/core/user_roles.dart';
-import 'package:school_pulse/features/admin/user_management_screen.dart';
+import 'package:school_pulse/features/admin/presentation/pages/user_management_page.dart';
 import 'package:school_pulse/features/admin/broadcast_sms_screen.dart';
 import 'package:school_pulse/features/admin/system_config_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/structure_screen.dart';
@@ -37,6 +40,7 @@ import 'package:school_pulse/features/structure/presentation/screens/assessment_
 import 'package:school_pulse/features/structure/presentation/screens/campus_facilities_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/operations_config_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/feature_toggles_screen.dart';
+import 'package:school_pulse/features/structure/presentation/screens/structure_setup_wizard_screen.dart';
 import 'package:school_pulse/features/admin/admin_staff_attendance_screen.dart';
 import 'package:school_pulse/features/admin/appointments_screen.dart';
 import 'package:school_pulse/features/admin/audit_log_screen.dart';
@@ -325,6 +329,28 @@ final router = GoRouter(
       }
     }
 
+    // Institution Context Engine gating. superAdmin operates platform-wide
+    // and has no tenant to scope to, so it's exempt from all of this.
+    final isInstitutionSuspendedRoute = state.uri.path == '/institution-suspended';
+    if (authState is AuthAuthenticated &&
+        authState.user.role != UserRole.superAdmin &&
+        !isLoggingIn &&
+        !isInstitutionSuspendedRoute &&
+        !state.uri.path.startsWith('/super-admin')) {
+      final contextState = context.read<InstitutionContextCubit>().state;
+      if (contextState is InstitutionContextSuspended) {
+        return '/institution-suspended';
+      }
+    }
+    // A user who was suspended and got reactivated shouldn't stay stuck on
+    // the suspended screen once the context reloads as active.
+    if (isInstitutionSuspendedRoute && authState is AuthAuthenticated) {
+      final contextState = context.read<InstitutionContextCubit>().state;
+      if (contextState is InstitutionContextLoaded) {
+        return UserRoleRouting.dashboardPath(authState.user.role);
+      }
+    }
+
     return null;
   },
   routes: [
@@ -339,6 +365,10 @@ final router = GoRouter(
     GoRoute(
       path: '/welcome',
       builder: (context, state) => const WelcomeScreen(),
+    ),
+    GoRoute(
+      path: '/institution-suspended',
+      builder: (context, state) => const InstitutionSuspendedScreen(),
     ),
     GoRoute(
       path: '/school-splash',
@@ -1195,7 +1225,7 @@ final router = GoRouter(
           routes: [
             GoRoute(
               path: 'users',
-              builder: (context, state) => const UserManagementScreen(),
+              builder: (context, state) => UserManagementPage(initialTab: state.uri.queryParameters['tab']),
             ),
             GoRoute(
               path: 'broadcast-sms',
@@ -1215,11 +1245,17 @@ final router = GoRouter(
                 ),
                 GoRoute(
                   path: 'academic',
-                  builder: (context, state) => const AcademicStructureScreen(),
+                  builder: (context, state) {
+                    final tab = int.tryParse(state.uri.queryParameters['tab'] ?? '0') ?? 0;
+                    return AcademicStructureScreen(initialTab: tab);
+                  },
                 ),
                 GoRoute(
                   path: 'people',
-                  builder: (context, state) => const PeopleStructureScreen(),
+                  builder: (context, state) {
+                    final tab = int.tryParse(state.uri.queryParameters['tab'] ?? '0') ?? 0;
+                    return PeopleStructureScreen(initialTab: tab);
+                  },
                 ),
                 GoRoute(
                   path: 'assessment',
@@ -1227,7 +1263,10 @@ final router = GoRouter(
                 ),
                 GoRoute(
                   path: 'campus',
-                  builder: (context, state) => const CampusFacilitiesScreen(),
+                  builder: (context, state) {
+                    final tab = int.tryParse(state.uri.queryParameters['tab'] ?? '0') ?? 0;
+                    return CampusFacilitiesScreen(initialTab: tab);
+                  },
                 ),
                 GoRoute(
                   path: 'operations',
@@ -1236,6 +1275,10 @@ final router = GoRouter(
                 GoRoute(
                   path: 'feature-toggles',
                   builder: (context, state) => const FeatureTogglesScreen(),
+                ),
+                GoRoute(
+                  path: 'wizard',
+                  builder: (context, state) => const StructureSetupWizardScreen(),
                 ),
               ],
             ),

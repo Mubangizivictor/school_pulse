@@ -51,23 +51,18 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
 
   @override
   Future<void> createSchool(SchoolModel school, String adminEmail, String adminPassword) async {
-    // 1. Create the school document
+    // schools/{id} is the sole institution tenant source of truth as of
+    // Phase 1 (classification/divisions/displayLabel live on this doc). The
+    // legacy tenants/{tenantId} doc is deprecated in place - no new writes
+    // go there; existing docs are left untouched, not migrated.
     await firestore.collection('schools').doc(school.id).set(school.toJson());
 
-    // 2. Create the tenant/config for the school
-    await firestore.collection('tenants').doc(school.tenantId).set({
-      'schoolId': school.id,
-      'name': school.name,
-      'createdAt': FieldValue.serverTimestamp(),
-      'status': 'active',
-    });
-
-    // Note: Creating the Admin user usually happens via a Cloud Function 
+    // Note: Creating the Admin user usually happens via a Cloud Function
     // to avoid logging out the Super Admin from the current app session.
-    // For this implementation, we assume a Cloud Function will handle 
+    // For this implementation, we assume a Cloud Function will handle
     // the actual Firebase Auth user creation and assigning the 'schoolAdmin' role
     // when a new 'school_admin_invitation' document is created.
-    
+
     await firestore.collection('school_admin_invitations').add({
       'email': adminEmail,
       'schoolId': school.id,
