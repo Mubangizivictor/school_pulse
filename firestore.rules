@@ -217,6 +217,69 @@ service cloud.firestore {
       allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
 
+    // Phase 4: real parent<->student link, replacing the bare
+    // studentIds array (still kept in place elsewhere for backward
+    // compatibility) with a per-relationship record that can carry
+    // metadata, be locked, and be reallocated with a reason and full
+    // history. Ordinary parents/students never get create/update here -
+    // a relationship is admin-created or reallocated only, never
+    // self-service, per the "parents must not publicly link themselves to
+    // students" requirement.
+    match /parent_student_relationships/{relationshipId} {
+      allow read: if isSameSchool(resource.data.schoolId) && (
+        hasAnyRole(['director', 'headTeacher', 'schoolAdmin']) ||
+        (isParent() && resource.data.userId == request.auth.uid) ||
+        isMe(resource.data.studentId)
+      );
+      allow create: if hasAnyRole(['director', 'headTeacher', 'schoolAdmin']) &&
+        isSameSchool(request.resource.data.schoolId) &&
+        request.resource.data.status == 'RelationshipStatus.active';
+      // Reallocation only: schoolId/studentId are permanently locked (a
+      // relationship never moves to a different school or student -
+      // reallocation always creates a new doc instead), status may only
+      // move active -> superseded/revoked, never back, and a
+      // supersessionReason is mandatory.
+      allow update: if hasAnyRole(['director', 'headTeacher', 'schoolAdmin']) &&
+        isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId &&
+        request.resource.data.studentId == resource.data.studentId &&
+        resource.data.status == 'RelationshipStatus.active' &&
+        request.resource.data.status in ['RelationshipStatus.superseded', 'RelationshipStatus.revoked'] &&
+        request.resource.data.supersessionReason is string &&
+        request.resource.data.supersessionReason.size() > 0;
+      allow delete: if false;
+    }
+
+    // Phase 4: placement history. students/{id}.classId/streamId/
+    // academicYearId stay the "current" pointer every existing module
+    // already queries - this collection only records a snapshot each time
+    // that placement actually changes, so a promotion/transfer no longer
+    // silently overwrites history.
+    match /student_enrolments/{enrolmentId} {
+      allow read: if isSameSchool(resource.data.schoolId) && (
+        isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId)
+      );
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      // Only closing out a record (status/endDate) is allowed - the
+      // placement it recorded is never rewritten after the fact.
+      allow update: if isStaff() &&
+        isSameSchool(resource.data.schoolId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'endDate']) &&
+        request.resource.data.classId == resource.data.classId &&
+        request.resource.data.streamId == resource.data.streamId &&
+        request.resource.data.academicYearId == resource.data.academicYearId;
+      allow delete: if false;
+    }
+
+    // Phase 4: institution-configurable guardian-linking policy. Doc id is
+    // the schoolId itself. Any signed-in same-school user may read it
+    // (parents need to know the limit before attempting to add a
+    // guardian); only top-tier admins may change it.
+    match /people_policies/{schoolId} {
+      allow read: if isSameSchool(schoolId);
+      allow write: if hasAnyRole(['director', 'headTeacher', 'schoolAdmin']) && isSameSchool(schoolId);
+    }
+
     // Per-student records: parents can read only their own children's
     // records; staff can read and write everything. No client writes for
     // parents or students.
