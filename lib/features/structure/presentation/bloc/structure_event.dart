@@ -274,6 +274,13 @@ class DeleteLevelRequested extends StructureEvent {
   List<Object?> get props => [levelId];
 }
 
+class ArchiveLevelRequested extends StructureEvent {
+  final String levelId;
+  const ArchiveLevelRequested(this.levelId);
+  @override
+  List<Object?> get props => [levelId];
+}
+
 class SaveAcademicYearRequested extends StructureEvent {
   final AcademicYear year;
   const SaveAcademicYearRequested(this.year);
@@ -332,6 +339,13 @@ class DeleteClassRequested extends StructureEvent {
   List<Object?> get props => [classId];
 }
 
+class ArchiveClassRequested extends StructureEvent {
+  final String classId;
+  const ArchiveClassRequested(this.classId);
+  @override
+  List<Object?> get props => [classId];
+}
+
 class SaveStreamRequested extends StructureEvent {
   final ClassStream stream;
   const SaveStreamRequested(this.stream);
@@ -370,6 +384,13 @@ class SaveDepartmentRequested extends StructureEvent {
 class DeleteDepartmentRequested extends StructureEvent {
   final String departmentId;
   const DeleteDepartmentRequested(this.departmentId);
+  @override
+  List<Object?> get props => [departmentId];
+}
+
+class ArchiveDepartmentRequested extends StructureEvent {
+  final String departmentId;
+  const ArchiveDepartmentRequested(this.departmentId);
   @override
   List<Object?> get props => [departmentId];
 }

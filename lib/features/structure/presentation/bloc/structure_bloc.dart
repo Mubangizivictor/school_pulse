@@ -78,6 +78,7 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
 
     on<SaveLevelRequested>((event, emit) => repository.addLevel(event.level));
     on<DeleteLevelRequested>((event, emit) => repository.deleteLevel(event.levelId));
+    on<ArchiveLevelRequested>((event, emit) => repository.archiveLevel(event.levelId));
 
     on<SaveAcademicYearRequested>((event, emit) => repository.addAcademicYear(event.year));
     on<DeleteAcademicYearRequested>((event, emit) => repository.deleteAcademicYear(event.yearId));
@@ -89,6 +90,7 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
 
     on<SaveClassRequested>((event, emit) => repository.addClass(event.schoolClass));
     on<DeleteClassRequested>((event, emit) => repository.deleteClass(event.classId));
+    on<ArchiveClassRequested>((event, emit) => repository.archiveClass(event.classId));
 
     on<SaveStreamRequested>((event, emit) => repository.addStream(event.stream));
     on<DeleteStreamRequested>((event, emit) => repository.deleteStream(event.streamId));
@@ -98,6 +100,7 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
 
     on<SaveDepartmentRequested>((event, emit) => repository.addDepartment(event.department));
     on<DeleteDepartmentRequested>((event, emit) => repository.deleteDepartment(event.departmentId));
+    on<ArchiveDepartmentRequested>((event, emit) => repository.archiveDepartment(event.departmentId));
 
     on<SaveDesignationRequested>((event, emit) => repository.addDesignation(event.designation));
     on<DeleteDesignationRequested>((event, emit) => repository.deleteDesignation(event.designationId));

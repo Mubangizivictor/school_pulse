@@ -17,6 +17,7 @@ abstract class StructureRemoteDataSource {
   Stream<List<EducationalLevel>> watchLevels(String schoolId);
   Future<void> saveLevel(EducationalLevel level);
   Future<void> deleteLevel(String levelId);
+  Future<void> archiveLevel(String levelId);
 
   Stream<List<AcademicYear>> watchAcademicYears(String schoolId);
   Future<void> saveAcademicYear(AcademicYear year);
@@ -31,6 +32,7 @@ abstract class StructureRemoteDataSource {
   Stream<List<SchoolClass>> watchClasses(String schoolId);
   Future<void> saveClass(SchoolClass schoolClass);
   Future<void> deleteClass(String classId);
+  Future<void> archiveClass(String classId);
 
   Stream<List<ClassStream>> watchStreams(String schoolId);
   Future<void> saveStream(ClassStream stream);
@@ -43,6 +45,7 @@ abstract class StructureRemoteDataSource {
   Stream<List<Department>> watchDepartments(String schoolId);
   Future<void> saveDepartment(Department department);
   Future<void> deleteDepartment(String departmentId);
+  Future<void> archiveDepartment(String departmentId);
 
   Stream<List<StaffDesignation>> watchDesignations(String schoolId);
   Future<void> saveDesignation(StaffDesignation designation);
@@ -57,6 +60,11 @@ abstract class StructureRemoteDataSource {
 
   Stream<InstitutionProfile> watchInstitutionProfile(String schoolId);
   Future<void> updateInstitutionProfile(InstitutionProfile profile, String schoolId);
+
+  Stream<List<Campus>> watchCampuses(String schoolId);
+  Future<void> saveCampus(Campus campus);
+  Future<void> deleteCampus(String campusId);
+  Future<void> archiveCampus(String campusId);
 
   Stream<List<House>> watchHouses(String schoolId);
   Future<void> saveHouse(House house);
@@ -153,6 +161,7 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   CollectionReference<Map<String, dynamic>> get _designations => firestore.collection('staff_designations');
   CollectionReference<Map<String, dynamic>> get _staffRoles => firestore.collection('staff_roles');
 
+  CollectionReference<Map<String, dynamic>> get _campuses => firestore.collection('campuses');
   CollectionReference<Map<String, dynamic>> get _houses => firestore.collection('houses');
   CollectionReference<Map<String, dynamic>> get _clubs => firestore.collection('clubs');
   CollectionReference<Map<String, dynamic>> get _facilities => firestore.collection('facilities');
@@ -208,6 +217,10 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
 
   @override
   Future<void> deleteLevel(String levelId) => _levels.doc(levelId).delete();
+
+  @override
+  Future<void> archiveLevel(String levelId) =>
+      _levels.doc(levelId).update({'isActive': false, 'archivedAt': Timestamp.now().millisecondsSinceEpoch});
 
   EducationalLevel _levelFromMap(String id, Map<String, dynamic> map) {
     return EducationalLevel(
@@ -351,6 +364,9 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   @override
   Future<void> deleteClass(String classId) => _classes.doc(classId).delete();
 
+  @override
+  Future<void> archiveClass(String classId) => _classes.doc(classId).update({'isActive': false});
+
   SchoolClass _classFromMap(String id, Map<String, dynamic> map) {
     return SchoolClass(
       id: id,
@@ -476,6 +492,9 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
 
   @override
   Future<void> deleteDepartment(String departmentId) => _departments.doc(departmentId).delete();
+
+  @override
+  Future<void> archiveDepartment(String departmentId) => _departments.doc(departmentId).update({'isActive': false});
 
   Department _departmentFromMap(String id, Map<String, dynamic> map) {
     return Department(
@@ -695,6 +714,61 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
         'language': e.language,
         'dateFormat': e.dateFormat,
         'timeFormat': e.timeFormat,
+      };
+
+  // Campuses
+  @override
+  Stream<List<Campus>> watchCampuses(String schoolId) {
+    return _campuses
+        .where('schoolId', isEqualTo: schoolId)
+        .orderBy('order')
+        .snapshots()
+        .map((snap) => snap.docs.map((d) => _campusFromMap(d.id, d.data())).toList());
+  }
+
+  @override
+  Future<void> saveCampus(Campus campus) => _campuses.doc(campus.id).set(_campusToMap(campus));
+
+  @override
+  Future<void> deleteCampus(String campusId) => _campuses.doc(campusId).delete();
+
+  @override
+  Future<void> archiveCampus(String campusId) => _campuses.doc(campusId).update({
+        'isActive': false,
+        'archivedAt': Timestamp.now(),
+      });
+
+  Campus _campusFromMap(String id, Map<String, dynamic> map) {
+    return Campus(
+      id: id,
+      schoolId: map['schoolId'] ?? '',
+      name: map['name'] ?? '',
+      code: map['code'] ?? '',
+      address: map['address'] ?? '',
+      district: map['district'] ?? '',
+      contactPhone: map['contactPhone'] as String?,
+      contactEmail: map['contactEmail'] as String?,
+      headStaffId: map['headStaffId'] as String?,
+      isPrimary: map['isPrimary'] ?? false,
+      isActive: map['isActive'] ?? true,
+      order: map['order'] ?? 0,
+      archivedAt: (map['archivedAt'] as Timestamp?)?.toDate(),
+    );
+  }
+
+  Map<String, dynamic> _campusToMap(Campus e) => {
+        'schoolId': e.schoolId,
+        'name': e.name,
+        'code': e.code,
+        'address': e.address,
+        'district': e.district,
+        'contactPhone': e.contactPhone,
+        'contactEmail': e.contactEmail,
+        'headStaffId': e.headStaffId,
+        'isPrimary': e.isPrimary,
+        'isActive': e.isActive,
+        'order': e.order,
+        'archivedAt': e.archivedAt != null ? Timestamp.fromDate(e.archivedAt!) : null,
       };
 
   // Houses

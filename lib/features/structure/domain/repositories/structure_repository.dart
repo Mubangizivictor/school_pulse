@@ -22,6 +22,7 @@ abstract class StructureRepository {
   Future<void> addLevel(EducationalLevel level);
   Future<void> updateLevel(EducationalLevel level);
   Future<void> deleteLevel(String levelId);
+  Future<void> archiveLevel(String levelId);
 
   // Academic Years
   Stream<List<AcademicYear>> watchAcademicYears(String schoolId);
@@ -42,6 +43,7 @@ abstract class StructureRepository {
   Future<void> addClass(SchoolClass schoolClass);
   Future<void> updateClass(SchoolClass schoolClass);
   Future<void> deleteClass(String classId);
+  Future<void> archiveClass(String classId);
 
   // Streams / Sections
   Stream<List<ClassStream>> watchStreams(String schoolId);
@@ -60,6 +62,7 @@ abstract class StructureRepository {
   Future<void> addDepartment(Department department);
   Future<void> updateDepartment(Department department);
   Future<void> deleteDepartment(String departmentId);
+  Future<void> archiveDepartment(String departmentId);
 
   // Staff Designations
   Stream<List<StaffDesignation>> watchDesignations(String schoolId);

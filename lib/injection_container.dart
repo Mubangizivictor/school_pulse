@@ -368,6 +368,7 @@ import 'package:school_pulse/features/admin/data/repositories/subscription_repos
 
 // Structure module
 import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
+import 'package:school_pulse/features/structure/domain/services/structure_dependency_service.dart';
 import 'package:school_pulse/features/structure/data/repositories/structure_repository_impl.dart';
 import 'package:school_pulse/features/structure/data/datasources/structure_remote_data_source.dart';
 import 'package:school_pulse/features/structure/data/datasources/structure_local_data_source.dart';
@@ -1624,6 +1625,8 @@ Future<void> init() async {
   sl.registerLazySingleton<StructureLocalDataSource>(
     () => StructureLocalDataSourceImpl(isar: sl()),
   );
+
+  sl.registerLazySingleton(() => StructureDependencyService(firestore: sl()));
 
   // Finance - additional usecases (FinanceRepository already registered above)
   sl.registerLazySingleton(() => GetAllFees(sl()));

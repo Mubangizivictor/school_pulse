@@ -47,6 +47,9 @@ class StructureRepositoryImpl implements StructureRepository {
   Future<void> deleteLevel(String levelId) => remoteDataSource.deleteLevel(levelId);
 
   @override
+  Future<void> archiveLevel(String levelId) => remoteDataSource.archiveLevel(levelId);
+
+  @override
   Stream<List<AcademicYear>> watchAcademicYears(String schoolId) {
     return remoteDataSource.watchAcademicYears(schoolId).map((years) {
       localDataSource.cacheAcademicYears(years.map((e) => AcademicYearIsar.fromEntity(e)).toList());
@@ -106,6 +109,9 @@ class StructureRepositoryImpl implements StructureRepository {
   Future<void> deleteClass(String classId) => remoteDataSource.deleteClass(classId);
 
   @override
+  Future<void> archiveClass(String classId) => remoteDataSource.archiveClass(classId);
+
+  @override
   Stream<List<ClassStream>> watchStreams(String schoolId) {
     return remoteDataSource.watchStreams(schoolId).map((streams) {
       localDataSource.cacheStreams(streams.map((e) => ClassStreamIsar.fromEntity(e)).toList());
@@ -155,6 +161,9 @@ class StructureRepositoryImpl implements StructureRepository {
 
   @override
   Future<void> deleteDepartment(String departmentId) => remoteDataSource.deleteDepartment(departmentId);
+
+  @override
+  Future<void> archiveDepartment(String departmentId) => remoteDataSource.archiveDepartment(departmentId);
 
   @override
   Stream<List<StaffDesignation>> watchDesignations(String schoolId) {

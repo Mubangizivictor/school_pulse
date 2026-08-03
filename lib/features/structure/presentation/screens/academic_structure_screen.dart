@@ -9,6 +9,41 @@ import '../bloc/structure_event.dart';
 import '../bloc/structure_state.dart';
 import '../widgets/structure_dialogs.dart';
 import '../widgets/structure_empty_hint.dart';
+import '../../domain/services/structure_dependency_service.dart';
+import 'package:school_pulse/injection_container.dart' as di;
+
+/// Shows a dependency-aware delete confirmation: if [dependentCount] is
+/// greater than 0, offers Archive instead of a destructive delete. Returns
+/// 'delete', 'archive', or null (cancelled).
+Future<String?> _confirmDeleteOrArchive(
+  BuildContext context, {
+  required String title,
+  required String itemName,
+  required int dependentCount,
+  required String dependentDescription,
+}) async {
+  if (dependentCount == 0) {
+    final confirmed = await showDeleteConfirmDialog(context, title: title, message: 'Delete "$itemName"?');
+    return confirmed == true ? 'delete' : null;
+  }
+  return showDialog<String>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(title),
+      content: Text(
+        '"$itemName" is still referenced by $dependentCount $dependentDescription. '
+        'Archive it instead of deleting it to keep that data intact.',
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () => Navigator.pop(context, 'archive'),
+          child: const Text('Archive'),
+        ),
+      ],
+    ),
+  );
+}
 
 /// Levels, Academic Years/Terms, Classes/Streams, and Subjects - the core
 /// academic hierarchy every other module reads from.
@@ -101,8 +136,20 @@ class _LevelsTab extends StatelessWidget {
                         IconButton(
                           icon: const Icon(Icons.delete_outline, color: Colors.red),
                           onPressed: () async {
-                            final confirmed = await showDeleteConfirmDialog(context, title: 'Delete Level', message: 'Delete "${level.name}"?');
-                            if (confirmed == true) bloc.add(DeleteLevelRequested(level.id));
+                            final dependentCount = await di.sl<StructureDependencyService>()
+                                .countClassesInLevel(schoolId, level.id);
+                            final action = await _confirmDeleteOrArchive(
+                              context,
+                              title: 'Delete Level',
+                              itemName: level.name,
+                              dependentCount: dependentCount,
+                              dependentDescription: 'class(es)',
+                            );
+                            if (action == 'delete') {
+                              bloc.add(DeleteLevelRequested(level.id));
+                            } else if (action == 'archive') {
+                              bloc.add(ArchiveLevelRequested(level.id));
+                            }
                           },
                         ),
                       ],
@@ -312,8 +359,20 @@ class _ClassesAndStreamsTab extends StatelessWidget {
                   IconButton(
                     icon: const Icon(Icons.delete_outline, color: Colors.red),
                     onPressed: () async {
-                      final confirmed = await showDeleteConfirmDialog(context, title: 'Delete Class', message: 'Delete "${schoolClass.name}"?');
-                      if (confirmed == true) bloc.add(DeleteClassRequested(schoolClass.id));
+                      final dependentCount = await di.sl<StructureDependencyService>()
+                          .countStudentsInClass(schoolId, schoolClass.id);
+                      final action = await _confirmDeleteOrArchive(
+                        context,
+                        title: 'Delete Class',
+                        itemName: schoolClass.name,
+                        dependentCount: dependentCount,
+                        dependentDescription: 'student(s)',
+                      );
+                      if (action == 'delete') {
+                        bloc.add(DeleteClassRequested(schoolClass.id));
+                      } else if (action == 'archive') {
+                        bloc.add(ArchiveClassRequested(schoolClass.id));
+                      }
                     },
                   ),
                 ],
