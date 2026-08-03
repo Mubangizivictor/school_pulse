@@ -533,3 +533,67 @@ describe('SaaS owner / platform layer', () => {
     });
   });
 });
+
+describe('Institution Context Phase 1', () => {
+  test('institution_memberships are never client-writable, even by the owning user', async () => {
+    await assertFails(setDoc(doc(dbFor('adminA'), 'institution_memberships', 'adminA_schoolA'), {
+      userId: 'adminA', institutionId: 'schoolA', roles: ['schoolAdmin'],
+      isPrimaryAdmin: true, status: 'active',
+    }));
+  });
+
+  test('a user can only read their own institution_memberships, not another user\'s', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'institution_memberships', 'adminA_schoolA'), {
+        userId: 'adminA', institutionId: 'schoolA', roles: ['schoolAdmin'],
+        isPrimaryAdmin: true, status: 'active',
+      });
+    });
+
+    await assertSucceeds(getDoc(doc(dbFor('adminA'), 'institution_memberships', 'adminA_schoolA')));
+    await assertFails(getDoc(doc(dbFor('teacherA'), 'institution_memberships', 'adminA_schoolA')));
+    await assertSucceeds(getDoc(doc(dbFor('ownerA'), 'institution_memberships', 'adminA_schoolA')));
+  });
+
+  test('a user can create and update their own onboarding_state within their own institution', async () => {
+    await assertSucceeds(setDoc(doc(dbFor('adminA'), 'onboarding_state', 'adminA_schoolA'), {
+      userId: 'adminA', institutionId: 'schoolA', currentStep: 'identityConfirm',
+      completedSteps: [], mfaRequired: false,
+    }));
+    await assertSucceeds(updateDoc(doc(dbFor('adminA'), 'onboarding_state', 'adminA_schoolA'), {
+      currentStep: 'passwordChange',
+    }));
+  });
+
+  test('a user cannot create onboarding_state for a different institution than their own', async () => {
+    await assertFails(setDoc(doc(dbFor('adminA'), 'onboarding_state', 'adminA_schoolB'), {
+      userId: 'adminA', institutionId: 'schoolB', currentStep: 'identityConfirm',
+      completedSteps: [], mfaRequired: false,
+    }));
+  });
+
+  test('a user cannot read or update another user\'s onboarding_state', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'onboarding_state', 'adminA_schoolA'), {
+        userId: 'adminA', institutionId: 'schoolA', currentStep: 'identityConfirm',
+        completedSteps: [], mfaRequired: false,
+      });
+    });
+
+    await assertFails(getDoc(doc(dbFor('teacherA'), 'onboarding_state', 'adminA_schoolA')));
+    await assertFails(updateDoc(doc(dbFor('teacherA'), 'onboarding_state', 'adminA_schoolA'), {
+      currentStep: 'completed',
+    }));
+  });
+
+  test('onboarding_state can never be deleted by a client', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'onboarding_state', 'adminA_schoolA'), {
+        userId: 'adminA', institutionId: 'schoolA', currentStep: 'identityConfirm',
+        completedSteps: [], mfaRequired: false,
+      });
+    });
+
+    await assertFails(deleteDoc(doc(dbFor('adminA'), 'onboarding_state', 'adminA_schoolA')));
+  });
+});
