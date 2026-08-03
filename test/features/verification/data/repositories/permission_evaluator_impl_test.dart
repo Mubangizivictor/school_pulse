@@ -154,4 +154,30 @@ void main() {
       verify(() => localDataSource.savePermissionSnapshot(any())).called(1);
     });
   });
+
+  group('role permission overrides', () {
+    test('an override present for the role replaces its defaults entirely', () async {
+      when(() => overrideRepository.getOverrides(ordinaryTeacher.schoolId)).thenAnswer(
+        (_) async => Right({
+          UserRole.subjectTeacher: RolePermissionOverride(
+            role: UserRole.subjectTeacher,
+            permissions: {Permission.securityIdentityVerify},
+            updatedBy: 'adminA',
+            updatedAt: DateTime.now(),
+          ),
+        }),
+      );
+
+      final result = await evaluator.can(Permission.securityIdentityVerify, ordinaryTeacher);
+      expect(result.getOrElse(() => false), isTrue);
+    });
+
+    test('no override for the role falls back to RolePermissionDefaults unchanged', () async {
+      when(() => overrideRepository.getOverrides(gatekeeper.schoolId))
+          .thenAnswer((_) async => const Right(<UserRole, RolePermissionOverride>{}));
+
+      final result = await evaluator.can(Permission.securityIdentityVerify, gatekeeper);
+      expect(result.getOrElse(() => false), isTrue);
+    });
+  });
 }

@@ -643,3 +643,95 @@ describe('Structure Phase 2', () => {
     }));
   });
 });
+
+describe('Phase 3 people/roles/permissions', () => {
+  test('a non-admin staff member cannot edit another staff member\'s roles', async () => {
+    await assertFails(updateDoc(
+      doc(dbFor('teacherA'), 'users', 'otherTeacherA'),
+      { roles: ['schoolAdmin'] },
+    ));
+  });
+
+  test('an admin-console role (schoolAdmin/headTeacher/director) can edit another staff member\'s roles', async () => {
+    await assertSucceeds(updateDoc(
+      doc(dbFor('adminA'), 'users', 'otherTeacherA'),
+      { roles: ['classTeacher', 'nurse'] },
+    ));
+  });
+
+  test('deputyHead is not granted staff-role-editing authority (matches ADMIN_ROLES in Cloud Functions)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'users', 'deputyA'), {
+        role: 'deputyHead', roles: ['deputyHead'], schoolId: 'schoolA', studentIds: [],
+      });
+    });
+    await assertFails(updateDoc(
+      doc(dbFor('deputyA'), 'users', 'otherTeacherA'),
+      { roles: ['schoolAdmin'] },
+    ));
+  });
+
+  test('an admin still cannot edit a parent\'s profile through this path', async () => {
+    await assertFails(updateDoc(
+      doc(dbFor('adminA'), 'users', 'parentA'),
+      { roles: ['schoolAdmin'] },
+    ));
+  });
+
+  test('a non-teaching (nurse) staff_role_assignments doc behaves like a teaching one under the same rules', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'schools/schoolA/staff_role_assignments/assignNurse'), {
+        schoolId: 'schoolA', campusId: 'main', staffId: 'nurseA', userId: 'nurseA',
+        roleType: 'nurse', academicYearId: '2026', status: 'active',
+        permissionScope: { permissions: ['health.clinicVisit.record'], termIds: [] },
+      });
+    });
+
+    await assertSucceeds(getDoc(
+      doc(dbFor('nurseA'), 'schools/schoolA/staff_role_assignments/assignNurse'),
+    ));
+    await assertFails(getDoc(
+      doc(dbFor('teacherA'), 'schools/schoolA/staff_role_assignments/assignNurse'),
+    ));
+    await assertFails(setDoc(
+      doc(dbFor('nurseA'), 'schools/schoolA/staff_role_assignments/selfGrantedNurse'),
+      {
+        schoolId: 'schoolA', staffId: 'nurseA', userId: 'nurseA',
+        roleType: 'nurse', academicYearId: '2026', status: 'active',
+        permissionScope: { permissions: ['health.clinicVisit.record'] },
+      },
+    ));
+  });
+
+  test('role_permission_overrides: schoolAcademicAdmin can write, other staff can only read, cross-school denied', async () => {
+    await assertSucceeds(setDoc(
+      doc(dbFor('adminA'), 'schools/schoolA/role_permission_overrides/nurse'),
+      { role: 'nurse', permissions: ['health.clinicVisit.record'], updatedBy: 'adminA' },
+    ));
+    await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'schools/schoolA/role_permission_overrides/nurse')));
+    await assertFails(setDoc(
+      doc(dbFor('teacherA'), 'schools/schoolA/role_permission_overrides/nurse'),
+      { role: 'nurse', permissions: ['everything'], updatedBy: 'teacherA' },
+    ));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'schools/schoolA/role_permission_overrides/nurse')));
+  });
+
+  test('role_permission_overrides can never be deleted', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'schools/schoolA/role_permission_overrides/nurse'), {
+        role: 'nurse', permissions: ['health.clinicVisit.record'], updatedBy: 'adminA',
+      });
+    });
+    await assertFails(deleteDoc(doc(dbFor('adminA'), 'schools/schoolA/role_permission_overrides/nurse')));
+  });
+
+  test('student_access_codes: staff can list/write, direct-by-id get is public, unauthenticated cannot list', async () => {
+    await assertSucceeds(setDoc(doc(dbFor('adminA'), 'student_access_codes', 'STU123'), {
+      schoolId: 'schoolA', studentId: 'studentA', studentName: 'Student A',
+      phoneNumber: '+256700000000', pin: '1234', isActive: true,
+    }));
+    await assertSucceeds(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'student_access_codes', 'STU123')));
+    await assertFails(getDocs(collection(dbFor('teacherA'), 'student_access_codes')));
+    await assertSucceeds(getDocs(collection(dbFor('adminA'), 'student_access_codes')));
+  });
+});
