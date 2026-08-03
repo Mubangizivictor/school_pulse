@@ -82,6 +82,8 @@ import 'package:school_pulse/features/student/presentation/screens/admissions_li
 import 'package:school_pulse/features/student/presentation/screens/new_application_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/report_wizard/report_wizard_bloc.dart';
 import 'package:school_pulse/features/teacher/staff_more_screen.dart';
+import 'package:school_pulse/features/teacher/attendance_screen.dart';
+import 'package:school_pulse/features/teacher/attendance_history_screen.dart';
 import 'package:school_pulse/features/teacher/staff_profile_screen.dart';
 import 'package:school_pulse/features/teacher/security_settings_screen.dart';
 import 'package:school_pulse/features/teacher/class_analytics_screen.dart';
@@ -255,6 +257,9 @@ import 'package:school_pulse/features/teacher/presentation/screens/lessons/lesso
 
 // ... (keep existing imports)
 
+import 'package:school_pulse/features/health/presentation/screens/nurse_records_hub_screen.dart';
+import 'package:school_pulse/features/health/presentation/screens/nurse_clinic_visits_screen.dart';
+import 'package:school_pulse/features/health/presentation/screens/record_clinic_visit_screen.dart';
 import 'package:school_pulse/features/health/presentation/screens/student_health_profile_screen.dart';
 import 'package:school_pulse/features/health/presentation/screens/health_history_screen.dart';
 import 'package:school_pulse/features/health/presentation/screens/incident_details_screen.dart';
@@ -780,23 +785,48 @@ final router = GoRouter(
           builder: (context, state) => const NurseDashboardScreen(),
           routes: [
             GoRoute(
+              path: 'records',
+              builder: (context, state) => BlocProvider.value(
+                value: context.read<HealthBloc>(),
+                child: const NurseRecordsHubScreen(),
+              ),
+            ),
+            GoRoute(
+              path: 'visits',
+              builder: (context, state) => BlocProvider.value(
+                value: context.read<HealthBloc>(),
+                child: const NurseClinicVisitsScreen(),
+              ),
+              routes: [
+                GoRoute(
+                  path: 'new',
+                  builder: (context, state) => BlocProvider.value(
+                    value: context.read<HealthBloc>(),
+                    child: RecordClinicVisitScreen(
+                      studentId: state.extra as String,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            GoRoute(
               path: 'inventory',
-              builder: (context, state) => BlocProvider(
-                create: (_) => di.sl<HealthBloc>(),
+              builder: (context, state) => BlocProvider.value(
+                value: context.read<HealthBloc>(),
                 child: const MedicineInventoryScreen(),
               ),
             ),
             GoRoute(
               path: 'history',
-              builder: (context, state) => BlocProvider(
-                create: (_) => di.sl<HealthBloc>(),
+              builder: (context, state) => BlocProvider.value(
+                value: context.read<HealthBloc>(),
                 child: const HealthHistoryScreen(),
               ),
             ),
             GoRoute(
               path: 'profile/:id',
-              builder: (context, state) => BlocProvider(
-                create: (_) => di.sl<HealthBloc>(),
+              builder: (context, state) => BlocProvider.value(
+                value: context.read<HealthBloc>(),
                 child: StudentHealthProfileScreen(
                   studentId: state.pathParameters['id']!,
                 ),
@@ -804,8 +834,8 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'incident/:id',
-              builder: (context, state) => BlocProvider(
-                create: (_) => di.sl<HealthBloc>(),
+              builder: (context, state) => BlocProvider.value(
+                value: context.read<HealthBloc>(),
                 child: IncidentDetailsScreen(
                   incidentId: state.pathParameters['id']!,
                 ),
@@ -1557,6 +1587,23 @@ final router = GoRouter(
         GoRoute(
           path: '/staff/homework',
           builder: (context, state) => const HomeworkScreen(),
+        ),
+        // The Class Teacher's own daily register - distinct from the shared
+        // /staff/attendance method-chooser above, which every staff role
+        // with any attendance duty (boarding matron/patron, admin) also
+        // reaches and which is not scoped to one class. TeacherAttendanceScreen
+        // and TeacherAttendanceHistoryScreen are wired to ClassAttendanceBloc /
+        // ClassAttendanceHistoryBloc, so this route is what the dashboard's
+        // Roll Call action and the Present/Absent tiles need to reach.
+        GoRoute(
+          path: '/staff/roll-call',
+          builder: (context, state) => const TeacherAttendanceScreen(),
+          routes: [
+            GoRoute(
+              path: 'history',
+              builder: (context, state) => const TeacherAttendanceHistoryScreen(),
+            ),
+          ],
         ),
         GoRoute(
           path: '/staff/report-comments',

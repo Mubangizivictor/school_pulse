@@ -50,7 +50,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
         actions: [
           IconButton(
             icon: Icon(Icons.history, color: AppColors.primary(context)),
-            onPressed: () => context.go('/staff/attendance/history'),
+            onPressed: () => context.go('/staff/roll-call/history'),
           ),
         ],
       ),

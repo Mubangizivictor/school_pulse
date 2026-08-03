@@ -1788,6 +1788,7 @@ Future<void> init() async {
     ClassStudentIsarSchema,
     ClassDashboardCacheIsarSchema,
     ClassAttendanceDraftIsarSchema,
+    AttendanceTypeDefIsarSchema,
   ], directory: dir.path);
   sl.registerLazySingleton(() => isar);
 

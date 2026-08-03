@@ -271,7 +271,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
         // "Not taken" rather than 0% - an unmarked register and a class with
         // nobody present are different facts.
         caption: share(state.presentPercentage),
-        onTap: () => context.push('/staff/attendance'),
+        onTap: () => context.push('/staff/roll-call'),
       ),
       BoardingMetric(
         label: 'Absent Today',
@@ -279,7 +279,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
         color: AppColors.danger(context),
         value: absent ?? 0,
         caption: share(state.absentPercentage),
-        onTap: () => context.push('/staff/attendance'),
+        onTap: () => context.push('/staff/roll-call'),
       ),
       BoardingMetric(
         label: 'Assignments',
@@ -299,7 +299,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
           label: 'Roll Call',
           icon: Icons.how_to_reg,
           color: AppColors.success(context),
-          onTap: () => context.push('/staff/attendance'),
+          onTap: () => context.push('/staff/roll-call'),
         ),
         BoardingQuickAction(
           label: 'Submit Marks',

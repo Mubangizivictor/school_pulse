@@ -109,8 +109,9 @@ class AdminSeeder {
       await _seedNoticesAndAuditLogs();
 
       debugPrint("🏁 FULL SEEDING COMPLETE!");
-    } catch (e) {
+    } catch (e, st) {
       debugPrint("❌ Seeding failed: $e");
+      debugPrint(st.toString());
     }
   }
 
