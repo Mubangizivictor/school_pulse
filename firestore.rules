@@ -189,9 +189,32 @@ service cloud.firestore {
     // Students are readable by any staff member, or by the parent(s)
     // linked to that student via users/{uid}.studentIds, or the student
     // themselves.
+    // Phase 4 security gate: this collection had no rule block at all -
+    // every read/write was default-denied, so the existing admission
+    // pipeline (submit -> review -> enroll, staff-only per the router's
+    // role gate on /admissions/new) was non-functional in production.
+    // Staff-only throughout since applicants have no users/{uid} account
+    // yet at this stage - admission is always staff-mediated today.
+    match /admission_applications/{applicationId} {
+      allow read: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId;
+      allow delete: if false;
+    }
+
     match /students/{studentId} {
       allow read: if isStaff() || isParentOf(studentId) || isMe(studentId);
-      allow write: if isStaff();
+      // Phase 4 security gate: previously any staff account from any
+      // school could write any other school's student doc if they knew
+      // or guessed the id - isStaff() alone never checked tenancy. create
+      // and update now both require same-school, and update additionally
+      // locks schoolId so a doc can never be re-parented to another
+      // school by editing this field.
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId;
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
 
     // Per-student records: parents can read only their own children's
