@@ -388,6 +388,64 @@ class StaffRoleIsar {
 }
 
 @collection
+class CampusIsar {
+  Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String campusId;
+
+  late String schoolId;
+  late String name;
+  late String code;
+  late String address;
+  late String district;
+  String? contactPhone;
+  String? contactEmail;
+  String? headStaffId;
+  late bool isPrimary;
+  late bool isActive;
+  late int order;
+  DateTime? archivedAt;
+
+  CampusIsar();
+
+  factory CampusIsar.fromEntity(Campus e) {
+    return CampusIsar()
+      ..campusId = e.id
+      ..schoolId = e.schoolId
+      ..name = e.name
+      ..code = e.code
+      ..address = e.address
+      ..district = e.district
+      ..contactPhone = e.contactPhone
+      ..contactEmail = e.contactEmail
+      ..headStaffId = e.headStaffId
+      ..isPrimary = e.isPrimary
+      ..isActive = e.isActive
+      ..order = e.order
+      ..archivedAt = e.archivedAt;
+  }
+
+  Campus toEntity() {
+    return Campus(
+      id: campusId,
+      schoolId: schoolId,
+      name: name,
+      code: code,
+      address: address,
+      district: district,
+      contactPhone: contactPhone,
+      contactEmail: contactEmail,
+      headStaffId: headStaffId,
+      isPrimary: isPrimary,
+      isActive: isActive,
+      order: order,
+      archivedAt: archivedAt,
+    );
+  }
+}
+
+@collection
 class HouseIsar {
   Id id = Isar.autoIncrement;
 

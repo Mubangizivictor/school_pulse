@@ -29,6 +29,9 @@ abstract class StructureLocalDataSource {
   Future<List<StaffRoleIsar>> getStaffRoles();
   Future<void> cacheStaffRoles(List<StaffRoleIsar> roles);
 
+  Future<List<CampusIsar>> getCampuses();
+  Future<void> cacheCampuses(List<CampusIsar> campuses);
+
   Future<List<HouseIsar>> getHouses();
   Future<void> cacheHouses(List<HouseIsar> houses);
 
@@ -206,6 +209,17 @@ class StructureLocalDataSourceImpl implements StructureLocalDataSource {
     await isar.writeTxn(() async {
       await isar.staffRoleIsars.clear();
       await isar.staffRoleIsars.putAll(roles);
+    });
+  }
+
+  @override
+  Future<List<CampusIsar>> getCampuses() async => isar.campusIsars.where().findAll();
+
+  @override
+  Future<void> cacheCampuses(List<CampusIsar> campuses) async {
+    await isar.writeTxn(() async {
+      await isar.campusIsars.clear();
+      await isar.campusIsars.putAll(campuses);
     });
   }
 

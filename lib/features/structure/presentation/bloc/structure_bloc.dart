@@ -18,6 +18,7 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
   StreamSubscription? _staffRolesSub;
   StreamSubscription? _togglesSub;
   StreamSubscription? _institutionProfileSub;
+  StreamSubscription? _campusesSub;
   StreamSubscription? _housesSub;
   StreamSubscription? _clubsSub;
   StreamSubscription? _facilitiesSub;
@@ -52,6 +53,7 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     on<StaffRolesUpdated>((event, emit) => emit(state.copyWith(isLoading: false, staffRoles: event.roles)));
     on<FeatureTogglesUpdated>((event, emit) => emit(state.copyWith(isLoading: false, featureToggles: event.toggles)));
     on<InstitutionProfileUpdated>((event, emit) => emit(state.copyWith(isLoading: false, institutionProfile: event.profile)));
+    on<CampusesUpdated>((event, emit) => emit(state.copyWith(isLoading: false, campuses: event.campuses)));
     on<HousesUpdated>((event, emit) => emit(state.copyWith(isLoading: false, houses: event.houses)));
     on<ClubsUpdated>((event, emit) => emit(state.copyWith(isLoading: false, clubs: event.clubs)));
     on<FacilitiesUpdated>((event, emit) => emit(state.copyWith(isLoading: false, facilities: event.facilities)));
@@ -106,6 +108,10 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     on<UpdateFeatureTogglesRequested>((event, emit) => repository.updateFeatureToggles(event.toggles, event.schoolId));
 
     on<UpdateInstitutionProfileRequested>((event, emit) => repository.updateInstitutionProfile(event.profile, event.schoolId));
+
+    on<SaveCampusRequested>((event, emit) => repository.addCampus(event.campus));
+    on<DeleteCampusRequested>((event, emit) => repository.deleteCampus(event.campusId));
+    on<ArchiveCampusRequested>((event, emit) => repository.archiveCampus(event.campusId));
 
     on<SaveHouseRequested>((event, emit) => repository.addHouse(event.house));
     on<DeleteHouseRequested>((event, emit) => repository.deleteHouse(event.houseId));
@@ -179,6 +185,7 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     await _staffRolesSub?.cancel();
     await _togglesSub?.cancel();
     await _institutionProfileSub?.cancel();
+    await _campusesSub?.cancel();
     await _housesSub?.cancel();
     await _clubsSub?.cancel();
     await _facilitiesSub?.cancel();
@@ -242,6 +249,10 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
         );
     _institutionProfileSub = repository.watchInstitutionProfile(event.schoolId).listen(
           (profile) => add(InstitutionProfileUpdated(profile)),
+          onError: (e) => add(StructureLoadFailed(e.toString())),
+        );
+    _campusesSub = repository.watchCampuses(event.schoolId).listen(
+          (campuses) => add(CampusesUpdated(campuses)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
     _housesSub = repository.watchHouses(event.schoolId).listen(
@@ -339,6 +350,7 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     _staffRolesSub?.cancel();
     _togglesSub?.cancel();
     _institutionProfileSub?.cancel();
+    _campusesSub?.cancel();
     _housesSub?.cancel();
     _clubsSub?.cancel();
     _facilitiesSub?.cancel();

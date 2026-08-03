@@ -105,6 +105,13 @@ class InstitutionProfileUpdated extends StructureEvent {
   List<Object?> get props => [profile];
 }
 
+class CampusesUpdated extends StructureEvent {
+  final List<Campus> campuses;
+  const CampusesUpdated(this.campuses);
+  @override
+  List<Object?> get props => [campuses];
+}
+
 class HousesUpdated extends StructureEvent {
   final List<House> houses;
   const HousesUpdated(this.houses);
@@ -409,6 +416,27 @@ class UpdateInstitutionProfileRequested extends StructureEvent {
   const UpdateInstitutionProfileRequested(this.profile, this.schoolId);
   @override
   List<Object?> get props => [profile, schoolId];
+}
+
+class SaveCampusRequested extends StructureEvent {
+  final Campus campus;
+  const SaveCampusRequested(this.campus);
+  @override
+  List<Object?> get props => [campus];
+}
+
+class DeleteCampusRequested extends StructureEvent {
+  final String campusId;
+  const DeleteCampusRequested(this.campusId);
+  @override
+  List<Object?> get props => [campusId];
+}
+
+class ArchiveCampusRequested extends StructureEvent {
+  final String campusId;
+  const ArchiveCampusRequested(this.campusId);
+  @override
+  List<Object?> get props => [campusId];
 }
 
 class SaveHouseRequested extends StructureEvent {

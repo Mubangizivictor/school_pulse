@@ -27,6 +27,7 @@ class StructureState extends Equatable {
   final List<StaffRole> staffRoles;
   final FeatureToggles featureToggles;
   final InstitutionProfile institutionProfile;
+  final List<Campus> campuses;
   final List<House> houses;
   final List<Club> clubs;
   final List<Facility> facilities;
@@ -62,6 +63,7 @@ class StructureState extends Equatable {
     this.staffRoles = const [],
     this.featureToggles = const FeatureToggles(),
     this.institutionProfile = const InstitutionProfile(),
+    this.campuses = const [],
     this.houses = const [],
     this.clubs = const [],
     this.facilities = const [],
@@ -98,6 +100,7 @@ class StructureState extends Equatable {
     List<StaffRole>? staffRoles,
     FeatureToggles? featureToggles,
     InstitutionProfile? institutionProfile,
+    List<Campus>? campuses,
     List<House>? houses,
     List<Club>? clubs,
     List<Facility>? facilities,
@@ -133,6 +136,7 @@ class StructureState extends Equatable {
       staffRoles: staffRoles ?? this.staffRoles,
       featureToggles: featureToggles ?? this.featureToggles,
       institutionProfile: institutionProfile ?? this.institutionProfile,
+      campuses: campuses ?? this.campuses,
       houses: houses ?? this.houses,
       clubs: clubs ?? this.clubs,
       facilities: facilities ?? this.facilities,
@@ -171,6 +175,7 @@ class StructureState extends Equatable {
         staffRoles,
         featureToggles,
         institutionProfile,
+        campuses,
         houses,
         clubs,
         facilities,

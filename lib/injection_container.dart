@@ -1797,6 +1797,7 @@ Future<void> init() async {
     ClassDashboardCacheIsarSchema,
     ClassAttendanceDraftIsarSchema,
     AttendanceTypeDefIsarSchema,
+    CampusIsarSchema,
     HouseIsarSchema,
     ClubIsarSchema,
     FacilityIsarSchema,

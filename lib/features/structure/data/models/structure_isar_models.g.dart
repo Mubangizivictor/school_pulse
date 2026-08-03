@@ -13863,6 +13863,2387 @@ extension StaffRoleIsarQueryProperty
 // coverage:ignore-file
 // ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types
 
+extension GetCampusIsarCollection on Isar {
+  IsarCollection<CampusIsar> get campusIsars => this.collection();
+}
+
+const CampusIsarSchema = CollectionSchema(
+  name: r'CampusIsar',
+  id: -1133415018555854153,
+  properties: {
+    r'address': PropertySchema(
+      id: 0,
+      name: r'address',
+      type: IsarType.string,
+    ),
+    r'archivedAt': PropertySchema(
+      id: 1,
+      name: r'archivedAt',
+      type: IsarType.dateTime,
+    ),
+    r'campusId': PropertySchema(
+      id: 2,
+      name: r'campusId',
+      type: IsarType.string,
+    ),
+    r'code': PropertySchema(
+      id: 3,
+      name: r'code',
+      type: IsarType.string,
+    ),
+    r'contactEmail': PropertySchema(
+      id: 4,
+      name: r'contactEmail',
+      type: IsarType.string,
+    ),
+    r'contactPhone': PropertySchema(
+      id: 5,
+      name: r'contactPhone',
+      type: IsarType.string,
+    ),
+    r'district': PropertySchema(
+      id: 6,
+      name: r'district',
+      type: IsarType.string,
+    ),
+    r'headStaffId': PropertySchema(
+      id: 7,
+      name: r'headStaffId',
+      type: IsarType.string,
+    ),
+    r'isActive': PropertySchema(
+      id: 8,
+      name: r'isActive',
+      type: IsarType.bool,
+    ),
+    r'isPrimary': PropertySchema(
+      id: 9,
+      name: r'isPrimary',
+      type: IsarType.bool,
+    ),
+    r'name': PropertySchema(
+      id: 10,
+      name: r'name',
+      type: IsarType.string,
+    ),
+    r'order': PropertySchema(
+      id: 11,
+      name: r'order',
+      type: IsarType.long,
+    ),
+    r'schoolId': PropertySchema(
+      id: 12,
+      name: r'schoolId',
+      type: IsarType.string,
+    )
+  },
+  estimateSize: _campusIsarEstimateSize,
+  serialize: _campusIsarSerialize,
+  deserialize: _campusIsarDeserialize,
+  deserializeProp: _campusIsarDeserializeProp,
+  idName: r'id',
+  indexes: {
+    r'campusId': IndexSchema(
+      id: 6882888983202248835,
+      name: r'campusId',
+      unique: true,
+      replace: true,
+      properties: [
+        IndexPropertySchema(
+          name: r'campusId',
+          type: IndexType.hash,
+          caseSensitive: true,
+        )
+      ],
+    )
+  },
+  links: {},
+  embeddedSchemas: {},
+  getId: _campusIsarGetId,
+  getLinks: _campusIsarGetLinks,
+  attach: _campusIsarAttach,
+  version: '3.1.0+1',
+);
+
+int _campusIsarEstimateSize(
+  CampusIsar object,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  var bytesCount = offsets.last;
+  bytesCount += 3 + object.address.length * 3;
+  bytesCount += 3 + object.campusId.length * 3;
+  bytesCount += 3 + object.code.length * 3;
+  {
+    final value = object.contactEmail;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.contactPhone;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  bytesCount += 3 + object.district.length * 3;
+  {
+    final value = object.headStaffId;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  bytesCount += 3 + object.name.length * 3;
+  bytesCount += 3 + object.schoolId.length * 3;
+  return bytesCount;
+}
+
+void _campusIsarSerialize(
+  CampusIsar object,
+  IsarWriter writer,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  writer.writeString(offsets[0], object.address);
+  writer.writeDateTime(offsets[1], object.archivedAt);
+  writer.writeString(offsets[2], object.campusId);
+  writer.writeString(offsets[3], object.code);
+  writer.writeString(offsets[4], object.contactEmail);
+  writer.writeString(offsets[5], object.contactPhone);
+  writer.writeString(offsets[6], object.district);
+  writer.writeString(offsets[7], object.headStaffId);
+  writer.writeBool(offsets[8], object.isActive);
+  writer.writeBool(offsets[9], object.isPrimary);
+  writer.writeString(offsets[10], object.name);
+  writer.writeLong(offsets[11], object.order);
+  writer.writeString(offsets[12], object.schoolId);
+}
+
+CampusIsar _campusIsarDeserialize(
+  Id id,
+  IsarReader reader,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  final object = CampusIsar();
+  object.address = reader.readString(offsets[0]);
+  object.archivedAt = reader.readDateTimeOrNull(offsets[1]);
+  object.campusId = reader.readString(offsets[2]);
+  object.code = reader.readString(offsets[3]);
+  object.contactEmail = reader.readStringOrNull(offsets[4]);
+  object.contactPhone = reader.readStringOrNull(offsets[5]);
+  object.district = reader.readString(offsets[6]);
+  object.headStaffId = reader.readStringOrNull(offsets[7]);
+  object.id = id;
+  object.isActive = reader.readBool(offsets[8]);
+  object.isPrimary = reader.readBool(offsets[9]);
+  object.name = reader.readString(offsets[10]);
+  object.order = reader.readLong(offsets[11]);
+  object.schoolId = reader.readString(offsets[12]);
+  return object;
+}
+
+P _campusIsarDeserializeProp<P>(
+  IsarReader reader,
+  int propertyId,
+  int offset,
+  Map<Type, List<int>> allOffsets,
+) {
+  switch (propertyId) {
+    case 0:
+      return (reader.readString(offset)) as P;
+    case 1:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 2:
+      return (reader.readString(offset)) as P;
+    case 3:
+      return (reader.readString(offset)) as P;
+    case 4:
+      return (reader.readStringOrNull(offset)) as P;
+    case 5:
+      return (reader.readStringOrNull(offset)) as P;
+    case 6:
+      return (reader.readString(offset)) as P;
+    case 7:
+      return (reader.readStringOrNull(offset)) as P;
+    case 8:
+      return (reader.readBool(offset)) as P;
+    case 9:
+      return (reader.readBool(offset)) as P;
+    case 10:
+      return (reader.readString(offset)) as P;
+    case 11:
+      return (reader.readLong(offset)) as P;
+    case 12:
+      return (reader.readString(offset)) as P;
+    default:
+      throw IsarError('Unknown property with id $propertyId');
+  }
+}
+
+Id _campusIsarGetId(CampusIsar object) {
+  return object.id;
+}
+
+List<IsarLinkBase<dynamic>> _campusIsarGetLinks(CampusIsar object) {
+  return [];
+}
+
+void _campusIsarAttach(IsarCollection<dynamic> col, Id id, CampusIsar object) {
+  object.id = id;
+}
+
+extension CampusIsarByIndex on IsarCollection<CampusIsar> {
+  Future<CampusIsar?> getByCampusId(String campusId) {
+    return getByIndex(r'campusId', [campusId]);
+  }
+
+  CampusIsar? getByCampusIdSync(String campusId) {
+    return getByIndexSync(r'campusId', [campusId]);
+  }
+
+  Future<bool> deleteByCampusId(String campusId) {
+    return deleteByIndex(r'campusId', [campusId]);
+  }
+
+  bool deleteByCampusIdSync(String campusId) {
+    return deleteByIndexSync(r'campusId', [campusId]);
+  }
+
+  Future<List<CampusIsar?>> getAllByCampusId(List<String> campusIdValues) {
+    final values = campusIdValues.map((e) => [e]).toList();
+    return getAllByIndex(r'campusId', values);
+  }
+
+  List<CampusIsar?> getAllByCampusIdSync(List<String> campusIdValues) {
+    final values = campusIdValues.map((e) => [e]).toList();
+    return getAllByIndexSync(r'campusId', values);
+  }
+
+  Future<int> deleteAllByCampusId(List<String> campusIdValues) {
+    final values = campusIdValues.map((e) => [e]).toList();
+    return deleteAllByIndex(r'campusId', values);
+  }
+
+  int deleteAllByCampusIdSync(List<String> campusIdValues) {
+    final values = campusIdValues.map((e) => [e]).toList();
+    return deleteAllByIndexSync(r'campusId', values);
+  }
+
+  Future<Id> putByCampusId(CampusIsar object) {
+    return putByIndex(r'campusId', object);
+  }
+
+  Id putByCampusIdSync(CampusIsar object, {bool saveLinks = true}) {
+    return putByIndexSync(r'campusId', object, saveLinks: saveLinks);
+  }
+
+  Future<List<Id>> putAllByCampusId(List<CampusIsar> objects) {
+    return putAllByIndex(r'campusId', objects);
+  }
+
+  List<Id> putAllByCampusIdSync(List<CampusIsar> objects,
+      {bool saveLinks = true}) {
+    return putAllByIndexSync(r'campusId', objects, saveLinks: saveLinks);
+  }
+}
+
+extension CampusIsarQueryWhereSort
+    on QueryBuilder<CampusIsar, CampusIsar, QWhere> {
+  QueryBuilder<CampusIsar, CampusIsar, QAfterWhere> anyId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(const IdWhereClause.any());
+    });
+  }
+}
+
+extension CampusIsarQueryWhere
+    on QueryBuilder<CampusIsar, CampusIsar, QWhereClause> {
+  QueryBuilder<CampusIsar, CampusIsar, QAfterWhereClause> idEqualTo(Id id) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IdWhereClause.between(
+        lower: id,
+        upper: id,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterWhereClause> idNotEqualTo(Id id) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IdWhereClause.lessThan(upper: id, includeUpper: false),
+            )
+            .addWhereClause(
+              IdWhereClause.greaterThan(lower: id, includeLower: false),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IdWhereClause.greaterThan(lower: id, includeLower: false),
+            )
+            .addWhereClause(
+              IdWhereClause.lessThan(upper: id, includeUpper: false),
+            );
+      }
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterWhereClause> idGreaterThan(Id id,
+      {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IdWhereClause.greaterThan(lower: id, includeLower: include),
+      );
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterWhereClause> idLessThan(Id id,
+      {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IdWhereClause.lessThan(upper: id, includeUpper: include),
+      );
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterWhereClause> idBetween(
+    Id lowerId,
+    Id upperId, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IdWhereClause.between(
+        lower: lowerId,
+        includeLower: includeLower,
+        upper: upperId,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterWhereClause> campusIdEqualTo(
+      String campusId) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'campusId',
+        value: [campusId],
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterWhereClause> campusIdNotEqualTo(
+      String campusId) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'campusId',
+              lower: [],
+              upper: [campusId],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'campusId',
+              lower: [campusId],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'campusId',
+              lower: [campusId],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'campusId',
+              lower: [],
+              upper: [campusId],
+              includeUpper: false,
+            ));
+      }
+    });
+  }
+}
+
+extension CampusIsarQueryFilter
+    on QueryBuilder<CampusIsar, CampusIsar, QFilterCondition> {
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> addressEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'address',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      addressGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'address',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> addressLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'address',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> addressBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'address',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> addressStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'address',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> addressEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'address',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> addressContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'address',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> addressMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'address',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> addressIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'address',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      addressIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'address',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      archivedAtIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'archivedAt',
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      archivedAtIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'archivedAt',
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> archivedAtEqualTo(
+      DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'archivedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      archivedAtGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'archivedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      archivedAtLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'archivedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> archivedAtBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'archivedAt',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> campusIdEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'campusId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      campusIdGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'campusId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> campusIdLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'campusId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> campusIdBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'campusId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      campusIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'campusId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> campusIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'campusId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> campusIdContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'campusId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> campusIdMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'campusId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      campusIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'campusId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      campusIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'campusId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> codeEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'code',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> codeGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'code',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> codeLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'code',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> codeBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'code',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> codeStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'code',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> codeEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'code',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> codeContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'code',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> codeMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'code',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> codeIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'code',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> codeIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'code',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      contactEmailIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'contactEmail',
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      contactEmailIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'contactEmail',
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      contactEmailEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'contactEmail',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      contactEmailGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'contactEmail',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      contactEmailLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'contactEmail',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      contactEmailBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'contactEmail',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      contactEmailStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'contactEmail',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      contactEmailEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'contactEmail',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      contactEmailContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'contactEmail',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      contactEmailMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'contactEmail',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      contactEmailIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'contactEmail',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      contactEmailIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'contactEmail',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      contactPhoneIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'contactPhone',
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      contactPhoneIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'contactPhone',
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      contactPhoneEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'contactPhone',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      contactPhoneGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'contactPhone',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      contactPhoneLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'contactPhone',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      contactPhoneBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'contactPhone',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      contactPhoneStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'contactPhone',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      contactPhoneEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'contactPhone',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      contactPhoneContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'contactPhone',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      contactPhoneMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'contactPhone',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      contactPhoneIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'contactPhone',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      contactPhoneIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'contactPhone',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> districtEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'district',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      districtGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'district',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> districtLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'district',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> districtBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'district',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      districtStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'district',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> districtEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'district',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> districtContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'district',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> districtMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'district',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      districtIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'district',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      districtIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'district',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      headStaffIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'headStaffId',
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      headStaffIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'headStaffId',
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      headStaffIdEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'headStaffId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      headStaffIdGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'headStaffId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      headStaffIdLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'headStaffId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      headStaffIdBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'headStaffId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      headStaffIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'headStaffId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      headStaffIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'headStaffId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      headStaffIdContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'headStaffId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      headStaffIdMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'headStaffId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      headStaffIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'headStaffId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      headStaffIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'headStaffId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> idEqualTo(
+      Id value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'id',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> idGreaterThan(
+    Id value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'id',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> idLessThan(
+    Id value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'id',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> idBetween(
+    Id lower,
+    Id upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'id',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> isActiveEqualTo(
+      bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isActive',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> isPrimaryEqualTo(
+      bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isPrimary',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> nameEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'name',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> nameGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'name',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> nameLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'name',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> nameBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'name',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> nameStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'name',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> nameEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'name',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> nameContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'name',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> nameMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'name',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> nameIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'name',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> nameIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'name',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> orderEqualTo(
+      int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'order',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> orderGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'order',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> orderLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'order',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> orderBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'order',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> schoolIdEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'schoolId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      schoolIdGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'schoolId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> schoolIdLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'schoolId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> schoolIdBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'schoolId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      schoolIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'schoolId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> schoolIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'schoolId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> schoolIdContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'schoolId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition> schoolIdMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'schoolId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      schoolIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'schoolId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterFilterCondition>
+      schoolIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'schoolId',
+        value: '',
+      ));
+    });
+  }
+}
+
+extension CampusIsarQueryObject
+    on QueryBuilder<CampusIsar, CampusIsar, QFilterCondition> {}
+
+extension CampusIsarQueryLinks
+    on QueryBuilder<CampusIsar, CampusIsar, QFilterCondition> {}
+
+extension CampusIsarQuerySortBy
+    on QueryBuilder<CampusIsar, CampusIsar, QSortBy> {
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> sortByAddress() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'address', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> sortByAddressDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'address', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> sortByArchivedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'archivedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> sortByArchivedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'archivedAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> sortByCampusId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'campusId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> sortByCampusIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'campusId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> sortByCode() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'code', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> sortByCodeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'code', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> sortByContactEmail() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'contactEmail', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> sortByContactEmailDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'contactEmail', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> sortByContactPhone() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'contactPhone', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> sortByContactPhoneDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'contactPhone', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> sortByDistrict() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'district', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> sortByDistrictDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'district', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> sortByHeadStaffId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'headStaffId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> sortByHeadStaffIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'headStaffId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> sortByIsActive() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isActive', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> sortByIsActiveDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isActive', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> sortByIsPrimary() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isPrimary', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> sortByIsPrimaryDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isPrimary', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> sortByName() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'name', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> sortByNameDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'name', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> sortByOrder() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'order', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> sortByOrderDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'order', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> sortBySchoolId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'schoolId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> sortBySchoolIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'schoolId', Sort.desc);
+    });
+  }
+}
+
+extension CampusIsarQuerySortThenBy
+    on QueryBuilder<CampusIsar, CampusIsar, QSortThenBy> {
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenByAddress() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'address', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenByAddressDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'address', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenByArchivedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'archivedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenByArchivedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'archivedAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenByCampusId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'campusId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenByCampusIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'campusId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenByCode() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'code', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenByCodeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'code', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenByContactEmail() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'contactEmail', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenByContactEmailDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'contactEmail', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenByContactPhone() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'contactPhone', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenByContactPhoneDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'contactPhone', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenByDistrict() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'district', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenByDistrictDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'district', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenByHeadStaffId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'headStaffId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenByHeadStaffIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'headStaffId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenById() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'id', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenByIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'id', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenByIsActive() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isActive', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenByIsActiveDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isActive', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenByIsPrimary() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isPrimary', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenByIsPrimaryDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isPrimary', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenByName() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'name', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenByNameDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'name', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenByOrder() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'order', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenByOrderDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'order', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenBySchoolId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'schoolId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QAfterSortBy> thenBySchoolIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'schoolId', Sort.desc);
+    });
+  }
+}
+
+extension CampusIsarQueryWhereDistinct
+    on QueryBuilder<CampusIsar, CampusIsar, QDistinct> {
+  QueryBuilder<CampusIsar, CampusIsar, QDistinct> distinctByAddress(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'address', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QDistinct> distinctByArchivedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'archivedAt');
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QDistinct> distinctByCampusId(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'campusId', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QDistinct> distinctByCode(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'code', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QDistinct> distinctByContactEmail(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'contactEmail', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QDistinct> distinctByContactPhone(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'contactPhone', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QDistinct> distinctByDistrict(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'district', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QDistinct> distinctByHeadStaffId(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'headStaffId', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QDistinct> distinctByIsActive() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isActive');
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QDistinct> distinctByIsPrimary() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isPrimary');
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QDistinct> distinctByName(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'name', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QDistinct> distinctByOrder() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'order');
+    });
+  }
+
+  QueryBuilder<CampusIsar, CampusIsar, QDistinct> distinctBySchoolId(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'schoolId', caseSensitive: caseSensitive);
+    });
+  }
+}
+
+extension CampusIsarQueryProperty
+    on QueryBuilder<CampusIsar, CampusIsar, QQueryProperty> {
+  QueryBuilder<CampusIsar, int, QQueryOperations> idProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<CampusIsar, String, QQueryOperations> addressProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'address');
+    });
+  }
+
+  QueryBuilder<CampusIsar, DateTime?, QQueryOperations> archivedAtProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'archivedAt');
+    });
+  }
+
+  QueryBuilder<CampusIsar, String, QQueryOperations> campusIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'campusId');
+    });
+  }
+
+  QueryBuilder<CampusIsar, String, QQueryOperations> codeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'code');
+    });
+  }
+
+  QueryBuilder<CampusIsar, String?, QQueryOperations> contactEmailProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'contactEmail');
+    });
+  }
+
+  QueryBuilder<CampusIsar, String?, QQueryOperations> contactPhoneProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'contactPhone');
+    });
+  }
+
+  QueryBuilder<CampusIsar, String, QQueryOperations> districtProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'district');
+    });
+  }
+
+  QueryBuilder<CampusIsar, String?, QQueryOperations> headStaffIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'headStaffId');
+    });
+  }
+
+  QueryBuilder<CampusIsar, bool, QQueryOperations> isActiveProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isActive');
+    });
+  }
+
+  QueryBuilder<CampusIsar, bool, QQueryOperations> isPrimaryProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isPrimary');
+    });
+  }
+
+  QueryBuilder<CampusIsar, String, QQueryOperations> nameProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'name');
+    });
+  }
+
+  QueryBuilder<CampusIsar, int, QQueryOperations> orderProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'order');
+    });
+  }
+
+  QueryBuilder<CampusIsar, String, QQueryOperations> schoolIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'schoolId');
+    });
+  }
+}
+
+// coverage:ignore-file
+// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types
+
 extension GetHouseIsarCollection on Isar {
   IsarCollection<HouseIsar> get houseIsars => this.collection();
 }

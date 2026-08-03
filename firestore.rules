@@ -778,6 +778,10 @@ service cloud.firestore {
       allow read: if isSignedIn() && isSameSchool(schoolId);
       allow write: if isStaff() && isSameSchool(schoolId);
     }
+    match /campuses/{id} {
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+    }
     match /houses/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
       allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
