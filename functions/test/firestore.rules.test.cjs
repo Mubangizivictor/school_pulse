@@ -644,6 +644,74 @@ describe('Structure Phase 2', () => {
   });
 });
 
+describe('Phase 3.5 tenant-lock hardening', () => {
+  // One representative per group of structurally identical rule blocks
+  // (they all share the exact same allow-create/update/delete lines) -
+  // exhaustively re-testing all 29 would just repeat this same case.
+  const lockedCollections = ['classes', 'academic_years', 'departments', 'campuses', 'grade_bands'];
+
+  for (const collectionName of lockedCollections) {
+    test(`${collectionName}: same-school staff cannot re-parent a doc to another school via update`, async () => {
+      const ref = doc(dbFor('adminA'), collectionName, 'doc1');
+      await assertSucceeds(setDoc(ref, { schoolId: 'schoolA', name: 'Original' }));
+
+      // The core Phase 3.5 attack: an update() that only changes schoolId,
+      // attempted by a staff member who is legitimately same-school on
+      // schoolA (the before value) - isSameSchool(request.resource.data.schoolId)
+      // alone would have let this through since it only checks the
+      // incoming value, never the existing one.
+      await assertFails(updateDoc(ref, { schoolId: 'schoolB' }));
+
+      await assertSucceeds(getDoc(doc(dbFor('adminA'), collectionName, 'doc1')));
+    });
+
+    test(`${collectionName}: an unrelated field can still be updated without touching schoolId`, async () => {
+      const ref = doc(dbFor('adminA'), collectionName, 'doc2');
+      await assertSucceeds(setDoc(ref, { schoolId: 'schoolA', name: 'Original' }));
+      await assertSucceeds(updateDoc(ref, { name: 'Renamed' }));
+    });
+
+    test(`${collectionName}: a staff member from the target school cannot pull a doc into their own school either`, async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), collectionName, 'doc3'), {
+          schoolId: 'schoolA', name: 'Belongs to A',
+        });
+      });
+      // teacherB is schoolB staff - can't touch a schoolA doc at all, let
+      // alone reassign it to schoolB (the isSameSchool(resource.data...)
+      // guard on update should already deny this before schoolIdUnchanged()
+      // is even reached).
+      await assertFails(updateDoc(
+        doc(dbFor('teacherB'), collectionName, 'doc3'),
+        { schoolId: 'schoolB' },
+      ));
+    });
+
+    test(`${collectionName}: a doc cannot be created directly into a different school than the caller's`, async () => {
+      await assertFails(setDoc(
+        doc(dbFor('teacherB'), collectionName, 'doc4'),
+        { schoolId: 'schoolA', name: 'Cross-tenant create' },
+      ));
+    });
+  }
+
+  test('subjects has exactly one matching rule block left - the second, unscoped duplicate was removed', async () => {
+    // Before the fix, a second unscoped `match /subjects/{id}` block meant
+    // Firestore's rule union silently granted cross-tenant access
+    // regardless of the first block's tenant lock. This proves the removal
+    // held: schoolId immutability and tenant isolation both apply exactly
+    // as they do for every other Structure collection.
+    const ref = doc(dbFor('adminA'), 'subjects', 'subjectA');
+    await assertSucceeds(setDoc(ref, { schoolId: 'schoolA', name: 'Mathematics' }));
+    await assertFails(updateDoc(ref, { schoolId: 'schoolB' }));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'subjects', 'subjectA')));
+    await assertFails(setDoc(
+      doc(dbFor('teacherB'), 'subjects', 'subjectB'),
+      { schoolId: 'schoolA', name: 'Cross-tenant subject' },
+    ));
+  });
+});
+
 describe('Phase 3 people/roles/permissions', () => {
   test('a non-admin staff member cannot edit another staff member\'s roles', async () => {
     await assertFails(updateDoc(

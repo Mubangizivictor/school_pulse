@@ -71,6 +71,21 @@ service cloud.firestore {
       return isSignedIn() && myUser().schoolId == schoolId;
     }
 
+    // Phase 3.5: tenant-lock hardening. A Structure record's schoolId is
+    // its ownership boundary - once created, no client write may move it to
+    // a different school by changing this field, even a staff member who is
+    // same-school on both the before and after values (an update touching
+    // `resource.data.schoolId` requires the two to already match, and a
+    // request that changes it therefore always resolves to a
+    // cross-tenant re-parenting attempt). There is deliberately no
+    // client-side transfer path: a record does not move between schools by
+    // editing this field, full stop. If that's ever a real product need, it
+    // goes through a Cloud Function with the Admin SDK (bypasses rules) and
+    // an audit log entry - not a rule exception.
+    function schoolIdUnchanged() {
+      return request.resource.data.schoolId == resource.data.schoolId;
+    }
+
     // Institution Context Phase 1: a signed-in user has an active
     // membership in institutionId, either as their home schoolId or via an
     // additive institution_memberships doc (multi-institution switching).
@@ -751,39 +766,66 @@ service cloud.firestore {
     // editable by staff.
     match /educational_levels/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /academic_years/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /academic_terms/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /classes/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /class_streams/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /subjects/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /departments/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /staff_designations/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /staff_roles/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     // Fixed as of Phase 2: feature_toggles/institution_profile/timetable_config
     // are actually read/written at schools/{schoolId}/config/{document} (see
@@ -797,83 +839,143 @@ service cloud.firestore {
     }
     match /campuses/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /houses/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /clubs/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /facilities/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /hostels/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /hostel_rooms/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /transport_routes/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /transport_stops/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /transport_vehicles/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /structure_fee_categories/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /structure_assessment_types/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /structure_grading_systems/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /grade_bands/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /attendance_types/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /attendance_sessions/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /announcement_categories/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /notification_categories/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /message_templates/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /document_templates/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /custom_fields/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
 
     // Staff clock-in/out records for the attendance monitor.
@@ -946,10 +1048,12 @@ service cloud.firestore {
     match /sports_houses/{id} {
       allow read, write: if isStaff();
     }
-    match /subjects/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
-    }
+    // Phase 3.5: this duplicated the schoolId-scoped /subjects/{id} match
+    // above with a looser, unscoped rule. Firestore rules union every
+    // matching block, so this second block silently widened Subjects to
+    // cross-tenant read and write regardless of the tenant lock on the
+    // first one - removed rather than tightened, since the real rule
+    // already exists above.
     match /inventory_items/{id} {
       allow read, write: if isStaff();
     }
