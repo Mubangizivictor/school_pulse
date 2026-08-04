@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:school_pulse/core/usecases/usecase.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/admin/data/models/staff_attendance_record.dart';
@@ -39,7 +40,7 @@ class _AdminStaffAttendanceScreenState extends State<AdminStaffAttendanceScreen>
   }
 
   Future<void> _loadStaff() async {
-    final result = await di.sl<GetStaffMembers>()(_schoolId);
+    final result = await di.sl<GetStaffMembers>()(NoParams());
     result.fold(
       (_) => setState(() => _staff = const []),
       (staff) => setState(() => _staff = staff),
