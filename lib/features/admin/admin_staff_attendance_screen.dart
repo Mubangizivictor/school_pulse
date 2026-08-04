@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:school_pulse/core/usecases/usecase.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/admin/data/models/staff_attendance_record.dart';
 import 'package:school_pulse/features/admin/data/repositories/staff_attendance_repository.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
 enum _StatusFilter { all, present, late, notClockedIn }
@@ -31,8 +33,13 @@ class _AdminStaffAttendanceScreenState extends State<AdminStaffAttendanceScreen>
     _loadStaff();
   }
 
+  String get _schoolId {
+    final authState = context.read<AuthBloc>().state;
+    return authState is AuthAuthenticated ? authState.user.schoolId : '';
+  }
+
   Future<void> _loadStaff() async {
-    final result = await di.sl<GetStaffMembers>()(NoParams());
+    final result = await di.sl<GetStaffMembers>()(_schoolId);
     result.fold(
       (_) => setState(() => _staff = const []),
       (staff) => setState(() => _staff = staff),
@@ -57,7 +64,7 @@ class _AdminStaffAttendanceScreenState extends State<AdminStaffAttendanceScreen>
         ],
       ),
       body: StreamBuilder<Map<String, StaffAttendanceRecord>>(
-        stream: di.sl<StaffAttendanceRepository>().watchToday(),
+        stream: di.sl<StaffAttendanceRepository>().watchToday(_schoolId),
         builder: (context, snapshot) {
           if (_staff == null || snapshot.connectionState == ConnectionState.waiting) {
             return const _AttendanceSkeleton();

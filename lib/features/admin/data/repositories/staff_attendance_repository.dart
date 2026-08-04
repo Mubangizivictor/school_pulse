@@ -11,11 +11,12 @@ class StaffAttendanceRepository {
     return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
   }
 
-  Stream<Map<String, StaffAttendanceRecord>> watchToday() {
+  Stream<Map<String, StaffAttendanceRecord>> watchToday(String schoolId) {
     final start = DateTime.now().copyWith(hour: 0, minute: 0, second: 0, millisecond: 0);
     final end = start.add(const Duration(days: 1));
     return _firestore
         .collection('staff_attendance')
+        .where('schoolId', isEqualTo: schoolId)
         .where('clockIn', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
         .where('clockIn', isLessThan: Timestamp.fromDate(end))
         .snapshots()
