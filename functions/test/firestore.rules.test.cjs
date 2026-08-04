@@ -943,3 +943,96 @@ describe('Phase 4 core people records', () => {
     await assertFails(getDoc(doc(dbFor('teacherB'), 'people_policies', 'schoolA')));
   });
 });
+
+describe('Phase 5 attendance security gate', () => {
+  test('attendance_records: cross-school staff write denied, schoolId locked on update', async () => {
+    const ref = doc(dbFor('adminA'), 'attendance_records', 'rec1');
+    await assertSucceeds(setDoc(ref, {
+      schoolId: 'schoolA', studentId: 'studentA', status: 'present',
+    }));
+    await assertFails(setDoc(doc(dbFor('teacherB'), 'attendance_records', 'rec2'), {
+      schoolId: 'schoolA', studentId: 'studentA', status: 'present',
+    }));
+    await assertFails(updateDoc(ref, { schoolId: 'schoolB' }));
+  });
+
+  test('attendance_records: readable by staff and the linked student/parent, cross-school denied', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'attendance_records', 'rec3'), {
+        schoolId: 'schoolA', studentId: 'studentA', status: 'present',
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'attendance_records', 'rec3')));
+    await assertSucceeds(getDoc(doc(dbFor('parentA'), 'attendance_records', 'rec3')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'attendance_records', 'rec3')));
+  });
+
+  test('attendance: cross-school write denied, students subcollection scoped via parent lookup', async () => {
+    const ref = doc(dbFor('adminA'), 'attendance', '2026-01-01');
+    await assertSucceeds(setDoc(ref, { schoolId: 'schoolA', studentId: 'studentA' }));
+    await assertFails(setDoc(doc(dbFor('teacherB'), 'attendance', '2026-01-02'), {
+      schoolId: 'schoolA', studentId: 'studentA',
+    }));
+    await assertSucceeds(setDoc(doc(ref, 'students', 'studentA'), { status: 'present' }));
+    await assertFails(setDoc(doc(dbFor('teacherB'), 'attendance', '2026-01-01', 'students', 'studentA'), {
+      status: 'present',
+    }));
+  });
+
+  test('attendance_logs: cross-school read/write denied', async () => {
+    const ref = doc(dbFor('adminA'), 'attendance_logs', 'log1');
+    await assertSucceeds(setDoc(ref, { schoolId: 'schoolA', className: 'P6' }));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'attendance_logs', 'log1')));
+    await assertFails(setDoc(doc(dbFor('teacherB'), 'attendance_logs', 'log2'), {
+      schoolId: 'schoolA', className: 'P6',
+    }));
+  });
+
+  test('staff_attendance: cross-school read/write denied, schoolId locked on update', async () => {
+    const ref = doc(dbFor('adminA'), 'staff_attendance', 'teacherA_2026-01-01');
+    await assertSucceeds(setDoc(ref, {
+      schoolId: 'schoolA', staffId: 'teacherA', clockIn: new Date(), status: 'on_time', location: 'Main Gate',
+    }));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'staff_attendance', 'teacherA_2026-01-01')));
+    await assertFails(updateDoc(ref, { schoolId: 'schoolB' }));
+  });
+
+  test('boarding_attendance: hasAnyRole OR-branch still admits a matron with no assignment row', async () => {
+    const ref = doc(dbFor('matronA'), 'boarding_attendance', 'roll1');
+    await assertSucceeds(setDoc(ref, {
+      schoolId: 'schoolA', studentId: 'studentA', studentName: 'Student A',
+      dormitoryId: 'dormA', date: new Date(), type: 'Evening', status: 'Present', recordedBy: 'matronA',
+    }));
+  });
+
+  test('boarding_attendance: cross-school write denied even for a qualifying role', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'users', 'matronB'), {
+        role: 'boardingMatron', roles: ['boardingMatron'], schoolId: 'schoolB', studentIds: [],
+      });
+    });
+    await assertFails(setDoc(doc(dbFor('matronB'), 'boarding_attendance', 'roll2'), {
+      schoolId: 'schoolA', studentId: 'studentA', studentName: 'Student A',
+      dormitoryId: 'dormA', date: new Date(), type: 'Evening', status: 'Present', recordedBy: 'matronB',
+    }));
+  });
+
+  test('boarding_attendance: readable by staff and the linked student/parent, cross-school denied', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'boarding_attendance', 'roll3'), {
+        schoolId: 'schoolA', studentId: 'studentA', studentName: 'Student A',
+        dormitoryId: 'dormA', date: new Date(), type: 'Evening', status: 'Present', recordedBy: 'matronA',
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'boarding_attendance', 'roll3')));
+    await assertSucceeds(getDoc(doc(dbFor('parentA'), 'boarding_attendance', 'roll3')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'boarding_attendance', 'roll3')));
+  });
+
+  test('boarding_attendance: an ordinary teacher with neither hasAnyRole nor an assignment is denied', async () => {
+    await assertFails(setDoc(doc(dbFor('teacherA'), 'boarding_attendance', 'roll4'), {
+      schoolId: 'schoolA', studentId: 'studentA', studentName: 'Student A',
+      dormitoryId: 'dormA', date: new Date(), type: 'Evening', status: 'Present', recordedBy: 'teacherA',
+    }));
+  });
+});
