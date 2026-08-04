@@ -184,7 +184,6 @@ import 'package:school_pulse/design_system/components/pulse_logo.dart';
 
 import 'package:school_pulse/features/attendance/presentation/screens/attendance_method_screen.dart';
 import 'package:school_pulse/features/attendance/presentation/screens/nfc_scanner_screen.dart';
-import 'package:school_pulse/features/attendance/presentation/screens/nfc_success_screen.dart';
 import 'package:school_pulse/features/attendance/presentation/screens/qr_scanner_screen.dart';
 import 'package:school_pulse/features/attendance/presentation/screens/qr_success_screen.dart';
 import 'package:school_pulse/features/attendance/presentation/screens/manual_attendance_screen.dart';
@@ -1460,9 +1459,16 @@ final router = GoRouter(
               path: 'nfc',
               builder: (context, state) => const NFCScannerScreen(),
             ),
+            // Legacy route: NFCScannerScreen now routes a successful lookup
+            // straight to the real qr-success screen (same
+            // AttendanceQrBloc-driven flow, keyed by uniqueSystemId
+            // regardless of how it was entered) since no real NFC engine
+            // exists to give this screen's own mocked-up success view
+            // anything genuine to show. Redirect rather than delete the
+            // path outright, in case anything still links here directly.
             GoRoute(
               path: 'nfc-success',
-              builder: (context, state) => const NFCSuccessScreen(),
+              redirect: (context, state) => '/staff/attendance',
             ),
             GoRoute(
               path: 'qr',
