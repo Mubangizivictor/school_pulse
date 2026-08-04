@@ -78,6 +78,7 @@ abstract class PatronRepository {
 
   // Attendance
   Stream<List<BoardingAttendance>> getAttendance(
+    String schoolId,
     DateTime date,
     String? dormitoryId,
     String? type,

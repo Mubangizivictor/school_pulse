@@ -117,11 +117,12 @@ class PatronRepositoryImpl implements PatronRepository {
 
   @override
   Stream<List<BoardingAttendance>> getAttendance(
+    String schoolId,
     DateTime date,
     String? dormitoryId,
     String? type,
   ) {
-    return remoteDataSource.getAttendance(date, dormitoryId, type);
+    return remoteDataSource.getAttendance(schoolId, date, dormitoryId, type);
   }
 
   @override

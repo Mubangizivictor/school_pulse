@@ -164,6 +164,7 @@ class BoardingStudent extends Equatable {
 /// plain string so this stays wire-compatible with existing records.
 class BoardingAttendance extends Equatable {
   final String id;
+  final String schoolId;
   final String studentId;
   final String studentName;
   final String dormitoryId;
@@ -175,6 +176,7 @@ class BoardingAttendance extends Equatable {
 
   const BoardingAttendance({
     required this.id,
+    required this.schoolId,
     required this.studentId,
     required this.studentName,
     required this.dormitoryId,
@@ -188,6 +190,7 @@ class BoardingAttendance extends Equatable {
   @override
   List<Object?> get props => [
     id,
+    schoolId,
     studentId,
     studentName,
     dormitoryId,

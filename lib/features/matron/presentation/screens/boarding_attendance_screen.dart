@@ -39,6 +39,7 @@ class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
 
   void _loadAttendance() {
     context.read<MatronBloc>().add(WatchAttendance(
+          schoolId: _currentSchoolId(context),
           date: selectedDate,
           dormitoryId: selectedDormId,
           type: selectedType,
@@ -51,6 +52,11 @@ class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
   String _currentUserName(BuildContext context) {
     final authState = context.read<AuthBloc>().state;
     return authState is AuthAuthenticated ? authState.user.name : 'Matron';
+  }
+
+  String _currentSchoolId(BuildContext context) {
+    final authState = context.read<AuthBloc>().state;
+    return authState is AuthAuthenticated ? authState.user.schoolId : '';
   }
 
   @override
@@ -410,9 +416,11 @@ class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
     final state = context.read<MatronBloc>().state;
     if (state is BoardingStudentsLoaded) {
       final recordedBy = _currentUserName(context);
+      final schoolId = _currentSchoolId(context);
       final records = state.students.map((s) {
         return BoardingAttendance(
           id: '',
+          schoolId: schoolId,
           studentId: s.id,
           studentName: s.name,
           dormitoryId: selectedDormId!,

@@ -428,9 +428,27 @@ service cloud.firestore {
     // Shared collections, gender-scoped by a `gender` field on each doc.
     // Boarding roll-call. Distinct from the generic `attendance` collection
     // used by the classroom attendance engine.
+    // Phase 5 security gate: previously any hasAnyRole()-qualifying staff
+    // member could read/write ANY school's boarding roll call - no
+    // isSameSchool check existed, and the write path (matron/patron
+    // datasources) never even set a schoolId field on these docs. Both are
+    // now required. The write rule keeps hasAnyRole as an unconditional
+    // OR-branch (every current boarding staff member's access is preserved
+    // with zero migration) and adds a second, additive OR-branch for the
+    // assignment-scoped path once staff_role_assignments rows with a
+    // 'patron'/'matron' responsibility exist and roleAssignmentId/
+    // academicYearId are written by the client - not exercised by any
+    // write today, purely forward-compatible.
     match /boarding_attendance/{docId} {
-      allow read: if isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId);
-      allow write: if hasAnyRole(['boardingPatron', 'boardingMatron', 'schoolAdmin', 'headTeacher', 'director']);
+      allow read: if isSameSchool(resource.data.schoolId) &&
+        (isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId));
+      allow write: if isSameSchool(request.resource.data.schoolId) && (
+        hasAnyRole(['boardingPatron', 'boardingMatron', 'schoolAdmin', 'headTeacher', 'director']) ||
+        (holdsAssignment(request.resource.data.schoolId, request.resource.data.roleAssignmentId,
+            null, null, request.resource.data.academicYearId) &&
+          grantsPermission(request.resource.data.schoolId, request.resource.data.roleAssignmentId,
+            'attendance.boarding.scan'))
+      );
     }
     // Boarding-specific discipline incidents (separate from the general
     // Guidance & Discipline module's discipline_incidents collection).

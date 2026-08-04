@@ -46,6 +46,7 @@ abstract class PatronRemoteDataSource {
   Future<void> setRoomLeader(String dormitoryId, String? studentId);
 
   Stream<List<BoardingAttendance>> getAttendance(
+    String schoolId,
     DateTime date,
     String? dormitoryId,
     String? type,
@@ -121,7 +122,10 @@ class PatronRemoteDataSourceImpl implements PatronRemoteDataSource {
   Future<void> _notifyParent(String studentId, String title, String body) async {
     final parentUid = await _parentUidForStudent(studentId);
     if (parentUid == null) return;
+    final studentDoc = await firestore.collection('students').doc(studentId).get();
+    final schoolId = studentDoc.data()?['schoolId'] as String? ?? '';
     await NotificationService().sendStudentAlert(
+      schoolId: schoolId,
       studentId: studentId,
       parentIds: [parentUid],
       title: title,
@@ -280,6 +284,7 @@ class PatronRemoteDataSourceImpl implements PatronRemoteDataSource {
       'location': dormitory.location,
     });
     await auditRepository.logAction(
+      schoolId: '',
       title: 'Dormitory created',
       description: '${dormitory.name} was added (capacity ${dormitory.capacity}).',
       iconName: 'hotel',
@@ -299,6 +304,7 @@ class PatronRemoteDataSourceImpl implements PatronRemoteDataSource {
       'location': dormitory.location,
     });
     await auditRepository.logAction(
+      schoolId: '',
       title: 'Dormitory updated',
       description: '${dormitory.name} details were changed.',
       iconName: 'hotel',
@@ -310,6 +316,7 @@ class PatronRemoteDataSourceImpl implements PatronRemoteDataSource {
   Future<void> deleteDormitory(String id) async {
     await firestore.collection('dormitories').doc(id).delete();
     await auditRepository.logAction(
+      schoolId: '',
       title: 'Dormitory deleted',
       description: 'Dormitory $id was removed.',
       iconName: 'hotel',
@@ -369,6 +376,7 @@ class PatronRemoteDataSourceImpl implements PatronRemoteDataSource {
     batch.update(firestore.collection('dormitories').doc(dormitoryId), update);
     await batch.commit();
     await auditRepository.logAction(
+      schoolId: '',
       title: 'Dorm leadership updated',
       description: 'Leadership roles updated for dormitory $dormitoryId.',
       iconName: 'star',
@@ -470,6 +478,7 @@ class PatronRemoteDataSourceImpl implements PatronRemoteDataSource {
 
     await batch.commit();
     await auditRepository.logAction(
+      schoolId: '',
       title: 'Student transferred',
       description: '$studentName moved to $toDormName${toBedNumber != null ? ' (Bed $toBedNumber)' : ''}.',
       iconName: 'swap_horiz',
@@ -591,6 +600,7 @@ class PatronRemoteDataSourceImpl implements PatronRemoteDataSource {
     await batch.commit();
 
     await auditRepository.logAction(
+      schoolId: '',
       title: 'Student allocated',
       description: '$studentName allocated to $dormName${bedNumber != null ? ' (Bed $bedNumber)' : ''}.',
       iconName: 'person_add',
@@ -630,6 +640,7 @@ class PatronRemoteDataSourceImpl implements PatronRemoteDataSource {
 
   @override
   Stream<List<BoardingAttendance>> getAttendance(
+    String schoolId,
     DateTime date,
     String? dormitoryId,
     String? type,
@@ -639,6 +650,7 @@ class PatronRemoteDataSourceImpl implements PatronRemoteDataSource {
 
     Query<Map<String, dynamic>> query = firestore
         .collection('boarding_attendance')
+        .where('schoolId', isEqualTo: schoolId)
         .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
         .where('date', isLessThan: Timestamp.fromDate(endOfDay));
 
@@ -654,6 +666,7 @@ class PatronRemoteDataSourceImpl implements PatronRemoteDataSource {
         final data = doc.data();
         return BoardingAttendance(
           id: doc.id,
+          schoolId: data['schoolId'] ?? schoolId,
           studentId: data['studentId'],
           studentName: data['studentName'],
           dormitoryId: data['dormitoryId'],
@@ -672,6 +685,7 @@ class PatronRemoteDataSourceImpl implements PatronRemoteDataSource {
     BoardingAttendance attendance,
   ) async {
     await ref.set({
+      'schoolId': attendance.schoolId,
       'studentId': attendance.studentId,
       'studentName': attendance.studentName,
       'dormitoryId': attendance.dormitoryId,
@@ -708,6 +722,7 @@ class PatronRemoteDataSourceImpl implements PatronRemoteDataSource {
     for (var record in records) {
       final docRef = firestore.collection('boarding_attendance').doc();
       batch.set(docRef, {
+        'schoolId': record.schoolId,
         'studentId': record.studentId,
         'studentName': record.studentName,
         'dormitoryId': record.dormitoryId,
@@ -725,6 +740,7 @@ class PatronRemoteDataSourceImpl implements PatronRemoteDataSource {
     await batch.commit();
 
     await auditRepository.logAction(
+      schoolId: '',
       title: 'Roll call submitted',
       description: '${records.length} ${records.isNotEmpty ? records.first.type : ''} attendance records saved.',
       iconName: 'how_to_reg',
@@ -801,6 +817,7 @@ class PatronRemoteDataSourceImpl implements PatronRemoteDataSource {
     });
 
     await auditRepository.logAction(
+      schoolId: '',
       title: 'Leave requested',
       description: '${request.studentName}: ${request.reason}',
       iconName: 'exit_to_app',
@@ -848,6 +865,7 @@ class PatronRemoteDataSourceImpl implements PatronRemoteDataSource {
     }
 
     await auditRepository.logAction(
+      schoolId: requestDoc.data()?['schoolId'] as String? ?? '',
       title: 'Leave request $status',
       description: '$studentName\'s leave request marked $status.',
       iconName: 'exit_to_app',
@@ -928,6 +946,7 @@ class PatronRemoteDataSourceImpl implements PatronRemoteDataSource {
     });
 
     await auditRepository.logAction(
+      schoolId: record.schoolId,
       title: 'Welfare record logged',
       description: '${record.category} for ${record.studentName}.',
       iconName: 'favorite',
@@ -997,6 +1016,7 @@ class PatronRemoteDataSourceImpl implements PatronRemoteDataSource {
     });
 
     await auditRepository.logAction(
+      schoolId: studentDoc.data()?['schoolId'] as String? ?? '',
       title: 'Counseling referral logged',
       description: '${referral.studentName} referred: ${referral.reason}',
       iconName: 'psychology',
@@ -1060,6 +1080,7 @@ class PatronRemoteDataSourceImpl implements PatronRemoteDataSource {
     });
 
     await auditRepository.logAction(
+      schoolId: studentDoc.data()?['schoolId'] as String? ?? '',
       title: 'Behaviour observation logged',
       description: '${observation.type}: ${observation.studentName} - ${observation.description}',
       iconName: 'visibility',
@@ -1129,6 +1150,7 @@ class PatronRemoteDataSourceImpl implements PatronRemoteDataSource {
     });
 
     await auditRepository.logAction(
+      schoolId: studentDoc.data()?['schoolId'] as String? ?? '',
       title: 'Discipline incident logged',
       description: '${incident.studentName}: ${incident.category} (${incident.severity})',
       iconName: 'gavel',
@@ -1156,6 +1178,7 @@ class PatronRemoteDataSourceImpl implements PatronRemoteDataSource {
       'actionTaken': actionTaken,
     });
     await auditRepository.logAction(
+      schoolId: '',
       title: 'Discipline case updated',
       description: 'Case $incidentId marked $status.',
       iconName: 'gavel',
@@ -1203,6 +1226,7 @@ class PatronRemoteDataSourceImpl implements PatronRemoteDataSource {
 
     if (announcement.targetGroups.isNotEmpty) {
       await NotificationService().sendBroadcast(
+        schoolId: '',
         title: announcement.title,
         body: announcement.content,
         targetGroups: announcement.targetGroups,
@@ -1210,6 +1234,7 @@ class PatronRemoteDataSourceImpl implements PatronRemoteDataSource {
     }
 
     await auditRepository.logAction(
+      schoolId: '',
       title: 'Boarding announcement posted',
       description: announcement.title,
       iconName: 'campaign',
