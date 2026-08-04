@@ -3,6 +3,7 @@ import 'package:dartz/dartz.dart';
 import 'package:equatable/equatable.dart';
 import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/usecases/usecase.dart';
+import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/repositories/auth_repository.dart';
 import 'package:school_pulse/features/student/domain/repositories/student_repository.dart';
 import 'package:school_pulse/features/admin/data/repositories/visitor_repository.dart';
@@ -73,19 +74,19 @@ class AdminDashboardStats extends Equatable {
 
   @override
   List<Object?> get props => [
-        activeStaffCount,
-        totalStudentsCount,
-        visitorsTodayCount,
-        activeVisitorsCount,
-        systemHealth,
-        staffPendingSetupCount,
-        overdueVisitorsCount,
-        serviceStatuses,
-        upcomingDeadlines,
-        activeNotices,
-        dataSyncRatePercent,
-        failedOperationsCount,
-      ];
+    activeStaffCount,
+    totalStudentsCount,
+    visitorsTodayCount,
+    activeVisitorsCount,
+    systemHealth,
+    staffPendingSetupCount,
+    overdueVisitorsCount,
+    serviceStatuses,
+    upcomingDeadlines,
+    activeNotices,
+    dataSyncRatePercent,
+    failedOperationsCount,
+  ];
 }
 
 class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
@@ -104,17 +105,30 @@ class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
   @override
   Future<Either<Failure, AdminDashboardStats>> call(NoParams params) async {
     try {
-      final staffResult = await authRepository.getStaffMembers().timeout(const Duration(seconds: 10));
-      final studentsResult = await studentRepository.getAllStudents().timeout(const Duration(seconds: 10));
+      final currentUserResult = await authRepository.getCurrentUser();
+      final schoolId = currentUserResult.fold((_) => null, (u) => u?.schoolId);
+      final Either<Failure, List<UserEntity>> staffResult =
+          schoolId != null && schoolId.isNotEmpty
+          ? await authRepository
+                .getStaffMembers(schoolId)
+                .timeout(const Duration(seconds: 10))
+          : const Right(<UserEntity>[]);
+      final studentsResult = await studentRepository.getAllStudents().timeout(
+        const Duration(seconds: 10),
+      );
 
       // For visitors, we use a Future instead of .first on a stream to avoid deadlocks
       // if the stream doesn't emit immediately.
-      final visitors = await visitorRepository.getVisitorsOnce().timeout(const Duration(seconds: 10));
+      final visitors = await visitorRepository.getVisitorsOnce().timeout(
+        const Duration(seconds: 10),
+      );
 
       final now = DateTime.now();
       final todayVisitors = visitors.where((v) {
         final checkIn = v.checkIn;
-        return checkIn.year == now.year && checkIn.month == now.month && checkIn.day == now.day;
+        return checkIn.year == now.year &&
+            checkIn.month == now.month &&
+            checkIn.day == now.day;
       }).toList();
 
       final activeVisitors = visitors.where((v) => v.checkOut == null).toList();
@@ -126,30 +140,37 @@ class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
       int staffPendingSetup = 0;
       staffResult.fold((_) => null, (staff) {
         activeStaff = staff.where((s) => s.isActive).length;
-        staffPendingSetup = staff.where((s) => s.isActive && s.mustChangePassword).length;
+        staffPendingSetup = staff
+            .where((s) => s.isActive && s.mustChangePassword)
+            .length;
       });
 
       int totalStudents = 0;
-      studentsResult.fold((_) => null, (students) => totalStudents = students.length);
+      studentsResult.fold(
+        (_) => null,
+        (students) => totalStudents = students.length,
+      );
 
       final serviceStatuses = await _getServiceStatuses();
       final systemHealth = _scoreServices(serviceStatuses);
       final syncHealth = await _getSyncHealth();
 
-      return Right(AdminDashboardStats(
-        activeStaffCount: activeStaff,
-        totalStudentsCount: totalStudents,
-        visitorsTodayCount: todayVisitors.length,
-        activeVisitorsCount: activeVisitors.length,
-        systemHealth: systemHealth,
-        staffPendingSetupCount: staffPendingSetup,
-        overdueVisitorsCount: overdueVisitors,
-        serviceStatuses: serviceStatuses,
-        upcomingDeadlines: await _getUpcomingDeadlines(),
-        activeNotices: await _getActiveNotices(),
-        dataSyncRatePercent: syncHealth.$1,
-        failedOperationsCount: syncHealth.$2,
-      ));
+      return Right(
+        AdminDashboardStats(
+          activeStaffCount: activeStaff,
+          totalStudentsCount: totalStudents,
+          visitorsTodayCount: todayVisitors.length,
+          activeVisitorsCount: activeVisitors.length,
+          systemHealth: systemHealth,
+          staffPendingSetupCount: staffPendingSetup,
+          overdueVisitorsCount: overdueVisitors,
+          serviceStatuses: serviceStatuses,
+          upcomingDeadlines: await _getUpcomingDeadlines(),
+          activeNotices: await _getActiveNotices(),
+          dataSyncRatePercent: syncHealth.$1,
+          failedOperationsCount: syncHealth.$2,
+        ),
+      );
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -203,7 +224,9 @@ class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
   /// outage (e.g. a broadcast that failed to send) actually shows up here
   /// instead of the panel just being decorative.
   Future<List<ServiceStatusItem>> _getServiceStatuses() async {
-    final since = Timestamp.fromDate(DateTime.now().subtract(const Duration(hours: 24)));
+    final since = Timestamp.fromDate(
+      DateTime.now().subtract(const Duration(hours: 24)),
+    );
 
     Future<String> queueHealth(String collection, String createdAtField) async {
       try {
@@ -212,7 +235,9 @@ class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
             .where(createdAtField, isGreaterThanOrEqualTo: since)
             .get();
         if (snapshot.docs.isEmpty) return 'Operational';
-        final failed = snapshot.docs.where((d) => d.data()['status'] == 'failed').length;
+        final failed = snapshot.docs
+            .where((d) => d.data()['status'] == 'failed')
+            .length;
         if (failed == 0) return 'Operational';
         if (failed < snapshot.docs.length) return 'Degraded';
         return 'Down';
@@ -232,7 +257,9 @@ class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
       ServiceStatusItem(label: 'SMS Gateway', status: smsStatus),
       ServiceStatusItem(
         label: 'Identity',
-        status: firestore.app.options.projectId.isNotEmpty ? 'Operational' : 'Down',
+        status: firestore.app.options.projectId.isNotEmpty
+            ? 'Operational'
+            : 'Down',
       ),
     ];
   }
@@ -240,7 +267,9 @@ class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
   /// Sync rate / failed-operations count for the "Data Integrity & Health"
   /// panel - looks at the last 7 days across every delivery queue.
   Future<(double, int)> _getSyncHealth() async {
-    final since = Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 7)));
+    final since = Timestamp.fromDate(
+      DateTime.now().subtract(const Duration(days: 7)),
+    );
     const collections = ['broadcast_queue', 'sms_queue', 'notification_queue'];
 
     int total = 0;
@@ -252,7 +281,9 @@ class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
             .where('createdAt', isGreaterThanOrEqualTo: since)
             .get();
         total += snapshot.docs.length;
-        failed += snapshot.docs.where((d) => d.data()['status'] == 'failed').length;
+        failed += snapshot.docs
+            .where((d) => d.data()['status'] == 'failed')
+            .length;
       } catch (_) {
         // Collection may not exist yet on a fresh install - treat as healthy.
       }

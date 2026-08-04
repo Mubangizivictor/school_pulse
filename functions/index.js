@@ -10,11 +10,11 @@ admin.initializeApp();
 const ADMIN_ROLES = ["director", "headTeacher", "schoolAdmin"];
 
 const STAFF_ROLES = [
-  "director", "headTeacher", "deputyHead", "schoolAdmin", "bursar",
+  "director", "headTeacher", "deputyHead", "deanOfStudies", "schoolAdmin", "bursar",
   "classTeacher", "subjectTeacher", "librarian", "nurse", "boardingMatron", "boardingPatron",
   "transportCoordinator", "guidanceDiscipline", "storeInventory",
   "receptionist", "gatekeeper", "securityHead",
-  "gamesMaster", "cateringManager",
+  "gamesMaster", "cateringManager", "religiousLeader", "hrOfficer",
 ];
 
 // Maps a UserRole to the StaffResponsibilityType (see

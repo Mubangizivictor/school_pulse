@@ -31,6 +31,7 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/staff_panel_host.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/admin/presentation/pages/user_management_page.dart';
+import 'package:school_pulse/features/admin/presentation/add_staff_wizard/add_staff_wizard_page.dart';
 import 'package:school_pulse/features/admin/broadcast_sms_screen.dart';
 import 'package:school_pulse/features/admin/system_config_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/structure_screen.dart';
@@ -1232,6 +1233,28 @@ final router = GoRouter(
             GoRoute(
               path: 'users',
               builder: (context, state) => UserManagementPage(initialTab: state.uri.queryParameters['tab']),
+              routes: [
+                GoRoute(
+                  path: 'add-staff',
+                  redirect: (context, state) {
+                    final auth = context.read<AuthBloc>().state;
+                    if (auth is! AuthAuthenticated) return '/welcome';
+                    // Deputy Head shares the admin console UI but the
+                    // createStaffAccount Cloud Function does not permit them
+                    // to actually create staff - they can still navigate the
+                    // wizard (Step 11 disables Confirm for them), but every
+                    // other route into the admin console is exposed to the
+                    // same UserRoleDisplay.adminConsoleRoles set, so this
+                    // route uses that too rather than a narrower list that
+                    // would make it a dead end reachable from nowhere.
+                    if (!auth.user.roles.any(UserRoleDisplay.adminConsoleRoles.contains)) {
+                      return UserRoleRouting.dashboardPath(auth.user.role);
+                    }
+                    return null;
+                  },
+                  builder: (context, state) => const AddStaffWizardPage(),
+                ),
+              ],
             ),
             GoRoute(
               path: 'broadcast-sms',

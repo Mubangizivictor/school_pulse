@@ -1,5 +1,6 @@
 import 'package:school_pulse/core/user_roles.dart';
-import 'package:school_pulse/features/auth/domain/entities/user_entity.dart' show SubjectAssignment;
+import 'package:school_pulse/features/auth/domain/entities/user_entity.dart'
+    show SubjectAssignment;
 
 /// One role's contextual scope, gathered in Step 6 (Configure Role) and
 /// reviewed in Step 7 (Roles Summary). Only the fields relevant to [role]
@@ -39,22 +40,22 @@ class RoleAssignmentDraft {
   }) : subjectAssignments = subjectAssignments ?? [];
 
   Map<String, dynamic> toJson() => {
-        'role': role.name,
-        if (academicYearId != null) 'academicYearId': academicYearId,
-        if (classId != null) 'classId': classId,
-        if (className != null) 'className': className,
-        if (streamId != null) 'streamId': streamId,
-        if (streamName != null) 'streamName': streamName,
-        if (subjectAssignments.isNotEmpty)
-          'subjectAssignments': subjectAssignments.map((s) => s.toJson()).toList(),
-        if (departmentId != null) 'departmentId': departmentId,
-        if (dormitoryWing != null) 'dormitoryWing': dormitoryWing,
-        if (routeId != null) 'routeId': routeId,
-        if (facilityId != null) 'facilityId': facilityId,
-        if (approvalScope != null) 'approvalScope': approvalScope,
-        if (startDate != null) 'startDate': startDate!.toIso8601String(),
-        if (endDate != null) 'endDate': endDate!.toIso8601String(),
-      };
+    'role': role.name,
+    if (academicYearId != null) 'academicYearId': academicYearId,
+    if (classId != null) 'classId': classId,
+    if (className != null) 'className': className,
+    if (streamId != null) 'streamId': streamId,
+    if (streamName != null) 'streamName': streamName,
+    if (subjectAssignments.isNotEmpty)
+      'subjectAssignments': subjectAssignments.map((s) => s.toJson()).toList(),
+    if (departmentId != null) 'departmentId': departmentId,
+    if (dormitoryWing != null) 'dormitoryWing': dormitoryWing,
+    if (routeId != null) 'routeId': routeId,
+    if (facilityId != null) 'facilityId': facilityId,
+    if (approvalScope != null) 'approvalScope': approvalScope,
+    if (startDate != null) 'startDate': startDate!.toIso8601String(),
+    if (endDate != null) 'endDate': endDate!.toIso8601String(),
+  };
 
   factory RoleAssignmentDraft.fromJson(Map<String, dynamic> json) {
     return RoleAssignmentDraft(
@@ -64,8 +65,11 @@ class RoleAssignmentDraft {
       className: json['className'] as String?,
       streamId: json['streamId'] as String?,
       streamName: json['streamName'] as String?,
-      subjectAssignments: (json['subjectAssignments'] as List<dynamic>?)
-              ?.map((e) => SubjectAssignment.fromJson(e as Map<String, dynamic>))
+      subjectAssignments:
+          (json['subjectAssignments'] as List<dynamic>?)
+              ?.map(
+                (e) => SubjectAssignment.fromJson(e as Map<String, dynamic>),
+              )
               .toList() ??
           [],
       departmentId: json['departmentId'] as String?,
@@ -73,8 +77,12 @@ class RoleAssignmentDraft {
       routeId: json['routeId'] as String?,
       facilityId: json['facilityId'] as String?,
       approvalScope: json['approvalScope'] as String?,
-      startDate: json['startDate'] != null ? DateTime.tryParse(json['startDate'] as String) : null,
-      endDate: json['endDate'] != null ? DateTime.tryParse(json['endDate'] as String) : null,
+      startDate: json['startDate'] != null
+          ? DateTime.tryParse(json['startDate'] as String)
+          : null,
+      endDate: json['endDate'] != null
+          ? DateTime.tryParse(json['endDate'] as String)
+          : null,
     );
   }
 }

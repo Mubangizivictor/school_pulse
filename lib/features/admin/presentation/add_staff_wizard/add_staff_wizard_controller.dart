@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -81,7 +82,12 @@ class AddStaffWizardController extends ChangeNotifier {
   String? resultUid;
 
   List<UserRole> get rolesNeedingConfig => draft.selectedRoles
-      .where((r) => r == UserRole.classTeacher || r == UserRole.subjectTeacher || _rolesWithScope.contains(r))
+      .where(
+        (r) =>
+            r == UserRole.classTeacher ||
+            r == UserRole.subjectTeacher ||
+            _rolesWithScope.contains(r),
+      )
       .toList();
 
   static const _rolesWithScope = {
@@ -125,7 +131,9 @@ class AddStaffWizardController extends ChangeNotifier {
         break;
       case WizardStep.selectRoles:
         _configureRoleIndex = 0;
-        _step = rolesNeedingConfig.isNotEmpty ? WizardStep.configureRole : WizardStep.rolesSummary;
+        _step = rolesNeedingConfig.isNotEmpty
+            ? WizardStep.configureRole
+            : WizardStep.rolesSummary;
         break;
       case WizardStep.configureRole:
         if (_configureRoleIndex < rolesNeedingConfig.length - 1) {
@@ -180,8 +188,11 @@ class AddStaffWizardController extends ChangeNotifier {
         }
         break;
       case WizardStep.rolesSummary:
-        _step = rolesNeedingConfig.isNotEmpty ? WizardStep.configureRole : WizardStep.selectRoles;
-        if (_step == WizardStep.configureRole) _configureRoleIndex = rolesNeedingConfig.length - 1;
+        _step = rolesNeedingConfig.isNotEmpty
+            ? WizardStep.configureRole
+            : WizardStep.selectRoles;
+        if (_step == WizardStep.configureRole)
+          _configureRoleIndex = rolesNeedingConfig.length - 1;
         break;
       case WizardStep.accessPreview:
         _step = WizardStep.rolesSummary;
@@ -243,7 +254,9 @@ class AddStaffWizardController extends ChangeNotifier {
         await prefs.remove(_draftKey);
         return false;
       }
-      final restored = AddStaffDraft.fromJson(payload['draft'] as Map<String, dynamic>);
+      final restored = AddStaffDraft.fromJson(
+        payload['draft'] as Map<String, dynamic>,
+      );
       draft
         ..firstName = restored.firstName
         ..middleName = restored.middleName
@@ -296,41 +309,69 @@ class AddStaffWizardController extends ChangeNotifier {
     final classTeacherConfig = draft.roleConfigs[UserRole.classTeacher];
     final subjectTeacherConfig = draft.roleConfigs[UserRole.subjectTeacher];
 
-    final result = await di.sl<CreateStaffAccount>()(CreateStaffAccountParams(
-      email: draft.email.trim(),
-      name: draft.fullName,
-      schoolId: schoolId,
-      roles: draft.selectedRoles.toList(),
-      password: '', // server always generates its own; see AuthRemoteDataSource.
-      assignedClass: classTeacherConfig?.className,
-      subjects: subjectTeacherConfig?.subjectAssignments,
-      academicYearId: currentAcademicYearId,
-    ));
+    final result = await di.sl<CreateStaffAccount>()(
+      CreateStaffAccountParams(
+        email: draft.email.trim(),
+        name: draft.fullName,
+        schoolId: schoolId,
+        roles: draft.selectedRoles.toList(),
+        password:
+            '', // server always generates its own; see AuthRemoteDataSource.
+        assignedClass: classTeacherConfig?.className,
+        subjects: subjectTeacherConfig?.subjectAssignments,
+        academicYearId: currentAcademicYearId,
+      ),
+    );
 
     submitting = false;
 
-    result.fold(
-      (failure) {
-        submitError = failure.message;
-      },
-      (tempPassword) {
-        resultTempPassword = tempPassword;
-        clearDraft();
-      },
-    );
+    final failure = result.fold((f) => f, (_) => null);
+    if (failure != null) {
+      submitError = failure.message;
+      notifyListeners();
+      return result;
+    }
+
+    final tempPassword = result.fold((_) => null, (p) => p);
+    resultTempPassword = tempPassword;
+    resultStaffCode = await _lookupStaffCodeAndUid();
+    await clearDraft();
 
     notifyListeners();
     return result;
   }
 
+  /// The Cloud Function response only surfaces the temp password through
+  /// the shared AuthRepository/CreateStaffAccount contract (used by other
+  /// callers), not the created uid/staffCode - so this wizard looks the new
+  /// user doc up by its now-unique email instead of widening that shared
+  /// interface. Best-effort: a lookup failure never fails staff creation,
+  /// it only means Documents can't upload and Success won't show the code.
+  Future<String?> _lookupStaffCodeAndUid() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('schoolId', isEqualTo: schoolId)
+          .where('email', isEqualTo: draft.email.trim())
+          .limit(1)
+          .get();
+      if (snapshot.docs.isEmpty) return null;
+      final doc = snapshot.docs.first;
+      resultUid = doc.id;
+      return doc.data()['staffCode'] as String?;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> logAudit() async {
-    di.sl<AuditRepository>().logAction(
-          schoolId: schoolId,
-          title: 'Staff Account Created',
-          description: '${draft.fullName} was added as ${draft.selectedRoles.map(UserRoleDisplay.name).join(', ')}.',
-          iconName: 'person_add',
-          colorHex: 'FF2196F3',
-          userId: adminUid,
-        );
+    await di.sl<AuditRepository>().logAction(
+      title: 'Staff Account Created',
+      description:
+          '${draft.fullName} was added as ${draft.selectedRoles.map(UserRoleDisplay.name).join(', ')}.',
+      iconName: 'person_add',
+      colorHex: 'FF2196F3',
+      userId: adminUid,
+    );
   }
 }

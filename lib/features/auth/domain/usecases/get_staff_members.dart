@@ -11,6 +11,14 @@ class GetStaffMembers implements UseCase<List<UserEntity>, NoParams> {
 
   @override
   Future<Either<Failure, List<UserEntity>>> call(NoParams params) async {
-    return await repository.getStaffMembers();
+    final currentUserResult = await repository.getCurrentUser();
+    Failure? failure;
+    UserEntity? user;
+    currentUserResult.fold((f) => failure = f, (u) => user = u);
+    if (failure != null) return Left(failure!);
+    if (user == null || user!.schoolId.isEmpty) {
+      return const Left(ServerFailure('Not signed in to a school.'));
+    }
+    return await repository.getStaffMembers(user!.schoolId);
   }
 }

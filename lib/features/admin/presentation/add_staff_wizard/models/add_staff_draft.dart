@@ -3,16 +3,22 @@ import 'dart:io';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/admin/presentation/add_staff_wizard/models/role_assignment_draft.dart';
 
-enum StaffDocumentType { nationalId, academicCertificates, appointmentLetter, contract, other }
+enum StaffDocumentType {
+  nationalId,
+  academicCertificates,
+  appointmentLetter,
+  contract,
+  other,
+}
 
 extension StaffDocumentTypeDisplay on StaffDocumentType {
   String get label => switch (this) {
-        StaffDocumentType.nationalId => 'National ID / Passport',
-        StaffDocumentType.academicCertificates => 'Academic Certificates',
-        StaffDocumentType.appointmentLetter => 'Appointment Letter',
-        StaffDocumentType.contract => 'Contract',
-        StaffDocumentType.other => 'Other Documents',
-      };
+    StaffDocumentType.nationalId => 'National ID / Passport',
+    StaffDocumentType.academicCertificates => 'Academic Certificates',
+    StaffDocumentType.appointmentLetter => 'Appointment Letter',
+    StaffDocumentType.contract => 'Contract',
+    StaffDocumentType.other => 'Other Documents',
+  };
 }
 
 /// A document staged in-memory during the wizard. The staff account doesn't
@@ -23,7 +29,11 @@ class StagedDocument {
   final File file;
   final String fileName;
 
-  StagedDocument({required this.type, required this.file, required this.fileName});
+  StagedDocument({
+    required this.type,
+    required this.file,
+    required this.fileName,
+  });
 }
 
 /// Accumulates every field gathered across the Add Staff wizard's steps.
@@ -62,35 +72,42 @@ class AddStaffDraft {
   // Step 10: Documents (staged only; uploaded post-creation)
   List<StagedDocument> documents = [];
 
-  String get fullName => [firstName, middleName, lastName].where((s) => s.trim().isNotEmpty).join(' ');
+  String get fullName => [
+    firstName,
+    middleName,
+    lastName,
+  ].where((s) => s.trim().isNotEmpty).join(' ');
 
-  bool get personalInfoComplete => firstName.trim().isNotEmpty && lastName.trim().isNotEmpty;
+  bool get personalInfoComplete =>
+      firstName.trim().isNotEmpty && lastName.trim().isNotEmpty;
 
-  bool get contactInfoComplete => email.trim().isNotEmpty && phoneNumber.trim().isNotEmpty;
+  bool get contactInfoComplete =>
+      email.trim().isNotEmpty && phoneNumber.trim().isNotEmpty;
 
-  bool get employmentInfoComplete => department.trim().isNotEmpty && designation.trim().isNotEmpty;
+  bool get employmentInfoComplete =>
+      department.trim().isNotEmpty && designation.trim().isNotEmpty;
 
   bool get rolesSelected => selectedRoles.isNotEmpty;
 
   Map<String, dynamic> toJson() => {
-        'firstName': firstName,
-        'middleName': middleName,
-        'lastName': lastName,
-        'gender': gender,
-        'email': email,
-        'phoneNumber': phoneNumber,
-        'alternatePhone': alternatePhone,
-        'address': address,
-        'nationality': nationality,
-        'employmentType': employmentType,
-        'department': department,
-        'designation': designation,
-        'dateJoined': dateJoined.toIso8601String(),
-        'selectedRoles': selectedRoles.map((r) => r.name).toList(),
-        'roleConfigs': roleConfigs.map((k, v) => MapEntry(k.name, v.toJson())),
-        'forcePasswordChange': forcePasswordChange,
-        'sendLoginDetailsViaEmail': sendLoginDetailsViaEmail,
-      };
+    'firstName': firstName,
+    'middleName': middleName,
+    'lastName': lastName,
+    'gender': gender,
+    'email': email,
+    'phoneNumber': phoneNumber,
+    'alternatePhone': alternatePhone,
+    'address': address,
+    'nationality': nationality,
+    'employmentType': employmentType,
+    'department': department,
+    'designation': designation,
+    'dateJoined': dateJoined.toIso8601String(),
+    'selectedRoles': selectedRoles.map((r) => r.name).toList(),
+    'roleConfigs': roleConfigs.map((k, v) => MapEntry(k.name, v.toJson())),
+    'forcePasswordChange': forcePasswordChange,
+    'sendLoginDetailsViaEmail': sendLoginDetailsViaEmail,
+  };
 
   static AddStaffDraft fromJson(Map<String, dynamic> json) {
     final draft = AddStaffDraft()
@@ -110,9 +127,11 @@ class AddStaffDraft {
           ? DateTime.tryParse(json['dateJoined'] as String) ?? DateTime.now()
           : DateTime.now()
       ..forcePasswordChange = json['forcePasswordChange'] as bool? ?? true
-      ..sendLoginDetailsViaEmail = json['sendLoginDetailsViaEmail'] as bool? ?? true;
+      ..sendLoginDetailsViaEmail =
+          json['sendLoginDetailsViaEmail'] as bool? ?? true;
 
-    final roleNames = (json['selectedRoles'] as List<dynamic>?)?.cast<String>() ?? [];
+    final roleNames =
+        (json['selectedRoles'] as List<dynamic>?)?.cast<String>() ?? [];
     draft.selectedRoles = roleNames
         .map((n) => UserRole.values.where((r) => r.name == n).firstOrNull)
         .whereType<UserRole>()

@@ -33,7 +33,10 @@ class WizardScaffold extends StatelessWidget {
                 children: [
                   IconButton(
                     onPressed: onBack,
-                    icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
+                    icon: Icon(
+                      Icons.arrow_back,
+                      color: AppColors.textPrimary(context),
+                    ),
                   ),
                   Expanded(
                     child: Text(
@@ -55,7 +58,10 @@ class WizardScaffold extends StatelessWidget {
                 children: [
                   Text(
                     'Step $currentStep of $totalSteps',
-                    style: TextStyle(color: AppColors.textMuted(context), fontSize: 12),
+                    style: TextStyle(
+                      color: AppColors.textMuted(context),
+                      fontSize: 12,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   ClipRRect(
@@ -64,7 +70,9 @@ class WizardScaffold extends StatelessWidget {
                       value: currentStep / totalSteps,
                       minHeight: 4,
                       backgroundColor: AppColors.surfaceContainer(context),
-                      valueColor: AlwaysStoppedAnimation(AppColors.electricBlue),
+                      valueColor: AlwaysStoppedAnimation(
+                        AppColors.electricBlue,
+                      ),
                     ),
                   ),
                 ],
@@ -113,15 +121,34 @@ class WizardStepCaption extends StatelessWidget {
         CircleAvatar(
           radius: 12,
           backgroundColor: AppColors.electricBlue,
-          child: Text('$number', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+          child: Text(
+            '$number',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: TextStyle(color: AppColors.textPrimary(context), fontWeight: FontWeight.w600)),
-              Text(subtitle, style: TextStyle(color: AppColors.textMuted(context), fontSize: 12)),
+              Text(
+                title,
+                style: TextStyle(
+                  color: AppColors.textPrimary(context),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  color: AppColors.textMuted(context),
+                  fontSize: 12,
+                ),
+              ),
             ],
           ),
         ),
@@ -169,7 +196,10 @@ class WizardFooterButtons extends StatelessWidget {
                 ? const SizedBox(
                     height: 18,
                     width: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
                   )
                 : Text(nextLabel),
           ),

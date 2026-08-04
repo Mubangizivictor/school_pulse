@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/core/usecases/usecase.dart';
 import '../../data/models/audit_log.dart';
 import '../../data/repositories/audit_repository.dart';
@@ -14,7 +15,6 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/usecases/delete_staff_member.dart';
 import 'package:school_pulse/features/auth/domain/usecases/update_staff_member.dart';
-import 'package:school_pulse/features/auth/domain/usecases/create_staff_account.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
 import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/student/domain/entities/student_enums.dart';
@@ -132,10 +132,6 @@ class UsersOverviewView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final schoolId = context.read<AuthBloc>().state is AuthAuthenticated
-        ? (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId
-        : '';
-
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -149,11 +145,7 @@ class UsersOverviewView extends StatelessWidget {
               label: 'Add Staff',
               icon: Icons.person_add_outlined,
               color: AppColors.primary(context),
-              onTap: () {
-                // This is a bit tricky since the dialog is inside _StaffListViewState.
-                // We should probably move the creation logic to a shared place or use a key.
-                // For now, we'll just navigate to the Staff tab.
-              },
+              onTap: () => context.push('/staff/admin/users/add-staff'),
             ),
             QuickActionItem(
               label: 'Add Student',
@@ -198,7 +190,7 @@ class UsersOverviewView extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         StreamBuilder<List<AuditLog>>(
-          stream: di.sl<AuditRepository>().watchRecentLogs(schoolId: schoolId, limit: 5),
+          stream: di.sl<AuditRepository>().watchRecentLogs(limit: 5),
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
               return const Center(child: Padding(
@@ -232,7 +224,6 @@ class UsersOverviewView extends StatelessWidget {
           () => const AdminDashboardStats(
             activeStaffCount: 0,
             totalStudentsCount: 0,
-            totalParentsCount: 0,
             visitorsTodayCount: 0,
             activeVisitorsCount: 0,
             systemHealth: 100,
@@ -244,18 +235,18 @@ class UsersOverviewView extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: UserStatCard(
-                    label: 'Total Staff',
-                    count: stats?.activeStaffCount.toString() ?? '...',
+                  child: DashboardStatCard(
+                    title: 'Total Staff',
+                    value: (stats?.activeStaffCount ?? 0).toDouble(),
                     icon: Icons.people_alt_outlined,
                     color: AppColors.primary(context),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: UserStatCard(
-                    label: 'Students',
-                    count: stats?.totalStudentsCount.toString() ?? '...',
+                  child: DashboardStatCard(
+                    title: 'Students',
+                    value: (stats?.totalStudentsCount ?? 0).toDouble(),
                     icon: Icons.school_outlined,
                     color: AppColors.secondary(context),
                   ),
@@ -266,18 +257,19 @@ class UsersOverviewView extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: UserStatCard(
-                    label: 'Parents',
-                    count: stats?.totalParentsCount.toString() ?? '...',
+                  child: DashboardStatCard(
+                    title: 'Visitors Today',
+                    value: (stats?.visitorsTodayCount ?? 0).toDouble(),
                     icon: Icons.family_restroom_outlined,
                     color: AppColors.success(context),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: UserStatCard(
-                    label: 'System Health',
-                    count: '${stats?.systemHealth.round() ?? 100}%',
+                  child: DashboardStatCard(
+                    title: 'System Health',
+                    value: stats?.systemHealth ?? 100,
+                    suffix: '%',
                     icon: Icons.bolt_outlined,
                     color: AppColors.information(context),
                   ),
@@ -423,10 +415,8 @@ class _StaffListViewState extends State<StaffListView> {
   final _structureRepository = di.sl<StructureRepository>();
   List<String> _classNames = [];
   List<String> _subjectNames = [];
-  String? _currentAcademicYearId;
   StreamSubscription<List<SchoolClass>>? _classesSub;
   StreamSubscription<List<Subject>>? _subjectsSub;
-  StreamSubscription<List<AcademicYear>>? _academicYearsSub;
 
   @override
   void initState() {
@@ -443,28 +433,17 @@ class _StaffListViewState extends State<StaffListView> {
     _subjectsSub = _structureRepository.watchSubjects(schoolId).listen((subjects) {
       if (mounted) setState(() => _subjectNames = subjects.map((s) => s.name).toList());
     });
-    // Used to stamp staff_role_assignments with the active academic year at
-    // creation/edit time; if no year is marked current yet, assignments are
-    // simply not written (createStaffAccount treats it as optional).
-    _academicYearsSub = _structureRepository.watchAcademicYears(schoolId).listen((years) {
-      if (mounted) {
-        setState(() => _currentAcademicYearId = years.where((y) => y.isCurrent).firstOrNull?.id);
-      }
-    });
   }
 
   @override
   void dispose() {
     _classesSub?.cancel();
     _subjectsSub?.cancel();
-    _academicYearsSub?.cancel();
     super.dispose();
   }
 
   Future<List<UserEntity>> _load() async {
-    final authState = context.read<AuthBloc>().state;
-    final schoolId = authState is AuthAuthenticated ? authState.user.schoolId : '';
-    final result = await di.sl<GetStaffMembers>()(schoolId);
+    final result = await di.sl<GetStaffMembers>()(NoParams());
     return result.fold((failure) => throw failure, (staff) => staff);
   }
 
@@ -682,7 +661,6 @@ class _StaffListViewState extends State<StaffListView> {
         reason: member.isActive ? reasonController.text.trim() : null,
       );
       await di.sl<AuditRepository>().logAction(
-        schoolId: member.schoolId,
         title: activating ? 'Staff Account Enabled' : 'Staff Account Disabled',
         description: activating
             ? '${member.name} was re-enabled.'
@@ -707,7 +685,6 @@ class _StaffListViewState extends State<StaffListView> {
     if (confirmed == true) {
       await di.sl<DeleteStaffMember>()(member.id);
       await di.sl<AuditRepository>().logAction(
-        schoolId: member.schoolId,
         title: 'Staff Account Deleted',
         description: '${member.name} (${member.email}) was permanently deleted.',
         iconName: 'gpp_maybe',
@@ -911,270 +888,6 @@ class _StaffListViewState extends State<StaffListView> {
     );
   }
 
-  Future<void> _openCreateStaffDialog() async {
-    final nameController = TextEditingController();
-    final emailController = TextEditingController();
-    final passwordController = TextEditingController();
-    Set<UserRole> selectedRoles = {UserRole.classTeacher};
-    String? assignedClass;
-    List<SubjectAssignment> subjects = [];
-
-    void generatePassword() {
-      const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#\$%^&*';
-      final rand = DateTime.now().microsecondsSinceEpoch;
-      final pass = List.generate(8, (i) => chars[(rand + i * 31) % chars.length]).join();
-      passwordController.text = pass;
-    }
-
-    generatePassword();
-
-    final roles = UserRole.values.where((r) => r != UserRole.parent && r != UserRole.schoolAdmin && r != UserRole.director && r != UserRole.headTeacher).toList();
-    final isMobile = MediaQuery.of(context).size.width < 700;
-
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          title: const Text('Create Staff Account'),
-          content: SizedBox(
-            width: isMobile ? double.maxFinite : 500,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Full Name',
-                      prefixIcon: Icon(Icons.person_outline),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: emailController,
-                    decoration: const InputDecoration(
-                      labelText: 'Email Address',
-                      prefixIcon: Icon(Icons.email_outlined),
-                      helperText: 'Used for login and notifications.',
-                    ),
-                    keyboardType: TextInputType.emailAddress,
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: passwordController,
-                          decoration: const InputDecoration(
-                            labelText: 'Temporary Password',
-                            prefixIcon: Icon(Icons.lock_outline),
-                            helperText: 'Required on first login.',
-                          ),
-                          obscureText: true,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        onPressed: () => setDialogState(generatePassword),
-                        icon: const Icon(Icons.refresh),
-                        tooltip: 'Regenerate',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('System Roles (select all that apply)', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const Text(
-                    'One login can hold several roles - e.g. Class Teacher + Subject Teacher + Discipline Head.',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: roles.map((role) {
-                      final selected = selectedRoles.contains(role);
-                      return FilterChip(
-                        label: Text(UserRoleDisplay.name(role)),
-                        selected: selected,
-                        onSelected: (val) {
-                          setDialogState(() {
-                            if (val) {
-                              if (role == UserRole.boardingMatron) {
-                                selectedRoles.remove(UserRole.boardingPatron);
-                              } else if (role == UserRole.boardingPatron) {
-                                selectedRoles.remove(UserRole.boardingMatron);
-                              }
-
-                              selectedRoles.add(role);
-                              if (role == UserRole.classTeacher && _classNames.isNotEmpty) {
-                                assignedClass ??= _classNames.first;
-                              }
-                            } else {
-                              selectedRoles.remove(role);
-                            }
-                          });
-                        },
-                      );
-                    }).toList(),
-                  ),
-                  if (selectedRoles.contains(UserRole.classTeacher)) ...[
-                    const SizedBox(height: 16),
-                    if (_classNames.isEmpty)
-                      Text(
-                        'No classes registered yet. Add classes in School Structure first.',
-                        style: TextStyle(fontSize: 12, color: AppColors.danger(context)),
-                      )
-                    else
-                      DropdownButtonFormField<String>(
-                        value: assignedClass,
-                        decoration: const InputDecoration(
-                          labelText: 'Assigned Class',
-                          prefixIcon: Icon(Icons.meeting_room_outlined),
-                        ),
-                        items: _classNames.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                        onChanged: (val) => setDialogState(() => assignedClass = val),
-                      ),
-                  ],
-                  if (selectedRoles.contains(UserRole.subjectTeacher)) ...[
-                    const SizedBox(height: 24),
-                    const Text('Subject Assignments', style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    ...subjects.map((assignment) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8.0),
-                          child: Row(
-                            children: [
-                              Expanded(child: Text('${assignment.subjectName} (${assignment.className})')),
-                              IconButton(
-                                icon: Icon(Icons.delete_outline, size: 20, color: AppColors.danger(context)),
-                                onPressed: () => setDialogState(() => subjects.remove(assignment)),
-                              ),
-                            ],
-                          ),
-                        )),
-                    TextButton.icon(
-                      onPressed: () async {
-                        final newAssignment = await _showAddSubjectDialog(dialogContext);
-                        if (newAssignment != null) {
-                          setDialogState(() => subjects.add(newAssignment));
-                        }
-                      },
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add Subject & Class'),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
-            FilledButton(
-              onPressed: () {
-                if (nameController.text.isEmpty ||
-                    emailController.text.isEmpty ||
-                    passwordController.text.isEmpty ||
-                    selectedRoles.isEmpty) {
-                  return;
-                }
-                Navigator.pop(dialogContext, true);
-              },
-              child: const Text('Create Account'),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (result != true) return;
-
-    if (!mounted) return;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
-    );
-
-    final createResult = await di.sl<CreateStaffAccount>()(CreateStaffAccountParams(
-      email: emailController.text.trim(),
-      name: nameController.text.trim(),
-      schoolId: context.read<AuthBloc>().state is AuthAuthenticated
-          ? (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId
-          : '',
-      roles: selectedRoles.toList(),
-      password: passwordController.text.trim(),
-      assignedClass: selectedRoles.contains(UserRole.classTeacher) ? assignedClass : null,
-      subjects: selectedRoles.contains(UserRole.subjectTeacher) ? subjects : null,
-      academicYearId: _currentAcademicYearId,
-    ));
-
-    if (!mounted) return;
-    Navigator.pop(context);
-
-    createResult.fold(
-      (failure) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed: ${failure.message}'), backgroundColor: AppColors.danger(context)),
-      ),
-      (tempPassword) {
-        _refresh();
-        di.sl<AuditRepository>().logAction(
-          schoolId: context.read<AuthBloc>().state is AuthAuthenticated
-              ? (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId
-              : '',
-          title: 'Staff Account Created',
-          description: '${nameController.text.trim()} was added as ${selectedRoles.map(UserRoleDisplay.name).join(', ')}.',
-          iconName: 'person_add',
-          colorHex: 'FF2196F3',
-          userId: FirebaseAuth.instance.currentUser?.uid,
-        );
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Row(
-              children: [
-                Icon(Icons.check_circle, color: AppColors.success(context)),
-                const SizedBox(width: 8),
-                const Expanded(child: Text('Staff Created')),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Account for ${nameController.text} has been provisioned.'),
-                const SizedBox(height: 16),
-                const Text('Temporary Password:', style: TextStyle(fontWeight: FontWeight.bold)),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  margin: const EdgeInsets.symmetric(vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(child: Text(tempPassword, style: const TextStyle(fontFamily: 'monospace'))),
-                      IconButton(
-                        icon: const Icon(Icons.copy, size: 18),
-                        onPressed: () => Clipboard.setData(ClipboardData(text: tempPassword)),
-                      ),
-                    ],
-                  ),
-                ),
-                const Text('The user will be prompted to change this password on their first login.', style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
-              ],
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Done')),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -1209,7 +922,7 @@ class _StaffListViewState extends State<StaffListView> {
                     ),
                     child: IconButton(
                       icon: const Icon(Icons.add, color: Colors.white),
-                      onPressed: _openCreateStaffDialog,
+                      onPressed: () => context.push('add-staff').then((_) => _refresh()),
                     ),
                   ),
                 ],
@@ -1318,7 +1031,7 @@ class _StaffListViewState extends State<StaffListView> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             if (!member.isActive)
-                              StatusBadge(label: 'Disabled', color: AppColors.danger(context), isCompact: true),
+                              StatusBadge(label: 'Disabled', color: AppColors.danger(context)),
                             IconButton(
                               icon: const Icon(Icons.more_vert, size: 20),
                               onPressed: () => _showUserActions(context, member),
@@ -1926,7 +1639,6 @@ class _StudentsListViewState extends State<StudentsListView> {
                                 color: student.status == StudentStatus.active
                                     ? AppColors.success(context)
                                     : AppColors.disabled(context),
-                                isCompact: true,
                               ),
                               IconButton(
                                 icon: const Icon(Icons.more_vert, size: 20),
@@ -2248,7 +1960,6 @@ class _ParentCodesListViewState extends State<ParentCodesListView> {
                               StatusBadge(
                                 label: code.isActive ? 'ACTIVE' : 'INACTIVE',
                                 color: code.isActive ? AppColors.success(context) : AppColors.disabled(context),
-                                isCompact: true,
                               ),
                             ],
                           ),
