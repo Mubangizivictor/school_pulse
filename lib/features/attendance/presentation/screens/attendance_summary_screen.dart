@@ -1,11 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/features/attendance_summary/domain/attendance_summary.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/matron/domain/entities/matron_entities.dart';
+import 'package:school_pulse/features/matron/presentation/bloc/matron_bloc.dart';
+import 'package:school_pulse/features/matron/presentation/bloc/matron_event.dart';
+import 'package:school_pulse/features/matron/presentation/bloc/matron_state.dart';
 
-class AttendanceSummaryScreen extends StatelessWidget {
+class AttendanceSummaryScreen extends StatefulWidget {
   const AttendanceSummaryScreen({super.key});
+
+  @override
+  State<AttendanceSummaryScreen> createState() =>
+      _AttendanceSummaryScreenState();
+}
+
+class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
+  @override
+  void initState() {
+    super.initState();
+    final authState = context.read<AuthBloc>().state;
+    final schoolId = authState is AuthAuthenticated
+        ? authState.user.schoolId
+        : '';
+    context.read<MatronBloc>().add(
+      WatchAttendance(schoolId: schoolId, date: DateTime.now()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,176 +44,255 @@ class AttendanceSummaryScreen extends StatelessWidget {
         ),
         title: const Text('Attendance Summary'),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.l),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 20),
-                    Center(
-                      child: FadeInSlide(
-                        duration: const Duration(milliseconds: 800),
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            final size = constraints.maxWidth * 0.5 > 200.0 ? 200.0 : constraints.maxWidth * 0.5;
-                            return Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                SizedBox(
-                                  width: size,
-                                  height: size,
-                                  child: CircularProgressIndicator(
-                                    value: 23 / 25,
-                                    strokeWidth: size * 0.07,
-                                    backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.success(context)),
-                                    strokeCap: StrokeCap.round,
-                                  ),
-                                ),
-                                Column(
-                                  mainAxisSize: MainAxisSize.min,
+      body: BlocBuilder<MatronBloc, MatronState>(
+        builder: (context, state) {
+          final records = state is AttendanceLoaded
+              ? state.attendance
+              : const <BoardingAttendance>[];
+          final latest = records.isEmpty
+              ? null
+              : (records.toList()..sort((a, b) => b.date.compareTo(a.date)))
+                    .first;
+          final sessionRecords = latest == null
+              ? const <BoardingAttendance>[]
+              : records
+                    .where(
+                      (r) =>
+                          r.dormitoryId == latest.dormitoryId &&
+                          r.type == latest.type &&
+                          r.date.year == latest.date.year &&
+                          r.date.month == latest.date.month &&
+                          r.date.day == latest.date.day,
+                    )
+                    .toList();
+          final summary = AttendanceRateCalculator.summarize(
+            sessionRecords.map((r) => classifyBoardingStatus(r.status)),
+          );
+          final rate = summary.ratePercent;
+          final lateCount = sessionRecords
+              .where((r) => r.status == 'Late')
+              .length;
+
+          return Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.l),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 20),
+                        Center(
+                          child: FadeInSlide(
+                            duration: const Duration(milliseconds: 800),
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                final size = constraints.maxWidth * 0.5 > 200.0
+                                    ? 200.0
+                                    : constraints.maxWidth * 0.5;
+                                return Stack(
+                                  alignment: Alignment.center,
                                   children: [
-                                    Text(
-                                      '92%',
-                                      style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                                            fontWeight: FontWeight.w900,
-                                            color: AppColors.success(context),
-                                            fontSize: size * 0.22,
-                                          ),
+                                    SizedBox(
+                                      width: size,
+                                      height: size,
+                                      child: CircularProgressIndicator(
+                                        value: rate == null ? 0 : rate / 100,
+                                        strokeWidth: size * 0.07,
+                                        backgroundColor: Theme.of(context)
+                                            .colorScheme
+                                            .surfaceContainerHighest
+                                            .withValues(alpha: 0.3),
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              AppColors.success(context),
+                                            ),
+                                        strokeCap: StrokeCap.round,
+                                      ),
                                     ),
-                                    Text(
-                                      'Attendance Rate',
-                                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                            color: Theme.of(context).hintColor,
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: size * 0.06,
-                                          ),
+                                    Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          rate == null
+                                              ? '—'
+                                              : '${rate.round()}%',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .displaySmall
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w900,
+                                                color: AppColors.success(
+                                                  context,
+                                                ),
+                                                fontSize: size * 0.22,
+                                              ),
+                                        ),
+                                        Text(
+                                          'Attendance Rate',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .labelMedium
+                                              ?.copyWith(
+                                                color: Theme.of(
+                                                  context,
+                                                ).hintColor,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: size * 0.06,
+                                              ),
+                                        ),
+                                      ],
                                     ),
                                   ],
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+                        FadeInSlide(
+                          delay: const Duration(milliseconds: 200),
+                          child: Column(
+                            children: [
+                              Text(
+                                latest == null
+                                    ? 'No roll call yet today'
+                                    : '${latest.dormitoryId} — ${latest.type}',
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 4),
+                              if (latest != null)
+                                Text(
+                                  DateFormat(
+                                    'MMMM d, yyyy • h:mm a',
+                                  ).format(latest.date),
+                                  style: TextStyle(
+                                    color: Theme.of(context).hintColor,
+                                  ),
                                 ),
-                              ],
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-                    FadeInSlide(
-                      delay: const Duration(milliseconds: 200),
-                      child: Column(
-                        children: [
-                          Text(
-                            'Sunset House — Evening',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'January 6, 2026 • 08:46 PM',
-                            style: TextStyle(color: Theme.of(context).hintColor),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FadeInSlide(
-                            delay: const Duration(milliseconds: 300),
-                            child: _SummaryCard(
-                              icon: Icons.check_circle_rounded,
-                              count: '23',
-                              label: 'Present',
-                              color: AppColors.success(context),
-                            ),
+                            ],
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: FadeInSlide(
-                            delay: const Duration(milliseconds: 400),
-                            child: _SummaryCard(
-                              icon: Icons.cancel_rounded,
-                              count: '2',
-                              label: 'Absent',
-                              color: AppColors.errorRed,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: FadeInSlide(
-                            delay: const Duration(milliseconds: 500),
-                            child: _SummaryCard(
-                              icon: Icons.access_time_filled_rounded,
-                              count: '0',
-                              label: 'Late',
-                              color: AppColors.warning(context),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-                    FadeInSlide(
-                      delay: const Duration(milliseconds: 600),
-                      child: AppCard(
-                        padding: const EdgeInsets.all(AppSpacing.m),
-                        child: Row(
+                        const SizedBox(height: 32),
+                        Row(
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: AppColors.royalBlue.withValues(alpha: 0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Icons.description_outlined, color: AppColors.royalBlue, size: 20),
-                            ),
-                            const SizedBox(width: 16),
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Detailed Report', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  Text('View full student breakdown', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                                ],
+                            Expanded(
+                              child: FadeInSlide(
+                                delay: const Duration(milliseconds: 300),
+                                child: _SummaryCard(
+                                  icon: Icons.check_circle_rounded,
+                                  count: '${summary.present}',
+                                  label: 'Present',
+                                  color: AppColors.success(context),
+                                ),
                               ),
                             ),
-                            TextButton(
-                              onPressed: () => context.push('/staff/attendance/list'),
-                              child: const Text('View List'),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: FadeInSlide(
+                                delay: const Duration(milliseconds: 400),
+                                child: _SummaryCard(
+                                  icon: Icons.cancel_rounded,
+                                  count: '${summary.unauthorisedAbsent}',
+                                  label: 'Absent',
+                                  color: AppColors.errorRed,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: FadeInSlide(
+                                delay: const Duration(milliseconds: 500),
+                                child: _SummaryCard(
+                                  icon: Icons.access_time_filled_rounded,
+                                  count: '$lateCount',
+                                  label: 'Late',
+                                  color: AppColors.warning(context),
+                                ),
+                              ),
                             ),
                           ],
                         ),
-                      ),
+                        const SizedBox(height: 32),
+                        FadeInSlide(
+                          delay: const Duration(milliseconds: 600),
+                          child: AppCard(
+                            padding: const EdgeInsets.all(AppSpacing.m),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.royalBlue.withValues(
+                                      alpha: 0.1,
+                                    ),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.description_outlined,
+                                    color: AppColors.royalBlue,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                const Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Detailed Report',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Text(
+                                        'View full student breakdown',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () =>
+                                      context.push('/staff/attendance/list'),
+                                  child: const Text('View List'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
                     ),
-                    const SizedBox(height: 20),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.l),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceElevated(context),
-              border: Border(top: BorderSide(color: AppColors.border(context))),
-            ),
-            child: SafeArea(
-              top: false,
-              child: PrimaryButton(
-                label: 'Finish Roll Call',
-                onPressed: () => context.go('/staff/dashboard'),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.l),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceElevated(context),
+                  border: Border(
+                    top: BorderSide(color: AppColors.border(context)),
+                  ),
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: PrimaryButton(
+                    label: 'Finish Roll Call',
+                    onPressed: () => context.go('/staff/dashboard'),
+                  ),
+                ),
               ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
-
   }
 }
 
@@ -219,9 +325,9 @@ class _SummaryCard extends StatelessWidget {
           Text(
             count,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  color: color,
-                ),
+              fontWeight: FontWeight.w900,
+              color: color,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
