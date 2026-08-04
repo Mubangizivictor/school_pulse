@@ -246,6 +246,7 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
     emit(TeacherLoading());
     
     final result = await submitAttendance(AttendanceParams(
+      schoolId: event.schoolId,
       className: event.className,
       date: DateTime.now(),
       attendance: event.attendance.map(

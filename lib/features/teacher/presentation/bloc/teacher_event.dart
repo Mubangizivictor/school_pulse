@@ -77,16 +77,18 @@ class TeacherMarksSubmitted extends TeacherEvent {
 }
 
 class TeacherAttendanceSubmitted extends TeacherEvent {
+  final String schoolId;
   final String className;
   final Map<String, String> attendance; // studentId -> status
 
   const TeacherAttendanceSubmitted({
+    required this.schoolId,
     required this.className,
     required this.attendance,
   });
 
   @override
-  List<Object?> get props => [className, attendance];
+  List<Object?> get props => [schoolId, className, attendance];
 }
 
 // Homework Events

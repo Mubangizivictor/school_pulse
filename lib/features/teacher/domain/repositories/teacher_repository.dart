@@ -13,6 +13,7 @@ abstract class TeacherRepository {
   Future<Either<Failure, List<TeacherStudent>>> getStudentsByClass(String className);
   
   Future<Either<Failure, void>> submitAttendance({
+    required String schoolId,
     required String className,
     required DateTime date,
     required Map<String, StudentStatus> attendance,

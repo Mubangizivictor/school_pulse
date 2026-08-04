@@ -13,6 +13,7 @@ class SubmitAttendance implements UseCase<void, AttendanceParams> {
   @override
   Future<Either<Failure, void>> call(AttendanceParams params) async {
     return await repository.submitAttendance(
+      schoolId: params.schoolId,
       className: params.className,
       date: params.date,
       attendance: params.attendance,
@@ -21,16 +22,18 @@ class SubmitAttendance implements UseCase<void, AttendanceParams> {
 }
 
 class AttendanceParams extends Equatable {
+  final String schoolId;
   final String className;
   final DateTime date;
   final Map<String, StudentStatus> attendance;
 
   const AttendanceParams({
+    required this.schoolId,
     required this.className,
     required this.date,
     required this.attendance,
   });
 
   @override
-  List<Object?> get props => [className, date, attendance];
+  List<Object?> get props => [schoolId, className, date, attendance];
 }

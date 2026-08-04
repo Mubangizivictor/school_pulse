@@ -9,6 +9,7 @@ import '../../domain/entities/competency_rating.dart';
 abstract class TeacherRemoteDataSource {
   Future<List<TeacherStudent>> getStudentsByClass(String className);
   Future<void> submitAttendance({
+    required String schoolId,
     required String className,
     required DateTime date,
     required Map<String, String> attendance,
@@ -94,6 +95,7 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
 
   @override
   Future<void> submitAttendance({
+    required String schoolId,
     required String className,
     required DateTime date,
     required Map<String, String> attendance,
@@ -110,6 +112,7 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
           .collection('attendance_records')
           .doc('${studentId}_$dateStr');
       batch.set(docRef, {
+        'schoolId': schoolId,
         'studentId': studentId,
         'className': className,
         'date': Timestamp.fromDate(date),
@@ -125,6 +128,7 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
     final logRef =
         firestore.collection('attendance_logs').doc('${className}_$dateStr');
     batch.set(logRef, {
+      'schoolId': schoolId,
       'className': className,
       'date': Timestamp.fromDate(date),
       'presentCount': presentCount,

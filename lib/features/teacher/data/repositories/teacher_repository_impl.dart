@@ -27,12 +27,14 @@ class TeacherRepositoryImpl implements TeacherRepository {
 
   @override
   Future<Either<Failure, void>> submitAttendance({
+    required String schoolId,
     required String className,
     required DateTime date,
     required Map<String, StudentStatus> attendance,
   }) async {
     try {
       await remoteDataSource.submitAttendance(
+        schoolId: schoolId,
         className: className,
         date: date,
         attendance: attendance.map((key, value) => MapEntry(key, value.name)),

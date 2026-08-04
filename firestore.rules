@@ -291,9 +291,17 @@ service cloud.firestore {
       allow read: if isStudentRecordReadable();
       allow write: if isStaff();
     }
+    // Phase 5 security gate: previously any staff/parent/self with
+    // isStudentRecordReadable() could read this doc regardless of school,
+    // and any staff account from any school could write it - isStaff()
+    // alone never checked tenancy. schoolId is now required on both sides
+    // and locked on update.
     match /attendance_records/{docId} {
-      allow read: if isStudentRecordReadable();
-      allow write: if isStaff();
+      allow read: if isStudentRecordReadable() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId;
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /fees/{docId} {
       allow read: if isStudentRecordReadable();
@@ -469,21 +477,34 @@ service cloud.firestore {
       allow write: if isStaff();
     }
 
-    // Attendance collection (new)
+    // Attendance collection (new). Phase 5 security gate: write had no
+    // isSameSchool check at all; read likewise let any staff/parent/self
+    // reach a doc regardless of school.
     match /attendance/{docId} {
-      allow read: if isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId);
-      allow write: if isStaff();
+      allow read: if isSameSchool(resource.data.schoolId) &&
+        (isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId;
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
 
       // Matron/Patron night roll call: attendance/{date}/students/{studentId}.
+      // schoolId lives on the parent attendance/{date} doc, not this
+      // subdocument, so scope is checked via a lookup.
       match /students/{studentId} {
-        allow read, write: if isStaff();
+        allow read, write: if isStaff() &&
+          isSameSchool(get(/databases/$(database)/documents/attendance/$(docId)).data.schoolId);
       }
     }
 
-    // Attendance logs/summaries
+    // Attendance logs/summaries. Phase 5 security gate: no isSameSchool
+    // check existed on either read or write.
     match /attendance_logs/{docId} {
-      allow read: if isStaff();
-      allow write: if isStaff();
+      allow read: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId;
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
 
     // School statistics for Dean/Admin dashboards
@@ -1064,9 +1085,16 @@ service cloud.firestore {
       allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
 
-    // Staff clock-in/out records for the attendance monitor.
+    // Staff clock-in/out records for the attendance monitor. Phase 5
+    // security gate: no isSameSchool check existed. No client write path
+    // exists yet (StaffAttendanceRepository is read-only today), so this
+    // is a straight tightening rather than an OR-fallback migration.
     match /staff_attendance/{id} {
-      allow read, write: if isStaff();
+      allow read: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId;
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
 
     // Per-role dashboard summary docs (e.g. stats/attendance_summary,
