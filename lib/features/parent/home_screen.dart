@@ -3,10 +3,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
-import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/parent/widgets/student_app_bar.dart';
 import 'package:school_pulse/features/academic/domain/entities/attendance_record.dart';
 import 'package:school_pulse/features/academic/presentation/bloc/academic_bloc.dart';
+import 'package:school_pulse/features/attendance_summary/domain/attendance_summary.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/finance/domain/entities/fee_item.dart';
@@ -70,7 +71,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
+    
 
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
@@ -173,55 +174,55 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                                 QuickActionItem(
                                   label: 'Academics',
                                   icon: Icons.school_outlined,
-                                  color: Theme.of(context).colorScheme.primary,
+                                  color: AppColors.primary(context),
                                   onTap: () => context.push('/parent/academics'),
                                 ),
                                 QuickActionItem(
                                   label: 'Fees',
                                   icon: Icons.account_balance_wallet_outlined,
-                                  color: Theme.of(context).colorScheme.secondary,
+                                  color: AppColors.secondary(context),
                                   onTap: () => context.push('/parent/fees'),
                                 ),
                                 QuickActionItem(
                                   label: 'Health',
                                   icon: Icons.health_and_safety_outlined,
-                                  color: semanticColors.info,
+                                  color: AppColors.information(context),
                                   onTap: () => context.push('/parent/health'),
                                 ),
                                 QuickActionItem(
                                   label: 'Transport',
                                   icon: Icons.directions_bus_outlined,
-                                  color: semanticColors.warning,
+                                  color: AppColors.warning(context),
                                   onTap: () => context.push('/parent/transport'),
                                 ),
                                 QuickActionItem(
                                   label: 'Library',
                                   icon: Icons.library_books_outlined,
-                                  color: Theme.of(context).colorScheme.tertiary,
+                                  color: AppColors.primaryStrong(context),
                                   onTap: () => context.push('/parent/library'),
                                 ),
                                 QuickActionItem(
                                   label: 'Discipline',
                                   icon: Icons.gavel_outlined,
-                                  color: semanticColors.error,
+                                  color: AppColors.danger(context),
                                   onTap: () => context.push('/parent/discipline'),
                                 ),
                                 QuickActionItem(
                                   label: 'Boarding',
                                   icon: Icons.bed_outlined,
-                                  color: Colors.indigo,
+                                  color: AppColors.primary(context),
                                   onTap: () => context.push('/parent/boarding'),
                                 ),
                                 QuickActionItem(
                                   label: 'Messages',
                                   icon: Icons.chat_bubble_outline,
-                                  color: Colors.blueAccent,
+                                  color: AppColors.information(context),
                                   onTap: () => context.push('/parent/messages'),
                                 ),
                                 QuickActionItem(
                                   label: 'Profile',
                                   icon: Icons.person_outline,
-                                  color: Colors.grey,
+                                  color: AppColors.textMuted(context),
                                   onTap: () => context.push('/parent/profile'),
                                 ),
                               ],
@@ -257,7 +258,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                                           message: alert.message,
                                           color: _getAlertColor(
                                             alert.severity,
-                                            semanticColors,
+                                            context,
                                           ),
                                           icon: _getAlertIcon(alert.severity),
                                           onDismiss: () {
@@ -283,7 +284,6 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                             child: _buildStudentSummary(
                               context,
                               selectedStudent,
-                              semanticColors,
                             ),
                           ),
                           FadeInSlide(
@@ -300,7 +300,6 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                             child: _buildRecentActivity(
                               context,
                               selectedStudent,
-                              semanticColors,
                             ),
                           ),
                           const SizedBox(height: 32),
@@ -339,11 +338,11 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                 context.read<SelectedStudentBloc>().add(SelectStudent(student));
               }
             },
-            selectedColor: Theme.of(context).colorScheme.primary,
+            selectedColor: AppColors.primary(context),
             labelStyle: TextStyle(
               color: isSelected
                   ? Colors.white
-                  : Theme.of(context).colorScheme.onSurface,
+                  : AppColors.textPrimary(context),
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
           );
@@ -362,7 +361,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
               Text(
                 'Viewing profile of',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.outline,
+                  color: AppColors.textMuted(context),
                 ),
               ),
               Text(
@@ -387,7 +386,6 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
   Widget _buildStudentSummary(
     BuildContext context,
     Student student,
-    SemanticColors colors,
   ) {
     return BlocBuilder<AcademicBloc, AcademicState>(
       builder: (context, academicState) {
@@ -397,11 +395,18 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
             String? attendanceTrend;
             if (academicState is AcademicLoaded &&
                 academicState.attendanceRecords.isNotEmpty) {
-              final records = academicState.attendanceRecords;
-              final presentCount = records
-                  .where((r) => r.status == StudentStatus.present)
-                  .length;
-              attendanceRate = presentCount / records.length * 100;
+              // Strictly "present" only - late still counts as an absence
+              // here, distinct from the student dashboard's more lenient
+              // present-or-late reading of the same records. Preserved as
+              // its own MarkClassification mapping rather than reusing
+              // classifyStudentStatus, which would silently change this
+              // screen's existing behaviour.
+              final summary = AttendanceRateCalculator.summarize(
+                academicState.attendanceRecords.map((r) => r.status == StudentStatus.present
+                    ? MarkClassification.present
+                    : MarkClassification.unauthorisedAbsent),
+              );
+              attendanceRate = summary.ratePercent ?? 0;
               attendanceTrend = attendanceRate >= 90 ? 'On track' : 'Watch';
             }
 
@@ -424,7 +429,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                       value: attendanceRate,
                       suffix: '%',
                       icon: Icons.calendar_today,
-                      color: colors.success,
+                      color: AppColors.success(context),
                       trend: attendanceTrend,
                       isPositiveTrend: attendanceRate >= 90,
                     ),
@@ -435,7 +440,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                       title: 'Fee Balance (UGX)',
                       value: feeBalance,
                       icon: Icons.payments_outlined,
-                      color: feeBalance > 0 ? colors.warning : colors.success,
+                      color: feeBalance > 0 ? AppColors.warning(context) : AppColors.success(context),
                       trend: feeTrend,
                       isPositiveTrend: feeBalance <= 0,
                     ),
@@ -452,7 +457,6 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
   Widget _buildRecentActivity(
     BuildContext context,
     Student student,
-    SemanticColors colors,
   ) {
     return BlocBuilder<AcademicBloc, AcademicState>(
       builder: (context, state) {
@@ -462,13 +466,13 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
             child: Row(
               children: [
                 Icon(Icons.history,
-                    color: Theme.of(context).disabledColor, size: 24),
+                    color: AppColors.disabled(context), size: 24),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Text(
                     'No recent activity yet',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).hintColor,
+                          color: AppColors.textMuted(context),
                         ),
                   ),
                 ),
@@ -493,8 +497,8 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                 ? Icons.check_circle_outline
                 : Icons.event_busy_outlined,
             iconColor: latest.status == StudentStatus.present
-                ? colors.success
-                : colors.warning,
+                ? AppColors.success(context)
+                : AppColors.warning(context),
             title: 'Attendance',
             subtitle: '${student.name.split(' ').first} $statusLabel',
             time: DateFormat('d MMM').format(latest.date),
@@ -508,7 +512,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
             child: _buildActivityItem(
               context,
               icon: Icons.assignment_outlined,
-              iconColor: Theme.of(context).colorScheme.secondary,
+              iconColor: AppColors.secondary(context),
               title: 'Marks Posted',
               subtitle: '${record.subject}: ${record.score.round()}%',
               time: '${record.term} ${record.year}',
@@ -628,16 +632,16 @@ class _HomeSkeleton extends StatelessWidget {
   }
 }
 
-Color _getAlertColor(AlertSeverity severity, SemanticColors colors) {
+Color _getAlertColor(AlertSeverity severity, BuildContext context) {
   switch (severity) {
     case AlertSeverity.error:
-      return colors.error;
+      return AppColors.danger(context);
     case AlertSeverity.warning:
-      return colors.warning;
+      return AppColors.warning(context);
     case AlertSeverity.success:
-      return colors.success;
+      return AppColors.success(context);
     case AlertSeverity.info:
-      return colors.info;
+      return AppColors.information(context);
   }
 }
 

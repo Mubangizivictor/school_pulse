@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
-import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/academic/domain/entities/attendance_record.dart';
+import 'package:school_pulse/features/attendance_summary/domain/attendance_summary.dart';
 import 'package:school_pulse/features/academic/presentation/bloc/academic_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
@@ -97,8 +98,14 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
             final attendance = state.attendanceRecords;
 
             final avgScore = records.isEmpty ? 0.0 : records.map((r) => r.score).reduce((a, b) => a + b) / records.length;
-            final presentCount = attendance.where((r) => r.status == StudentStatus.present).length;
-            final attendanceRate = attendance.isEmpty ? 0.0 : (presentCount / attendance.length * 100).toDouble();
+            // Strictly "present" only, matching parent/home_screen.dart's
+            // reading of the same records (late counts as an absence here).
+            final attendanceSummary = AttendanceRateCalculator.summarize(
+              attendance.map((r) => r.status == StudentStatus.present
+                  ? MarkClassification.present
+                  : MarkClassification.unauthorisedAbsent),
+            );
+            final attendanceRate = attendanceSummary.ratePercent ?? 0.0;
 
             final subjectData = {for (var r in records) r.subject: r.score};
 
@@ -201,7 +208,7 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
           decimalPlaces: decimalPlaces,
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
+                color: AppColors.primary(context),
               ),
         ),
         Text(label, style: Theme.of(context).textTheme.bodySmall),
@@ -235,8 +242,8 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
               Icon(
                 record.trend >= 0 ? Icons.trending_up : Icons.trending_down,
                 color: record.trend >= 0
-                    ? Theme.of(context).extension<SemanticColors>()!.success
-                    : Theme.of(context).extension<SemanticColors>()!.error,
+                    ? AppColors.success(context)
+                    : AppColors.danger(context),
                 size: 20,
               ),
             ],
@@ -247,7 +254,6 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
   }
 
   Widget _buildAttendanceMiniMap(BuildContext context, List<AttendanceRecord> records) {
-    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
     // Show last 14 days
     return AppCard(
       child: Wrap(
@@ -256,9 +262,9 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
         children: records.take(14).map((r) {
           Color color;
           switch (r.status) {
-            case StudentStatus.present: color = semanticColors.success; break;
-            case StudentStatus.absent: color = semanticColors.error; break;
-            case StudentStatus.late: color = semanticColors.warning; break;
+            case StudentStatus.present: color = AppColors.success(context); break;
+            case StudentStatus.absent: color = AppColors.danger(context); break;
+            case StudentStatus.late: color = AppColors.warning(context); break;
           }
           return Container(
             width: 24,

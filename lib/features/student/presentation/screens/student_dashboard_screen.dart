@@ -3,10 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
-import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/core/theme_provider.dart';
-import 'package:school_pulse/features/academic/domain/entities/attendance_record.dart';
 import 'package:school_pulse/features/academic/presentation/bloc/academic_bloc.dart';
+import 'package:school_pulse/features/attendance_summary/domain/attendance_summary.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/finance/domain/entities/fee_item.dart';
@@ -67,7 +67,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
     final config = context.watch<ThemeProvider>().config;
 
     return BlocBuilder<AuthBloc, AuthState>(
@@ -97,6 +96,11 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                   appBar: AppBar(
                     title: const Text('Student Portal'),
                     actions: [
+                      IconButton(
+                        icon: const Icon(Icons.chat_bubble_outline_rounded),
+                        onPressed: () => context.push('/student/messages'),
+                        tooltip: 'Messages',
+                      ),
                       const NotificationBellButton(),
                       const SizedBox(width: 8),
                       Padding(
@@ -115,16 +119,16 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       children: [
                         _buildWelcomeHeader(context, student),
                         const SizedBox(height: 24),
-                        _buildQuickActions(context, semanticColors, config?.studentPortalConfig),
+                        _buildQuickActions(context, config?.studentPortalConfig),
                         const SizedBox(height: 24),
-                        _buildAcademicSummary(context, semanticColors),
+                        _buildAcademicSummary(context),
                         if (config?.studentPortalConfig.allowSchoolFeeVisibility ?? false) ...[
                           const SizedBox(height: 24),
-                          _buildFeeSummary(context, semanticColors),
+                          _buildFeeSummary(context),
                         ],
                         const SizedBox(height: 24),
                         const SectionHeader(title: 'Recent Announcements'),
-                        _buildAnnouncements(context, semanticColors),
+                        _buildAnnouncements(context),
                         const SizedBox(height: 32),
                       ],
                     ),
@@ -145,13 +149,14 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         Text(
           'Welcome back,',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.outline,
+                color: AppColors.textSecondary(context),
               ),
         ),
         Text(
           student.name,
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary(context),
               ),
         ),
         const SizedBox(height: 4),
@@ -160,13 +165,13 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
+                color: AppColors.primarySoft(context),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
                 'Class: ${student.classId}',
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  color: AppColors.primary(context),
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
                 ),
@@ -175,7 +180,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             const SizedBox(width: 8),
             Text(
               'ID: ${student.studentCode}',
-              style: Theme.of(context).textTheme.bodySmall,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.textMuted(context),
+              ),
             ),
           ],
         ),
@@ -183,74 +190,76 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     );
   }
 
-  Widget _buildQuickActions(BuildContext context, SemanticColors colors, dynamic portalConfig) {
+  Widget _buildQuickActions(BuildContext context, dynamic portalConfig) {
     return QuickActionGrid(
       items: [
         QuickActionItem(
           label: 'Academics',
           icon: Icons.school_outlined,
-          color: Theme.of(context).colorScheme.primary,
+          color: AppColors.primary(context),
           onTap: () => context.push('/student/academics'),
         ),
         QuickActionItem(
           label: 'Homework',
           icon: Icons.assignment_outlined,
-          color: Theme.of(context).colorScheme.secondary,
+          color: AppColors.secondary(context),
           onTap: () => context.push('/student/homework'),
         ),
         if (portalConfig?.allowTimetableAccess ?? false)
           QuickActionItem(
             label: 'Timetable',
             icon: Icons.calendar_today_outlined,
-            color: colors.info,
+            color: AppColors.information(context),
             onTap: () => context.push('/student/timetable'),
           ),
         if (portalConfig?.allowDigitalIdCard ?? false)
           QuickActionItem(
             label: 'ID Card',
             icon: Icons.badge_outlined,
-            color: colors.warning,
+            color: AppColors.secondary(context),
             onTap: () {
-               final state = context.read<SelectedStudentBloc>().state;
-               if (state is SelectedStudentLoaded) {
-                 context.push('/student/id-card', extra: state.student);
-               }
+              final state = context.read<SelectedStudentBloc>().state;
+              if (state is SelectedStudentLoaded) {
+                context.push('/student/id-card', extra: state.student);
+              }
             },
           ),
         QuickActionItem(
           label: 'Library',
           icon: Icons.library_books_outlined,
-          color: Theme.of(context).colorScheme.tertiary,
+          color: AppColors.primary(context),
           onTap: () => context.push('/student/library'),
         ),
         QuickActionItem(
           label: 'Transport',
           icon: Icons.directions_bus_outlined,
-          color: Colors.orange,
+          color: AppColors.warning(context),
           onTap: () => context.push('/student/transport'),
         ),
       ],
     );
   }
 
-  Widget _buildAcademicSummary(BuildContext context, SemanticColors colors) {
+  Widget _buildAcademicSummary(BuildContext context) {
     return BlocBuilder<AcademicBloc, AcademicState>(
       builder: (context, state) {
         double attendanceRate = 0;
         if (state is AcademicLoaded && state.attendanceRecords.isNotEmpty) {
-          final presentCount = state.attendanceRecords.where((r) => r.status != StudentStatus.absent).length;
-          attendanceRate = presentCount / state.attendanceRecords.length * 100;
+          final summary = AttendanceRateCalculator.summarize(
+            state.attendanceRecords.map((r) => classifyStudentStatus(r.status.name)),
+          );
+          attendanceRate = summary.ratePercent ?? 0;
         }
 
         return AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Row(
+              Row(
                 children: [
-                  Icon(Icons.analytics_outlined, size: 20),
-                  SizedBox(width: 8),
-                  Text('Academic Overview', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Icon(Icons.analytics_outlined, size: 20, color: AppColors.primary(context)),
+                  const SizedBox(width: 8),
+                  Text('Academic Overview', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary(context))),
                 ],
               ),
               const SizedBox(height: 16),
@@ -261,16 +270,16 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       context,
                       'Attendance',
                       '${attendanceRate.toStringAsFixed(1)}%',
-                      attendanceRate >= 90 ? colors.success : colors.warning,
+                      attendanceRate >= 90 ? AppColors.success(context) : AppColors.warning(context),
                     ),
                   ),
-                  const VerticalDivider(),
+                  VerticalDivider(color: AppColors.border(context)),
                   Expanded(
                     child: _buildSummaryItem(
                       context,
                       'Subjects',
                       '12 Active',
-                      Theme.of(context).colorScheme.primary,
+                      AppColors.primary(context),
                     ),
                   ),
                 ],
@@ -282,7 +291,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     );
   }
 
-  Widget _buildFeeSummary(BuildContext context, SemanticColors colors) {
+  Widget _buildFeeSummary(BuildContext context) {
     return BlocBuilder<FinanceBloc, FinanceState>(
       builder: (context, state) {
         double balance = 0;
@@ -290,23 +299,25 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           balance = state.fees.where((f) => f.status != FeeStatus.paid).fold(0.0, (sum, f) => sum + f.amount);
         }
 
+        final statusColor = balance > 0 ? AppColors.warning(context) : AppColors.success(context);
+
         return AppCard(
-          color: balance > 0 ? colors.warning.withValues(alpha: 0.1) : colors.success.withValues(alpha: 0.1),
+          color: statusColor.withValues(alpha: 0.1),
           child: Row(
             children: [
-              Icon(Icons.account_balance_wallet_outlined, color: balance > 0 ? colors.warning : colors.success),
+              Icon(Icons.account_balance_wallet_outlined, color: statusColor),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Fee Balance', style: TextStyle(fontSize: 12)),
+                    Text('Fee Balance', style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
                     Text(
                       balance > 0 ? 'UGX ${NumberFormat('#,###').format(balance)}' : 'Fully Paid',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
-                        color: balance > 0 ? colors.warning : colors.success,
+                        color: statusColor,
                       ),
                     ),
                   ],
@@ -315,7 +326,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               if (balance > 0)
                 TextButton(
                   onPressed: () => context.push('/student/fees'),
-                  child: const Text('View Details'),
+                  child: Text('View Details', style: TextStyle(color: AppColors.primary(context))),
                 ),
             ],
           ),
@@ -324,7 +335,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     );
   }
 
-  Widget _buildAnnouncements(BuildContext context, SemanticColors colors) {
+  Widget _buildAnnouncements(BuildContext context) {
     return BlocBuilder<NotificationsBloc, NotificationsState>(
       builder: (context, state) {
         if (state is! NotificationsLoaded || state.alerts.isEmpty) {
@@ -344,7 +355,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             child: AlertBanner(
               title: alert.title,
               message: alert.message,
-              color: _getAlertColor(alert.severity, colors),
+              color: _getAlertColor(alert.severity, context),
               icon: _getAlertIcon(alert.severity),
               onDismiss: () {}, // Students probably can't dismiss global announcements here
             ),
@@ -357,7 +368,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   Widget _buildSummaryItem(BuildContext context, String label, String value, Color color) {
     return Column(
       children: [
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
+        Text(label, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted(context))),
         const SizedBox(height: 4),
         Text(
           value,
@@ -371,12 +382,12 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     );
   }
 
-  Color _getAlertColor(AlertSeverity severity, SemanticColors colors) {
+  Color _getAlertColor(AlertSeverity severity, BuildContext context) {
     switch (severity) {
-      case AlertSeverity.error: return colors.error;
-      case AlertSeverity.warning: return colors.warning;
-      case AlertSeverity.success: return colors.success;
-      case AlertSeverity.info: return colors.info;
+      case AlertSeverity.error: return AppColors.danger(context);
+      case AlertSeverity.warning: return AppColors.warning(context);
+      case AlertSeverity.success: return AppColors.success(context);
+      case AlertSeverity.info: return AppColors.information(context);
     }
   }
 

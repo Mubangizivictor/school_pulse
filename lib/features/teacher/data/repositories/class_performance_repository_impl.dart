@@ -3,6 +3,7 @@ import 'package:dartz/dartz.dart';
 import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/network/network_info.dart';
 import 'package:school_pulse/core/permissions/permission.dart';
+import 'package:school_pulse/features/attendance_summary/domain/attendance_summary.dart';
 
 import '../../domain/entities/active_responsibility_context.dart';
 import '../../domain/entities/class_performance.dart';
@@ -180,25 +181,23 @@ class ClassPerformanceRepositoryImpl implements ClassPerformanceRepository {
     final sessions = history.getOrElse(() => const []);
     if (sessions.isEmpty) return const {};
 
-    final present = <String, int>{};
-    final marked = <String, int>{};
+    // Lateness counts as attendance here, matching the register's own
+    // reading (entry.statusCode 'present'/'late' both classify as
+    // present via classifyStudentStatus - anything else, including a
+    // school's custom status codes, falls to unauthorisedAbsent).
+    final marksByStudent = <String, List<MarkClassification>>{};
 
     for (final session in sessions) {
       if (!session.isSubmitted) continue;
       for (final entry in session.entries) {
         if (!entry.isMarked) continue;
-        marked[entry.studentId] = (marked[entry.studentId] ?? 0) + 1;
-        // Lateness counts as attendance, matching the register's own reading.
-        if (entry.statusCode == 'present' || entry.statusCode == 'late') {
-          present[entry.studentId] = (present[entry.studentId] ?? 0) + 1;
-        }
+        (marksByStudent[entry.studentId] ??= []).add(classifyStudentStatus(entry.statusCode));
       }
     }
 
     return {
-      for (final entry in marked.entries)
-        if (entry.value > 0)
-          entry.key: ((present[entry.key] ?? 0) / entry.value) * 100,
+      for (final studentId in marksByStudent.keys)
+        studentId: AttendanceRateCalculator.summarize(marksByStudent[studentId]!).ratePercent ?? 0,
     };
   }
 }
