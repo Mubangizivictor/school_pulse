@@ -1,25 +1,83 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/features/attendance_qr_integration/presentation/bloc/attendance_qr_bloc.dart';
+import 'package:school_pulse/features/attendance_qr_integration/presentation/bloc/attendance_qr_event.dart';
+import 'package:school_pulse/features/attendance_qr_integration/presentation/bloc/attendance_qr_state.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 
 class QRScannerScreen extends StatelessWidget {
   const QRScannerScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return BlocProvider(
+      create: (_) => di.sl<AttendanceQrBloc>(),
+      child: const _QRScannerView(),
+    );
+  }
+}
+
+class _QRScannerView extends StatefulWidget {
+  const _QRScannerView();
+
+  @override
+  State<_QRScannerView> createState() => _QRScannerViewState();
+}
+
+class _QRScannerViewState extends State<_QRScannerView> {
+  late final MobileScannerController _controller;
+  bool _isScanning = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = MobileScannerController(detectionSpeed: DetectionSpeed.noDuplicates);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onDetect(BarcodeCapture capture) {
+    if (!_isScanning) return;
+    final code = capture.barcodes.firstOrNull?.rawValue;
+    if (code == null || code.isEmpty) return;
+    setState(() => _isScanning = false);
+    context.read<AttendanceQrBloc>().add(ScanStudentQrEvent(code));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return BlocListener<AttendanceQrBloc, AttendanceQrState>(
+      listener: (context, state) {
+        if (state is StudentScannedSuccess) {
+          context.push('/staff/attendance/qr-success', extra: state.student).then((_) {
+            if (mounted) setState(() => _isScanning = true);
+          });
+        } else if (state is AttendanceQrError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+          );
+          setState(() => _isScanning = true);
+        }
+      },
+      child: Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Mock Camera View
-          Container(
-            color: Colors.black,
-            width: double.infinity,
-            height: double.infinity,
+          MobileScanner(
+            controller: _controller,
+            onDetect: _onDetect,
           ),
-          
+
           // Overlay
           SafeArea(
             child: Column(
@@ -33,67 +91,83 @@ class QRScannerScreen extends StatelessWidget {
                         icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
                         onPressed: () => context.pop(),
                       ),
-                      const Text(
+                      Text(
                         'QR Scanner',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.5,
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.flashlight_on, color: Colors.white, size: 24),
-                        onPressed: () {},
+                        onPressed: () => _controller.toggleTorch(),
                       ),
                     ],
                   ),
                 ),
                 const Spacer(),
-                Column(
-                  children: [
-                    const Text(
-                      'Scan Student QR Code',
-                      style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Position the QR code within the frame',
-                      style: TextStyle(color: Colors.white70, fontSize: 14),
-                    ),
-                    const SizedBox(height: 40),
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        // QR Frame with corners
-                        _ScannerFrame(),
-                        // Mock QR Code Image
-                        Image.network(
-                          'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=KatoMercy',
-                          width: 180,
-                          height: 180,
-                          color: Colors.white.withValues(alpha: 0.8),
+                FadeInSlide(
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Scan Student QR Code',
+                        style: TextStyle(
+                          color: Colors.white, 
+                          fontSize: 22, 
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.5,
                         ),
-                        // Scanning Line
-                        const _ScanningLine(),
-                      ],
-                    ),
-                  ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Position the QR code within the frame',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.7), 
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // QR Frame with corners
+                          _ScannerFrame(),
+                          // Scanning Line
+                          const _ScanningLine(),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
                 const Spacer(),
                 Padding(
                   padding: const EdgeInsets.all(AppSpacing.xl),
-                  child: AppCard(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    showBorder: false,
-                    showShadow: false,
-                    padding: const EdgeInsets.all(AppSpacing.m),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.info_outline, color: Colors.white70),
-                        const SizedBox(width: 12),
-                        const Expanded(
-                          child: Text(
-                            'Make sure there is enough light for a faster scan',
-                            style: TextStyle(color: Colors.white70, fontSize: 13),
+                  child: FadeInSlide(
+                    direction: FadeInDirection.bt,
+                    delay: const Duration(milliseconds: 400),
+                    child: AppCard(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      showBorder: false,
+                      showShadow: false,
+                      padding: const EdgeInsets.all(AppSpacing.m),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.white.withValues(alpha: 0.7)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Make sure there is enough light for a faster scan',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.7), 
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -101,15 +175,8 @@ class QRScannerScreen extends StatelessWidget {
               ],
             ),
           ),
-
-          // For demo purposes, tapping the screen takes us to success
-          Positioned.fill(
-            child: GestureDetector(
-              onTap: () => context.push('/staff/attendance/qr-success'),
-              child: Container(color: Colors.transparent),
-            ),
-          ),
         ],
+      ),
       ),
     );
   }

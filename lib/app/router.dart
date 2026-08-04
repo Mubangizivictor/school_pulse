@@ -164,6 +164,7 @@ import 'package:school_pulse/features/director/presentation/screens/director_rep
 import 'package:school_pulse/features/student_identity/presentation/screens/student_id_card_screen.dart';
 import 'package:school_pulse/features/student_identity/presentation/screens/batch_id_card_screen.dart';
 import 'package:school_pulse/features/student/domain/entities/student.dart';
+import 'package:school_pulse/features/attendance_qr_integration/presentation/bloc/attendance_qr_bloc.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/super_admin_dashboard.dart';
 import 'package:school_pulse/features/visitors/domain/entities/visitor.dart';
 import 'package:school_pulse/features/visitors/domain/entities/pre_approved_visitor.dart';
@@ -1469,7 +1470,10 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'qr-success',
-              builder: (context, state) => const QRSuccessScreen(),
+              builder: (context, state) => BlocProvider(
+                create: (_) => di.sl<AttendanceQrBloc>(),
+                child: QRSuccessScreen(student: state.extra as Student),
+              ),
             ),
             GoRoute(
               path: 'manual',
