@@ -1,9 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/features/attendance_summary/domain/attendance_summary.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/matron/domain/entities/matron_entities.dart';
+import 'package:school_pulse/features/matron/presentation/bloc/matron_bloc.dart';
+import 'package:school_pulse/features/matron/presentation/bloc/matron_event.dart';
+import 'package:school_pulse/features/matron/presentation/bloc/matron_state.dart';
+
+class _RollCallEntry {
+  final String title;
+  final DateTime date;
+  final AttendanceSummary summary;
+
+  const _RollCallEntry({required this.title, required this.date, required this.summary});
+}
 
 class AttendanceHistoryScreen extends StatefulWidget {
   const AttendanceHistoryScreen({super.key});
@@ -16,13 +33,45 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
   String _searchQuery = '';
 
   @override
+  void initState() {
+    super.initState();
+    final authState = context.read<AuthBloc>().state;
+    final schoolId = authState is AuthAuthenticated ? authState.user.schoolId : '';
+    // Last 7 days, one WatchAttendance call per day - the bloc/repository
+    // only support a single-date query, so history is built by requesting
+    // each day and letting _AttendanceUpdated accumulate.
+    for (var i = 0; i < 7; i++) {
+      context.read<MatronBloc>().add(WatchAttendance(
+            schoolId: schoolId,
+            date: DateTime.now().subtract(Duration(days: i)),
+          ));
+    }
+  }
+
+  List<_RollCallEntry> _groupByRollCall(List<BoardingAttendance> records) {
+    final grouped = <String, List<BoardingAttendance>>{};
+    for (final r in records) {
+      final dayKey = '${r.date.year}-${r.date.month}-${r.date.day}';
+      final key = '${r.dormitoryId}|${r.type}|$dayKey';
+      (grouped[key] ??= []).add(r);
+    }
+    return grouped.values.map((group) {
+      final first = group.first;
+      final summary = AttendanceRateCalculator.summarize(
+        group.map((r) => classifyBoardingStatus(r.status)),
+      );
+      return _RollCallEntry(
+        title: '${first.dormitoryId} — ${first.type}',
+        date: first.date,
+        summary: summary,
+      );
+    }).toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+  }
+
+  @override
   Widget build(BuildContext context) {
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
-    
-    final filteredHistory = _mockHistory.where((item) => 
-      item['title'].toString().toLowerCase().contains(_searchQuery.toLowerCase()) ||
-      item['date'].toString().toLowerCase().contains(_searchQuery.toLowerCase())
-    ).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -54,23 +103,34 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
             ),
           ),
           Expanded(
-            child: filteredHistory.isEmpty 
-              ? const EmptyState(
-                  icon: Icons.history, 
-                  title: 'No history found', 
-                  message: 'Try adjusting your search or filters.',
-                )
-              : ListView.builder(
+            child: BlocBuilder<MatronBloc, MatronState>(
+              builder: (context, state) {
+                final records = state is AttendanceLoaded ? state.attendance : const <BoardingAttendance>[];
+                final history = _groupByRollCall(records)
+                    .where((entry) => entry.title.toLowerCase().contains(_searchQuery.toLowerCase()))
+                    .toList();
+
+                if (history.isEmpty) {
+                  return const EmptyState(
+                    icon: Icons.history,
+                    title: 'No history found',
+                    message: 'Try adjusting your search or filters.',
+                  );
+                }
+
+                return ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
-                  itemCount: filteredHistory.length,
+                  itemCount: history.length,
                   itemBuilder: (context, index) {
-                    final item = filteredHistory[index];
+                    final entry = history[index];
                     return FadeInSlide(
                       delay: Duration(milliseconds: index * 50),
-                      child: _HistoryCard(item: item, colors: semanticColors),
+                      child: _HistoryCard(entry: entry, colors: semanticColors),
                     );
                   },
-                ),
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -90,64 +150,23 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppColors.border(context)),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-              const Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.grey),
-            ],
-          ),
+          child: Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
         ),
       ],
     );
   }
-
-  static const List<Map<String, dynamic>> _mockHistory = [
-    {
-      'title': 'Sunset House — Evening',
-      'date': '1/6/2026',
-      'time': '08:46 PM',
-      'present': 23,
-      'total': 25,
-      'status': 'Completed'
-    },
-    {
-      'title': 'Sunrise House — Morning',
-      'date': '1/6/2026',
-      'time': '07:15 AM',
-      'present': 48,
-      'total': 50,
-      'status': 'Completed'
-    },
-    {
-      'title': 'Dining Hall — Lunch',
-      'date': '1/6/2026',
-      'time': '12:30 PM',
-      'present': 450,
-      'total': 480,
-      'status': 'Completed'
-    },
-    {
-      'title': 'Sunset House — Evening',
-      'date': '31/5/2026',
-      'time': '08:45 PM',
-      'present': 25,
-      'total': 25,
-      'status': 'Completed'
-    },
-  ];
 }
 
 class _HistoryCard extends StatelessWidget {
-  final Map<String, dynamic> item;
+  final _RollCallEntry entry;
   final SemanticColors colors;
 
-  const _HistoryCard({required this.item, required this.colors});
+  const _HistoryCard({required this.entry, required this.colors});
 
   @override
   Widget build(BuildContext context) {
-    final double percentage = item['present'] / item['total'];
-    final bool isPerfect = percentage == 1.0;
+    final rate = entry.summary.ratePercent;
+    final bool isPerfect = rate == 100.0;
 
     return AppCard(
       margin: const EdgeInsets.only(bottom: 12),
@@ -176,11 +195,11 @@ class _HistoryCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item['title'],
+                      entry.title,
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                     ),
                     Text(
-                      '${item['date']} • ${item['time']}',
+                      DateFormat('d/M/yyyy • h:mm a').format(entry.date),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.grey),
                     ),
                   ],
@@ -204,7 +223,7 @@ class _HistoryCard extends StatelessWidget {
                           style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
                         ),
                         Text(
-                          '${(percentage * 100).round()}%',
+                          rate == null ? '—' : '${rate.round()}%',
                           style: TextStyle(
                             fontWeight: FontWeight.w900,
                             color: isPerfect ? colors.success : colors.warning,
@@ -217,7 +236,7 @@ class _HistoryCard extends StatelessWidget {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(4),
                       child: LinearProgressIndicator(
-                        value: percentage,
+                        value: rate == null ? 0 : rate / 100,
                         backgroundColor: AppColors.surfaceElevated(context),
                         valueColor: AlwaysStoppedAnimation<Color>(isPerfect ? colors.success : colors.warning),
                         minHeight: 6,
@@ -230,11 +249,11 @@ class _HistoryCard extends StatelessWidget {
               Column(
                 children: [
                   Text(
-                    '${item['present']}',
+                    '${entry.summary.present}',
                     style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
                   ),
                   Text(
-                    'of ${item['total']}',
+                    'of ${entry.summary.totalMarked}',
                     style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold),
                   ),
                 ],
