@@ -53,6 +53,9 @@ import 'package:school_pulse/core/network/network_info.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:school_pulse/features/attendance_qr_integration/domain/services/google_sheets_service.dart';
 import 'package:school_pulse/features/attendance_qr_integration/data/models/attendance_log_isar.dart';
+import 'package:school_pulse/features/attendance_qr_integration/domain/repositories/attendance_qr_repository.dart';
+import 'package:school_pulse/features/attendance_qr_integration/data/repositories/attendance_qr_repository_impl.dart';
+import 'package:school_pulse/features/attendance_qr_integration/presentation/bloc/attendance_qr_bloc.dart';
 import 'package:school_pulse/features/student_identity/data/models/student_cache_isar.dart';
 import 'package:school_pulse/features/inventory/data/models/asset_isar.dart';
 import 'package:school_pulse/features/inventory/data/models/inventory_item_isar.dart';
@@ -700,6 +703,16 @@ Future<void> init() async {
 
   sl.registerLazySingleton<StudentIdentityRepository>(
     () => StudentIdentityRepositoryImpl(firestore: sl(), isar: sl(), idGenerator: sl()),
+  );
+
+  // Was built correctly (offline-first Isar queue, real StudentIdentity
+  // lookup) but never registered, so the QR/manual attendance stub
+  // screens had nothing real to call - see qr_scanner_screen.dart etc.
+  sl.registerLazySingleton<AttendanceQrRepository>(
+    () => AttendanceQrRepositoryImpl(firestore: sl(), isar: sl()),
+  );
+  sl.registerFactory(
+    () => AttendanceQrBloc(attendanceRepository: sl(), identityRepository: sl()),
   );
 
   // Was never registered even though StudentIdCardScreen already read it
