@@ -142,8 +142,11 @@ void main() {
       );
 
       expect(result.decision, DeliveryDecision.deliverSilently);
-      expect(result.shouldStore, isTrue,
-          reason: 'it must still be waiting in the centre in the morning');
+      expect(
+        result.shouldStore,
+        isTrue,
+        reason: 'it must still be waiting in the centre in the morning',
+      );
       expect(result.playSound, isFalse);
     });
 
@@ -256,7 +259,10 @@ void main() {
         persistence: NotificationPersistence.transient,
       );
 
-      expect(NotificationDeliveryPolicy.shouldClearOnOpen(notification), isTrue);
+      expect(
+        NotificationDeliveryPolicy.shouldClearOnOpen(notification),
+        isTrue,
+      );
     });
 
     test('an official announcement is retained after being opened', () {

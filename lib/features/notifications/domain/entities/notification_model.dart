@@ -218,18 +218,16 @@ class NotificationSender {
 
   /// System-generated sender. Never carries a human name, per the spec's
   /// prohibition on falsely attributing automated events to a person.
-  const NotificationSender.automated({
-    required String module,
-    String? reason,
-  })  : senderId = null,
-        nameSnapshot = 'Automated System',
-        roleSnapshot = 'School Pulse',
-        department = null,
-        photoUrl = null,
-        localPhotoPath = null,
-        kind = NotificationSourceKind.automated,
-        sourceModule = module,
-        triggerReason = reason;
+  const NotificationSender.automated({required String module, String? reason})
+    : senderId = null,
+      nameSnapshot = 'Automated System',
+      roleSnapshot = 'School Pulse',
+      department = null,
+      photoUrl = null,
+      localPhotoPath = null,
+      kind = NotificationSourceKind.automated,
+      sourceModule = module,
+      triggerReason = reason;
 
   bool get isAutomated => kind != NotificationSourceKind.human;
 }
@@ -375,7 +373,8 @@ class NotificationItem {
 
   /// True when acknowledgement is required but has not happened yet - the
   /// details screen uses this to keep the acknowledge action prominent.
-  bool get needsAcknowledgement => requiresAcknowledgment && acknowledgedAt == null;
+  bool get needsAcknowledgement =>
+      requiresAcknowledgment && acknowledgedAt == null;
 
   /// Effective sender identity, falling back to the flat name/role fields for
   /// records created before the richer [sender] existed.

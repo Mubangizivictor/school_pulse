@@ -52,32 +52,33 @@ class ClinicVisit extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        studentId,
-        staffId,
-        dateTime,
-        reason,
-        symptoms,
-        temperature,
-        bloodPressure,
-        pulseRate,
-        oxygenSaturation,
-        weight,
-        diagnosis,
-        treatmentProvided,
-        medicationsGiven,
-        observationNotes,
-        followUpRequired,
-        outcome,
-        recordedBy,
-        schoolId,
-      ];
+    id,
+    studentId,
+    staffId,
+    dateTime,
+    reason,
+    symptoms,
+    temperature,
+    bloodPressure,
+    pulseRate,
+    oxygenSaturation,
+    weight,
+    diagnosis,
+    treatmentProvided,
+    medicationsGiven,
+    observationNotes,
+    followUpRequired,
+    outcome,
+    recordedBy,
+    schoolId,
+  ];
 }
 
 class AdministeredMedication extends Equatable {
   final String medicationId;
   final String medicationName;
   final String dosage;
+  final int quantity;
   final DateTime timeAdministered;
   final String administeredBy;
   final String? notes;
@@ -86,6 +87,7 @@ class AdministeredMedication extends Equatable {
     required this.medicationId,
     required this.medicationName,
     required this.dosage,
+    this.quantity = 1,
     required this.timeAdministered,
     required this.administeredBy,
     this.notes,
@@ -93,11 +95,12 @@ class AdministeredMedication extends Equatable {
 
   @override
   List<Object?> get props => [
-        medicationId,
-        medicationName,
-        dosage,
-        timeAdministered,
-        administeredBy,
-        notes,
-      ];
+    medicationId,
+    medicationName,
+    dosage,
+    quantity,
+    timeAdministered,
+    administeredBy,
+    notes,
+  ];
 }

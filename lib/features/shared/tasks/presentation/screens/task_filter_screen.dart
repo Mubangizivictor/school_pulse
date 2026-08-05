@@ -18,12 +18,7 @@ class _TaskFilterScreenState extends State<TaskFilterScreen> {
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.pop(context),
         ),
-        actions: [
-          TextButton(
-            onPressed: () {},
-            child: const Text('Reset'),
-          ),
-        ],
+        actions: [TextButton(onPressed: () {}, child: const Text('Reset'))],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -92,12 +87,16 @@ class _TaskFilterScreenState extends State<TaskFilterScreen> {
       selected: isSelected,
       onSelected: (val) {},
       backgroundColor: Colors.transparent,
-      selectedColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+      selectedColor: Theme.of(
+        context,
+      ).colorScheme.primary.withValues(alpha: 0.1),
       checkmarkColor: Theme.of(context).colorScheme.primary,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: BorderSide(
-          color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.outlineVariant,
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.outlineVariant,
         ),
       ),
     );

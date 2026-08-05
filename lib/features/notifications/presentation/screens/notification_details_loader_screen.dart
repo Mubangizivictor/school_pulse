@@ -53,10 +53,10 @@ class _NotificationDetailsLoaderScreenState
     }
 
     return di.sl<NotificationRepository>().getById(
-          schoolId: user.schoolId,
-          notificationId: widget.notificationId,
-          recipientUserId: user.id,
-        );
+      schoolId: user.schoolId,
+      notificationId: widget.notificationId,
+      recipientUserId: user.id,
+    );
   }
 
   @override

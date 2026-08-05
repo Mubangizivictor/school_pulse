@@ -14,13 +14,21 @@ const List<Color> kSubjectColorSwatches = [
   Color(0xFF455A64),
 ];
 
-String _colorToHex(Color color) => '#${color.toARGB32().toRadixString(16).substring(2)}';
+String _colorToHex(Color color) =>
+    '#${color.toARGB32().toRadixString(16).substring(2)}';
 
-Future<void> showLevelFormDialog(BuildContext context, {EducationalLevel? existing, required String schoolId, required void Function(EducationalLevel) onSave}) {
+Future<void> showLevelFormDialog(
+  BuildContext context, {
+  EducationalLevel? existing,
+  required String schoolId,
+  required void Function(EducationalLevel) onSave,
+}) {
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController(text: existing?.name);
   final codeController = TextEditingController(text: existing?.code);
-  final orderController = TextEditingController(text: existing?.order.toString() ?? '0');
+  final orderController = TextEditingController(
+    text: existing?.order.toString() ?? '0',
+  );
   final descController = TextEditingController(text: existing?.description);
   bool isActive = existing?.isActive ?? true;
 
@@ -28,7 +36,9 @@ Future<void> showLevelFormDialog(BuildContext context, {EducationalLevel? existi
     context: context,
     builder: (context) => StatefulBuilder(
       builder: (context, setState) => AlertDialog(
-        title: Text(existing == null ? 'Add Educational Level' : 'Edit Educational Level'),
+        title: Text(
+          existing == null ? 'Add Educational Level' : 'Edit Educational Level',
+        ),
         content: SingleChildScrollView(
           child: Form(
             key: formKey,
@@ -37,12 +47,16 @@ Future<void> showLevelFormDialog(BuildContext context, {EducationalLevel? existi
               children: [
                 TextFormField(
                   controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Level Name (e.g. Primary)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Level Name (e.g. Primary)',
+                  ),
                   validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                 ),
                 TextFormField(
                   controller: codeController,
-                  decoration: const InputDecoration(labelText: 'Code (optional)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Code (optional)',
+                  ),
                 ),
                 TextFormField(
                   controller: orderController,
@@ -51,7 +65,9 @@ Future<void> showLevelFormDialog(BuildContext context, {EducationalLevel? existi
                 ),
                 TextFormField(
                   controller: descController,
-                  decoration: const InputDecoration(labelText: 'Description (optional)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Description (optional)',
+                  ),
                   maxLines: 2,
                 ),
                 if (existing != null)
@@ -66,19 +82,24 @@ Future<void> showLevelFormDialog(BuildContext context, {EducationalLevel? existi
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () {
               if (!formKey.currentState!.validate()) return;
-              onSave(EducationalLevel(
-                id: existing?.id ?? const Uuid().v4(),
-                schoolId: existing?.schoolId ?? schoolId,
-                name: nameController.text,
-                code: codeController.text,
-                order: int.tryParse(orderController.text) ?? 0,
-                description: descController.text,
-                isActive: isActive,
-              ));
+              onSave(
+                EducationalLevel(
+                  id: existing?.id ?? const Uuid().v4(),
+                  schoolId: existing?.schoolId ?? schoolId,
+                  name: nameController.text,
+                  code: codeController.text,
+                  order: int.tryParse(orderController.text) ?? 0,
+                  description: descController.text,
+                  isActive: isActive,
+                ),
+              );
               Navigator.pop(context);
             },
             child: Text(existing == null ? 'Add' : 'Save'),
@@ -89,17 +110,25 @@ Future<void> showLevelFormDialog(BuildContext context, {EducationalLevel? existi
   );
 }
 
-Future<void> showAcademicYearFormDialog(BuildContext context, {AcademicYear? existing, required String schoolId, required void Function(AcademicYear) onSave}) {
+Future<void> showAcademicYearFormDialog(
+  BuildContext context, {
+  AcademicYear? existing,
+  required String schoolId,
+  required void Function(AcademicYear) onSave,
+}) {
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController(text: existing?.name);
-  DateTime startDate = existing?.startDate ?? DateTime(DateTime.now().year, 1, 1);
+  DateTime startDate =
+      existing?.startDate ?? DateTime(DateTime.now().year, 1, 1);
   DateTime endDate = existing?.endDate ?? DateTime(DateTime.now().year, 12, 31);
 
   return showDialog(
     context: context,
     builder: (context) => StatefulBuilder(
       builder: (context, setState) => AlertDialog(
-        title: Text(existing == null ? 'Add Academic Year' : 'Edit Academic Year'),
+        title: Text(
+          existing == null ? 'Add Academic Year' : 'Edit Academic Year',
+        ),
         content: SingleChildScrollView(
           child: Form(
             key: formKey,
@@ -108,7 +137,9 @@ Future<void> showAcademicYearFormDialog(BuildContext context, {AcademicYear? exi
               children: [
                 TextFormField(
                   controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Year Name (e.g. 2026)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Year Name (e.g. 2026)',
+                  ),
                   validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                 ),
                 const SizedBox(height: 12),
@@ -147,19 +178,24 @@ Future<void> showAcademicYearFormDialog(BuildContext context, {AcademicYear? exi
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () {
               if (!formKey.currentState!.validate()) return;
-              onSave(AcademicYear(
-                id: existing?.id ?? const Uuid().v4(),
-                schoolId: existing?.schoolId ?? schoolId,
-                name: nameController.text,
-                startDate: startDate,
-                endDate: endDate,
-                isCurrent: existing?.isCurrent ?? false,
-                isArchived: existing?.isArchived ?? false,
-              ));
+              onSave(
+                AcademicYear(
+                  id: existing?.id ?? const Uuid().v4(),
+                  schoolId: existing?.schoolId ?? schoolId,
+                  name: nameController.text,
+                  startDate: startDate,
+                  endDate: endDate,
+                  isCurrent: existing?.isCurrent ?? false,
+                  isArchived: existing?.isArchived ?? false,
+                ),
+              );
               Navigator.pop(context);
             },
             child: Text(existing == null ? 'Add' : 'Save'),
@@ -179,16 +215,22 @@ Future<void> showAcademicTermFormDialog(
 }) {
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController(text: existing?.name);
-  final orderController = TextEditingController(text: existing?.order.toString() ?? '0');
-  String? selectedYearId = existing?.academicYearId ?? (years.isNotEmpty ? years.first.id : null);
+  final orderController = TextEditingController(
+    text: existing?.order.toString() ?? '0',
+  );
+  String? selectedYearId =
+      existing?.academicYearId ?? (years.isNotEmpty ? years.first.id : null);
   DateTime startDate = existing?.startDate ?? DateTime.now();
-  DateTime endDate = existing?.endDate ?? DateTime.now().add(const Duration(days: 90));
+  DateTime endDate =
+      existing?.endDate ?? DateTime.now().add(const Duration(days: 90));
 
   return showDialog(
     context: context,
     builder: (context) => StatefulBuilder(
       builder: (context, setState) => AlertDialog(
-        title: Text(existing == null ? 'Add Term / Semester' : 'Edit Term / Semester'),
+        title: Text(
+          existing == null ? 'Add Term / Semester' : 'Edit Term / Semester',
+        ),
         content: SingleChildScrollView(
           child: Form(
             key: formKey,
@@ -198,13 +240,20 @@ Future<void> showAcademicTermFormDialog(
                 DropdownButtonFormField<String>(
                   initialValue: selectedYearId,
                   decoration: const InputDecoration(labelText: 'Academic Year'),
-                  items: years.map((y) => DropdownMenuItem(value: y.id, child: Text(y.name))).toList(),
+                  items: years
+                      .map(
+                        (y) =>
+                            DropdownMenuItem(value: y.id, child: Text(y.name)),
+                      )
+                      .toList(),
                   onChanged: (v) => setState(() => selectedYearId = v),
                   validator: (v) => v == null ? 'Select a year' : null,
                 ),
                 TextFormField(
                   controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Term Name (e.g. Term 1, Semester 1)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Term Name (e.g. Term 1, Semester 1)',
+                  ),
                   validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                 ),
                 TextFormField(
@@ -247,20 +296,25 @@ Future<void> showAcademicTermFormDialog(
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () {
               if (!formKey.currentState!.validate()) return;
-              onSave(AcademicTerm(
-                id: existing?.id ?? const Uuid().v4(),
-                schoolId: existing?.schoolId ?? schoolId,
-                academicYearId: selectedYearId!,
-                name: nameController.text,
-                order: int.tryParse(orderController.text) ?? 0,
-                startDate: startDate,
-                endDate: endDate,
-                isCurrent: existing?.isCurrent ?? false,
-              ));
+              onSave(
+                AcademicTerm(
+                  id: existing?.id ?? const Uuid().v4(),
+                  schoolId: existing?.schoolId ?? schoolId,
+                  academicYearId: selectedYearId!,
+                  name: nameController.text,
+                  order: int.tryParse(orderController.text) ?? 0,
+                  startDate: startDate,
+                  endDate: endDate,
+                  isCurrent: existing?.isCurrent ?? false,
+                ),
+              );
               Navigator.pop(context);
             },
             child: Text(existing == null ? 'Add' : 'Save'),
@@ -281,7 +335,9 @@ Future<void> showClassFormDialog(
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController(text: existing?.name);
   final codeController = TextEditingController(text: existing?.code);
-  final capacityController = TextEditingController(text: existing?.capacity.toString() ?? '0');
+  final capacityController = TextEditingController(
+    text: existing?.capacity.toString() ?? '0',
+  );
   final descController = TextEditingController(text: existing?.description);
   String? selectedLevelId = existing?.levelId.isNotEmpty == true
       ? existing!.levelId
@@ -301,17 +357,28 @@ Future<void> showClassFormDialog(
               children: [
                 TextFormField(
                   controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Class Name (e.g. P1, S1, Grade 12)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Class Name (e.g. P1, S1, Grade 12)',
+                  ),
                   validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                 ),
                 TextFormField(
                   controller: codeController,
-                  decoration: const InputDecoration(labelText: 'Code (optional)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Code (optional)',
+                  ),
                 ),
                 DropdownButtonFormField<String>(
                   initialValue: selectedLevelId,
-                  decoration: const InputDecoration(labelText: 'Educational Level'),
-                  items: levels.map((l) => DropdownMenuItem(value: l.id, child: Text(l.name))).toList(),
+                  decoration: const InputDecoration(
+                    labelText: 'Educational Level',
+                  ),
+                  items: levels
+                      .map(
+                        (l) =>
+                            DropdownMenuItem(value: l.id, child: Text(l.name)),
+                      )
+                      .toList(),
                   onChanged: (v) => setState(() => selectedLevelId = v),
                   validator: (v) => v == null ? 'Select a level' : null,
                 ),
@@ -322,7 +389,9 @@ Future<void> showClassFormDialog(
                 ),
                 TextFormField(
                   controller: descController,
-                  decoration: const InputDecoration(labelText: 'Description (optional)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Description (optional)',
+                  ),
                   maxLines: 2,
                 ),
                 if (existing != null)
@@ -337,20 +406,25 @@ Future<void> showClassFormDialog(
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () {
               if (!formKey.currentState!.validate()) return;
-              onSave(SchoolClass(
-                id: existing?.id ?? const Uuid().v4(),
-                schoolId: existing?.schoolId ?? schoolId,
-                name: nameController.text,
-                code: codeController.text,
-                levelId: selectedLevelId ?? '',
-                capacity: int.tryParse(capacityController.text) ?? 0,
-                description: descController.text,
-                isActive: isActive,
-              ));
+              onSave(
+                SchoolClass(
+                  id: existing?.id ?? const Uuid().v4(),
+                  schoolId: existing?.schoolId ?? schoolId,
+                  name: nameController.text,
+                  code: codeController.text,
+                  levelId: selectedLevelId ?? '',
+                  capacity: int.tryParse(capacityController.text) ?? 0,
+                  description: descController.text,
+                  isActive: isActive,
+                ),
+              );
               Navigator.pop(context);
             },
             child: Text(existing == null ? 'Add' : 'Save'),
@@ -371,15 +445,20 @@ Future<void> showStreamFormDialog(
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController(text: existing?.name);
   final codeController = TextEditingController(text: existing?.code);
-  final capacityController = TextEditingController(text: existing?.capacity.toString() ?? '0');
-  String? selectedClassId = existing?.classId ?? (classes.isNotEmpty ? classes.first.id : null);
+  final capacityController = TextEditingController(
+    text: existing?.capacity.toString() ?? '0',
+  );
+  String? selectedClassId =
+      existing?.classId ?? (classes.isNotEmpty ? classes.first.id : null);
   bool isActive = existing?.isActive ?? true;
 
   return showDialog(
     context: context,
     builder: (context) => StatefulBuilder(
       builder: (context, setState) => AlertDialog(
-        title: Text(existing == null ? 'Add Stream / Section' : 'Edit Stream / Section'),
+        title: Text(
+          existing == null ? 'Add Stream / Section' : 'Edit Stream / Section',
+        ),
         content: SingleChildScrollView(
           child: Form(
             key: formKey,
@@ -388,17 +467,26 @@ Future<void> showStreamFormDialog(
               children: [
                 TextFormField(
                   controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Stream Name (e.g. East, A, Blue)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Stream Name (e.g. East, A, Blue)',
+                  ),
                   validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                 ),
                 TextFormField(
                   controller: codeController,
-                  decoration: const InputDecoration(labelText: 'Code (optional)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Code (optional)',
+                  ),
                 ),
                 DropdownButtonFormField<String>(
                   initialValue: selectedClassId,
                   decoration: const InputDecoration(labelText: 'Class'),
-                  items: classes.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
+                  items: classes
+                      .map(
+                        (c) =>
+                            DropdownMenuItem(value: c.id, child: Text(c.name)),
+                      )
+                      .toList(),
                   onChanged: (v) => setState(() => selectedClassId = v),
                   validator: (v) => v == null ? 'Select a class' : null,
                 ),
@@ -419,19 +507,24 @@ Future<void> showStreamFormDialog(
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () {
               if (!formKey.currentState!.validate()) return;
-              onSave(ClassStream(
-                id: existing?.id ?? const Uuid().v4(),
-                schoolId: existing?.schoolId ?? schoolId,
-                name: nameController.text,
-                code: codeController.text,
-                classId: selectedClassId ?? '',
-                capacity: int.tryParse(capacityController.text) ?? 0,
-                isActive: isActive,
-              ));
+              onSave(
+                ClassStream(
+                  id: existing?.id ?? const Uuid().v4(),
+                  schoolId: existing?.schoolId ?? schoolId,
+                  name: nameController.text,
+                  code: codeController.text,
+                  classId: selectedClassId ?? '',
+                  capacity: int.tryParse(capacityController.text) ?? 0,
+                  isActive: isActive,
+                ),
+              );
               Navigator.pop(context);
             },
             child: Text(existing == null ? 'Add' : 'Save'),
@@ -452,7 +545,9 @@ Future<void> showSubjectFormDialog(
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController(text: existing?.name);
   final codeController = TextEditingController(text: existing?.code);
-  final creditController = TextEditingController(text: existing?.creditUnits.toString() ?? '0');
+  final creditController = TextEditingController(
+    text: existing?.creditUnits.toString() ?? '0',
+  );
   final descController = TextEditingController(text: existing?.description);
   String? selectedDepartmentId = existing?.departmentId.isNotEmpty == true
       ? existing!.departmentId
@@ -482,18 +577,28 @@ Future<void> showSubjectFormDialog(
                 ),
                 TextFormField(
                   controller: codeController,
-                  decoration: const InputDecoration(labelText: 'Code (optional)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Code (optional)',
+                  ),
                 ),
                 DropdownButtonFormField<String>(
                   initialValue: selectedDepartmentId,
                   decoration: const InputDecoration(labelText: 'Department'),
-                  items: departments.map((d) => DropdownMenuItem(value: d.id, child: Text(d.name))).toList(),
+                  items: departments
+                      .map(
+                        (d) =>
+                            DropdownMenuItem(value: d.id, child: Text(d.name)),
+                      )
+                      .toList(),
                   onChanged: (v) => setState(() => selectedDepartmentId = v),
                 ),
                 const SizedBox(height: 8),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: Text('Color', style: Theme.of(context).textTheme.labelMedium),
+                  child: Text(
+                    'Color',
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
                 ),
                 Wrap(
                   spacing: 8,
@@ -504,7 +609,13 @@ Future<void> showSubjectFormDialog(
                       child: CircleAvatar(
                         backgroundColor: c,
                         radius: 14,
-                        child: selected ? const Icon(Icons.check, color: Colors.white, size: 16) : null,
+                        child: selected
+                            ? const Icon(
+                                Icons.check,
+                                color: Colors.white,
+                                size: 16,
+                              )
+                            : null,
                       ),
                     );
                   }).toList(),
@@ -512,12 +623,16 @@ Future<void> showSubjectFormDialog(
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: creditController,
-                  decoration: const InputDecoration(labelText: 'Credit Units (optional)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Credit Units (optional)',
+                  ),
                   keyboardType: TextInputType.number,
                 ),
                 TextFormField(
                   controller: descController,
-                  decoration: const InputDecoration(labelText: 'Description (optional)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Description (optional)',
+                  ),
                   maxLines: 2,
                 ),
                 SwitchListTile(
@@ -544,25 +659,30 @@ Future<void> showSubjectFormDialog(
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () {
               if (!formKey.currentState!.validate()) return;
-              onSave(Subject(
-                id: existing?.id ?? const Uuid().v4(),
-                schoolId: existing?.schoolId ?? schoolId,
-                name: nameController.text,
-                code: codeController.text,
-                departmentId: selectedDepartmentId ?? '',
-                color: _colorToHex(selectedColor),
-                description: descController.text,
-                isElective: isElective,
-                isPractical: isPractical,
-                creditUnits: int.tryParse(creditController.text) ?? 0,
-                isActive: isActive,
-                assignedLevelIds: existing?.assignedLevelIds ?? const [],
-                assignedClassIds: existing?.assignedClassIds ?? const [],
-              ));
+              onSave(
+                Subject(
+                  id: existing?.id ?? const Uuid().v4(),
+                  schoolId: existing?.schoolId ?? schoolId,
+                  name: nameController.text,
+                  code: codeController.text,
+                  departmentId: selectedDepartmentId ?? '',
+                  color: _colorToHex(selectedColor),
+                  description: descController.text,
+                  isElective: isElective,
+                  isPractical: isPractical,
+                  creditUnits: int.tryParse(creditController.text) ?? 0,
+                  isActive: isActive,
+                  assignedLevelIds: existing?.assignedLevelIds ?? const [],
+                  assignedClassIds: existing?.assignedClassIds ?? const [],
+                ),
+              );
               Navigator.pop(context);
             },
             child: Text(existing == null ? 'Add' : 'Save'),
@@ -573,7 +693,12 @@ Future<void> showSubjectFormDialog(
   );
 }
 
-Future<void> showDepartmentFormDialog(BuildContext context, {Department? existing, required String schoolId, required void Function(Department) onSave}) {
+Future<void> showDepartmentFormDialog(
+  BuildContext context, {
+  Department? existing,
+  required String schoolId,
+  required void Function(Department) onSave,
+}) {
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController(text: existing?.name);
   final codeController = TextEditingController(text: existing?.code);
@@ -593,16 +718,22 @@ Future<void> showDepartmentFormDialog(BuildContext context, {Department? existin
               children: [
                 TextFormField(
                   controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Department Name'),
+                  decoration: const InputDecoration(
+                    labelText: 'Department Name',
+                  ),
                   validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                 ),
                 TextFormField(
                   controller: codeController,
-                  decoration: const InputDecoration(labelText: 'Code (optional)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Code (optional)',
+                  ),
                 ),
                 TextFormField(
                   controller: descController,
-                  decoration: const InputDecoration(labelText: 'Description (optional)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Description (optional)',
+                  ),
                   maxLines: 2,
                 ),
                 if (existing != null)
@@ -617,19 +748,25 @@ Future<void> showDepartmentFormDialog(BuildContext context, {Department? existin
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () {
               if (!formKey.currentState!.validate()) return;
-              onSave(Department(
-                id: existing?.id ?? const Uuid().v4(),
-                schoolId: existing?.schoolId ?? schoolId,
-                name: nameController.text,
-                code: codeController.text,
-                description: descController.text,
-                headOfDepartmentStaffId: existing?.headOfDepartmentStaffId ?? '',
-                isActive: isActive,
-              ));
+              onSave(
+                Department(
+                  id: existing?.id ?? const Uuid().v4(),
+                  schoolId: existing?.schoolId ?? schoolId,
+                  name: nameController.text,
+                  code: codeController.text,
+                  description: descController.text,
+                  headOfDepartmentStaffId:
+                      existing?.headOfDepartmentStaffId ?? '',
+                  isActive: isActive,
+                ),
+              );
               Navigator.pop(context);
             },
             child: Text(existing == null ? 'Add' : 'Save'),
@@ -640,7 +777,12 @@ Future<void> showDepartmentFormDialog(BuildContext context, {Department? existin
   );
 }
 
-Future<void> showDesignationFormDialog(BuildContext context, {StaffDesignation? existing, required String schoolId, required void Function(StaffDesignation) onSave}) {
+Future<void> showDesignationFormDialog(
+  BuildContext context, {
+  StaffDesignation? existing,
+  required String schoolId,
+  required void Function(StaffDesignation) onSave,
+}) {
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController(text: existing?.name);
   final descController = TextEditingController(text: existing?.description);
@@ -650,7 +792,9 @@ Future<void> showDesignationFormDialog(BuildContext context, {StaffDesignation? 
     context: context,
     builder: (context) => StatefulBuilder(
       builder: (context, setState) => AlertDialog(
-        title: Text(existing == null ? 'Add Staff Designation' : 'Edit Staff Designation'),
+        title: Text(
+          existing == null ? 'Add Staff Designation' : 'Edit Staff Designation',
+        ),
         content: SingleChildScrollView(
           child: Form(
             key: formKey,
@@ -659,12 +803,16 @@ Future<void> showDesignationFormDialog(BuildContext context, {StaffDesignation? 
               children: [
                 TextFormField(
                   controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Designation (e.g. Principal, Bursar)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Designation (e.g. Principal, Bursar)',
+                  ),
                   validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                 ),
                 TextFormField(
                   controller: descController,
-                  decoration: const InputDecoration(labelText: 'Description (optional)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Description (optional)',
+                  ),
                   maxLines: 2,
                 ),
                 if (existing != null)
@@ -679,17 +827,22 @@ Future<void> showDesignationFormDialog(BuildContext context, {StaffDesignation? 
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () {
               if (!formKey.currentState!.validate()) return;
-              onSave(StaffDesignation(
-                id: existing?.id ?? const Uuid().v4(),
-                schoolId: existing?.schoolId ?? schoolId,
-                name: nameController.text,
-                description: descController.text,
-                isActive: isActive,
-              ));
+              onSave(
+                StaffDesignation(
+                  id: existing?.id ?? const Uuid().v4(),
+                  schoolId: existing?.schoolId ?? schoolId,
+                  name: nameController.text,
+                  description: descController.text,
+                  isActive: isActive,
+                ),
+              );
               Navigator.pop(context);
             },
             child: Text(existing == null ? 'Add' : 'Save'),
@@ -728,18 +881,29 @@ Future<void> showStaffRoleFormDialog(
               children: [
                 TextFormField(
                   controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Role (e.g. Class Teacher, Exam Officer)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Role (e.g. Class Teacher, Exam Officer)',
+                  ),
                   validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                 ),
                 DropdownButtonFormField<String>(
                   initialValue: selectedDesignationId,
-                  decoration: const InputDecoration(labelText: 'Designation (optional)'),
-                  items: designations.map((d) => DropdownMenuItem(value: d.id, child: Text(d.name))).toList(),
+                  decoration: const InputDecoration(
+                    labelText: 'Designation (optional)',
+                  ),
+                  items: designations
+                      .map(
+                        (d) =>
+                            DropdownMenuItem(value: d.id, child: Text(d.name)),
+                      )
+                      .toList(),
                   onChanged: (v) => setState(() => selectedDesignationId = v),
                 ),
                 TextFormField(
                   controller: descController,
-                  decoration: const InputDecoration(labelText: 'Description (optional)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Description (optional)',
+                  ),
                   maxLines: 2,
                 ),
                 if (existing != null)
@@ -754,18 +918,23 @@ Future<void> showStaffRoleFormDialog(
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () {
               if (!formKey.currentState!.validate()) return;
-              onSave(StaffRole(
-                id: existing?.id ?? const Uuid().v4(),
-                schoolId: existing?.schoolId ?? schoolId,
-                name: nameController.text,
-                designationId: selectedDesignationId ?? '',
-                description: descController.text,
-                isActive: isActive,
-              ));
+              onSave(
+                StaffRole(
+                  id: existing?.id ?? const Uuid().v4(),
+                  schoolId: existing?.schoolId ?? schoolId,
+                  name: nameController.text,
+                  designationId: selectedDesignationId ?? '',
+                  description: descController.text,
+                  isActive: isActive,
+                ),
+              );
               Navigator.pop(context);
             },
             child: Text(existing == null ? 'Add' : 'Save'),
@@ -776,14 +945,35 @@ Future<void> showStaffRoleFormDialog(
   );
 }
 
-Future<bool?> showDeleteConfirmDialog(BuildContext context, {required String title, required String message}) {
+Future<bool?> showDeleteConfirmDialog(
+  BuildContext context, {
+  required String title,
+  required String message,
+  String? impactMessage,
+}) {
   return showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
       title: Text(title),
-      content: Text(message),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(message),
+          if (impactMessage != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              impactMessage,
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ],
+      ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
         TextButton(
           onPressed: () => Navigator.pop(context, true),
           child: const Text('Delete', style: TextStyle(color: Colors.red)),

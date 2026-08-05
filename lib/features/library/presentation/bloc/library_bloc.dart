@@ -30,34 +30,52 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     on<UpdatePolicyRequested>(_onUpdatePolicyRequested);
   }
 
-  Future<void> _onWatchLibraryResources(WatchLibraryResources event, Emitter<LibraryState> emit) async {
+  Future<void> _onWatchLibraryResources(
+    WatchLibraryResources event,
+    Emitter<LibraryState> emit,
+  ) async {
     await _resourcesSubscription?.cancel();
     emit(LibraryLoading());
-    _resourcesSubscription = repository.watchResources(event.schoolId).listen(
-      (resources) => add(_UpdateResources(resources)),
+    _resourcesSubscription = repository
+        .watchResources(event.schoolId)
+        .listen((resources) => add(_UpdateResources(resources)));
+    on<_UpdateResources>(
+      (event, emit) => emit(LibraryResourcesLoaded(event.resources)),
     );
-    on<_UpdateResources>((event, emit) => emit(LibraryResourcesLoaded(event.resources)));
   }
 
-  Future<void> _onWatchBorrowingHistory(WatchBorrowingHistory event, Emitter<LibraryState> emit) async {
+  Future<void> _onWatchBorrowingHistory(
+    WatchBorrowingHistory event,
+    Emitter<LibraryState> emit,
+  ) async {
     await _historySubscription?.cancel();
     emit(LibraryLoading());
-    _historySubscription = repository.watchBorrowingHistory(event.schoolId, borrowerId: event.borrowerId).listen(
-      (history) => add(_UpdateHistory(history)),
+    _historySubscription = repository
+        .watchBorrowingHistory(event.schoolId, borrowerId: event.borrowerId)
+        .listen((history) => add(_UpdateHistory(history)));
+    on<_UpdateHistory>(
+      (event, emit) => emit(LibraryHistoryLoaded(event.history)),
     );
-    on<_UpdateHistory>((event, emit) => emit(LibraryHistoryLoaded(event.history)));
   }
 
-  Future<void> _onWatchReservations(WatchReservations event, Emitter<LibraryState> emit) async {
+  Future<void> _onWatchReservations(
+    WatchReservations event,
+    Emitter<LibraryState> emit,
+  ) async {
     await _reservationsSubscription?.cancel();
     emit(LibraryLoading());
-    _reservationsSubscription = repository.watchReservations(event.schoolId, borrowerId: event.borrowerId).listen(
-      (reservations) => add(_UpdateReservations(reservations)),
+    _reservationsSubscription = repository
+        .watchReservations(event.schoolId, borrowerId: event.borrowerId)
+        .listen((reservations) => add(_UpdateReservations(reservations)));
+    on<_UpdateReservations>(
+      (event, emit) => emit(LibraryReservationsLoaded(event.reservations)),
     );
-    on<_UpdateReservations>((event, emit) => emit(LibraryReservationsLoaded(event.reservations)));
   }
 
-  Future<void> _onAddResourceRequested(AddResourceRequested event, Emitter<LibraryState> emit) async {
+  Future<void> _onAddResourceRequested(
+    AddResourceRequested event,
+    Emitter<LibraryState> emit,
+  ) async {
     try {
       await repository.addResource(event.resource);
       emit(const LibraryActionSuccess('Resource added successfully'));
@@ -66,7 +84,10 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     }
   }
 
-  Future<void> _onUpdateResourceRequested(UpdateResourceRequested event, Emitter<LibraryState> emit) async {
+  Future<void> _onUpdateResourceRequested(
+    UpdateResourceRequested event,
+    Emitter<LibraryState> emit,
+  ) async {
     try {
       await repository.updateResource(event.resource);
       emit(const LibraryActionSuccess('Resource updated successfully'));
@@ -75,7 +96,10 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     }
   }
 
-  Future<void> _onIssueResourceRequested(IssueResourceRequested event, Emitter<LibraryState> emit) async {
+  Future<void> _onIssueResourceRequested(
+    IssueResourceRequested event,
+    Emitter<LibraryState> emit,
+  ) async {
     try {
       await repository.issueResource(event.borrowing);
       emit(const LibraryActionSuccess('Resource issued successfully'));
@@ -84,7 +108,10 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     }
   }
 
-  Future<void> _onReturnResourceRequested(ReturnResourceRequested event, Emitter<LibraryState> emit) async {
+  Future<void> _onReturnResourceRequested(
+    ReturnResourceRequested event,
+    Emitter<LibraryState> emit,
+  ) async {
     try {
       await repository.returnResource(
         event.schoolId,
@@ -98,7 +125,10 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     }
   }
 
-  Future<void> _onReserveResourceRequested(ReserveResourceRequested event, Emitter<LibraryState> emit) async {
+  Future<void> _onReserveResourceRequested(
+    ReserveResourceRequested event,
+    Emitter<LibraryState> emit,
+  ) async {
     try {
       await repository.reserveResource(event.reservation);
       emit(const LibraryActionSuccess('Resource reserved successfully'));
@@ -107,7 +137,10 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     }
   }
 
-  Future<void> _onFetchLibraryStats(FetchLibraryStats event, Emitter<LibraryState> emit) async {
+  Future<void> _onFetchLibraryStats(
+    FetchLibraryStats event,
+    Emitter<LibraryState> emit,
+  ) async {
     emit(LibraryLoading());
     try {
       final stats = await repository.getLibraryStats(event.schoolId);
@@ -117,21 +150,32 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     }
   }
 
-  Future<void> _onSearchResourcesRequested(SearchResourcesRequested event, Emitter<LibraryState> emit) async {
-    // This could be handled by the watch event filtered in the UI, 
+  Future<void> _onSearchResourcesRequested(
+    SearchResourcesRequested event,
+    Emitter<LibraryState> emit,
+  ) async {
+    // This could be handled by the watch event filtered in the UI,
     // but for large datasets, we'd implement a repository search.
     // For now, we rely on the Watch stream being filtered in the UI or locally.
   }
 
-  Future<void> _onWatchPoliciesRequested(WatchPoliciesRequested event, Emitter<LibraryState> emit) async {
+  Future<void> _onWatchPoliciesRequested(
+    WatchPoliciesRequested event,
+    Emitter<LibraryState> emit,
+  ) async {
     await _policiesSubscription?.cancel();
-    _policiesSubscription = repository.watchPolicies(event.schoolId).listen(
-      (policies) => add(_UpdatePolicies(policies)),
+    _policiesSubscription = repository
+        .watchPolicies(event.schoolId)
+        .listen((policies) => add(_UpdatePolicies(policies)));
+    on<_UpdatePolicies>(
+      (event, emit) => emit(LibraryPoliciesLoaded(event.policies)),
     );
-    on<_UpdatePolicies>((event, emit) => emit(LibraryPoliciesLoaded(event.policies)));
   }
 
-  Future<void> _onUpdatePolicyRequested(UpdatePolicyRequested event, Emitter<LibraryState> emit) async {
+  Future<void> _onUpdatePolicyRequested(
+    UpdatePolicyRequested event,
+    Emitter<LibraryState> emit,
+  ) async {
     try {
       await repository.updatePolicy(event.policy);
       emit(const LibraryActionSuccess('Policy updated successfully'));

@@ -39,25 +39,43 @@ class MyClassesScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               children: [
-                _buildClassItem(context, '10A', 'Grade 10A (Science)', 'Section A', 'Mathematics', '28 Students',
-                    '10:00 AM'),
+                _buildClassItem(
+                  context,
+                  '10A',
+                  'Grade 10A (Science)',
+                  'Section A',
+                  'Mathematics',
+                  '28 Students',
+                  '10:00 AM',
+                ),
                 const SizedBox(height: 16),
-                _buildClassItem(context, '10B', 'Grade 10B (Science)', 'Section B', 'Mathematics', '25 Students',
-                    '01:00 PM',
-                    nextTimeColor: AppColors.secondary(context)),
+                _buildClassItem(
+                  context,
+                  '10B',
+                  'Grade 10B (Science)',
+                  'Section B',
+                  'Mathematics',
+                  '25 Students',
+                  '01:00 PM',
+                  nextTimeColor: AppColors.secondary(context),
+                ),
                 const SizedBox(height: 16),
-                _buildClassItem(context, '9A', 'Grade 9A (Science)', 'Section A', 'Mathematics', '27 Students',
-                    'Tomorrow\n02:00 PM',
-                    nextTimeColor: AppColors.primary(context)),
+                _buildClassItem(
+                  context,
+                  '9A',
+                  'Grade 9A (Science)',
+                  'Section A',
+                  'Mathematics',
+                  '27 Students',
+                  'Tomorrow\n02:00 PM',
+                  nextTimeColor: AppColors.primary(context),
+                ),
               ],
             ),
           ),
           Padding(
             padding: const EdgeInsets.all(20.0),
-            child: PrimaryButton(
-              label: 'View Timetable',
-              onPressed: () {},
-            ),
+            child: PrimaryButton(label: 'View Timetable', onPressed: () {}),
           ),
         ],
       ),
@@ -83,9 +101,16 @@ class MyClassesScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildClassItem(BuildContext context, String code, String name, String section, String subject,
-      String students, String nextLesson,
-      {Color? nextTimeColor}) {
+  Widget _buildClassItem(
+    BuildContext context,
+    String code,
+    String name,
+    String section,
+    String subject,
+    String students,
+    String nextLesson, {
+    Color? nextTimeColor,
+  }) {
     final effectiveNextTimeColor = nextTimeColor ?? AppColors.primary(context);
     return AppCard(
       onTap: () => context.push('/staff/lessons/class/10A'),
@@ -101,33 +126,59 @@ class MyClassesScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
             ),
             alignment: Alignment.center,
-            child: Text(code,
-                style: TextStyle(
-                  color: AppColors.primary(context),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                )),
+            child: Text(
+              code,
+              style: TextStyle(
+                color: AppColors.primary(context),
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name,
-                    style: TextStyle(
-                      color: AppColors.textPrimary(context),
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    )),
-                Text(section, style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12)),
+                Text(
+                  name,
+                  style: TextStyle(
+                    color: AppColors.textPrimary(context),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  section,
+                  style: TextStyle(
+                    color: AppColors.textSecondary(context),
+                    fontSize: 12,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(subject, style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12)),
+                Text(
+                  subject,
+                  style: TextStyle(
+                    color: AppColors.textSecondary(context),
+                    fontSize: 12,
+                  ),
+                ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Icon(Icons.people_outline, color: AppColors.textMuted(context), size: 14),
+                    Icon(
+                      Icons.people_outline,
+                      color: AppColors.textMuted(context),
+                      size: 14,
+                    ),
                     const SizedBox(width: 4),
-                    Text(students, style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12)),
+                    Text(
+                      students,
+                      style: TextStyle(
+                        color: AppColors.textSecondary(context),
+                        fontSize: 12,
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -136,15 +187,23 @@ class MyClassesScreen extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('Next Lesson', style: TextStyle(color: AppColors.textMuted(context), fontSize: 10)),
+              Text(
+                'Next Lesson',
+                style: TextStyle(
+                  color: AppColors.textMuted(context),
+                  fontSize: 10,
+                ),
+              ),
               const SizedBox(height: 4),
-              Text(nextLesson,
-                  textAlign: TextAlign.right,
-                  style: TextStyle(
-                    color: effectiveNextTimeColor,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  )),
+              Text(
+                nextLesson,
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                  color: effectiveNextTimeColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
         ],
@@ -152,4 +211,3 @@ class MyClassesScreen extends StatelessWidget {
     );
   }
 }
-

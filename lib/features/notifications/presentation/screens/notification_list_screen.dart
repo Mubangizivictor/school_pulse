@@ -34,10 +34,9 @@ class NotificationListScreen extends StatelessWidget {
 
     return BlocProvider(
       create: (_) => di.sl<NotificationCenterBloc>()
-        ..add(NotificationCenterStarted(
-          schoolId: user.schoolId,
-          userId: user.id,
-        )),
+        ..add(
+          NotificationCenterStarted(schoolId: user.schoolId, userId: user.id),
+        ),
       child: const _NotificationListView(),
     );
   }
@@ -233,8 +232,7 @@ class _NotificationListViewState extends State<_NotificationListView>
       // Still wrapped in a refresh indicator: an empty list is exactly when a
       // user is most likely to pull down expecting something to appear.
       return RefreshIndicator(
-        onRefresh: () async =>
-            bloc.add(const NotificationCenterRefreshed()),
+        onRefresh: () async => bloc.add(const NotificationCenterRefreshed()),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           children: const [
@@ -258,8 +256,8 @@ class _NotificationListViewState extends State<_NotificationListView>
         onNotification: (scroll) {
           // Request the next page slightly before the bottom so the list keeps
           // moving rather than stalling at the end.
-          final atEnd = scroll.metrics.pixels >=
-              scroll.metrics.maxScrollExtent - 300;
+          final atEnd =
+              scroll.metrics.pixels >= scroll.metrics.maxScrollExtent - 300;
           if (atEnd && state.hasMore && !state.isLoadingMore) {
             bloc.add(const NotificationCenterLoadedMore());
           }
@@ -305,9 +303,9 @@ class _NotificationTile extends StatelessWidget {
         // Opening records openedAt and readAt as distinct timestamps, then
         // navigates. The notification travels as `extra` so the details screen
         // renders immediately instead of re-fetching by id.
-        context
-            .read<NotificationCenterBloc>()
-            .add(NotificationOpened(notification.id));
+        context.read<NotificationCenterBloc>().add(
+          NotificationOpened(notification.id),
+        );
         context.push(
           '/staff/notifications/${notification.id}',
           extra: notification,
@@ -344,7 +342,10 @@ class _NotificationTile extends StatelessWidget {
                       ),
                       Text(
                         DateFormat('h:mm a').format(notification.timestamp),
-                        style: const TextStyle(color: Colors.white60, fontSize: 12),
+                        style: const TextStyle(
+                          color: Colors.white60,
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
@@ -360,19 +361,28 @@ class _NotificationTile extends StatelessWidget {
                     children: [
                       Text(
                         notification.senderName,
-                        style: const TextStyle(color: Color(0xFF10B981), fontSize: 12),
+                        style: const TextStyle(
+                          color: Color(0xFF10B981),
+                          fontSize: 12,
+                        ),
                       ),
                       const Spacer(),
                       if (notification.priority == NotificationPriority.high)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFE11D48).withOpacity(0.2),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: const Text(
                             'High',
-                            style: TextStyle(color: Color(0xFFE11D48), fontSize: 10),
+                            style: TextStyle(
+                              color: Color(0xFFE11D48),
+                              fontSize: 10,
+                            ),
                           ),
                         ),
                     ],

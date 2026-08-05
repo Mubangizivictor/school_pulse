@@ -20,11 +20,14 @@ import 'package:school_pulse/features/verification/presentation/bloc/verificatio
 
 class MockIdentityResolver extends Mock implements IdentityResolver {}
 
-class MockVerificationPolicyEvaluator extends Mock implements VerificationPolicyEvaluator {}
+class MockVerificationPolicyEvaluator extends Mock
+    implements VerificationPolicyEvaluator {}
 
-class MockVerificationEventRecorder extends Mock implements VerificationEventRecorder {}
+class MockVerificationEventRecorder extends Mock
+    implements VerificationEventRecorder {}
 
-class MockVerificationFeedbackService extends Mock implements VerificationFeedbackService {}
+class MockVerificationFeedbackService extends Mock
+    implements VerificationFeedbackService {}
 
 class MockRecordStudentMovement extends Mock implements RecordStudentMovement {}
 
@@ -66,7 +69,10 @@ void main() {
     requestedAt: DateTime(2026, 1, 1),
   );
 
-  final credential = QrScanCredential(rawPayload: 'SP-0001', scannedAt: DateTime.now());
+  final credential = QrScanCredential(
+    rawPayload: 'SP-0001',
+    scannedAt: DateTime.now(),
+  );
 
   const student = StudentResolvedIdentity(
     id: 'student-1',
@@ -76,35 +82,41 @@ void main() {
   );
 
   VerificationSessionBloc buildBloc() => VerificationSessionBloc(
-        identityResolver: identityResolver,
-        policyEvaluator: policyEvaluator,
-        eventRecorder: eventRecorder,
-        feedbackService: feedbackService,
-        recordStudentMovement: recordStudentMovement,
-        recordStaffMovement: recordStaffMovement,
-      );
+    identityResolver: identityResolver,
+    policyEvaluator: policyEvaluator,
+    eventRecorder: eventRecorder,
+    feedbackService: feedbackService,
+    recordStudentMovement: recordStudentMovement,
+    recordStaffMovement: recordStaffMovement,
+  );
 
   setUpAll(() {
     registerFallbackValue(credential);
     registerFallbackValue(context);
     registerFallbackValue(student);
     registerFallbackValue(
-      const VerificationDecision(outcome: VerificationOutcome.allowed, identity: student, message: ''),
+      const VerificationDecision(
+        outcome: VerificationOutcome.allowed,
+        identity: student,
+        message: '',
+      ),
     );
-    registerFallbackValue(StudentMovement(
-      id: 'fallback',
-      studentId: 'fallback',
-      studentName: 'fallback',
-      className: 'fallback',
-      timestamp: DateTime.now(),
-      gateId: 'fallback',
-      direction: 'In',
-      movementType: 'Arrival',
-      verificationMethod: 'fallback',
-      officerId: 'fallback',
-      deviceId: 'fallback',
-      schoolId: 'fallback',
-    ));
+    registerFallbackValue(
+      StudentMovement(
+        id: 'fallback',
+        studentId: 'fallback',
+        studentName: 'fallback',
+        className: 'fallback',
+        timestamp: DateTime.now(),
+        gateId: 'fallback',
+        direction: 'In',
+        movementType: 'Arrival',
+        verificationMethod: 'fallback',
+        officerId: 'fallback',
+        deviceId: 'fallback',
+        schoolId: 'fallback',
+      ),
+    );
   });
 
   setUp(() {
@@ -119,32 +131,52 @@ void main() {
     when(() => feedbackService.playDenied()).thenAnswer((_) async {});
     when(() => feedbackService.playDuplicate()).thenAnswer((_) async {});
     when(() => feedbackService.playError()).thenAnswer((_) async {});
-    when(() => recordStudentMovement(any())).thenAnswer((_) async => const Right(null));
-    when(() => eventRecorder.record(
-          decision: any(named: 'decision'),
-          context: any(named: 'context'),
-          credential: any(named: 'credential'),
-          direction: any(named: 'direction'),
-        )).thenAnswer((_) async => const Right(null));
+    when(
+      () => recordStudentMovement(any()),
+    ).thenAnswer((_) async => const Right(null));
+    when(
+      () => eventRecorder.record(
+        decision: any(named: 'decision'),
+        context: any(named: 'context'),
+        credential: any(named: 'credential'),
+        direction: any(named: 'direction'),
+      ),
+    ).thenAnswer((_) async => const Right(null));
   });
 
   blocTest<VerificationSessionBloc, VerificationSessionState>(
     'emits Resolving then Decided(allowed) on a successful, permitted scan',
     build: () {
-      when(() => identityResolver.resolve(any(), any())).thenAnswer((_) async => const Right(student));
-      when(() => policyEvaluator.evaluate(identity: any(named: 'identity'), context: any(named: 'context')))
-          .thenAnswer((_) async => const Right(VerificationDecision(
-                outcome: VerificationOutcome.allowed,
-                identity: student,
-                message: 'Identity verified.',
-                suggestedDirection: 'In',
-              )));
+      when(
+        () => identityResolver.resolve(any(), any()),
+      ).thenAnswer((_) async => const Right(student));
+      when(
+        () => policyEvaluator.evaluate(
+          identity: any(named: 'identity'),
+          context: any(named: 'context'),
+        ),
+      ).thenAnswer(
+        (_) async => const Right(
+          VerificationDecision(
+            outcome: VerificationOutcome.allowed,
+            identity: student,
+            message: 'Identity verified.',
+            suggestedDirection: 'In',
+          ),
+        ),
+      );
       return buildBloc();
     },
-    act: (bloc) => bloc.add(VerificationCredentialCaptured(credential: credential, context: context)),
+    act: (bloc) => bloc.add(
+      VerificationCredentialCaptured(credential: credential, context: context),
+    ),
     expect: () => [
       const VerificationResolving(),
-      isA<VerificationDecided>().having((s) => s.decision.outcome, 'outcome', VerificationOutcome.allowed),
+      isA<VerificationDecided>().having(
+        (s) => s.decision.outcome,
+        'outcome',
+        VerificationOutcome.allowed,
+      ),
     ],
     verify: (_) {
       verify(() => feedbackService.playApproved()).called(1);
@@ -154,20 +186,36 @@ void main() {
   blocTest<VerificationSessionBloc, VerificationSessionState>(
     'emits Decided(denied) and plays the denied sound when policy rejects the identity',
     build: () {
-      when(() => identityResolver.resolve(any(), any())).thenAnswer((_) async => const Right(student));
-      when(() => policyEvaluator.evaluate(identity: any(named: 'identity'), context: any(named: 'context')))
-          .thenAnswer((_) async => const Right(VerificationDecision(
-                outcome: VerificationOutcome.denied,
-                identity: student,
-                message: 'Not authorized.',
-                reasonCode: 'NOT_AUTHORIZED',
-              )));
+      when(
+        () => identityResolver.resolve(any(), any()),
+      ).thenAnswer((_) async => const Right(student));
+      when(
+        () => policyEvaluator.evaluate(
+          identity: any(named: 'identity'),
+          context: any(named: 'context'),
+        ),
+      ).thenAnswer(
+        (_) async => const Right(
+          VerificationDecision(
+            outcome: VerificationOutcome.denied,
+            identity: student,
+            message: 'Not authorized.',
+            reasonCode: 'NOT_AUTHORIZED',
+          ),
+        ),
+      );
       return buildBloc();
     },
-    act: (bloc) => bloc.add(VerificationCredentialCaptured(credential: credential, context: context)),
+    act: (bloc) => bloc.add(
+      VerificationCredentialCaptured(credential: credential, context: context),
+    ),
     expect: () => [
       const VerificationResolving(),
-      isA<VerificationDecided>().having((s) => s.decision.outcome, 'outcome', VerificationOutcome.denied),
+      isA<VerificationDecided>().having(
+        (s) => s.decision.outcome,
+        'outcome',
+        VerificationOutcome.denied,
+      ),
     ],
     verify: (_) {
       verify(() => feedbackService.playDenied()).called(1);
@@ -178,18 +226,33 @@ void main() {
   blocTest<VerificationSessionBloc, VerificationSessionState>(
     'records the student movement and the audit event once the operator confirms a direction',
     build: () {
-      when(() => identityResolver.resolve(any(), any())).thenAnswer((_) async => const Right(student));
-      when(() => policyEvaluator.evaluate(identity: any(named: 'identity'), context: any(named: 'context')))
-          .thenAnswer((_) async => const Right(VerificationDecision(
-                outcome: VerificationOutcome.allowed,
-                identity: student,
-                message: 'Identity verified.',
-                suggestedDirection: 'In',
-              )));
+      when(
+        () => identityResolver.resolve(any(), any()),
+      ).thenAnswer((_) async => const Right(student));
+      when(
+        () => policyEvaluator.evaluate(
+          identity: any(named: 'identity'),
+          context: any(named: 'context'),
+        ),
+      ).thenAnswer(
+        (_) async => const Right(
+          VerificationDecision(
+            outcome: VerificationOutcome.allowed,
+            identity: student,
+            message: 'Identity verified.',
+            suggestedDirection: 'In',
+          ),
+        ),
+      );
       return buildBloc();
     },
     act: (bloc) async {
-      bloc.add(VerificationCredentialCaptured(credential: credential, context: context));
+      bloc.add(
+        VerificationCredentialCaptured(
+          credential: credential,
+          context: context,
+        ),
+      );
       await Future.delayed(Duration.zero);
       bloc.add(const VerificationDirectionConfirmed('In'));
     },
@@ -199,32 +262,53 @@ void main() {
       isA<VerificationRecorded>().having((s) => s.direction, 'direction', 'In'),
     ],
     verify: (_) {
-      verify(() => recordStudentMovement(any(that: isA<StudentMovement>()))).called(1);
-      verify(() => eventRecorder.record(
-            decision: any(named: 'decision'),
-            context: any(named: 'context'),
-            credential: any(named: 'credential'),
-            direction: 'In',
-          )).called(1);
+      verify(
+        () => recordStudentMovement(any(that: isA<StudentMovement>())),
+      ).called(1);
+      verify(
+        () => eventRecorder.record(
+          decision: any(named: 'decision'),
+          context: any(named: 'context'),
+          credential: any(named: 'credential'),
+          direction: 'In',
+        ),
+      ).called(1);
     },
   );
 
   blocTest<VerificationSessionBloc, VerificationSessionState>(
     'surfaces an error instead of a false "recorded" success when the movement write itself fails',
     build: () {
-      when(() => identityResolver.resolve(any(), any())).thenAnswer((_) async => const Right(student));
-      when(() => policyEvaluator.evaluate(identity: any(named: 'identity'), context: any(named: 'context')))
-          .thenAnswer((_) async => const Right(VerificationDecision(
-                outcome: VerificationOutcome.allowed,
-                identity: student,
-                message: 'Identity verified.',
-                suggestedDirection: 'In',
-              )));
-      when(() => recordStudentMovement(any())).thenAnswer((_) async => const Left(ServerFailure('write failed')));
+      when(
+        () => identityResolver.resolve(any(), any()),
+      ).thenAnswer((_) async => const Right(student));
+      when(
+        () => policyEvaluator.evaluate(
+          identity: any(named: 'identity'),
+          context: any(named: 'context'),
+        ),
+      ).thenAnswer(
+        (_) async => const Right(
+          VerificationDecision(
+            outcome: VerificationOutcome.allowed,
+            identity: student,
+            message: 'Identity verified.',
+            suggestedDirection: 'In',
+          ),
+        ),
+      );
+      when(
+        () => recordStudentMovement(any()),
+      ).thenAnswer((_) async => const Left(ServerFailure('write failed')));
       return buildBloc();
     },
     act: (bloc) async {
-      bloc.add(VerificationCredentialCaptured(credential: credential, context: context));
+      bloc.add(
+        VerificationCredentialCaptured(
+          credential: credential,
+          context: context,
+        ),
+      );
       await Future.delayed(Duration.zero);
       bloc.add(const VerificationDirectionConfirmed('In'));
     },
@@ -234,23 +318,28 @@ void main() {
       isA<VerificationSessionError>(),
     ],
     verify: (_) {
-      verifyNever(() => eventRecorder.record(
-            decision: any(named: 'decision'),
-            context: any(named: 'context'),
-            credential: any(named: 'credential'),
-            direction: any(named: 'direction'),
-          ));
+      verifyNever(
+        () => eventRecorder.record(
+          decision: any(named: 'decision'),
+          context: any(named: 'context'),
+          credential: any(named: 'credential'),
+          direction: any(named: 'direction'),
+        ),
+      );
     },
   );
 
   blocTest<VerificationSessionBloc, VerificationSessionState>(
     'emits an error state and plays the error sound when the resolver fails',
     build: () {
-      when(() => identityResolver.resolve(any(), any()))
-          .thenAnswer((_) async => const Left(CacheFailure('offline')));
+      when(
+        () => identityResolver.resolve(any(), any()),
+      ).thenAnswer((_) async => const Left(CacheFailure('offline')));
       return buildBloc();
     },
-    act: (bloc) => bloc.add(VerificationCredentialCaptured(credential: credential, context: context)),
+    act: (bloc) => bloc.add(
+      VerificationCredentialCaptured(credential: credential, context: context),
+    ),
     expect: () => [
       const VerificationResolving(),
       isA<VerificationSessionError>(),

@@ -10,12 +10,12 @@ import 'package:school_pulse/features/messages/domain/entities/message_models.da
 class MockFirebaseStorage extends Mock implements FirebaseStorage {}
 
 UserEntity _user(String id, String name, UserRole role) => UserEntity(
-      id: id,
-      name: name,
-      email: '$id@school.test',
-      schoolId: 'school-1',
-      roles: [role],
-    );
+  id: id,
+  name: name,
+  email: '$id@school.test',
+  schoolId: 'school-1',
+  roles: [role],
+);
 
 void main() {
   late FakeFirebaseFirestore firestore;
@@ -25,21 +25,40 @@ void main() {
   final parent = _user('parent-1', 'Mr. Boateng', UserRole.parent);
   final otherParent = _user('parent-2', 'Abena Owusu', UserRole.parent);
 
-  const teacherContact = MessageContact(id: 'teacher-1', name: 'Mrs. Amina', role: 'classTeacher');
-  const parentContact = MessageContact(id: 'parent-1', name: 'Mr. Boateng', role: 'parent');
-  const otherParentContact = MessageContact(id: 'parent-2', name: 'Abena Owusu', role: 'parent');
+  const teacherContact = MessageContact(
+    id: 'teacher-1',
+    name: 'Mrs. Amina',
+    role: 'classTeacher',
+  );
+  const parentContact = MessageContact(
+    id: 'parent-1',
+    name: 'Mr. Boateng',
+    role: 'parent',
+  );
+  const otherParentContact = MessageContact(
+    id: 'parent-2',
+    name: 'Abena Owusu',
+    role: 'parent',
+  );
 
   setUp(() {
     firestore = FakeFirebaseFirestore();
-    repository = MessagesRepositoryImpl(firestore: firestore, storage: MockFirebaseStorage());
+    repository = MessagesRepositoryImpl(
+      firestore: firestore,
+      storage: MockFirebaseStorage(),
+    );
   });
 
   group('startDirectConversation', () {
     test('reuses the same thread no matter who opens it first', () async {
-      final fromParent =
-          await repository.startDirectConversation(me: parent, contact: teacherContact);
-      final fromTeacher =
-          await repository.startDirectConversation(me: teacher, contact: parentContact);
+      final fromParent = await repository.startDirectConversation(
+        me: parent,
+        contact: teacherContact,
+      );
+      final fromTeacher = await repository.startDirectConversation(
+        me: teacher,
+        contact: parentContact,
+      );
 
       expect(fromParent, fromTeacher);
       final all = await firestore.collection('conversations').get();
@@ -47,36 +66,60 @@ void main() {
     });
 
     test('auto-accepts when a staff member is involved', () async {
-      final id = await repository.startDirectConversation(me: parent, contact: teacherContact);
+      final id = await repository.startDirectConversation(
+        me: parent,
+        contact: teacherContact,
+      );
 
       final doc = await firestore.collection('conversations').doc(id).get();
       expect(doc.data()!['acceptedBy'], containsAll(['parent-1', 'teacher-1']));
     });
 
     test('leaves a parent-to-parent chat pending for the recipient', () async {
-      final id = await repository.startDirectConversation(me: parent, contact: otherParentContact);
+      final id = await repository.startDirectConversation(
+        me: parent,
+        contact: otherParentContact,
+      );
 
       final doc = await firestore.collection('conversations').doc(id).get();
       expect(doc.data()!['acceptedBy'], ['parent-1']);
 
-      final forRecipient = await repository.watchConversation(id, otherParent.id).first;
+      final forRecipient = await repository
+          .watchConversation(id, otherParent.id)
+          .first;
       expect(forRecipient!.isAccepted, isFalse);
     });
 
     test('un-hides a thread the user had previously deleted', () async {
-      final id = await repository.startDirectConversation(me: parent, contact: teacherContact);
+      final id = await repository.startDirectConversation(
+        me: parent,
+        contact: teacherContact,
+      );
       await repository.leaveConversation(id, parent.id);
       expect(await repository.watchConversations(parent.id).first, isEmpty);
 
-      await repository.startDirectConversation(me: parent, contact: teacherContact);
-      expect(await repository.watchConversations(parent.id).first, hasLength(1));
+      await repository.startDirectConversation(
+        me: parent,
+        contact: teacherContact,
+      );
+      expect(
+        await repository.watchConversations(parent.id).first,
+        hasLength(1),
+      );
     });
   });
 
   group('sendMessage', () {
     test('raises the unread count for everyone but the sender', () async {
-      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
-      await repository.sendMessage(conversationId: id, sender: teacher, content: 'PTA on Friday');
+      final id = await repository.startDirectConversation(
+        me: teacher,
+        contact: parentContact,
+      );
+      await repository.sendMessage(
+        conversationId: id,
+        sender: teacher,
+        content: 'PTA on Friday',
+      );
 
       final doc = await firestore.collection('conversations').doc(id).get();
       final unread = doc.data()!['unreadCounts'] as Map<String, dynamic>;
@@ -84,19 +127,34 @@ void main() {
       expect(unread['teacher-1'], 0);
     });
 
-    test('denormalizes the preview and participants onto the conversation', () async {
-      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
-      await repository.sendMessage(conversationId: id, sender: teacher, content: 'PTA on Friday');
+    test(
+      'denormalizes the preview and participants onto the conversation',
+      () async {
+        final id = await repository.startDirectConversation(
+          me: teacher,
+          contact: parentContact,
+        );
+        await repository.sendMessage(
+          conversationId: id,
+          sender: teacher,
+          content: 'PTA on Friday',
+        );
 
-      final conversation = await repository.watchConversation(id, parent.id).first;
-      expect(conversation!.lastMessage.content, 'PTA on Friday');
-      expect(conversation.hasMessages, isTrue);
-      // A 1:1 title is resolved per viewer, never stored.
-      expect(conversation.title, 'Mrs. Amina');
-    });
+        final conversation = await repository
+            .watchConversation(id, parent.id)
+            .first;
+        expect(conversation!.lastMessage.content, 'PTA on Friday');
+        expect(conversation.hasMessages, isTrue);
+        // A 1:1 title is resolved per viewer, never stored.
+        expect(conversation.title, 'Mrs. Amina');
+      },
+    );
 
     test('shows a photo as a preview rather than empty text', () async {
-      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
+      final id = await repository.startDirectConversation(
+        me: teacher,
+        contact: parentContact,
+      );
       await repository.sendMessage(
         conversationId: id,
         sender: teacher,
@@ -106,14 +164,24 @@ void main() {
         fileName: 'a.jpg',
       );
 
-      final conversation = await repository.watchConversation(id, parent.id).first;
+      final conversation = await repository
+          .watchConversation(id, parent.id)
+          .first;
       expect(conversation!.lastMessage.content, '📷 Photo');
     });
 
     test('carries the quoted message when replying', () async {
-      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
-      await repository.sendMessage(conversationId: id, sender: teacher, content: 'PTA on Friday');
-      final original = (await repository.watchMessages(id, parent.id).first).single;
+      final id = await repository.startDirectConversation(
+        me: teacher,
+        contact: parentContact,
+      );
+      await repository.sendMessage(
+        conversationId: id,
+        sender: teacher,
+        content: 'PTA on Friday',
+      );
+      final original =
+          (await repository.watchMessages(id, parent.id).first).single;
 
       await repository.sendMessage(
         conversationId: id,
@@ -129,25 +197,56 @@ void main() {
   });
 
   group('read state', () {
-    test('markConversationRead clears the badge and flips the sender ticks', () async {
-      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
-      await repository.sendMessage(conversationId: id, sender: teacher, content: 'Hello');
+    test(
+      'markConversationRead clears the badge and flips the sender ticks',
+      () async {
+        final id = await repository.startDirectConversation(
+          me: teacher,
+          contact: parentContact,
+        );
+        await repository.sendMessage(
+          conversationId: id,
+          sender: teacher,
+          content: 'Hello',
+        );
 
-      expect((await repository.watchMessages(id, teacher.id).first).single.isRead, isFalse);
+        expect(
+          (await repository.watchMessages(id, teacher.id).first).single.isRead,
+          isFalse,
+        );
 
-      await repository.markConversationRead(id, parent.id);
+        await repository.markConversationRead(id, parent.id);
 
-      final forParent = await repository.watchConversation(id, parent.id).first;
-      expect(forParent!.unreadCount, 0);
-      expect((await repository.watchMessages(id, teacher.id).first).single.isRead, isTrue);
-    });
+        final forParent = await repository
+            .watchConversation(id, parent.id)
+            .first;
+        expect(forParent!.unreadCount, 0);
+        expect(
+          (await repository.watchMessages(id, teacher.id).first).single.isRead,
+          isTrue,
+        );
+      },
+    );
 
     test('isMe is resolved per viewer', () async {
-      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
-      await repository.sendMessage(conversationId: id, sender: teacher, content: 'Hello');
+      final id = await repository.startDirectConversation(
+        me: teacher,
+        contact: parentContact,
+      );
+      await repository.sendMessage(
+        conversationId: id,
+        sender: teacher,
+        content: 'Hello',
+      );
 
-      expect((await repository.watchMessages(id, teacher.id).first).single.isMe, isTrue);
-      expect((await repository.watchMessages(id, parent.id).first).single.isMe, isFalse);
+      expect(
+        (await repository.watchMessages(id, teacher.id).first).single.isMe,
+        isTrue,
+      );
+      expect(
+        (await repository.watchMessages(id, parent.id).first).single.isMe,
+        isFalse,
+      );
     });
   });
 
@@ -156,77 +255,117 @@ void main() {
     late ChatMessage message;
 
     setUp(() async {
-      conversationId = await repository.startDirectConversation(me: teacher, contact: parentContact);
+      conversationId = await repository.startDirectConversation(
+        me: teacher,
+        contact: parentContact,
+      );
       await repository.sendMessage(
         conversationId: conversationId,
         sender: teacher,
         content: 'Original',
       );
-      message = (await repository.watchMessages(conversationId, teacher.id).first).single;
+      message =
+          (await repository.watchMessages(conversationId, teacher.id).first)
+              .single;
     });
 
     test('starring is per-user', () async {
       await repository.setStarred(conversationId, message.id, parent.id, true);
 
-      expect((await repository.watchMessages(conversationId, parent.id).first).single.isStarred,
-          isTrue);
-      expect((await repository.watchMessages(conversationId, teacher.id).first).single.isStarred,
-          isFalse);
+      expect(
+        (await repository.watchMessages(conversationId, parent.id).first)
+            .single
+            .isStarred,
+        isTrue,
+      );
+      expect(
+        (await repository.watchMessages(conversationId, teacher.id).first)
+            .single
+            .isStarred,
+        isFalse,
+      );
     });
 
     test('pinning updates both the message and the chat banner', () async {
       await repository.setMessagePinned(conversationId, message, true);
 
-      final conversation = await repository.watchConversation(conversationId, teacher.id).first;
+      final conversation = await repository
+          .watchConversation(conversationId, teacher.id)
+          .first;
       expect(conversation!.pinnedMessageContent, 'Original');
-      expect((await repository.watchMessages(conversationId, teacher.id).first).single.isPinned,
-          isTrue);
+      expect(
+        (await repository.watchMessages(conversationId, teacher.id).first)
+            .single
+            .isPinned,
+        isTrue,
+      );
 
       await repository.setMessagePinned(conversationId, message, false);
-      final cleared = await repository.watchConversation(conversationId, teacher.id).first;
+      final cleared = await repository
+          .watchConversation(conversationId, teacher.id)
+          .first;
       expect(cleared!.pinnedMessageContent, isNull);
     });
 
     test('editing rewrites the inbox preview too', () async {
       await repository.editMessage(conversationId, message.id, 'Corrected');
 
-      final conversation = await repository.watchConversation(conversationId, teacher.id).first;
+      final conversation = await repository
+          .watchConversation(conversationId, teacher.id)
+          .first;
       expect(conversation!.lastMessage.content, 'Corrected');
-      expect((await repository.watchMessages(conversationId, teacher.id).first).single.editedAt,
-          isNotNull);
+      expect(
+        (await repository.watchMessages(conversationId, teacher.id).first)
+            .single
+            .editedAt,
+        isNotNull,
+      );
     });
 
     test('deleting tombstones the message and the preview', () async {
       await repository.deleteMessage(conversationId, message.id);
 
-      final deleted = (await repository.watchMessages(conversationId, teacher.id).first).single;
+      final deleted =
+          (await repository.watchMessages(conversationId, teacher.id).first)
+              .single;
       expect(deleted.isDeleted, isTrue);
       expect(deleted.content, isEmpty);
 
-      final conversation = await repository.watchConversation(conversationId, teacher.id).first;
+      final conversation = await repository
+          .watchConversation(conversationId, teacher.id)
+          .first;
       expect(conversation!.lastMessage.content, 'This message was deleted');
     });
 
     test('a person only ever holds one reaction', () async {
       await repository.react(conversationId, message.id, parent.id, '👍');
-      var reacted = (await repository.watchMessages(conversationId, parent.id).first).single;
+      var reacted =
+          (await repository.watchMessages(conversationId, parent.id).first)
+              .single;
       expect(reacted.myReaction, '👍');
       expect(reacted.reactions, {'👍': 1});
 
       await repository.react(conversationId, message.id, parent.id, '❤️');
-      reacted = (await repository.watchMessages(conversationId, parent.id).first).single;
+      reacted =
+          (await repository.watchMessages(conversationId, parent.id).first)
+              .single;
       expect(reacted.myReaction, '❤️');
       expect(reacted.reactions, {'❤️': 1});
 
       // Tapping the same emoji again clears it.
       await repository.react(conversationId, message.id, parent.id, '❤️');
-      reacted = (await repository.watchMessages(conversationId, parent.id).first).single;
+      reacted =
+          (await repository.watchMessages(conversationId, parent.id).first)
+              .single;
       expect(reacted.myReaction, isNull);
       expect(reacted.reactions, isEmpty);
     });
 
     test('forwarding copies the body into another chat', () async {
-      final other = await repository.startDirectConversation(me: teacher, contact: otherParentContact);
+      final other = await repository.startDirectConversation(
+        me: teacher,
+        contact: otherParentContact,
+      );
 
       await repository.forwardMessage(
         message: message,
@@ -240,27 +379,39 @@ void main() {
   });
 
   group('rich attachments', () {
-    test('a poll starts with every option on zero and no vote of my own', () async {
-      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
-      await repository.sendMessage(
-        conversationId: id,
-        sender: teacher,
-        content: 'Which day suits the trip?',
-        type: MessageType.poll,
-        pollOptions: ['Friday', 'Saturday'],
-      );
+    test(
+      'a poll starts with every option on zero and no vote of my own',
+      () async {
+        final id = await repository.startDirectConversation(
+          me: teacher,
+          contact: parentContact,
+        );
+        await repository.sendMessage(
+          conversationId: id,
+          sender: teacher,
+          content: 'Which day suits the trip?',
+          type: MessageType.poll,
+          pollOptions: ['Friday', 'Saturday'],
+        );
 
-      final poll = (await repository.watchMessages(id, parent.id).first).single;
-      expect(poll.pollOptions, ['Friday', 'Saturday']);
-      expect(poll.pollVotes, {'0': 0, '1': 0});
-      expect(poll.myPollVote, isNull);
-      // The inbox preview names the type rather than showing a blank line.
-      final conversation = await repository.watchConversation(id, parent.id).first;
-      expect(conversation!.lastMessage.content, '📊 Poll');
-    });
+        final poll =
+            (await repository.watchMessages(id, parent.id).first).single;
+        expect(poll.pollOptions, ['Friday', 'Saturday']);
+        expect(poll.pollVotes, {'0': 0, '1': 0});
+        expect(poll.myPollVote, isNull);
+        // The inbox preview names the type rather than showing a blank line.
+        final conversation = await repository
+            .watchConversation(id, parent.id)
+            .first;
+        expect(conversation!.lastMessage.content, '📊 Poll');
+      },
+    );
 
     test('a person holds one poll vote and can move or withdraw it', () async {
-      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
+      final id = await repository.startDirectConversation(
+        me: teacher,
+        contact: parentContact,
+      );
       await repository.sendMessage(
         conversationId: id,
         sender: teacher,
@@ -301,18 +452,23 @@ void main() {
         type: MessageType.poll,
         pollOptions: ['Friday', 'Saturday'],
       );
-      final poll = (await repository.watchMessages(id, teacher.id).first).single;
+      final poll =
+          (await repository.watchMessages(id, teacher.id).first).single;
 
       await repository.voteInPoll(id, poll.id, parent.id, 0);
       await repository.voteInPoll(id, poll.id, otherParent.id, 0);
 
-      final voted = (await repository.watchMessages(id, teacher.id).first).single;
+      final voted =
+          (await repository.watchMessages(id, teacher.id).first).single;
       expect(voted.pollVotes, {'0': 2, '1': 0});
       expect(voted.myPollVote, isNull, reason: 'the teacher has not voted');
     });
 
     test('a voice note keeps its duration', () async {
-      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
+      final id = await repository.startDirectConversation(
+        me: teacher,
+        contact: parentContact,
+      );
       await repository.sendMessage(
         conversationId: id,
         sender: teacher,
@@ -323,15 +479,21 @@ void main() {
         audioDuration: const Duration(seconds: 12),
       );
 
-      final message = (await repository.watchMessages(id, parent.id).first).single;
+      final message =
+          (await repository.watchMessages(id, parent.id).first).single;
       expect(message.audioDuration, const Duration(seconds: 12));
 
-      final conversation = await repository.watchConversation(id, parent.id).first;
+      final conversation = await repository
+          .watchConversation(id, parent.id)
+          .first;
       expect(conversation!.lastMessage.content, '🎤 Voice message');
     });
 
     test('a shared location round-trips its coordinates', () async {
-      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
+      final id = await repository.startDirectConversation(
+        me: teacher,
+        contact: parentContact,
+      );
       await repository.sendMessage(
         conversationId: id,
         sender: teacher,
@@ -341,13 +503,17 @@ void main() {
         longitude: 32.5825,
       );
 
-      final message = (await repository.watchMessages(id, parent.id).first).single;
+      final message =
+          (await repository.watchMessages(id, parent.id).first).single;
       expect(message.latitude, closeTo(0.3476, 0.00001));
       expect(message.longitude, closeTo(32.5825, 0.00001));
     });
 
     test('a shared contact carries the id needed to open a chat', () async {
-      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
+      final id = await repository.startDirectConversation(
+        me: teacher,
+        contact: parentContact,
+      );
       await repository.sendMessage(
         conversationId: id,
         sender: teacher,
@@ -357,14 +523,18 @@ void main() {
         sharedContactRole: 'parent',
       );
 
-      final message = (await repository.watchMessages(id, parent.id).first).single;
+      final message =
+          (await repository.watchMessages(id, parent.id).first).single;
       expect(message.sharedContactId, 'parent-2');
       expect(message.sharedContactRole, 'parent');
       expect(message.content, 'Abena Owusu');
     });
 
     test('an event keeps its start time and place', () async {
-      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
+      final id = await repository.startDirectConversation(
+        me: teacher,
+        contact: parentContact,
+      );
       final start = DateTime(2026, 9, 4, 16, 30);
       await repository.sendMessage(
         conversationId: id,
@@ -375,13 +545,17 @@ void main() {
         eventLocation: 'Assembly hall',
       );
 
-      final message = (await repository.watchMessages(id, parent.id).first).single;
+      final message =
+          (await repository.watchMessages(id, parent.id).first).single;
       expect(message.eventStart, start);
       expect(message.eventLocation, 'Assembly hall');
     });
 
     test('a document shows its filename in the inbox preview', () async {
-      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
+      final id = await repository.startDirectConversation(
+        me: teacher,
+        contact: parentContact,
+      );
       await repository.sendMessage(
         conversationId: id,
         sender: teacher,
@@ -392,12 +566,17 @@ void main() {
         fileSize: '2.4 MB',
       );
 
-      final conversation = await repository.watchConversation(id, parent.id).first;
+      final conversation = await repository
+          .watchConversation(id, parent.id)
+          .first;
       expect(conversation!.lastMessage.content, '📄 Newsletter.pdf');
     });
 
     test('forwarding a poll resets the votes', () async {
-      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
+      final id = await repository.startDirectConversation(
+        me: teacher,
+        contact: parentContact,
+      );
       await repository.sendMessage(
         conversationId: id,
         sender: teacher,
@@ -405,18 +584,24 @@ void main() {
         type: MessageType.poll,
         pollOptions: ['Friday', 'Saturday'],
       );
-      final poll = (await repository.watchMessages(id, teacher.id).first).single;
+      final poll =
+          (await repository.watchMessages(id, teacher.id).first).single;
       await repository.voteInPoll(id, poll.id, parent.id, 0);
-      final voted = (await repository.watchMessages(id, teacher.id).first).single;
+      final voted =
+          (await repository.watchMessages(id, teacher.id).first).single;
 
-      final other = await repository.startDirectConversation(me: teacher, contact: otherParentContact);
+      final other = await repository.startDirectConversation(
+        me: teacher,
+        contact: otherParentContact,
+      );
       await repository.forwardMessage(
         message: voted,
         conversationIds: [other],
         sender: teacher,
       );
 
-      final forwarded = (await repository.watchMessages(other, teacher.id).first).single;
+      final forwarded =
+          (await repository.watchMessages(other, teacher.id).first).single;
       expect(forwarded.pollOptions, ['Friday', 'Saturday']);
       expect(forwarded.pollVotes, {'0': 0, '1': 0});
     });
@@ -424,11 +609,16 @@ void main() {
 
   group('message requests', () {
     test('marking spam is per-user and does not accept the chat', () async {
-      final id = await repository.startDirectConversation(me: parent, contact: otherParentContact);
+      final id = await repository.startDirectConversation(
+        me: parent,
+        contact: otherParentContact,
+      );
 
       await repository.markSpam(id, otherParent.id);
 
-      final forRecipient = await repository.watchConversation(id, otherParent.id).first;
+      final forRecipient = await repository
+          .watchConversation(id, otherParent.id)
+          .first;
       expect(forRecipient!.isSpam, isTrue);
       expect(forRecipient.isAccepted, isFalse);
 
@@ -436,16 +626,24 @@ void main() {
       expect(forSender!.isSpam, isFalse);
     });
 
-    test('accepting clears the spam flag and moves it into the inbox', () async {
-      final id = await repository.startDirectConversation(me: parent, contact: otherParentContact);
-      await repository.markSpam(id, otherParent.id);
+    test(
+      'accepting clears the spam flag and moves it into the inbox',
+      () async {
+        final id = await repository.startDirectConversation(
+          me: parent,
+          contact: otherParentContact,
+        );
+        await repository.markSpam(id, otherParent.id);
 
-      await repository.acceptRequest(id, otherParent.id);
+        await repository.acceptRequest(id, otherParent.id);
 
-      final accepted = await repository.watchConversation(id, otherParent.id).first;
-      expect(accepted!.isAccepted, isTrue);
-      expect(accepted.isSpam, isFalse);
-    });
+        final accepted = await repository
+            .watchConversation(id, otherParent.id)
+            .first;
+        expect(accepted!.isAccepted, isTrue);
+        expect(accepted.isSpam, isFalse);
+      },
+    );
   });
 
   group('groups', () {
@@ -457,7 +655,9 @@ void main() {
         members: [parentContact, otherParentContact],
       );
 
-      final conversation = await repository.watchConversation(id, parent.id).first;
+      final conversation = await repository
+          .watchConversation(id, parent.id)
+          .first;
       expect(conversation!.title, 'P7 - Parents Group');
       expect(conversation.participants, hasLength(3));
       expect(conversation.isAdmin(teacher.id), isTrue);
@@ -474,7 +674,9 @@ void main() {
         messagePolicy: MessagePolicy.adminsOnly,
       );
 
-      final conversation = await repository.watchConversation(id, parent.id).first;
+      final conversation = await repository
+          .watchConversation(id, parent.id)
+          .first;
       expect(conversation!.canPost(teacher.id), isTrue);
       expect(conversation.canPost(parent.id), isFalse);
     });
@@ -489,8 +691,13 @@ void main() {
 
       await repository.leaveConversation(id, parent.id);
 
-      final conversation = await repository.watchConversation(id, teacher.id).first;
-      expect(conversation!.participants.map((p) => p.id), isNot(contains(parent.id)));
+      final conversation = await repository
+          .watchConversation(id, teacher.id)
+          .first;
+      expect(
+        conversation!.participants.map((p) => p.id),
+        isNot(contains(parent.id)),
+      );
       expect(await repository.watchConversations(parent.id).first, isEmpty);
     });
 
@@ -505,47 +712,66 @@ void main() {
       await repository.addMembers(id, [parentContact, otherParentContact]);
       await repository.addMembers(id, [otherParentContact]);
 
-      final conversation = await repository.watchConversation(id, teacher.id).first;
+      final conversation = await repository
+          .watchConversation(id, teacher.id)
+          .first;
       expect(conversation!.participants, hasLength(3));
     });
   });
 
   group('reporting', () {
-    test('files a report staff can pick up, tied to the conversation', () async {
-      final id = await repository.startDirectConversation(me: parent, contact: teacherContact);
+    test(
+      'files a report staff can pick up, tied to the conversation',
+      () async {
+        final id = await repository.startDirectConversation(
+          me: parent,
+          contact: teacherContact,
+        );
 
-      await repository.reportConversation(
-        conversationId: id,
-        reporter: parent,
-        reason: 'Inappropriate language',
-        reportedUserId: teacher.id,
-      );
+        await repository.reportConversation(
+          conversationId: id,
+          reporter: parent,
+          reason: 'Inappropriate language',
+          reportedUserId: teacher.id,
+        );
 
-      final reports = await firestore.collection('message_reports').get();
-      final report = reports.docs.single.data();
-      expect(report['conversationId'], id);
-      expect(report['reportedBy'], parent.id);
-      expect(report['reportedUserId'], teacher.id);
-      expect(report['reason'], 'Inappropriate language');
-      expect(report['schoolId'], 'school-1');
-      // Staff triage on this field, so it has to start open.
-      expect(report['status'], 'open');
-    });
+        final reports = await firestore.collection('message_reports').get();
+        final report = reports.docs.single.data();
+        expect(report['conversationId'], id);
+        expect(report['reportedBy'], parent.id);
+        expect(report['reportedUserId'], teacher.id);
+        expect(report['reason'], 'Inappropriate language');
+        expect(report['schoolId'], 'school-1');
+        // Staff triage on this field, so it has to start open.
+        expect(report['status'], 'open');
+      },
+    );
   });
 
   group('pagination', () {
     test('the limit caps how far back a chat loads', () async {
-      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
+      final id = await repository.startDirectConversation(
+        me: teacher,
+        contact: parentContact,
+      );
       for (var i = 0; i < 5; i++) {
-        await repository.sendMessage(conversationId: id, sender: teacher, content: 'Message $i');
+        await repository.sendMessage(
+          conversationId: id,
+          sender: teacher,
+          content: 'Message $i',
+        );
       }
 
-      final firstPage = await repository.watchMessages(id, teacher.id, limit: 3).first;
+      final firstPage = await repository
+          .watchMessages(id, teacher.id, limit: 3)
+          .first;
       expect(firstPage, hasLength(3));
       // Oldest first within the window, and the window holds the newest.
       expect(firstPage.last.content, 'Message 4');
 
-      final wholeChat = await repository.watchMessages(id, teacher.id, limit: 50).first;
+      final wholeChat = await repository
+          .watchMessages(id, teacher.id, limit: 50)
+          .first;
       expect(wholeChat, hasLength(5));
       expect(wholeChat.first.content, 'Message 0');
     });
@@ -553,11 +779,24 @@ void main() {
 
   group('inbox', () {
     test('pinned chats sort above newer ones', () async {
-      final older = await repository.startDirectConversation(me: teacher, contact: parentContact);
-      await repository.sendMessage(conversationId: older, sender: teacher, content: 'First');
-      final newer =
-          await repository.startDirectConversation(me: teacher, contact: otherParentContact);
-      await repository.sendMessage(conversationId: newer, sender: teacher, content: 'Second');
+      final older = await repository.startDirectConversation(
+        me: teacher,
+        contact: parentContact,
+      );
+      await repository.sendMessage(
+        conversationId: older,
+        sender: teacher,
+        content: 'First',
+      );
+      final newer = await repository.startDirectConversation(
+        me: teacher,
+        contact: otherParentContact,
+      );
+      await repository.sendMessage(
+        conversationId: newer,
+        sender: teacher,
+        content: 'Second',
+      );
 
       await repository.setPinned(older, teacher.id, true);
 
@@ -567,22 +806,48 @@ void main() {
     });
 
     test('archiving is per-user', () async {
-      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
+      final id = await repository.startDirectConversation(
+        me: teacher,
+        contact: parentContact,
+      );
       await repository.setArchived(id, teacher.id, true);
 
-      expect((await repository.watchConversations(teacher.id).first).single.isArchived, isTrue);
-      expect((await repository.watchConversations(parent.id).first).single.isArchived, isFalse);
+      expect(
+        (await repository.watchConversations(teacher.id).first)
+            .single
+            .isArchived,
+        isTrue,
+      );
+      expect(
+        (await repository.watchConversations(parent.id).first)
+            .single
+            .isArchived,
+        isFalse,
+      );
     });
 
-    test('deleting a 1:1 chat only hides it from the person who deleted it', () async {
-      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
-      await repository.sendMessage(conversationId: id, sender: teacher, content: 'Hello');
+    test(
+      'deleting a 1:1 chat only hides it from the person who deleted it',
+      () async {
+        final id = await repository.startDirectConversation(
+          me: teacher,
+          contact: parentContact,
+        );
+        await repository.sendMessage(
+          conversationId: id,
+          sender: teacher,
+          content: 'Hello',
+        );
 
-      await repository.leaveConversation(id, parent.id);
+        await repository.leaveConversation(id, parent.id);
 
-      expect(await repository.watchConversations(parent.id).first, isEmpty);
-      expect(await repository.watchConversations(teacher.id).first, hasLength(1));
-    });
+        expect(await repository.watchConversations(parent.id).first, isEmpty);
+        expect(
+          await repository.watchConversations(teacher.id).first,
+          hasLength(1),
+        );
+      },
+    );
   });
 
   group('directory', () {
@@ -613,15 +878,28 @@ void main() {
       });
     });
 
-    test('lists only active contacts from the same school, minus yourself', () async {
-      final contacts = await repository.getContacts('school-1', excludeId: 'teacher-1');
+    test(
+      'lists only active contacts from the same school, minus yourself',
+      () async {
+        final contacts = await repository.getContacts(
+          'school-1',
+          excludeId: 'teacher-1',
+        );
 
-      expect(contacts.map((c) => c.id), ['parent-1']);
-    });
+        expect(contacts.map((c) => c.id), ['parent-1']);
+      },
+    );
 
     test('recent contacts come from direct chats, most recent first', () async {
-      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
-      await repository.sendMessage(conversationId: id, sender: teacher, content: 'Hello');
+      final id = await repository.startDirectConversation(
+        me: teacher,
+        contact: parentContact,
+      );
+      await repository.sendMessage(
+        conversationId: id,
+        sender: teacher,
+        content: 'Hello',
+      );
 
       final recent = await repository.getRecentContacts(teacher.id);
       expect(recent.map((c) => c.id), ['parent-1']);
@@ -630,10 +908,20 @@ void main() {
 
   group('search and starred', () {
     test('finds messages by substring, case-insensitively', () async {
-      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
+      final id = await repository.startDirectConversation(
+        me: teacher,
+        contact: parentContact,
+      );
       await repository.sendMessage(
-          conversationId: id, sender: teacher, content: 'PTA meeting this Friday');
-      await repository.sendMessage(conversationId: id, sender: teacher, content: 'Homework due');
+        conversationId: id,
+        sender: teacher,
+        content: 'PTA meeting this Friday',
+      );
+      await repository.sendMessage(
+        conversationId: id,
+        sender: teacher,
+        content: 'Homework due',
+      );
 
       final results = await repository.searchMessages(parent.id, 'friday');
 
@@ -643,19 +931,34 @@ void main() {
     });
 
     test('search skips deleted messages', () async {
-      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
+      final id = await repository.startDirectConversation(
+        me: teacher,
+        contact: parentContact,
+      );
       await repository.sendMessage(
-          conversationId: id, sender: teacher, content: 'PTA meeting this Friday');
-      final message = (await repository.watchMessages(id, teacher.id).first).single;
+        conversationId: id,
+        sender: teacher,
+        content: 'PTA meeting this Friday',
+      );
+      final message =
+          (await repository.watchMessages(id, teacher.id).first).single;
       await repository.deleteMessage(id, message.id);
 
       expect(await repository.searchMessages(parent.id, 'friday'), isEmpty);
     });
 
     test('starred messages carry the chat they came from', () async {
-      final id = await repository.startDirectConversation(me: teacher, contact: parentContact);
-      await repository.sendMessage(conversationId: id, sender: teacher, content: 'Keep this');
-      final message = (await repository.watchMessages(id, parent.id).first).single;
+      final id = await repository.startDirectConversation(
+        me: teacher,
+        contact: parentContact,
+      );
+      await repository.sendMessage(
+        conversationId: id,
+        sender: teacher,
+        content: 'Keep this',
+      );
+      final message =
+          (await repository.watchMessages(id, parent.id).first).single;
       await repository.setStarred(id, message.id, parent.id, true);
 
       final starred = await repository.watchStarredMessages(parent.id).first;

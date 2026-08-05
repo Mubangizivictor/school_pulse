@@ -16,7 +16,11 @@ class DataExportScreen extends StatelessWidget {
         ),
         title: const Text(
           'Data & Export',
-          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: false,
       ),
@@ -126,11 +130,18 @@ class DataExportScreen extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     Text(
                       subtitle,
-                      style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.4),
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
@@ -154,7 +165,10 @@ class DataExportScreen extends StatelessWidget {
               ),
               child: Text(
                 actionLabel,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
               ),
             ),
           ),
@@ -184,16 +198,27 @@ class DataExportScreen extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text(
                   subtitle,
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.4),
+                    fontSize: 11,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Format: $format',
-                  style: const TextStyle(color: Color(0xFF6366F1), fontSize: 10, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: Color(0xFF6366F1),
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -204,7 +229,11 @@ class DataExportScreen extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.download_rounded, color: Colors.white, size: 20),
+            child: const Icon(
+              Icons.download_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
         ],
       ),
@@ -232,11 +261,18 @@ class DataExportScreen extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text(
                   'Next run: $time',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.4),
+                    fontSize: 11,
+                  ),
                 ),
               ],
             ),

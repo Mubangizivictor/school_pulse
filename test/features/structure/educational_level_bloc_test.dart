@@ -9,7 +9,8 @@ import 'package:school_pulse/features/structure/presentation/bloc/structure_stat
 
 class _MockStructureRepository extends Mock implements StructureRepository {}
 
-EducationalLevel _level({String id = 'level-1', bool isActive = true}) => EducationalLevel(
+EducationalLevel _level({String id = 'level-1', bool isActive = true}) =>
+    EducationalLevel(
       id: id,
       schoolId: 'school-1',
       name: 'Primary',
@@ -25,38 +26,102 @@ void main() {
 
   setUp(() {
     repository = _MockStructureRepository();
-    when(() => repository.watchLevels(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchAcademicYears(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchAcademicTerms(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchClasses(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchStreams(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchSubjects(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchDepartments(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchDesignations(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchStaffRoles(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchFeatureToggles(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchInstitutionProfile(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchCampuses(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchHouses(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchClubs(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchFacilities(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchHostels(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchHostelRooms(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchTransportRoutes(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchTransportStops(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchTransportVehicles(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchFeeCategories(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchAssessmentTypes(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchGradingSystems(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchGradeBands(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchTimetableConfig(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchAttendanceTypes(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchAttendanceSessions(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchAnnouncementCategories(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchNotificationCategories(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchMessageTemplates(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchDocumentTemplates(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchCustomFields(any())).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchLevels(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchAcademicYears(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchAcademicTerms(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchClasses(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchStreams(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchSubjects(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchDepartments(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchDesignations(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchStaffRoles(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchFeatureToggles(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchInstitutionProfile(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchCampuses(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchHouses(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchClubs(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchFacilities(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchHostels(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchHostelRooms(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchTransportRoutes(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchTransportStops(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchTransportVehicles(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchFeeCategories(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchAssessmentTypes(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchGradingSystems(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchGradeBands(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchTimetableConfig(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchAttendanceTypes(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchAttendanceSessions(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchAnnouncementCategories(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchNotificationCategories(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchMessageTemplates(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchDocumentTemplates(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchCustomFields(any()),
+    ).thenAnswer((_) => const Stream.empty());
   });
 
   group('EducationalLevel events (previously unreachable from the UI)', () {
@@ -109,8 +174,9 @@ void main() {
     blocTest<StructureBloc, StructureState>(
       'LoadStructureData subscribes to watchLevels for the given school',
       build: () {
-        when(() => repository.watchLevels('school-1'))
-            .thenAnswer((_) => Stream.value([_level()]));
+        when(
+          () => repository.watchLevels('school-1'),
+        ).thenAnswer((_) => Stream.value([_level()]));
         return StructureBloc(repository: repository);
       },
       act: (bloc) => bloc.add(const LoadStructureData('school-1')),

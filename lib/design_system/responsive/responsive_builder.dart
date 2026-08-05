@@ -1,18 +1,15 @@
 import 'package:flutter/material.dart';
 import '../theme/app_breakpoints.dart';
 
-typedef ResponsiveWidgetBuilder = Widget Function(
-    BuildContext context, ResponsiveLayout layout);
+typedef ResponsiveWidgetBuilder =
+    Widget Function(BuildContext context, ResponsiveLayout layout);
 
 enum ResponsiveLayout { mobile, tablet, desktop }
 
 class ResponsiveBuilder extends StatelessWidget {
   final ResponsiveWidgetBuilder builder;
 
-  const ResponsiveBuilder({
-    super.key,
-    required this.builder,
-  });
+  const ResponsiveBuilder({super.key, required this.builder});
 
   static ResponsiveLayout getLayout(BuildContext context) {
     double width = MediaQuery.of(context).size.width;
@@ -27,10 +24,10 @@ class ResponsiveBuilder extends StatelessWidget {
 
   static bool isMobile(BuildContext context) =>
       getLayout(context) == ResponsiveLayout.mobile;
-  
+
   static bool isTablet(BuildContext context) =>
       getLayout(context) == ResponsiveLayout.tablet;
-  
+
   static bool isDesktop(BuildContext context) =>
       getLayout(context) == ResponsiveLayout.desktop;
 

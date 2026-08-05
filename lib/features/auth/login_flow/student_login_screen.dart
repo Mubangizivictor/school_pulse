@@ -22,9 +22,14 @@ class _StudentHubScreenState extends State<StudentHubScreen> {
   static const _pinLength = 4;
 
   final _codeController = TextEditingController();
-  final List<TextEditingController> _pinControllers =
-      List.generate(_pinLength, (_) => TextEditingController());
-  final List<FocusNode> _pinFocus = List.generate(_pinLength, (_) => FocusNode());
+  final List<TextEditingController> _pinControllers = List.generate(
+    _pinLength,
+    (_) => TextEditingController(),
+  );
+  final List<FocusNode> _pinFocus = List.generate(
+    _pinLength,
+    (_) => FocusNode(),
+  );
 
   @override
   void initState() {
@@ -78,7 +83,10 @@ class _StudentHubScreenState extends State<StudentHubScreen> {
             ),
             children: const [
               TextSpan(text: 'Student '),
-              TextSpan(text: 'Hub', style: TextStyle(color: _accent)),
+              TextSpan(
+                text: 'Hub',
+                style: TextStyle(color: _accent),
+              ),
             ],
           ),
         ),
@@ -220,8 +228,8 @@ class _StudentHubScreenState extends State<StudentHubScreen> {
             color: focused
                 ? _accent
                 : filled
-                    ? _accent.withValues(alpha: 0.6)
-                    : Colors.white.withValues(alpha: 0.22),
+                ? _accent.withValues(alpha: 0.6)
+                : Colors.white.withValues(alpha: 0.22),
             width: focused ? 2 : 1.2,
           ),
           boxShadow: focused
@@ -282,9 +290,7 @@ class _StudentBadge extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          Positioned.fill(
-            child: CustomPaint(painter: _TracePainter()),
-          ),
+          Positioned.fill(child: CustomPaint(painter: _TracePainter())),
           Container(
             width: 72,
             height: 72,
@@ -325,7 +331,11 @@ class _TracePainter extends CustomPainter {
     // Mirrored traces running out from behind the badge on both sides.
     for (final dir in [-1.0, 1.0]) {
       final start = size.width / 2 + dir * 46;
-      for (final spec in [(dy: -9.0, len: 46.0), (dy: 0.0, len: 62.0), (dy: 9.0, len: 46.0)]) {
+      for (final spec in [
+        (dy: -9.0, len: 46.0),
+        (dy: 0.0, len: 62.0),
+        (dy: 9.0, len: 46.0),
+      ]) {
         final end = start + dir * spec.len;
         stroke.color = (dir < 0 ? AppColors.brightCyan : AppColors.emeraldGreen)
             .withValues(alpha: 0.55);
@@ -428,9 +438,21 @@ class _StudentScene extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                _SceneGlyph(icon: Icons.menu_book_outlined, size: 26, bottom: 44),
-                _SceneGlyph(icon: Icons.emoji_events_outlined, size: 28, bottom: 62),
-                _SceneGlyph(icon: Icons.lightbulb_outline, size: 26, bottom: 40),
+                _SceneGlyph(
+                  icon: Icons.menu_book_outlined,
+                  size: 26,
+                  bottom: 44,
+                ),
+                _SceneGlyph(
+                  icon: Icons.emoji_events_outlined,
+                  size: 28,
+                  bottom: 62,
+                ),
+                _SceneGlyph(
+                  icon: Icons.lightbulb_outline,
+                  size: 26,
+                  bottom: 40,
+                ),
                 _SceneGlyph(icon: Icons.public_outlined, size: 30, bottom: 30),
               ],
             ),
@@ -479,10 +501,7 @@ class _StudentScenePainter extends CustomPainter {
     final baseY = size.height - 6;
     const bw = 66.0;
     const bh = 44.0;
-    canvas.drawRect(
-      Rect.fromLTWH(cx - bw / 2, baseY - bh, bw, bh),
-      stroke,
-    );
+    canvas.drawRect(Rect.fromLTWH(cx - bw / 2, baseY - bh, bw, bh), stroke);
     canvas.drawPath(
       Path()
         ..moveTo(cx - bw / 2 - 5, baseY - bh)
@@ -496,10 +515,7 @@ class _StudentScenePainter extends CustomPainter {
       Offset(cx, baseY - bh - 34),
       stroke,
     );
-    canvas.drawRect(
-      Rect.fromLTWH(cx - 8, baseY - 22, 16, 22),
-      stroke,
-    );
+    canvas.drawRect(Rect.fromLTWH(cx - 8, baseY - 22, 16, 22), stroke);
 
     // Star field behind the scene.
     final dot = Paint();

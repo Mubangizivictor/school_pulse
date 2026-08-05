@@ -9,7 +9,8 @@ class TeacherTimetableScreen extends StatefulWidget {
   State<TeacherTimetableScreen> createState() => _TeacherTimetableScreenState();
 }
 
-class _TeacherTimetableScreenState extends State<TeacherTimetableScreen> with SingleTickerProviderStateMixin {
+class _TeacherTimetableScreenState extends State<TeacherTimetableScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -66,13 +67,19 @@ class _TeacherTimetableScreenState extends State<TeacherTimetableScreen> with Si
                   onSelected: (_) {},
                   selectedColor: AppColors.primary(context),
                   backgroundColor: AppColors.surfaceElevated(context),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                   side: BorderSide(
-                    color: isSelected ? AppColors.primary(context) : AppColors.border(context),
+                    color: isSelected
+                        ? AppColors.primary(context)
+                        : AppColors.border(context),
                   ),
                   labelStyle: TextStyle(
-                    color: isSelected 
-                        ? (Theme.of(context).brightness == Brightness.dark ? Colors.black : Colors.white)
+                    color: isSelected
+                        ? (Theme.of(context).brightness == Brightness.dark
+                              ? Colors.black
+                              : Colors.white)
                         : AppColors.textSecondary(context),
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
@@ -172,11 +179,17 @@ class _TimetableSlot extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.primary(context).withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.primary(context).withValues(alpha: 0.1)),
+          border: Border.all(
+            color: AppColors.primary(context).withValues(alpha: 0.1),
+          ),
         ),
         child: Row(
           children: [
-            Icon(Icons.restaurant_rounded, size: 16, color: AppColors.textMuted(context)),
+            Icon(
+              Icons.restaurant_rounded,
+              size: 16,
+              color: AppColors.textMuted(context),
+            ),
             const SizedBox(width: 8),
             Text(
               '$subject ($time)',

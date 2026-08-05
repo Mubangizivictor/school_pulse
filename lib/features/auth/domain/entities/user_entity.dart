@@ -20,6 +20,7 @@ class UserEntity extends Equatable {
   final bool isActive;
   final String? deactivationReason;
   final bool mustChangePassword;
+  final bool mfaEnabled;
 
   const UserEntity({
     required this.id,
@@ -38,47 +39,47 @@ class UserEntity extends Equatable {
     this.isActive = true,
     this.deactivationReason,
     this.mustChangePassword = false,
+    this.mfaEnabled = false,
   });
 
-  UserRole get role => roles.first; // Temporary helper for backward compatibility
+  UserRole get role =>
+      roles.first; // Temporary helper for backward compatibility
 
   @override
   List<Object?> get props => [
-        id,
-        staffCode,
-        name,
-        email,
-        schoolId,
-        schoolName,
-        phoneNumber,
-        roles,
-        photoUrl,
-        studentIds,
-        studentId,
-        assignedClass,
-        subjects,
-        mustChangePassword,
-        isActive,
-        deactivationReason,
-      ];
+    id,
+    staffCode,
+    name,
+    email,
+    schoolId,
+    schoolName,
+    phoneNumber,
+    roles,
+    photoUrl,
+    studentIds,
+    studentId,
+    assignedClass,
+    subjects,
+    mustChangePassword,
+    isActive,
+    deactivationReason,
+    mfaEnabled,
+  ];
 }
 
 class SubjectAssignment extends Equatable {
   final String subjectName;
   final String className;
 
-  const SubjectAssignment({
-    required this.subjectName,
-    required this.className,
-  });
+  const SubjectAssignment({required this.subjectName, required this.className});
 
   @override
   List<Object?> get props => [subjectName, className];
 
   Map<String, dynamic> toJson() => {
-        'subjectName': subjectName,
-        'className': className,
-      };
+    'subjectName': subjectName,
+    'className': className,
+  };
 
   factory SubjectAssignment.fromJson(Map<String, dynamic> json) =>
       SubjectAssignment(

@@ -26,7 +26,10 @@ class StudentService {
     );
   }
 
-  Future<Either<Failure, List<Student>>> getStudentsByClass(String schoolId, String classId) {
+  Future<Either<Failure, List<Student>>> getStudentsByClass(
+    String schoolId,
+    String classId,
+  ) {
     return repository.searchStudents(schoolId: schoolId, classId: classId);
   }
 }

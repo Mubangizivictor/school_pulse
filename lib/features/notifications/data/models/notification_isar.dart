@@ -175,10 +175,10 @@ class NotificationIsar {
       ..deepLinkParamValues = entity.deepLinkParameters.values.toList()
       ..metadataKeys = entity.metadata.keys.toList()
       ..metadataValues = entity.metadata.values.toList()
-      ..actions =
-          entity.actions.map(NotificationActionIsar.fromEntity).toList()
-      ..attachments =
-          entity.attachments.map(NotificationAttachmentIsar.fromEntity).toList()
+      ..actions = entity.actions.map(NotificationActionIsar.fromEntity).toList()
+      ..attachments = entity.attachments
+          .map(NotificationAttachmentIsar.fromEntity)
+          .toList()
       ..scheduledAt = entity.scheduledAt
       ..sentAt = entity.sentAt
       ..deliveredAt = entity.deliveredAt

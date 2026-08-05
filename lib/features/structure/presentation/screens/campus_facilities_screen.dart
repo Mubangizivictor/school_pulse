@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
@@ -23,77 +24,84 @@ class CampusFacilitiesScreen extends StatefulWidget {
   State<CampusFacilitiesScreen> createState() => _CampusFacilitiesScreenState();
 }
 
-class _CampusFacilitiesScreenState extends State<CampusFacilitiesScreen> with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
-
-  static const _tabs = [
-    Tab(text: 'Campuses'),
-    Tab(text: 'Houses'),
-    Tab(text: 'Clubs & Societies'),
-    Tab(text: 'Facilities'),
-    Tab(text: 'Hostel Structure'),
-    Tab(text: 'Transport Structure'),
+class _CampusFacilitiesScreenState extends State<CampusFacilitiesScreen> {
+  static const _sections = [
+    'Campuses',
+    'Houses',
+    'Clubs & societies',
+    'Facilities',
+    'Hostel structure',
+    'Transport structure',
   ];
+  late int _selectedIndex;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(
-      length: _tabs.length,
-      vsync: this,
-      initialIndex: widget.initialTab,
-    );
+    _selectedIndex = widget.initialTab.clamp(0, _sections.length - 1);
   }
 
   @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+  void didUpdateWidget(covariant CampusFacilitiesScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialTab != widget.initialTab) {
+      _selectedIndex = widget.initialTab.clamp(0, _sections.length - 1);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF020716),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Campus & Facilities', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Text(
+          'Campus & Facilities',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(
+            Icons.arrow_back,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          tabs: _tabs,
-          indicatorColor: AppColors.electricBlue,
-          labelColor: Colors.white,
-          unselectedLabelColor: const Color(0xFF8190AA),
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 14),
-        ),
       ),
-      body: BlocBuilder<StructureBloc, StructureState>(
-        builder: (context, state) {
-          return TabBarView(
-            controller: _tabController,
-            children: [
-              _CampusesTab(state: state),
-              _HousesTab(state: state),
-              _ClubsTab(state: state),
-              _FacilitiesTab(state: state),
-              _HostelStructureTab(state: state),
-              _TransportStructureTab(state: state),
-            ],
-          );
-        },
+      body: Column(
+        children: [
+          StructureSectionPicker(
+            sections: _sections,
+            selectedIndex: _selectedIndex,
+            onSelected: (index) =>
+                context.go('/staff/admin/structure/campus?tab=$index'),
+          ),
+          Expanded(
+            child: BlocBuilder<StructureBloc, StructureState>(
+              builder: (context, state) => IndexedStack(
+                index: _selectedIndex,
+                children: [
+                  _CampusesTab(state: state),
+                  _HousesTab(state: state),
+                  _ClubsTab(state: state),
+                  _FacilitiesTab(state: state),
+                  _HostelStructureTab(state: state),
+                  _TransportStructureTab(state: state),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-Color _fromHex(String hex, Color fallback) => hex.isNotEmpty ? Color(int.parse(hex.replaceFirst('#', '0xff'))) : fallback;
+Color _fromHex(String hex, Color fallback) =>
+    hex.isNotEmpty ? Color(int.parse(hex.replaceFirst('#', '0xff'))) : fallback;
 
 class _CampusesTab extends StatefulWidget {
   final StructureState state;
@@ -107,8 +115,10 @@ class _CampusesTabState extends State<_CampusesTab> {
   @override
   Widget build(BuildContext context) {
     final bloc = context.read<StructureBloc>();
-    final schoolId = (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
-    final campuses = [...widget.state.campuses]..sort((a, b) => a.order.compareTo(b.order));
+    final schoolId =
+        (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
+    final campuses = [...widget.state.campuses]
+      ..sort((a, b) => a.order.compareTo(b.order));
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Column(
@@ -123,7 +133,9 @@ class _CampusesTabState extends State<_CampusesTab> {
                     'No campuses defined yet. Single-site institutions can skip this entirely - Campus is only needed for multi-site setups.',
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.l,
+                    ),
                     itemCount: campuses.length,
                     itemBuilder: (context, index) {
                       final campus = campuses[index];
@@ -136,17 +148,26 @@ class _CampusesTabState extends State<_CampusesTab> {
                           if (campus.district.isNotEmpty) campus.district,
                         ].join(' - '),
                         isActive: campus.isActive,
-                        badge: StructureStatusBadge(label: 'Active', isActive: campus.isActive),
+                        badge: StructureStatusBadge(
+                          label: 'Active',
+                          isActive: campus.isActive,
+                        ),
                         onEdit: () => showCampusFormDialog(
                           context,
                           existing: campus,
                           schoolId: schoolId,
-                          onSave: (updated) => bloc.add(SaveCampusRequested(updated)),
+                          onSave: (updated) =>
+                              bloc.add(SaveCampusRequested(updated)),
                         ),
                         onDelete: () async {
-                          final confirmed = await showDeleteConfirmDialog(context,
-                              title: 'Delete Campus', message: 'Delete "${campus.name}"?');
-                          if (confirmed == true) bloc.add(DeleteCampusRequested(campus.id));
+                          final confirmed = await showDeleteConfirmDialog(
+                            context,
+                            title: 'Delete Campus',
+                            message: 'Delete "${campus.name}"?',
+                          );
+                          if (confirmed == true) {
+                            bloc.add(DeleteCampusRequested(campus.id));
+                          }
                         },
                       );
                     },
@@ -155,9 +176,13 @@ class _CampusesTabState extends State<_CampusesTab> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showCampusFormDialog(context, schoolId: schoolId, onSave: (c) => bloc.add(SaveCampusRequested(c))),
-        backgroundColor: AppColors.electricBlue,
-        foregroundColor: Colors.white,
+        onPressed: () => showCampusFormDialog(
+          context,
+          schoolId: schoolId,
+          onSave: (c) => bloc.add(SaveCampusRequested(c)),
+        ),
+        backgroundColor: AppColors.primary(context),
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         icon: const Icon(Icons.add),
         label: const Text('Add Campus'),
       ),
@@ -179,7 +204,8 @@ class _HousesTabState extends State<_HousesTab> {
   @override
   Widget build(BuildContext context) {
     final bloc = context.read<StructureBloc>();
-    final schoolId = (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
+    final schoolId =
+        (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Column(
@@ -202,7 +228,9 @@ class _HousesTabState extends State<_HousesTab> {
             child: widget.state.houses.isEmpty
                 ? const StructureEmptyHint('No houses defined yet.')
                 : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.l,
+                    ),
                     itemCount: widget.state.houses.length,
                     itemBuilder: (context, index) {
                       final house = widget.state.houses[index];
@@ -212,13 +240,25 @@ class _HousesTabState extends State<_HousesTab> {
                         title: house.name,
                         subtitle: house.description,
                         isActive: house.isActive,
-                        badge: StructureStatusBadge(label: 'Active', isActive: house.isActive),
-                        onEdit: () =>
-                            showHouseFormDialog(context, existing: house, schoolId: schoolId, onSave: (u) => bloc.add(SaveHouseRequested(u))),
+                        badge: StructureStatusBadge(
+                          label: 'Active',
+                          isActive: house.isActive,
+                        ),
+                        onEdit: () => showHouseFormDialog(
+                          context,
+                          existing: house,
+                          schoolId: schoolId,
+                          onSave: (u) => bloc.add(SaveHouseRequested(u)),
+                        ),
                         onDelete: () async {
-                          final confirmed = await showDeleteConfirmDialog(context,
-                              title: 'Delete House', message: 'Delete "${house.name}"?');
-                          if (confirmed == true) bloc.add(DeleteHouseRequested(house.id));
+                          final confirmed = await showDeleteConfirmDialog(
+                            context,
+                            title: 'Delete House',
+                            message: 'Delete "${house.name}"?',
+                          );
+                          if (confirmed == true) {
+                            bloc.add(DeleteHouseRequested(house.id));
+                          }
                         },
                       );
                     },
@@ -227,9 +267,13 @@ class _HousesTabState extends State<_HousesTab> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showHouseFormDialog(context, schoolId: schoolId, onSave: (h) => bloc.add(SaveHouseRequested(h))),
-        backgroundColor: AppColors.electricBlue,
-        foregroundColor: Colors.white,
+        onPressed: () => showHouseFormDialog(
+          context,
+          schoolId: schoolId,
+          onSave: (h) => bloc.add(SaveHouseRequested(h)),
+        ),
+        backgroundColor: AppColors.primary(context),
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         icon: const Icon(Icons.add),
         label: const Text('Add House'),
       ),
@@ -251,7 +295,8 @@ class _ClubsTabState extends State<_ClubsTab> {
   @override
   Widget build(BuildContext context) {
     final bloc = context.read<StructureBloc>();
-    final schoolId = (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
+    final schoolId =
+        (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Column(
@@ -274,7 +319,9 @@ class _ClubsTabState extends State<_ClubsTab> {
             child: widget.state.clubs.isEmpty
                 ? const StructureEmptyHint('No clubs or societies defined yet.')
                 : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.l,
+                    ),
                     itemCount: widget.state.clubs.length,
                     itemBuilder: (context, index) {
                       final club = widget.state.clubs[index];
@@ -284,15 +331,29 @@ class _ClubsTabState extends State<_ClubsTab> {
                         title: club.name,
                         subtitle: [
                           if (club.category.isNotEmpty) club.category,
-                          if (club.patronName.isNotEmpty) 'Patron: ${club.patronName}'
+                          if (club.patronName.isNotEmpty)
+                            'Patron: ${club.patronName}',
                         ].join(' - '),
                         isActive: club.isActive,
-                        badge: StructureStatusBadge(label: 'Active', isActive: club.isActive),
-                        onEdit: () => showClubFormDialog(context, existing: club, schoolId: schoolId, onSave: (u) => bloc.add(SaveClubRequested(u))),
+                        badge: StructureStatusBadge(
+                          label: 'Active',
+                          isActive: club.isActive,
+                        ),
+                        onEdit: () => showClubFormDialog(
+                          context,
+                          existing: club,
+                          schoolId: schoolId,
+                          onSave: (u) => bloc.add(SaveClubRequested(u)),
+                        ),
                         onDelete: () async {
-                          final confirmed = await showDeleteConfirmDialog(context,
-                              title: 'Delete Club', message: 'Delete "${club.name}"?');
-                          if (confirmed == true) bloc.add(DeleteClubRequested(club.id));
+                          final confirmed = await showDeleteConfirmDialog(
+                            context,
+                            title: 'Delete Club',
+                            message: 'Delete "${club.name}"?',
+                          );
+                          if (confirmed == true) {
+                            bloc.add(DeleteClubRequested(club.id));
+                          }
                         },
                       );
                     },
@@ -301,9 +362,13 @@ class _ClubsTabState extends State<_ClubsTab> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showClubFormDialog(context, schoolId: schoolId, onSave: (c) => bloc.add(SaveClubRequested(c))),
-        backgroundColor: AppColors.electricBlue,
-        foregroundColor: Colors.white,
+        onPressed: () => showClubFormDialog(
+          context,
+          schoolId: schoolId,
+          onSave: (c) => bloc.add(SaveClubRequested(c)),
+        ),
+        backgroundColor: AppColors.primary(context),
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         icon: const Icon(Icons.add),
         label: const Text('Add Club'),
       ),
@@ -325,7 +390,8 @@ class _FacilitiesTabState extends State<_FacilitiesTab> {
   @override
   Widget build(BuildContext context) {
     final bloc = context.read<StructureBloc>();
-    final schoolId = (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
+    final schoolId =
+        (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Column(
@@ -348,7 +414,9 @@ class _FacilitiesTabState extends State<_FacilitiesTab> {
             child: widget.state.facilities.isEmpty
                 ? const StructureEmptyHint('No facilities defined yet.')
                 : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.l,
+                    ),
                     itemCount: widget.state.facilities.length,
                     itemBuilder: (context, index) {
                       final facility = widget.state.facilities[index];
@@ -357,17 +425,30 @@ class _FacilitiesTabState extends State<_FacilitiesTab> {
                         color: Colors.brown,
                         title: facility.name,
                         subtitle: [
-                          if (facility.facilityType.isNotEmpty) facility.facilityType,
-                          if (facility.location.isNotEmpty) facility.location
+                          if (facility.facilityType.isNotEmpty)
+                            facility.facilityType,
+                          if (facility.location.isNotEmpty) facility.location,
                         ].join(' - '),
                         isActive: facility.isActive,
-                        badge: StructureStatusBadge(label: 'Active', isActive: facility.isActive),
-                        onEdit: () =>
-                            showFacilityFormDialog(context, existing: facility, schoolId: schoolId, onSave: (u) => bloc.add(SaveFacilityRequested(u))),
+                        badge: StructureStatusBadge(
+                          label: 'Active',
+                          isActive: facility.isActive,
+                        ),
+                        onEdit: () => showFacilityFormDialog(
+                          context,
+                          existing: facility,
+                          schoolId: schoolId,
+                          onSave: (u) => bloc.add(SaveFacilityRequested(u)),
+                        ),
                         onDelete: () async {
-                          final confirmed = await showDeleteConfirmDialog(context,
-                              title: 'Delete Facility', message: 'Delete "${facility.name}"?');
-                          if (confirmed == true) bloc.add(DeleteFacilityRequested(facility.id));
+                          final confirmed = await showDeleteConfirmDialog(
+                            context,
+                            title: 'Delete Facility',
+                            message: 'Delete "${facility.name}"?',
+                          );
+                          if (confirmed == true) {
+                            bloc.add(DeleteFacilityRequested(facility.id));
+                          }
                         },
                       );
                     },
@@ -376,9 +457,13 @@ class _FacilitiesTabState extends State<_FacilitiesTab> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showFacilityFormDialog(context, schoolId: schoolId, onSave: (f) => bloc.add(SaveFacilityRequested(f))),
-        backgroundColor: AppColors.electricBlue,
-        foregroundColor: Colors.white,
+        onPressed: () => showFacilityFormDialog(
+          context,
+          schoolId: schoolId,
+          onSave: (f) => bloc.add(SaveFacilityRequested(f)),
+        ),
+        backgroundColor: AppColors.primary(context),
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         icon: const Icon(Icons.add),
         label: const Text('Add Facility'),
       ),
@@ -400,7 +485,8 @@ class _HostelStructureTabState extends State<_HostelStructureTab> {
   @override
   Widget build(BuildContext context) {
     final bloc = context.read<StructureBloc>();
-    final schoolId = (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
+    final schoolId =
+        (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Column(
@@ -426,43 +512,69 @@ class _HostelStructureTabState extends State<_HostelStructureTab> {
                 StructureSectionHeader(
                   title: 'Hostels',
                   actionLabel: 'Add Hostel',
-                  onAction: () => showHostelFormDialog(context, schoolId: schoolId, onSave: (h) => bloc.add(SaveHostelRequested(h))),
+                  onAction: () => showHostelFormDialog(
+                    context,
+                    schoolId: schoolId,
+                    onSave: (h) => bloc.add(SaveHostelRequested(h)),
+                  ),
                 ),
-                if (widget.state.hostels.isEmpty) const StructureEmptyHint('No hostels defined yet.'),
-                ...widget.state.hostels.map((hostel) => StructureListRow(
-                      icon: Icons.night_shelter_outlined,
-                      color: Colors.brown,
-                      title: hostel.name,
-                      subtitle: [
-                        hostel.gender,
-                        if (hostel.wardenName.isNotEmpty) 'Warden: ${hostel.wardenName}',
-                        'Capacity ${hostel.capacity}'
-                      ].join(' - '),
+                if (widget.state.hostels.isEmpty)
+                  const StructureEmptyHint('No hostels defined yet.'),
+                ...widget.state.hostels.map(
+                  (hostel) => StructureListRow(
+                    icon: Icons.night_shelter_outlined,
+                    color: Colors.brown,
+                    title: hostel.name,
+                    subtitle: [
+                      hostel.gender,
+                      if (hostel.wardenName.isNotEmpty)
+                        'Warden: ${hostel.wardenName}',
+                      'Capacity ${hostel.capacity}',
+                    ].join(' - '),
+                    isActive: hostel.isActive,
+                    badge: StructureStatusBadge(
+                      label: 'Active',
                       isActive: hostel.isActive,
-                      badge: StructureStatusBadge(label: 'Active', isActive: hostel.isActive),
-                      onEdit: () =>
-                          showHostelFormDialog(context, existing: hostel, schoolId: schoolId, onSave: (u) => bloc.add(SaveHostelRequested(u))),
-                      onDelete: () async {
-                        final confirmed = await showDeleteConfirmDialog(context,
-                            title: 'Delete Hostel', message: 'Delete "${hostel.name}"?');
-                        if (confirmed == true) bloc.add(DeleteHostelRequested(hostel.id));
-                      },
-                    )),
+                    ),
+                    onEdit: () => showHostelFormDialog(
+                      context,
+                      existing: hostel,
+                      schoolId: schoolId,
+                      onSave: (u) => bloc.add(SaveHostelRequested(u)),
+                    ),
+                    onDelete: () async {
+                      final confirmed = await showDeleteConfirmDialog(
+                        context,
+                        title: 'Delete Hostel',
+                        message: 'Delete "${hostel.name}"?',
+                      );
+                      if (confirmed == true) {
+                        bloc.add(DeleteHostelRequested(hostel.id));
+                      }
+                    },
+                  ),
+                ),
                 const SizedBox(height: AppSpacing.xl),
                 StructureSectionHeader(
                   title: 'Rooms',
                   actionLabel: 'Add Room',
                   onAction: widget.state.hostels.isEmpty
                       ? null
-                      : () => showHostelRoomFormDialog(context,
-                          hostels: widget.state.hostels, schoolId: schoolId, onSave: (r) => bloc.add(SaveHostelRoomRequested(r))),
+                      : () => showHostelRoomFormDialog(
+                          context,
+                          hostels: widget.state.hostels,
+                          schoolId: schoolId,
+                          onSave: (r) => bloc.add(SaveHostelRoomRequested(r)),
+                        ),
                 ),
                 if (widget.state.hostels.isEmpty)
                   const StructureEmptyHint('Add a hostel first.')
                 else if (widget.state.hostelRooms.isEmpty)
                   const StructureEmptyHint('No rooms defined yet.'),
                 ...widget.state.hostelRooms.map((room) {
-                  final hostel = widget.state.hostels.where((h) => h.id == room.hostelId).firstOrNull;
+                  final hostel = widget.state.hostels
+                      .where((h) => h.id == room.hostelId)
+                      .firstOrNull;
                   return StructureListRow(
                     icon: Icons.meeting_room_outlined,
                     color: Colors.blueGrey,
@@ -470,20 +582,29 @@ class _HostelStructureTabState extends State<_HostelStructureTab> {
                     subtitle: [
                       hostel?.name ?? 'No hostel',
                       if (room.blockName.isNotEmpty) room.blockName,
-                      '${room.bedCapacity} bed(s)'
+                      '${room.bedCapacity} bed(s)',
                     ].join(' - '),
                     isActive: room.isActive,
-                    badge: StructureStatusBadge(label: 'Active', isActive: room.isActive),
+                    badge: StructureStatusBadge(
+                      label: 'Active',
+                      isActive: room.isActive,
+                    ),
                     onEdit: () => showHostelRoomFormDialog(
                       context,
                       existing: room,
                       hostels: widget.state.hostels,
-                      schoolId: schoolId, onSave: (u) => bloc.add(SaveHostelRoomRequested(u)),
+                      schoolId: schoolId,
+                      onSave: (u) => bloc.add(SaveHostelRoomRequested(u)),
                     ),
                     onDelete: () async {
-                      final confirmed = await showDeleteConfirmDialog(context,
-                          title: 'Delete Room', message: 'Delete Room "${room.roomNumber}"?');
-                      if (confirmed == true) bloc.add(DeleteHostelRoomRequested(room.id));
+                      final confirmed = await showDeleteConfirmDialog(
+                        context,
+                        title: 'Delete Room',
+                        message: 'Delete Room "${room.roomNumber}"?',
+                      );
+                      if (confirmed == true) {
+                        bloc.add(DeleteHostelRoomRequested(room.id));
+                      }
                     },
                   );
                 }),
@@ -511,7 +632,8 @@ class _TransportStructureTabState extends State<_TransportStructureTab> {
   @override
   Widget build(BuildContext context) {
     final bloc = context.read<StructureBloc>();
-    final schoolId = (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
+    final schoolId =
+        (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Column(
@@ -537,39 +659,65 @@ class _TransportStructureTabState extends State<_TransportStructureTab> {
                 StructureSectionHeader(
                   title: 'Routes',
                   actionLabel: 'Add Route',
-                  onAction: () => showTransportRouteFormDialog(context, schoolId: schoolId, onSave: (r) => bloc.add(SaveTransportRouteRequested(r))),
+                  onAction: () => showTransportRouteFormDialog(
+                    context,
+                    schoolId: schoolId,
+                    onSave: (r) => bloc.add(SaveTransportRouteRequested(r)),
+                  ),
                 ),
-                if (widget.state.transportRoutes.isEmpty) const StructureEmptyHint('No routes defined yet.'),
-                ...widget.state.transportRoutes.map((route) => StructureListRow(
-                      icon: Icons.route_outlined,
-                      color: Colors.teal,
-                      title: route.name,
-                      subtitle: route.code,
+                if (widget.state.transportRoutes.isEmpty)
+                  const StructureEmptyHint('No routes defined yet.'),
+                ...widget.state.transportRoutes.map(
+                  (route) => StructureListRow(
+                    icon: Icons.route_outlined,
+                    color: Colors.teal,
+                    title: route.name,
+                    subtitle: route.code,
+                    isActive: route.isActive,
+                    badge: StructureStatusBadge(
+                      label: 'Active',
                       isActive: route.isActive,
-                      badge: StructureStatusBadge(label: 'Active', isActive: route.isActive),
-                      onEdit: () => showTransportRouteFormDialog(context,
-                          existing: route, schoolId: schoolId, onSave: (u) => bloc.add(SaveTransportRouteRequested(u))),
-                      onDelete: () async {
-                        final confirmed = await showDeleteConfirmDialog(context,
-                            title: 'Delete Route', message: 'Delete "${route.name}"?');
-                        if (confirmed == true) bloc.add(DeleteTransportRouteRequested(route.id));
-                      },
-                    )),
+                    ),
+                    onEdit: () => showTransportRouteFormDialog(
+                      context,
+                      existing: route,
+                      schoolId: schoolId,
+                      onSave: (u) => bloc.add(SaveTransportRouteRequested(u)),
+                    ),
+                    onDelete: () async {
+                      final confirmed = await showDeleteConfirmDialog(
+                        context,
+                        title: 'Delete Route',
+                        message: 'Delete "${route.name}"?',
+                      );
+                      if (confirmed == true) {
+                        bloc.add(DeleteTransportRouteRequested(route.id));
+                      }
+                    },
+                  ),
+                ),
                 const SizedBox(height: AppSpacing.xl),
                 StructureSectionHeader(
                   title: 'Stops',
                   actionLabel: 'Add Stop',
                   onAction: widget.state.transportRoutes.isEmpty
                       ? null
-                      : () => showTransportStopFormDialog(context,
-                          routes: widget.state.transportRoutes, schoolId: schoolId, onSave: (s) => bloc.add(SaveTransportStopRequested(s))),
+                      : () => showTransportStopFormDialog(
+                          context,
+                          routes: widget.state.transportRoutes,
+                          schoolId: schoolId,
+                          onSave: (s) =>
+                              bloc.add(SaveTransportStopRequested(s)),
+                        ),
                 ),
                 if (widget.state.transportRoutes.isEmpty)
                   const StructureEmptyHint('Add a route first.')
                 else if (widget.state.transportStops.isEmpty)
                   const StructureEmptyHint('No stops defined yet.'),
                 ...widget.state.transportStops.map((stop) {
-                  final route = widget.state.transportRoutes.where((r) => r.id == stop.routeId).firstOrNull;
+                  final route = widget.state.transportRoutes
+                      .where((r) => r.id == stop.routeId)
+                      .firstOrNull;
                   return StructureListRow(
                     icon: Icons.pin_drop_outlined,
                     color: Colors.blueGrey,
@@ -577,20 +725,29 @@ class _TransportStructureTabState extends State<_TransportStructureTab> {
                     subtitle: [
                       route?.name ?? 'No route',
                       if (stop.pickupTime.isNotEmpty) stop.pickupTime,
-                      if (stop.zone.isNotEmpty) stop.zone
+                      if (stop.zone.isNotEmpty) stop.zone,
                     ].join(' - '),
                     isActive: stop.isActive,
-                    badge: StructureStatusBadge(label: 'Active', isActive: stop.isActive),
+                    badge: StructureStatusBadge(
+                      label: 'Active',
+                      isActive: stop.isActive,
+                    ),
                     onEdit: () => showTransportStopFormDialog(
                       context,
                       existing: stop,
                       routes: widget.state.transportRoutes,
-                      schoolId: schoolId, onSave: (u) => bloc.add(SaveTransportStopRequested(u)),
+                      schoolId: schoolId,
+                      onSave: (u) => bloc.add(SaveTransportStopRequested(u)),
                     ),
                     onDelete: () async {
-                      final confirmed = await showDeleteConfirmDialog(context,
-                          title: 'Delete Stop', message: 'Delete "${stop.name}"?');
-                      if (confirmed == true) bloc.add(DeleteTransportStopRequested(stop.id));
+                      final confirmed = await showDeleteConfirmDialog(
+                        context,
+                        title: 'Delete Stop',
+                        message: 'Delete "${stop.name}"?',
+                      );
+                      if (confirmed == true) {
+                        bloc.add(DeleteTransportStopRequested(stop.id));
+                      }
                     },
                   );
                 }),
@@ -598,12 +755,19 @@ class _TransportStructureTabState extends State<_TransportStructureTab> {
                 StructureSectionHeader(
                   title: 'Vehicles',
                   actionLabel: 'Add Vehicle',
-                  onAction: () => showTransportVehicleFormDialog(context,
-                      routes: widget.state.transportRoutes, schoolId: schoolId, onSave: (v) => bloc.add(SaveTransportVehicleRequested(v))),
+                  onAction: () => showTransportVehicleFormDialog(
+                    context,
+                    routes: widget.state.transportRoutes,
+                    schoolId: schoolId,
+                    onSave: (v) => bloc.add(SaveTransportVehicleRequested(v)),
+                  ),
                 ),
-                if (widget.state.transportVehicles.isEmpty) const StructureEmptyHint('No vehicles defined yet.'),
+                if (widget.state.transportVehicles.isEmpty)
+                  const StructureEmptyHint('No vehicles defined yet.'),
                 ...widget.state.transportVehicles.map((vehicle) {
-                  final route = widget.state.transportRoutes.where((r) => r.id == vehicle.routeId).firstOrNull;
+                  final route = widget.state.transportRoutes
+                      .where((r) => r.id == vehicle.routeId)
+                      .firstOrNull;
                   return StructureListRow(
                     icon: Icons.directions_bus_outlined,
                     color: Colors.orange,
@@ -611,20 +775,29 @@ class _TransportStructureTabState extends State<_TransportStructureTab> {
                     subtitle: [
                       if (vehicle.plateNumber.isNotEmpty) vehicle.plateNumber,
                       route?.name ?? 'Unassigned',
-                      'Capacity ${vehicle.capacity}'
+                      'Capacity ${vehicle.capacity}',
                     ].join(' - '),
                     isActive: vehicle.isActive,
-                    badge: StructureStatusBadge(label: 'Active', isActive: vehicle.isActive),
+                    badge: StructureStatusBadge(
+                      label: 'Active',
+                      isActive: vehicle.isActive,
+                    ),
                     onEdit: () => showTransportVehicleFormDialog(
                       context,
                       existing: vehicle,
                       routes: widget.state.transportRoutes,
-                      schoolId: schoolId, onSave: (u) => bloc.add(SaveTransportVehicleRequested(u)),
+                      schoolId: schoolId,
+                      onSave: (u) => bloc.add(SaveTransportVehicleRequested(u)),
                     ),
                     onDelete: () async {
-                      final confirmed = await showDeleteConfirmDialog(context,
-                          title: 'Delete Vehicle', message: 'Delete "${vehicle.busNumber}"?');
-                      if (confirmed == true) bloc.add(DeleteTransportVehicleRequested(vehicle.id));
+                      final confirmed = await showDeleteConfirmDialog(
+                        context,
+                        title: 'Delete Vehicle',
+                        message: 'Delete "${vehicle.busNumber}"?',
+                      );
+                      if (confirmed == true) {
+                        bloc.add(DeleteTransportVehicleRequested(vehicle.id));
+                      }
                     },
                   );
                 }),

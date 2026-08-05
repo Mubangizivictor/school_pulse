@@ -50,23 +50,23 @@ class ClassStudentIsar {
   late DateTime cachedAt;
 
   ClassStudentSummary toEntity() => ClassStudentSummary(
-        studentId: studentId,
-        schoolId: schoolId,
-        name: name,
-        admissionNumber: admissionNumber,
-        photoUrl: photoUrl,
-        classId: classId,
-        className: className,
-        streamId: streamId,
-        streamName: streamName,
-        academicYearId: academicYearId,
-        status: ClassStudentStatus.fromId(status),
-        gender: gender,
-        residency: ResidencyType.fromId(residency),
-        houseId: houseId,
-        houseName: houseName,
-        hasHealthAlert: hasHealthAlert,
-      );
+    studentId: studentId,
+    schoolId: schoolId,
+    name: name,
+    admissionNumber: admissionNumber,
+    photoUrl: photoUrl,
+    classId: classId,
+    className: className,
+    streamId: streamId,
+    streamName: streamName,
+    academicYearId: academicYearId,
+    status: ClassStudentStatus.fromId(status),
+    gender: gender,
+    residency: ResidencyType.fromId(residency),
+    houseId: houseId,
+    houseName: houseName,
+    hasHealthAlert: hasHealthAlert,
+  );
 
   static ClassStudentIsar fromEntity(ClassStudentSummary student) {
     return ClassStudentIsar()
@@ -126,23 +126,23 @@ class ClassDashboardCacheIsar {
   late DateTime cachedAt;
 
   ClassDashboardSummary toEntity() => ClassDashboardSummary(
-        totalStudents: totalStudents,
-        attendance: ClassAttendanceToday(
-          hasSession: hasSession,
-          isSubmitted: isSubmitted,
-          presentCount: presentCount,
-          absentCount: absentCount,
-          lateCount: lateCount,
-          excusedCount: excusedCount,
-          submittedAt: submittedAt,
-        ),
-        pendingAssignments: pendingAssignments,
-        pendingReports: pendingReports,
-        pendingBehaviourFollowUps: pendingBehaviourFollowUps,
-        unreadMessages: unreadMessages,
-        // Never presented as live - the dashboard says where this came from.
-        isFromCache: true,
-      );
+    totalStudents: totalStudents,
+    attendance: ClassAttendanceToday(
+      hasSession: hasSession,
+      isSubmitted: isSubmitted,
+      presentCount: presentCount,
+      absentCount: absentCount,
+      lateCount: lateCount,
+      excusedCount: excusedCount,
+      submittedAt: submittedAt,
+    ),
+    pendingAssignments: pendingAssignments,
+    pendingReports: pendingReports,
+    pendingBehaviourFollowUps: pendingBehaviourFollowUps,
+    unreadMessages: unreadMessages,
+    // Never presented as live - the dashboard says where this came from.
+    isFromCache: true,
+  );
 
   static ClassDashboardCacheIsar fromEntity(
     ClassDashboardSummary summary, {
@@ -215,12 +215,14 @@ class ClassAttendanceDraftIsar {
     final raw = jsonDecode(entriesJson);
     final entries = (raw is List ? raw : const [])
         .whereType<Map<String, dynamic>>()
-        .map((e) => ClassAttendanceEntry(
-              studentId: e['studentId'] as String? ?? '',
-              statusCode: e['status'] as String? ?? '',
-              note: e['note'] as String?,
-              markedAt: DateTime.tryParse(e['markedAt'] as String? ?? ''),
-            ))
+        .map(
+          (e) => ClassAttendanceEntry(
+            studentId: e['studentId'] as String? ?? '',
+            statusCode: e['status'] as String? ?? '',
+            note: e['note'] as String?,
+            markedAt: DateTime.tryParse(e['markedAt'] as String? ?? ''),
+          ),
+        )
         .toList();
 
     return ClassAttendanceSession(
@@ -257,14 +259,18 @@ class ClassAttendanceDraftIsar {
       ..sessionType = session.sessionType
       ..date = session.date
       ..status = session.status.name
-      ..entriesJson = jsonEncode(session.entries
-          .map((e) => {
+      ..entriesJson = jsonEncode(
+        session.entries
+            .map(
+              (e) => {
                 'studentId': e.studentId,
                 'status': e.statusCode,
                 'note': e.note,
                 'markedAt': e.markedAt?.toIso8601String(),
-              })
-          .toList())
+              },
+            )
+            .toList(),
+      )
       ..submittedAt = session.submittedAt
       ..submittedBy = session.submittedBy
       ..roleAssignmentId = session.roleAssignmentId

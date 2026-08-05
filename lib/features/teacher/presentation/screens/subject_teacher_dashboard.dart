@@ -21,7 +21,8 @@ class SubjectTeacherDashboard extends StatefulWidget {
   const SubjectTeacherDashboard({super.key});
 
   @override
-  State<SubjectTeacherDashboard> createState() => _SubjectTeacherDashboardState();
+  State<SubjectTeacherDashboard> createState() =>
+      _SubjectTeacherDashboardState();
 }
 
 class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
@@ -37,11 +38,11 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
     final authState = context.read<AuthBloc>().state;
     if (authState is! AuthAuthenticated) return;
     context.read<SubjectTeacherContextBloc>().add(
-          ContextRequested(
-            schoolId: authState.user.schoolId,
-            userId: authState.user.id,
-          ),
-        );
+      ContextRequested(
+        schoolId: authState.user.schoolId,
+        userId: authState.user.id,
+      ),
+    );
   }
 
   Future<void> _openSwitcher(SubjectTeacherContextState state) async {
@@ -68,21 +69,26 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
 
     return BlocConsumer<SubjectTeacherContextBloc, SubjectTeacherContextState>(
       listenWhen: (previous, current) =>
-          previous.active?.roleAssignmentId != current.active?.roleAssignmentId ||
+          previous.active?.roleAssignmentId !=
+              current.active?.roleAssignmentId ||
           previous.notice != current.notice,
       listener: (context, state) {
         final active = state.active;
         if (active != null) {
           // Every responsibility change reloads the figures, so the previous
           // subject's numbers never linger under the new one.
-          context.read<SubjectTeacherDashboardBloc>().add(DashboardRequested(active));
+          context.read<SubjectTeacherDashboardBloc>().add(
+            DashboardRequested(active),
+          );
         }
         final notice = state.notice;
         if (notice != null) {
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
             ..showSnackBar(SnackBar(content: Text(notice)));
-          context.read<SubjectTeacherContextBloc>().add(const ContextNoticeCleared());
+          context.read<SubjectTeacherContextBloc>().add(
+            const ContextNoticeCleared(),
+          );
         }
       },
       builder: (context, contextState) {
@@ -106,9 +112,7 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
                     child: Center(child: CircularProgressIndicator()),
                   )
                 else if (contextState.unavailableReason != null)
-                  SliverFillRemaining(
-                    child: _buildUnavailable(contextState),
-                  )
+                  SliverFillRemaining(child: _buildUnavailable(contextState))
                 else if (contextState.active != null)
                   SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -143,32 +147,32 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
   Widget _buildUnavailable(SubjectTeacherContextState state) {
     final (icon, title, message) = switch (state.unavailableReason!) {
       ContextUnavailableReason.noAssignments => (
-          Icons.school_outlined,
-          'No teaching assignments',
-          'Your school admin has not assigned you a subject or class yet.',
-        ),
+        Icons.school_outlined,
+        'No teaching assignments',
+        'Your school admin has not assigned you a subject or class yet.',
+      ),
       ContextUnavailableReason.assignmentSuspended => (
-          Icons.lock_outline,
-          'Responsibility suspended',
-          state.errorMessage ??
-              'This responsibility has been suspended by your school admin.',
-        ),
+        Icons.lock_outline,
+        'Responsibility suspended',
+        state.errorMessage ??
+            'This responsibility has been suspended by your school admin.',
+      ),
       ContextUnavailableReason.assignmentExpired => (
-          Icons.event_busy_outlined,
-          'Assignment ended',
-          'This responsibility is outside its active dates.',
-        ),
+        Icons.event_busy_outlined,
+        'Assignment ended',
+        'This responsibility is outside its active dates.',
+      ),
       ContextUnavailableReason.noAcademicYear => (
-          Icons.calendar_today_outlined,
-          'No academic year set',
-          'Your school admin needs to set the current academic year before '
-              'lessons and marks can be recorded.',
-        ),
+        Icons.calendar_today_outlined,
+        'No academic year set',
+        'Your school admin needs to set the current academic year before '
+            'lessons and marks can be recorded.',
+      ),
       ContextUnavailableReason.loadFailed => (
-          Icons.cloud_off_outlined,
-          'Could not load your panel',
-          state.errorMessage ?? 'Something went wrong. Try again.',
-        ),
+        Icons.cloud_off_outlined,
+        'Could not load your panel',
+        state.errorMessage ?? 'Something went wrong. Try again.',
+      ),
     };
 
     return EmptyState(
@@ -235,11 +239,17 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
           },
         ),
         IconButton(
-          icon: Icon(Icons.chat_bubble_outline, color: AppColors.textSecondary(context)),
+          icon: Icon(
+            Icons.chat_bubble_outline,
+            color: AppColors.textSecondary(context),
+          ),
           onPressed: () => context.push('/staff/messages'),
         ),
         IconButton(
-          icon: Icon(Icons.notifications_none, color: AppColors.textSecondary(context)),
+          icon: Icon(
+            Icons.notifications_none,
+            color: AppColors.textSecondary(context),
+          ),
           onPressed: () => context.push('/staff/notifications'),
         ),
       ],
@@ -263,7 +273,9 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
+        border: Border.all(
+          color: AppColors.border(context).withValues(alpha: 0.5),
+        ),
         boxShadow: [
           BoxShadow(
             color: AppColors.shadow(context),
@@ -282,7 +294,11 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
                   color: AppColors.primary(context).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(Icons.functions, color: AppColors.primary(context), size: 24),
+                child: Icon(
+                  Icons.functions,
+                  color: AppColors.primary(context),
+                  size: 24,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -299,7 +315,10 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
                     ),
                     Text(
                       active.academicSubtitle,
-                      style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12),
+                      style: TextStyle(
+                        color: AppColors.textSecondary(context),
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
@@ -310,7 +329,10 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
                     : () => _openSwitcher(contextState),
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceContainer(context),
                     borderRadius: BorderRadius.circular(8),
@@ -319,9 +341,16 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
                     children: [
                       Text(
                         'Change Class/Subject',
-                        style: TextStyle(color: AppColors.textPrimary(context), fontSize: 10),
+                        style: TextStyle(
+                          color: AppColors.textPrimary(context),
+                          fontSize: 10,
+                        ),
                       ),
-                      Icon(Icons.keyboard_arrow_down, color: AppColors.textPrimary(context), size: 14),
+                      Icon(
+                        Icons.keyboard_arrow_down,
+                        color: AppColors.textPrimary(context),
+                        size: 14,
+                      ),
                     ],
                   ),
                 ),
@@ -331,7 +360,10 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
           const SizedBox(height: 20),
           Divider(color: AppColors.border(context).withValues(alpha: 0.5)),
           const SizedBox(height: 12),
-          BlocBuilder<SubjectTeacherDashboardBloc, SubjectTeacherDashboardState>(
+          BlocBuilder<
+            SubjectTeacherDashboardBloc,
+            SubjectTeacherDashboardState
+          >(
             builder: (context, stats) {
               return Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -373,10 +405,14 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
   /// has not been taken" and "nobody turned up" are different facts.
   String _count(int? value) => value?.toString() ?? '–';
 
-  String _percent(double? value) =>
-      value == null ? '–' : '${value.round()}%';
+  String _percent(double? value) => value == null ? '–' : '${value.round()}%';
 
-  Widget _buildMetricItem(String label, String value, String subValue, Color color) {
+  Widget _buildMetricItem(
+    String label,
+    String value,
+    String subValue,
+    Color color,
+  ) {
     return Expanded(
       child: Column(
         children: [
@@ -397,7 +433,14 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
             ),
           ),
           const SizedBox(height: 2),
-          Text(subValue, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600)),
+          Text(
+            subValue,
+            style: TextStyle(
+              color: color,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
@@ -433,7 +476,13 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
     );
   }
 
-  Widget _buildActionCard(String title, String desc, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildActionCard(
+    String title,
+    String desc,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return Expanded(
       child: InkWell(
         onTap: onTap,
@@ -444,7 +493,9 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
           decoration: BoxDecoration(
             color: color,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
+            border: Border.all(
+              color: AppColors.border(context).withValues(alpha: 0.5),
+            ),
             boxShadow: [
               BoxShadow(
                 color: AppColors.shadow(context),
@@ -471,7 +522,10 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
               Text(
                 desc,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.textMuted(context), fontSize: 8),
+                style: TextStyle(
+                  color: AppColors.textMuted(context),
+                  fontSize: 8,
+                ),
               ),
             ],
           ),
@@ -498,7 +552,10 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
               onPressed: () => context.push('/staff/timetable'),
               child: Text(
                 'View Timetable',
-                style: TextStyle(color: AppColors.primary(context), fontSize: 12),
+                style: TextStyle(
+                  color: AppColors.primary(context),
+                  fontSize: 12,
+                ),
               ),
             ),
           ],
@@ -511,8 +568,9 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
               decoration: BoxDecoration(
                 color: AppColors.surfaceElevated(context),
                 borderRadius: BorderRadius.circular(16),
-                border:
-                    Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
+                border: Border.all(
+                  color: AppColors.border(context).withValues(alpha: 0.5),
+                ),
               ),
               child: lesson == null
                   ? _buildNoLessonRow(context)
@@ -577,8 +635,10 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.primary(context).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(4),
@@ -596,9 +656,10 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
               ),
               const SizedBox(height: 4),
               Text(
-                [lesson.className, lesson.streamName]
-                    .where((e) => e != null && e.isNotEmpty)
-                    .join(' '),
+                [
+                  lesson.className,
+                  lesson.streamName,
+                ].where((e) => e != null && e.isNotEmpty).join(' '),
                 style: TextStyle(
                   color: AppColors.textSecondary(context),
                   fontSize: 12,
@@ -608,8 +669,11 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(Icons.location_on_outlined,
-                        color: AppColors.textMuted(context), size: 14),
+                    Icon(
+                      Icons.location_on_outlined,
+                      color: AppColors.textMuted(context),
+                      size: 14,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       lesson.room!,
@@ -630,7 +694,9 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             minimumSize: const Size(0, 36),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
           onPressed: () => context.push('/staff/lessons/details/${lesson.id}'),
           icon: Icon(ongoing ? Icons.how_to_reg : Icons.play_arrow, size: 18),
@@ -652,7 +718,11 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
   Widget _buildNoLessonRow(BuildContext context) {
     return Row(
       children: [
-        Icon(Icons.event_available_outlined, color: AppColors.textMuted(context), size: 20),
+        Icon(
+          Icons.event_available_outlined,
+          color: AppColors.textMuted(context),
+          size: 20,
+        ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -669,7 +739,10 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
               const SizedBox(height: 2),
               Text(
                 'Nothing on your timetable for this class today.',
-                style: TextStyle(color: AppColors.textSecondary(context), fontSize: 11),
+                style: TextStyle(
+                  color: AppColors.textSecondary(context),
+                  fontSize: 11,
+                ),
               ),
             ],
           ),
@@ -678,7 +751,10 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
     );
   }
 
-  Widget _buildMyTeaching(BuildContext context, SubjectTeacherContextState state) {
+  Widget _buildMyTeaching(
+    BuildContext context,
+    SubjectTeacherContextState state,
+  ) {
     final subjectClasses = state.currentSubjectClasses;
     final otherSubjects = state.otherSubjectAssignments;
     final classTeacher = state.classTeacherAssignment;
@@ -725,7 +801,10 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
                 1 => 'You teach one subject.',
                 _ => 'You are not a class teacher this year.',
               },
-              style: TextStyle(color: AppColors.textMuted(context), fontSize: 12),
+              style: TextStyle(
+                color: AppColors.textMuted(context),
+                fontSize: 12,
+              ),
             ),
           )
         else
@@ -749,7 +828,9 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
             label,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: isSelected ? Colors.white : AppColors.textSecondary(context),
+              color: isSelected
+                  ? Colors.white
+                  : AppColors.textSecondary(context),
               fontSize: 11,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
@@ -763,19 +844,22 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
     StaffRoleAssignment assignment,
     SubjectTeacherContextState state,
   ) {
-    final className = [assignment.className, assignment.streamName]
-        .where((e) => e != null && e.isNotEmpty)
-        .join(' ');
-    final shortName =
-        classInitials(className, fallback: assignment.roleType.label);
+    final className = [
+      assignment.className,
+      assignment.streamName,
+    ].where((e) => e != null && e.isNotEmpty).join(' ');
+    final shortName = classInitials(
+      className,
+      fallback: assignment.roleType.label,
+    );
     final isActive = assignment.id == state.active?.roleAssignmentId;
 
     return InkWell(
       onTap: isActive
           ? null
-          : () => context
-              .read<SubjectTeacherContextBloc>()
-              .add(ContextSwitched(assignment.id)),
+          : () => context.read<SubjectTeacherContextBloc>().add(
+              ContextSwitched(assignment.id),
+            ),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
@@ -812,12 +896,18 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
                   ),
                   Text(
                     assignment.subjectName ?? assignment.roleType.label,
-                    style: TextStyle(color: AppColors.textSecondary(context), fontSize: 11),
+                    style: TextStyle(
+                      color: AppColors.textSecondary(context),
+                      fontSize: 11,
+                    ),
                   ),
                   if (assignment.isSubstitute)
                     Text(
                       'Covering',
-                      style: TextStyle(color: AppColors.warning(context), fontSize: 11),
+                      style: TextStyle(
+                        color: AppColors.warning(context),
+                        fontSize: 11,
+                      ),
                     ),
                 ],
               ),
@@ -857,7 +947,10 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
               onPressed: () => context.push('/staff/lessons'),
               child: Text(
                 'View All',
-                style: TextStyle(color: AppColors.primary(context), fontSize: 12),
+                style: TextStyle(
+                  color: AppColors.primary(context),
+                  fontSize: 12,
+                ),
               ),
             ),
           ],

@@ -81,7 +81,10 @@ class TaskTypeSelectionScreen extends StatelessWidget {
       ),
       subtitle: Text(
         subtitle,
-        style: TextStyle(color: Theme.of(context).colorScheme.outline, fontSize: 12),
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.outline,
+          fontSize: 12,
+        ),
       ),
       trailing: const Icon(Icons.chevron_right, size: 20),
     );

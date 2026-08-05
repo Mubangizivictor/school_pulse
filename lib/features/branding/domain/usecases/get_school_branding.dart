@@ -13,7 +13,7 @@ class GetSchoolBranding implements UseCase<SchoolBranding, String> {
   Future<Either<Failure, SchoolBranding>> call(String schoolId) async {
     try {
       final doc = await firestore.collection('schools').doc(schoolId).get();
-      
+
       if (!doc.exists) {
         return Left(ServerFailure('School branding not found'));
       }
@@ -25,20 +25,22 @@ class GetSchoolBranding implements UseCase<SchoolBranding, String> {
         return Left(ServerFailure('Branding data is missing for this school'));
       }
 
-      return Right(SchoolBranding(
-        schoolId: schoolId,
-        schoolName: data['name'] ?? 'School Name',
-        schoolMotto: brandingData['motto'] ?? '',
-        logoUrl: brandingData['logoUrl'],
-        badgeUrl: brandingData['badgeUrl'],
-        primaryColor: brandingData['primaryColor'],
-        secondaryColor: brandingData['secondaryColor'],
-        accentColor: brandingData['accentColor'],
-        welcomeMessage: brandingData['welcomeMessage'],
-        dashboardBannerUrl: brandingData['dashboardBannerUrl'],
-        loginBackgroundUrl: brandingData['loginBackgroundUrl'],
-        version: brandingData['version'] ?? 1,
-      ));
+      return Right(
+        SchoolBranding(
+          schoolId: schoolId,
+          schoolName: data['name'] ?? 'School Name',
+          schoolMotto: brandingData['motto'] ?? '',
+          logoUrl: brandingData['logoUrl'],
+          badgeUrl: brandingData['badgeUrl'],
+          primaryColor: brandingData['primaryColor'],
+          secondaryColor: brandingData['secondaryColor'],
+          accentColor: brandingData['accentColor'],
+          welcomeMessage: brandingData['welcomeMessage'],
+          dashboardBannerUrl: brandingData['dashboardBannerUrl'],
+          loginBackgroundUrl: brandingData['loginBackgroundUrl'],
+          version: brandingData['version'] ?? 1,
+        ),
+      );
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }

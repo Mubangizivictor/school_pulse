@@ -31,7 +31,8 @@ class InventoryItem extends Equatable {
 
   bool get isLowStock => quantity <= lowStockThreshold;
   bool get isOutOfStock => quantity <= 0;
-  bool get isExpired => expiryDate != null && expiryDate!.isBefore(DateTime.now());
+  bool get isExpired =>
+      expiryDate != null && expiryDate!.isBefore(DateTime.now());
 
   InventoryItem copyWith({
     int? quantity,
@@ -60,17 +61,17 @@ class InventoryItem extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        name,
-        category,
-        quantity,
-        unit,
-        lowStockThreshold,
-        maximumStock,
-        reorderLevel,
-        warehouseLocation,
-        storeLocation,
-        expiryDate,
-      ];
+    id,
+    schoolId,
+    name,
+    category,
+    quantity,
+    unit,
+    lowStockThreshold,
+    maximumStock,
+    reorderLevel,
+    warehouseLocation,
+    storeLocation,
+    expiryDate,
+  ];
 }

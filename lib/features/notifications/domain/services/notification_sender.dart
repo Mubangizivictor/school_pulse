@@ -39,11 +39,12 @@ class NotificationAudience {
     this.studentIds = const [],
   });
 
-  const NotificationAudience.school() : this(kind: NotificationAudienceKind.school);
+  const NotificationAudience.school()
+    : this(kind: NotificationAudienceKind.school);
   const NotificationAudience.allParents()
-      : this(kind: NotificationAudienceKind.allParents);
+    : this(kind: NotificationAudienceKind.allParents);
   const NotificationAudience.allStaff()
-      : this(kind: NotificationAudienceKind.allStaff);
+    : this(kind: NotificationAudienceKind.allStaff);
 
   /// Server-side field name for [kind]. Snake_case to match the Cloud
   /// Function's switch.
@@ -67,12 +68,12 @@ class NotificationAudience {
   }
 
   Map<String, dynamic> toMap() => {
-        'kind': kindName,
-        if (userIds.isNotEmpty) 'userIds': userIds,
-        if (roles.isNotEmpty) 'roles': roles,
-        if (classNames.isNotEmpty) 'classNames': classNames,
-        if (studentIds.isNotEmpty) 'studentIds': studentIds,
-      };
+    'kind': kindName,
+    if (userIds.isNotEmpty) 'userIds': userIds,
+    if (roles.isNotEmpty) 'roles': roles,
+    if (classNames.isNotEmpty) 'classNames': classNames,
+    if (studentIds.isNotEmpty) 'studentIds': studentIds,
+  };
 
   /// Human description used in confirmation dialogs, so a sender sees who they
   /// are about to reach before committing.
@@ -171,8 +172,7 @@ class NotificationSendService {
         'persistence': config.defaultPersistence.name,
         'requiresAcknowledgment':
             requiresAcknowledgment ?? config.requiresAcknowledgment,
-        if (scheduledAt != null)
-          'scheduledAt': Timestamp.fromDate(scheduledAt),
+        if (scheduledAt != null) 'scheduledAt': Timestamp.fromDate(scheduledAt),
         if (expiresAt != null) 'expiresAt': Timestamp.fromDate(expiresAt),
         'status': 'pending',
         // Lets a retried submission be recognised server-side rather than
@@ -208,11 +208,9 @@ class NotificationSendService {
 
   /// Live delivery counts for a request the caller sent.
   Stream<NotificationDeliveryReport?> watchDelivery(String requestId) {
-    return firestore
-        .collection(collection)
-        .doc(requestId)
-        .snapshots()
-        .map((doc) {
+    return firestore.collection(collection).doc(requestId).snapshots().map((
+      doc,
+    ) {
       final data = doc.data();
       if (!doc.exists || data == null) return null;
       return NotificationDeliveryReport.fromMap(requestId, data);
@@ -232,9 +230,11 @@ class NotificationSendService {
         .orderBy('createdAt', descending: true)
         .limit(limit)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((d) => NotificationDeliveryReport.fromMap(d.id, d.data()))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((d) => NotificationDeliveryReport.fromMap(d.id, d.data()))
+              .toList(),
+        );
   }
 
   /// Best available label for the sender's role, for the identity snapshot.

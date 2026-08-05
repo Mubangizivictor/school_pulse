@@ -31,15 +31,19 @@ class AddLessonNoteScreen extends StatelessWidget {
           children: [
             _buildLessonHeader(colorScheme),
             const SizedBox(height: 24),
-            Text('Title', style: TextStyle(color: colorScheme.onSurface, fontSize: 14)),
+            Text(
+              'Title',
+              style: TextStyle(color: colorScheme.onSurface, fontSize: 14),
+            ),
             const SizedBox(height: 8),
             TextField(
-              decoration: const InputDecoration(
-                hintText: 'Enter note title',
-              ),
+              decoration: const InputDecoration(hintText: 'Enter note title'),
             ),
             const SizedBox(height: 24),
-            Text('Note Content', style: TextStyle(color: colorScheme.onSurface, fontSize: 14)),
+            Text(
+              'Note Content',
+              style: TextStyle(color: colorScheme.onSurface, fontSize: 14),
+            ),
             const SizedBox(height: 8),
             TextField(
               maxLines: 8,
@@ -48,25 +52,41 @@ class AddLessonNoteScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            Text('Attachments (Optional)',
-                style: TextStyle(color: colorScheme.onSurface, fontSize: 14)),
+            Text(
+              'Attachments (Optional)',
+              style: TextStyle(color: colorScheme.onSurface, fontSize: 14),
+            ),
             const SizedBox(height: 12),
             InkWell(
               onTap: () {},
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 12,
+                  horizontal: 16,
+                ),
                 decoration: BoxDecoration(
                   color: colorScheme.surfaceContainer,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.1)),
+                  border: Border.all(
+                    color: colorScheme.outlineVariant.withOpacity(0.1),
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.attach_file, color: colorScheme.primary, size: 20),
+                    Icon(
+                      Icons.attach_file,
+                      color: colorScheme.primary,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
-                    Text('Add File',
-                        style: TextStyle(color: colorScheme.onSurface, fontSize: 14)),
+                    Text(
+                      'Add File',
+                      style: TextStyle(
+                        color: colorScheme.onSurface,
+                        fontSize: 14,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -93,18 +113,39 @@ class AddLessonNoteScreen extends StatelessWidget {
               color: colorScheme.primaryContainer,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(Icons.book, color: colorScheme.onPrimaryContainer, size: 20),
+            child: Icon(
+              Icons.book,
+              color: colorScheme.onPrimaryContainer,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Linear Equations',
-                    style: TextStyle(color: colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.bold)),
-                Text('Grade 10A (Science) • Section A', style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12)),
-                Text('Mon, 20 May 2025 • 10:00 AM - 10:45 AM',
-                    style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 10)),
+                Text(
+                  'Linear Equations',
+                  style: TextStyle(
+                    color: colorScheme.onSurface,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'Grade 10A (Science) • Section A',
+                  style: TextStyle(
+                    color: colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
+                ),
+                Text(
+                  'Mon, 20 May 2025 • 10:00 AM - 10:45 AM',
+                  style: TextStyle(
+                    color: colorScheme.onSurfaceVariant,
+                    fontSize: 10,
+                  ),
+                ),
               ],
             ),
           ),

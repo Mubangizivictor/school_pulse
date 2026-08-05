@@ -53,13 +53,19 @@ class OnboardingStepScaffold extends StatelessWidget {
                 final isDesktop = layout == ResponsiveLayout.desktop;
                 return Container(
                   constraints: BoxConstraints(maxWidth: isDesktop ? 480 : 420),
-                  padding: isDesktop ? const EdgeInsets.all(AppSpacing.x4l) : null,
+                  padding: isDesktop
+                      ? const EdgeInsets.all(AppSpacing.x4l)
+                      : null,
                   decoration: isDesktop
                       ? BoxDecoration(
-                          color: isDark ? AppColors.surfaceDark.withValues(alpha: 0.5) : Colors.white,
+                          color: isDark
+                              ? AppColors.surfaceDark.withValues(alpha: 0.5)
+                              : Colors.white,
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
-                            color: isDark ? AppColors.white.withValues(alpha: 0.1) : AppColors.borderLight,
+                            color: isDark
+                                ? AppColors.white.withValues(alpha: 0.1)
+                                : AppColors.borderLight,
                           ),
                           boxShadow: [
                             BoxShadow(
@@ -77,7 +83,9 @@ class OnboardingStepScaffold extends StatelessWidget {
                         title,
                         style: AppTypography.headlineMedium.copyWith(
                           fontWeight: FontWeight.w800,
-                          color: isDark ? Colors.white : AppColors.textPrimaryLight,
+                          color: isDark
+                              ? Colors.white
+                              : AppColors.textPrimaryLight,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -85,7 +93,9 @@ class OnboardingStepScaffold extends StatelessWidget {
                       Text(
                         subtitle,
                         style: AppTypography.bodyMedium.copyWith(
-                          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -114,7 +124,11 @@ class OnboardingSummaryRow extends StatelessWidget {
   final String label;
   final String value;
 
-  const OnboardingSummaryRow({super.key, required this.label, required this.value});
+  const OnboardingSummaryRow({
+    super.key,
+    required this.label,
+    required this.value,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -129,7 +143,9 @@ class OnboardingSummaryRow extends StatelessWidget {
             child: Text(
               label,
               style: AppTypography.bodySmall.copyWith(
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
               ),
             ),
           ),

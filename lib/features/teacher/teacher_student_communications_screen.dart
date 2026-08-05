@@ -6,7 +6,10 @@ import 'package:school_pulse/design_system/theme/app_typography.dart';
 
 class TeacherStudentCommunicationsScreen extends StatelessWidget {
   final String studentId;
-  const TeacherStudentCommunicationsScreen({super.key, required this.studentId});
+  const TeacherStudentCommunicationsScreen({
+    super.key,
+    required this.studentId,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -18,13 +21,18 @@ class TeacherStudentCommunicationsScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black),
+          icon: Icon(
+            Icons.arrow_back,
+            color: isDark ? Colors.white : Colors.black,
+          ),
           onPressed: () => context.pop(),
         ),
         title: Text(
           'Communications',
           style: AppTypography.headlineSmall.copyWith(
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            color: isDark
+                ? AppColors.textPrimaryDark
+                : AppColors.textPrimaryLight,
           ),
         ),
       ),
@@ -71,11 +79,16 @@ class TeacherStudentCommunicationsScreen extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: () {},
                 icon: const Icon(Icons.send, color: Colors.white),
-                label: const Text('New Message', style: TextStyle(color: Colors.white)),
+                label: const Text(
+                  'New Message',
+                  style: TextStyle(color: Colors.white),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.royalBlue,
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.l),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.m)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppSpacing.m),
+                  ),
                 ),
               ),
             ),
@@ -95,8 +108,20 @@ class TeacherStudentCommunicationsScreen extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Expanded(child: _TabButton(label: 'Messages', isSelected: true, isDark: isDark)),
-          Expanded(child: _TabButton(label: 'Announcements', isSelected: false, isDark: isDark)),
+          Expanded(
+            child: _TabButton(
+              label: 'Messages',
+              isSelected: true,
+              isDark: isDark,
+            ),
+          ),
+          Expanded(
+            child: _TabButton(
+              label: 'Announcements',
+              isSelected: false,
+              isDark: isDark,
+            ),
+          ),
         ],
       ),
     );
@@ -108,21 +133,29 @@ class _TabButton extends StatelessWidget {
   final bool isSelected;
   final bool isDark;
 
-  const _TabButton({required this.label, required this.isSelected, required this.isDark});
+  const _TabButton({
+    required this.label,
+    required this.isSelected,
+    required this.isDark,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
-        color: isSelected ? (isDark ? AppColors.bgDark : Colors.white) : Colors.transparent,
+        color: isSelected
+            ? (isDark ? AppColors.bgDark : Colors.white)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(AppSpacing.s),
       ),
       child: Center(
         child: Text(
           label,
           style: AppTypography.labelMedium.copyWith(
-            color: isSelected ? AppColors.royalBlue : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+            color: isSelected
+                ? AppColors.royalBlue
+                : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
         ),
@@ -155,7 +188,11 @@ class _MessageTile extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 20,
-            backgroundImage: NetworkImage(isSelf ? 'https://i.pravatar.cc/150?u=me' : 'https://i.pravatar.cc/150?u=mother'),
+            backgroundImage: NetworkImage(
+              isSelf
+                  ? 'https://i.pravatar.cc/150?u=me'
+                  : 'https://i.pravatar.cc/150?u=mother',
+            ),
           ),
           const SizedBox(width: AppSpacing.l),
           Expanded(
@@ -168,13 +205,19 @@ class _MessageTile extends StatelessWidget {
                     Text(
                       name,
                       style: AppTypography.titleSmall.copyWith(
-                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     Text(
                       time,
-                      style: AppTypography.bodySmall.copyWith(color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+                      style: AppTypography.bodySmall.copyWith(
+                        color: isDark
+                            ? AppColors.textMutedDark
+                            : AppColors.textMutedLight,
+                      ),
                     ),
                   ],
                 ),
@@ -182,7 +225,9 @@ class _MessageTile extends StatelessWidget {
                 Text(
                   message,
                   style: AppTypography.bodyMedium.copyWith(
-                    color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                    color: isDark
+                        ? AppColors.textMutedDark
+                        : AppColors.textMutedLight,
                   ),
                 ),
               ],

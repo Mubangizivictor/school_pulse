@@ -64,25 +64,43 @@ void main() {
       transportRepository: transportRepository,
     );
 
-    when(() => studentRepository.getStudentById(studentId)).thenAnswer((_) async => Right(student));
+    when(
+      () => studentRepository.getStudentById(studentId),
+    ).thenAnswer((_) async => Right(student));
   });
 
   test('denies when the operator lacks transportBoardingVerify', () async {
-    when(() => permissionEvaluator.can(Permission.transportBoardingVerify, operatorUser))
-        .thenAnswer((_) async => const Right(false));
+    when(
+      () => permissionEvaluator.can(
+        Permission.transportBoardingVerify,
+        operatorUser,
+      ),
+    ).thenAnswer((_) async => const Right(false));
 
-    final result = await service.getStudentView(studentId: studentId, operatorUser: operatorUser);
+    final result = await service.getStudentView(
+      studentId: studentId,
+      operatorUser: operatorUser,
+    );
 
     expect(result.fold((f) => f, (r) => null), isA<PermissionDeniedFailure>());
     verifyNever(() => transportRepository.getTransportInfo(any()));
   });
 
   test('returns route/stop/status when allowed', () async {
-    when(() => permissionEvaluator.can(Permission.transportBoardingVerify, operatorUser))
-        .thenAnswer((_) async => const Right(true));
-    when(() => transportRepository.getTransportInfo(studentId)).thenAnswer((_) async => const Right(transportInfo));
+    when(
+      () => permissionEvaluator.can(
+        Permission.transportBoardingVerify,
+        operatorUser,
+      ),
+    ).thenAnswer((_) async => const Right(true));
+    when(
+      () => transportRepository.getTransportInfo(studentId),
+    ).thenAnswer((_) async => const Right(transportInfo));
 
-    final result = await service.getStudentView(studentId: studentId, operatorUser: operatorUser);
+    final result = await service.getStudentView(
+      studentId: studentId,
+      operatorUser: operatorUser,
+    );
 
     final view = result.getOrElse(() => throw StateError('expected Right'));
     expect(view.name, 'Jane Doe');

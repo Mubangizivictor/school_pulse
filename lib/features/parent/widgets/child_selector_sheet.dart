@@ -16,7 +16,9 @@ class ChildSelectorSheet extends StatelessWidget {
       builders: [
         BlocBuilder<StudentsBloc, StudentsState>(
           builder: (context, studentsState) {
-            final parentStudents = studentsState is StudentsLoaded ? studentsState.students : const [];
+            final parentStudents = studentsState is StudentsLoaded
+                ? studentsState.students
+                : const [];
 
             return BlocBuilder<SelectedStudentBloc, SelectedStudentState>(
               builder: (context, studentState) {
@@ -29,7 +31,9 @@ class ChildSelectorSheet extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 24),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surface,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(24),
+                    ),
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -40,7 +44,8 @@ class ChildSelectorSheet extends StatelessWidget {
                           children: [
                             Text(
                               'Select Student',
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.bold),
                             ),
                             const Spacer(),
                             IconButton(
@@ -56,39 +61,56 @@ class ChildSelectorSheet extends StatelessWidget {
                           shrinkWrap: true,
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           itemCount: parentStudents.length,
-                          separatorBuilder: (context, index) => const SizedBox(height: 8),
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 8),
                           itemBuilder: (context, index) {
                             final student = parentStudents[index];
                             final isSelected = student.id == selectedStudentId;
 
                             return AppCard(
                               onTap: () {
-                                context.read<SelectedStudentBloc>().add(SelectStudent(student));
+                                context.read<SelectedStudentBloc>().add(
+                                  SelectStudent(student),
+                                );
                                 Navigator.pop(context);
                               },
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
                               child: Row(
                                 children: [
                                   AvatarInitials(
                                     name: student.name,
                                     size: 40,
-                                    ringColor: isSelected ? Theme.of(context).colorScheme.primary : null,
+                                    ringColor: isSelected
+                                        ? Theme.of(context).colorScheme.primary
+                                        : null,
                                   ),
                                   const SizedBox(width: 16),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           student.name,
                                           style: TextStyle(
-                                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                            color: isSelected ? Theme.of(context).colorScheme.primary : null,
+                                            fontWeight: isSelected
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
+                                            color: isSelected
+                                                ? Theme.of(
+                                                    context,
+                                                  ).colorScheme.primary
+                                                : null,
                                           ),
                                         ),
                                         Text(
                                           student.className,
-                                          style: Theme.of(context).textTheme.bodySmall,
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.bodySmall,
                                         ),
                                       ],
                                     ),
@@ -96,7 +118,9 @@ class ChildSelectorSheet extends StatelessWidget {
                                   if (isSelected)
                                     Icon(
                                       Icons.check_circle,
-                                      color: Theme.of(context).colorScheme.primary,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
                                     ),
                                 ],
                               ),

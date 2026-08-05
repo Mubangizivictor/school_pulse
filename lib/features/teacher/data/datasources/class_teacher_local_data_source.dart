@@ -75,7 +75,10 @@ class ClassTeacherLocalDataSourceImpl implements ClassTeacherLocalDataSource {
 
   @override
   Future<ClassStudentIsar?> getClassStudent(String studentId) {
-    return isar.classStudentIsars.filter().studentIdEqualTo(studentId).findFirst();
+    return isar.classStudentIsars
+        .filter()
+        .studentIdEqualTo(studentId)
+        .findFirst();
   }
 
   @override
@@ -95,8 +98,10 @@ class ClassTeacherLocalDataSourceImpl implements ClassTeacherLocalDataSource {
           .findAll();
 
       final stale = existing
-          .where((r) =>
-              streamId == null || streamId.isEmpty || r.streamId == streamId)
+          .where(
+            (r) =>
+                streamId == null || streamId.isEmpty || r.streamId == streamId,
+          )
           .map((r) => r.isarId)
           .toList();
 
@@ -113,11 +118,13 @@ class ClassTeacherLocalDataSourceImpl implements ClassTeacherLocalDataSource {
   }) {
     return isar.classDashboardCacheIsars
         .filter()
-        .cacheKeyEqualTo(dashboardCacheKey(
-          classId: classId,
-          streamId: streamId,
-          academicYearId: academicYearId,
-        ))
+        .cacheKeyEqualTo(
+          dashboardCacheKey(
+            classId: classId,
+            streamId: streamId,
+            academicYearId: academicYearId,
+          ),
+        )
         .findFirst();
   }
 
@@ -139,8 +146,9 @@ class ClassTeacherLocalDataSourceImpl implements ClassTeacherLocalDataSource {
   @override
   Future<void> saveAttendanceDraft(ClassAttendanceSession session) async {
     await isar.writeTxn(() async {
-      await isar.classAttendanceDraftIsars
-          .put(ClassAttendanceDraftIsar.fromEntity(session));
+      await isar.classAttendanceDraftIsars.put(
+        ClassAttendanceDraftIsar.fromEntity(session),
+      );
     });
   }
 
@@ -158,21 +166,25 @@ class ClassTeacherLocalDataSourceImpl implements ClassTeacherLocalDataSource {
           .filter()
           .schoolIdEqualTo(schoolId)
           .findAll();
-      await isar.classAttendanceDraftIsars
-          .deleteAll(drafts.map((r) => r.isarId).toList());
+      await isar.classAttendanceDraftIsars.deleteAll(
+        drafts.map((r) => r.isarId).toList(),
+      );
 
       final students = await isar.classStudentIsars
           .filter()
           .schoolIdEqualTo(schoolId)
           .findAll();
-      await isar.classStudentIsars.deleteAll(students.map((r) => r.isarId).toList());
+      await isar.classStudentIsars.deleteAll(
+        students.map((r) => r.isarId).toList(),
+      );
 
       final dashboards = await isar.classDashboardCacheIsars
           .filter()
           .schoolIdEqualTo(schoolId)
           .findAll();
-      await isar.classDashboardCacheIsars
-          .deleteAll(dashboards.map((r) => r.isarId).toList());
+      await isar.classDashboardCacheIsars.deleteAll(
+        dashboards.map((r) => r.isarId).toList(),
+      );
     });
   }
 }

@@ -29,10 +29,10 @@ class VerificationDecision extends Equatable {
 
   @override
   List<Object?> get props => [
-        outcome,
-        identity,
-        message,
-        reasonCode,
-        suggestedDirection,
-      ];
+    outcome,
+    identity,
+    message,
+    reasonCode,
+    suggestedDirection,
+  ];
 }

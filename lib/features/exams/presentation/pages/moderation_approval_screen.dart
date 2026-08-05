@@ -11,7 +11,8 @@ class ModerationApprovalScreen extends StatefulWidget {
   const ModerationApprovalScreen({super.key, required this.schoolId});
 
   @override
-  State<ModerationApprovalScreen> createState() => _ModerationApprovalScreenState();
+  State<ModerationApprovalScreen> createState() =>
+      _ModerationApprovalScreenState();
 }
 
 class _ModerationApprovalScreenState extends State<ModerationApprovalScreen> {
@@ -21,12 +22,14 @@ class _ModerationApprovalScreenState extends State<ModerationApprovalScreen> {
   void initState() {
     super.initState();
     // Load marks that are in 'submitted' or 'moderated' status
-    context.read<AssessmentBloc>().add(LoadMarksForEntry(
-      schoolId: widget.schoolId,
-      assessmentTypeId: '', // Should probably load all pending ones or filter
-      subjectId: '',
-      classId: '',
-    ));
+    context.read<AssessmentBloc>().add(
+      LoadMarksForEntry(
+        schoolId: widget.schoolId,
+        assessmentTypeId: '', // Should probably load all pending ones or filter
+        subjectId: '',
+        classId: '',
+      ),
+    );
   }
 
   @override
@@ -39,15 +42,25 @@ class _ModerationApprovalScreenState extends State<ModerationApprovalScreen> {
             PopupMenuButton<String>(
               onSelected: (value) {
                 if (value == 'moderate') {
-                  context.read<AssessmentBloc>().add(ModerateMarks(_selectedMarkIds, 'current_user_id'));
+                  context.read<AssessmentBloc>().add(
+                    ModerateMarks(_selectedMarkIds, 'current_user_id'),
+                  );
                 } else if (value == 'approve') {
-                  context.read<AssessmentBloc>().add(ApproveMarks(_selectedMarkIds, 'current_user_id'));
+                  context.read<AssessmentBloc>().add(
+                    ApproveMarks(_selectedMarkIds, 'current_user_id'),
+                  );
                 }
                 setState(() => _selectedMarkIds.clear());
               },
               itemBuilder: (context) => [
-                const PopupMenuItem(value: 'moderate', child: Text('Moderate Selected')),
-                const PopupMenuItem(value: 'approve', child: Text('Approve Selected')),
+                const PopupMenuItem(
+                  value: 'moderate',
+                  child: Text('Moderate Selected'),
+                ),
+                const PopupMenuItem(
+                  value: 'approve',
+                  child: Text('Approve Selected'),
+                ),
               ],
             ),
         ],
@@ -58,9 +71,13 @@ class _ModerationApprovalScreenState extends State<ModerationApprovalScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final pendingMarks = state.marks.where((m) => 
-            m.status == MarkStatus.submitted || m.status == MarkStatus.moderated
-          ).toList();
+          final pendingMarks = state.marks
+              .where(
+                (m) =>
+                    m.status == MarkStatus.submitted ||
+                    m.status == MarkStatus.moderated,
+              )
+              .toList();
 
           if (pendingMarks.isEmpty) {
             return const EmptyState(
@@ -91,8 +108,13 @@ class _ModerationApprovalScreenState extends State<ModerationApprovalScreen> {
                     });
                   },
                   title: Text('Student: ${mark.studentId}'),
-                  subtitle: Text('Subject: ${mark.subjectId} | Score: ${mark.score}'),
-                  secondary: StatusBadge(label: mark.status.name, color: _markStatusColor(mark.status)),
+                  subtitle: Text(
+                    'Subject: ${mark.subjectId} | Score: ${mark.score}',
+                  ),
+                  secondary: StatusBadge(
+                    label: mark.status.name,
+                    color: _markStatusColor(mark.status),
+                  ),
                 ),
               );
             },
@@ -104,8 +126,8 @@ class _ModerationApprovalScreenState extends State<ModerationApprovalScreen> {
 }
 
 Color _markStatusColor(MarkStatus status) => switch (status) {
-      MarkStatus.submitted => Colors.orange,
-      MarkStatus.moderated => Colors.blue,
-      MarkStatus.approved => Colors.green,
-      _ => Colors.grey,
-    };
+  MarkStatus.submitted => Colors.orange,
+  MarkStatus.moderated => Colors.blue,
+  MarkStatus.approved => Colors.green,
+  _ => Colors.grey,
+};

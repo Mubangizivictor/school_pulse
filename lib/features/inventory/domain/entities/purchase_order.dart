@@ -32,7 +32,20 @@ class PurchaseOrder extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, schoolId, orderNumber, supplierId, supplierName, items, totalAmount, status, date, notes, createdBy, approvedBy];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    orderNumber,
+    supplierId,
+    supplierName,
+    items,
+    totalAmount,
+    status,
+    date,
+    notes,
+    createdBy,
+    approvedBy,
+  ];
 }
 
 class OrderItem extends Equatable {

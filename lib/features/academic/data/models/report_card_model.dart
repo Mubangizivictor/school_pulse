@@ -53,10 +53,13 @@ class ReportCardModel extends ReportCard {
       'year': year,
       'status': status.name,
       'deanId': deanId,
-      'deanSignedAt': deanSignedAt != null ? Timestamp.fromDate(deanSignedAt!) : null,
+      'deanSignedAt': deanSignedAt != null
+          ? Timestamp.fromDate(deanSignedAt!)
+          : null,
       'headTeacherId': headTeacherId,
-      'headTeacherSignedAt':
-          headTeacherSignedAt != null ? Timestamp.fromDate(headTeacherSignedAt!) : null,
+      'headTeacherSignedAt': headTeacherSignedAt != null
+          ? Timestamp.fromDate(headTeacherSignedAt!)
+          : null,
       'classTeacherComment': classTeacherComment,
       'averageScore': averageScore,
     };

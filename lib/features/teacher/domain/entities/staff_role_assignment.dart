@@ -39,26 +39,27 @@ enum StaffResponsibilityType {
 
 extension StaffResponsibilityTypeDisplay on StaffResponsibilityType {
   String get label => switch (this) {
-        StaffResponsibilityType.subjectTeacher => 'Subject Teacher',
-        StaffResponsibilityType.classTeacher => 'Class Teacher',
-        StaffResponsibilityType.departmentHead => 'Head of Department',
-        StaffResponsibilityType.examinationOfficer => 'Examination Officer',
-        StaffResponsibilityType.houseMaster => 'House Master',
-        StaffResponsibilityType.patron => 'Patron',
-        StaffResponsibilityType.matron => 'Matron',
-        StaffResponsibilityType.sportsLeader => 'Sports Leader',
-        StaffResponsibilityType.religiousLeader => 'Religious Leader',
-        StaffResponsibilityType.nurse => 'Nurse',
-        StaffResponsibilityType.bursar => 'Bursar',
-        StaffResponsibilityType.librarian => 'Librarian',
-        StaffResponsibilityType.securityOfficer => 'Security Officer',
-        StaffResponsibilityType.transportCoordinator => 'Transport Coordinator',
-        StaffResponsibilityType.storeInventoryManager => 'Store & Inventory Manager',
-        StaffResponsibilityType.hrOfficer => 'HR Officer',
-        StaffResponsibilityType.receptionist => 'Receptionist',
-        StaffResponsibilityType.cateringManager => 'Catering Manager',
-        StaffResponsibilityType.other => 'Staff',
-      };
+    StaffResponsibilityType.subjectTeacher => 'Subject Teacher',
+    StaffResponsibilityType.classTeacher => 'Class Teacher',
+    StaffResponsibilityType.departmentHead => 'Head of Department',
+    StaffResponsibilityType.examinationOfficer => 'Examination Officer',
+    StaffResponsibilityType.houseMaster => 'House Master',
+    StaffResponsibilityType.patron => 'Patron',
+    StaffResponsibilityType.matron => 'Matron',
+    StaffResponsibilityType.sportsLeader => 'Sports Leader',
+    StaffResponsibilityType.religiousLeader => 'Religious Leader',
+    StaffResponsibilityType.nurse => 'Nurse',
+    StaffResponsibilityType.bursar => 'Bursar',
+    StaffResponsibilityType.librarian => 'Librarian',
+    StaffResponsibilityType.securityOfficer => 'Security Officer',
+    StaffResponsibilityType.transportCoordinator => 'Transport Coordinator',
+    StaffResponsibilityType.storeInventoryManager =>
+      'Store & Inventory Manager',
+    StaffResponsibilityType.hrOfficer => 'HR Officer',
+    StaffResponsibilityType.receptionist => 'Receptionist',
+    StaffResponsibilityType.cateringManager => 'Catering Manager',
+    StaffResponsibilityType.other => 'Staff',
+  };
 }
 
 /// Lifecycle of a single assignment. Only [active] grants access, and only
@@ -164,14 +165,14 @@ class PermissionScope extends Equatable {
 
   @override
   List<Object?> get props => [
-        permissions,
-        subjectId,
-        classId,
-        streamId,
-        departmentId,
-        academicYearId,
-        termIds,
-      ];
+    permissions,
+    subjectId,
+    classId,
+    streamId,
+    departmentId,
+    academicYearId,
+    termIds,
+  ];
 }
 
 /// One responsibility an admin attached to a staff profile.
@@ -247,11 +248,14 @@ class StaffRoleAssignment extends Equatable {
   bool isCurrentlyValid({DateTime? asOf}) {
     if (status != AssignmentStatus.active) return false;
     final now = asOf ?? DateTime.now();
-    if (now.isBefore(DateTime(startDate.year, startDate.month, startDate.day))) {
+    if (now.isBefore(
+      DateTime(startDate.year, startDate.month, startDate.day),
+    )) {
       return false;
     }
     final end = endDate;
-    if (end != null && now.isAfter(DateTime(end.year, end.month, end.day, 23, 59, 59))) {
+    if (end != null &&
+        now.isAfter(DateTime(end.year, end.month, end.day, 23, 59, 59))) {
       return false;
     }
     return true;
@@ -260,14 +264,19 @@ class StaffRoleAssignment extends Equatable {
   /// Label the responsibility switcher shows, e.g. "Mathematics - Grade 10A"
   /// for a subject assignment or "Class Teacher - Grade 10A" for a class one.
   String get displayLabel {
-    final classLabel = [className, streamName]
-        .where((e) => e != null && e.isNotEmpty)
-        .join(' ');
+    final classLabel = [
+      className,
+      streamName,
+    ].where((e) => e != null && e.isNotEmpty).join(' ');
     return switch (roleType) {
-      StaffResponsibilityType.subjectTeacher =>
-        [subjectName ?? 'Subject', if (classLabel.isNotEmpty) classLabel].join(' - '),
-      StaffResponsibilityType.classTeacher =>
-        ['Class Teacher', if (classLabel.isNotEmpty) classLabel].join(' - '),
+      StaffResponsibilityType.subjectTeacher => [
+        subjectName ?? 'Subject',
+        if (classLabel.isNotEmpty) classLabel,
+      ].join(' - '),
+      StaffResponsibilityType.classTeacher => [
+        'Class Teacher',
+        if (classLabel.isNotEmpty) classLabel,
+      ].join(' - '),
       _ => roleType.label,
     };
   }
@@ -330,30 +339,30 @@ class StaffRoleAssignment extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        campusId,
-        staffId,
-        userId,
-        roleType,
-        academicYearId,
-        termId,
-        subjectId,
-        subjectName,
-        classId,
-        className,
-        streamId,
-        streamName,
-        departmentId,
-        houseId,
-        startDate,
-        endDate,
-        status,
-        permissionScope,
-        substituteForStaffId,
-        assignedBy,
-        assignedAt,
-        updatedBy,
-        updatedAt,
-      ];
+    id,
+    schoolId,
+    campusId,
+    staffId,
+    userId,
+    roleType,
+    academicYearId,
+    termId,
+    subjectId,
+    subjectName,
+    classId,
+    className,
+    streamId,
+    streamName,
+    departmentId,
+    houseId,
+    startDate,
+    endDate,
+    status,
+    permissionScope,
+    substituteForStaffId,
+    assignedBy,
+    assignedAt,
+    updatedBy,
+    updatedAt,
+  ];
 }

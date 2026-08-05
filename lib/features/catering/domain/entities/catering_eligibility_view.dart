@@ -25,5 +25,13 @@ class CateringEligibilityView extends Equatable {
   });
 
   @override
-  List<Object?> get props => [studentId, name, classId, photoUrl, eligible, message, dietaryRestrictions];
+  List<Object?> get props => [
+    studentId,
+    name,
+    classId,
+    photoUrl,
+    eligible,
+    message,
+    dietaryRestrictions,
+  ];
 }

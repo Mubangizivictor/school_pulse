@@ -12,7 +12,9 @@ class TaskHistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final completedTasks = mockTasks.where((t) => t.status == TaskStatus.completed).toList();
+    final completedTasks = mockTasks
+        .where((t) => t.status == TaskStatus.completed)
+        .toList();
 
     return Scaffold(
       backgroundColor: AppColors.background(context),
@@ -20,10 +22,7 @@ class TaskHistoryScreen extends StatelessWidget {
         backgroundColor: isDark ? AppColors.bgDark : Colors.white,
         title: const Text('Task History'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {},
-          ),
+          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
           const SizedBox(width: 8),
         ],
       ),
@@ -41,7 +40,8 @@ class TaskHistoryScreen extends StatelessWidget {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (index == 0 || _shouldShowDateHeader(completedTasks, index))
+                    if (index == 0 ||
+                        _shouldShowDateHeader(completedTasks, index))
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12, top: 8),
                         child: Text(
@@ -72,22 +72,39 @@ class TaskHistoryScreen extends StatelessWidget {
   bool _shouldShowDateHeader(List<TaskEntity> tasks, int index) {
     final current = tasks[index].completedAt ?? tasks[index].dueDate;
     final previous = tasks[index - 1].completedAt ?? tasks[index - 1].dueDate;
-    return current.day != previous.day || 
-           current.month != previous.month || 
-           current.year != previous.year;
+    return current.day != previous.day ||
+        current.month != previous.month ||
+        current.year != previous.year;
   }
 
   String _formatDateHeader(DateTime date) {
     final now = DateTime.now();
     final yesterday = now.subtract(const Duration(days: 1));
-    
-    if (date.day == now.day && date.month == now.month && date.year == now.year) {
+
+    if (date.day == now.day &&
+        date.month == now.month &&
+        date.year == now.year) {
       return 'Today';
-    } else if (date.day == yesterday.day && date.month == yesterday.month && date.year == yesterday.year) {
+    } else if (date.day == yesterday.day &&
+        date.month == yesterday.month &&
+        date.year == yesterday.year) {
       return 'Yesterday';
     }
-    
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 }

@@ -13,9 +13,13 @@ class DisciplineRepositoryImpl implements DisciplineRepository {
   DisciplineRepositoryImpl({required this.remoteDataSource});
 
   @override
-  Future<Either<Failure, List<DisciplineIncident>>> getDisciplineIncidents(String studentId) async {
+  Future<Either<Failure, List<DisciplineIncident>>> getDisciplineIncidents(
+    String studentId,
+  ) async {
     try {
-      final remoteIncidents = await remoteDataSource.getDisciplineIncidents(studentId);
+      final remoteIncidents = await remoteDataSource.getDisciplineIncidents(
+        studentId,
+      );
       return Right(remoteIncidents);
     } catch (e) {
       return Left(ServerFailure());
@@ -23,9 +27,11 @@ class DisciplineRepositoryImpl implements DisciplineRepository {
   }
 
   @override
-  Future<Either<Failure, List<DisciplineIncident>>> getRecentDisciplineIncidents() async {
+  Future<Either<Failure, List<DisciplineIncident>>>
+  getRecentDisciplineIncidents() async {
     try {
-      final remoteIncidents = await remoteDataSource.getRecentDisciplineIncidents();
+      final remoteIncidents = await remoteDataSource
+          .getRecentDisciplineIncidents();
       return Right(remoteIncidents);
     } catch (e) {
       return Left(ServerFailure());
@@ -53,7 +59,8 @@ class DisciplineRepositoryImpl implements DisciplineRepository {
   }
 
   @override
-  Future<Either<Failure, List<CounselingSession>>> getCounselingSessions() async {
+  Future<Either<Failure, List<CounselingSession>>>
+  getCounselingSessions() async {
     try {
       final remoteSessions = await remoteDataSource.getCounselingSessions();
       return Right(remoteSessions);
@@ -63,7 +70,9 @@ class DisciplineRepositoryImpl implements DisciplineRepository {
   }
 
   @override
-  Future<Either<Failure, void>> logCounselingSession(CounselingSession session) async {
+  Future<Either<Failure, void>> logCounselingSession(
+    CounselingSession session,
+  ) async {
     try {
       final model = CounselingSessionModel(
         id: session.id,

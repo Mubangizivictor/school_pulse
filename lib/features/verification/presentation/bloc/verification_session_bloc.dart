@@ -22,7 +22,8 @@ import 'package:school_pulse/features/verification/presentation/bloc/verificatio
 /// downstream) stays exactly as it is today - this bloc adds an audit
 /// trail and permission/duplicate policy on top, it doesn't replace
 /// movement recording.
-class VerificationSessionBloc extends Bloc<VerificationSessionEvent, VerificationSessionState> {
+class VerificationSessionBloc
+    extends Bloc<VerificationSessionEvent, VerificationSessionState> {
   final IdentityResolver identityResolver;
   final VerificationPolicyEvaluator policyEvaluator;
   final VerificationEventRecorder eventRecorder;
@@ -40,7 +41,9 @@ class VerificationSessionBloc extends Bloc<VerificationSessionEvent, Verificatio
   }) : super(const VerificationIdle()) {
     on<VerificationCredentialCaptured>(_onCredentialCaptured);
     on<VerificationDirectionConfirmed>(_onDirectionConfirmed);
-    on<VerificationSessionReset>((event, emit) => emit(const VerificationIdle()));
+    on<VerificationSessionReset>(
+      (event, emit) => emit(const VerificationIdle()),
+    );
   }
 
   Future<void> _onCredentialCaptured(
@@ -49,19 +52,39 @@ class VerificationSessionBloc extends Bloc<VerificationSessionEvent, Verificatio
   ) async {
     emit(const VerificationResolving());
 
-    final identityResult = await identityResolver.resolve(event.credential, event.context);
-    final identity = identityResult.fold((failure) => null, (identity) => identity);
+    final identityResult = await identityResolver.resolve(
+      event.credential,
+      event.context,
+    );
+    final identity = identityResult.fold(
+      (failure) => null,
+      (identity) => identity,
+    );
     if (identity == null) {
       await feedbackService.playError();
-      emit(VerificationSessionError(identityResult.fold((f) => f.message, (_) => 'Unknown error')));
+      emit(
+        VerificationSessionError(
+          identityResult.fold((f) => f.message, (_) => 'Unknown error'),
+        ),
+      );
       return;
     }
 
-    final decisionResult = await policyEvaluator.evaluate(identity: identity, context: event.context);
-    final decision = decisionResult.fold((failure) => null, (decision) => decision);
+    final decisionResult = await policyEvaluator.evaluate(
+      identity: identity,
+      context: event.context,
+    );
+    final decision = decisionResult.fold(
+      (failure) => null,
+      (decision) => decision,
+    );
     if (decision == null) {
       await feedbackService.playError();
-      emit(VerificationSessionError(decisionResult.fold((f) => f.message, (_) => 'Unknown error')));
+      emit(
+        VerificationSessionError(
+          decisionResult.fold((f) => f.message, (_) => 'Unknown error'),
+        ),
+      );
       return;
     }
 
@@ -80,7 +103,13 @@ class VerificationSessionBloc extends Bloc<VerificationSessionEvent, Verificatio
         break;
     }
 
-    emit(VerificationDecided(decision: decision, credential: event.credential, context: event.context));
+    emit(
+      VerificationDecided(
+        decision: decision,
+        credential: event.credential,
+        context: event.context,
+      ),
+    );
   }
 
   Future<void> _onDirectionConfirmed(
@@ -88,7 +117,8 @@ class VerificationSessionBloc extends Bloc<VerificationSessionEvent, Verificatio
     Emitter<VerificationSessionState> emit,
   ) async {
     final current = state;
-    if (current is! VerificationDecided || current.decision.outcome != VerificationOutcome.allowed) {
+    if (current is! VerificationDecided ||
+        current.decision.outcome != VerificationOutcome.allowed) {
       return;
     }
 
@@ -102,7 +132,8 @@ class VerificationSessionBloc extends Bloc<VerificationSessionEvent, Verificatio
     final identity = current.decision.identity;
 
     final movementResult = switch (identity) {
-      StaffResolvedIdentity() => await recordStaffMovement(StaffMovement(
+      StaffResolvedIdentity() => await recordStaffMovement(
+        StaffMovement(
           id: const Uuid().v4(),
           staffId: identity.id,
           staffName: identity.name,
@@ -112,8 +143,10 @@ class VerificationSessionBloc extends Bloc<VerificationSessionEvent, Verificatio
           verificationMethod: _verificationMethodLabel(current.credential),
           officerId: operatorId,
           schoolId: schoolId,
-        )),
-      StudentResolvedIdentity() => await recordStudentMovement(StudentMovement(
+        ),
+      ),
+      StudentResolvedIdentity() => await recordStudentMovement(
+        StudentMovement(
           id: const Uuid().v4(),
           studentId: identity.id,
           studentName: identity.name,
@@ -126,8 +159,10 @@ class VerificationSessionBloc extends Bloc<VerificationSessionEvent, Verificatio
           officerId: operatorId,
           deviceId: deviceId,
           schoolId: schoolId,
-        )),
-      ParentPickupResolvedIdentity() => await recordStudentMovement(StudentMovement(
+        ),
+      ),
+      ParentPickupResolvedIdentity() => await recordStudentMovement(
+        StudentMovement(
           id: const Uuid().v4(),
           studentId: identity.childId,
           studentName: identity.childName,
@@ -135,7 +170,9 @@ class VerificationSessionBloc extends Bloc<VerificationSessionEvent, Verificatio
           timestamp: DateTime.now(),
           gateId: gate.id,
           direction: event.direction,
-          movementType: event.direction == 'Out' ? 'Authorized Pickup' : movementType,
+          movementType: event.direction == 'Out'
+              ? 'Authorized Pickup'
+              : movementType,
           verificationMethod: 'Parent Code Verification',
           officerId: operatorId,
           deviceId: deviceId,
@@ -143,15 +180,22 @@ class VerificationSessionBloc extends Bloc<VerificationSessionEvent, Verificatio
           pickupDetails: {
             'parentCode': identity.parentCode,
             if (identity.parentName != null) 'parentName': identity.parentName,
-            if (identity.phoneNumber != null) 'phoneNumber': identity.phoneNumber,
+            if (identity.phoneNumber != null)
+              'phoneNumber': identity.phoneNumber,
           },
-        )),
-      UnresolvedResolvedIdentity() => throw StateError('unreachable: allowed outcome implies a resolved identity'),
+        ),
+      ),
+      UnresolvedResolvedIdentity() => throw StateError(
+        'unreachable: allowed outcome implies a resolved identity',
+      ),
     };
 
     if (movementResult.isLeft()) {
       await feedbackService.playError();
-      final message = movementResult.swap().getOrElse(() => const ServerFailure()).message;
+      final message = movementResult
+          .swap()
+          .getOrElse(() => const ServerFailure())
+          .message;
       emit(VerificationSessionError('Could not record movement: $message'));
       return;
     }
@@ -167,10 +211,16 @@ class VerificationSessionBloc extends Bloc<VerificationSessionEvent, Verificatio
       direction: event.direction,
     );
 
-    emit(VerificationRecorded(decision: current.decision, direction: event.direction));
+    emit(
+      VerificationRecorded(
+        decision: current.decision,
+        direction: event.direction,
+      ),
+    );
   }
 
-  String _verificationMethodLabel(ScanCredential credential) => switch (credential) {
+  String _verificationMethodLabel(ScanCredential credential) =>
+      switch (credential) {
         QrScanCredential() => 'QR Student ID',
         NfcScanCredential() => 'NFC Card',
         ManualCodeScanCredential() => 'Manual Search',

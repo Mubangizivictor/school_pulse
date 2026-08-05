@@ -8,7 +8,9 @@ class GetDisciplineIncidents {
 
   GetDisciplineIncidents(this.repository);
 
-  Future<Either<Failure, List<DisciplineIncident>>> call(String studentId) async {
+  Future<Either<Failure, List<DisciplineIncident>>> call(
+    String studentId,
+  ) async {
     return await repository.getDisciplineIncidents(studentId);
   }
 }

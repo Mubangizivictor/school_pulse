@@ -14,16 +14,24 @@ import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/student/domain/usecases/get_all_students.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
-const _kWelfareCategories = ['Concern', 'Check-in', 'Counseling', 'Check-up', 'Observation'];
+const _kWelfareCategories = [
+  'Concern',
+  'Check-in',
+  'Counseling',
+  'Check-up',
+  'Observation',
+];
 
 class WelfareManagementScreen extends StatefulWidget {
   const WelfareManagementScreen({super.key});
 
   @override
-  State<WelfareManagementScreen> createState() => _WelfareManagementScreenState();
+  State<WelfareManagementScreen> createState() =>
+      _WelfareManagementScreenState();
 }
 
-class _WelfareManagementScreenState extends State<WelfareManagementScreen> with SingleTickerProviderStateMixin {
+class _WelfareManagementScreenState extends State<WelfareManagementScreen>
+    with SingleTickerProviderStateMixin {
   List<Student> _students = const [];
   late final TabController _tabController;
 
@@ -56,7 +64,9 @@ class _WelfareManagementScreenState extends State<WelfareManagementScreen> with 
     if (!mounted) return;
     result.fold((_) => null, (students) {
       setState(() {
-        _students = students.where((student) => student.gender.name == 'female').toList();
+        _students = students
+            .where((student) => student.gender.name == 'female')
+            .toList();
       });
     });
   }
@@ -76,13 +86,19 @@ class _WelfareManagementScreenState extends State<WelfareManagementScreen> with 
         ),
       ),
       body: BlocListener<MatronBloc, MatronState>(
-        listenWhen: (_, current) => current is MatronActionSuccess || current is MatronError,
+        listenWhen: (_, current) =>
+            current is MatronActionSuccess || current is MatronError,
         listener: (context, state) {
           if (state is MatronActionSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
           } else if (state is MatronError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: AppColors.error),
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: AppColors.error,
+              ),
             );
           }
         },
@@ -137,36 +153,49 @@ class _WelfareManagementScreenState extends State<WelfareManagementScreen> with 
                     items: _students,
                     labelBuilder: (student) => student.name,
                     subtitleBuilder: (student) => student.className,
-                    onChanged: (student) => setState(() => selectedStudent = student),
+                    onChanged: (student) =>
+                        setState(() => selectedStudent = student),
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
                     decoration: const InputDecoration(labelText: 'Category'),
                     initialValue: selectedCategory,
-                    items: _kWelfareCategories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                    items: _kWelfareCategories
+                        .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                        .toList(),
                     onChanged: (val) => setState(() => selectedCategory = val!),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: noteController,
-                    decoration: const InputDecoration(labelText: 'Observations / Notes', border: OutlineInputBorder()),
+                    decoration: const InputDecoration(
+                      labelText: 'Observations / Notes',
+                      border: OutlineInputBorder(),
+                    ),
                     maxLines: 3,
                     onChanged: (_) => setState(() {}),
                   ),
                   CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Private record'),
-                    subtitle: const Text('Only boarding staff and administrators can view it'),
+                    subtitle: const Text(
+                      'Only boarding staff and administrators can view it',
+                    ),
                     value: isPrivate,
-                    onChanged: (value) => setState(() => isPrivate = value ?? false),
+                    onChanged: (value) =>
+                        setState(() => isPrivate = value ?? false),
                   ),
                 ],
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
               ElevatedButton(
-                onPressed: selectedStudent == null || noteController.text.isEmpty
+                onPressed:
+                    selectedStudent == null || noteController.text.isEmpty
                     ? null
                     : () {
                         final record = WelfareRecord(
@@ -180,7 +209,9 @@ class _WelfareManagementScreenState extends State<WelfareManagementScreen> with 
                           recordedBy: _auth?.user.name ?? 'Matron',
                           isPrivate: isPrivate,
                         );
-                        context.read<MatronBloc>().add(LogWelfareRecordEvent(record));
+                        context.read<MatronBloc>().add(
+                          LogWelfareRecordEvent(record),
+                        );
                         Navigator.pop(dialogContext);
                       },
                 child: const Text('Save Record'),
@@ -213,38 +244,56 @@ class _WelfareManagementScreenState extends State<WelfareManagementScreen> with 
                     items: _students,
                     labelBuilder: (student) => student.name,
                     subtitleBuilder: (student) => student.className,
-                    onChanged: (student) => setState(() => selectedStudent = student),
+                    onChanged: (student) =>
+                        setState(() => selectedStudent = student),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: reasonController,
-                    decoration: const InputDecoration(labelText: 'Reason for Referral', border: OutlineInputBorder()),
+                    decoration: const InputDecoration(
+                      labelText: 'Reason for Referral',
+                      border: OutlineInputBorder(),
+                    ),
                     maxLines: 2,
                     onChanged: (_) => setState(() {}),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: referredToController,
-                    decoration: const InputDecoration(labelText: 'Referred To (optional)', border: OutlineInputBorder()),
+                    decoration: const InputDecoration(
+                      labelText: 'Referred To (optional)',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
                 ],
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
               ElevatedButton(
-                onPressed: selectedStudent == null || reasonController.text.isEmpty
+                onPressed:
+                    selectedStudent == null || reasonController.text.isEmpty
                     ? null
                     : () {
-                        context.read<MatronBloc>().add(LogCounselingReferralEvent(CounselingReferral(
+                        context.read<MatronBloc>().add(
+                          LogCounselingReferralEvent(
+                            CounselingReferral(
                               id: '',
                               studentId: selectedStudent!.id,
                               studentName: selectedStudent!.name,
                               reason: reasonController.text.trim(),
                               referredBy: _auth?.user.name ?? 'Matron',
-                              referredTo: referredToController.text.trim().isEmpty ? null : referredToController.text.trim(),
+                              referredTo:
+                                  referredToController.text.trim().isEmpty
+                                  ? null
+                                  : referredToController.text.trim(),
                               referralDate: DateTime.now(),
-                            )));
+                            ),
+                          ),
+                        );
                         Navigator.pop(dialogContext);
                       },
                 child: const Text('Submit Referral'),
@@ -277,7 +326,8 @@ class _WelfareManagementScreenState extends State<WelfareManagementScreen> with 
                     items: _students,
                     labelBuilder: (student) => student.name,
                     subtitleBuilder: (student) => student.className,
-                    onChanged: (student) => setState(() => selectedStudent = student),
+                    onChanged: (student) =>
+                        setState(() => selectedStudent = student),
                   ),
                   const SizedBox(height: 16),
                   SegmentedButton<String>(
@@ -286,12 +336,16 @@ class _WelfareManagementScreenState extends State<WelfareManagementScreen> with 
                       ButtonSegment(value: 'Concern', label: Text('Concern')),
                     ],
                     selected: {type},
-                    onSelectionChanged: (sel) => setState(() => type = sel.first),
+                    onSelectionChanged: (sel) =>
+                        setState(() => type = sel.first),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: descController,
-                    decoration: const InputDecoration(labelText: 'Description', border: OutlineInputBorder()),
+                    decoration: const InputDecoration(
+                      labelText: 'Description',
+                      border: OutlineInputBorder(),
+                    ),
                     maxLines: 3,
                     onChanged: (_) => setState(() {}),
                   ),
@@ -299,12 +353,18 @@ class _WelfareManagementScreenState extends State<WelfareManagementScreen> with 
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
               ElevatedButton(
-                onPressed: selectedStudent == null || descController.text.isEmpty
+                onPressed:
+                    selectedStudent == null || descController.text.isEmpty
                     ? null
                     : () {
-                        context.read<MatronBloc>().add(LogBehaviourObservationEvent(BehaviourObservation(
+                        context.read<MatronBloc>().add(
+                          LogBehaviourObservationEvent(
+                            BehaviourObservation(
                               id: '',
                               studentId: selectedStudent!.id,
                               studentName: selectedStudent!.name,
@@ -312,7 +372,9 @@ class _WelfareManagementScreenState extends State<WelfareManagementScreen> with 
                               description: descController.text.trim(),
                               date: DateTime.now(),
                               recordedBy: _auth?.user.name ?? 'Matron',
-                            )));
+                            ),
+                          ),
+                        );
                         Navigator.pop(dialogContext);
                       },
                 child: const Text('Save'),
@@ -333,9 +395,11 @@ class _WelfareLogTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<MatronBloc, MatronState>(
-      buildWhen: (_, current) => current is WelfareRecordsLoaded || current is MatronLoading,
+      buildWhen: (_, current) =>
+          current is WelfareRecordsLoaded || current is MatronLoading,
       builder: (context, state) {
-        if (state is MatronLoading) return const Center(child: CircularProgressIndicator());
+        if (state is MatronLoading)
+          return const Center(child: CircularProgressIndicator());
         if (state is! WelfareRecordsLoaded) return const SizedBox.shrink();
         final records = state.records;
         if (records.isEmpty) {
@@ -356,8 +420,18 @@ class _WelfareLogTab extends StatelessWidget {
                 title: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(child: Text(record.studentName, style: const TextStyle(fontWeight: FontWeight.bold))),
-                    if (record.isPrivate) const Icon(Icons.lock_outline, size: 14, color: Colors.grey),
+                    Expanded(
+                      child: Text(
+                        record.studentName,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    if (record.isPrivate)
+                      const Icon(
+                        Icons.lock_outline,
+                        size: 14,
+                        color: Colors.grey,
+                      ),
                     const SizedBox(width: 6),
                     _CategoryChip(category: record.category),
                   ],
@@ -371,8 +445,21 @@ class _WelfareLogTab extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(DateFormat('MMM d, yyyy').format(record.date), style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                        Text('By: ${record.recordedBy}', style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontStyle: FontStyle.italic)),
+                        Text(
+                          DateFormat('MMM d, yyyy').format(record.date),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        Text(
+                          'By: ${record.recordedBy}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -396,7 +483,8 @@ class _ReferralsTab extends StatelessWidget {
     return BlocBuilder<MatronBloc, MatronState>(
       buildWhen: (_, current) => current is CounselingReferralsLoaded,
       builder: (context, state) {
-        if (state is! CounselingReferralsLoaded) return const Center(child: CircularProgressIndicator());
+        if (state is! CounselingReferralsLoaded)
+          return const Center(child: CircularProgressIndicator());
         if (state.referrals.isEmpty) {
           return const EmptyState(
             icon: Icons.psychology_outlined,
@@ -412,7 +500,10 @@ class _ReferralsTab extends StatelessWidget {
             return AppCard(
               margin: const EdgeInsets.only(bottom: 12),
               child: ListTile(
-                title: Text(referral.studentName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(
+                  referral.studentName,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 subtitle: Text(referral.reason),
                 trailing: DropdownButton<String>(
                   value: referral.status,
@@ -421,7 +512,9 @@ class _ReferralsTab extends StatelessWidget {
                       .toList(),
                   onChanged: (val) {
                     if (val != null) {
-                      context.read<MatronBloc>().add(UpdateReferralStatusEvent(referral.id, val));
+                      context.read<MatronBloc>().add(
+                        UpdateReferralStatusEvent(referral.id, val),
+                      );
                     }
                   },
                 ),
@@ -444,7 +537,8 @@ class _BehaviourTab extends StatelessWidget {
     return BlocBuilder<MatronBloc, MatronState>(
       buildWhen: (_, current) => current is BehaviourObservationsLoaded,
       builder: (context, state) {
-        if (state is! BehaviourObservationsLoaded) return const Center(child: CircularProgressIndicator());
+        if (state is! BehaviourObservationsLoaded)
+          return const Center(child: CircularProgressIndicator());
         if (state.observations.isEmpty) {
           return const EmptyState(
             icon: Icons.visibility_outlined,
@@ -462,12 +556,22 @@ class _BehaviourTab extends StatelessWidget {
               margin: const EdgeInsets.only(bottom: 12),
               child: ListTile(
                 leading: Icon(
-                  isPositive ? Icons.thumb_up_outlined : Icons.warning_amber_outlined,
-                  color: isPositive ? AppColors.success(context) : AppColors.warning(context),
+                  isPositive
+                      ? Icons.thumb_up_outlined
+                      : Icons.warning_amber_outlined,
+                  color: isPositive
+                      ? AppColors.success(context)
+                      : AppColors.warning(context),
                 ),
-                title: Text(obs.studentName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(
+                  obs.studentName,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 subtitle: Text(obs.description),
-                trailing: Text(DateFormat('MMM d').format(obs.date), style: Theme.of(context).textTheme.labelSmall),
+                trailing: Text(
+                  DateFormat('MMM d').format(obs.date),
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
               ),
             );
           },
@@ -504,7 +608,10 @@ class _CategoryChip extends StatelessWidget {
         color = AppColors.border(context);
     }
     return Chip(
-      label: Text(category, style: const TextStyle(color: Colors.white, fontSize: 10)),
+      label: Text(
+        category,
+        style: const TextStyle(color: Colors.white, fontSize: 10),
+      ),
       backgroundColor: color,
       padding: EdgeInsets.zero,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,

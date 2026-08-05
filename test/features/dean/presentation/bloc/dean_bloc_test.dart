@@ -17,17 +17,19 @@ void main() {
   late MockDeanRepository mockRepository;
 
   setUpAll(() {
-    registerFallbackValue(AcademicIntervention(
-      id: 'fallback',
-      studentId: 'fallback',
-      studentName: 'fallback',
-      reason: 'fallback',
-      type: InterventionType.remedial,
-      status: InterventionStatus.pending,
-      startDate: DateTime(2024),
-      assignedTo: const [],
-      outcomes: '',
-    ));
+    registerFallbackValue(
+      AcademicIntervention(
+        id: 'fallback',
+        studentId: 'fallback',
+        studentName: 'fallback',
+        reason: 'fallback',
+        type: InterventionType.remedial,
+        status: InterventionStatus.pending,
+        startDate: DateTime(2024),
+        assignedTo: const [],
+        outcomes: '',
+      ),
+    );
   });
 
   setUp(() {
@@ -79,74 +81,73 @@ void main() {
     blocTest<DeanBloc, DeanState>(
       'should emit [DeanLoading, AcademicDashboardLoaded] when stats fetched successfully',
       build: () {
-        when(() => mockRepository.getAcademicDashboardStats())
-            .thenAnswer((_) async => Right(tStats));
+        when(
+          () => mockRepository.getAcademicDashboardStats(),
+        ).thenAnswer((_) async => Right(tStats));
         return bloc;
       },
       act: (bloc) => bloc.add(AcademicDashboardRequested()),
-      expect: () => [
-        DeanLoading(),
-        AcademicDashboardLoaded(tStats),
-      ],
+      expect: () => [DeanLoading(), AcademicDashboardLoaded(tStats)],
     );
 
     blocTest<DeanBloc, DeanState>(
       'should emit [DeanLoading, DeanError] when fetching stats fails',
       build: () {
-        when(() => mockRepository.getAcademicDashboardStats())
-            .thenAnswer((_) async => const Left(ServerFailure('Error')));
+        when(
+          () => mockRepository.getAcademicDashboardStats(),
+        ).thenAnswer((_) async => const Left(ServerFailure('Error')));
         return bloc;
-      } ,
+      },
       act: (bloc) => bloc.add(AcademicDashboardRequested()),
-      expect: () => [
-        DeanLoading(),
-        const DeanError('Error'),
-      ],
+      expect: () => [DeanLoading(), const DeanError('Error')],
     );
-   group('DeanBloc - Interventions', () {
-    blocTest<DeanBloc, DeanState>(
-      'should emit [DeanLoading, InterventionsLoaded] when interventions fetched successfully',
-      build: () {
-        when(() => mockRepository.getInterventions())
-            .thenAnswer((_) async => Right([tIntervention]));
-        return bloc;
-      },
-      act: (bloc) => bloc.add(InterventionsRequested()),
-      expect: () => [
-        DeanLoading(),
-        InterventionsLoaded([tIntervention]),
-      ],
-    );
+    group('DeanBloc - Interventions', () {
+      blocTest<DeanBloc, DeanState>(
+        'should emit [DeanLoading, InterventionsLoaded] when interventions fetched successfully',
+        build: () {
+          when(
+            () => mockRepository.getInterventions(),
+          ).thenAnswer((_) async => Right([tIntervention]));
+          return bloc;
+        },
+        act: (bloc) => bloc.add(InterventionsRequested()),
+        expect: () => [
+          DeanLoading(),
+          InterventionsLoaded([tIntervention]),
+        ],
+      );
 
-    blocTest<DeanBloc, DeanState>(
-      'should emit [DeanLoading, DeanOperationSuccess] when intervention created successfully',
-      build: () {
-        when(() => mockRepository.createIntervention(any()))
-            .thenAnswer((_) async => const Right(null));
-        return bloc;
-      },
-      act: (bloc) => bloc.add(CreateInterventionRequested(tIntervention)),
-      expect: () => [
-        DeanLoading(),
-        const DeanOperationSuccess('Intervention plan created'),
-      ],
-    );
-  });
+      blocTest<DeanBloc, DeanState>(
+        'should emit [DeanLoading, DeanOperationSuccess] when intervention created successfully',
+        build: () {
+          when(
+            () => mockRepository.createIntervention(any()),
+          ).thenAnswer((_) async => const Right(null));
+          return bloc;
+        },
+        act: (bloc) => bloc.add(CreateInterventionRequested(tIntervention)),
+        expect: () => [
+          DeanLoading(),
+          const DeanOperationSuccess('Intervention plan created'),
+        ],
+      );
+    });
 
-  group('DeanBloc - QA & Approvals', () {
-    blocTest<DeanBloc, DeanState>(
-      'should emit [DeanLoading, DeanOperationSuccess] when assessment marks approved',
-      build: () {
-        when(() => mockRepository.approveAssessmentMarks(any()))
-            .thenAnswer((_) async => const Right(null));
-        return bloc;
-      },
-      act: (bloc) => bloc.add(const ApproveAssessmentMarksRequested('a1')),
-      expect: () => [
-        DeanLoading(),
-        const DeanOperationSuccess('Assessment marks approved'),
-      ],
-    );
-  });
+    group('DeanBloc - QA & Approvals', () {
+      blocTest<DeanBloc, DeanState>(
+        'should emit [DeanLoading, DeanOperationSuccess] when assessment marks approved',
+        build: () {
+          when(
+            () => mockRepository.approveAssessmentMarks(any()),
+          ).thenAnswer((_) async => const Right(null));
+          return bloc;
+        },
+        act: (bloc) => bloc.add(const ApproveAssessmentMarksRequested('a1')),
+        expect: () => [
+          DeanLoading(),
+          const DeanOperationSuccess('Assessment marks approved'),
+        ],
+      );
+    });
   });
 }

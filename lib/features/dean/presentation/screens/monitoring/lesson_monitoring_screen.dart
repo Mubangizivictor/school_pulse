@@ -54,16 +54,22 @@ class LessonMonitoringScreen extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
             leading: _getStatusIcon(record.status),
-            title: Text('${record.subjectName} - ${record.className}',
-                style: const TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(
+              '${record.subjectName} - ${record.className}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Teacher: ${record.teacherName}'),
-                Text('Date: ${DateFormat('MMM dd, yyyy HH:mm').format(record.scheduledAt)}'),
+                Text(
+                  'Date: ${DateFormat('MMM dd, yyyy HH:mm').format(record.scheduledAt)}',
+                ),
                 if (record.topicCovered != null)
-                  Text('Topic: ${record.topicCovered}',
-                      style: const TextStyle(fontStyle: FontStyle.italic)),
+                  Text(
+                    'Topic: ${record.topicCovered}',
+                    style: const TextStyle(fontStyle: FontStyle.italic),
+                  ),
               ],
             ),
             trailing: _getStatusChip(record.status),
@@ -132,8 +138,10 @@ class LessonMonitoringScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Filter Lessons',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(
+              'Filter Lessons',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             SizedBox(height: 16),
             // Add date range, teacher, class pickers here
             Text('Filtering options coming soon...'),

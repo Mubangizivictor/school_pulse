@@ -19,37 +19,32 @@ class ProfileScreen extends StatelessWidget {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         if (state is! AuthAuthenticated) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
         final parentName = state.user.name;
         final parentPhone = state.user.phoneNumber ?? '—';
 
         return Scaffold(
-          appBar: const StudentAppBar(
-            title: 'Profile',
-          ),
+          appBar: const StudentAppBar(title: 'Profile'),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                Center(
-                  child: AvatarInitials(
-                    name: parentName,
-                    size: 80,
-                  ),
-                ),
+                Center(child: AvatarInitials(name: parentName, size: 80)),
                 const SizedBox(height: 16),
                 Text(
                   parentName,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text(
                   'Parent Account',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.outline,
-                      ),
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
                 ),
                 const SizedBox(height: 32),
                 _buildInfoCard(context, [
@@ -88,11 +83,16 @@ class ProfileScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text('Dark Mode', style: TextStyle(fontWeight: FontWeight.w500)),
+          const Text(
+            'Dark Mode',
+            style: TextStyle(fontWeight: FontWeight.w500),
+          ),
           Switch(
             value: themeProvider.themeMode == ThemeMode.dark,
             onChanged: (value) {
-              themeProvider.setThemeMode(value ? ThemeMode.dark : ThemeMode.light);
+              themeProvider.setThemeMode(
+                value ? ThemeMode.dark : ThemeMode.light,
+              );
             },
           ),
         ],
@@ -169,8 +169,8 @@ class _InfoRow extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.outline,
-              ),
+            color: Theme.of(context).colorScheme.outline,
+          ),
         ),
         const SizedBox(width: 16),
         Flexible(

@@ -131,7 +131,12 @@ class WatchAttendance extends MatronEvent {
   final DateTime date;
   final String? dormitoryId;
   final String? type;
-  const WatchAttendance({required this.schoolId, required this.date, this.dormitoryId, this.type});
+  const WatchAttendance({
+    required this.schoolId,
+    required this.date,
+    this.dormitoryId,
+    this.type,
+  });
 }
 
 // ---- Leave Management ----

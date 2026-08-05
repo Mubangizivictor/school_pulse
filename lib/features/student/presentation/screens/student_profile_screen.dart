@@ -34,28 +34,52 @@ class StudentProfileScreen extends StatelessWidget {
                     const SizedBox(height: 16),
                     Text(
                       student.name,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     Text(
                       'Student Code: ${student.studentCode}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.outline),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 32),
               _buildSection(context, 'Academic Information', [
-                _buildInfoTile(context, 'Admission Number', student.admissionNumber),
+                _buildInfoTile(
+                  context,
+                  'Admission Number',
+                  student.admissionNumber,
+                ),
                 _buildInfoTile(context, 'Class', student.classId),
-                _buildInfoTile(context, 'Education Level', student.level.name.toUpperCase()),
-                if (student.streamId != null) _buildInfoTile(context, 'Stream', student.streamId!),
+                _buildInfoTile(
+                  context,
+                  'Education Level',
+                  student.level.name.toUpperCase(),
+                ),
+                if (student.streamId != null)
+                  _buildInfoTile(context, 'Stream', student.streamId!),
               ]),
               const SizedBox(height: 24),
               _buildSection(context, 'Personal Details', [
-                _buildInfoTile(context, 'Date of Birth', DateFormat('dd MMMM yyyy').format(student.dateOfBirth)),
-                _buildInfoTile(context, 'Gender', student.gender.name.toUpperCase()),
+                _buildInfoTile(
+                  context,
+                  'Date of Birth',
+                  DateFormat('dd MMMM yyyy').format(student.dateOfBirth),
+                ),
+                _buildInfoTile(
+                  context,
+                  'Gender',
+                  student.gender.name.toUpperCase(),
+                ),
                 if (student.medicalInfo?.bloodGroup != null)
-                  _buildInfoTile(context, 'Blood Group', student.medicalInfo!.bloodGroup!),
+                  _buildInfoTile(
+                    context,
+                    'Blood Group',
+                    student.medicalInfo!.bloodGroup!,
+                  ),
               ]),
               const SizedBox(height: 24),
               if (student.dormLeadershipRole != null) ...[
@@ -71,8 +95,18 @@ class StudentProfileScreen extends StatelessWidget {
                 const SizedBox(height: 24),
               ],
               if (student.emergencyContacts.isNotEmpty)
-                _buildSection(context, 'Emergency Contacts',
-                  student.emergencyContacts.map((c) => _buildInfoTile(context, c.relationship, '${c.name} (${c.phoneNumber})')).toList(),
+                _buildSection(
+                  context,
+                  'Emergency Contacts',
+                  student.emergencyContacts
+                      .map(
+                        (c) => _buildInfoTile(
+                          context,
+                          c.relationship,
+                          '${c.name} (${c.phoneNumber})',
+                        ),
+                      )
+                      .toList(),
                 ),
               const SizedBox(height: 24),
               AppCard(
@@ -113,7 +147,11 @@ class StudentProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSection(BuildContext context, String title, List<Widget> children) {
+  Widget _buildSection(
+    BuildContext context,
+    String title,
+    List<Widget> children,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -122,16 +160,14 @@ class StudentProfileScreen extends StatelessWidget {
           child: Text(
             title,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
+            ),
           ),
         ),
         AppCard(
           padding: EdgeInsets.zero,
-          child: Column(
-            children: children,
-          ),
+          child: Column(children: children),
         ),
       ],
     );
@@ -140,7 +176,10 @@ class StudentProfileScreen extends StatelessWidget {
   Widget _buildInfoTile(BuildContext context, String label, String value) {
     return ListTile(
       title: Text(label, style: Theme.of(context).textTheme.bodySmall),
-      subtitle: Text(value, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16)),
+      subtitle: Text(
+        value,
+        style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
+      ),
     );
   }
 }

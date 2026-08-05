@@ -68,7 +68,7 @@ class Step10Documents extends StatelessWidget {
                   children: [
                     Icon(
                       Icons.description_outlined,
-                      color: AppColors.electricBlue,
+                      color: AppColors.primary(context),
                     ),
                     const SizedBox(width: 12),
                     Expanded(

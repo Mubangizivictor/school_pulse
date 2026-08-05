@@ -31,10 +31,13 @@ class AdmissionsListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authState = context.read<AuthBloc>().state;
-    final schoolId = authState is AuthAuthenticated ? authState.user.schoolId : '';
+    final schoolId = authState is AuthAuthenticated
+        ? authState.user.schoolId
+        : '';
 
     return BlocProvider(
-      create: (_) => sl<AdmissionBloc>()..add(LoadApplicationsRequested(schoolId)),
+      create: (_) =>
+          sl<AdmissionBloc>()..add(LoadApplicationsRequested(schoolId)),
       child: _AdmissionsListView(schoolId: schoolId),
     );
   }
@@ -52,7 +55,9 @@ class _AdmissionsListViewState extends State<_AdmissionsListView> {
   AdmissionStatus? _filter;
 
   void _reload() {
-    context.read<AdmissionBloc>().add(LoadApplicationsRequested(widget.schoolId));
+    context.read<AdmissionBloc>().add(
+      LoadApplicationsRequested(widget.schoolId),
+    );
   }
 
   Future<void> _openReview(AdmissionApplication application) async {
@@ -81,13 +86,14 @@ class _AdmissionsListViewState extends State<_AdmissionsListView> {
         label: const Text('New Application'),
       ),
       body: BlocConsumer<AdmissionBloc, AdmissionState>(
-        listenWhen: (previous, current) => current is AdmissionError || current is AdmissionActionDenied,
+        listenWhen: (previous, current) =>
+            current is AdmissionError || current is AdmissionActionDenied,
         listener: (context, state) {
           final message = state is AdmissionError
               ? state.message
               : state is AdmissionActionDenied
-                  ? state.message
-                  : null;
+              ? state.message
+              : null;
           if (message != null) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(message), backgroundColor: Colors.red),
@@ -101,13 +107,17 @@ class _AdmissionsListViewState extends State<_AdmissionsListView> {
           final applications = state is AdmissionApplicationsLoaded
               ? state.applications
               : const <AdmissionApplication>[];
-          final visible =
-              _filter == null ? applications : applications.where((a) => a.status == _filter).toList();
+          final visible = _filter == null
+              ? applications
+              : applications.where((a) => a.status == _filter).toList();
 
           return Column(
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 child: Wrap(
                   spacing: 8,
                   children: [
@@ -141,7 +151,11 @@ class _AdmissionsListViewState extends State<_AdmissionsListView> {
                                 'Class ${application.targetClassId} · Applied '
                                 '${application.appliedAt.toLocal().toString().split(' ').first}',
                               ),
-                              trailing: Chip(label: Text(admissionStatusLabel(application.status))),
+                              trailing: Chip(
+                                label: Text(
+                                  admissionStatusLabel(application.status),
+                                ),
+                              ),
                               onTap: () => _openReview(application),
                             ),
                           );

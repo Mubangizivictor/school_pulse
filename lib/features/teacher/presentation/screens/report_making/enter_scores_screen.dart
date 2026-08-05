@@ -34,11 +34,13 @@ class _EnterScoresScreenState extends State<EnterScoresScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<TeacherBloc>().add(TeacherMarksEntryRequested(
-          className: widget.className,
-          subject: widget.subject,
-          assessment: widget.assessment,
-        ));
+    context.read<TeacherBloc>().add(
+      TeacherMarksEntryRequested(
+        className: widget.className,
+        subject: widget.subject,
+        assessment: widget.assessment,
+      ),
+    );
   }
 
   @override
@@ -60,14 +62,16 @@ class _EnterScoresScreenState extends State<EnterScoresScreen> {
       marks[entry.key] = ca + ea;
     }
 
-    context.read<TeacherBloc>().add(TeacherMarksSubmitted(
-          className: widget.className,
-          subject: widget.subject,
-          assessment: widget.assessment,
-          term: widget.term,
-          year: widget.year,
-          marks: marks,
-        ));
+    context.read<TeacherBloc>().add(
+      TeacherMarksSubmitted(
+        className: widget.className,
+        subject: widget.subject,
+        assessment: widget.assessment,
+        term: widget.term,
+        year: widget.year,
+        marks: marks,
+      ),
+    );
   }
 
   @override
@@ -77,13 +81,19 @@ class _EnterScoresScreenState extends State<EnterScoresScreen> {
         if (state is TeacherMarksSubmitSuccess) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-                content: Text('Successfully saved marks for ${state.savedCount} students'),
-                backgroundColor: AppColors.success(context)),
+              content: Text(
+                'Successfully saved marks for ${state.savedCount} students',
+              ),
+              backgroundColor: AppColors.success(context),
+            ),
           );
           Navigator.pop(context);
         } else if (state is TeacherError) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message), backgroundColor: AppColors.errorRed),
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: AppColors.errorRed,
+            ),
           );
         }
       },
@@ -98,7 +108,10 @@ class _EnterScoresScreenState extends State<EnterScoresScreen> {
             actions: [
               TextButton(
                 onPressed: () => context.push('/staff/reports/ca-ea-breakdown'),
-                child: Text('CA/EA Breakdown', style: TextStyle(color: AppColors.primary(context))),
+                child: Text(
+                  'CA/EA Breakdown',
+                  style: TextStyle(color: AppColors.primary(context)),
+                ),
               ),
             ],
             bottom: PreferredSize(
@@ -117,55 +130,80 @@ class _EnterScoresScreenState extends State<EnterScoresScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(widget.subject,
-                        style: TextStyle(
-                            color: AppColors.textPrimary(context),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18)),
-                    Text('Total: 100 Points',
-                        style: TextStyle(color: AppColors.textSecondary(context))),
+                    Text(
+                      widget.subject,
+                      style: TextStyle(
+                        color: AppColors.textPrimary(context),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    Text(
+                      'Total: 100 Points',
+                      style: TextStyle(color: AppColors.textSecondary(context)),
+                    ),
                   ],
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 8.0,
+                ),
                 child: Row(
                   children: [
                     Expanded(
-                        flex: 3,
-                        child: Text('Student',
-                            style: TextStyle(
-                                color: AppColors.textPrimary(context),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12))),
+                      flex: 3,
+                      child: Text(
+                        'Student',
+                        style: TextStyle(
+                          color: AppColors.textPrimary(context),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
                     Expanded(
-                        child: Text('CA (40)',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                color: AppColors.textPrimary(context),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12))),
+                      child: Text(
+                        'CA (40)',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppColors.textPrimary(context),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
                     Expanded(
-                        child: Text('EA (60)',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                color: AppColors.textPrimary(context),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12))),
+                      child: Text(
+                        'EA (60)',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppColors.textPrimary(context),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
                     Expanded(
-                        child: Text('Total',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                color: AppColors.textPrimary(context),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12))),
+                      child: Text(
+                        'Total',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppColors.textPrimary(context),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
-              Divider(height: 1, color: AppColors.border(context).withValues(alpha: 0.5)),
-              Expanded(
-                child: _buildContent(state),
+              Divider(
+                height: 1,
+                color: AppColors.border(context).withValues(alpha: 0.5),
               ),
+              Expanded(child: _buildContent(state)),
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Row(
@@ -195,30 +233,45 @@ class _EnterScoresScreenState extends State<EnterScoresScreen> {
 
   Widget _buildContent(TeacherState state) {
     if (state is TeacherLoading) {
-      return Center(child: CircularProgressIndicator(color: AppColors.primary(context)));
+      return Center(
+        child: CircularProgressIndicator(color: AppColors.primary(context)),
+      );
     }
 
     if (state is TeacherMarksEntryLoaded) {
       return ListView.separated(
         itemCount: state.students.length,
-        separatorBuilder: (_, __) =>
-            Divider(height: 1, color: AppColors.border(context).withValues(alpha: 0.5)),
+        separatorBuilder: (_, __) => Divider(
+          height: 1,
+          color: AppColors.border(context).withValues(alpha: 0.5),
+        ),
         itemBuilder: (context, index) {
           final student = state.students[index];
           final caController = _caControllers.putIfAbsent(
-              student.id, () => TextEditingController(text: '0'));
+            student.id,
+            () => TextEditingController(text: '0'),
+          );
           final eaController = _eaControllers.putIfAbsent(
-              student.id, () => TextEditingController(text: '0'));
+            student.id,
+            () => TextEditingController(text: '0'),
+          );
 
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 12.0,
+            ),
             child: Row(
               children: [
                 Expanded(
                   flex: 3,
-                  child: Text(student.name,
-                      style: TextStyle(
-                          color: AppColors.textPrimary(context), fontWeight: FontWeight.w500)),
+                  child: Text(
+                    student.name,
+                    style: TextStyle(
+                      color: AppColors.textPrimary(context),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
                 Expanded(
                   child: Padding(
@@ -233,7 +286,9 @@ class _EnterScoresScreenState extends State<EnterScoresScreen> {
                         filled: true,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: AppColors.border(context)),
+                          borderSide: BorderSide(
+                            color: AppColors.border(context),
+                          ),
                         ),
                       ),
                       keyboardType: TextInputType.number,
@@ -254,7 +309,9 @@ class _EnterScoresScreenState extends State<EnterScoresScreen> {
                         filled: true,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: AppColors.border(context)),
+                          borderSide: BorderSide(
+                            color: AppColors.border(context),
+                          ),
                         ),
                       ),
                       keyboardType: TextInputType.number,
@@ -267,7 +324,9 @@ class _EnterScoresScreenState extends State<EnterScoresScreen> {
                     '${(double.tryParse(caController.text) ?? 0) + (double.tryParse(eaController.text) ?? 0)}',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                        color: AppColors.textPrimary(context), fontWeight: FontWeight.bold),
+                      color: AppColors.textPrimary(context),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
@@ -278,13 +337,19 @@ class _EnterScoresScreenState extends State<EnterScoresScreen> {
     }
 
     if (state is TeacherError) {
-      return Center(child: Text(state.message, style: TextStyle(color: AppColors.textPrimary(context))));
+      return Center(
+        child: Text(
+          state.message,
+          style: TextStyle(color: AppColors.textPrimary(context)),
+        ),
+      );
     }
 
     return Center(
-        child: Text('No students found for this class.',
-            style: TextStyle(color: AppColors.textSecondary(context))));
+      child: Text(
+        'No students found for this class.',
+        style: TextStyle(color: AppColors.textSecondary(context)),
+      ),
+    );
   }
 }
-
-

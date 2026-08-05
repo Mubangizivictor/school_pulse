@@ -134,14 +134,20 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.05))),
+        border: Border(
+          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           const Text(
             'Add New Institution',
-            style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           IconButton(
             onPressed: () => Navigator.pop(context),
@@ -156,9 +162,23 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
     return Row(
       children: [
         _buildStepCircle(1, 'Basic Info', _currentStep >= 1),
-        Expanded(child: Container(height: 2, color: _currentStep >= 2 ? _kAccent : Colors.white.withValues(alpha: 0.1))),
+        Expanded(
+          child: Container(
+            height: 2,
+            color: _currentStep >= 2
+                ? _kAccent
+                : Colors.white.withValues(alpha: 0.1),
+          ),
+        ),
         _buildStepCircle(2, 'Classification', _currentStep >= 2),
-        Expanded(child: Container(height: 2, color: _currentStep >= 3 ? _kAccent : Colors.white.withValues(alpha: 0.1))),
+        Expanded(
+          child: Container(
+            height: 2,
+            color: _currentStep >= 3
+                ? _kAccent
+                : Colors.white.withValues(alpha: 0.1),
+          ),
+        ),
         _buildStepCircle(3, 'Admin & Plan', _currentStep >= 3),
       ],
     );
@@ -173,12 +193,19 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
           decoration: BoxDecoration(
             color: active ? _kAccent : Colors.transparent,
             shape: BoxShape.circle,
-            border: Border.all(color: active ? _kAccent : Colors.white.withValues(alpha: 0.2)),
+            border: Border.all(
+              color: active ? _kAccent : Colors.white.withValues(alpha: 0.2),
+            ),
           ),
           child: Center(
             child: Text(
               step.toString(),
-              style: TextStyle(color: active ? Colors.white : Colors.white.withValues(alpha: 0.5), fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: active
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.5),
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ),
@@ -199,7 +226,11 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildTextField('Institution Name', _nameController, hint: 'e.g. Greenfield Academy'),
+        _buildTextField(
+          'Institution Name',
+          _nameController,
+          hint: 'e.g. Greenfield Academy',
+        ),
         const SizedBox(height: 20),
         _buildTextField(
           'Display Label (optional)',
@@ -208,15 +239,35 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
           required: false,
         ),
         const SizedBox(height: 20),
-        _buildTextField('Tenant ID', _tenantIdController, hint: 'e.g. GREENFIELD'),
+        _buildTextField(
+          'Tenant ID',
+          _tenantIdController,
+          hint: 'e.g. GREENFIELD',
+        ),
         const SizedBox(height: 20),
-        _buildTextField('Physical Address', _addressController, hint: 'e.g. Kampala, Uganda'),
+        _buildTextField(
+          'Physical Address',
+          _addressController,
+          hint: 'e.g. Kampala, Uganda',
+        ),
         const SizedBox(height: 20),
         Row(
           children: [
-            Expanded(child: _buildTextField('Contact Email', _emailController, hint: 'info@school.com')),
+            Expanded(
+              child: _buildTextField(
+                'Contact Email',
+                _emailController,
+                hint: 'info@school.com',
+              ),
+            ),
             const SizedBox(width: 16),
-            Expanded(child: _buildTextField('Contact Phone', _phoneController, hint: '+256...')),
+            Expanded(
+              child: _buildTextField(
+                'Contact Phone',
+                _phoneController,
+                hint: '+256...',
+              ),
+            ),
           ],
         ),
       ],
@@ -227,33 +278,60 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Institution Classification', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+        const Text(
+          'Institution Classification',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 4),
         Text(
           'Descriptive only - suggests defaults, never restricts features.',
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11),
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.4),
+            fontSize: 11,
+          ),
         ),
         const SizedBox(height: 12),
         _buildClassificationDropdown(),
         if (_classification == InstitutionClassification.other) ...[
           const SizedBox(height: 20),
-          _buildTextField('Describe this institution type', _classificationOtherController, hint: 'e.g. Adult Learning Centre'),
+          _buildTextField(
+            'Describe this institution type',
+            _classificationOtherController,
+            hint: 'e.g. Adult Learning Centre',
+          ),
         ],
         const SizedBox(height: 32),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Education Divisions', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+            const Text(
+              'Education Divisions',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             TextButton.icon(
               onPressed: _addDivision,
               icon: const Icon(Icons.add, size: 16, color: _kAccent),
-              label: const Text('Add Division', style: TextStyle(color: _kAccent, fontSize: 12)),
+              label: const Text(
+                'Add Division',
+                style: TextStyle(color: _kAccent, fontSize: 12),
+              ),
             ),
           ],
         ),
         Text(
           'A single institution may contain one or many divisions (e.g. Kindergarten + Primary, or Undergraduate + Postgraduate).',
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11),
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.4),
+            fontSize: 11,
+          ),
         ),
         const SizedBox(height: 12),
         if (_divisions.isEmpty)
@@ -266,11 +344,16 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
             ),
             child: Text(
               'No divisions added yet. Add at least one before continuing.',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12),
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.4),
+                fontSize: 12,
+              ),
             ),
           )
         else
-          ..._divisions.asMap().entries.map((entry) => _buildDivisionRow(entry.key, entry.value)),
+          ..._divisions.asMap().entries.map(
+            (entry) => _buildDivisionRow(entry.key, entry.value),
+          ),
       ],
     );
   }
@@ -309,9 +392,21 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
                 isExpanded: true,
                 isDense: true,
                 style: const TextStyle(color: Colors.white, fontSize: 12),
-                icon: Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white.withValues(alpha: 0.5), size: 18),
+                icon: Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: Colors.white.withValues(alpha: 0.5),
+                  size: 18,
+                ),
                 items: InstitutionClassification.values
-                    .map((c) => DropdownMenuItem(value: c, child: Text(_classificationLabel(c), overflow: TextOverflow.ellipsis)))
+                    .map(
+                      (c) => DropdownMenuItem(
+                        value: c,
+                        child: Text(
+                          _classificationLabel(c),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    )
                     .toList(),
                 onChanged: (v) => setState(() => draft.levelHint = v!),
               ),
@@ -339,13 +434,36 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Primary Institution Administrator', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+        const Text(
+          'Primary Institution Administrator',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 16),
-        _buildTextField('Admin Email', _adminEmailController, hint: 'admin@school.com'),
+        _buildTextField(
+          'Admin Email',
+          _adminEmailController,
+          hint: 'admin@school.com',
+        ),
         const SizedBox(height: 20),
-        _buildTextField('Temporary Password', _tempPasswordController, hint: '••••••••', obscureText: true),
+        _buildTextField(
+          'Temporary Password',
+          _tempPasswordController,
+          hint: '••••••••',
+          obscureText: true,
+        ),
         const SizedBox(height: 32),
-        const Text('Subscription Plan', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+        const Text(
+          'Subscription Plan',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 16),
         _buildPlanDropdown(),
       ],
@@ -364,7 +482,11 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
       children: [
         Text(
           label,
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12, fontWeight: FontWeight.w500),
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.6),
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         const SizedBox(height: 8),
         Container(
@@ -379,11 +501,19 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
             style: const TextStyle(color: Colors.white, fontSize: 13),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.2), fontSize: 13),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              hintStyle: TextStyle(
+                color: Colors.white.withValues(alpha: 0.2),
+                fontSize: 13,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
               border: InputBorder.none,
             ),
-            validator: required ? (v) => v?.isEmpty ?? true ? 'Required' : null : null,
+            validator: required
+                ? (v) => v?.isEmpty ?? true ? 'Required' : null
+                : null,
           ),
         ),
       ],
@@ -404,9 +534,20 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
           dropdownColor: _kSurface,
           isExpanded: true,
           style: const TextStyle(color: Colors.white, fontSize: 13),
-          icon: Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white.withValues(alpha: 0.5)),
+          icon: Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: Colors.white.withValues(alpha: 0.5),
+          ),
           items: InstitutionClassification.values
-              .map((c) => DropdownMenuItem(value: c, child: Text(_classificationLabel(c), style: const TextStyle(fontSize: 13))))
+              .map(
+                (c) => DropdownMenuItem(
+                  value: c,
+                  child: Text(
+                    _classificationLabel(c),
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
+              )
               .toList(),
           onChanged: (v) => setState(() => _classification = v!),
         ),
@@ -428,11 +569,29 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
           dropdownColor: _kSurface,
           isExpanded: true,
           style: const TextStyle(color: Colors.white, fontSize: 13),
-          icon: Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white.withValues(alpha: 0.5)),
+          icon: Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: Colors.white.withValues(alpha: 0.5),
+          ),
           items: const [
-            DropdownMenuItem(value: 'starter', child: Text('Starter (Yearly)', style: TextStyle(fontSize: 13))),
-            DropdownMenuItem(value: 'pro', child: Text('Professional (Termly)', style: TextStyle(fontSize: 13))),
-            DropdownMenuItem(value: 'enterprise', child: Text('Enterprise (Yearly)', style: TextStyle(fontSize: 13))),
+            DropdownMenuItem(
+              value: 'starter',
+              child: Text('Starter (Yearly)', style: TextStyle(fontSize: 13)),
+            ),
+            DropdownMenuItem(
+              value: 'pro',
+              child: Text(
+                'Professional (Termly)',
+                style: TextStyle(fontSize: 13),
+              ),
+            ),
+            DropdownMenuItem(
+              value: 'enterprise',
+              child: Text(
+                'Enterprise (Yearly)',
+                style: TextStyle(fontSize: 13),
+              ),
+            ),
           ],
           onChanged: (v) => setState(() => _selectedPlanId = v!),
         ),
@@ -444,7 +603,9 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.05))),
+        border: Border(
+          top: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
@@ -459,7 +620,10 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
             },
             child: Text(
               _currentStep == 1 ? 'Cancel' : 'Back',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 13),
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.5),
+                fontSize: 13,
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -469,9 +633,14 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
               backgroundColor: _kAccent,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            child: Text(_currentStep == 3 ? 'Create Institution' : 'Next Step', style: const TextStyle(fontSize: 13)),
+            child: Text(
+              _currentStep == 3 ? 'Create Institution' : 'Next Step',
+              style: const TextStyle(fontSize: 13),
+            ),
           ),
         ],
       ),
@@ -488,14 +657,18 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
     if (_currentStep == 2) {
       if (_divisions.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Add at least one education division to continue.')),
+          const SnackBar(
+            content: Text('Add at least one education division to continue.'),
+          ),
         );
         return;
       }
       if (_classification == InstitutionClassification.other &&
           _classificationOtherController.text.trim().isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Describe the institution type for "Other".')),
+          const SnackBar(
+            content: Text('Describe the institution type for "Other".'),
+          ),
         );
         return;
       }
@@ -509,11 +682,13 @@ class _CreateSchoolDialogState extends State<CreateSchoolDialog> {
     if (_formKey.currentState?.validate() ?? false) {
       final divisions = _divisions
           .where((d) => d.nameController.text.trim().isNotEmpty)
-          .map((d) => InstitutionDivision(
-                id: const Uuid().v4(),
-                name: d.nameController.text.trim(),
-                levelHint: d.levelHint,
-              ))
+          .map(
+            (d) => InstitutionDivision(
+              id: const Uuid().v4(),
+              name: d.nameController.text.trim(),
+              levelHint: d.levelHint,
+            ),
+          )
           .toList();
 
       final school = School(

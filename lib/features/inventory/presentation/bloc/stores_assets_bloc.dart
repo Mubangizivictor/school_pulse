@@ -35,13 +35,18 @@ class StoresAssetsBloc extends Bloc<StoresAssetsEvent, StoresAssetsState> {
     on<ScheduleMaintenanceRequested>(_onScheduleMaintenance);
     on<LoadProcurementRequests>(_onLoadProcurementRequests);
     on<CreateProcurementRequestRequested>(_onCreateProcurementRequest);
-    on<UpdateProcurementRequestStatusRequested>(_onUpdateProcurementRequestStatus);
+    on<UpdateProcurementRequestStatusRequested>(
+      _onUpdateProcurementRequestStatus,
+    );
     on<SyncOfflineData>(_onSyncOfflineData);
   }
 
-  Future<void> _onLoadDashboardData(LoadDashboardData event, Emitter<StoresAssetsState> emit) async {
+  Future<void> _onLoadDashboardData(
+    LoadDashboardData event,
+    Emitter<StoresAssetsState> emit,
+  ) async {
     emit(StoresAssetsLoading());
-    
+
     final itemsResult = await repository.getInventoryItems();
     final assetsResult = await repository.getAssets();
     final ordersResult = await repository.getPurchaseOrders();
@@ -51,19 +56,24 @@ class StoresAssetsBloc extends Bloc<StoresAssetsEvent, StoresAssetsState> {
     final suppliersResult = await repository.getSuppliers();
     final procurementRequestsResult = await repository.getProcurementRequests();
 
-    emit(StoresAssetsLoaded(
-      items: itemsResult.getOrElse(() => []),
-      assets: assetsResult.getOrElse(() => []),
-      purchaseOrders: ordersResult.getOrElse(() => []),
-      repairs: repairsResult.getOrElse(() => []),
-      recentMovements: movementsResult.getOrElse(() => []),
-      maintenanceSchedule: maintenanceResult.getOrElse(() => []),
-      suppliers: suppliersResult.getOrElse(() => []),
-      procurementRequests: procurementRequestsResult.getOrElse(() => []),
-    ));
+    emit(
+      StoresAssetsLoaded(
+        items: itemsResult.getOrElse(() => []),
+        assets: assetsResult.getOrElse(() => []),
+        purchaseOrders: ordersResult.getOrElse(() => []),
+        repairs: repairsResult.getOrElse(() => []),
+        recentMovements: movementsResult.getOrElse(() => []),
+        maintenanceSchedule: maintenanceResult.getOrElse(() => []),
+        suppliers: suppliersResult.getOrElse(() => []),
+        procurementRequests: procurementRequestsResult.getOrElse(() => []),
+      ),
+    );
   }
 
-  Future<void> _onLoadInventoryItems(LoadInventoryItems event, Emitter<StoresAssetsState> emit) async {
+  Future<void> _onLoadInventoryItems(
+    LoadInventoryItems event,
+    Emitter<StoresAssetsState> emit,
+  ) async {
     final result = await repository.getInventoryItems();
     result.fold(
       (failure) => emit(const StoresAssetsError('Failed to load inventory')),
@@ -77,7 +87,10 @@ class StoresAssetsBloc extends Bloc<StoresAssetsEvent, StoresAssetsState> {
     );
   }
 
-  Future<void> _onAddInventoryItem(AddInventoryItemRequested event, Emitter<StoresAssetsState> emit) async {
+  Future<void> _onAddInventoryItem(
+    AddInventoryItemRequested event,
+    Emitter<StoresAssetsState> emit,
+  ) async {
     final result = await repository.addInventoryItem(event.item);
     result.fold(
       (failure) => emit(const StoresAssetsError('Failed to add item')),
@@ -85,7 +98,10 @@ class StoresAssetsBloc extends Bloc<StoresAssetsEvent, StoresAssetsState> {
     );
   }
 
-  Future<void> _onUpdateInventoryItem(UpdateInventoryItemRequested event, Emitter<StoresAssetsState> emit) async {
+  Future<void> _onUpdateInventoryItem(
+    UpdateInventoryItemRequested event,
+    Emitter<StoresAssetsState> emit,
+  ) async {
     final result = await repository.updateInventoryItem(event.item);
     result.fold(
       (failure) => emit(const StoresAssetsError('Failed to update item')),
@@ -93,7 +109,10 @@ class StoresAssetsBloc extends Bloc<StoresAssetsEvent, StoresAssetsState> {
     );
   }
 
-  Future<void> _onAdjustStock(AdjustStockRequested event, Emitter<StoresAssetsState> emit) async {
+  Future<void> _onAdjustStock(
+    AdjustStockRequested event,
+    Emitter<StoresAssetsState> emit,
+  ) async {
     final result = await repository.adjustStock(event.adjustment);
     result.fold(
       (failure) => emit(const StoresAssetsError('Failed to adjust stock')),
@@ -101,7 +120,10 @@ class StoresAssetsBloc extends Bloc<StoresAssetsEvent, StoresAssetsState> {
     );
   }
 
-  Future<void> _onIssueStock(IssueStockRequested event, Emitter<StoresAssetsState> emit) async {
+  Future<void> _onIssueStock(
+    IssueStockRequested event,
+    Emitter<StoresAssetsState> emit,
+  ) async {
     final result = await repository.issueStock(event.issue);
     result.fold(
       (failure) => emit(const StoresAssetsError('Failed to issue stock')),
@@ -109,7 +131,10 @@ class StoresAssetsBloc extends Bloc<StoresAssetsEvent, StoresAssetsState> {
     );
   }
 
-  Future<void> _onLoadAssets(LoadAssets event, Emitter<StoresAssetsState> emit) async {
+  Future<void> _onLoadAssets(
+    LoadAssets event,
+    Emitter<StoresAssetsState> emit,
+  ) async {
     final result = await repository.getAssets();
     result.fold(
       (failure) => emit(const StoresAssetsError('Failed to load assets')),
@@ -123,7 +148,10 @@ class StoresAssetsBloc extends Bloc<StoresAssetsEvent, StoresAssetsState> {
     );
   }
 
-  Future<void> _onAddAsset(AddAssetRequested event, Emitter<StoresAssetsState> emit) async {
+  Future<void> _onAddAsset(
+    AddAssetRequested event,
+    Emitter<StoresAssetsState> emit,
+  ) async {
     final result = await repository.addAsset(event.asset);
     result.fold(
       (failure) => emit(const StoresAssetsError('Failed to add asset')),
@@ -131,7 +159,10 @@ class StoresAssetsBloc extends Bloc<StoresAssetsEvent, StoresAssetsState> {
     );
   }
 
-  Future<void> _onUpdateAsset(UpdateAssetRequested event, Emitter<StoresAssetsState> emit) async {
+  Future<void> _onUpdateAsset(
+    UpdateAssetRequested event,
+    Emitter<StoresAssetsState> emit,
+  ) async {
     final result = await repository.updateAsset(event.asset);
     result.fold(
       (failure) => emit(const StoresAssetsError('Failed to update asset')),
@@ -139,21 +170,26 @@ class StoresAssetsBloc extends Bloc<StoresAssetsEvent, StoresAssetsState> {
     );
   }
 
-  Future<void> _onScanAssetQR(ScanAssetQR event, Emitter<StoresAssetsState> emit) async {
+  Future<void> _onScanAssetQR(
+    ScanAssetQR event,
+    Emitter<StoresAssetsState> emit,
+  ) async {
     final result = await repository.getAssetByQr(event.qrCode);
-    result.fold(
-      (failure) => emit(const StoresAssetsError('Asset not found')),
-      (asset) {
-        if (state is StoresAssetsLoaded) {
-          emit((state as StoresAssetsLoaded).copyWith(scannedAsset: asset));
-        } else {
-          emit(StoresAssetsLoaded(scannedAsset: asset));
-        }
-      },
-    );
+    result.fold((failure) => emit(const StoresAssetsError('Asset not found')), (
+      asset,
+    ) {
+      if (state is StoresAssetsLoaded) {
+        emit((state as StoresAssetsLoaded).copyWith(scannedAsset: asset));
+      } else {
+        emit(StoresAssetsLoaded(scannedAsset: asset));
+      }
+    });
   }
 
-  Future<void> _onDisposeAsset(DisposeAssetRequested event, Emitter<StoresAssetsState> emit) async {
+  Future<void> _onDisposeAsset(
+    DisposeAssetRequested event,
+    Emitter<StoresAssetsState> emit,
+  ) async {
     final result = await repository.disposeAsset(event.assetId, event.reason);
     result.fold(
       (failure) => emit(const StoresAssetsError('Failed to dispose asset')),
@@ -161,7 +197,10 @@ class StoresAssetsBloc extends Bloc<StoresAssetsEvent, StoresAssetsState> {
     );
   }
 
-  Future<void> _onLoadSuppliers(LoadSuppliers event, Emitter<StoresAssetsState> emit) async {
+  Future<void> _onLoadSuppliers(
+    LoadSuppliers event,
+    Emitter<StoresAssetsState> emit,
+  ) async {
     final result = await repository.getSuppliers();
     result.fold(
       (failure) => emit(const StoresAssetsError('Failed to load suppliers')),
@@ -175,10 +214,14 @@ class StoresAssetsBloc extends Bloc<StoresAssetsEvent, StoresAssetsState> {
     );
   }
 
-  Future<void> _onLoadPurchaseOrders(LoadPurchaseOrders event, Emitter<StoresAssetsState> emit) async {
+  Future<void> _onLoadPurchaseOrders(
+    LoadPurchaseOrders event,
+    Emitter<StoresAssetsState> emit,
+  ) async {
     final result = await repository.getPurchaseOrders();
     result.fold(
-      (failure) => emit(const StoresAssetsError('Failed to load purchase orders')),
+      (failure) =>
+          emit(const StoresAssetsError('Failed to load purchase orders')),
       (orders) {
         if (state is StoresAssetsLoaded) {
           emit((state as StoresAssetsLoaded).copyWith(purchaseOrders: orders));
@@ -189,7 +232,10 @@ class StoresAssetsBloc extends Bloc<StoresAssetsEvent, StoresAssetsState> {
     );
   }
 
-  Future<void> _onCreatePurchaseOrder(CreatePurchaseOrderRequested event, Emitter<StoresAssetsState> emit) async {
+  Future<void> _onCreatePurchaseOrder(
+    CreatePurchaseOrderRequested event,
+    Emitter<StoresAssetsState> emit,
+  ) async {
     final result = await repository.createPurchaseOrder(event.order);
     result.fold(
       (failure) => emit(const StoresAssetsError('Failed to create order')),
@@ -197,7 +243,10 @@ class StoresAssetsBloc extends Bloc<StoresAssetsEvent, StoresAssetsState> {
     );
   }
 
-  Future<void> _onLoadRepairs(LoadRepairs event, Emitter<StoresAssetsState> emit) async {
+  Future<void> _onLoadRepairs(
+    LoadRepairs event,
+    Emitter<StoresAssetsState> emit,
+  ) async {
     final result = await repository.getRepairRecords();
     result.fold(
       (failure) => emit(const StoresAssetsError('Failed to load repairs')),
@@ -211,13 +260,21 @@ class StoresAssetsBloc extends Bloc<StoresAssetsEvent, StoresAssetsState> {
     );
   }
 
-  Future<void> _onLoadMaintenanceSchedule(LoadMaintenanceSchedule event, Emitter<StoresAssetsState> emit) async {
+  Future<void> _onLoadMaintenanceSchedule(
+    LoadMaintenanceSchedule event,
+    Emitter<StoresAssetsState> emit,
+  ) async {
     final result = await repository.getMaintenanceSchedule();
     result.fold(
-      (failure) => emit(const StoresAssetsError('Failed to load maintenance schedule')),
+      (failure) =>
+          emit(const StoresAssetsError('Failed to load maintenance schedule')),
       (schedule) {
         if (state is StoresAssetsLoaded) {
-          emit((state as StoresAssetsLoaded).copyWith(maintenanceSchedule: schedule));
+          emit(
+            (state as StoresAssetsLoaded).copyWith(
+              maintenanceSchedule: schedule,
+            ),
+          );
         } else {
           emit(StoresAssetsLoaded(maintenanceSchedule: schedule));
         }
@@ -225,7 +282,10 @@ class StoresAssetsBloc extends Bloc<StoresAssetsEvent, StoresAssetsState> {
     );
   }
 
-  Future<void> _onRequestRepair(RequestRepairRequested event, Emitter<StoresAssetsState> emit) async {
+  Future<void> _onRequestRepair(
+    RequestRepairRequested event,
+    Emitter<StoresAssetsState> emit,
+  ) async {
     final result = await repository.requestRepair(event.repair);
     result.fold(
       (failure) => emit(const StoresAssetsError('Failed to request repair')),
@@ -233,21 +293,33 @@ class StoresAssetsBloc extends Bloc<StoresAssetsEvent, StoresAssetsState> {
     );
   }
 
-  Future<void> _onScheduleMaintenance(ScheduleMaintenanceRequested event, Emitter<StoresAssetsState> emit) async {
+  Future<void> _onScheduleMaintenance(
+    ScheduleMaintenanceRequested event,
+    Emitter<StoresAssetsState> emit,
+  ) async {
     final result = await repository.scheduleMaintenance(event.maintenance);
     result.fold(
-      (failure) => emit(const StoresAssetsError('Failed to schedule maintenance')),
+      (failure) =>
+          emit(const StoresAssetsError('Failed to schedule maintenance')),
       (_) => add(LoadDashboardData()),
     );
   }
 
-  Future<void> _onLoadProcurementRequests(LoadProcurementRequests event, Emitter<StoresAssetsState> emit) async {
+  Future<void> _onLoadProcurementRequests(
+    LoadProcurementRequests event,
+    Emitter<StoresAssetsState> emit,
+  ) async {
     final result = await repository.getProcurementRequests();
     result.fold(
-      (failure) => emit(const StoresAssetsError('Failed to load procurement requests')),
+      (failure) =>
+          emit(const StoresAssetsError('Failed to load procurement requests')),
       (requests) {
         if (state is StoresAssetsLoaded) {
-          emit((state as StoresAssetsLoaded).copyWith(procurementRequests: requests));
+          emit(
+            (state as StoresAssetsLoaded).copyWith(
+              procurementRequests: requests,
+            ),
+          );
         } else {
           emit(StoresAssetsLoaded(procurementRequests: requests));
         }
@@ -255,23 +327,38 @@ class StoresAssetsBloc extends Bloc<StoresAssetsEvent, StoresAssetsState> {
     );
   }
 
-  Future<void> _onCreateProcurementRequest(CreateProcurementRequestRequested event, Emitter<StoresAssetsState> emit) async {
+  Future<void> _onCreateProcurementRequest(
+    CreateProcurementRequestRequested event,
+    Emitter<StoresAssetsState> emit,
+  ) async {
     final result = await repository.createProcurementRequest(event.request);
     result.fold(
-      (failure) => emit(const StoresAssetsError('Failed to create procurement request')),
+      (failure) =>
+          emit(const StoresAssetsError('Failed to create procurement request')),
       (_) => add(LoadDashboardData()),
     );
   }
 
-  Future<void> _onUpdateProcurementRequestStatus(UpdateProcurementRequestStatusRequested event, Emitter<StoresAssetsState> emit) async {
-    final result = await repository.updateProcurementRequestStatus(event.requestId, event.status, directorNote: event.directorNote);
+  Future<void> _onUpdateProcurementRequestStatus(
+    UpdateProcurementRequestStatusRequested event,
+    Emitter<StoresAssetsState> emit,
+  ) async {
+    final result = await repository.updateProcurementRequestStatus(
+      event.requestId,
+      event.status,
+      directorNote: event.directorNote,
+    );
     result.fold(
-      (failure) => emit(const StoresAssetsError('Failed to update procurement request')),
+      (failure) =>
+          emit(const StoresAssetsError('Failed to update procurement request')),
       (_) => add(LoadDashboardData()),
     );
   }
 
-  Future<void> _onSyncOfflineData(SyncOfflineData event, Emitter<StoresAssetsState> emit) async {
+  Future<void> _onSyncOfflineData(
+    SyncOfflineData event,
+    Emitter<StoresAssetsState> emit,
+  ) async {
     await repository.syncOfflineData();
     add(LoadDashboardData());
   }

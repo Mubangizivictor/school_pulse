@@ -29,7 +29,10 @@ class ParentStudentRelationshipModel extends ParentStudentRelationship {
     super.previousRelationshipId,
   });
 
-  factory ParentStudentRelationshipModel.fromMap(String id, Map<String, dynamic> map) {
+  factory ParentStudentRelationshipModel.fromMap(
+    String id,
+    Map<String, dynamic> map,
+  ) {
     return ParentStudentRelationshipModel(
       id: id,
       schoolId: map['schoolId'] ?? '',
@@ -83,7 +86,9 @@ class ParentStudentRelationshipModel extends ParentStudentRelationship {
       'createdBy': createdBy,
       'approvedBy': approvedBy,
       'createdAt': Timestamp.fromDate(createdAt),
-      'supersededAt': supersededAt != null ? Timestamp.fromDate(supersededAt!) : null,
+      'supersededAt': supersededAt != null
+          ? Timestamp.fromDate(supersededAt!)
+          : null,
       'supersededBy': supersededBy,
       'supersessionReason': supersessionReason,
       'previousRelationshipId': previousRelationshipId,

@@ -53,15 +53,17 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
     try {
       // Audit first: impersonation must never happen off the record, even
       // if the local state update below never completes.
-      await repository.logAction(AuditLog(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        ownerId: _ownerId,
-        action: 'ENTER_SUPPORT_MODE',
-        schoolId: event.schoolId,
-        timestamp: DateTime.now(),
-        device: 'Platform Dashboard',
-        reason: event.reason,
-      ));
+      await repository.logAction(
+        AuditLog(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          ownerId: _ownerId,
+          action: 'ENTER_SUPPORT_MODE',
+          schoolId: event.schoolId,
+          timestamp: DateTime.now(),
+          device: 'Platform Dashboard',
+          reason: event.reason,
+        ),
+      );
 
       emit(state.copyWith(supportModeSchoolId: event.schoolId));
     } catch (e) {
@@ -75,14 +77,16 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
   ) async {
     final schoolId = state.supportModeSchoolId;
     if (schoolId != null) {
-      await repository.logAction(AuditLog(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        ownerId: _ownerId,
-        action: 'EXIT_SUPPORT_MODE',
-        schoolId: schoolId,
-        timestamp: DateTime.now(),
-        device: 'Platform Dashboard',
-      ));
+      await repository.logAction(
+        AuditLog(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          ownerId: _ownerId,
+          action: 'EXIT_SUPPORT_MODE',
+          schoolId: schoolId,
+          timestamp: DateTime.now(),
+          device: 'Platform Dashboard',
+        ),
+      );
     }
     emit(state.copyWith(supportModeSchoolId: null));
   }
@@ -115,19 +119,23 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
       final plans = await repository.getSubscriptionPlans();
       final stats = await repository.getPlatformStats();
       final invoices = await billingRepository.getInvoices();
-      
-      emit(state.copyWith(
-        status: SuperAdminStatus.success,
-        schools: schools,
-        plans: plans,
-        stats: stats,
-        invoices: invoices,
-      ));
+
+      emit(
+        state.copyWith(
+          status: SuperAdminStatus.success,
+          schools: schools,
+          plans: plans,
+          stats: stats,
+          invoices: invoices,
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        status: SuperAdminStatus.failure,
-        errorMessage: e.toString(),
-      ));
+      emit(
+        state.copyWith(
+          status: SuperAdminStatus.failure,
+          errorMessage: e.toString(),
+        ),
+      );
     }
   }
 
@@ -136,7 +144,9 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
     Emitter<SuperAdminState> emit,
   ) async {
     try {
-      final invoices = await billingRepository.getInvoices(schoolId: event.schoolId);
+      final invoices = await billingRepository.getInvoices(
+        schoolId: event.schoolId,
+      );
       emit(state.copyWith(invoices: invoices));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
@@ -148,17 +158,23 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
     Emitter<SuperAdminState> emit,
   ) async {
     try {
-      await repository.createSchool(event.school, event.adminEmail, event.adminPassword);
-      
-      await repository.logAction(AuditLog(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        ownerId: _ownerId,
-        action: 'CREATE_SCHOOL',
-        schoolId: event.school.id,
-        timestamp: DateTime.now(),
-        device: 'Platform Dashboard',
-        metadata: {'schoolName': event.school.name},
-      ));
+      await repository.createSchool(
+        event.school,
+        event.adminEmail,
+        event.adminPassword,
+      );
+
+      await repository.logAction(
+        AuditLog(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          ownerId: _ownerId,
+          action: 'CREATE_SCHOOL',
+          schoolId: event.school.id,
+          timestamp: DateTime.now(),
+          device: 'Platform Dashboard',
+          metadata: {'schoolName': event.school.name},
+        ),
+      );
 
       add(LoadSuperAdminDashboard());
     } catch (e) {
@@ -172,21 +188,26 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
   ) async {
     try {
       if (event.status == SchoolStatus.suspended) {
-        await repository.suspendSchool(event.schoolId, event.reason ?? 'No reason provided');
+        await repository.suspendSchool(
+          event.schoolId,
+          event.reason ?? 'No reason provided',
+        );
       } else if (event.status == SchoolStatus.active) {
         await repository.activateSchool(event.schoolId);
       }
 
-      await repository.logAction(AuditLog(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        ownerId: _ownerId,
-        action: 'UPDATE_SCHOOL_STATUS',
-        schoolId: event.schoolId,
-        timestamp: DateTime.now(),
-        device: 'Platform Dashboard',
-        reason: event.reason,
-        metadata: {'newStatus': event.status.name},
-      ));
+      await repository.logAction(
+        AuditLog(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          ownerId: _ownerId,
+          action: 'UPDATE_SCHOOL_STATUS',
+          schoolId: event.schoolId,
+          timestamp: DateTime.now(),
+          device: 'Platform Dashboard',
+          reason: event.reason,
+          metadata: {'newStatus': event.status.name},
+        ),
+      );
 
       add(LoadSuperAdminDashboard());
     } catch (e) {
@@ -199,17 +220,26 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
     Emitter<SuperAdminState> emit,
   ) async {
     try {
-      await repository.updateSchoolSubscription(event.schoolId, event.planId, event.expiry);
-      
-      await repository.logAction(AuditLog(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        ownerId: _ownerId,
-        action: 'UPDATE_SUBSCRIPTION',
-        schoolId: event.schoolId,
-        timestamp: DateTime.now(),
-        device: 'Platform Dashboard',
-        metadata: {'planId': event.planId, 'expiry': event.expiry.toIso8601String()},
-      ));
+      await repository.updateSchoolSubscription(
+        event.schoolId,
+        event.planId,
+        event.expiry,
+      );
+
+      await repository.logAction(
+        AuditLog(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          ownerId: _ownerId,
+          action: 'UPDATE_SUBSCRIPTION',
+          schoolId: event.schoolId,
+          timestamp: DateTime.now(),
+          device: 'Platform Dashboard',
+          metadata: {
+            'planId': event.planId,
+            'expiry': event.expiry.toIso8601String(),
+          },
+        ),
+      );
 
       add(LoadSuperAdminDashboard());
     } catch (e) {
@@ -225,22 +255,27 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
       final school = state.schools.firstWhere((s) => s.id == event.schoolId);
       final updatedFeatures = List<String>.from(school.enabledFeatures);
       if (event.enabled) {
-        if (!updatedFeatures.contains(event.feature)) updatedFeatures.add(event.feature);
+        if (!updatedFeatures.contains(event.feature))
+          updatedFeatures.add(event.feature);
       } else {
         updatedFeatures.remove(event.feature);
       }
-      
-      await repository.updateSchool(school.copyWith(enabledFeatures: updatedFeatures));
 
-      await repository.logAction(AuditLog(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        ownerId: _ownerId,
-        action: 'TOGGLE_FEATURE',
-        schoolId: event.schoolId,
-        timestamp: DateTime.now(),
-        device: 'Platform Dashboard',
-        metadata: {'feature': event.feature, 'enabled': event.enabled},
-      ));
+      await repository.updateSchool(
+        school.copyWith(enabledFeatures: updatedFeatures),
+      );
+
+      await repository.logAction(
+        AuditLog(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          ownerId: _ownerId,
+          action: 'TOGGLE_FEATURE',
+          schoolId: event.schoolId,
+          timestamp: DateTime.now(),
+          device: 'Platform Dashboard',
+          metadata: {'feature': event.feature, 'enabled': event.enabled},
+        ),
+      );
 
       add(LoadSuperAdminDashboard());
     } catch (e) {

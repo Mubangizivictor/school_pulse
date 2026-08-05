@@ -25,16 +25,16 @@ class Homework extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        title,
-        description,
-        className,
-        subject,
-        dueDate,
-        createdAt,
-        teacherId,
-        attachments,
-      ];
+    id,
+    title,
+    description,
+    className,
+    subject,
+    dueDate,
+    createdAt,
+    teacherId,
+    attachments,
+  ];
 
   Homework copyWith({
     String? id,

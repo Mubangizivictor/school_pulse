@@ -72,8 +72,14 @@ class TeacherMarksSubmitted extends TeacherEvent {
   });
 
   @override
-  List<Object?> get props =>
-      [className, subject, assessment, term, year, marks];
+  List<Object?> get props => [
+    className,
+    subject,
+    assessment,
+    term,
+    year,
+    marks,
+  ];
 }
 
 class TeacherAttendanceSubmitted extends TeacherEvent {

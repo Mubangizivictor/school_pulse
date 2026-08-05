@@ -5,7 +5,11 @@ class CommentCategory extends Equatable {
   final String schoolId;
   final String name; // e.g., 'Academic Performance', 'Conduct', 'Social Skills'
 
-  const CommentCategory({required this.id, required this.schoolId, required this.name});
+  const CommentCategory({
+    required this.id,
+    required this.schoolId,
+    required this.name,
+  });
 
   @override
   List<Object?> get props => [id, schoolId, name];

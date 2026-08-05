@@ -17,16 +17,19 @@ class UserModel extends UserEntity {
     super.mustChangePassword = false,
     super.isActive = true,
     super.deactivationReason,
+    super.mfaEnabled = false,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     List<UserRole> roles = [];
     if (json['roles'] != null) {
       roles = (json['roles'] as List)
-          .map((r) => UserRole.values.firstWhere(
-                (e) => e.name == r,
-                orElse: () => UserRole.parent,
-              ))
+          .map(
+            (r) => UserRole.values.firstWhere(
+              (e) => e.name == r,
+              orElse: () => UserRole.parent,
+            ),
+          )
           .toList();
     } else if (json['role'] != null) {
       // Handle legacy single role
@@ -34,7 +37,7 @@ class UserModel extends UserEntity {
         UserRole.values.firstWhere(
           (e) => e.name == json['role'],
           orElse: () => UserRole.parent,
-        )
+        ),
       ];
     } else {
       roles = [UserRole.parent];
@@ -54,12 +57,13 @@ class UserModel extends UserEntity {
       assignedClass: json['assignedClass'],
       subjects: json['subjects'] != null
           ? (json['subjects'] as List)
-              .map((i) => SubjectAssignment.fromJson(i))
-              .toList()
+                .map((i) => SubjectAssignment.fromJson(i))
+                .toList()
           : null,
       mustChangePassword: json['mustChangePassword'] ?? false,
       isActive: json['isActive'] ?? true,
       deactivationReason: json['deactivationReason'] as String?,
+      mfaEnabled: json['mfaEnabled'] ?? false,
     );
   }
 
@@ -83,6 +87,7 @@ class UserModel extends UserEntity {
       'mustChangePassword': mustChangePassword,
       'isActive': isActive,
       'deactivationReason': deactivationReason,
+      'mfaEnabled': mfaEnabled,
     };
   }
 
@@ -103,6 +108,7 @@ class UserModel extends UserEntity {
       mustChangePassword: entity.mustChangePassword,
       isActive: entity.isActive,
       deactivationReason: entity.deactivationReason,
+      mfaEnabled: entity.mfaEnabled,
     );
   }
 }

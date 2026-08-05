@@ -57,54 +57,77 @@ void main() {
       cateringRepository: cateringRepository,
     );
 
-    when(() => studentRepository.getStudentById(studentId)).thenAnswer((_) async => Right(student));
-    when(() => permissionEvaluator.can(Permission.mealsVerify, operatorUser))
-        .thenAnswer((_) async => const Right(true));
+    when(
+      () => studentRepository.getStudentById(studentId),
+    ).thenAnswer((_) async => Right(student));
+    when(
+      () => permissionEvaluator.can(Permission.mealsVerify, operatorUser),
+    ).thenAnswer((_) async => const Right(true));
   });
 
   test('denies when the operator lacks mealsVerify', () async {
-    when(() => permissionEvaluator.can(Permission.mealsVerify, operatorUser))
-        .thenAnswer((_) async => const Right(false));
+    when(
+      () => permissionEvaluator.can(Permission.mealsVerify, operatorUser),
+    ).thenAnswer((_) async => const Right(false));
 
-    final result = await service.getEligibility(studentId: studentId, operatorUser: operatorUser);
+    final result = await service.getEligibility(
+      studentId: studentId,
+      operatorUser: operatorUser,
+    );
 
     expect(result.fold((f) => f, (r) => null), isA<PermissionDeniedFailure>());
     verifyNever(() => cateringRepository.verifyStudentMealEligibility(any()));
   });
 
-  test('is eligible and shows dietary restrictions when cleared, with no balance field anywhere in the view', () async {
-    when(() => cateringRepository.verifyStudentMealEligibility(studentId)).thenAnswer(
-      (_) async => const Right({
-        'studentName': 'Jane Doe',
-        'eligibilityStatus': 'Cleared',
-        'percentagePaid': 100.0,
-      }),
-    );
+  test(
+    'is eligible and shows dietary restrictions when cleared, with no balance field anywhere in the view',
+    () async {
+      when(
+        () => cateringRepository.verifyStudentMealEligibility(studentId),
+      ).thenAnswer(
+        (_) async => const Right({
+          'studentName': 'Jane Doe',
+          'eligibilityStatus': 'Cleared',
+          'percentagePaid': 100.0,
+        }),
+      );
 
-    final result = await service.getEligibility(studentId: studentId, operatorUser: operatorUser);
+      final result = await service.getEligibility(
+        studentId: studentId,
+        operatorUser: operatorUser,
+      );
 
-    final view = result.getOrElse(() => throw StateError('expected Right'));
-    expect(view.eligible, true);
-    expect(view.dietaryRestrictions, const ['Peanuts']);
-    // CateringEligibilityView has no balance/percentagePaid field at all -
-    // this asserts the view's own field set, not just that one field is
-    // absent, so a future field addition would have to be a deliberate change.
-    expect(view.props.length, 7);
-  });
+      final view = result.getOrElse(() => throw StateError('expected Right'));
+      expect(view.eligible, true);
+      expect(view.dietaryRestrictions, const ['Peanuts']);
+      // CateringEligibilityView has no balance/percentagePaid field at all -
+      // this asserts the view's own field set, not just that one field is
+      // absent, so a future field addition would have to be a deliberate change.
+      expect(view.props.length, 7);
+    },
+  );
 
-  test('shows the generic denial message without the underlying eligibilityStatus/percentage when not cleared', () async {
-    when(() => cateringRepository.verifyStudentMealEligibility(studentId)).thenAnswer(
-      (_) async => const Right({
-        'studentName': 'Jane Doe',
-        'eligibilityStatus': 'Not Cleared',
-        'percentagePaid': 30.0,
-      }),
-    );
+  test(
+    'shows the generic denial message without the underlying eligibilityStatus/percentage when not cleared',
+    () async {
+      when(
+        () => cateringRepository.verifyStudentMealEligibility(studentId),
+      ).thenAnswer(
+        (_) async => const Right({
+          'studentName': 'Jane Doe',
+          'eligibilityStatus': 'Not Cleared',
+          'percentagePaid': 30.0,
+        }),
+      );
 
-    final result = await service.getEligibility(studentId: studentId, operatorUser: operatorUser);
+      final result = await service.getEligibility(
+        studentId: studentId,
+        operatorUser: operatorUser,
+      );
 
-    final view = result.getOrElse(() => throw StateError('expected Right'));
-    expect(view.eligible, false);
-    expect(view.message, 'Meal not authorized. Please contact the bursar.');
-  });
+      final view = result.getOrElse(() => throw StateError('expected Right'));
+      expect(view.eligible, false);
+      expect(view.message, 'Meal not authorized. Please contact the bursar.');
+    },
+  );
 }

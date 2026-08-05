@@ -42,7 +42,12 @@ class AppointmentTypeModel extends AppointmentType {
       requiresApproval: map['requiresApproval'] ?? true,
       active: map['active'] ?? true,
       targetRoles: ((map['targetRoles'] as List?) ?? const [])
-          .map((r) => UserRole.values.firstWhere((v) => v.name == r, orElse: () => UserRole.schoolAdmin))
+          .map(
+            (r) => UserRole.values.firstWhere(
+              (v) => v.name == r,
+              orElse: () => UserRole.schoolAdmin,
+            ),
+          )
           .toList(),
     );
   }

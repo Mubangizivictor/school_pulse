@@ -7,7 +7,15 @@ class IssueItem {
 
   IssueItem(this.repository);
 
-  Future<Either<Failure, void>> call({required String itemId, required int quantity, required String note}) async {
-    return await repository.issueItem(itemId: itemId, quantity: quantity, note: note);
+  Future<Either<Failure, void>> call({
+    required String itemId,
+    required int quantity,
+    required String note,
+  }) async {
+    return await repository.issueItem(
+      itemId: itemId,
+      quantity: quantity,
+      note: note,
+    );
   }
 }

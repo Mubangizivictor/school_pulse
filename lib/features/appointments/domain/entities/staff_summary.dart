@@ -9,7 +9,11 @@ class StaffSummary extends Equatable {
   final String name;
   final UserRole role;
 
-  const StaffSummary({required this.id, required this.name, required this.role});
+  const StaffSummary({
+    required this.id,
+    required this.name,
+    required this.role,
+  });
 
   @override
   List<Object?> get props => [id, name, role];

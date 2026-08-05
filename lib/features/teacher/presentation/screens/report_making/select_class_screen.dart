@@ -45,11 +45,11 @@ class SelectClassScreen extends StatelessWidget {
                       isSelected: state.selectedClassId == 'p4e',
                       onTap: () {
                         context.read<ReportWizardBloc>().add(
-                              const ReportWizardClassSelected(
-                                classId: 'p4e',
-                                className: 'Primary 4 - Emerald',
-                              ),
-                            );
+                          const ReportWizardClassSelected(
+                            classId: 'p4e',
+                            className: 'Primary 4 - Emerald',
+                          ),
+                        );
                       },
                     ),
                     const SizedBox(height: 12),
@@ -59,11 +59,11 @@ class SelectClassScreen extends StatelessWidget {
                       isSelected: state.selectedClassId == 'p4s',
                       onTap: () {
                         context.read<ReportWizardBloc>().add(
-                              const ReportWizardClassSelected(
-                                classId: 'p4s',
-                                className: 'Primary 4 - Sapphire',
-                              ),
-                            );
+                          const ReportWizardClassSelected(
+                            classId: 'p4s',
+                            className: 'Primary 4 - Sapphire',
+                          ),
+                        );
                       },
                     ),
                     const SizedBox(height: 12),
@@ -73,11 +73,11 @@ class SelectClassScreen extends StatelessWidget {
                       isSelected: state.selectedClassId == 'p5e',
                       onTap: () {
                         context.read<ReportWizardBloc>().add(
-                              const ReportWizardClassSelected(
-                                classId: 'p5e',
-                                className: 'Primary 5 - Emerald',
-                              ),
-                            );
+                          const ReportWizardClassSelected(
+                            classId: 'p5e',
+                            className: 'Primary 5 - Emerald',
+                          ),
+                        );
                       },
                     ),
                     const SizedBox(height: 12),
@@ -87,11 +87,11 @@ class SelectClassScreen extends StatelessWidget {
                       isSelected: state.selectedClassId == 'p5s',
                       onTap: () {
                         context.read<ReportWizardBloc>().add(
-                              const ReportWizardClassSelected(
-                                classId: 'p5s',
-                                className: 'Primary 5 - Sapphire',
-                              ),
-                            );
+                          const ReportWizardClassSelected(
+                            classId: 'p5s',
+                            className: 'Primary 5 - Sapphire',
+                          ),
+                        );
                       },
                     ),
                     const SizedBox(height: 12),
@@ -101,11 +101,11 @@ class SelectClassScreen extends StatelessWidget {
                       isSelected: state.selectedClassId == 'p6e',
                       onTap: () {
                         context.read<ReportWizardBloc>().add(
-                              const ReportWizardClassSelected(
-                                classId: 'p6e',
-                                className: 'Primary 6 - Emerald',
-                              ),
-                            );
+                          const ReportWizardClassSelected(
+                            classId: 'p6e',
+                            className: 'Primary 6 - Emerald',
+                          ),
+                        );
                       },
                     ),
                   ],
@@ -153,7 +153,9 @@ class _ClassItem extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: AppColors.primary(context).withValues(alpha: isSelected ? 0.2 : 0.1),
+              color: AppColors.primary(
+                context,
+              ).withValues(alpha: isSelected ? 0.2 : 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -166,13 +168,18 @@ class _ClassItem extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(className,
-                    style: TextStyle(
-                        color: AppColors.textPrimary(context),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16)),
-                Text('$studentCount Students',
-                    style: TextStyle(color: AppColors.textSecondary(context))),
+                Text(
+                  className,
+                  style: TextStyle(
+                    color: AppColors.textPrimary(context),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                Text(
+                  '$studentCount Students',
+                  style: TextStyle(color: AppColors.textSecondary(context)),
+                ),
               ],
             ),
           ),
@@ -182,4 +189,3 @@ class _ClassItem extends StatelessWidget {
     );
   }
 }
-

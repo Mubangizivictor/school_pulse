@@ -13,7 +13,9 @@ class ReligionActivityModel extends ReligionActivity {
     return ReligionActivityModel(
       id: id,
       title: json['title'] ?? '',
-      dateTime: json['dateTime'] != null ? DateTime.parse(json['dateTime']) : DateTime.now(),
+      dateTime: json['dateTime'] != null
+          ? DateTime.parse(json['dateTime'])
+          : DateTime.now(),
       venue: json['venue'] ?? '',
       category: json['category'] ?? 'General',
     );
@@ -47,10 +49,6 @@ class SpiritualGroupModel extends SpiritualGroup {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'leader': leader,
-      'memberCount': memberCount,
-    };
+    return {'name': name, 'leader': leader, 'memberCount': memberCount};
   }
 }

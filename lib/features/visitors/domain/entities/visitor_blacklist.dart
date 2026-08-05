@@ -22,5 +22,14 @@ class VisitorBlacklist extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, schoolId, visitorId, fullName, phone, reason, dateAdded, addedBy];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    visitorId,
+    fullName,
+    phone,
+    reason,
+    dateAdded,
+    addedBy,
+  ];
 }

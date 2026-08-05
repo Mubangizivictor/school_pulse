@@ -10,9 +10,7 @@ class ResourceCategoriesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        title: const Text('Resource Categories'),
-      ),
+      appBar: AppBar(title: const Text('Resource Categories')),
       body: Column(
         children: [
           Padding(
@@ -23,13 +21,48 @@ class ResourceCategoriesScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
               children: [
-                _CategoryItem(icon: Icons.grid_view_outlined, label: 'All Resources', count: 124, color: Colors.blue),
-                _CategoryItem(icon: Icons.description_outlined, label: 'Documents', count: 68, color: Colors.red),
-                _CategoryItem(icon: Icons.play_circle_outline, label: 'Videos', count: 24, color: Colors.purple),
-                _CategoryItem(icon: Icons.image_outlined, label: 'Images', count: 16, color: Colors.green),
-                _CategoryItem(icon: Icons.link_outlined, label: 'Links', count: 18, color: Colors.orange),
-                _CategoryItem(icon: Icons.audiotrack_outlined, label: 'Audio', count: 5, color: Colors.teal),
-                _CategoryItem(icon: Icons.more_horiz_outlined, label: 'Others', count: 0, color: Colors.grey),
+                _CategoryItem(
+                  icon: Icons.grid_view_outlined,
+                  label: 'All Resources',
+                  count: 124,
+                  color: Colors.blue,
+                ),
+                _CategoryItem(
+                  icon: Icons.description_outlined,
+                  label: 'Documents',
+                  count: 68,
+                  color: Colors.red,
+                ),
+                _CategoryItem(
+                  icon: Icons.play_circle_outline,
+                  label: 'Videos',
+                  count: 24,
+                  color: Colors.purple,
+                ),
+                _CategoryItem(
+                  icon: Icons.image_outlined,
+                  label: 'Images',
+                  count: 16,
+                  color: Colors.green,
+                ),
+                _CategoryItem(
+                  icon: Icons.link_outlined,
+                  label: 'Links',
+                  count: 18,
+                  color: Colors.orange,
+                ),
+                _CategoryItem(
+                  icon: Icons.audiotrack_outlined,
+                  label: 'Audio',
+                  count: 5,
+                  color: Colors.teal,
+                ),
+                _CategoryItem(
+                  icon: Icons.more_horiz_outlined,
+                  label: 'Others',
+                  count: 0,
+                  color: Colors.grey,
+                ),
               ],
             ),
           ),

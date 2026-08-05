@@ -17,7 +17,13 @@ class AcademicAnalytics extends Equatable {
   });
 
   @override
-  List<Object?> get props => [gradeDistribution, averagePassRate, topPerformers, bottomPerformers, trends];
+  List<Object?> get props => [
+    gradeDistribution,
+    averagePassRate,
+    topPerformers,
+    bottomPerformers,
+    trends,
+  ];
 }
 
 class PerformanceTrendPoint extends Equatable {
@@ -36,7 +42,12 @@ class Award extends Equatable {
   final String studentName;
   final String reason;
 
-  const Award({required this.title, required this.studentId, required this.studentName, required this.reason});
+  const Award({
+    required this.title,
+    required this.studentId,
+    required this.studentName,
+    required this.reason,
+  });
 
   @override
   List<Object?> get props => [title, studentId, studentName, reason];
@@ -58,13 +69,21 @@ class RankingResult extends Equatable {
   });
 
   @override
-  List<Object?> get props => [subjectPositions, classPosition, streamPosition, totalStudentsInClass, totalStudentsInStream];
+  List<Object?> get props => [
+    subjectPositions,
+    classPosition,
+    streamPosition,
+    totalStudentsInClass,
+    totalStudentsInStream,
+  ];
 }
 
 /// Automatically computes class/subject/term/year comparisons, grade
 /// distribution, pass rate, rankings and awards - never entered manually.
 class AnalyticsEngine {
-  static AcademicAnalytics calculateClassAnalytics(List<SubjectResult> allStudentResults) {
+  static AcademicAnalytics calculateClassAnalytics(
+    List<SubjectResult> allStudentResults,
+  ) {
     // 1. Grade Distribution
     Map<String, int> counts = {};
     for (var result in allStudentResults) {
@@ -82,8 +101,12 @@ class AnalyticsEngine {
     // says otherwise. Since grade labels are school-configurable (not
     // always 'F'), pass/fail is derived from the grade's remarks field
     // containing 'fail' rather than a hardcoded grade letter.
-    int passes = allStudentResults.where((r) => !r.remarks.toLowerCase().contains('fail')).length;
-    double passRate = allStudentResults.isEmpty ? 0 : (passes / allStudentResults.length) * 100;
+    int passes = allStudentResults
+        .where((r) => !r.remarks.toLowerCase().contains('fail'))
+        .length;
+    double passRate = allStudentResults.isEmpty
+        ? 0
+        : (passes / allStudentResults.length) * 100;
 
     // 3. Sorting for general analytics
     List<SubjectResult> sorted = List.from(allStudentResults)
@@ -101,7 +124,8 @@ class AnalyticsEngine {
   /// Calculates positions for all students in a given group (Class or Stream).
   /// Returns a Map of StudentID -> RankingResult.
   static Map<String, RankingResult> calculateBatchRankings({
-    required Map<String, List<SubjectResult>> studentResults, // studentId -> list of results
+    required Map<String, List<SubjectResult>>
+    studentResults, // studentId -> list of results
     required Map<String, String> studentStreams, // studentId -> streamId
     required Map<String, String> studentClasses, // studentId -> classId
   }) {
@@ -153,7 +177,8 @@ class AnalyticsEngine {
     });
 
     // 4. Subject Positions (Class-wide)
-    Map<String, Map<String, List<MapEntry<String, double>>>> subjectScoresByClass = {};
+    Map<String, Map<String, List<MapEntry<String, double>>>>
+    subjectScoresByClass = {};
 
     studentResults.forEach((studentId, results) {
       final classId = studentClasses[studentId] ?? 'unknown';
@@ -161,7 +186,9 @@ class AnalyticsEngine {
 
       for (var result in results) {
         subjectScoresByClass[classId]!.putIfAbsent(result.subjectId, () => []);
-        subjectScoresByClass[classId]![result.subjectId]!.add(MapEntry(studentId, result.totalMark));
+        subjectScoresByClass[classId]![result.subjectId]!.add(
+          MapEntry(studentId, result.totalMark),
+        );
       }
     });
 
@@ -171,7 +198,9 @@ class AnalyticsEngine {
         for (int i = 0; i < scores.length; i++) {
           final studentId = scores[i].key;
           final currentRanking = rankings[studentId];
-          final subjectPositions = Map<String, int>.from(currentRanking?.subjectPositions ?? {});
+          final subjectPositions = Map<String, int>.from(
+            currentRanking?.subjectPositions ?? {},
+          );
           subjectPositions[subjectId] = i + 1;
 
           rankings[studentId] = _updateRanking(
@@ -224,7 +253,9 @@ class AnalyticsEngine {
     double highestAvg = -1;
 
     studentResultsMap.forEach((studentId, results) {
-      double avg = results.isEmpty ? 0 : results.fold(0.0, (sum, r) => sum + r.percentage) / results.length;
+      double avg = results.isEmpty
+          ? 0
+          : results.fold(0.0, (sum, r) => sum + r.percentage) / results.length;
       if (avg > highestAvg) {
         highestAvg = avg;
         topStudentId = studentId;
@@ -232,33 +263,42 @@ class AnalyticsEngine {
     });
 
     if (topStudentId != null) {
-      awards.add(Award(
-        title: 'Best Overall Student',
-        studentId: topStudentId!,
-        studentName: studentNames[topStudentId] ?? 'Unknown',
-        reason: 'Attained an overall average of ${highestAvg.toStringAsFixed(1)}%',
-      ));
+      awards.add(
+        Award(
+          title: 'Best Overall Student',
+          studentId: topStudentId!,
+          studentName: studentNames[topStudentId] ?? 'Unknown',
+          reason:
+              'Attained an overall average of ${highestAvg.toStringAsFixed(1)}%',
+        ),
+      );
     }
 
     // 2. Top Performer in Each Subject
-    Map<String, MapEntry<String, double>> topBySubject = {}; // subjectId -> (studentId, score)
+    Map<String, MapEntry<String, double>> topBySubject =
+        {}; // subjectId -> (studentId, score)
 
     studentResultsMap.forEach((studentId, results) {
       for (var r in results) {
-        if (!topBySubject.containsKey(r.subjectId) || r.totalMark > topBySubject[r.subjectId]!.value) {
+        if (!topBySubject.containsKey(r.subjectId) ||
+            r.totalMark > topBySubject[r.subjectId]!.value) {
           topBySubject[r.subjectId] = MapEntry(studentId, r.totalMark);
         }
       }
     });
 
     topBySubject.forEach((subjectId, entry) {
-      final subjectName = studentResultsMap[entry.key]!.firstWhere((r) => r.subjectId == subjectId).subjectName;
-      awards.add(Award(
-        title: 'Top Subject Performer: $subjectName',
-        studentId: entry.key,
-        studentName: studentNames[entry.key] ?? 'Unknown',
-        reason: 'Scored ${entry.value.toStringAsFixed(1)} in $subjectName',
-      ));
+      final subjectName = studentResultsMap[entry.key]!
+          .firstWhere((r) => r.subjectId == subjectId)
+          .subjectName;
+      awards.add(
+        Award(
+          title: 'Top Subject Performer: $subjectName',
+          studentId: entry.key,
+          studentName: studentNames[entry.key] ?? 'Unknown',
+          reason: 'Scored ${entry.value.toStringAsFixed(1)} in $subjectName',
+        ),
+      );
     });
 
     return awards;

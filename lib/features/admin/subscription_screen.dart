@@ -31,8 +31,14 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           if (subSnapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          final subscription = subSnapshot.data ??
-              const Subscription(plan: 'No Plan', status: SubscriptionStatus.none, renewalDate: null, amountUgx: 0);
+          final subscription =
+              subSnapshot.data ??
+              const Subscription(
+                plan: 'No Plan',
+                status: SubscriptionStatus.none,
+                renewalDate: null,
+                amountUgx: 0,
+              );
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -52,12 +58,19 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     );
   }
 
-  Widget _buildStatusCard(BuildContext context, SemanticColors semantic, Subscription sub) {
+  Widget _buildStatusCard(
+    BuildContext context,
+    SemanticColors semantic,
+    Subscription sub,
+  ) {
     final (label, color) = switch (sub.status) {
       SubscriptionStatus.active => ('Active', semantic.success),
       SubscriptionStatus.gracePeriod => ('Grace Period', semantic.warning),
       SubscriptionStatus.expired => ('Expired', semantic.error),
-      SubscriptionStatus.none => ('No Active Plan', Theme.of(context).colorScheme.outline),
+      SubscriptionStatus.none => (
+        'No Active Plan',
+        Theme.of(context).colorScheme.outline,
+      ),
     };
 
     return AppCard(
@@ -68,7 +81,13 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(sub.plan, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+              Text(
+                sub.plan,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                ),
+              ),
               StatusBadge(label: label, color: color),
             ],
           ),
@@ -77,7 +96,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             sub.renewalDate != null
                 ? 'Renews on ${DateFormat('MMM dd, yyyy').format(sub.renewalDate!)}'
                 : 'No upcoming renewal on file',
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
@@ -95,12 +116,20 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     );
   }
 
-  Widget _buildTransactionHistory(BuildContext context, SemanticColors semantic) {
+  Widget _buildTransactionHistory(
+    BuildContext context,
+    SemanticColors semantic,
+  ) {
     return StreamBuilder<List<PaymentTransaction>>(
       stream: _repository.watchRecentTransactions(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()));
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: CircularProgressIndicator(),
+            ),
+          );
         }
         final transactions = snapshot.data ?? const [];
         if (transactions.isEmpty) {
@@ -129,12 +158,17 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   child: Icon(Icons.phone_android, color: color, size: 18),
                 ),
                 title: Text('${t.provider.toUpperCase()} • ${t.phoneNumber}'),
-                subtitle: Text(DateFormat('MMM dd, yyyy • hh:mm a').format(t.createdAt)),
+                subtitle: Text(
+                  DateFormat('MMM dd, yyyy • hh:mm a').format(t.createdAt),
+                ),
                 trailing: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(CurrencyFormatter.ugx(t.amountUgx.toDouble()), style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      CurrencyFormatter.ugx(t.amountUgx.toDouble()),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     StatusBadge(label: label, color: color),
                   ],
                 ),
@@ -160,7 +194,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('You will be charged ${CurrencyFormatter.ugx(sub.amountUgx.toDouble())} for the ${sub.plan}.'),
+              Text(
+                'You will be charged ${CurrencyFormatter.ugx(sub.amountUgx.toDouble())} for the ${sub.plan}.',
+              ),
               const SizedBox(height: 16),
               SegmentedButton<String>(
                 segments: const [
@@ -168,7 +204,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   ButtonSegment(value: 'airtel', label: Text('Airtel Money')),
                 ],
                 selected: {provider},
-                onSelectionChanged: (val) => setDialogState(() => provider = val.first),
+                onSelectionChanged: (val) =>
+                    setDialogState(() => provider = val.first),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -189,7 +226,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: isSubmitting ? null : () => Navigator.pop(dialogContext),
+              onPressed: isSubmitting
+                  ? null
+                  : () => Navigator.pop(dialogContext),
               child: const Text('Cancel'),
             ),
             FilledButton(
@@ -214,7 +253,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                         if (dialogContext.mounted) {
                           Navigator.pop(dialogContext);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Payment request sent — approve it on your phone.')),
+                            const SnackBar(
+                              content: Text(
+                                'Payment request sent — approve it on your phone.',
+                              ),
+                            ),
                           );
                         }
                       } catch (e) {
@@ -225,7 +268,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                       }
                     },
               child: isSubmitting
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : const Text('Request Payment'),
             ),
           ],

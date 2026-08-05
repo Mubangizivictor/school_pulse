@@ -5,13 +5,16 @@ import '../../../../core/usecases/usecase.dart';
 import '../entities/attendance_record.dart';
 import '../repositories/academic_repository.dart';
 
-class GetAttendanceRecords implements UseCase<List<AttendanceRecord>, GetAttendanceRecordsParams> {
+class GetAttendanceRecords
+    implements UseCase<List<AttendanceRecord>, GetAttendanceRecordsParams> {
   final AcademicRepository repository;
 
   GetAttendanceRecords(this.repository);
 
   @override
-  Future<Either<Failure, List<AttendanceRecord>>> call(GetAttendanceRecordsParams params) async {
+  Future<Either<Failure, List<AttendanceRecord>>> call(
+    GetAttendanceRecordsParams params,
+  ) async {
     return await repository.getAttendanceRecords(
       params.studentId,
       startDate: params.startDate,

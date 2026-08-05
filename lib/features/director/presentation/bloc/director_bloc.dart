@@ -9,8 +9,8 @@ class DirectorBloc extends Bloc<DirectorEvent, DirectorState> {
   final AuditRepository _auditRepository;
 
   DirectorBloc({required AuditRepository auditRepository})
-      : _auditRepository = auditRepository,
-        super(DirectorInitial()) {
+    : _auditRepository = auditRepository,
+      super(DirectorInitial()) {
     on<DirectorDashboardRequested>(_onDashboardRequested);
     on<DirectorApprovalsRequested>(_onApprovalsRequested);
     on<DirectorApprovalActionRequested>(_onApprovalActionRequested);
@@ -46,12 +46,28 @@ class DirectorBloc extends Bloc<DirectorEvent, DirectorState> {
         passRate: 92.0,
         improvementTrend: 4.2,
         topClasses: const [
-          ClassPerformance(className: 'Senior 4 Blue', average: 78.5, trend: 2.1),
-          ClassPerformance(className: 'Senior 6 Arts', average: 75.2, trend: 1.5),
+          ClassPerformance(
+            className: 'Senior 4 Blue',
+            average: 78.5,
+            trend: 2.1,
+          ),
+          ClassPerformance(
+            className: 'Senior 6 Arts',
+            average: 75.2,
+            trend: 1.5,
+          ),
         ],
         weakClasses: const [
-          ClassPerformance(className: 'Senior 1 Green', average: 52.4, trend: -1.2),
-          ClassPerformance(className: 'Senior 2 Alpha', average: 55.8, trend: 0.5),
+          ClassPerformance(
+            className: 'Senior 1 Green',
+            average: 52.4,
+            trend: -1.2,
+          ),
+          ClassPerformance(
+            className: 'Senior 2 Alpha',
+            average: 55.8,
+            trend: 0.5,
+          ),
         ],
         staffAttendanceRate: 94.5,
         parentPortalUsageRate: 62.0,
@@ -77,7 +93,8 @@ class DirectorBloc extends Bloc<DirectorEvent, DirectorState> {
           requesterName: 'John Doe',
           department: 'Science',
           title: 'Laboratory Equipment',
-          description: 'Purchase of microscopes and chemicals for Senior 4 exams.',
+          description:
+              'Purchase of microscopes and chemicals for Senior 4 exams.',
           amount: 2500.0,
           dateRequested: DateTime.now().subtract(const Duration(days: 2)),
           status: ApprovalStatus.pending,
@@ -95,7 +112,8 @@ class DirectorBloc extends Bloc<DirectorEvent, DirectorState> {
           requesterName: 'Jane Smith',
           department: 'Sports',
           title: 'Regional Tournament Fees',
-          description: 'Registration fees for the upcoming regional football and netball games.',
+          description:
+              'Registration fees for the upcoming regional football and netball games.',
           amount: 800.0,
           dateRequested: DateTime.now().subtract(const Duration(days: 1)),
           status: ApprovalStatus.pending,
@@ -117,11 +135,12 @@ class DirectorBloc extends Bloc<DirectorEvent, DirectorState> {
     try {
       await _auditRepository.logAction(
         title: 'Director Approval: ${event.action.toUpperCase()}',
-        description: 'Director acted on approval ${event.approvalId} with action: ${event.action}. Comment: ${event.comment ?? "N/A"}',
+        description:
+            'Director acted on approval ${event.approvalId} with action: ${event.action}. Comment: ${event.comment ?? "N/A"}',
         iconName: event.action == 'approve' ? 'check_circle' : 'cancel',
         colorHex: event.action == 'approve' ? '#4CAF50' : '#F44336',
       );
-      
+
       // Refresh the list
       add(DirectorApprovalsRequested());
     } catch (e) {

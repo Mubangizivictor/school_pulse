@@ -5,7 +5,10 @@ abstract class LibraryLocalDataSource {
   Future<void> cacheResources(List<LibraryResourceIsar> resources);
   Future<List<LibraryResourceIsar>> getCachedResources(String schoolId);
   Future<void> cacheBorrowings(List<LibraryBorrowingIsar> borrowings);
-  Future<List<LibraryBorrowingIsar>> getCachedBorrowings(String schoolId, {String? borrowerId});
+  Future<List<LibraryBorrowingIsar>> getCachedBorrowings(
+    String schoolId, {
+    String? borrowerId,
+  });
   Future<void> clearCache(String schoolId);
 }
 
@@ -37,7 +40,10 @@ class LibraryLocalDataSourceImpl implements LibraryLocalDataSource {
   }
 
   @override
-  Future<List<LibraryBorrowingIsar>> getCachedBorrowings(String schoolId, {String? borrowerId}) async {
+  Future<List<LibraryBorrowingIsar>> getCachedBorrowings(
+    String schoolId, {
+    String? borrowerId,
+  }) async {
     var query = isar.libraryBorrowingIsars.filter().schoolIdEqualTo(schoolId);
     if (borrowerId != null) {
       query = query.borrowerIdEqualTo(borrowerId);
@@ -48,9 +54,18 @@ class LibraryLocalDataSourceImpl implements LibraryLocalDataSource {
   @override
   Future<void> clearCache(String schoolId) async {
     await isar.writeTxn(() async {
-      await isar.libraryResourceIsars.filter().schoolIdEqualTo(schoolId).deleteAll();
-      await isar.libraryBorrowingIsars.filter().schoolIdEqualTo(schoolId).deleteAll();
-      await isar.libraryReservationIsars.filter().schoolIdEqualTo(schoolId).deleteAll();
+      await isar.libraryResourceIsars
+          .filter()
+          .schoolIdEqualTo(schoolId)
+          .deleteAll();
+      await isar.libraryBorrowingIsars
+          .filter()
+          .schoolIdEqualTo(schoolId)
+          .deleteAll();
+      await isar.libraryReservationIsars
+          .filter()
+          .schoolIdEqualTo(schoolId)
+          .deleteAll();
     });
   }
 }

@@ -87,8 +87,9 @@ class SubjectAuditServiceImpl implements SubjectAuditService {
     if (!await networkInfo.isConnected) return;
 
     final pending = await localDataSource.getPendingOperations();
-    final auditOps =
-        pending.where((op) => op.entityType == OfflineOperationType.auditLog).toList();
+    final auditOps = pending
+        .where((op) => op.entityType == OfflineOperationType.auditLog)
+        .toList();
 
     for (final op in auditOps) {
       try {
@@ -130,29 +131,30 @@ class SubjectAuditServiceImpl implements SubjectAuditService {
   }
 
   Map<String, dynamic> _toPayload(SubjectAuditLog log) => {
-        'auditId': log.auditId,
-        'schoolId': log.schoolId,
-        'campusId': log.campusId,
-        'userId': log.userId,
-        'staffId': log.staffId,
-        'roleAssignmentId': log.roleAssignmentId,
-        'activeRole': log.activeRole.name,
-        'subjectId': log.subjectId,
-        'classId': log.classId,
-        'streamId': log.streamId,
-        'academicYearId': log.academicYearId,
-        'termId': log.termId,
-        'action': log.action,
-        'entityType': log.entityType,
-        'entityId': log.entityId,
-        'previousValue':
-            log.previousValue == null ? null : jsonEncode(log.previousValue),
-        'newValue': log.newValue == null ? null : jsonEncode(log.newValue),
-        'reason': log.reason,
-        'timestamp': log.timestamp.toIso8601String(),
-        'deviceId': log.deviceId,
-        'platform': log.platform,
-      };
+    'auditId': log.auditId,
+    'schoolId': log.schoolId,
+    'campusId': log.campusId,
+    'userId': log.userId,
+    'staffId': log.staffId,
+    'roleAssignmentId': log.roleAssignmentId,
+    'activeRole': log.activeRole.name,
+    'subjectId': log.subjectId,
+    'classId': log.classId,
+    'streamId': log.streamId,
+    'academicYearId': log.academicYearId,
+    'termId': log.termId,
+    'action': log.action,
+    'entityType': log.entityType,
+    'entityId': log.entityId,
+    'previousValue': log.previousValue == null
+        ? null
+        : jsonEncode(log.previousValue),
+    'newValue': log.newValue == null ? null : jsonEncode(log.newValue),
+    'reason': log.reason,
+    'timestamp': log.timestamp.toIso8601String(),
+    'deviceId': log.deviceId,
+    'platform': log.platform,
+  };
 
   SubjectAuditLog _logFromPayload(SubjectTeacherOfflineOperationIsar op) {
     final p = op.toEntity().payload;
@@ -175,7 +177,8 @@ class SubjectAuditServiceImpl implements SubjectAuditService {
       previousValue: _decodeMap(p['previousValue']),
       newValue: _decodeMap(p['newValue']),
       reason: p['reason'] as String?,
-      timestamp: DateTime.tryParse(p['timestamp'] as String? ?? '') ?? op.createdAt,
+      timestamp:
+          DateTime.tryParse(p['timestamp'] as String? ?? '') ?? op.createdAt,
       deviceId: p['deviceId'] as String? ?? op.deviceId,
       platform: p['platform'] as String? ?? '',
       // Marks the row as a replay, so a reviewer can tell a delayed write

@@ -7,7 +7,8 @@ import 'package:school_pulse/features/relationships/domain/entities/relationship
 import 'package:school_pulse/features/relationships/domain/repositories/relationship_repository.dart';
 import 'package:school_pulse/features/relationships/domain/usecases/create_relationship.dart';
 
-class MockRelationshipRepository extends Mock implements RelationshipRepository {}
+class MockRelationshipRepository extends Mock
+    implements RelationshipRepository {}
 
 void main() {
   late CreateRelationship usecase;
@@ -41,12 +42,19 @@ void main() {
     usecase = CreateRelationship(repository);
   });
 
-  test('creates a relationship when the student is under the guardian limit', () async {
-    when(() => repository.getPeoplePolicy(schoolId))
-        .thenAnswer((_) async => Right(const PeoplePolicy(schoolId: schoolId, maxStandardGuardians: 2)));
-    when(() => repository.getRelationshipsForStudent(schoolId, studentId))
-        .thenAnswer((_) async => const Right([]));
-    when(() => repository.createRelationship(
+  test(
+    'creates a relationship when the student is under the guardian limit',
+    () async {
+      when(() => repository.getPeoplePolicy(schoolId)).thenAnswer(
+        (_) async => Right(
+          const PeoplePolicy(schoolId: schoolId, maxStandardGuardians: 2),
+        ),
+      );
+      when(
+        () => repository.getRelationshipsForStudent(schoolId, studentId),
+      ).thenAnswer((_) async => const Right([]));
+      when(
+        () => repository.createRelationship(
           schoolId: schoolId,
           studentId: studentId,
           userId: any(named: 'userId'),
@@ -55,38 +63,55 @@ void main() {
           isLegalGuardian: any(named: 'isLegalGuardian'),
           isPrimaryGuardian: any(named: 'isPrimaryGuardian'),
           createdBy: createdBy,
-        )).thenAnswer((_) async => Right(buildRelationship()));
+        ),
+      ).thenAnswer((_) async => Right(buildRelationship()));
 
-    final result = await usecase(const CreateRelationshipParams(
-      schoolId: schoolId,
-      studentId: studentId,
-      type: RelationshipType.parent,
-      createdBy: createdBy,
-    ));
+      final result = await usecase(
+        const CreateRelationshipParams(
+          schoolId: schoolId,
+          studentId: studentId,
+          type: RelationshipType.parent,
+          createdBy: createdBy,
+        ),
+      );
 
-    expect(result.isRight(), isTrue);
-  });
+      expect(result.isRight(), isTrue);
+    },
+  );
 
-  test('rejects a new standard guardian once the policy limit is reached', () async {
-    when(() => repository.getPeoplePolicy(schoolId))
-        .thenAnswer((_) async => Right(const PeoplePolicy(schoolId: schoolId, maxStandardGuardians: 2)));
-    when(() => repository.getRelationshipsForStudent(schoolId, studentId)).thenAnswer(
-      (_) async => Right([
-        buildRelationship(type: RelationshipType.parent),
-        buildRelationship(type: RelationshipType.guardian),
-      ]),
-    );
+  test(
+    'rejects a new standard guardian once the policy limit is reached',
+    () async {
+      when(() => repository.getPeoplePolicy(schoolId)).thenAnswer(
+        (_) async => Right(
+          const PeoplePolicy(schoolId: schoolId, maxStandardGuardians: 2),
+        ),
+      );
+      when(
+        () => repository.getRelationshipsForStudent(schoolId, studentId),
+      ).thenAnswer(
+        (_) async => Right([
+          buildRelationship(type: RelationshipType.parent),
+          buildRelationship(type: RelationshipType.guardian),
+        ]),
+      );
 
-    final result = await usecase(const CreateRelationshipParams(
-      schoolId: schoolId,
-      studentId: studentId,
-      type: RelationshipType.parent,
-      createdBy: createdBy,
-    ));
+      final result = await usecase(
+        const CreateRelationshipParams(
+          schoolId: schoolId,
+          studentId: studentId,
+          type: RelationshipType.parent,
+          createdBy: createdBy,
+        ),
+      );
 
-    expect(result.isLeft(), isTrue);
-    expect(result.fold((f) => f, (_) => null), isA<GuardianLimitExceededFailure>());
-    verifyNever(() => repository.createRelationship(
+      expect(result.isLeft(), isTrue);
+      expect(
+        result.fold((f) => f, (_) => null),
+        isA<GuardianLimitExceededFailure>(),
+      );
+      verifyNever(
+        () => repository.createRelationship(
           schoolId: any(named: 'schoolId'),
           studentId: any(named: 'studentId'),
           userId: any(named: 'userId'),
@@ -95,19 +120,32 @@ void main() {
           isLegalGuardian: any(named: 'isLegalGuardian'),
           isPrimaryGuardian: any(named: 'isPrimaryGuardian'),
           createdBy: any(named: 'createdBy'),
-        ));
-  });
+        ),
+      );
+    },
+  );
 
-  test('superseded relationships do not count against the guardian limit', () async {
-    when(() => repository.getPeoplePolicy(schoolId))
-        .thenAnswer((_) async => Right(const PeoplePolicy(schoolId: schoolId, maxStandardGuardians: 2)));
-    when(() => repository.getRelationshipsForStudent(schoolId, studentId)).thenAnswer(
-      (_) async => Right([
-        buildRelationship(type: RelationshipType.parent, status: RelationshipStatus.superseded),
-        buildRelationship(type: RelationshipType.guardian),
-      ]),
-    );
-    when(() => repository.createRelationship(
+  test(
+    'superseded relationships do not count against the guardian limit',
+    () async {
+      when(() => repository.getPeoplePolicy(schoolId)).thenAnswer(
+        (_) async => Right(
+          const PeoplePolicy(schoolId: schoolId, maxStandardGuardians: 2),
+        ),
+      );
+      when(
+        () => repository.getRelationshipsForStudent(schoolId, studentId),
+      ).thenAnswer(
+        (_) async => Right([
+          buildRelationship(
+            type: RelationshipType.parent,
+            status: RelationshipStatus.superseded,
+          ),
+          buildRelationship(type: RelationshipType.guardian),
+        ]),
+      );
+      when(
+        () => repository.createRelationship(
           schoolId: schoolId,
           studentId: studentId,
           userId: any(named: 'userId'),
@@ -116,20 +154,27 @@ void main() {
           isLegalGuardian: any(named: 'isLegalGuardian'),
           isPrimaryGuardian: any(named: 'isPrimaryGuardian'),
           createdBy: createdBy,
-        )).thenAnswer((_) async => Right(buildRelationship()));
+        ),
+      ).thenAnswer((_) async => Right(buildRelationship()));
 
-    final result = await usecase(const CreateRelationshipParams(
-      schoolId: schoolId,
-      studentId: studentId,
-      type: RelationshipType.parent,
-      createdBy: createdBy,
-    ));
+      final result = await usecase(
+        const CreateRelationshipParams(
+          schoolId: schoolId,
+          studentId: studentId,
+          type: RelationshipType.parent,
+          createdBy: createdBy,
+        ),
+      );
 
-    expect(result.isRight(), isTrue);
-  });
+      expect(result.isRight(), isTrue);
+    },
+  );
 
-  test('non-standard relationship types (sponsor) bypass the guardian limit entirely', () async {
-    when(() => repository.createRelationship(
+  test(
+    'non-standard relationship types (sponsor) bypass the guardian limit entirely',
+    () async {
+      when(
+        () => repository.createRelationship(
           schoolId: schoolId,
           studentId: studentId,
           userId: any(named: 'userId'),
@@ -138,16 +183,22 @@ void main() {
           isLegalGuardian: any(named: 'isLegalGuardian'),
           isPrimaryGuardian: any(named: 'isPrimaryGuardian'),
           createdBy: createdBy,
-        )).thenAnswer((_) async => Right(buildRelationship(type: RelationshipType.sponsor)));
+        ),
+      ).thenAnswer(
+        (_) async => Right(buildRelationship(type: RelationshipType.sponsor)),
+      );
 
-    final result = await usecase(const CreateRelationshipParams(
-      schoolId: schoolId,
-      studentId: studentId,
-      type: RelationshipType.sponsor,
-      createdBy: createdBy,
-    ));
+      final result = await usecase(
+        const CreateRelationshipParams(
+          schoolId: schoolId,
+          studentId: studentId,
+          type: RelationshipType.sponsor,
+          createdBy: createdBy,
+        ),
+      );
 
-    expect(result.isRight(), isTrue);
-    verifyNever(() => repository.getPeoplePolicy(any()));
-  });
+      expect(result.isRight(), isTrue);
+      verifyNever(() => repository.getPeoplePolicy(any()));
+    },
+  );
 }

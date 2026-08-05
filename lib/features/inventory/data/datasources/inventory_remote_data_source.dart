@@ -5,8 +5,19 @@ import '../models/stock_movement_model.dart';
 abstract class InventoryRemoteDataSource {
   Future<List<InventoryItemModel>> getItems();
   Future<List<StockMovementModel>> getRecentMovements();
-  Future<void> addStock({required String itemId, required String itemName, required String category, required String unit, required int lowStockThreshold, required int quantity});
-  Future<void> issueItem({required String itemId, required int quantity, required String note});
+  Future<void> addStock({
+    required String itemId,
+    required String itemName,
+    required String category,
+    required String unit,
+    required int lowStockThreshold,
+    required int quantity,
+  });
+  Future<void> issueItem({
+    required String itemId,
+    required int quantity,
+    required String note,
+  });
 }
 
 class InventoryRemoteDataSourceImpl implements InventoryRemoteDataSource {
@@ -16,8 +27,13 @@ class InventoryRemoteDataSourceImpl implements InventoryRemoteDataSource {
 
   @override
   Future<List<InventoryItemModel>> getItems() async {
-    final snapshot = await firestore.collection('inventory_items').orderBy('name').get();
-    return snapshot.docs.map((doc) => InventoryItemModel.fromFirestore(doc)).toList();
+    final snapshot = await firestore
+        .collection('inventory_items')
+        .orderBy('name')
+        .get();
+    return snapshot.docs
+        .map((doc) => InventoryItemModel.fromFirestore(doc))
+        .toList();
   }
 
   @override
@@ -27,7 +43,9 @@ class InventoryRemoteDataSourceImpl implements InventoryRemoteDataSource {
         .orderBy('date', descending: true)
         .limit(20)
         .get();
-    return snapshot.docs.map((doc) => StockMovementModel.fromFirestore(doc)).toList();
+    return snapshot.docs
+        .map((doc) => StockMovementModel.fromFirestore(doc))
+        .toList();
   }
 
   @override
@@ -66,7 +84,11 @@ class InventoryRemoteDataSourceImpl implements InventoryRemoteDataSource {
   }
 
   @override
-  Future<void> issueItem({required String itemId, required int quantity, required String note}) async {
+  Future<void> issueItem({
+    required String itemId,
+    required int quantity,
+    required String note,
+  }) async {
     final itemDoc = firestore.collection('inventory_items').doc(itemId);
     final snapshot = await itemDoc.get();
     final itemName = snapshot.data()?['name'] ?? '';

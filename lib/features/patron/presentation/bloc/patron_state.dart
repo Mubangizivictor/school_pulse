@@ -31,7 +31,14 @@ class PatronDashboardLoaded extends PatronState {
   });
 
   @override
-  List<Object?> get props => [dormitories, students, recentAttendance, recentIncidents, recentWelfare, announcements];
+  List<Object?> get props => [
+    dormitories,
+    students,
+    recentAttendance,
+    recentIncidents,
+    recentWelfare,
+    announcements,
+  ];
 }
 
 class DashboardOverviewLoaded extends PatronState {

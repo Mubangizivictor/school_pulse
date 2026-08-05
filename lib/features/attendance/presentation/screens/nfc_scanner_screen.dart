@@ -28,12 +28,18 @@ class NFCScannerScreen extends StatelessWidget {
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(hintText: 'e.g. SP-STUDENT-a82jd92'),
+          decoration: const InputDecoration(
+            hintText: 'e.g. SP-STUDENT-a82jd92',
+          ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+            onPressed: () =>
+                Navigator.pop(dialogContext, controller.text.trim()),
             child: const Text('Verify'),
           ),
         ],
@@ -71,96 +77,104 @@ class _NFCScannerView extends StatelessWidget {
         }
       },
       child: Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-          onPressed: () => context.pop(),
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+            onPressed: () => context.pop(),
+          ),
+          title: const Text('NFC Verification'),
         ),
-        title: const Text('NFC Verification'),
-      ),
-      body: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.xl),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Spacer(),
-                const _RippleAnimation(),
-                const SizedBox(height: 60),
-                FadeInSlide(
-                  duration: const Duration(milliseconds: 600),
-                  child: Column(
-                    children: [
-                      Text(
-                        'Ready to Scan',
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Hold the student ID card near the back\nof your device to verify identity.',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Spacer(),
-                FadeInSlide(
-                  delay: const Duration(milliseconds: 300),
-                  child: AppCard(
-                    padding: const EdgeInsets.all(AppSpacing.m),
-                    child: Row(
+        body: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Spacer(),
+                  const _RippleAnimation(),
+                  const SizedBox(height: 60),
+                  FadeInSlide(
+                    duration: const Duration(milliseconds: 600),
+                    child: Column(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
+                        Text(
+                          'Ready to Scan',
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
                           ),
-                          child: Icon(Icons.sensors, color: theme.colorScheme.primary, size: 24),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'NFC Sensor Active', 
-                                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                              ),
-                              Text(
-                                'Ensure NFC is enabled in settings', 
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
+                        const SizedBox(height: 12),
+                        Text(
+                          'Hold the student ID card near the back\nof your device to verify identity.',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
                     ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.l),
-              ],
+                  const Spacer(),
+                  FadeInSlide(
+                    delay: const Duration(milliseconds: 300),
+                    child: AppCard(
+                      padding: const EdgeInsets.all(AppSpacing.m),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary.withValues(
+                                alpha: 0.1,
+                              ),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.sensors,
+                              color: theme.colorScheme.primary,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'NFC Sensor Active',
+                                  style: theme.textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                Text(
+                                  'Ensure NFC is enabled in settings',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.l),
+                ],
+              ),
             ),
-          ),
-          Positioned.fill(
-            child: GestureDetector(
-              onTap: () => onScanRequested(context),
-              child: Container(color: Colors.transparent),
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () => onScanRequested(context),
+                child: Container(color: Colors.transparent),
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
@@ -173,7 +187,8 @@ class _RippleAnimation extends StatefulWidget {
   State<_RippleAnimation> createState() => _RippleAnimationState();
 }
 
-class _RippleAnimationState extends State<_RippleAnimation> with SingleTickerProviderStateMixin {
+class _RippleAnimationState extends State<_RippleAnimation>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override
@@ -194,7 +209,7 @@ class _RippleAnimationState extends State<_RippleAnimation> with SingleTickerPro
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;
-    
+
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
@@ -205,7 +220,7 @@ class _RippleAnimationState extends State<_RippleAnimation> with SingleTickerPro
               final progress = (_controller.value + (index / 3)) % 1.0;
               final size = 100 + (180 * progress);
               final opacity = (1.0 - progress).clamp(0.0, 1.0);
-              
+
               return Container(
                 width: size,
                 height: size,
@@ -223,7 +238,10 @@ class _RippleAnimationState extends State<_RippleAnimation> with SingleTickerPro
               decoration: BoxDecoration(
                 color: primaryColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
-                border: Border.all(color: primaryColor.withValues(alpha: 0.2), width: 2),
+                border: Border.all(
+                  color: primaryColor.withValues(alpha: 0.2),
+                  width: 2,
+                ),
               ),
               child: Icon(
                 Icons.contactless_outlined,

@@ -78,7 +78,9 @@ class ChatInfoScreen extends StatelessWidget {
                       shape: BoxShape.circle,
                       image: conversation.avatarUrl != null
                           ? DecorationImage(
-                              image: NetworkImage(conversation.avatarUrl!), fit: BoxFit.cover)
+                              image: NetworkImage(conversation.avatarUrl!),
+                              fit: BoxFit.cover,
+                            )
                           : null,
                       boxShadow: [
                         BoxShadow(
@@ -94,7 +96,10 @@ class ChatInfoScreen extends StatelessWidget {
                             child: Text(
                               _initials(conversation.title),
                               style: const TextStyle(
-                                  color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold),
+                                color: Colors.white,
+                                fontSize: 36,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                   ),
@@ -109,10 +114,16 @@ class ChatInfoScreen extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: AppColors.electricBlue,
                             shape: BoxShape.circle,
-                            border:
-                                Border.all(color: isDark ? AppColors.bgDark : Colors.white, width: 3),
+                            border: Border.all(
+                              color: isDark ? AppColors.bgDark : Colors.white,
+                              width: 3,
+                            ),
                           ),
-                          child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            size: 16,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
@@ -124,8 +135,12 @@ class ChatInfoScreen extends StatelessWidget {
               Text(
                 isGroup
                     ? '${_typeLabel(conversation.type)} • ${conversation.participants.length} members'
-                    : _roleLabel(_otherParticipant(conversation, user.id)?.role ?? ''),
-                style: AppTypography.bodyMedium.copyWith(color: AppColors.textMuted(context)),
+                    : _roleLabel(
+                        _otherParticipant(conversation, user.id)?.role ?? '',
+                      ),
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textMuted(context),
+                ),
               ),
             ],
           ),
@@ -156,21 +171,40 @@ class ChatInfoScreen extends StatelessWidget {
                     ? Icons.notifications_active_outlined
                     : Icons.notifications_off_outlined,
                 label: conversation.isMuted ? 'Unmute' : 'Mute',
-                onTap: () =>
-                    context.messages.setMuted(conversation.id, user.id, !conversation.isMuted),
+                onTap: () => context.messages.setMuted(
+                  conversation.id,
+                  user.id,
+                  !conversation.isMuted,
+                ),
               ),
             ],
           ),
         ),
         const SizedBox(height: AppSpacing.xl),
         _buildInfoSection(context, [
-          if (conversation.description != null && conversation.description!.isNotEmpty)
-            _buildInfoTile(context, Icons.info_outline, 'Description', conversation.description!,
-                showChevron: false),
-          _buildInfoTile(context, Icons.perm_media_outlined, 'Media, Links & Docs', 'View all',
-              onTap: () => context.push('/messages/chat/$chatId/media')),
-          _buildInfoTile(context, Icons.star_border, 'Starred Messages', 'View all',
-              onTap: () => context.push('/messages/starred')),
+          if (conversation.description != null &&
+              conversation.description!.isNotEmpty)
+            _buildInfoTile(
+              context,
+              Icons.info_outline,
+              'Description',
+              conversation.description!,
+              showChevron: false,
+            ),
+          _buildInfoTile(
+            context,
+            Icons.perm_media_outlined,
+            'Media, Links & Docs',
+            'View all',
+            onTap: () => context.push('/messages/chat/$chatId/media'),
+          ),
+          _buildInfoTile(
+            context,
+            Icons.star_border,
+            'Starred Messages',
+            'View all',
+            onTap: () => context.push('/messages/starred'),
+          ),
         ]),
         _buildInfoSection(context, [
           _buildInfoTile(
@@ -178,34 +212,49 @@ class ChatInfoScreen extends StatelessWidget {
             Icons.notifications_none,
             'Notifications',
             conversation.isMuted ? 'Muted' : 'On',
-            onTap: () => context.messages.setMuted(conversation.id, user.id, !conversation.isMuted),
+            onTap: () => context.messages.setMuted(
+              conversation.id,
+              user.id,
+              !conversation.isMuted,
+            ),
           ),
           _buildInfoTile(
             context,
-            conversation.isArchived ? Icons.unarchive_outlined : Icons.archive_outlined,
+            conversation.isArchived
+                ? Icons.unarchive_outlined
+                : Icons.archive_outlined,
             'Archive',
             conversation.isArchived ? 'Archived' : 'Not archived',
-            onTap: () =>
-                context.messages.setArchived(conversation.id, user.id, !conversation.isArchived),
+            onTap: () => context.messages.setArchived(
+              conversation.id,
+              user.id,
+              !conversation.isArchived,
+            ),
           ),
           if (isGroup)
             _buildInfoTile(
               context,
               Icons.admin_panel_settings_outlined,
               'Who can send messages?',
-              conversation.messagePolicy == MessagePolicy.everyone ? 'All Members' : 'Admins Only',
+              conversation.messagePolicy == MessagePolicy.everyone
+                  ? 'All Members'
+                  : 'Admins Only',
               onTap: amAdmin
                   ? () => context.messages.updateGroupInfo(
-                        conversation.id,
-                        messagePolicy: conversation.messagePolicy == MessagePolicy.everyone
-                            ? MessagePolicy.adminsOnly
-                            : MessagePolicy.everyone,
-                      )
+                      conversation.id,
+                      messagePolicy:
+                          conversation.messagePolicy == MessagePolicy.everyone
+                          ? MessagePolicy.adminsOnly
+                          : MessagePolicy.everyone,
+                    )
                   : null,
             ),
         ]),
         if (isGroup) ...[
-          _buildSectionHeader(context, '${conversation.participants.length} MEMBERS'),
+          _buildSectionHeader(
+            context,
+            '${conversation.participants.length} MEMBERS',
+          ),
           ...conversation.participants.map(
             (participant) => _buildMemberTile(
               context,
@@ -213,7 +262,10 @@ class ChatInfoScreen extends StatelessWidget {
               isMe: participant.id == user.id,
               isAdmin: conversation.isAdmin(participant.id),
               onRemove: amAdmin && participant.id != user.id
-                  ? () => context.messages.removeMember(conversation.id, participant.id)
+                  ? () => context.messages.removeMember(
+                      conversation.id,
+                      participant.id,
+                    )
                   : null,
             ),
           ),
@@ -234,7 +286,10 @@ class ChatInfoScreen extends StatelessWidget {
     );
   }
 
-  MessageParticipant? _otherParticipant(ChatConversation conversation, String userId) {
+  MessageParticipant? _otherParticipant(
+    ChatConversation conversation,
+    String userId,
+  ) {
     final others = conversation.participants.where((p) => p.id != userId);
     return others.isEmpty ? null : others.first;
   }
@@ -254,13 +309,18 @@ class ChatInfoScreen extends StatelessWidget {
       return;
     }
 
-    final contacts = await context.messages.getContacts(user.schoolId, excludeId: user.id);
+    final contacts = await context.messages.getContacts(
+      user.schoolId,
+      excludeId: user.id,
+    );
     if (!context.mounted) return;
 
     final existing = conversation.participants.map((p) => p.id).toSet();
     final candidates = contacts.where((c) => !existing.contains(c.id)).toList();
     if (candidates.isEmpty) {
-      context.showMessagingSnack('Everyone in your school is already in this group');
+      context.showMessagingSnack(
+        'Everyone in your school is already in this group',
+      );
       return;
     }
 
@@ -303,14 +363,20 @@ class ChatInfoScreen extends StatelessWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.edit_outlined, color: Colors.white70),
-              title: const Text('Edit name & description', style: TextStyle(color: Colors.white)),
+              title: const Text(
+                'Edit name & description',
+                style: TextStyle(color: Colors.white),
+              ),
               onTap: () {
                 Navigator.pop(sheetContext);
                 _editGroup(context, conversation);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.admin_panel_settings_outlined, color: Colors.white70),
+              leading: const Icon(
+                Icons.admin_panel_settings_outlined,
+                color: Colors.white70,
+              ),
               title: Text(
                 conversation.messagePolicy == MessagePolicy.everyone
                     ? 'Restrict posting to admins'
@@ -321,7 +387,8 @@ class ChatInfoScreen extends StatelessWidget {
                 Navigator.pop(sheetContext);
                 context.messages.updateGroupInfo(
                   conversation.id,
-                  messagePolicy: conversation.messagePolicy == MessagePolicy.everyone
+                  messagePolicy:
+                      conversation.messagePolicy == MessagePolicy.everyone
                       ? MessagePolicy.adminsOnly
                       : MessagePolicy.everyone,
                 );
@@ -362,7 +429,10 @@ class ChatInfoScreen extends StatelessWidget {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Report', style: TextStyle(color: Colors.red)),
@@ -389,7 +459,10 @@ class ChatInfoScreen extends StatelessWidget {
     UserEntity user,
     ChatConversation conversation,
   ) async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 70);
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+    );
     if (picked == null || !context.mounted) return;
 
     try {
@@ -402,13 +475,19 @@ class ChatInfoScreen extends StatelessWidget {
       if (!context.mounted) return;
       await context.messages.updateGroupInfo(conversation.id, avatarUrl: url);
     } catch (e) {
-      if (context.mounted) context.showMessagingSnack('Could not update the photo: $e');
+      if (context.mounted)
+        context.showMessagingSnack('Could not update the photo: $e');
     }
   }
 
-  Future<void> _editGroup(BuildContext context, ChatConversation conversation) async {
+  Future<void> _editGroup(
+    BuildContext context,
+    ChatConversation conversation,
+  ) async {
     final nameController = TextEditingController(text: conversation.title);
-    final descController = TextEditingController(text: conversation.description ?? '');
+    final descController = TextEditingController(
+      text: conversation.description ?? '',
+    );
 
     final saved = await showDialog<bool>(
       context: context,
@@ -430,8 +509,14 @@ class ChatInfoScreen extends StatelessWidget {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Save')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Save'),
+          ),
         ],
       ),
     );
@@ -454,14 +539,22 @@ class ChatInfoScreen extends StatelessWidget {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(isGroup ? 'Exit group?' : 'Delete chat?'),
-        content: Text(isGroup
-            ? 'You will stop receiving messages from this group.'
-            : 'This chat will be removed from your inbox.'),
+        content: Text(
+          isGroup
+              ? 'You will stop receiving messages from this group.'
+              : 'This chat will be removed from your inbox.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(isGroup ? 'Exit' : 'Delete', style: const TextStyle(color: Colors.red)),
+            child: Text(
+              isGroup ? 'Exit' : 'Delete',
+              style: const TextStyle(color: Colors.red),
+            ),
           ),
         ],
       ),
@@ -476,7 +569,10 @@ class ChatInfoScreen extends StatelessWidget {
   Widget _buildInfoSection(BuildContext context, List<Widget> children) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: AppSpacing.s),
+      margin: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.m,
+        vertical: AppSpacing.s,
+      ),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -487,10 +583,18 @@ class ChatInfoScreen extends StatelessWidget {
 
   Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
-      padding: const EdgeInsets.only(left: AppSpacing.xl, top: AppSpacing.l, bottom: AppSpacing.s),
-      child: Text(title,
-          style: AppTypography.labelSmall
-              .copyWith(color: AppColors.textMuted(context), letterSpacing: 1)),
+      padding: const EdgeInsets.only(
+        left: AppSpacing.xl,
+        top: AppSpacing.l,
+        bottom: AppSpacing.s,
+      ),
+      child: Text(
+        title,
+        style: AppTypography.labelSmall.copyWith(
+          color: AppColors.textMuted(context),
+          letterSpacing: 1,
+        ),
+      ),
     );
   }
 
@@ -509,9 +613,16 @@ class ChatInfoScreen extends StatelessWidget {
           style: const TextStyle(color: AppColors.electricBlue),
         ),
       ),
-      title: Text(isMe ? '${participant.name} (You)' : participant.name, style: AppTypography.titleSmall),
-      subtitle: Text(_roleLabel(participant.role),
-          style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context))),
+      title: Text(
+        isMe ? '${participant.name} (You)' : participant.name,
+        style: AppTypography.titleSmall,
+      ),
+      subtitle: Text(
+        _roleLabel(participant.role),
+        style: AppTypography.bodySmall.copyWith(
+          color: AppColors.textMuted(context),
+        ),
+      ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -522,11 +633,18 @@ class ChatInfoScreen extends StatelessWidget {
                 border: Border.all(color: AppColors.emeraldGreen),
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: const Text('Admin', style: TextStyle(color: AppColors.emeraldGreen, fontSize: 10)),
+              child: const Text(
+                'Admin',
+                style: TextStyle(color: AppColors.emeraldGreen, fontSize: 10),
+              ),
             ),
           if (onRemove != null)
             IconButton(
-              icon: const Icon(Icons.person_remove_outlined, size: 18, color: Colors.redAccent),
+              icon: const Icon(
+                Icons.person_remove_outlined,
+                size: 18,
+                color: Colors.redAccent,
+              ),
               onPressed: onRemove,
             ),
         ],
@@ -537,7 +655,10 @@ class ChatInfoScreen extends StatelessWidget {
   Widget _buildDangerTile(IconData icon, String label, VoidCallback onTap) {
     return ListTile(
       leading: Icon(icon, color: Colors.red),
-      title: Text(label, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
+      title: Text(
+        label,
+        style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+      ),
       onTap: onTap,
     );
   }
@@ -553,8 +674,15 @@ class ChatInfoScreen extends StatelessWidget {
     return ListTile(
       leading: Icon(icon, color: AppColors.electricBlue, size: 22),
       title: Text(title, style: AppTypography.titleSmall),
-      subtitle: Text(value, style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context))),
-      trailing: showChevron && onTap != null ? const Icon(Icons.chevron_right, size: 20) : null,
+      subtitle: Text(
+        value,
+        style: AppTypography.bodySmall.copyWith(
+          color: AppColors.textMuted(context),
+        ),
+      ),
+      trailing: showChevron && onTap != null
+          ? const Icon(Icons.chevron_right, size: 20)
+          : null,
       onTap: onTap,
     );
   }
@@ -571,10 +699,17 @@ class ChatInfoScreen extends StatelessWidget {
   }
 
   String _initials(String title) {
-    final parts = title.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final parts = title
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
     if (parts.isEmpty) return '?';
     if (parts.length == 1) {
-      return (parts.first.length >= 2 ? parts.first.substring(0, 2) : parts.first).toUpperCase();
+      return (parts.first.length >= 2
+              ? parts.first.substring(0, 2)
+              : parts.first)
+          .toUpperCase();
     }
     return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
   }
@@ -602,7 +737,9 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
     return Container(
       margin: const EdgeInsets.all(AppSpacing.m),
       padding: const EdgeInsets.all(AppSpacing.m),
-      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.7,
+      ),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -610,7 +747,12 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('Add members', style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            'Add members',
+            style: AppTypography.titleMedium.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: AppSpacing.s),
           Flexible(
             child: ListView.builder(
@@ -621,16 +763,25 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
                 final selected = _selected.contains(contact.id);
                 return ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: AppColors.electricBlue.withValues(alpha: 0.1),
-                    child: Text(contact.initials, style: const TextStyle(color: AppColors.electricBlue)),
+                    backgroundColor: AppColors.electricBlue.withValues(
+                      alpha: 0.1,
+                    ),
+                    child: Text(
+                      contact.initials,
+                      style: const TextStyle(color: AppColors.electricBlue),
+                    ),
                   ),
                   title: Text(contact.name, style: AppTypography.titleSmall),
                   trailing: Icon(
-                    selected ? Icons.check_circle : Icons.radio_button_unchecked,
+                    selected
+                        ? Icons.check_circle
+                        : Icons.radio_button_unchecked,
                     color: selected ? AppColors.electricBlue : Colors.grey,
                   ),
                   onTap: () => setState(() {
-                    selected ? _selected.remove(contact.id) : _selected.add(contact.id);
+                    selected
+                        ? _selected.remove(contact.id)
+                        : _selected.add(contact.id);
                   }),
                 );
               },
@@ -643,17 +794,24 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
               onPressed: _selected.isEmpty
                   ? null
                   : () => Navigator.pop(
-                        context,
-                        widget.candidates.where((c) => _selected.contains(c.id)).toList(),
-                      ),
+                      context,
+                      widget.candidates
+                          .where((c) => _selected.contains(c.id))
+                          .toList(),
+                    ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.electricBlue,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 elevation: 0,
               ),
-              child: const Text('Add', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Add',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ),
         ],
@@ -667,7 +825,11 @@ class _ActionButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
 
-  const _ActionButton({required this.icon, required this.label, required this.onTap});
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -684,7 +846,10 @@ class _ActionButton extends StatelessWidget {
             child: Icon(icon, color: AppColors.electricBlue),
           ),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(fontSize: 12, color: AppColors.electricBlue)),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: AppColors.electricBlue),
+          ),
         ],
       ),
     );

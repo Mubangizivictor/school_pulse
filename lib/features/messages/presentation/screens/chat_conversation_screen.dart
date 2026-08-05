@@ -102,8 +102,12 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
               body: Center(
                 child: snapshot.connectionState == ConnectionState.waiting
                     ? const CircularProgressIndicator()
-                    : Text('This conversation is no longer available',
-                        style: AppTypography.bodyMedium.copyWith(color: AppColors.textMuted(context))),
+                    : Text(
+                        'This conversation is no longer available',
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: AppColors.textMuted(context),
+                        ),
+                      ),
               ),
             );
           }
@@ -151,15 +155,22 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
         icon: const Icon(Icons.close),
         onPressed: () => setState(_selectedIds.clear),
       ),
-      title: Text('${selected.length} selected', style: AppTypography.titleMedium),
+      title: Text(
+        '${selected.length} selected',
+        style: AppTypography.titleMedium,
+      ),
       actions: [
         IconButton(
           icon: const Icon(Icons.copy),
           tooltip: 'Copy',
           onPressed: () {
-            Clipboard.setData(ClipboardData(
-              text: selected.map((m) => '${m.senderName}: ${m.content}').join('\n'),
-            ));
+            Clipboard.setData(
+              ClipboardData(
+                text: selected
+                    .map((m) => '${m.senderName}: ${m.content}')
+                    .join('\n'),
+              ),
+            );
             setState(_selectedIds.clear);
             context.showMessagingSnack('Copied to clipboard');
           },
@@ -169,8 +180,12 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
           tooltip: 'Star',
           onPressed: () async {
             for (final message in selected) {
-              await context.messages
-                  .setStarred(conversation.id, message.id, user.id, !message.isStarred);
+              await context.messages.setStarred(
+                conversation.id,
+                message.id,
+                user.id,
+                !message.isStarred,
+              );
             }
             if (mounted) setState(_selectedIds.clear);
           },
@@ -192,7 +207,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     );
   }
 
-  Widget _buildChat(BuildContext context, UserEntity user, ChatConversation conversation) {
+  Widget _buildChat(
+    BuildContext context,
+    UserEntity user,
+    ChatConversation conversation,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (_selectedIds.isNotEmpty) {
@@ -214,7 +233,8 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
           // Broadcast lists and channels have their own info screen (it is
           // about recipients and delivery, not group membership).
           onTap: () => context.push(
-            conversation.type == ChatType.broadcast || conversation.type == ChatType.channel
+            conversation.type == ChatType.broadcast ||
+                    conversation.type == ChatType.channel
                 ? '/messages/broadcast/${widget.chatId}'
                 : '/messages/chat/${widget.chatId}/info',
           ),
@@ -223,14 +243,18 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
               CircleAvatar(
                 radius: 18,
                 backgroundColor: AppColors.electricBlue,
-                backgroundImage:
-                    conversation.avatarUrl != null ? NetworkImage(conversation.avatarUrl!) : null,
+                backgroundImage: conversation.avatarUrl != null
+                    ? NetworkImage(conversation.avatarUrl!)
+                    : null,
                 child: conversation.avatarUrl != null
                     ? null
                     : Text(
                         _initials(conversation.title),
                         style: const TextStyle(
-                            color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
               ),
               const SizedBox(width: AppSpacing.s),
@@ -246,7 +270,9 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                     ),
                     Text(
                       conversation.subtitle ?? '',
-                      style: AppTypography.labelSmall.copyWith(color: AppColors.textMuted(context)),
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.textMuted(context),
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -259,11 +285,13 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.videocam_outlined),
-            onPressed: () => context.showMessagingSnack('Video calls are not available yet'),
+            onPressed: () =>
+                context.showMessagingSnack('Video calls are not available yet'),
           ),
           IconButton(
             icon: const Icon(Icons.phone_outlined),
-            onPressed: () => context.showMessagingSnack('Voice calls are not available yet'),
+            onPressed: () =>
+                context.showMessagingSnack('Voice calls are not available yet'),
           ),
           const SizedBox(width: 4),
         ],
@@ -279,43 +307,48 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     ChatConversation conversation,
   ) {
     return Column(
-        children: [
-          if (conversation.pinnedMessageContent != null)
-            _buildPinnedBanner(context, isDark, conversation),
-          Expanded(
-            child: StreamBuilder<List<ChatMessage>>(
-              stream: context.messages
-                  .watchMessages(widget.chatId, user.id, limit: _messageLimit),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final messages = snapshot.data!;
-                _visibleMessages = messages;
-                if (messages.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.x3l),
-                      child: Text(
-                        'No messages yet. Say hello!',
-                        textAlign: TextAlign.center,
-                        style: AppTypography.bodyMedium.copyWith(color: AppColors.textMuted(context)),
+      children: [
+        if (conversation.pinnedMessageContent != null)
+          _buildPinnedBanner(context, isDark, conversation),
+        Expanded(
+          child: StreamBuilder<List<ChatMessage>>(
+            stream: context.messages.watchMessages(
+              widget.chatId,
+              user.id,
+              limit: _messageLimit,
+            ),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final messages = snapshot.data!;
+              _visibleMessages = messages;
+              if (messages.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.x3l),
+                    child: Text(
+                      'No messages yet. Say hello!',
+                      textAlign: TextAlign.center,
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.textMuted(context),
                       ),
                     ),
-                  );
-                }
-                return NotificationListener<ScrollNotification>(
-                  // The list is reversed, so "scrolled to the end" means the
-                  // user has reached the oldest message they have; fetch the
-                  // next window rather than stopping dead at the limit.
-                  onNotification: (notification) {
-                    if (notification.metrics.extentAfter < 200 &&
-                        messages.length >= _messageLimit) {
-                      setState(() => _messageLimit += 60);
-                    }
-                    return false;
-                  },
-                  child: ListView.builder(
+                  ),
+                );
+              }
+              return NotificationListener<ScrollNotification>(
+                // The list is reversed, so "scrolled to the end" means the
+                // user has reached the oldest message they have; fetch the
+                // next window rather than stopping dead at the limit.
+                onNotification: (notification) {
+                  if (notification.metrics.extentAfter < 200 &&
+                      messages.length >= _messageLimit) {
+                    setState(() => _messageLimit += 60);
+                  }
+                  return false;
+                },
+                child: ListView.builder(
                   padding: const EdgeInsets.all(AppSpacing.m),
                   reverse: true,
                   itemCount: messages.length,
@@ -334,8 +367,12 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                         _editing = null;
                       }),
                       onForward: () => _forward(user, message),
-                      onStar: () => context.messages
-                          .setStarred(conversation.id, message.id, user.id, !message.isStarred),
+                      onStar: () => context.messages.setStarred(
+                        conversation.id,
+                        message.id,
+                        user.id,
+                        !message.isStarred,
+                      ),
                       onCopy: () {
                         Clipboard.setData(ClipboardData(text: message.content));
                         context.showMessagingSnack('Copied to clipboard');
@@ -349,39 +386,59 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                               });
                             }
                           : null,
-                      onDelete: message.isMe ? () => _confirmDelete(conversation.id, message) : null,
-                      onPin: () => context.messages
-                          .setMessagePinned(conversation.id, message, !message.isPinned),
-                      onReact: (emoji) =>
-                          context.messages.react(conversation.id, message.id, user.id, emoji),
-                      onVote: (option) =>
-                          context.messages.voteInPoll(conversation.id, message.id, user.id, option),
-                      onOpenContact: (contactId) => _openSharedContact(user, contactId),
+                      onDelete: message.isMe
+                          ? () => _confirmDelete(conversation.id, message)
+                          : null,
+                      onPin: () => context.messages.setMessagePinned(
+                        conversation.id,
+                        message,
+                        !message.isPinned,
+                      ),
+                      onReact: (emoji) => context.messages.react(
+                        conversation.id,
+                        message.id,
+                        user.id,
+                        emoji,
+                      ),
+                      onVote: (option) => context.messages.voteInPoll(
+                        conversation.id,
+                        message.id,
+                        user.id,
+                        option,
+                      ),
+                      onOpenContact: (contactId) =>
+                          _openSharedContact(user, contactId),
                     );
                   },
-                  ),
-                );
-              },
-            ),
+                ),
+              );
+            },
           ),
-          if (_uploading) const LinearProgressIndicator(minHeight: 2),
-          // The composer is out of the way while a selection is active.
-          if (_selectedIds.isNotEmpty)
-            const SizedBox.shrink()
-          else if (conversation.canPost(user.id))
-            _buildInputArea(isDark, user, conversation)
-          else
-            _buildReadOnlyNotice(isDark),
-        ],
+        ),
+        if (_uploading) const LinearProgressIndicator(minHeight: 2),
+        // The composer is out of the way while a selection is active.
+        if (_selectedIds.isNotEmpty)
+          const SizedBox.shrink()
+        else if (conversation.canPost(user.id))
+          _buildInputArea(isDark, user, conversation)
+        else
+          _buildReadOnlyNotice(isDark),
+      ],
     );
   }
 
-  Widget _buildPinnedBanner(BuildContext context, bool isDark, ChatConversation conversation) {
+  Widget _buildPinnedBanner(
+    BuildContext context,
+    bool isDark,
+    ChatConversation conversation,
+  ) {
     return InkWell(
       onTap: () => context.push('/messages/pinned'),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-        color: isDark ? AppColors.electricBlue.withValues(alpha: 0.1) : Colors.blue.withValues(alpha: 0.05),
+        color: isDark
+            ? AppColors.electricBlue.withValues(alpha: 0.1)
+            : Colors.blue.withValues(alpha: 0.05),
         child: Row(
           children: [
             const Icon(Icons.push_pin, size: 14, color: AppColors.electricBlue),
@@ -402,7 +459,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.close, size: 16, color: AppColors.electricBlue),
+              icon: const Icon(
+                Icons.close,
+                size: 16,
+                color: AppColors.electricBlue,
+              ),
               onPressed: () => context.messages.setMessagePinned(
                 conversation.id,
                 ChatMessage(
@@ -426,94 +487,143 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   Widget _buildReadOnlyNotice(bool isDark) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.m, horizontal: AppSpacing.l),
+      padding: const EdgeInsets.symmetric(
+        vertical: AppSpacing.m,
+        horizontal: AppSpacing.l,
+      ),
       decoration: BoxDecoration(
         color: isDark ? AppColors.bgDark : Colors.white,
-        border: Border(top: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight)),
+        border: Border(
+          top: BorderSide(
+            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+          ),
+        ),
       ),
       child: SafeArea(
         child: Text(
           'Only admins can send messages here',
           textAlign: TextAlign.center,
-          style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context)),
+          style: AppTypography.bodySmall.copyWith(
+            color: AppColors.textMuted(context),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildInputArea(bool isDark, UserEntity user, ChatConversation conversation) {
+  Widget _buildInputArea(
+    bool isDark,
+    UserEntity user,
+    ChatConversation conversation,
+  ) {
     final draft = _replyTo ?? _editing;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s, vertical: AppSpacing.s),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s,
+        vertical: AppSpacing.s,
+      ),
       decoration: BoxDecoration(
         color: isDark ? AppColors.bgDark : Colors.white,
-        border: Border(top: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight)),
+        border: Border(
+          top: BorderSide(
+            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+          ),
+        ),
       ),
       child: SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (draft != null && _recordingPath == null) _buildDraftBanner(isDark, draft),
+            if (draft != null && _recordingPath == null)
+              _buildDraftBanner(isDark, draft),
             if (_recordingPath != null)
               _buildRecordingBar(isDark, user, conversation)
             else
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.add_circle_outline, color: AppColors.electricBlue, size: 28),
-                  onPressed: () => _showAttachmentMenu(context, user, conversation),
-                ),
-                Expanded(
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.surfaceDark : AppColors.bgLight,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.add_circle_outline,
+                      color: AppColors.electricBlue,
+                      size: 28,
                     ),
-                    child: TextField(
-                      controller: _messageController,
-                      // "Enter is send" turns the return key into a send
-                      // button; otherwise it stays a newline.
-                      maxLines: _preferences.enterIsSend ? 1 : 4,
-                      minLines: 1,
-                      textInputAction:
-                          _preferences.enterIsSend ? TextInputAction.send : TextInputAction.newline,
-                      onSubmitted:
-                          _preferences.enterIsSend ? (_) => _send(user, conversation) : null,
-                      textCapitalization: TextCapitalization.sentences,
-                      style: TextStyle(color: isDark ? Colors.white : Colors.black87),
-                      decoration: const InputDecoration(
-                        hintText: 'Type a message...',
-                        hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(vertical: 10),
-                        suffixIcon: Icon(Icons.emoji_emotions_outlined, color: Colors.grey, size: 20),
+                    onPressed: () =>
+                        _showAttachmentMenu(context, user, conversation),
+                  ),
+                  Expanded(
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.m,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppColors.surfaceDark
+                            : AppColors.bgLight,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: isDark
+                              ? AppColors.borderDark
+                              : AppColors.borderLight,
+                        ),
+                      ),
+                      child: TextField(
+                        controller: _messageController,
+                        // "Enter is send" turns the return key into a send
+                        // button; otherwise it stays a newline.
+                        maxLines: _preferences.enterIsSend ? 1 : 4,
+                        minLines: 1,
+                        textInputAction: _preferences.enterIsSend
+                            ? TextInputAction.send
+                            : TextInputAction.newline,
+                        onSubmitted: _preferences.enterIsSend
+                            ? (_) => _send(user, conversation)
+                            : null,
+                        textCapitalization: TextCapitalization.sentences,
+                        style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                        decoration: const InputDecoration(
+                          hintText: 'Type a message...',
+                          hintStyle: TextStyle(
+                            color: Colors.grey,
+                            fontSize: 14,
+                          ),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(vertical: 10),
+                          suffixIcon: Icon(
+                            Icons.emoji_emotions_outlined,
+                            color: Colors.grey,
+                            size: 20,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: AppSpacing.s),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: CircleAvatar(
-                    radius: 22,
-                    backgroundColor: AppColors.electricBlue,
-                    child: IconButton(
-                      icon: Icon(_composerHadText ? Icons.send : Icons.mic, color: Colors.white, size: 20),
-                      onPressed: _composerHadText
-                          ? () => _send(user, conversation)
-                          : _startRecording,
+                  const SizedBox(width: AppSpacing.s),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: CircleAvatar(
+                      radius: 22,
+                      backgroundColor: AppColors.electricBlue,
+                      child: IconButton(
+                        icon: Icon(
+                          _composerHadText ? Icons.send : Icons.mic,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        onPressed: _composerHadText
+                            ? () => _send(user, conversation)
+                            : _startRecording,
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
           ],
         ),
       ),
@@ -526,22 +636,33 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     final isEditing = _editing != null;
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: AppSpacing.s),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.m,
+        vertical: AppSpacing.s,
+      ),
       decoration: BoxDecoration(
         color: AppColors.electricBlue.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border(left: BorderSide(color: AppColors.electricBlue, width: 3)),
+        border: Border(
+          left: BorderSide(color: AppColors.electricBlue, width: 3),
+        ),
       ),
       child: Row(
         children: [
-          Icon(isEditing ? Icons.edit_outlined : Icons.reply, size: 16, color: AppColors.electricBlue),
+          Icon(
+            isEditing ? Icons.edit_outlined : Icons.reply,
+            size: 16,
+            color: AppColors.electricBlue,
+          ),
           const SizedBox(width: AppSpacing.s),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isEditing ? 'Editing message' : 'Replying to ${draft.senderName}',
+                  isEditing
+                      ? 'Editing message'
+                      : 'Replying to ${draft.senderName}',
                   style: AppTypography.labelSmall.copyWith(
                     color: AppColors.electricBlue,
                     fontWeight: FontWeight.bold,
@@ -551,7 +672,9 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                   draft.content,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context)),
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.textMuted(context),
+                  ),
                 ),
               ],
             ),
@@ -605,7 +728,9 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   }
 
   Future<void> _forward(UserEntity user, ChatMessage message) async {
-    final conversations = await context.messages.watchConversations(user.id).first;
+    final conversations = await context.messages
+        .watchConversations(user.id)
+        .first;
     if (!mounted) return;
 
     final selected = await showModalBottomSheet<List<String>>(
@@ -626,7 +751,9 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   }
 
   Future<void> _forwardMany(UserEntity user, List<ChatMessage> messages) async {
-    final conversations = await context.messages.watchConversations(user.id).first;
+    final conversations = await context.messages
+        .watchConversations(user.id)
+        .first;
     if (!mounted) return;
 
     final selected = await showModalBottomSheet<List<String>>(
@@ -649,16 +776,24 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     context.showMessagingSnack('Forwarded to ${selected.length} chat(s)');
   }
 
-  Future<void> _confirmDeleteMany(String conversationId, List<ChatMessage> messages) async {
+  Future<void> _confirmDeleteMany(
+    String conversationId,
+    List<ChatMessage> messages,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(messages.length == 1
-            ? 'Delete message?'
-            : 'Delete ${messages.length} messages?'),
+        title: Text(
+          messages.length == 1
+              ? 'Delete message?'
+              : 'Delete ${messages.length} messages?',
+        ),
         content: const Text('They will be removed for everyone in the chat.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
@@ -674,14 +809,22 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     if (mounted) setState(_selectedIds.clear);
   }
 
-  Future<void> _confirmDelete(String conversationId, ChatMessage message) async {
+  Future<void> _confirmDelete(
+    String conversationId,
+    ChatMessage message,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Delete message?'),
-        content: const Text('This message will be removed for everyone in the chat.'),
+        content: const Text(
+          'This message will be removed for everyone in the chat.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
@@ -693,7 +836,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     await context.messages.deleteMessage(conversationId, message.id);
   }
 
-  void _showAttachmentMenu(BuildContext context, UserEntity user, ChatConversation conversation) {
+  void _showAttachmentMenu(
+    BuildContext context,
+    UserEntity user,
+    ChatConversation conversation,
+  ) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -715,7 +862,9 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
       case AttachmentKind.photos:
       case AttachmentKind.camera:
         await _sendImage(
-          kind == AttachmentKind.camera ? ImageSource.camera : ImageSource.gallery,
+          kind == AttachmentKind.camera
+              ? ImageSource.camera
+              : ImageSource.gallery,
           user,
           conversation,
         );
@@ -734,7 +883,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     }
   }
 
-  Future<void> _sendDocument(UserEntity user, ChatConversation conversation) async {
+  Future<void> _sendDocument(
+    UserEntity user,
+    ChatConversation conversation,
+  ) async {
     final result = await FilePicker.pickFiles();
     final picked = result?.files.singleOrNull;
     if (picked?.path == null || !mounted) return;
@@ -749,13 +901,18 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     );
   }
 
-  Future<void> _sendLocation(UserEntity user, ChatConversation conversation) async {
+  Future<void> _sendLocation(
+    UserEntity user,
+    ChatConversation conversation,
+  ) async {
     if (!await _ensureLocationPermission()) return;
 
     setState(() => _uploading = true);
     try {
       final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.medium,
+        ),
       );
       if (!mounted) return;
       await context.messages.sendMessage(
@@ -767,7 +924,8 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
         longitude: position.longitude,
       );
     } catch (e) {
-      if (mounted) context.showMessagingSnack('Could not get your location: $e');
+      if (mounted)
+        context.showMessagingSnack('Could not get your location: $e');
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
@@ -777,7 +935,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   /// never at launch - so a denial has to be explained here.
   Future<bool> _ensureLocationPermission() async {
     if (!await Geolocator.isLocationServiceEnabled()) {
-      if (mounted) context.showMessagingSnack('Turn on location services to share your location');
+      if (mounted)
+        context.showMessagingSnack(
+          'Turn on location services to share your location',
+        );
       return false;
     }
     var permission = await Geolocator.checkPermission();
@@ -786,14 +947,23 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     }
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
-      if (mounted) context.showMessagingSnack('Location permission is needed to share where you are');
+      if (mounted)
+        context.showMessagingSnack(
+          'Location permission is needed to share where you are',
+        );
       return false;
     }
     return true;
   }
 
-  Future<void> _sendContact(UserEntity user, ChatConversation conversation) async {
-    final contacts = await context.messages.getContacts(user.schoolId, excludeId: user.id);
+  Future<void> _sendContact(
+    UserEntity user,
+    ChatConversation conversation,
+  ) async {
+    final contacts = await context.messages.getContacts(
+      user.schoolId,
+      excludeId: user.id,
+    );
     if (!mounted) return;
 
     final picked = await showModalBottomSheet<MessageContact>(
@@ -832,7 +1002,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     );
   }
 
-  Future<void> _sendEvent(UserEntity user, ChatConversation conversation) async {
+  Future<void> _sendEvent(
+    UserEntity user,
+    ChatConversation conversation,
+  ) async {
     final draft = await showModalBottomSheet<EventDraft>(
       context: context,
       isScrollControlled: true,
@@ -856,10 +1029,16 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     if (contactId == user.id) return;
     final contact = await context.messages.getContact(contactId);
     if (contact == null || !mounted) {
-      if (mounted) context.showMessagingSnack('That contact is no longer in the directory');
+      if (mounted)
+        context.showMessagingSnack(
+          'That contact is no longer in the directory',
+        );
       return;
     }
-    final id = await context.messages.startDirectConversation(me: user, contact: contact);
+    final id = await context.messages.startDirectConversation(
+      me: user,
+      contact: contact,
+    );
     if (!mounted) return;
     context.push('/messages/chat/$id');
   }
@@ -869,7 +1048,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     UserEntity user,
     ChatConversation conversation,
   ) async {
-    final picked = await ImagePicker().pickImage(source: source, imageQuality: 70);
+    final picked = await ImagePicker().pickImage(
+      source: source,
+      imageQuality: 70,
+    );
     if (picked == null || !mounted) return;
 
     await _uploadAndSend(
@@ -924,12 +1106,16 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
 
   Future<void> _startRecording() async {
     if (!await _recorder.hasPermission()) {
-      if (mounted) context.showMessagingSnack('Microphone permission is needed to record a voice note');
+      if (mounted)
+        context.showMessagingSnack(
+          'Microphone permission is needed to record a voice note',
+        );
       return;
     }
 
     final directory = await getTemporaryDirectory();
-    final path = '${directory.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+    final path =
+        '${directory.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
     await _recorder.start(const RecordConfig(), path: path);
     if (!mounted) return;
 
@@ -963,7 +1149,8 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
 
     // Cancelled, or a mis-tap too short to be a message.
     if (!send || duration < const Duration(seconds: 1)) {
-      if (send) context.showMessagingSnack('Hold longer to record a voice note');
+      if (send)
+        context.showMessagingSnack('Hold longer to record a voice note');
       if (await file.exists()) await file.delete();
       return;
     }
@@ -981,7 +1168,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   }
 
   /// Replaces the composer row while a voice note is being recorded.
-  Widget _buildRecordingBar(bool isDark, UserEntity user, ChatConversation conversation) {
+  Widget _buildRecordingBar(
+    bool isDark,
+    UserEntity user,
+    ChatConversation conversation,
+  ) {
     return Row(
       children: [
         IconButton(
@@ -993,7 +1184,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
         Container(
           width: 10,
           height: 10,
-          decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
+          decoration: const BoxDecoration(
+            color: Colors.redAccent,
+            shape: BoxShape.circle,
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -1012,7 +1206,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
             backgroundColor: AppColors.electricBlue,
             child: IconButton(
               icon: const Icon(Icons.send, color: Colors.white, size: 20),
-              onPressed: () => _stopRecording(send: true, user: user, conversation: conversation),
+              onPressed: () => _stopRecording(
+                send: true,
+                user: user,
+                conversation: conversation,
+              ),
             ),
           ),
         ),
@@ -1027,10 +1225,17 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   }
 
   String _initials(String title) {
-    final parts = title.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final parts = title
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
     if (parts.isEmpty) return '?';
     if (parts.length == 1) {
-      return (parts.first.length >= 2 ? parts.first.substring(0, 2) : parts.first).toUpperCase();
+      return (parts.first.length >= 2
+              ? parts.first.substring(0, 2)
+              : parts.first)
+          .toUpperCase();
     }
     return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
   }
@@ -1074,45 +1279,53 @@ class AttachmentsMenu extends StatelessWidget {
             mainAxisSpacing: AppSpacing.m,
             children: [
               _AttachmentItem(
-                  icon: Icons.image,
-                  kind: AttachmentKind.photos,
-                  color: Colors.purple,
-                  onSelected: onSelected),
+                icon: Icons.image,
+                kind: AttachmentKind.photos,
+                color: Colors.purple,
+                onSelected: onSelected,
+              ),
               _AttachmentItem(
-                  icon: Icons.camera_alt,
-                  kind: AttachmentKind.camera,
-                  color: Colors.pink,
-                  onSelected: onSelected),
+                icon: Icons.camera_alt,
+                kind: AttachmentKind.camera,
+                color: Colors.pink,
+                onSelected: onSelected,
+              ),
               _AttachmentItem(
-                  icon: Icons.insert_drive_file,
-                  kind: AttachmentKind.document,
-                  color: Colors.blue,
-                  onSelected: onSelected),
+                icon: Icons.insert_drive_file,
+                kind: AttachmentKind.document,
+                color: Colors.blue,
+                onSelected: onSelected,
+              ),
               _AttachmentItem(
-                  icon: Icons.headset,
-                  kind: AttachmentKind.audio,
-                  color: Colors.orange,
-                  onSelected: onSelected),
+                icon: Icons.headset,
+                kind: AttachmentKind.audio,
+                color: Colors.orange,
+                onSelected: onSelected,
+              ),
               _AttachmentItem(
-                  icon: Icons.location_on,
-                  kind: AttachmentKind.location,
-                  color: Colors.green,
-                  onSelected: onSelected),
+                icon: Icons.location_on,
+                kind: AttachmentKind.location,
+                color: Colors.green,
+                onSelected: onSelected,
+              ),
               _AttachmentItem(
-                  icon: Icons.person,
-                  kind: AttachmentKind.contact,
-                  color: Colors.teal,
-                  onSelected: onSelected),
+                icon: Icons.person,
+                kind: AttachmentKind.contact,
+                color: Colors.teal,
+                onSelected: onSelected,
+              ),
               _AttachmentItem(
-                  icon: Icons.poll,
-                  kind: AttachmentKind.poll,
-                  color: Colors.amber,
-                  onSelected: onSelected),
+                icon: Icons.poll,
+                kind: AttachmentKind.poll,
+                color: Colors.amber,
+                onSelected: onSelected,
+              ),
               _AttachmentItem(
-                  icon: Icons.event,
-                  kind: AttachmentKind.event,
-                  color: Colors.cyan,
-                  onSelected: onSelected),
+                icon: Icons.event,
+                kind: AttachmentKind.event,
+                color: Colors.cyan,
+                onSelected: onSelected,
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.m),
@@ -1180,7 +1393,9 @@ class _ForwardSheetState extends State<_ForwardSheet> {
     return Container(
       margin: const EdgeInsets.all(AppSpacing.m),
       padding: const EdgeInsets.all(AppSpacing.m),
-      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.7,
+      ),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -1188,7 +1403,12 @@ class _ForwardSheetState extends State<_ForwardSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('Forward to', style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            'Forward to',
+            style: AppTypography.titleMedium.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: AppSpacing.s),
           Flexible(
             child: ListView.builder(
@@ -1199,7 +1419,9 @@ class _ForwardSheetState extends State<_ForwardSheet> {
                 final selected = _selected.contains(chat.id);
                 return ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: AppColors.electricBlue.withValues(alpha: 0.1),
+                    backgroundColor: AppColors.electricBlue.withValues(
+                      alpha: 0.1,
+                    ),
                     child: Text(
                       chat.title.isEmpty ? '?' : chat.title[0].toUpperCase(),
                       style: const TextStyle(color: AppColors.electricBlue),
@@ -1208,14 +1430,20 @@ class _ForwardSheetState extends State<_ForwardSheet> {
                   title: Text(chat.title, style: AppTypography.titleSmall),
                   subtitle: Text(
                     chat.subtitle ?? '',
-                    style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context)),
+                    style: AppTypography.bodySmall.copyWith(
+                      color: AppColors.textMuted(context),
+                    ),
                   ),
                   trailing: Icon(
-                    selected ? Icons.check_circle : Icons.radio_button_unchecked,
+                    selected
+                        ? Icons.check_circle
+                        : Icons.radio_button_unchecked,
                     color: selected ? AppColors.electricBlue : Colors.grey,
                   ),
                   onTap: () => setState(() {
-                    selected ? _selected.remove(chat.id) : _selected.add(chat.id);
+                    selected
+                        ? _selected.remove(chat.id)
+                        : _selected.add(chat.id);
                   }),
                 );
               },
@@ -1225,15 +1453,22 @@ class _ForwardSheetState extends State<_ForwardSheet> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _selected.isEmpty ? null : () => Navigator.pop(context, _selected.toList()),
+              onPressed: _selected.isEmpty
+                  ? null
+                  : () => Navigator.pop(context, _selected.toList()),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.electricBlue,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 elevation: 0,
               ),
-              child: const Text('Forward', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Forward',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ),
         ],

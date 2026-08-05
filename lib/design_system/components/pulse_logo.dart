@@ -1,22 +1,29 @@
 import 'package:flutter/material.dart';
 
-enum PulseLogoVariant { 
+enum PulseLogoVariant {
   /// 16:9 Horizontal format with text and mark
-  full, 
+  full,
+
   /// Square/Vertical format with mark and stacked text
   vertical,
+
   /// 16:9 Horizontal format (optimized for splash)
-  splash, 
+  splash,
+
   /// 16:9 Horizontal format (optimized for auth)
-  auth, 
+  auth,
+
   /// Square/Vertical format (mark only or compact)
-  shield, 
+  shield,
+
   /// Square/Vertical format
-  compact, 
+  compact,
+
   /// 16:9 Horizontal format for headers
-  header, 
+  header,
+
   /// Square/Vertical format for sidebar
-  sidebar 
+  sidebar,
 }
 
 class PulseLogo extends StatelessWidget {
@@ -38,7 +45,7 @@ class PulseLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     String assetPath;
-    
+
     switch (variant) {
       case PulseLogoVariant.full:
       case PulseLogoVariant.splash:
@@ -62,4 +69,3 @@ class PulseLogo extends StatelessWidget {
     );
   }
 }
-

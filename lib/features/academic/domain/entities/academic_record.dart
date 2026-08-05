@@ -23,13 +23,13 @@ class AcademicRecord extends Equatable {
 
   @override
   List<Object?> get props => [
-        studentId,
-        subject,
-        score,
-        grade,
-        term,
-        year,
-        teacherRemark,
-        trend,
-      ];
+    studentId,
+    subject,
+    score,
+    grade,
+    term,
+    year,
+    teacherRemark,
+    trend,
+  ];
 }

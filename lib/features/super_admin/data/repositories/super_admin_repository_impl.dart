@@ -22,7 +22,11 @@ class SuperAdminRepositoryImpl implements SuperAdminRepository {
   }
 
   @override
-  Future<void> createSchool(School school, String adminEmail, String adminPassword) async {
+  Future<void> createSchool(
+    School school,
+    String adminEmail,
+    String adminPassword,
+  ) async {
     final model = SchoolModel(
       id: school.id,
       name: school.name,
@@ -109,7 +113,11 @@ class SuperAdminRepositoryImpl implements SuperAdminRepository {
   }
 
   @override
-  Future<void> updateSchoolSubscription(String schoolId, String planId, DateTime expiry) async {
+  Future<void> updateSchoolSubscription(
+    String schoolId,
+    String planId,
+    DateTime expiry,
+  ) async {
     final schools = await remoteDataSource.getAllSchools();
     final school = schools.firstWhere((s) => s.id == schoolId);
     await remoteDataSource.updateSchool(
@@ -155,5 +163,4 @@ class SuperAdminRepositoryImpl implements SuperAdminRepository {
     );
     await remoteDataSource.logAction(model);
   }
-
 }

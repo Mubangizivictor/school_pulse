@@ -27,7 +27,8 @@ enum ClassHomeworkStatus {
   /// The statuses that have reached students and parents. Editing one of
   /// these is a change to work already set, not a draft revision.
   bool get isPublished =>
-      this != ClassHomeworkStatus.draft && this != ClassHomeworkStatus.cancelled;
+      this != ClassHomeworkStatus.draft &&
+      this != ClassHomeworkStatus.cancelled;
 
   bool get isOpen =>
       this == ClassHomeworkStatus.published ||
@@ -38,15 +39,15 @@ enum ClassHomeworkStatus {
 
 extension ClassHomeworkStatusDisplay on ClassHomeworkStatus {
   String get label => switch (this) {
-        ClassHomeworkStatus.draft => 'Draft',
-        ClassHomeworkStatus.published => 'Published',
-        ClassHomeworkStatus.active => 'Active',
-        ClassHomeworkStatus.dueSoon => 'Due soon',
-        ClassHomeworkStatus.overdue => 'Overdue',
-        ClassHomeworkStatus.completed => 'Completed',
-        ClassHomeworkStatus.archived => 'Archived',
-        ClassHomeworkStatus.cancelled => 'Cancelled',
-      };
+    ClassHomeworkStatus.draft => 'Draft',
+    ClassHomeworkStatus.published => 'Published',
+    ClassHomeworkStatus.active => 'Active',
+    ClassHomeworkStatus.dueSoon => 'Due soon',
+    ClassHomeworkStatus.overdue => 'Overdue',
+    ClassHomeworkStatus.completed => 'Completed',
+    ClassHomeworkStatus.archived => 'Archived',
+    ClassHomeworkStatus.cancelled => 'Cancelled',
+  };
 }
 
 enum ClassHomeworkPriority {
@@ -179,27 +180,27 @@ class ClassHomework extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        campusId,
-        classId,
-        className,
-        streamId,
-        academicYearId,
-        termId,
-        title,
-        description,
-        instructions,
-        subjectName,
-        dueDate,
-        status,
-        priority,
-        attachments,
-        createdBy,
-        createdAt,
-        updatedBy,
-        updatedAt,
-        publishedAt,
-        roleAssignmentId,
-      ];
+    id,
+    schoolId,
+    campusId,
+    classId,
+    className,
+    streamId,
+    academicYearId,
+    termId,
+    title,
+    description,
+    instructions,
+    subjectName,
+    dueDate,
+    status,
+    priority,
+    attachments,
+    createdBy,
+    createdAt,
+    updatedBy,
+    updatedAt,
+    publishedAt,
+    roleAssignmentId,
+  ];
 }

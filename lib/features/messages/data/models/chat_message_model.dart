@@ -17,7 +17,9 @@ class ChatMessageModel {
     final senderId = data['senderId'] as String? ?? '';
     final readBy = List<String>.from(data['readBy'] ?? const []);
     final starredBy = List<String>.from(data['starredBy'] ?? const []);
-    final rawReactions = Map<String, dynamic>.from(data['reactions'] ?? const {});
+    final rawReactions = Map<String, dynamic>.from(
+      data['reactions'] ?? const {},
+    );
 
     final reactions = <String, int>{};
     String? myReaction;
@@ -47,7 +49,9 @@ class ChatMessageModel {
       fileName: data['fileName'] as String?,
       fileSize: data['fileSize'] as String?,
       mediaUrl: data['mediaUrl'] as String?,
-      pollOptions: data['pollOptions'] != null ? List<String>.from(data['pollOptions']) : null,
+      pollOptions: data['pollOptions'] != null
+          ? List<String>.from(data['pollOptions'])
+          : null,
       pollVotes: _pollTallies(data['pollVotes']),
       myPollVote: _myPollVote(data['pollVotes'], currentUserId),
       audioDuration: data['audioDurationMs'] != null
@@ -118,13 +122,17 @@ class ChatMessageModel {
       'longitude': ?longitude,
       'sharedContactId': ?sharedContactId,
       'sharedContactRole': ?sharedContactRole,
-      'eventStart': ?(eventStart == null ? null : Timestamp.fromDate(eventStart)),
+      'eventStart': ?(eventStart == null
+          ? null
+          : Timestamp.fromDate(eventStart)),
       'eventLocation': ?eventLocation,
       if (pollOptions != null) ...{
         'pollOptions': pollOptions,
         // Every option starts with an empty voter list so the bubble can
         // render 0-vote rows without a null check.
-        'pollVotes': {for (var i = 0; i < pollOptions.length; i++) '$i': <String>[]},
+        'pollVotes': {
+          for (var i = 0; i < pollOptions.length; i++) '$i': <String>[],
+        },
       },
     };
   }
@@ -136,7 +144,8 @@ class ChatMessageModel {
     if (raw == null) return null;
     final votes = Map<String, dynamic>.from(raw);
     return {
-      for (final entry in votes.entries) entry.key: List<String>.from(entry.value ?? const []).length,
+      for (final entry in votes.entries)
+        entry.key: List<String>.from(entry.value ?? const []).length,
     };
   }
 

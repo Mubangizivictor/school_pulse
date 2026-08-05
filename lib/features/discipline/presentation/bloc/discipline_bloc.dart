@@ -28,16 +28,24 @@ class DisciplineBloc extends Bloc<DisciplineEvent, DisciplineState> {
   }) : super(DisciplineInitial()) {
     on<LoadDisciplineIncidents>((event, emit) async {
       emit(DisciplineLoading());
-      
+
       final result = await getDisciplineIncidents(event.studentId);
-      final boardingResult = await studentRepository.getDisciplineCases(studentId: event.studentId);
-      
+      final boardingResult = await studentRepository.getDisciplineCases(
+        studentId: event.studentId,
+      );
+
       result.fold(
-        (failure) => emit(const DisciplineError('Failed to fetch discipline incidents')),
+        (failure) =>
+            emit(const DisciplineError('Failed to fetch discipline incidents')),
         (incidents) {
           boardingResult.fold(
             (l) => emit(DisciplineLoaded(incidents: incidents)),
-            (boardingCases) => emit(DisciplineLoaded(incidents: incidents, boardingCases: boardingCases)),
+            (boardingCases) => emit(
+              DisciplineLoaded(
+                incidents: incidents,
+                boardingCases: boardingCases,
+              ),
+            ),
           );
         },
       );
@@ -50,18 +58,23 @@ class DisciplineBloc extends Bloc<DisciplineEvent, DisciplineState> {
       final boardingResult = await studentRepository.getDisciplineCases();
 
       incidentsResult.fold(
-        (failure) => emit(const DisciplineError('Failed to fetch recent incidents')),
+        (failure) =>
+            emit(const DisciplineError('Failed to fetch recent incidents')),
         (incidents) {
           sessionsResult.fold(
             (failure) => emit(DisciplineLoaded(incidents: incidents)),
             (sessions) {
               boardingResult.fold(
-                (l) => emit(DisciplineLoaded(incidents: incidents, sessions: sessions)),
-                (boardingCases) => emit(DisciplineLoaded(
-                  incidents: incidents,
-                  sessions: sessions,
-                  boardingCases: boardingCases,
-                )),
+                (l) => emit(
+                  DisciplineLoaded(incidents: incidents, sessions: sessions),
+                ),
+                (boardingCases) => emit(
+                  DisciplineLoaded(
+                    incidents: incidents,
+                    sessions: sessions,
+                    boardingCases: boardingCases,
+                  ),
+                ),
               );
             },
           );
@@ -82,7 +95,8 @@ class DisciplineBloc extends Bloc<DisciplineEvent, DisciplineState> {
       );
       final result = await logDisciplineIncident(incident);
       await result.fold(
-        (failure) async => emit(const DisciplineError('Failed to log incident')),
+        (failure) async =>
+            emit(const DisciplineError('Failed to log incident')),
         (_) async {
           add(LoadRecentIncidents());
         },
@@ -93,7 +107,8 @@ class DisciplineBloc extends Bloc<DisciplineEvent, DisciplineState> {
       emit(DisciplineLoading());
       final result = await getCounselingSessions();
       result.fold(
-        (failure) => emit(const DisciplineError('Failed to fetch counseling sessions')),
+        (failure) =>
+            emit(const DisciplineError('Failed to fetch counseling sessions')),
         (sessions) => emit(DisciplineLoaded(sessions: sessions)),
       );
     });
@@ -111,7 +126,8 @@ class DisciplineBloc extends Bloc<DisciplineEvent, DisciplineState> {
       );
       final result = await logCounselingSession(session);
       await result.fold(
-        (failure) async => emit(const DisciplineError('Failed to log counseling session')),
+        (failure) async =>
+            emit(const DisciplineError('Failed to log counseling session')),
         (_) async {
           add(LoadRecentIncidents());
         },

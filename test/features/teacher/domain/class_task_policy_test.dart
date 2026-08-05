@@ -171,13 +171,17 @@ void main() {
       final task = _task(dueAt: _due);
 
       expect(task.isOverdue(asOf: _due.add(const Duration(hours: 1))), isTrue);
-      expect(task.isOverdue(asOf: _due.subtract(const Duration(hours: 1))), isFalse);
+      expect(
+        task.isOverdue(asOf: _due.subtract(const Duration(hours: 1))),
+        isFalse,
+      );
     });
 
     test('a completed task is never overdue', () {
       expect(
-        _task(status: ClassTaskStatus.completed)
-            .isOverdue(asOf: _due.add(const Duration(days: 5))),
+        _task(
+          status: ClassTaskStatus.completed,
+        ).isOverdue(asOf: _due.add(const Duration(days: 5))),
         isFalse,
       );
     });
@@ -187,10 +191,12 @@ void main() {
     });
 
     test('checklist progress counts completed items', () {
-      final task = _task(checklist: const [
-        ClassTaskChecklistItem(id: 'c1', title: 'Mark', isCompleted: true),
-        ClassTaskChecklistItem(id: 'c2', title: 'Record'),
-      ]);
+      final task = _task(
+        checklist: const [
+          ClassTaskChecklistItem(id: 'c1', title: 'Mark', isCompleted: true),
+          ClassTaskChecklistItem(id: 'c2', title: 'Record'),
+        ],
+      );
 
       expect(task.checklistProgress, 0.5);
     });

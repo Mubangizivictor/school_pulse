@@ -50,7 +50,12 @@ class WatchStudentMovementsRequested extends SecurityEvent {
   final DateTime? date;
   final String? gateId;
   final String? studentId;
-  const WatchStudentMovementsRequested(this.schoolId, {this.date, this.gateId, this.studentId});
+  const WatchStudentMovementsRequested(
+    this.schoolId, {
+    this.date,
+    this.gateId,
+    this.studentId,
+  });
   @override
   List<Object?> get props => [schoolId, date, gateId, studentId];
 }
@@ -92,7 +97,12 @@ class UpdateIncidentStatusRequested extends SecurityEvent {
   final String incidentId;
   final String status;
   final String resolution;
-  const UpdateIncidentStatusRequested(this.schoolId, this.incidentId, this.status, this.resolution);
+  const UpdateIncidentStatusRequested(
+    this.schoolId,
+    this.incidentId,
+    this.status,
+    this.resolution,
+  );
   @override
   List<Object?> get props => [schoolId, incidentId, status, resolution];
 }
@@ -117,7 +127,12 @@ class ResolveEmergencyRequested extends SecurityEvent {
   final String emergencyId;
   final DateTime endTime;
   final List<String> actions;
-  const ResolveEmergencyRequested(this.schoolId, this.emergencyId, this.endTime, this.actions);
+  const ResolveEmergencyRequested(
+    this.schoolId,
+    this.emergencyId,
+    this.endTime,
+    this.actions,
+  );
   @override
   List<Object?> get props => [schoolId, emergencyId, endTime, actions];
 }

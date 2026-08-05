@@ -35,17 +35,35 @@ class _SchoolSplashScreenState extends State<SchoolSplashScreen>
     );
 
     _logoScale = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.1).chain(CurveTween(curve: Curves.easeOutBack)), weight: 40),
-      TweenSequenceItem(tween: Tween(begin: 1.1, end: 1.0).chain(CurveTween(curve: Curves.easeInOut)), weight: 20),
+      TweenSequenceItem(
+        tween: Tween(
+          begin: 0.0,
+          end: 1.1,
+        ).chain(CurveTween(curve: Curves.easeOutBack)),
+        weight: 40,
+      ),
+      TweenSequenceItem(
+        tween: Tween(
+          begin: 1.1,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 20,
+      ),
       TweenSequenceItem(tween: ConstantTween<double>(1.0), weight: 40),
     ]).animate(_mainController);
 
     _logoOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _mainController, curve: const Interval(0.0, 0.3, curve: Curves.easeIn)),
+      CurvedAnimation(
+        parent: _mainController,
+        curve: const Interval(0.0, 0.3, curve: Curves.easeIn),
+      ),
     );
 
     _contentOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _mainController, curve: const Interval(0.4, 0.8, curve: Curves.easeIn)),
+      CurvedAnimation(
+        parent: _mainController,
+        curve: const Interval(0.4, 0.8, curve: Curves.easeIn),
+      ),
     );
 
     _mainController.forward();
@@ -68,7 +86,7 @@ class _SchoolSplashScreenState extends State<SchoolSplashScreen>
   void _scheduleNavigation() {
     if (_navigationScheduled) return;
     _navigationScheduled = true;
-    
+
     Future.delayed(const Duration(milliseconds: 3000), () {
       if (mounted) {
         _navigateToHome();
@@ -108,8 +126,8 @@ class _SchoolSplashScreenState extends State<SchoolSplashScreen>
         backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
         body: BlocBuilder<SystemConfigBloc, SystemConfigState>(
           builder: (context, state) {
-            final config = state is SystemConfigLoaded 
-                ? state.config 
+            final config = state is SystemConfigLoaded
+                ? state.config
                 : (state is SystemConfigError ? state.config : null);
 
             return Center(
@@ -122,9 +140,15 @@ class _SchoolSplashScreenState extends State<SchoolSplashScreen>
                       animation: _mainController,
                       builder: (context, child) => Opacity(
                         opacity: _logoOpacity.value,
-                        child: Transform.scale(scale: _logoScale.value, child: child),
+                        child: Transform.scale(
+                          scale: _logoScale.value,
+                          child: child,
+                        ),
                       ),
-                      child: const PulseLogo(size: 100, variant: PulseLogoVariant.vertical),
+                      child: const PulseLogo(
+                        size: 100,
+                        variant: PulseLogoVariant.vertical,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.x6l),
                     if (config != null)
@@ -136,7 +160,9 @@ class _SchoolSplashScreenState extends State<SchoolSplashScreen>
                               config.schoolName.toUpperCase(),
                               textAlign: TextAlign.center,
                               style: AppTypography.headlineMedium.copyWith(
-                                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                                color: isDark
+                                    ? AppColors.textPrimaryDark
+                                    : AppColors.textPrimaryLight,
                                 letterSpacing: 4,
                               ),
                             ),
@@ -144,7 +170,9 @@ class _SchoolSplashScreenState extends State<SchoolSplashScreen>
                             Container(
                               height: 2,
                               width: 60,
-                              color: AppColors.electricBlue.withValues(alpha: 0.5),
+                              color: AppColors.electricBlue.withValues(
+                                alpha: 0.5,
+                              ),
                             ),
                             const SizedBox(height: AppSpacing.m),
                             Text(
@@ -152,7 +180,9 @@ class _SchoolSplashScreenState extends State<SchoolSplashScreen>
                               textAlign: TextAlign.center,
                               style: AppTypography.bodyMedium.copyWith(
                                 fontStyle: FontStyle.italic,
-                                color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                                color: isDark
+                                    ? AppColors.textMutedDark
+                                    : AppColors.textMutedLight,
                               ),
                             ),
                             const SizedBox(height: AppSpacing.x7l),
@@ -162,7 +192,9 @@ class _SchoolSplashScreenState extends State<SchoolSplashScreen>
                             ),
                             Text(
                               widget.user.name,
-                              style: AppTypography.titleLarge.copyWith(fontSize: 24),
+                              style: AppTypography.titleLarge.copyWith(
+                                fontSize: 24,
+                              ),
                             ),
                           ],
                         ),

@@ -65,22 +65,35 @@ class _TaskListScreenState extends State<TaskListScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
                 _buildSectionHeader('Priority Tasks', '2'),
-                ...mockTasks.where((t) => t.priority == TaskPriority.high).map((task) => TaskCard(
-                  task: task,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => TaskDetailsScreen(task: task)),
-                  ),
-                )),
+                ...mockTasks
+                    .where((t) => t.priority == TaskPriority.high)
+                    .map(
+                      (task) => TaskCard(
+                        task: task,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => TaskDetailsScreen(task: task),
+                          ),
+                        ),
+                      ),
+                    ),
                 const SizedBox(height: 16),
                 _buildSectionHeader('General Tasks', '3'),
-                ...mockTasks.where((t) => t.priority != TaskPriority.high).take(3).map((task) => TaskCard(
-                  task: task,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => TaskDetailsScreen(task: task)),
-                  ),
-                )),
+                ...mockTasks
+                    .where((t) => t.priority != TaskPriority.high)
+                    .take(3)
+                    .map(
+                      (task) => TaskCard(
+                        task: task,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => TaskDetailsScreen(task: task),
+                          ),
+                        ),
+                      ),
+                    ),
                 const SizedBox(height: 24),
                 PrimaryButton(
                   label: 'Add New Task',
@@ -107,17 +120,23 @@ class _TaskListScreenState extends State<TaskListScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent,
+            color: isSelected
+                ? Theme.of(context).colorScheme.primary
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isSelected ? Colors.transparent : Theme.of(context).colorScheme.outlineVariant,
+              color: isSelected
+                  ? Colors.transparent
+                  : Theme.of(context).colorScheme.outlineVariant,
             ),
           ),
           child: Text(
             label,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurfaceVariant,
+              color: isSelected
+                  ? Colors.white
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 13,
               fontWeight: FontWeight.bold,
             ),
@@ -140,7 +159,9 @@ class _TaskListScreenState extends State<TaskListScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+              color: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(

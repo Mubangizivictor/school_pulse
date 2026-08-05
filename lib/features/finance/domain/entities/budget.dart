@@ -22,17 +22,18 @@ class Budget extends Equatable {
   });
 
   double get remainingAmount => allocatedAmount - spentAmount;
-  double get utilizationPercentage => allocatedAmount > 0 ? (spentAmount / allocatedAmount) * 100 : 0;
+  double get utilizationPercentage =>
+      allocatedAmount > 0 ? (spentAmount / allocatedAmount) * 100 : 0;
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        name,
-        academicYear,
-        term,
-        allocatedAmount,
-        spentAmount,
-        description,
-      ];
+    id,
+    schoolId,
+    name,
+    academicYear,
+    term,
+    allocatedAmount,
+    spentAmount,
+    description,
+  ];
 }

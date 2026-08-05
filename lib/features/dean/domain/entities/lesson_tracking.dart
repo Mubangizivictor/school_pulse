@@ -31,16 +31,16 @@ class LessonRecord extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        subjectId,
-        subjectName,
-        classId,
-        className,
-        teacherId,
-        teacherName,
-        scheduledAt,
-        status,
-        topicCovered,
-        remarks,
-      ];
+    id,
+    subjectId,
+    subjectName,
+    classId,
+    className,
+    teacherId,
+    teacherName,
+    scheduledAt,
+    status,
+    topicCovered,
+    remarks,
+  ];
 }

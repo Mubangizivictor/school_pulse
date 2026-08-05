@@ -278,7 +278,12 @@ class MatronBloc extends Bloc<MatronEvent, MatronState> {
   void _onWatchAttendance(WatchAttendance event, Emitter<MatronState> emit) {
     _attendanceSubscription?.cancel();
     _attendanceSubscription = repository
-        .getAttendance(event.schoolId, event.date, event.dormitoryId, event.type)
+        .getAttendance(
+          event.schoolId,
+          event.date,
+          event.dormitoryId,
+          event.type,
+        )
         .listen((attendance) => add(_AttendanceUpdated(attendance)));
   }
 

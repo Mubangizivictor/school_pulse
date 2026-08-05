@@ -80,7 +80,8 @@ class BiometricsBloc extends Bloc<BiometricsEvent, BiometricsState> {
       await emit.forEach(
         getAuditLogs(event.schoolId, personId: event.personId),
         onData: (logs) => BiometricsAuditLogsLoaded(logs),
-        onError: (error, stackTrace) => BiometricOperationFailure(error.toString()),
+        onError: (error, stackTrace) =>
+            BiometricOperationFailure(error.toString()),
       );
     });
   }

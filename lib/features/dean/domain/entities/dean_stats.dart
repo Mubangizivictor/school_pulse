@@ -14,5 +14,10 @@ class DeanStats extends Equatable {
   });
 
   @override
-  List<Object?> get props => [totalStudents, totalTeachers, averagePerformance, syllabusCoverage];
+  List<Object?> get props => [
+    totalStudents,
+    totalTeachers,
+    averagePerformance,
+    syllabusCoverage,
+  ];
 }

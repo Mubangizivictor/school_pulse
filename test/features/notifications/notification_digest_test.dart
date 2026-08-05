@@ -37,7 +37,10 @@ void main() {
   final from = DateTime(2026, 8, 1);
   final to = DateTime(2026, 8, 1, 23, 59);
 
-  NotificationDigest build(List<NotificationItem> items, {bool weekly = false}) {
+  NotificationDigest build(
+    List<NotificationItem> items, {
+    bool weekly = false,
+  }) {
     return builder.build(
       notifications: items,
       from: from,
@@ -111,8 +114,9 @@ void main() {
       expect(digest.sections, hasLength(2));
       expect(digest.totalCount, 3);
 
-      final homework = digest.sections
-          .firstWhere((s) => s.category == NotificationCategory.homework);
+      final homework = digest.sections.firstWhere(
+        (s) => s.category == NotificationCategory.homework,
+      );
       expect(homework.totalCount, 2);
     });
 
@@ -134,7 +138,10 @@ void main() {
       final digest = build(items);
       final section = digest.sections.single;
 
-      expect(section.lines, hasLength(NotificationDigestBuilder.maxLinesPerSection));
+      expect(
+        section.lines,
+        hasLength(NotificationDigestBuilder.maxLinesPerSection),
+      );
       expect(section.totalCount, 9);
       expect(section.isTruncated, isTrue);
       expect(digest.toPlainText(), contains('and 4 more'));
@@ -161,7 +168,10 @@ void main() {
         ),
       ]);
 
-      expect(digest.sections.single.lines.single, 'Brian was assigned new homework');
+      expect(
+        digest.sections.single.lines.single,
+        'Brian was assigned new homework',
+      );
     });
   });
 

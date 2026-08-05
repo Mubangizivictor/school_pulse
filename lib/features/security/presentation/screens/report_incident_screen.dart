@@ -51,14 +51,20 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
   }
 
   Future<void> _addPhoto() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.camera, maxWidth: 1200, imageQuality: 80);
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.camera,
+      maxWidth: 1200,
+      imageQuality: 80,
+    );
     if (picked != null) setState(() => _photos.add(picked));
   }
 
   Future<List<String>> _uploadPhotos(String incidentId, String schoolId) async {
     final urls = <String>[];
     for (var i = 0; i < _photos.length; i++) {
-      final ref = FirebaseStorage.instance.ref('security_incidents/$schoolId/$incidentId/$i.jpg');
+      final ref = FirebaseStorage.instance.ref(
+        'security_incidents/$schoolId/$incidentId/$i.jpg',
+      );
       await ref.putFile(File(_photos[i].path));
       urls.add(await ref.getDownloadURL());
     }
@@ -66,7 +72,8 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
   }
 
   Future<void> _submit() async {
-    if (_descriptionController.text.trim().isEmpty || _locationController.text.trim().isEmpty) {
+    if (_descriptionController.text.trim().isEmpty ||
+        _locationController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Description and location are required')),
       );
@@ -119,8 +126,15 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                     Expanded(
                       child: DropdownButtonFormField<String>(
                         initialValue: _type,
-                        decoration: const InputDecoration(labelText: 'Incident Type', border: OutlineInputBorder()),
-                        items: kIncidentTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                        decoration: const InputDecoration(
+                          labelText: 'Incident Type',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: kIncidentTypes
+                            .map(
+                              (t) => DropdownMenuItem(value: t, child: Text(t)),
+                            )
+                            .toList(),
                         onChanged: (v) => setState(() => _type = v ?? _type),
                       ),
                     ),
@@ -128,7 +142,10 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                     Expanded(
                       child: TextField(
                         controller: _locationController,
-                        decoration: const InputDecoration(labelText: 'Location', border: OutlineInputBorder()),
+                        decoration: const InputDecoration(
+                          labelText: 'Location',
+                          border: OutlineInputBorder(),
+                        ),
                       ),
                     ),
                   ],
@@ -136,93 +153,146 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
               ] else ...[
                 DropdownButtonFormField<String>(
                   initialValue: _type,
-                  decoration: const InputDecoration(labelText: 'Incident Type', border: OutlineInputBorder()),
-                  items: kIncidentTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                  decoration: const InputDecoration(
+                    labelText: 'Incident Type',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: kIncidentTypes
+                      .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                      .toList(),
                   onChanged: (v) => setState(() => _type = v ?? _type),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _locationController,
-                  decoration: const InputDecoration(labelText: 'Location', border: OutlineInputBorder()),
+                  decoration: const InputDecoration(
+                    labelText: 'Location',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
               ],
               const SizedBox(height: 12),
               TextField(
                 controller: _descriptionController,
                 maxLines: 2,
-                decoration: const InputDecoration(labelText: 'Short Description', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                  labelText: 'Short Description',
+                  border: OutlineInputBorder(),
+                ),
               ),
               const SizedBox(height: 12),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                title: Text('Date & Time: ${_timestamp.toLocal()}'.split('.').first),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                title: Text(
+                  'Date & Time: ${_timestamp.toLocal()}'.split('.').first,
+                ),
                 trailing: const Icon(Icons.edit_calendar_outlined),
                 onTap: () async {
                   final date = await showDatePicker(
                     context: context,
                     initialDate: _timestamp,
-                    firstDate: DateTime.now().subtract(const Duration(days: 30)),
+                    firstDate: DateTime.now().subtract(
+                      const Duration(days: 30),
+                    ),
                     lastDate: DateTime.now(),
                   );
                   if (date == null || !context.mounted) return;
-                  final time = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(_timestamp));
+                  final time = await showTimePicker(
+                    context: context,
+                    initialTime: TimeOfDay.fromDateTime(_timestamp),
+                  );
                   if (time == null) return;
-                  setState(() => _timestamp = DateTime(date.year, date.month, date.day, time.hour, time.minute));
+                  setState(
+                    () => _timestamp = DateTime(
+                      date.year,
+                      date.month,
+                      date.day,
+                      time.hour,
+                      time.minute,
+                    ),
+                  );
                 },
               ),
               const SizedBox(height: 12),
-              Text('People Involved', style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                'People Involved',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
               const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(
                     child: TextField(
                       controller: _involvedController,
-                      decoration: const InputDecoration(labelText: 'Name or ID', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(
+                        labelText: 'Name or ID',
+                        border: OutlineInputBorder(),
+                      ),
                       onSubmitted: (_) => _addInvolvedPerson(),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  IconButton.filledTonal(icon: const Icon(Icons.add), onPressed: _addInvolvedPerson),
+                  IconButton.filledTonal(
+                    icon: const Icon(Icons.add),
+                    onPressed: _addInvolvedPerson,
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
                 children: _involvedPersons
-                    .map((p) => Chip(
-                          label: Text(p),
-                          onDeleted: () => setState(() => _involvedPersons.remove(p)),
-                          deleteIcon: const Icon(Icons.close, size: 14),
-                        ))
+                    .map(
+                      (p) => Chip(
+                        label: Text(p),
+                        onDeleted: () =>
+                            setState(() => _involvedPersons.remove(p)),
+                        deleteIcon: const Icon(Icons.close, size: 14),
+                      ),
+                    )
                     .toList(),
               ),
               const SizedBox(height: 24),
-              Text('Photos / Evidence', style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                'Photos / Evidence',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 12,
                 runSpacing: 12,
                 children: [
-                  ..._photos.map((p) => Stack(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.file(File(p.path), width: 100, height: 100, fit: BoxFit.cover),
+                  ..._photos.map(
+                    (p) => Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.file(
+                            File(p.path),
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
                           ),
-                          Positioned(
-                            top: 4,
-                            right: 4,
-                            child: IconButton.filled(
-                              icon: const Icon(Icons.close, size: 14),
-                              onPressed: () => setState(() => _photos.remove(p)),
-                              constraints: const BoxConstraints.tightFor(width: 24, height: 24),
-                              padding: EdgeInsets.zero,
+                        ),
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: IconButton.filled(
+                            icon: const Icon(Icons.close, size: 14),
+                            onPressed: () => setState(() => _photos.remove(p)),
+                            constraints: const BoxConstraints.tightFor(
+                              width: 24,
+                              height: 24,
                             ),
+                            padding: EdgeInsets.zero,
                           ),
-                        ],
-                      )),
+                        ),
+                      ],
+                    ),
+                  ),
                   InkWell(
                     onTap: _addPhoto,
                     borderRadius: BorderRadius.circular(12),
@@ -230,9 +300,14 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                       width: 100,
                       height: 100,
                       decoration: BoxDecoration(
-                        border: Border.all(color: Theme.of(context).dividerColor),
+                        border: Border.all(
+                          color: Theme.of(context).dividerColor,
+                        ),
                         borderRadius: BorderRadius.circular(12),
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest
+                            .withValues(alpha: 0.3),
                       ),
                       child: const Icon(Icons.add_a_photo_outlined),
                     ),
@@ -255,8 +330,21 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                 child: FilledButton(
                   onPressed: _isSaving ? null : _submit,
                   child: _isSaving
-                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Text('Submit Incident Report', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          'Submit Incident Report',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(height: 40),
@@ -267,4 +355,3 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
     );
   }
 }
-

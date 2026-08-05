@@ -86,14 +86,14 @@ class EnrollStudentRequested extends AdmissionEvent {
 
   @override
   List<Object?> get props => [
-        operatorUser,
-        applicationId,
-        schoolId,
-        schoolCode,
-        academicYear,
-        academicYearId,
-        term,
-        feeStructureId,
-        totalBilled,
-      ];
+    operatorUser,
+    applicationId,
+    schoolId,
+    schoolCode,
+    academicYear,
+    academicYearId,
+    term,
+    feeStructureId,
+    totalBilled,
+  ];
 }

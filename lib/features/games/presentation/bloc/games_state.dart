@@ -30,7 +30,14 @@ class GamesLoaded extends GamesState {
   });
 
   @override
-  List<Object?> get props => [houses, competitions, activeTeams, totalEquipment, nextEvent, upcomingFixtures];
+  List<Object?> get props => [
+    houses,
+    competitions,
+    activeTeams,
+    totalEquipment,
+    nextEvent,
+    upcomingFixtures,
+  ];
 }
 
 class GamesError extends GamesState {

@@ -110,16 +110,16 @@ class _MethodCard extends StatelessWidget {
       opacity: enabled ? 1 : 0.45,
       child: AppCard(
         onTap: enabled ? onTap : null,
-        borderColor: selected ? AppColors.electricBlue : null,
+        borderColor: selected ? AppColors.primary(context) : null,
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: AppColors.electricBlue.withValues(alpha: 0.12),
+                color: AppColors.primary(context).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: AppColors.electricBlue),
+              child: Icon(icon, color: AppColors.primary(context)),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -144,7 +144,7 @@ class _MethodCard extends StatelessWidget {
               ),
             ),
             if (selected)
-              Icon(Icons.check_circle, color: AppColors.electricBlue)
+              Icon(Icons.check_circle, color: AppColors.primary(context))
             else if (!enabled)
               StatusBadge(label: 'Soon', color: AppColors.textMuted(context)),
           ],

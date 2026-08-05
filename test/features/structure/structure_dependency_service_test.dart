@@ -18,10 +18,22 @@ void main() {
     });
 
     test('counts only students in the given school and class', () async {
-      await firestore.collection('students').add({'schoolId': 'school-1', 'classId': 'class-1'});
-      await firestore.collection('students').add({'schoolId': 'school-1', 'classId': 'class-1'});
-      await firestore.collection('students').add({'schoolId': 'school-1', 'classId': 'class-2'});
-      await firestore.collection('students').add({'schoolId': 'school-2', 'classId': 'class-1'});
+      await firestore.collection('students').add({
+        'schoolId': 'school-1',
+        'classId': 'class-1',
+      });
+      await firestore.collection('students').add({
+        'schoolId': 'school-1',
+        'classId': 'class-1',
+      });
+      await firestore.collection('students').add({
+        'schoolId': 'school-1',
+        'classId': 'class-2',
+      });
+      await firestore.collection('students').add({
+        'schoolId': 'school-2',
+        'classId': 'class-1',
+      });
 
       final count = await service.countStudentsInClass('school-1', 'class-1');
       expect(count, 2);
@@ -35,9 +47,18 @@ void main() {
     });
 
     test('counts only classes in the given school and level', () async {
-      await firestore.collection('classes').add({'schoolId': 'school-1', 'levelId': 'level-1'});
-      await firestore.collection('classes').add({'schoolId': 'school-1', 'levelId': 'level-2'});
-      await firestore.collection('classes').add({'schoolId': 'school-2', 'levelId': 'level-1'});
+      await firestore.collection('classes').add({
+        'schoolId': 'school-1',
+        'levelId': 'level-1',
+      });
+      await firestore.collection('classes').add({
+        'schoolId': 'school-1',
+        'levelId': 'level-2',
+      });
+      await firestore.collection('classes').add({
+        'schoolId': 'school-2',
+        'levelId': 'level-1',
+      });
 
       final count = await service.countClassesInLevel('school-1', 'level-1');
       expect(count, 1);
@@ -51,10 +72,24 @@ void main() {
     });
 
     test('sums students across every class under the level', () async {
-      await firestore.collection('classes').add({'schoolId': 'school-1', 'levelId': 'level-1', 'name': 'A'});
-      final classB = await firestore.collection('classes').add({'schoolId': 'school-1', 'levelId': 'level-1', 'name': 'B'});
-      await firestore.collection('students').add({'schoolId': 'school-1', 'classId': classB.id});
-      await firestore.collection('students').add({'schoolId': 'school-1', 'classId': classB.id});
+      await firestore.collection('classes').add({
+        'schoolId': 'school-1',
+        'levelId': 'level-1',
+        'name': 'A',
+      });
+      final classB = await firestore.collection('classes').add({
+        'schoolId': 'school-1',
+        'levelId': 'level-1',
+        'name': 'B',
+      });
+      await firestore.collection('students').add({
+        'schoolId': 'school-1',
+        'classId': classB.id,
+      });
+      await firestore.collection('students').add({
+        'schoolId': 'school-1',
+        'classId': classB.id,
+      });
 
       final count = await service.countStudentsInLevel('school-1', 'level-1');
       expect(count, 2);

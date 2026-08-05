@@ -46,7 +46,10 @@ class MaintenanceIsar {
     );
   }
 
-  factory MaintenanceIsar.fromEntity(MaintenanceRecord entity, {bool isSynced = true}) {
+  factory MaintenanceIsar.fromEntity(
+    MaintenanceRecord entity, {
+    bool isSynced = true,
+  }) {
     return MaintenanceIsar()
       ..maintenanceId = entity.id
       ..assetId = entity.assetId

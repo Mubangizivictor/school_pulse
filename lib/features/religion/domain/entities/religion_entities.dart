@@ -5,7 +5,8 @@ class ReligionActivity extends Equatable {
   final String title;
   final DateTime dateTime;
   final String venue;
-  final String category; // e.g., 'Catholic', 'Anglican', 'Muslim', 'SDA', 'Inter-faith'
+  final String
+  category; // e.g., 'Catholic', 'Anglican', 'Muslim', 'SDA', 'Inter-faith'
 
   const ReligionActivity({
     required this.id,

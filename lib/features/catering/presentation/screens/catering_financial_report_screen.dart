@@ -9,10 +9,12 @@ class CateringFinancialReportScreen extends StatefulWidget {
   const CateringFinancialReportScreen({super.key});
 
   @override
-  State<CateringFinancialReportScreen> createState() => _CateringFinancialReportScreenState();
+  State<CateringFinancialReportScreen> createState() =>
+      _CateringFinancialReportScreenState();
 }
 
-class _CateringFinancialReportScreenState extends State<CateringFinancialReportScreen> {
+class _CateringFinancialReportScreenState
+    extends State<CateringFinancialReportScreen> {
   DateTime _startDate = DateTime.now().subtract(const Duration(days: 30));
   DateTime _endDate = DateTime.now();
 
@@ -39,7 +41,10 @@ class _CateringFinancialReportScreenState extends State<CateringFinancialReportS
                 context: context,
                 firstDate: DateTime(2020),
                 lastDate: DateTime.now(),
-                initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
+                initialDateRange: DateTimeRange(
+                  start: _startDate,
+                  end: _endDate,
+                ),
               );
               if (range != null) {
                 setState(() {
@@ -65,14 +70,38 @@ class _CateringFinancialReportScreenState extends State<CateringFinancialReportS
                 children: [
                   _buildSummaryCard(data),
                   const SizedBox(height: 24),
-                  const Text('Cost Breakdown', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Cost Breakdown',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 16),
-                  _buildDetailItem('Total Revenue (Meal Fees)', data['totalRevenue'], Colors.green),
-                  _buildDetailItem('Direct Food Costs', data['foodCost'], Colors.orange),
-                  _buildDetailItem('Wastage Impact', data['wastageCost'], Colors.red),
-                  _buildDetailItem('Labor & Overheads', data['laborCost'], Colors.blueGrey),
+                  _buildDetailItem(
+                    'Total Revenue (Meal Fees)',
+                    data['totalRevenue'],
+                    Colors.green,
+                  ),
+                  _buildDetailItem(
+                    'Direct Food Costs',
+                    data['foodCost'],
+                    Colors.orange,
+                  ),
+                  _buildDetailItem(
+                    'Wastage Impact',
+                    data['wastageCost'],
+                    Colors.red,
+                  ),
+                  _buildDetailItem(
+                    'Labor & Overheads',
+                    data['laborCost'],
+                    Colors.blueGrey,
+                  ),
                   const Divider(height: 32),
-                  _buildDetailItem('Net Operating Profit', data['netProfit'], Colors.blue, isBold: true),
+                  _buildDetailItem(
+                    'Net Operating Profit',
+                    data['netProfit'],
+                    Colors.blue,
+                    isBold: true,
+                  ),
                   const SizedBox(height: 32),
                   _buildEfficiencyMetrics(data),
                 ],
@@ -88,7 +117,10 @@ class _CateringFinancialReportScreenState extends State<CateringFinancialReportS
   }
 
   Widget _buildSummaryCard(Map<String, dynamic> data) {
-    final currencyFormat = NumberFormat.currency(symbol: 'UGX ', decimalDigits: 0);
+    final currencyFormat = NumberFormat.currency(
+      symbol: 'UGX ',
+      decimalDigits: 0,
+    );
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -104,14 +136,26 @@ class _CateringFinancialReportScreenState extends State<CateringFinancialReportS
             const SizedBox(height: 8),
             Text(
               '${((data['grossProfit'] / data['totalRevenue']) * 100).toStringAsFixed(1)}%',
-              style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildSummaryItem('Total Rev', currencyFormat.format(data['totalRevenue'])),
-                _buildSummaryItem('Total Cost', currencyFormat.format(data['foodCost'] + data['wastageCost'] + data['laborCost'])),
+                _buildSummaryItem(
+                  'Total Rev',
+                  currencyFormat.format(data['totalRevenue']),
+                ),
+                _buildSummaryItem(
+                  'Total Cost',
+                  currencyFormat.format(
+                    data['foodCost'] + data['wastageCost'] + data['laborCost'],
+                  ),
+                ),
               ],
             ),
           ],
@@ -124,20 +168,44 @@ class _CateringFinancialReportScreenState extends State<CateringFinancialReportS
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-        Text(value, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildDetailItem(String label, dynamic value, Color color, {bool isBold = false}) {
-    final currencyFormat = NumberFormat.currency(symbol: 'UGX ', decimalDigits: 0);
+  Widget _buildDetailItem(
+    String label,
+    dynamic value,
+    Color color, {
+    bool isBold = false,
+  }) {
+    final currencyFormat = NumberFormat.currency(
+      symbol: 'UGX ',
+      decimalDigits: 0,
+    );
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontSize: 16, fontWeight: isBold ? FontWeight.bold : FontWeight.normal)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
           Text(
             currencyFormat.format(value),
             style: TextStyle(
@@ -162,10 +230,19 @@ class _CateringFinancialReportScreenState extends State<CateringFinancialReportS
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Performance Indicators', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text(
+            'Performance Indicators',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 12),
-          _buildMetricRow('Food Cost %', '${((data['foodCost'] / data['totalRevenue']) * 100).toStringAsFixed(1)}%'),
-          _buildMetricRow('Wastage %', '${((data['wastageCost'] / data['foodCost']) * 100).toStringAsFixed(1)}%'),
+          _buildMetricRow(
+            'Food Cost %',
+            '${((data['foodCost'] / data['totalRevenue']) * 100).toStringAsFixed(1)}%',
+          ),
+          _buildMetricRow(
+            'Wastage %',
+            '${((data['wastageCost'] / data['foodCost']) * 100).toStringAsFixed(1)}%',
+          ),
         ],
       ),
     );

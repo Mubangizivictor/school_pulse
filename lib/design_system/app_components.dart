@@ -10,12 +10,7 @@ class Skeleton extends StatelessWidget {
   final double? width;
   final double borderRadius;
 
-  const Skeleton({
-    super.key,
-    this.height,
-    this.width,
-    this.borderRadius = 8,
-  });
+  const Skeleton({super.key, this.height, this.width, this.borderRadius = 8});
 
   @override
   Widget build(BuildContext context) {
@@ -99,23 +94,29 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
         child: Container(
           margin: widget.margin,
           decoration: BoxDecoration(
-            color: widget.color ?? (isDark ? Theme.of(context).colorScheme.surface : Colors.white),
+            color:
+                widget.color ??
+                (isDark ? Theme.of(context).colorScheme.surface : Colors.white),
             borderRadius: BorderRadius.circular(16),
             border: widget.showBorder
-              ? Border.all(
-                  color: widget.borderColor ?? Theme.of(context).colorScheme.outlineVariant.withValues(
-                    alpha: isDark ? 0.7 : 0.8,
-                  ),
-                  width: 1,
-                )
-              : null,
-            boxShadow: (widget.showShadow && !isDark) ? [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ] : [],
+                ? Border.all(
+                    color:
+                        widget.borderColor ??
+                        Theme.of(context).colorScheme.outlineVariant.withValues(
+                          alpha: isDark ? 0.7 : 0.8,
+                        ),
+                    width: 1,
+                  )
+                : null,
+            boxShadow: (widget.showShadow && !isDark)
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : [],
           ),
           clipBehavior: Clip.antiAlias,
           // A Material ancestor here (rather than relying on whatever
@@ -135,7 +136,6 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
     );
   }
 }
-
 
 class StatusBadge extends StatelessWidget {
   final String label;
@@ -157,7 +157,10 @@ class StatusBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.withValues(alpha: isDark ? 0.15 : 0.08),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: isDark ? 0.3 : 0.2), width: 1),
+        border: Border.all(
+          color: color.withValues(alpha: isDark ? 0.3 : 0.2),
+          width: 1,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -230,7 +233,9 @@ class AlertBanner extends StatelessWidget {
                   Text(
                     message,
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.85),
                       fontSize: 13,
                     ),
                   ),
@@ -273,7 +278,10 @@ class PrimaryButton extends StatelessWidget {
             ? const SizedBox(
                 height: 20,
                 width: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
               )
             : Icon(icon, size: 20),
         label: Text(label),
@@ -285,7 +293,10 @@ class PrimaryButton extends StatelessWidget {
           ? const SizedBox(
               height: 20,
               width: 20,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
             )
           : Text(label),
     );
@@ -313,10 +324,7 @@ class SecondaryButton extends StatelessWidget {
         label: Text(label),
       );
     }
-    return OutlinedButton(
-      onPressed: onPressed,
-      child: Text(label),
-    );
+    return OutlinedButton(onPressed: onPressed, child: Text(label));
   }
 }
 
@@ -348,13 +356,17 @@ class EmptyState extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
               message,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).hintColor),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).hintColor,
+              ),
               textAlign: TextAlign.center,
             ),
             if (ctaLabel != null) ...[
@@ -410,7 +422,12 @@ class AvatarInitials extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initials = name.split(' ').take(2).map((e) => e.isNotEmpty ? e[0] : '').join().toUpperCase();
+    final initials = name
+        .split(' ')
+        .take(2)
+        .map((e) => e.isNotEmpty ? e[0] : '')
+        .join()
+        .toUpperCase();
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -419,7 +436,9 @@ class AvatarInitials extends StatelessWidget {
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.primaryContainer,
           shape: BoxShape.circle,
-          border: ringColor != null ? Border.all(color: ringColor!, width: 2) : null,
+          border: ringColor != null
+              ? Border.all(color: ringColor!, width: 2)
+              : null,
         ),
         child: Center(
           child: Text(
@@ -458,7 +477,8 @@ class AnimatedNumberText extends StatefulWidget {
   State<AnimatedNumberText> createState() => _AnimatedNumberTextState();
 }
 
-class _AnimatedNumberTextState extends State<AnimatedNumberText> with SingleTickerProviderStateMixin {
+class _AnimatedNumberTextState extends State<AnimatedNumberText>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
@@ -466,9 +486,10 @@ class _AnimatedNumberTextState extends State<AnimatedNumberText> with SingleTick
   void initState() {
     super.initState();
     _controller = AnimationController(vsync: this, duration: widget.duration);
-    _animation = Tween<double>(begin: 0, end: widget.value).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutExpo),
-    );
+    _animation = Tween<double>(
+      begin: 0,
+      end: widget.value,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutExpo));
     _controller.forward();
   }
 
@@ -476,9 +497,10 @@ class _AnimatedNumberTextState extends State<AnimatedNumberText> with SingleTick
   void didUpdateWidget(AnimatedNumberText oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.value != widget.value) {
-      _animation = Tween<double>(begin: oldWidget.value, end: widget.value).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeOutExpo),
-      );
+      _animation = Tween<double>(begin: oldWidget.value, end: widget.value)
+          .animate(
+            CurvedAnimation(parent: _controller, curve: Curves.easeOutExpo),
+          );
       _controller.reset();
       _controller.forward();
     }
@@ -568,7 +590,10 @@ class FadeInSlide extends StatelessWidget {
       future: Future.delayed(delay),
       builder: (context, snapshot) {
         return TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0.0, end: snapshot.connectionState == ConnectionState.done ? 1.0 : 0.0),
+          tween: Tween(
+            begin: 0.0,
+            end: snapshot.connectionState == ConnectionState.done ? 1.0 : 0.0,
+          ),
           duration: duration,
           curve: Curves.easeOutCubic,
           builder: (context, value, child) {
@@ -617,7 +642,8 @@ class DashboardStatCard extends StatefulWidget {
   State<DashboardStatCard> createState() => _DashboardStatCardState();
 }
 
-class _DashboardStatCardState extends State<DashboardStatCard> with SingleTickerProviderStateMixin {
+class _DashboardStatCardState extends State<DashboardStatCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _iconAnimation;
 
@@ -671,7 +697,9 @@ class _DashboardStatCardState extends State<DashboardStatCard> with SingleTicker
                   delay: const Duration(milliseconds: 400),
                   child: StatusBadge(
                     label: widget.trend!,
-                    color: widget.isPositiveTrend ?? true ? semantic.success : semantic.error,
+                    color: widget.isPositiveTrend ?? true
+                        ? semantic.success
+                        : semantic.error,
                   ),
                 ),
             ],
@@ -688,9 +716,9 @@ class _DashboardStatCardState extends State<DashboardStatCard> with SingleTicker
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -699,10 +727,10 @@ class _DashboardStatCardState extends State<DashboardStatCard> with SingleTicker
                 suffix: widget.suffix,
                 decimalPlaces: widget.decimalPlaces,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 18,
-                      letterSpacing: -0.5,
-                    ),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 18,
+                  letterSpacing: -0.5,
+                ),
               ),
             ],
           ),
@@ -738,7 +766,8 @@ class AnalyticalStatCard extends StatefulWidget {
   State<AnalyticalStatCard> createState() => _AnalyticalStatCardState();
 }
 
-class _AnalyticalStatCardState extends State<AnalyticalStatCard> with SingleTickerProviderStateMixin {
+class _AnalyticalStatCardState extends State<AnalyticalStatCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _iconAnimation;
 
@@ -808,15 +837,19 @@ class _AnalyticalStatCardState extends State<AnalyticalStatCard> with SingleTick
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
-                          fontWeight: FontWeight.w600,
-                        ),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.8),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   if (widget.trend != null)
                     Text(
                       widget.trend!,
                       style: TextStyle(
-                        color: widget.isPositiveTrend ?? true ? semantic.success : semantic.error,
+                        color: widget.isPositiveTrend ?? true
+                            ? semantic.success
+                            : semantic.error,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
@@ -830,10 +863,10 @@ class _AnalyticalStatCardState extends State<AnalyticalStatCard> with SingleTick
               suffix: widget.suffix,
               decimalPlaces: widget.decimalPlaces,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 18,
-                    letterSpacing: -0.5,
-                  ),
+                fontWeight: FontWeight.w900,
+                fontSize: 18,
+                letterSpacing: -0.5,
+              ),
             ),
           ],
         ),
@@ -841,7 +874,6 @@ class _AnalyticalStatCardState extends State<AnalyticalStatCard> with SingleTick
     );
   }
 }
-
 
 class ProgressCard extends StatelessWidget {
   final String title;
@@ -877,8 +909,8 @@ class ProgressCard extends StatelessWidget {
           Text(
             subtitle,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.outline,
-                ),
+              color: Theme.of(context).colorScheme.outline,
+            ),
           ),
         ],
       ),
@@ -887,7 +919,8 @@ class ProgressCard extends StatelessWidget {
 }
 
 class PerformanceBarChart extends StatelessWidget {
-  final Map<String, double> data; // Label to value; bars scale relative to maxValue
+  final Map<String, double>
+  data; // Label to value; bars scale relative to maxValue
   final Color? color;
   final String title;
   final double maxValue;
@@ -928,7 +961,10 @@ class PerformanceBarChart extends StatelessWidget {
                       children: [
                         Text(
                           '${entry.value.round()}${showPercentSign ? '%' : ''}',
-                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Container(
@@ -936,12 +972,16 @@ class PerformanceBarChart extends StatelessWidget {
                           height: 100 * fraction,
                           decoration: BoxDecoration(
                             color: activeColor,
-                            borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(4),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          entry.key.length > 3 ? entry.key.substring(0, 3) : entry.key,
+                          entry.key.length > 3
+                              ? entry.key.substring(0, 3)
+                              : entry.key,
                           style: Theme.of(context).textTheme.labelSmall,
                         ),
                       ],
@@ -998,7 +1038,10 @@ class QuickActionGrid extends StatelessWidget {
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -1045,7 +1088,10 @@ class AppSearchField extends StatelessWidget {
         prefixIcon: const Icon(Icons.search),
         filled: true,
         fillColor: Theme.of(context).colorScheme.surface,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
       ),
     );
   }
@@ -1065,10 +1111,16 @@ Future<bool?> confirmActionDialog(
       title: Text(title),
       content: Text(message),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(cancelLabel)),
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: Text(cancelLabel),
+        ),
         TextButton(
           onPressed: () => Navigator.pop(context, true),
-          child: Text(confirmLabel, style: TextStyle(color: isDestructive ? Colors.red : null)),
+          child: Text(
+            confirmLabel,
+            style: TextStyle(color: isDestructive ? Colors.red : null),
+          ),
         ),
       ],
     ),
@@ -1104,20 +1156,14 @@ class SectionHeader extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
           ),
-          if (trailing != null) ...[
-            const SizedBox(width: 8),
-            trailing!,
-          ],
+          if (trailing != null) ...[const SizedBox(width: 8), trailing!],
           if (actionLabel != null)
-            TextButton(
-              onPressed: onActionPressed,
-              child: Text(actionLabel!),
-            ),
+            TextButton(onPressed: onActionPressed, child: Text(actionLabel!)),
         ],
       ),
     );
@@ -1137,14 +1183,11 @@ class ThemeSwitchTile extends StatelessWidget {
     final themeProvider = context.watch<ThemeProvider>();
 
     return ListTile(
-      leading: Icon(
-        switch (themeProvider.themeMode) {
-          ThemeMode.light => Icons.light_mode_rounded,
-          ThemeMode.dark => Icons.dark_mode_rounded,
-          ThemeMode.system => Icons.brightness_auto_rounded,
-        },
-        color: AppColors.primary(context),
-      ),
+      leading: Icon(switch (themeProvider.themeMode) {
+        ThemeMode.light => Icons.light_mode_rounded,
+        ThemeMode.dark => Icons.dark_mode_rounded,
+        ThemeMode.system => Icons.brightness_auto_rounded,
+      }, color: Theme.of(context).colorScheme.primary),
       title: const Text('App Theme'),
       trailing: Text(
         switch (themeProvider.themeMode) {
@@ -1161,7 +1204,7 @@ class ThemeSwitchTile extends StatelessWidget {
   void _showSelector(BuildContext context, ThemeProvider themeProvider) {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: AppColors.background(context),
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1180,12 +1223,27 @@ class ThemeSwitchTile extends StatelessWidget {
                 ),
               ),
             ),
-            _option(sheetContext, themeProvider, ThemeMode.system,
-                Icons.brightness_auto_rounded, 'System Default'),
-            _option(sheetContext, themeProvider, ThemeMode.light,
-                Icons.light_mode_rounded, 'Light Mode'),
-            _option(sheetContext, themeProvider, ThemeMode.dark,
-                Icons.dark_mode_rounded, 'Dark Mode'),
+            _option(
+              sheetContext,
+              themeProvider,
+              ThemeMode.system,
+              Icons.brightness_auto_rounded,
+              'System Default',
+            ),
+            _option(
+              sheetContext,
+              themeProvider,
+              ThemeMode.light,
+              Icons.light_mode_rounded,
+              'Light Mode',
+            ),
+            _option(
+              sheetContext,
+              themeProvider,
+              ThemeMode.dark,
+              Icons.dark_mode_rounded,
+              'Dark Mode',
+            ),
             const SizedBox(height: 8),
           ],
         ),
@@ -1200,11 +1258,21 @@ class ThemeSwitchTile extends StatelessWidget {
     IconData icon,
     String label,
   ) {
+    final isSelected = themeProvider.themeMode == mode;
+    final colors = Theme.of(context).colorScheme;
     return ListTile(
-      leading: Icon(icon),
+      selected: isSelected,
+      selectedTileColor: colors.primaryContainer,
+      selectedColor: colors.onPrimaryContainer,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+      leading: Icon(
+        icon,
+        color: isSelected ? colors.onPrimaryContainer : colors.onSurfaceVariant,
+      ),
       title: Text(label),
-      trailing: themeProvider.themeMode == mode
-          ? Icon(Icons.check, color: AppColors.primary(context))
+      trailing: isSelected
+          ? Icon(Icons.check, color: colors.onPrimaryContainer)
           : null,
       onTap: () {
         themeProvider.setThemeMode(mode);

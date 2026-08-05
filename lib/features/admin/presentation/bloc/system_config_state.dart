@@ -3,7 +3,7 @@ import '../../data/models/system_config.dart';
 
 abstract class SystemConfigState extends Equatable {
   const SystemConfigState();
-  
+
   @override
   List<Object?> get props => [];
 }

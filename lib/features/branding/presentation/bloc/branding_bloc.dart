@@ -10,17 +10,18 @@ class BrandingBloc extends Bloc<BrandingEvent, BrandingState> {
   final Isar isar;
   final GetSchoolBranding getSchoolBranding;
 
-  BrandingBloc({
-    required this.isar,
-    required this.getSchoolBranding,
-  }) : super(BrandingInitial()) {
+  BrandingBloc({required this.isar, required this.getSchoolBranding})
+    : super(BrandingInitial()) {
     on<InitializeBranding>(_onInitializeBranding);
     on<BrandingUpdateRequested>(_onBrandingUpdateRequested);
     on<FetchBrandingForSchool>(_onFetchBrandingForSchool);
     on<ClearBranding>(_onClearBranding);
   }
 
-  Future<void> _onInitializeBranding(InitializeBranding event, Emitter<BrandingState> emit) async {
+  Future<void> _onInitializeBranding(
+    InitializeBranding event,
+    Emitter<BrandingState> emit,
+  ) async {
     final cached = await isar.schoolBrandingIsars.where().findFirst();
     if (cached != null) {
       emit(BrandingLoaded(_fromIsar(cached)));
@@ -29,12 +30,18 @@ class BrandingBloc extends Bloc<BrandingEvent, BrandingState> {
     }
   }
 
-  Future<void> _onBrandingUpdateRequested(BrandingUpdateRequested event, Emitter<BrandingState> emit) async {
+  Future<void> _onBrandingUpdateRequested(
+    BrandingUpdateRequested event,
+    Emitter<BrandingState> emit,
+  ) async {
     await _saveToIsar(event.branding);
     emit(BrandingLoaded(event.branding));
   }
 
-  Future<void> _onFetchBrandingForSchool(FetchBrandingForSchool event, Emitter<BrandingState> emit) async {
+  Future<void> _onFetchBrandingForSchool(
+    FetchBrandingForSchool event,
+    Emitter<BrandingState> emit,
+  ) async {
     final result = await getSchoolBranding(event.schoolId);
     await result.fold(
       (failure) async {
@@ -47,7 +54,10 @@ class BrandingBloc extends Bloc<BrandingEvent, BrandingState> {
     );
   }
 
-  Future<void> _onClearBranding(ClearBranding event, Emitter<BrandingState> emit) async {
+  Future<void> _onClearBranding(
+    ClearBranding event,
+    Emitter<BrandingState> emit,
+  ) async {
     await isar.writeTxn(() async {
       await isar.schoolBrandingIsars.clear();
     });
@@ -69,7 +79,7 @@ class BrandingBloc extends Bloc<BrandingEvent, BrandingState> {
         ..dashboardBannerUrl = branding.dashboardBannerUrl
         ..loginBackgroundUrl = branding.loginBackgroundUrl
         ..version = branding.version;
-      
+
       await isar.schoolBrandingIsars.put(isarModel);
     });
   }

@@ -6,5 +6,8 @@ abstract class ReligionRepository {
   Future<Either<Failure, List<ReligionActivity>>> getUpcomingActivities();
   Future<Either<Failure, List<SpiritualGroup>>> getSpiritualGroups();
   Future<Either<Failure, void>> createActivity(ReligionActivity activity);
-  Future<Either<Failure, void>> updateGroupMemberCount(String groupId, int count);
+  Future<Either<Failure, void>> updateGroupMemberCount(
+    String groupId,
+    int count,
+  );
 }

@@ -42,10 +42,12 @@ class GatekeeperVisitorCheckInScreen extends StatefulWidget {
   const GatekeeperVisitorCheckInScreen({super.key, required this.gate});
 
   @override
-  State<GatekeeperVisitorCheckInScreen> createState() => _GatekeeperVisitorCheckInScreenState();
+  State<GatekeeperVisitorCheckInScreen> createState() =>
+      _GatekeeperVisitorCheckInScreenState();
 }
 
-class _GatekeeperVisitorCheckInScreenState extends State<GatekeeperVisitorCheckInScreen> {
+class _GatekeeperVisitorCheckInScreenState
+    extends State<GatekeeperVisitorCheckInScreen> {
   _CheckInStep _step = _CheckInStep.details;
   final _picker = ImagePicker();
   final _nameController = TextEditingController();
@@ -85,7 +87,9 @@ class _GatekeeperVisitorCheckInScreenState extends State<GatekeeperVisitorCheckI
     if (!mounted) return;
     result.fold(
       (failure) => null,
-      (members) => setState(() => _staff = members.where((m) => m.schoolId == _schoolId).toList()),
+      (members) => setState(
+        () => _staff = members.where((m) => m.schoolId == _schoolId).toList(),
+      ),
     );
     setState(() => _isLoadingStaff = false);
   }
@@ -95,8 +99,11 @@ class _GatekeeperVisitorCheckInScreenState extends State<GatekeeperVisitorCheckI
     if (visitorsState is! VisitorsLoaded) return false;
     final phone = _phoneController.text.trim();
     final name = _nameController.text.trim();
-    return visitorsState.blacklist.any((b) =>
-        (phone.isNotEmpty && b.phone == phone) || (name.isNotEmpty && b.fullName.toLowerCase() == name.toLowerCase()));
+    return visitorsState.blacklist.any(
+      (b) =>
+          (phone.isNotEmpty && b.phone == phone) ||
+          (name.isNotEmpty && b.fullName.toLowerCase() == name.toLowerCase()),
+    );
   }
 
   void _confirmCheckIn() {
@@ -107,7 +114,9 @@ class _GatekeeperVisitorCheckInScreenState extends State<GatekeeperVisitorCheckI
     final visitor = Visitor(
       id: const Uuid().v4(),
       schoolId: authState.user.schoolId,
-      fullName: _nameController.text.trim().isEmpty ? 'Visitor' : _nameController.text.trim(),
+      fullName: _nameController.text.trim().isEmpty
+          ? 'Visitor'
+          : _nameController.text.trim(),
       phone: _phoneController.text.trim(),
       host: _host?.name ?? '',
       hostId: _host?.id,
@@ -158,25 +167,38 @@ class _GatekeeperVisitorCheckInScreenState extends State<GatekeeperVisitorCheckI
               child: CircleAvatar(
                 radius: 56,
                 backgroundImage: _image != null ? FileImage(_image!) : null,
-                child: _image == null ? const Icon(Icons.add_a_photo_outlined, size: 36) : null,
+                child: _image == null
+                    ? const Icon(Icons.add_a_photo_outlined, size: 36)
+                    : null,
               ),
             ),
           ),
           const SizedBox(height: 8),
-          Center(child: TextButton(onPressed: _takePhoto, child: Text(_image == null ? 'Take Photo' : 'Retake Photo'))),
+          Center(
+            child: TextButton(
+              onPressed: _takePhoto,
+              child: Text(_image == null ? 'Take Photo' : 'Retake Photo'),
+            ),
+          ),
           const SizedBox(height: 24),
           TextField(
             controller: _nameController,
             autofocus: true,
             style: const TextStyle(fontSize: 18),
-            decoration: const InputDecoration(labelText: 'Visitor name', prefixIcon: Icon(Icons.person_outline)),
+            decoration: const InputDecoration(
+              labelText: 'Visitor name',
+              prefixIcon: Icon(Icons.person_outline),
+            ),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _phoneController,
             keyboardType: TextInputType.phone,
             style: const TextStyle(fontSize: 18),
-            decoration: const InputDecoration(labelText: 'Phone number (optional)', prefixIcon: Icon(Icons.phone_outlined)),
+            decoration: const InputDecoration(
+              labelText: 'Phone number (optional)',
+              prefixIcon: Icon(Icons.phone_outlined),
+            ),
           ),
           const Spacer(),
           GatekeeperPrimaryButton(
@@ -196,7 +218,10 @@ class _GatekeeperVisitorCheckInScreenState extends State<GatekeeperVisitorCheckI
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Why are they visiting?', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Why are they visiting?',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 16),
           Expanded(
             child: GridView.count(
@@ -229,9 +254,16 @@ class _GatekeeperVisitorCheckInScreenState extends State<GatekeeperVisitorCheckI
       children: [
         const Padding(
           padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
-          child: Text('Who are they visiting?', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          child: Text(
+            'Who are they visiting?',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
         ),
-        if (_isLoadingStaff) const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator())),
+        if (_isLoadingStaff)
+          const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: CircularProgressIndicator()),
+          ),
         Expanded(
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -248,7 +280,15 @@ class _GatekeeperVisitorCheckInScreenState extends State<GatekeeperVisitorCheckI
                   children: [
                     AvatarInitials(name: person.name, size: 44),
                     const SizedBox(width: 14),
-                    Expanded(child: Text(person.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+                    Expanded(
+                      child: Text(
+                        person.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
                     const Icon(Icons.chevron_right),
                   ],
                 ),
@@ -271,15 +311,33 @@ class _GatekeeperVisitorCheckInScreenState extends State<GatekeeperVisitorCheckI
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircleAvatar(radius: 48, backgroundImage: _image != null ? FileImage(_image!) : null,
-                    child: _image == null ? const Icon(Icons.person, size: 40) : null),
+                  CircleAvatar(
+                    radius: 48,
+                    backgroundImage: _image != null ? FileImage(_image!) : null,
+                    child: _image == null
+                        ? const Icon(Icons.person, size: 40)
+                        : null,
+                  ),
                   const SizedBox(height: 12),
-                  Text(_nameController.text.trim().isEmpty ? 'Visitor' : _nameController.text.trim(),
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  Text(
+                    _nameController.text.trim().isEmpty
+                        ? 'Visitor'
+                        : _nameController.text.trim(),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text('${_purpose ?? ''} • Visiting ${_host?.name ?? ''}', textAlign: TextAlign.center),
+                  Text(
+                    '${_purpose ?? ''} • Visiting ${_host?.name ?? ''}',
+                    textAlign: TextAlign.center,
+                  ),
                   const SizedBox(height: 4),
-                  Text('Gate: ${widget.gate.name}', style: Theme.of(context).textTheme.bodySmall),
+                  Text(
+                    'Gate: ${widget.gate.name}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 ],
               ),
             ),
@@ -288,7 +346,8 @@ class _GatekeeperVisitorCheckInScreenState extends State<GatekeeperVisitorCheckI
             const SizedBox(height: 16),
             const AlertBanner(
               title: 'Security Alert',
-              message: 'This person is on the security blacklist. Call a supervisor before allowing entry.',
+              message:
+                  'This person is on the security blacklist. Call a supervisor before allowing entry.',
               color: Colors.red,
               icon: Icons.warning_amber_rounded,
             ),
@@ -297,7 +356,9 @@ class _GatekeeperVisitorCheckInScreenState extends State<GatekeeperVisitorCheckI
           GatekeeperPrimaryButton(
             label: blacklisted ? 'BLOCKED — CALL SUPERVISOR' : 'CHECK IN',
             icon: blacklisted ? Icons.block : Icons.login,
-            tone: blacklisted ? GatekeeperButtonTone.danger : GatekeeperButtonTone.success,
+            tone: blacklisted
+                ? GatekeeperButtonTone.danger
+                : GatekeeperButtonTone.success,
             isLoading: _isSubmitting,
             onPressed: blacklisted ? null : _confirmCheckIn,
           ),

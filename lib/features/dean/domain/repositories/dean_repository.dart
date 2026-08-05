@@ -17,11 +17,16 @@ abstract class DeanRepository {
   Future<Either<Failure, List<Curriculum>>> getCurricula();
   Future<Either<Failure, void>> updateCurriculum(Curriculum curriculum);
   Future<Either<Failure, List<Subject>>> getSubjects();
-  Future<Either<Failure, void>> updateSubjectAllocation(String subjectId, List<String> teacherIds);
+  Future<Either<Failure, void>> updateSubjectAllocation(
+    String subjectId,
+    List<String> teacherIds,
+  );
 
   // Teacher Workload
   Future<Either<Failure, List<TeacherWorkload>>> getTeacherWorkloads();
-  Future<Either<Failure, TeacherWorkload>> getTeacherWorkloadDetail(String teacherId);
+  Future<Either<Failure, TeacherWorkload>> getTeacherWorkloadDetail(
+    String teacherId,
+  );
 
   // Lesson Monitoring
   Future<Either<Failure, List<LessonRecord>>> getLessonRecords({
@@ -42,12 +47,19 @@ abstract class DeanRepository {
 
   // Assessment & Marks QA
   Future<Either<Failure, void>> approveAssessmentMarks(String assessmentId);
-  Future<Either<Failure, void>> rejectAssessmentMarks(String assessmentId, String reason);
-  Future<Either<Failure, List<AssessmentModeration>>> getPendingModerationAssessments();
+  Future<Either<Failure, void>> rejectAssessmentMarks(
+    String assessmentId,
+    String reason,
+  );
+  Future<Either<Failure, List<AssessmentModeration>>>
+  getPendingModerationAssessments();
 
   // Report Card Approval
   Future<Either<Failure, void>> approveReportCards(List<String> reportCardIds);
-  Future<Either<Failure, void>> rejectReportCards(List<String> reportCardIds, String reason);
+  Future<Either<Failure, void>> rejectReportCards(
+    List<String> reportCardIds,
+    String reason,
+  );
   Future<Either<Failure, List<ReportCardApproval>>> getPendingReportApprovals();
 
   // Performance Analytics
@@ -60,8 +72,14 @@ abstract class DeanRepository {
 
   // Student Academic Support & Interventions
   Future<Either<Failure, List<AcademicIntervention>>> getInterventions();
-  Future<Either<Failure, void>> createIntervention(AcademicIntervention intervention);
-  Future<Either<Failure, void>> updateInterventionStatus(String id, InterventionStatus status, String outcomes);
+  Future<Either<Failure, void>> createIntervention(
+    AcademicIntervention intervention,
+  );
+  Future<Either<Failure, void>> updateInterventionStatus(
+    String id,
+    InterventionStatus status,
+    String outcomes,
+  );
 
   // Class Observations
   Future<Either<Failure, List<ClassObservation>>> getClassObservations();

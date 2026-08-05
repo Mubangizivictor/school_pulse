@@ -13,18 +13,19 @@ class MarksQAScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => sl<DeanBloc>()..add(PendingModerationAssessmentsRequested()),
+      create: (context) =>
+          sl<DeanBloc>()..add(PendingModerationAssessmentsRequested()),
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Marks Quality Assurance'),
-        ),
+        appBar: AppBar(title: const Text('Marks Quality Assurance')),
         body: BlocListener<DeanBloc, DeanState>(
           listener: (context, state) {
             if (state is DeanOperationSuccess) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.message)),
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(state.message)));
+              context.read<DeanBloc>().add(
+                PendingModerationAssessmentsRequested(),
               );
-              context.read<DeanBloc>().add(PendingModerationAssessmentsRequested());
             }
           },
           child: BlocBuilder<DeanBloc, DeanState>(
@@ -33,7 +34,9 @@ class MarksQAScreen extends StatelessWidget {
                 return const Center(child: CircularProgressIndicator());
               } else if (state is PendingModerationAssessmentsLoaded) {
                 if (state.assessments.isEmpty) {
-                  return const Center(child: Text('No assessments pending moderation.'));
+                  return const Center(
+                    child: Text('No assessments pending moderation.'),
+                  );
                 }
                 return _buildAssessmentList(context, state.assessments);
               } else if (state is DeanError) {
@@ -47,7 +50,10 @@ class MarksQAScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAssessmentList(BuildContext context, List<AssessmentModeration> assessments) {
+  Widget _buildAssessmentList(
+    BuildContext context,
+    List<AssessmentModeration> assessments,
+  ) {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: assessments.length,
@@ -56,8 +62,13 @@ class MarksQAScreen extends StatelessWidget {
         return AppCard(
           margin: const EdgeInsets.only(bottom: 12),
           child: ExpansionTile(
-            title: Text(assessment.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text('${assessment.className} • ${assessment.subjectName}'),
+            title: Text(
+              assessment.title,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Text(
+              '${assessment.className} • ${assessment.subjectName}',
+            ),
             children: [
               Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -65,21 +76,34 @@ class MarksQAScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Teacher: ${assessment.teacherName}'),
-                    Text('Submissions: ${assessment.submissionCount} / ${assessment.totalStudents}'),
-                    Text('Average Score: ${assessment.averageScore.toStringAsFixed(1)}%'),
+                    Text(
+                      'Submissions: ${assessment.submissionCount} / ${assessment.totalStudents}',
+                    ),
+                    Text(
+                      'Average Score: ${assessment.averageScore.toStringAsFixed(1)}%',
+                    ),
                     const SizedBox(height: 16),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         OutlinedButton(
-                          onPressed: () => _showRejectDialog(context, assessment.assessmentId),
-                          style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                          onPressed: () => _showRejectDialog(
+                            context,
+                            assessment.assessmentId,
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                          ),
                           child: const Text('Reject'),
                         ),
                         const SizedBox(width: 8),
                         ElevatedButton(
                           onPressed: () {
-                            context.read<DeanBloc>().add(ApproveAssessmentMarksRequested(assessment.assessmentId));
+                            context.read<DeanBloc>().add(
+                              ApproveAssessmentMarksRequested(
+                                assessment.assessmentId,
+                              ),
+                            );
                           },
                           child: const Text('Approve & Publish'),
                         ),
@@ -110,13 +134,24 @@ class MarksQAScreen extends StatelessWidget {
           maxLines: 3,
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () {
-              context.read<DeanBloc>().add(RejectAssessmentMarksRequested(assessmentId, reasonController.text));
+              context.read<DeanBloc>().add(
+                RejectAssessmentMarksRequested(
+                  assessmentId,
+                  reasonController.text,
+                ),
+              );
               Navigator.pop(dialogContext);
             },
-            child: const Text('Submit Rejection', style: TextStyle(color: Colors.red)),
+            child: const Text(
+              'Submit Rejection',
+              style: TextStyle(color: Colors.red),
+            ),
           ),
         ],
       ),

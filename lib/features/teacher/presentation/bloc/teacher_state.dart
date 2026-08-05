@@ -15,7 +15,6 @@ abstract class TeacherState extends Equatable {
 
 class TeacherInitial extends TeacherState {}
 
-
 class TeacherLoading extends TeacherState {}
 
 class TeacherLoaded extends TeacherState {
@@ -45,17 +44,17 @@ class TeacherLoaded extends TeacherState {
 
   @override
   List<Object?> get props => [
-        studentsToday,
-        totalStudents,
-        submissionsDue,
-        classesToday,
-        activeNotifications,
-        attendanceTaken,
-        marksEntered,
-        reportsGenerated,
-        classProgress,
-        ongoingLesson,
-      ];
+    studentsToday,
+    totalStudents,
+    submissionsDue,
+    classesToday,
+    activeNotifications,
+    attendanceTaken,
+    marksEntered,
+    reportsGenerated,
+    classProgress,
+    ongoingLesson,
+  ];
 }
 
 class TeacherError extends TeacherState {
@@ -94,7 +93,12 @@ class TeacherMarksEntryLoaded extends TeacherState {
   });
 
   @override
-  List<Object?> get props => [students, selectedClass, selectedSubject, selectedAssessment];
+  List<Object?> get props => [
+    students,
+    selectedClass,
+    selectedSubject,
+    selectedAssessment,
+  ];
 }
 
 class TeacherMarksSubmitSuccess extends TeacherState {

@@ -45,7 +45,9 @@ class QrCredentialReaderAdapter implements CredentialReaderAdapter {
   /// whenever `mobile_scanner` reports a raw payload.
   void submitRawPayload(String rawPayload) {
     if (!_active) return;
-    _controller.add(QrScanCredential(rawPayload: rawPayload, scannedAt: DateTime.now()));
+    _controller.add(
+      QrScanCredential(rawPayload: rawPayload, scannedAt: DateTime.now()),
+    );
   }
 
   void dispose() {

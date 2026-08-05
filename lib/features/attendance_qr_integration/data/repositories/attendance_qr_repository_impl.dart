@@ -10,13 +10,12 @@ class AttendanceQrRepositoryImpl implements AttendanceQrRepository {
   final FirebaseFirestore firestore;
   final Isar isar;
 
-  AttendanceQrRepositoryImpl({
-    required this.firestore,
-    required this.isar,
-  });
+  AttendanceQrRepositoryImpl({required this.firestore, required this.isar});
 
   @override
-  Future<Either<Failure, void>> saveAttendance(QrAttendanceRecord record) async {
+  Future<Either<Failure, void>> saveAttendance(
+    QrAttendanceRecord record,
+  ) async {
     try {
       // Save locally to Isar first (Offline First)
       final log = AttendanceLogIsar()
@@ -43,21 +42,31 @@ class AttendanceQrRepositoryImpl implements AttendanceQrRepository {
   }
 
   @override
-  Future<Either<Failure, List<QrAttendanceRecord>>> getPendingSyncRecords() async {
+  Future<Either<Failure, List<QrAttendanceRecord>>>
+  getPendingSyncRecords() async {
     try {
-      final logs = await isar.attendanceLogIsars.filter().isSyncedEqualTo(false).findAll();
-      return Right(logs.map((log) => QrAttendanceRecord(
-        id: log.id.toString(),
-        studentUniqueId: log.studentUniqueId,
-        studentName: log.studentName,
-        className: log.className,
-        status: QrAttendanceStatus.values.byName(log.status),
-        timestamp: log.timestamp,
-        scannedBy: log.scannedBy,
-        schoolId: log.schoolId,
-        module: log.module,
-        isSynced: log.isSynced,
-      )).toList());
+      final logs = await isar.attendanceLogIsars
+          .filter()
+          .isSyncedEqualTo(false)
+          .findAll();
+      return Right(
+        logs
+            .map(
+              (log) => QrAttendanceRecord(
+                id: log.id.toString(),
+                studentUniqueId: log.studentUniqueId,
+                studentName: log.studentName,
+                className: log.className,
+                status: QrAttendanceStatus.values.byName(log.status),
+                timestamp: log.timestamp,
+                scannedBy: log.scannedBy,
+                schoolId: log.schoolId,
+                module: log.module,
+                isSynced: log.isSynced,
+              ),
+            )
+            .toList(),
+      );
     } catch (e) {
       return Left(CacheFailure());
     }
@@ -84,16 +93,13 @@ class AttendanceQrRepositoryImpl implements AttendanceQrRepository {
   Future<Either<Failure, void>> syncWithFirebase() async {
     try {
       final pending = await getPendingSyncRecords();
-      return pending.fold(
-        (failure) => Left(failure),
-        (records) async {
-          for (final record in records) {
-            await _writeToScopedCollection(record);
-            await markAsSynced(record.id);
-          }
-          return const Right(null);
-        },
-      );
+      return pending.fold((failure) => Left(failure), (records) async {
+        for (final record in records) {
+          await _writeToScopedCollection(record);
+          await markAsSynced(record.id);
+        }
+        return const Right(null);
+      });
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -119,27 +125,31 @@ class AttendanceQrRepositoryImpl implements AttendanceQrRepository {
           'recordedBy': record.scannedBy,
         });
       case 'staff':
-        await firestore.collection('staff_attendance').doc(
-          '${record.studentUniqueId}_${_dateKey(record.timestamp)}',
-        ).set({
-          'schoolId': record.schoolId,
-          'staffId': record.studentUniqueId,
-          'clockIn': Timestamp.fromDate(record.timestamp),
-          'status': record.status == QrAttendanceStatus.late ? 'late' : 'on_time',
-          'location': 'QR Scan',
-        });
+        await firestore
+            .collection('staff_attendance')
+            .doc('${record.studentUniqueId}_${_dateKey(record.timestamp)}')
+            .set({
+              'schoolId': record.schoolId,
+              'staffId': record.studentUniqueId,
+              'clockIn': Timestamp.fromDate(record.timestamp),
+              'status': record.status == QrAttendanceStatus.late
+                  ? 'late'
+                  : 'on_time',
+              'location': 'QR Scan',
+            });
       default:
-        await firestore.collection('attendance_records').doc(
-          '${record.studentUniqueId}_${_dateKey(record.timestamp)}',
-        ).set({
-          'schoolId': record.schoolId,
-          'studentId': record.studentUniqueId,
-          'className': record.className,
-          'date': Timestamp.fromDate(record.timestamp),
-          'status': record.status.name,
-          'note': '',
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
+        await firestore
+            .collection('attendance_records')
+            .doc('${record.studentUniqueId}_${_dateKey(record.timestamp)}')
+            .set({
+              'schoolId': record.schoolId,
+              'studentId': record.studentUniqueId,
+              'className': record.className,
+              'date': Timestamp.fromDate(record.timestamp),
+              'status': record.status.name,
+              'note': '',
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
     }
   }
 

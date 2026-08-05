@@ -35,11 +35,11 @@ class _StaffPanelHostState extends State<StaffPanelHost> {
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
       context.read<SubjectTeacherContextBloc>().add(
-            ContextRequested(
-              schoolId: authState.user.schoolId,
-              userId: authState.user.id,
-            ),
-          );
+        ContextRequested(
+          schoolId: authState.user.schoolId,
+          userId: authState.user.id,
+        ),
+      );
     }
   }
 

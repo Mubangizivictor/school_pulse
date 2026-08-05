@@ -18,7 +18,8 @@ class TeacherLibraryScreen extends StatefulWidget {
   State<TeacherLibraryScreen> createState() => _TeacherLibraryScreenState();
 }
 
-class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> with SingleTickerProviderStateMixin {
+class _TeacherLibraryScreenState extends State<TeacherLibraryScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -37,7 +38,8 @@ class _TeacherLibraryScreenState extends State<TeacherLibraryScreen> with Single
   Widget build(BuildContext context) {
     final authState = context.read<AuthBloc>().state;
     final user = authState is AuthAuthenticated ? authState.user : null;
-    final staffId = user?.id; // For teachers we use their user ID or staffId if available
+    final staffId =
+        user?.id; // For teachers we use their user ID or staffId if available
 
     if (staffId == null || user == null) {
       return const Scaffold(
@@ -103,10 +105,20 @@ class _MyBorrowingsTab extends StatelessWidget {
               return AppCard(
                 margin: const EdgeInsets.only(bottom: 12),
                 child: ListTile(
-                  leading: const CircleAvatar(child: Icon(Icons.inventory_2_outlined)),
-                  title: Text(borrowing.resourceTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text('Due: ${DateFormat('MMM dd, yyyy').format(borrowing.dueDate)}'),
-                  trailing: const StatusBadge(label: 'ACTIVE', color: Colors.blue),
+                  leading: const CircleAvatar(
+                    child: Icon(Icons.inventory_2_outlined),
+                  ),
+                  title: Text(
+                    borrowing.resourceTitle,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    'Due: ${DateFormat('MMM dd, yyyy').format(borrowing.dueDate)}',
+                  ),
+                  trailing: const StatusBadge(
+                    label: 'ACTIVE',
+                    color: Colors.blue,
+                  ),
                 ),
               );
             },
@@ -132,13 +144,17 @@ class _ResourceCatalogTab extends StatelessWidget {
             itemCount: state.resources.length,
             itemBuilder: (context, index) {
               final resource = state.resources[index];
-              final isDigital = resource.digitalAttachmentUrl != null && resource.digitalAttachmentUrl!.isNotEmpty;
+              final isDigital =
+                  resource.digitalAttachmentUrl != null &&
+                  resource.digitalAttachmentUrl!.isNotEmpty;
 
               return AppCard(
                 margin: const EdgeInsets.only(bottom: 12),
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: isDigital ? Colors.purple[50] : Colors.blue[50],
+                    backgroundColor: isDigital
+                        ? Colors.purple[50]
+                        : Colors.blue[50],
                     child: Icon(
                       isDigital ? Icons.cloud_done : Icons.book,
                       color: isDigital ? Colors.purple : Colors.blue,
@@ -146,12 +162,14 @@ class _ResourceCatalogTab extends StatelessWidget {
                   ),
                   title: Text(resource.title),
                   subtitle: Text('${resource.author} • ${resource.type.name}'),
-                  trailing: isDigital 
-                    ? IconButton(
-                        icon: const Icon(Icons.open_in_new),
-                        onPressed: () => _openDigitalResource(resource.digitalAttachmentUrl!),
-                      )
-                    : Text('${resource.availableCopies} left'),
+                  trailing: isDigital
+                      ? IconButton(
+                          icon: const Icon(Icons.open_in_new),
+                          onPressed: () => _openDigitalResource(
+                            resource.digitalAttachmentUrl!,
+                          ),
+                        )
+                      : Text('${resource.availableCopies} left'),
                 ),
               );
             },

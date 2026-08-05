@@ -18,25 +18,33 @@ abstract class StructureRemoteDataSource {
   Future<void> saveLevel(EducationalLevel level);
   Future<void> deleteLevel(String levelId);
   Future<void> archiveLevel(String levelId);
+  Future<void> restoreLevel(String levelId);
 
   Stream<List<AcademicYear>> watchAcademicYears(String schoolId);
   Future<void> saveAcademicYear(AcademicYear year);
   Future<void> deleteAcademicYear(String yearId);
   Future<void> setCurrentAcademicYear(String yearId, String schoolId);
+  Future<void> archiveAcademicYear(String yearId);
+  Future<void> restoreAcademicYear(String yearId);
 
   Stream<List<AcademicTerm>> watchAcademicTerms(String schoolId);
   Future<void> saveAcademicTerm(AcademicTerm term);
   Future<void> deleteAcademicTerm(String termId);
   Future<void> setCurrentAcademicTerm(String termId, String schoolId);
+  Future<void> archiveAcademicTerm(String termId);
+  Future<void> restoreAcademicTerm(String termId);
 
   Stream<List<SchoolClass>> watchClasses(String schoolId);
   Future<void> saveClass(SchoolClass schoolClass);
   Future<void> deleteClass(String classId);
   Future<void> archiveClass(String classId);
+  Future<void> restoreClass(String classId);
 
   Stream<List<ClassStream>> watchStreams(String schoolId);
   Future<void> saveStream(ClassStream stream);
   Future<void> deleteStream(String streamId);
+  Future<void> archiveStream(String streamId);
+  Future<void> restoreStream(String streamId);
 
   Stream<List<Subject>> watchSubjects(String schoolId);
   Future<void> saveSubject(Subject subject);
@@ -59,7 +67,10 @@ abstract class StructureRemoteDataSource {
   Future<void> updateFeatureToggles(FeatureToggles toggles, String schoolId);
 
   Stream<InstitutionProfile> watchInstitutionProfile(String schoolId);
-  Future<void> updateInstitutionProfile(InstitutionProfile profile, String schoolId);
+  Future<void> updateInstitutionProfile(
+    InstitutionProfile profile,
+    String schoolId,
+  );
 
   Stream<List<Campus>> watchCampuses(String schoolId);
   Future<void> saveCampus(Campus campus);
@@ -125,11 +136,15 @@ abstract class StructureRemoteDataSource {
   Future<void> saveAttendanceSession(AttendanceSessionDef session);
   Future<void> deleteAttendanceSession(String sessionId);
 
-  Stream<List<AnnouncementCategoryDef>> watchAnnouncementCategories(String schoolId);
+  Stream<List<AnnouncementCategoryDef>> watchAnnouncementCategories(
+    String schoolId,
+  );
   Future<void> saveAnnouncementCategory(AnnouncementCategoryDef category);
   Future<void> deleteAnnouncementCategory(String categoryId);
 
-  Stream<List<NotificationCategoryDef>> watchNotificationCategories(String schoolId);
+  Stream<List<NotificationCategoryDef>> watchNotificationCategories(
+    String schoolId,
+  );
   Future<void> saveNotificationCategory(NotificationCategoryDef category);
   Future<void> deleteNotificationCategory(String categoryId);
 
@@ -151,22 +166,37 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
 
   StructureRemoteDataSourceImpl({required this.firestore});
 
-  CollectionReference<Map<String, dynamic>> get _levels => firestore.collection('educational_levels');
-  CollectionReference<Map<String, dynamic>> get _years => firestore.collection('academic_years');
-  CollectionReference<Map<String, dynamic>> get _terms => firestore.collection('academic_terms');
-  CollectionReference<Map<String, dynamic>> get _classes => firestore.collection('classes');
-  CollectionReference<Map<String, dynamic>> get _streams => firestore.collection('class_streams');
-  CollectionReference<Map<String, dynamic>> get _subjects => firestore.collection('subjects');
-  CollectionReference<Map<String, dynamic>> get _departments => firestore.collection('departments');
-  CollectionReference<Map<String, dynamic>> get _designations => firestore.collection('staff_designations');
-  CollectionReference<Map<String, dynamic>> get _staffRoles => firestore.collection('staff_roles');
+  CollectionReference<Map<String, dynamic>> get _levels =>
+      firestore.collection('educational_levels');
+  CollectionReference<Map<String, dynamic>> get _years =>
+      firestore.collection('academic_years');
+  CollectionReference<Map<String, dynamic>> get _terms =>
+      firestore.collection('academic_terms');
+  CollectionReference<Map<String, dynamic>> get _classes =>
+      firestore.collection('classes');
+  CollectionReference<Map<String, dynamic>> get _streams =>
+      firestore.collection('class_streams');
+  CollectionReference<Map<String, dynamic>> get _subjects =>
+      firestore.collection('subjects');
+  CollectionReference<Map<String, dynamic>> get _departments =>
+      firestore.collection('departments');
+  CollectionReference<Map<String, dynamic>> get _designations =>
+      firestore.collection('staff_designations');
+  CollectionReference<Map<String, dynamic>> get _staffRoles =>
+      firestore.collection('staff_roles');
 
-  CollectionReference<Map<String, dynamic>> get _campuses => firestore.collection('campuses');
-  CollectionReference<Map<String, dynamic>> get _houses => firestore.collection('houses');
-  CollectionReference<Map<String, dynamic>> get _clubs => firestore.collection('clubs');
-  CollectionReference<Map<String, dynamic>> get _facilities => firestore.collection('facilities');
-  CollectionReference<Map<String, dynamic>> get _hostels => firestore.collection('hostels');
-  CollectionReference<Map<String, dynamic>> get _hostelRooms => firestore.collection('hostel_rooms');
+  CollectionReference<Map<String, dynamic>> get _campuses =>
+      firestore.collection('campuses');
+  CollectionReference<Map<String, dynamic>> get _houses =>
+      firestore.collection('houses');
+  CollectionReference<Map<String, dynamic>> get _clubs =>
+      firestore.collection('clubs');
+  CollectionReference<Map<String, dynamic>> get _facilities =>
+      firestore.collection('facilities');
+  CollectionReference<Map<String, dynamic>> get _hostels =>
+      firestore.collection('hostels');
+  CollectionReference<Map<String, dynamic>> get _hostelRooms =>
+      firestore.collection('hostel_rooms');
   CollectionReference<Map<String, dynamic>> get _transportRoutes =>
       firestore.collection('transport_routes');
   CollectionReference<Map<String, dynamic>> get _transportStops =>
@@ -179,7 +209,8 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       firestore.collection('structure_assessment_types');
   CollectionReference<Map<String, dynamic>> get _gradingSystems =>
       firestore.collection('structure_grading_systems');
-  CollectionReference<Map<String, dynamic>> get _gradeBands => firestore.collection('grade_bands');
+  CollectionReference<Map<String, dynamic>> get _gradeBands =>
+      firestore.collection('grade_bands');
   CollectionReference<Map<String, dynamic>> get _attendanceTypes =>
       firestore.collection('attendance_types');
   CollectionReference<Map<String, dynamic>> get _attendanceSessions =>
@@ -196,11 +227,25 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       firestore.collection('custom_fields');
 
   DocumentReference<Map<String, dynamic>> _featureTogglesDoc(String schoolId) =>
-      firestore.collection('schools').doc(schoolId).collection('config').doc('feature_toggles');
-  DocumentReference<Map<String, dynamic>> _institutionProfileDoc(String schoolId) =>
-      firestore.collection('schools').doc(schoolId).collection('config').doc('institution_profile');
-  DocumentReference<Map<String, dynamic>> _timetableConfigDoc(String schoolId) =>
-      firestore.collection('schools').doc(schoolId).collection('config').doc('timetable_config');
+      firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('config')
+          .doc('feature_toggles');
+  DocumentReference<Map<String, dynamic>> _institutionProfileDoc(
+    String schoolId,
+  ) => firestore
+      .collection('schools')
+      .doc(schoolId)
+      .collection('config')
+      .doc('institution_profile');
+  DocumentReference<Map<String, dynamic>> _timetableConfigDoc(
+    String schoolId,
+  ) => firestore
+      .collection('schools')
+      .doc(schoolId)
+      .collection('config')
+      .doc('timetable_config');
 
   // Educational Levels
   @override
@@ -209,18 +254,28 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
         .where('schoolId', isEqualTo: schoolId)
         .orderBy('order')
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _levelFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) =>
+              snap.docs.map((d) => _levelFromMap(d.id, d.data())).toList(),
+        );
   }
 
   @override
-  Future<void> saveLevel(EducationalLevel level) => _levels.doc(level.id).set(_levelToMap(level));
+  Future<void> saveLevel(EducationalLevel level) =>
+      _levels.doc(level.id).set(_levelToMap(level));
 
   @override
   Future<void> deleteLevel(String levelId) => _levels.doc(levelId).delete();
 
   @override
-  Future<void> archiveLevel(String levelId) =>
-      _levels.doc(levelId).update({'isActive': false, 'archivedAt': Timestamp.now().millisecondsSinceEpoch});
+  Future<void> archiveLevel(String levelId) => _levels.doc(levelId).update({
+    'isActive': false,
+    'archivedAt': Timestamp.now().millisecondsSinceEpoch,
+  });
+
+  @override
+  Future<void> restoreLevel(String levelId) =>
+      _levels.doc(levelId).update({'isActive': true, 'archivedAt': null});
 
   EducationalLevel _levelFromMap(String id, Map<String, dynamic> map) {
     return EducationalLevel(
@@ -235,13 +290,13 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   }
 
   Map<String, dynamic> _levelToMap(EducationalLevel e) => {
-        'schoolId': e.schoolId,
-        'name': e.name,
-        'code': e.code,
-        'order': e.order,
-        'description': e.description,
-        'isActive': e.isActive,
-      };
+    'schoolId': e.schoolId,
+    'name': e.name,
+    'code': e.code,
+    'order': e.order,
+    'description': e.description,
+    'isActive': e.isActive,
+  };
 
   // Academic Years
   @override
@@ -250,11 +305,14 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
         .where('schoolId', isEqualTo: schoolId)
         .orderBy('startDate', descending: true)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _yearFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) => snap.docs.map((d) => _yearFromMap(d.id, d.data())).toList(),
+        );
   }
 
   @override
-  Future<void> saveAcademicYear(AcademicYear year) => _years.doc(year.id).set(_yearToMap(year));
+  Future<void> saveAcademicYear(AcademicYear year) =>
+      _years.doc(year.id).set(_yearToMap(year));
 
   @override
   Future<void> deleteAcademicYear(String yearId) => _years.doc(yearId).delete();
@@ -273,6 +331,14 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     await batch.commit();
   }
 
+  @override
+  Future<void> archiveAcademicYear(String yearId) =>
+      _years.doc(yearId).update({'isArchived': true, 'isCurrent': false});
+
+  @override
+  Future<void> restoreAcademicYear(String yearId) =>
+      _years.doc(yearId).update({'isArchived': false});
+
   AcademicYear _yearFromMap(String id, Map<String, dynamic> map) {
     return AcademicYear(
       id: id,
@@ -286,13 +352,13 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   }
 
   Map<String, dynamic> _yearToMap(AcademicYear e) => {
-        'schoolId': e.schoolId,
-        'name': e.name,
-        'startDate': Timestamp.fromDate(e.startDate),
-        'endDate': Timestamp.fromDate(e.endDate),
-        'isCurrent': e.isCurrent,
-        'isArchived': e.isArchived,
-      };
+    'schoolId': e.schoolId,
+    'name': e.name,
+    'startDate': Timestamp.fromDate(e.startDate),
+    'endDate': Timestamp.fromDate(e.endDate),
+    'isCurrent': e.isCurrent,
+    'isArchived': e.isArchived,
+  };
 
   // Academic Terms
   @override
@@ -301,11 +367,14 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
         .where('schoolId', isEqualTo: schoolId)
         .orderBy('order')
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _termFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) => snap.docs.map((d) => _termFromMap(d.id, d.data())).toList(),
+        );
   }
 
   @override
-  Future<void> saveAcademicTerm(AcademicTerm term) => _terms.doc(term.id).set(_termToMap(term));
+  Future<void> saveAcademicTerm(AcademicTerm term) =>
+      _terms.doc(term.id).set(_termToMap(term));
 
   @override
   Future<void> deleteAcademicTerm(String termId) => _terms.doc(termId).delete();
@@ -324,6 +393,14 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     await batch.commit();
   }
 
+  @override
+  Future<void> archiveAcademicTerm(String termId) =>
+      _terms.doc(termId).update({'isArchived': true, 'isCurrent': false});
+
+  @override
+  Future<void> restoreAcademicTerm(String termId) =>
+      _terms.doc(termId).update({'isArchived': false});
+
   AcademicTerm _termFromMap(String id, Map<String, dynamic> map) {
     return AcademicTerm(
       id: id,
@@ -334,18 +411,25 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       startDate: (map['startDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
       endDate: (map['endDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
       isCurrent: map['isCurrent'] ?? false,
+      periodType: AcademicPeriodType.values.firstWhere(
+        (t) => t.name == map['periodType'],
+        orElse: () => AcademicPeriodType.term,
+      ),
+      isArchived: map['isArchived'] ?? false,
     );
   }
 
   Map<String, dynamic> _termToMap(AcademicTerm e) => {
-        'schoolId': e.schoolId,
-        'academicYearId': e.academicYearId,
-        'name': e.name,
-        'order': e.order,
-        'startDate': Timestamp.fromDate(e.startDate),
-        'endDate': Timestamp.fromDate(e.endDate),
-        'isCurrent': e.isCurrent,
-      };
+    'schoolId': e.schoolId,
+    'academicYearId': e.academicYearId,
+    'name': e.name,
+    'order': e.order,
+    'startDate': Timestamp.fromDate(e.startDate),
+    'endDate': Timestamp.fromDate(e.endDate),
+    'isCurrent': e.isCurrent,
+    'periodType': e.periodType.name,
+    'isArchived': e.isArchived,
+  };
 
   // Classes
   @override
@@ -354,7 +438,10 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
         .where('schoolId', isEqualTo: schoolId)
         .orderBy('name')
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _classFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) =>
+              snap.docs.map((d) => _classFromMap(d.id, d.data())).toList(),
+        );
   }
 
   @override
@@ -365,7 +452,12 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   Future<void> deleteClass(String classId) => _classes.doc(classId).delete();
 
   @override
-  Future<void> archiveClass(String classId) => _classes.doc(classId).update({'isActive': false});
+  Future<void> archiveClass(String classId) =>
+      _classes.doc(classId).update({'isActive': false});
+
+  @override
+  Future<void> restoreClass(String classId) =>
+      _classes.doc(classId).update({'isActive': true});
 
   SchoolClass _classFromMap(String id, Map<String, dynamic> map) {
     return SchoolClass(
@@ -381,14 +473,14 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   }
 
   Map<String, dynamic> _classToMap(SchoolClass e) => {
-        'schoolId': e.schoolId,
-        'name': e.name,
-        'code': e.code,
-        'levelId': e.levelId,
-        'capacity': e.capacity,
-        'description': e.description,
-        'isActive': e.isActive,
-      };
+    'schoolId': e.schoolId,
+    'name': e.name,
+    'code': e.code,
+    'levelId': e.levelId,
+    'capacity': e.capacity,
+    'description': e.description,
+    'isActive': e.isActive,
+  };
 
   // Streams
   @override
@@ -397,14 +489,26 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
         .where('schoolId', isEqualTo: schoolId)
         .orderBy('name')
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _streamFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) =>
+              snap.docs.map((d) => _streamFromMap(d.id, d.data())).toList(),
+        );
   }
 
   @override
-  Future<void> saveStream(ClassStream stream) => _streams.doc(stream.id).set(_streamToMap(stream));
+  Future<void> saveStream(ClassStream stream) =>
+      _streams.doc(stream.id).set(_streamToMap(stream));
 
   @override
   Future<void> deleteStream(String streamId) => _streams.doc(streamId).delete();
+
+  @override
+  Future<void> archiveStream(String streamId) =>
+      _streams.doc(streamId).update({'isActive': false});
+
+  @override
+  Future<void> restoreStream(String streamId) =>
+      _streams.doc(streamId).update({'isActive': true});
 
   ClassStream _streamFromMap(String id, Map<String, dynamic> map) {
     return ClassStream(
@@ -419,13 +523,13 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   }
 
   Map<String, dynamic> _streamToMap(ClassStream e) => {
-        'schoolId': e.schoolId,
-        'name': e.name,
-        'code': e.code,
-        'classId': e.classId,
-        'capacity': e.capacity,
-        'isActive': e.isActive,
-      };
+    'schoolId': e.schoolId,
+    'name': e.name,
+    'code': e.code,
+    'classId': e.classId,
+    'capacity': e.capacity,
+    'isActive': e.isActive,
+  };
 
   // Subjects
   @override
@@ -434,14 +538,19 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
         .where('schoolId', isEqualTo: schoolId)
         .orderBy('name')
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _subjectFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) =>
+              snap.docs.map((d) => _subjectFromMap(d.id, d.data())).toList(),
+        );
   }
 
   @override
-  Future<void> saveSubject(Subject subject) => _subjects.doc(subject.id).set(_subjectToMap(subject));
+  Future<void> saveSubject(Subject subject) =>
+      _subjects.doc(subject.id).set(_subjectToMap(subject));
 
   @override
-  Future<void> deleteSubject(String subjectId) => _subjects.doc(subjectId).delete();
+  Future<void> deleteSubject(String subjectId) =>
+      _subjects.doc(subjectId).delete();
 
   Subject _subjectFromMap(String id, Map<String, dynamic> map) {
     return Subject(
@@ -462,19 +571,19 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   }
 
   Map<String, dynamic> _subjectToMap(Subject e) => {
-        'schoolId': e.schoolId,
-        'name': e.name,
-        'code': e.code,
-        'departmentId': e.departmentId,
-        'color': e.color,
-        'description': e.description,
-        'isElective': e.isElective,
-        'isPractical': e.isPractical,
-        'creditUnits': e.creditUnits,
-        'isActive': e.isActive,
-        'assignedLevelIds': e.assignedLevelIds,
-        'assignedClassIds': e.assignedClassIds,
-      };
+    'schoolId': e.schoolId,
+    'name': e.name,
+    'code': e.code,
+    'departmentId': e.departmentId,
+    'color': e.color,
+    'description': e.description,
+    'isElective': e.isElective,
+    'isPractical': e.isPractical,
+    'creditUnits': e.creditUnits,
+    'isActive': e.isActive,
+    'assignedLevelIds': e.assignedLevelIds,
+    'assignedClassIds': e.assignedClassIds,
+  };
 
   // Departments
   @override
@@ -483,7 +592,10 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
         .where('schoolId', isEqualTo: schoolId)
         .orderBy('name')
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _departmentFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) =>
+              snap.docs.map((d) => _departmentFromMap(d.id, d.data())).toList(),
+        );
   }
 
   @override
@@ -491,10 +603,12 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       _departments.doc(department.id).set(_departmentToMap(department));
 
   @override
-  Future<void> deleteDepartment(String departmentId) => _departments.doc(departmentId).delete();
+  Future<void> deleteDepartment(String departmentId) =>
+      _departments.doc(departmentId).delete();
 
   @override
-  Future<void> archiveDepartment(String departmentId) => _departments.doc(departmentId).update({'isActive': false});
+  Future<void> archiveDepartment(String departmentId) =>
+      _departments.doc(departmentId).update({'isActive': false});
 
   Department _departmentFromMap(String id, Map<String, dynamic> map) {
     return Department(
@@ -509,13 +623,13 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   }
 
   Map<String, dynamic> _departmentToMap(Department e) => {
-        'schoolId': e.schoolId,
-        'name': e.name,
-        'code': e.code,
-        'description': e.description,
-        'headOfDepartmentStaffId': e.headOfDepartmentStaffId,
-        'isActive': e.isActive,
-      };
+    'schoolId': e.schoolId,
+    'name': e.name,
+    'code': e.code,
+    'description': e.description,
+    'headOfDepartmentStaffId': e.headOfDepartmentStaffId,
+    'isActive': e.isActive,
+  };
 
   // Staff Designations
   @override
@@ -524,7 +638,11 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
         .where('schoolId', isEqualTo: schoolId)
         .orderBy('name')
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _designationFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) => snap.docs
+              .map((d) => _designationFromMap(d.id, d.data()))
+              .toList(),
+        );
   }
 
   @override
@@ -532,7 +650,8 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       _designations.doc(designation.id).set(_designationToMap(designation));
 
   @override
-  Future<void> deleteDesignation(String designationId) => _designations.doc(designationId).delete();
+  Future<void> deleteDesignation(String designationId) =>
+      _designations.doc(designationId).delete();
 
   StaffDesignation _designationFromMap(String id, Map<String, dynamic> map) {
     return StaffDesignation(
@@ -545,11 +664,11 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   }
 
   Map<String, dynamic> _designationToMap(StaffDesignation e) => {
-        'schoolId': e.schoolId,
-        'name': e.name,
-        'description': e.description,
-        'isActive': e.isActive,
-      };
+    'schoolId': e.schoolId,
+    'name': e.name,
+    'description': e.description,
+    'isActive': e.isActive,
+  };
 
   // Staff Roles
   @override
@@ -558,14 +677,19 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
         .where('schoolId', isEqualTo: schoolId)
         .orderBy('name')
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _staffRoleFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) =>
+              snap.docs.map((d) => _staffRoleFromMap(d.id, d.data())).toList(),
+        );
   }
 
   @override
-  Future<void> saveStaffRole(StaffRole role) => _staffRoles.doc(role.id).set(_staffRoleToMap(role));
+  Future<void> saveStaffRole(StaffRole role) =>
+      _staffRoles.doc(role.id).set(_staffRoleToMap(role));
 
   @override
-  Future<void> deleteStaffRole(String roleId) => _staffRoles.doc(roleId).delete();
+  Future<void> deleteStaffRole(String roleId) =>
+      _staffRoles.doc(roleId).delete();
 
   StaffRole _staffRoleFromMap(String id, Map<String, dynamic> map) {
     return StaffRole(
@@ -579,12 +703,12 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   }
 
   Map<String, dynamic> _staffRoleToMap(StaffRole e) => {
-        'schoolId': e.schoolId,
-        'name': e.name,
-        'designationId': e.designationId,
-        'description': e.description,
-        'isActive': e.isActive,
-      };
+    'schoolId': e.schoolId,
+    'name': e.name,
+    'designationId': e.designationId,
+    'description': e.description,
+    'isActive': e.isActive,
+  };
 
   // Feature Toggles
   @override
@@ -621,22 +745,22 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   }
 
   Map<String, dynamic> _togglesToMap(FeatureToggles e) => {
-        'transport': e.transport,
-        'hostel': e.hostel,
-        'library': e.library,
-        'medical': e.medical,
-        'visitors': e.visitors,
-        'inventory': e.inventory,
-        'payroll': e.payroll,
-        'procurement': e.procurement,
-        'alumni': e.alumni,
-        'communication': e.communication,
-        'boarding': e.boarding,
-        'qrAttendance': e.qrAttendance,
-        'digitalIds': e.digitalIds,
-        'parentPortal': e.parentPortal,
-        'studentPortal': e.studentPortal,
-      };
+    'transport': e.transport,
+    'hostel': e.hostel,
+    'library': e.library,
+    'medical': e.medical,
+    'visitors': e.visitors,
+    'inventory': e.inventory,
+    'payroll': e.payroll,
+    'procurement': e.procurement,
+    'alumni': e.alumni,
+    'communication': e.communication,
+    'boarding': e.boarding,
+    'qrAttendance': e.qrAttendance,
+    'digitalIds': e.digitalIds,
+    'parentPortal': e.parentPortal,
+    'studentPortal': e.studentPortal,
+  };
 
   // Institution Profile
   @override
@@ -649,8 +773,10 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   }
 
   @override
-  Future<void> updateInstitutionProfile(InstitutionProfile profile, String schoolId) =>
-      _institutionProfileDoc(schoolId).set(_institutionProfileToMap(profile));
+  Future<void> updateInstitutionProfile(
+    InstitutionProfile profile,
+    String schoolId,
+  ) => _institutionProfileDoc(schoolId).set(_institutionProfileToMap(profile));
 
   InstitutionProfile _institutionProfileFromMap(Map<String, dynamic> map) {
     return InstitutionProfile(
@@ -686,35 +812,35 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   }
 
   Map<String, dynamic> _institutionProfileToMap(InstitutionProfile e) => {
-        'name': e.name,
-        'shortName': e.shortName,
-        'motto': e.motto,
-        'vision': e.vision,
-        'mission': e.mission,
-        'logoUrl': e.logoUrl,
-        'badgeUrl': e.badgeUrl,
-        'colors': e.colors,
-        'schoolType': e.schoolType,
-        'schoolCategory': e.schoolCategory,
-        'registrationNumber': e.registrationNumber,
-        'ministryRegistrationNumber': e.ministryRegistrationNumber,
-        'taxNumber': e.taxNumber,
-        'country': e.country,
-        'district': e.district,
-        'city': e.city,
-        'address': e.address,
-        'gpsLat': e.gpsLat,
-        'gpsLng': e.gpsLng,
-        'phone': e.phone,
-        'email': e.email,
-        'website': e.website,
-        'socialMedia': e.socialMedia,
-        'timeZone': e.timeZone,
-        'currency': e.currency,
-        'language': e.language,
-        'dateFormat': e.dateFormat,
-        'timeFormat': e.timeFormat,
-      };
+    'name': e.name,
+    'shortName': e.shortName,
+    'motto': e.motto,
+    'vision': e.vision,
+    'mission': e.mission,
+    'logoUrl': e.logoUrl,
+    'badgeUrl': e.badgeUrl,
+    'colors': e.colors,
+    'schoolType': e.schoolType,
+    'schoolCategory': e.schoolCategory,
+    'registrationNumber': e.registrationNumber,
+    'ministryRegistrationNumber': e.ministryRegistrationNumber,
+    'taxNumber': e.taxNumber,
+    'country': e.country,
+    'district': e.district,
+    'city': e.city,
+    'address': e.address,
+    'gpsLat': e.gpsLat,
+    'gpsLng': e.gpsLng,
+    'phone': e.phone,
+    'email': e.email,
+    'website': e.website,
+    'socialMedia': e.socialMedia,
+    'timeZone': e.timeZone,
+    'currency': e.currency,
+    'language': e.language,
+    'dateFormat': e.dateFormat,
+    'timeFormat': e.timeFormat,
+  };
 
   // Campuses
   @override
@@ -723,20 +849,24 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
         .where('schoolId', isEqualTo: schoolId)
         .orderBy('order')
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _campusFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) =>
+              snap.docs.map((d) => _campusFromMap(d.id, d.data())).toList(),
+        );
   }
 
   @override
-  Future<void> saveCampus(Campus campus) => _campuses.doc(campus.id).set(_campusToMap(campus));
+  Future<void> saveCampus(Campus campus) =>
+      _campuses.doc(campus.id).set(_campusToMap(campus));
 
   @override
-  Future<void> deleteCampus(String campusId) => _campuses.doc(campusId).delete();
+  Future<void> deleteCampus(String campusId) =>
+      _campuses.doc(campusId).delete();
 
   @override
-  Future<void> archiveCampus(String campusId) => _campuses.doc(campusId).update({
-        'isActive': false,
-        'archivedAt': Timestamp.now(),
-      });
+  Future<void> archiveCampus(String campusId) => _campuses.doc(campusId).update(
+    {'isActive': false, 'archivedAt': Timestamp.now()},
+  );
 
   Campus _campusFromMap(String id, Map<String, dynamic> map) {
     return Campus(
@@ -757,19 +887,21 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   }
 
   Map<String, dynamic> _campusToMap(Campus e) => {
-        'schoolId': e.schoolId,
-        'name': e.name,
-        'code': e.code,
-        'address': e.address,
-        'district': e.district,
-        'contactPhone': e.contactPhone,
-        'contactEmail': e.contactEmail,
-        'headStaffId': e.headStaffId,
-        'isPrimary': e.isPrimary,
-        'isActive': e.isActive,
-        'order': e.order,
-        'archivedAt': e.archivedAt != null ? Timestamp.fromDate(e.archivedAt!) : null,
-      };
+    'schoolId': e.schoolId,
+    'name': e.name,
+    'code': e.code,
+    'address': e.address,
+    'district': e.district,
+    'contactPhone': e.contactPhone,
+    'contactEmail': e.contactEmail,
+    'headStaffId': e.headStaffId,
+    'isPrimary': e.isPrimary,
+    'isActive': e.isActive,
+    'order': e.order,
+    'archivedAt': e.archivedAt != null
+        ? Timestamp.fromDate(e.archivedAt!)
+        : null,
+  };
 
   // Houses
   @override
@@ -777,31 +909,35 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     return _houses
         .where('schoolId', isEqualTo: schoolId)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _houseFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) =>
+              snap.docs.map((d) => _houseFromMap(d.id, d.data())).toList(),
+        );
   }
 
   @override
-  Future<void> saveHouse(House house) => _houses.doc(house.id).set(_houseToMap(house));
+  Future<void> saveHouse(House house) =>
+      _houses.doc(house.id).set(_houseToMap(house));
 
   @override
   Future<void> deleteHouse(String houseId) => _houses.doc(houseId).delete();
 
   House _houseFromMap(String id, Map<String, dynamic> map) => House(
-        id: id,
-        schoolId: map['schoolId'] ?? '',
-        name: map['name'] ?? '',
-        colorHex: map['colorHex'] ?? '',
-        description: map['description'] ?? '',
-        isActive: map['isActive'] ?? true,
-      );
+    id: id,
+    schoolId: map['schoolId'] ?? '',
+    name: map['name'] ?? '',
+    colorHex: map['colorHex'] ?? '',
+    description: map['description'] ?? '',
+    isActive: map['isActive'] ?? true,
+  );
 
   Map<String, dynamic> _houseToMap(House e) => {
-        'schoolId': e.schoolId,
-        'name': e.name,
-        'colorHex': e.colorHex,
-        'description': e.description,
-        'isActive': e.isActive,
-      };
+    'schoolId': e.schoolId,
+    'name': e.name,
+    'colorHex': e.colorHex,
+    'description': e.description,
+    'isActive': e.isActive,
+  };
 
   // Clubs & Societies
   @override
@@ -809,7 +945,9 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     return _clubs
         .where('schoolId', isEqualTo: schoolId)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _clubFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) => snap.docs.map((d) => _clubFromMap(d.id, d.data())).toList(),
+        );
   }
 
   @override
@@ -819,23 +957,23 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   Future<void> deleteClub(String clubId) => _clubs.doc(clubId).delete();
 
   Club _clubFromMap(String id, Map<String, dynamic> map) => Club(
-        id: id,
-        schoolId: map['schoolId'] ?? '',
-        name: map['name'] ?? '',
-        category: map['category'] ?? '',
-        description: map['description'] ?? '',
-        patronName: map['patronName'] ?? '',
-        isActive: map['isActive'] ?? true,
-      );
+    id: id,
+    schoolId: map['schoolId'] ?? '',
+    name: map['name'] ?? '',
+    category: map['category'] ?? '',
+    description: map['description'] ?? '',
+    patronName: map['patronName'] ?? '',
+    isActive: map['isActive'] ?? true,
+  );
 
   Map<String, dynamic> _clubToMap(Club e) => {
-        'schoolId': e.schoolId,
-        'name': e.name,
-        'category': e.category,
-        'description': e.description,
-        'patronName': e.patronName,
-        'isActive': e.isActive,
-      };
+    'schoolId': e.schoolId,
+    'name': e.name,
+    'category': e.category,
+    'description': e.description,
+    'patronName': e.patronName,
+    'isActive': e.isActive,
+  };
 
   // Facilities
   @override
@@ -843,7 +981,10 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     return _facilities
         .where('schoolId', isEqualTo: schoolId)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _facilityFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) =>
+              snap.docs.map((d) => _facilityFromMap(d.id, d.data())).toList(),
+        );
   }
 
   @override
@@ -851,28 +992,29 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       _facilities.doc(facility.id).set(_facilityToMap(facility));
 
   @override
-  Future<void> deleteFacility(String facilityId) => _facilities.doc(facilityId).delete();
+  Future<void> deleteFacility(String facilityId) =>
+      _facilities.doc(facilityId).delete();
 
   Facility _facilityFromMap(String id, Map<String, dynamic> map) => Facility(
-        id: id,
-        schoolId: map['schoolId'] ?? '',
-        name: map['name'] ?? '',
-        facilityType: map['facilityType'] ?? '',
-        location: map['location'] ?? '',
-        capacity: map['capacity'] ?? 0,
-        description: map['description'] ?? '',
-        isActive: map['isActive'] ?? true,
-      );
+    id: id,
+    schoolId: map['schoolId'] ?? '',
+    name: map['name'] ?? '',
+    facilityType: map['facilityType'] ?? '',
+    location: map['location'] ?? '',
+    capacity: map['capacity'] ?? 0,
+    description: map['description'] ?? '',
+    isActive: map['isActive'] ?? true,
+  );
 
   Map<String, dynamic> _facilityToMap(Facility e) => {
-        'schoolId': e.schoolId,
-        'name': e.name,
-        'facilityType': e.facilityType,
-        'location': e.location,
-        'capacity': e.capacity,
-        'description': e.description,
-        'isActive': e.isActive,
-      };
+    'schoolId': e.schoolId,
+    'name': e.name,
+    'facilityType': e.facilityType,
+    'location': e.location,
+    'capacity': e.capacity,
+    'description': e.description,
+    'isActive': e.isActive,
+  };
 
   // Hostels
   @override
@@ -880,37 +1022,41 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     return _hostels
         .where('schoolId', isEqualTo: schoolId)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _hostelFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) =>
+              snap.docs.map((d) => _hostelFromMap(d.id, d.data())).toList(),
+        );
   }
 
   @override
-  Future<void> saveHostel(Hostel hostel) => _hostels.doc(hostel.id).set(_hostelToMap(hostel));
+  Future<void> saveHostel(Hostel hostel) =>
+      _hostels.doc(hostel.id).set(_hostelToMap(hostel));
 
   @override
   Future<void> deleteHostel(String hostelId) => _hostels.doc(hostelId).delete();
 
   Hostel _hostelFromMap(String id, Map<String, dynamic> map) => Hostel(
-        id: id,
-        schoolId: map['schoolId'] ?? '',
-        name: map['name'] ?? '',
-        gender: map['gender'] ?? '',
-        wardenName: map['wardenName'] ?? '',
-        wardenContact: map['wardenContact'] ?? '',
-        capacity: map['capacity'] ?? 0,
-        description: map['description'] ?? '',
-        isActive: map['isActive'] ?? true,
-      );
+    id: id,
+    schoolId: map['schoolId'] ?? '',
+    name: map['name'] ?? '',
+    gender: map['gender'] ?? '',
+    wardenName: map['wardenName'] ?? '',
+    wardenContact: map['wardenContact'] ?? '',
+    capacity: map['capacity'] ?? 0,
+    description: map['description'] ?? '',
+    isActive: map['isActive'] ?? true,
+  );
 
   Map<String, dynamic> _hostelToMap(Hostel e) => {
-        'schoolId': e.schoolId,
-        'name': e.name,
-        'gender': e.gender,
-        'wardenName': e.wardenName,
-        'wardenContact': e.wardenContact,
-        'capacity': e.capacity,
-        'description': e.description,
-        'isActive': e.isActive,
-      };
+    'schoolId': e.schoolId,
+    'name': e.name,
+    'gender': e.gender,
+    'wardenName': e.wardenName,
+    'wardenContact': e.wardenContact,
+    'capacity': e.capacity,
+    'description': e.description,
+    'isActive': e.isActive,
+  };
 
   // Hostel Rooms
   @override
@@ -918,7 +1064,10 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     return _hostelRooms
         .where('schoolId', isEqualTo: schoolId)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _hostelRoomFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) =>
+              snap.docs.map((d) => _hostelRoomFromMap(d.id, d.data())).toList(),
+        );
   }
 
   @override
@@ -926,9 +1075,11 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       _hostelRooms.doc(room.id).set(_hostelRoomToMap(room));
 
   @override
-  Future<void> deleteHostelRoom(String roomId) => _hostelRooms.doc(roomId).delete();
+  Future<void> deleteHostelRoom(String roomId) =>
+      _hostelRooms.doc(roomId).delete();
 
-  HostelRoom _hostelRoomFromMap(String id, Map<String, dynamic> map) => HostelRoom(
+  HostelRoom _hostelRoomFromMap(String id, Map<String, dynamic> map) =>
+      HostelRoom(
         id: id,
         schoolId: map['schoolId'] ?? '',
         hostelId: map['hostelId'] ?? '',
@@ -939,13 +1090,13 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       );
 
   Map<String, dynamic> _hostelRoomToMap(HostelRoom e) => {
-        'schoolId': e.schoolId,
-        'hostelId': e.hostelId,
-        'blockName': e.blockName,
-        'roomNumber': e.roomNumber,
-        'bedCapacity': e.bedCapacity,
-        'isActive': e.isActive,
-      };
+    'schoolId': e.schoolId,
+    'hostelId': e.hostelId,
+    'blockName': e.blockName,
+    'roomNumber': e.roomNumber,
+    'bedCapacity': e.bedCapacity,
+    'isActive': e.isActive,
+  };
 
   // Transport Routes
   @override
@@ -953,7 +1104,11 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     return _transportRoutes
         .where('schoolId', isEqualTo: schoolId)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _transportRouteFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) => snap.docs
+              .map((d) => _transportRouteFromMap(d.id, d.data()))
+              .toList(),
+        );
   }
 
   @override
@@ -961,9 +1116,11 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       _transportRoutes.doc(route.id).set(_transportRouteToMap(route));
 
   @override
-  Future<void> deleteTransportRoute(String routeId) => _transportRoutes.doc(routeId).delete();
+  Future<void> deleteTransportRoute(String routeId) =>
+      _transportRoutes.doc(routeId).delete();
 
-  TransportRoute _transportRouteFromMap(String id, Map<String, dynamic> map) => TransportRoute(
+  TransportRoute _transportRouteFromMap(String id, Map<String, dynamic> map) =>
+      TransportRoute(
         id: id,
         schoolId: map['schoolId'] ?? '',
         name: map['name'] ?? '',
@@ -973,12 +1130,12 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       );
 
   Map<String, dynamic> _transportRouteToMap(TransportRoute e) => {
-        'schoolId': e.schoolId,
-        'name': e.name,
-        'code': e.code,
-        'description': e.description,
-        'isActive': e.isActive,
-      };
+    'schoolId': e.schoolId,
+    'name': e.name,
+    'code': e.code,
+    'description': e.description,
+    'isActive': e.isActive,
+  };
 
   // Transport Stops
   @override
@@ -987,7 +1144,11 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
         .where('schoolId', isEqualTo: schoolId)
         .orderBy('order')
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _transportStopFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) => snap.docs
+              .map((d) => _transportStopFromMap(d.id, d.data()))
+              .toList(),
+        );
   }
 
   @override
@@ -995,9 +1156,11 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       _transportStops.doc(stop.id).set(_transportStopToMap(stop));
 
   @override
-  Future<void> deleteTransportStop(String stopId) => _transportStops.doc(stopId).delete();
+  Future<void> deleteTransportStop(String stopId) =>
+      _transportStops.doc(stopId).delete();
 
-  TransportStop _transportStopFromMap(String id, Map<String, dynamic> map) => TransportStop(
+  TransportStop _transportStopFromMap(String id, Map<String, dynamic> map) =>
+      TransportStop(
         id: id,
         schoolId: map['schoolId'] ?? '',
         routeId: map['routeId'] ?? '',
@@ -1009,14 +1172,14 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       );
 
   Map<String, dynamic> _transportStopToMap(TransportStop e) => {
-        'schoolId': e.schoolId,
-        'routeId': e.routeId,
-        'name': e.name,
-        'order': e.order,
-        'pickupTime': e.pickupTime,
-        'zone': e.zone,
-        'isActive': e.isActive,
-      };
+    'schoolId': e.schoolId,
+    'routeId': e.routeId,
+    'name': e.name,
+    'order': e.order,
+    'pickupTime': e.pickupTime,
+    'zone': e.zone,
+    'isActive': e.isActive,
+  };
 
   // Transport Vehicles
   @override
@@ -1024,7 +1187,11 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     return _transportVehicles
         .where('schoolId', isEqualTo: schoolId)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _transportVehicleFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) => snap.docs
+              .map((d) => _transportVehicleFromMap(d.id, d.data()))
+              .toList(),
+        );
   }
 
   @override
@@ -1035,27 +1202,29 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   Future<void> deleteTransportVehicle(String vehicleId) =>
       _transportVehicles.doc(vehicleId).delete();
 
-  TransportVehicle _transportVehicleFromMap(String id, Map<String, dynamic> map) =>
-      TransportVehicle(
-        id: id,
-        schoolId: map['schoolId'] ?? '',
-        busNumber: map['busNumber'] ?? '',
-        plateNumber: map['plateNumber'] ?? '',
-        capacity: map['capacity'] ?? 0,
-        driverName: map['driverName'] ?? '',
-        routeId: map['routeId'] ?? '',
-        isActive: map['isActive'] ?? true,
-      );
+  TransportVehicle _transportVehicleFromMap(
+    String id,
+    Map<String, dynamic> map,
+  ) => TransportVehicle(
+    id: id,
+    schoolId: map['schoolId'] ?? '',
+    busNumber: map['busNumber'] ?? '',
+    plateNumber: map['plateNumber'] ?? '',
+    capacity: map['capacity'] ?? 0,
+    driverName: map['driverName'] ?? '',
+    routeId: map['routeId'] ?? '',
+    isActive: map['isActive'] ?? true,
+  );
 
   Map<String, dynamic> _transportVehicleToMap(TransportVehicle e) => {
-        'schoolId': e.schoolId,
-        'busNumber': e.busNumber,
-        'plateNumber': e.plateNumber,
-        'capacity': e.capacity,
-        'driverName': e.driverName,
-        'routeId': e.routeId,
-        'isActive': e.isActive,
-      };
+    'schoolId': e.schoolId,
+    'busNumber': e.busNumber,
+    'plateNumber': e.plateNumber,
+    'capacity': e.capacity,
+    'driverName': e.driverName,
+    'routeId': e.routeId,
+    'isActive': e.isActive,
+  };
 
   // Fee Categories
   @override
@@ -1063,7 +1232,11 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     return _feeCategories
         .where('schoolId', isEqualTo: schoolId)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _feeCategoryFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) => snap.docs
+              .map((d) => _feeCategoryFromMap(d.id, d.data()))
+              .toList(),
+        );
   }
 
   @override
@@ -1071,9 +1244,11 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       _feeCategories.doc(category.id).set(_feeCategoryToMap(category));
 
   @override
-  Future<void> deleteFeeCategory(String categoryId) => _feeCategories.doc(categoryId).delete();
+  Future<void> deleteFeeCategory(String categoryId) =>
+      _feeCategories.doc(categoryId).delete();
 
-  FeeCategory _feeCategoryFromMap(String id, Map<String, dynamic> map) => FeeCategory(
+  FeeCategory _feeCategoryFromMap(String id, Map<String, dynamic> map) =>
+      FeeCategory(
         id: id,
         schoolId: map['schoolId'] ?? '',
         name: map['name'] ?? '',
@@ -1084,13 +1259,13 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       );
 
   Map<String, dynamic> _feeCategoryToMap(FeeCategory e) => {
-        'schoolId': e.schoolId,
-        'name': e.name,
-        'code': e.code,
-        'description': e.description,
-        'isMandatory': e.isMandatory,
-        'isActive': e.isActive,
-      };
+    'schoolId': e.schoolId,
+    'name': e.name,
+    'code': e.code,
+    'description': e.description,
+    'isMandatory': e.isMandatory,
+    'isActive': e.isActive,
+  };
 
   // Assessment Types
   @override
@@ -1098,7 +1273,11 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     return _assessmentTypes
         .where('schoolId', isEqualTo: schoolId)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _assessmentTypeFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) => snap.docs
+              .map((d) => _assessmentTypeFromMap(d.id, d.data()))
+              .toList(),
+        );
   }
 
   @override
@@ -1106,25 +1285,28 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       _assessmentTypes.doc(type.id).set(_assessmentTypeToMap(type));
 
   @override
-  Future<void> deleteAssessmentType(String typeId) => _assessmentTypes.doc(typeId).delete();
+  Future<void> deleteAssessmentType(String typeId) =>
+      _assessmentTypes.doc(typeId).delete();
 
-  AssessmentTypeDef _assessmentTypeFromMap(String id, Map<String, dynamic> map) =>
-      AssessmentTypeDef(
-        id: id,
-        schoolId: map['schoolId'] ?? '',
-        name: map['name'] ?? '',
-        weightPercentage: (map['weightPercentage'] as num?)?.toDouble() ?? 0,
-        description: map['description'] ?? '',
-        isActive: map['isActive'] ?? true,
-      );
+  AssessmentTypeDef _assessmentTypeFromMap(
+    String id,
+    Map<String, dynamic> map,
+  ) => AssessmentTypeDef(
+    id: id,
+    schoolId: map['schoolId'] ?? '',
+    name: map['name'] ?? '',
+    weightPercentage: (map['weightPercentage'] as num?)?.toDouble() ?? 0,
+    description: map['description'] ?? '',
+    isActive: map['isActive'] ?? true,
+  );
 
   Map<String, dynamic> _assessmentTypeToMap(AssessmentTypeDef e) => {
-        'schoolId': e.schoolId,
-        'name': e.name,
-        'weightPercentage': e.weightPercentage,
-        'description': e.description,
-        'isActive': e.isActive,
-      };
+    'schoolId': e.schoolId,
+    'name': e.name,
+    'weightPercentage': e.weightPercentage,
+    'description': e.description,
+    'isActive': e.isActive,
+  };
 
   // Grading Systems
   @override
@@ -1132,7 +1314,11 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     return _gradingSystems
         .where('schoolId', isEqualTo: schoolId)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _gradingSystemFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) => snap.docs
+              .map((d) => _gradingSystemFromMap(d.id, d.data()))
+              .toList(),
+        );
   }
 
   @override
@@ -1140,9 +1326,11 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       _gradingSystems.doc(system.id).set(_gradingSystemToMap(system));
 
   @override
-  Future<void> deleteGradingSystem(String systemId) => _gradingSystems.doc(systemId).delete();
+  Future<void> deleteGradingSystem(String systemId) =>
+      _gradingSystems.doc(systemId).delete();
 
-  GradingSystemDef _gradingSystemFromMap(String id, Map<String, dynamic> map) => GradingSystemDef(
+  GradingSystemDef _gradingSystemFromMap(String id, Map<String, dynamic> map) =>
+      GradingSystemDef(
         id: id,
         schoolId: map['schoolId'] ?? '',
         name: map['name'] ?? '',
@@ -1152,12 +1340,12 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       );
 
   Map<String, dynamic> _gradingSystemToMap(GradingSystemDef e) => {
-        'schoolId': e.schoolId,
-        'name': e.name,
-        'type': e.type,
-        'isDefault': e.isDefault,
-        'isActive': e.isActive,
-      };
+    'schoolId': e.schoolId,
+    'name': e.name,
+    'type': e.type,
+    'isDefault': e.isDefault,
+    'isActive': e.isActive,
+  };
 
   // Grade Bands
   @override
@@ -1166,7 +1354,10 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
         .where('schoolId', isEqualTo: schoolId)
         .orderBy('order')
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _gradeBandFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) =>
+              snap.docs.map((d) => _gradeBandFromMap(d.id, d.data())).toList(),
+        );
   }
 
   @override
@@ -1174,28 +1365,29 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       _gradeBands.doc(band.id).set(_gradeBandToMap(band));
 
   @override
-  Future<void> deleteGradeBand(String bandId) => _gradeBands.doc(bandId).delete();
+  Future<void> deleteGradeBand(String bandId) =>
+      _gradeBands.doc(bandId).delete();
 
   GradeBand _gradeBandFromMap(String id, Map<String, dynamic> map) => GradeBand(
-        id: id,
-        schoolId: map['schoolId'] ?? '',
-        gradingSystemId: map['gradingSystemId'] ?? '',
-        grade: map['grade'] ?? '',
-        minScore: (map['minScore'] as num?)?.toDouble() ?? 0,
-        maxScore: (map['maxScore'] as num?)?.toDouble() ?? 0,
-        remarks: map['remarks'] ?? '',
-        order: map['order'] ?? 0,
-      );
+    id: id,
+    schoolId: map['schoolId'] ?? '',
+    gradingSystemId: map['gradingSystemId'] ?? '',
+    grade: map['grade'] ?? '',
+    minScore: (map['minScore'] as num?)?.toDouble() ?? 0,
+    maxScore: (map['maxScore'] as num?)?.toDouble() ?? 0,
+    remarks: map['remarks'] ?? '',
+    order: map['order'] ?? 0,
+  );
 
   Map<String, dynamic> _gradeBandToMap(GradeBand e) => {
-        'schoolId': e.schoolId,
-        'gradingSystemId': e.gradingSystemId,
-        'grade': e.grade,
-        'minScore': e.minScore,
-        'maxScore': e.maxScore,
-        'remarks': e.remarks,
-        'order': e.order,
-      };
+    'schoolId': e.schoolId,
+    'gradingSystemId': e.gradingSystemId,
+    'grade': e.grade,
+    'minScore': e.minScore,
+    'maxScore': e.maxScore,
+    'remarks': e.remarks,
+    'order': e.order,
+  };
 
   // Timetable Config
   @override
@@ -1219,31 +1411,35 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       schoolStartTime: map['schoolStartTime'] ?? '',
       schoolEndTime: map['schoolEndTime'] ?? '',
       slots: ((map['slots'] as List?) ?? const [])
-          .map((s) => TimetableSlot(
-                name: s['name'] ?? '',
-                startTime: s['startTime'] ?? '',
-                endTime: s['endTime'] ?? '',
-                type: s['type'] ?? 'period',
-              ))
+          .map(
+            (s) => TimetableSlot(
+              name: s['name'] ?? '',
+              startTime: s['startTime'] ?? '',
+              endTime: s['endTime'] ?? '',
+              type: s['type'] ?? 'period',
+            ),
+          )
           .toList(),
     );
   }
 
   Map<String, dynamic> _timetableConfigToMap(TimetableConfig e) => {
-        'teachingDays': e.teachingDays,
-        'weekendDays': e.weekendDays,
-        'periodsPerDay': e.periodsPerDay,
-        'schoolStartTime': e.schoolStartTime,
-        'schoolEndTime': e.schoolEndTime,
-        'slots': e.slots
-            .map((s) => {
-                  'name': s.name,
-                  'startTime': s.startTime,
-                  'endTime': s.endTime,
-                  'type': s.type,
-                })
-            .toList(),
-      };
+    'teachingDays': e.teachingDays,
+    'weekendDays': e.weekendDays,
+    'periodsPerDay': e.periodsPerDay,
+    'schoolStartTime': e.schoolStartTime,
+    'schoolEndTime': e.schoolEndTime,
+    'slots': e.slots
+        .map(
+          (s) => {
+            'name': s.name,
+            'startTime': s.startTime,
+            'endTime': s.endTime,
+            'type': s.type,
+          },
+        )
+        .toList(),
+  };
 
   // Attendance Types
   @override
@@ -1251,7 +1447,11 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     return _attendanceTypes
         .where('schoolId', isEqualTo: schoolId)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _attendanceTypeFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) => snap.docs
+              .map((d) => _attendanceTypeFromMap(d.id, d.data()))
+              .toList(),
+        );
   }
 
   @override
@@ -1259,23 +1459,26 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       _attendanceTypes.doc(type.id).set(_attendanceTypeToMap(type));
 
   @override
-  Future<void> deleteAttendanceType(String typeId) => _attendanceTypes.doc(typeId).delete();
+  Future<void> deleteAttendanceType(String typeId) =>
+      _attendanceTypes.doc(typeId).delete();
 
-  AttendanceTypeDef _attendanceTypeFromMap(String id, Map<String, dynamic> map) =>
-      AttendanceTypeDef(
-        id: id,
-        schoolId: map['schoolId'] ?? '',
-        name: map['name'] ?? '',
-        colorHex: map['colorHex'] ?? '',
-        isActive: map['isActive'] ?? true,
-      );
+  AttendanceTypeDef _attendanceTypeFromMap(
+    String id,
+    Map<String, dynamic> map,
+  ) => AttendanceTypeDef(
+    id: id,
+    schoolId: map['schoolId'] ?? '',
+    name: map['name'] ?? '',
+    colorHex: map['colorHex'] ?? '',
+    isActive: map['isActive'] ?? true,
+  );
 
   Map<String, dynamic> _attendanceTypeToMap(AttendanceTypeDef e) => {
-        'schoolId': e.schoolId,
-        'name': e.name,
-        'colorHex': e.colorHex,
-        'isActive': e.isActive,
-      };
+    'schoolId': e.schoolId,
+    'name': e.name,
+    'colorHex': e.colorHex,
+    'isActive': e.isActive,
+  };
 
   // Attendance Sessions
   @override
@@ -1283,7 +1486,11 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     return _attendanceSessions
         .where('schoolId', isEqualTo: schoolId)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _attendanceSessionFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) => snap.docs
+              .map((d) => _attendanceSessionFromMap(d.id, d.data()))
+              .toList(),
+        );
   }
 
   @override
@@ -1294,81 +1501,97 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   Future<void> deleteAttendanceSession(String sessionId) =>
       _attendanceSessions.doc(sessionId).delete();
 
-  AttendanceSessionDef _attendanceSessionFromMap(String id, Map<String, dynamic> map) =>
-      AttendanceSessionDef(
-        id: id,
-        schoolId: map['schoolId'] ?? '',
-        name: map['name'] ?? '',
-        isActive: map['isActive'] ?? true,
-      );
+  AttendanceSessionDef _attendanceSessionFromMap(
+    String id,
+    Map<String, dynamic> map,
+  ) => AttendanceSessionDef(
+    id: id,
+    schoolId: map['schoolId'] ?? '',
+    name: map['name'] ?? '',
+    isActive: map['isActive'] ?? true,
+  );
 
   Map<String, dynamic> _attendanceSessionToMap(AttendanceSessionDef e) => {
-        'schoolId': e.schoolId,
-        'name': e.name,
-        'isActive': e.isActive,
-      };
+    'schoolId': e.schoolId,
+    'name': e.name,
+    'isActive': e.isActive,
+  };
 
   // Announcement Categories
   @override
-  Stream<List<AnnouncementCategoryDef>> watchAnnouncementCategories(String schoolId) {
+  Stream<List<AnnouncementCategoryDef>> watchAnnouncementCategories(
+    String schoolId,
+  ) {
     return _announcementCategories
         .where('schoolId', isEqualTo: schoolId)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _announcementCategoryFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) => snap.docs
+              .map((d) => _announcementCategoryFromMap(d.id, d.data()))
+              .toList(),
+        );
   }
 
   @override
   Future<void> saveAnnouncementCategory(AnnouncementCategoryDef category) =>
-      _announcementCategories.doc(category.id).set(_announcementCategoryToMap(category));
+      _announcementCategories
+          .doc(category.id)
+          .set(_announcementCategoryToMap(category));
 
   @override
   Future<void> deleteAnnouncementCategory(String categoryId) =>
       _announcementCategories.doc(categoryId).delete();
 
-  AnnouncementCategoryDef _announcementCategoryFromMap(String id, Map<String, dynamic> map) =>
-      AnnouncementCategoryDef(
-        id: id,
-        schoolId: map['schoolId'] ?? '',
-        name: map['name'] ?? '',
-        isActive: map['isActive'] ?? true,
-      );
+  AnnouncementCategoryDef _announcementCategoryFromMap(
+    String id,
+    Map<String, dynamic> map,
+  ) => AnnouncementCategoryDef(
+    id: id,
+    schoolId: map['schoolId'] ?? '',
+    name: map['name'] ?? '',
+    isActive: map['isActive'] ?? true,
+  );
 
-  Map<String, dynamic> _announcementCategoryToMap(AnnouncementCategoryDef e) => {
-        'schoolId': e.schoolId,
-        'name': e.name,
-        'isActive': e.isActive,
-      };
+  Map<String, dynamic> _announcementCategoryToMap(AnnouncementCategoryDef e) =>
+      {'schoolId': e.schoolId, 'name': e.name, 'isActive': e.isActive};
 
   // Notification Categories
   @override
-  Stream<List<NotificationCategoryDef>> watchNotificationCategories(String schoolId) {
+  Stream<List<NotificationCategoryDef>> watchNotificationCategories(
+    String schoolId,
+  ) {
     return _notificationCategories
         .where('schoolId', isEqualTo: schoolId)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _notificationCategoryFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) => snap.docs
+              .map((d) => _notificationCategoryFromMap(d.id, d.data()))
+              .toList(),
+        );
   }
 
   @override
   Future<void> saveNotificationCategory(NotificationCategoryDef category) =>
-      _notificationCategories.doc(category.id).set(_notificationCategoryToMap(category));
+      _notificationCategories
+          .doc(category.id)
+          .set(_notificationCategoryToMap(category));
 
   @override
   Future<void> deleteNotificationCategory(String categoryId) =>
       _notificationCategories.doc(categoryId).delete();
 
-  NotificationCategoryDef _notificationCategoryFromMap(String id, Map<String, dynamic> map) =>
-      NotificationCategoryDef(
-        id: id,
-        schoolId: map['schoolId'] ?? '',
-        name: map['name'] ?? '',
-        isActive: map['isActive'] ?? true,
-      );
+  NotificationCategoryDef _notificationCategoryFromMap(
+    String id,
+    Map<String, dynamic> map,
+  ) => NotificationCategoryDef(
+    id: id,
+    schoolId: map['schoolId'] ?? '',
+    name: map['name'] ?? '',
+    isActive: map['isActive'] ?? true,
+  );
 
-  Map<String, dynamic> _notificationCategoryToMap(NotificationCategoryDef e) => {
-        'schoolId': e.schoolId,
-        'name': e.name,
-        'isActive': e.isActive,
-      };
+  Map<String, dynamic> _notificationCategoryToMap(NotificationCategoryDef e) =>
+      {'schoolId': e.schoolId, 'name': e.name, 'isActive': e.isActive};
 
   // Message Templates
   @override
@@ -1376,7 +1599,11 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     return _messageTemplates
         .where('schoolId', isEqualTo: schoolId)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _messageTemplateFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) => snap.docs
+              .map((d) => _messageTemplateFromMap(d.id, d.data()))
+              .toList(),
+        );
   }
 
   @override
@@ -1387,25 +1614,27 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   Future<void> deleteMessageTemplate(String templateId) =>
       _messageTemplates.doc(templateId).delete();
 
-  MessageTemplateDef _messageTemplateFromMap(String id, Map<String, dynamic> map) =>
-      MessageTemplateDef(
-        id: id,
-        schoolId: map['schoolId'] ?? '',
-        name: map['name'] ?? '',
-        channel: map['channel'] ?? 'sms',
-        subject: map['subject'] ?? '',
-        body: map['body'] ?? '',
-        isActive: map['isActive'] ?? true,
-      );
+  MessageTemplateDef _messageTemplateFromMap(
+    String id,
+    Map<String, dynamic> map,
+  ) => MessageTemplateDef(
+    id: id,
+    schoolId: map['schoolId'] ?? '',
+    name: map['name'] ?? '',
+    channel: map['channel'] ?? 'sms',
+    subject: map['subject'] ?? '',
+    body: map['body'] ?? '',
+    isActive: map['isActive'] ?? true,
+  );
 
   Map<String, dynamic> _messageTemplateToMap(MessageTemplateDef e) => {
-        'schoolId': e.schoolId,
-        'name': e.name,
-        'channel': e.channel,
-        'subject': e.subject,
-        'body': e.body,
-        'isActive': e.isActive,
-      };
+    'schoolId': e.schoolId,
+    'name': e.name,
+    'channel': e.channel,
+    'subject': e.subject,
+    'body': e.body,
+    'isActive': e.isActive,
+  };
 
   // Document Templates
   @override
@@ -1413,7 +1642,11 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     return _documentTemplates
         .where('schoolId', isEqualTo: schoolId)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _documentTemplateFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) => snap.docs
+              .map((d) => _documentTemplateFromMap(d.id, d.data()))
+              .toList(),
+        );
   }
 
   @override
@@ -1424,23 +1657,25 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   Future<void> deleteDocumentTemplate(String templateId) =>
       _documentTemplates.doc(templateId).delete();
 
-  DocumentTemplateDef _documentTemplateFromMap(String id, Map<String, dynamic> map) =>
-      DocumentTemplateDef(
-        id: id,
-        schoolId: map['schoolId'] ?? '',
-        name: map['name'] ?? '',
-        templateType: map['templateType'] ?? '',
-        description: map['description'] ?? '',
-        isActive: map['isActive'] ?? true,
-      );
+  DocumentTemplateDef _documentTemplateFromMap(
+    String id,
+    Map<String, dynamic> map,
+  ) => DocumentTemplateDef(
+    id: id,
+    schoolId: map['schoolId'] ?? '',
+    name: map['name'] ?? '',
+    templateType: map['templateType'] ?? '',
+    description: map['description'] ?? '',
+    isActive: map['isActive'] ?? true,
+  );
 
   Map<String, dynamic> _documentTemplateToMap(DocumentTemplateDef e) => {
-        'schoolId': e.schoolId,
-        'name': e.name,
-        'templateType': e.templateType,
-        'description': e.description,
-        'isActive': e.isActive,
-      };
+    'schoolId': e.schoolId,
+    'name': e.name,
+    'templateType': e.templateType,
+    'description': e.description,
+    'isActive': e.isActive,
+  };
 
   // Custom Fields
   @override
@@ -1448,7 +1683,11 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     return _customFields
         .where('schoolId', isEqualTo: schoolId)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => _customFieldFromMap(d.id, d.data())).toList());
+        .map(
+          (snap) => snap.docs
+              .map((d) => _customFieldFromMap(d.id, d.data()))
+              .toList(),
+        );
   }
 
   @override
@@ -1456,9 +1695,11 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       _customFields.doc(field.id).set(_customFieldToMap(field));
 
   @override
-  Future<void> deleteCustomField(String fieldId) => _customFields.doc(fieldId).delete();
+  Future<void> deleteCustomField(String fieldId) =>
+      _customFields.doc(fieldId).delete();
 
-  CustomFieldDef _customFieldFromMap(String id, Map<String, dynamic> map) => CustomFieldDef(
+  CustomFieldDef _customFieldFromMap(String id, Map<String, dynamic> map) =>
+      CustomFieldDef(
         id: id,
         schoolId: map['schoolId'] ?? '',
         appliesTo: map['appliesTo'] ?? '',
@@ -1470,12 +1711,12 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       );
 
   Map<String, dynamic> _customFieldToMap(CustomFieldDef e) => {
-        'schoolId': e.schoolId,
-        'appliesTo': e.appliesTo,
-        'fieldName': e.fieldName,
-        'fieldType': e.fieldType,
-        'options': e.options,
-        'isRequired': e.isRequired,
-        'isActive': e.isActive,
-      };
+    'schoolId': e.schoolId,
+    'appliesTo': e.appliesTo,
+    'fieldName': e.fieldName,
+    'fieldType': e.fieldType,
+    'options': e.options,
+    'isRequired': e.isRequired,
+    'isActive': e.isActive,
+  };
 }

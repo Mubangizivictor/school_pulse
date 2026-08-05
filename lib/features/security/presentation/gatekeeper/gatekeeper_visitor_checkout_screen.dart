@@ -16,10 +16,12 @@ class GatekeeperVisitorCheckOutScreen extends StatefulWidget {
   const GatekeeperVisitorCheckOutScreen({super.key});
 
   @override
-  State<GatekeeperVisitorCheckOutScreen> createState() => _GatekeeperVisitorCheckOutScreenState();
+  State<GatekeeperVisitorCheckOutScreen> createState() =>
+      _GatekeeperVisitorCheckOutScreenState();
 }
 
-class _GatekeeperVisitorCheckOutScreenState extends State<GatekeeperVisitorCheckOutScreen> {
+class _GatekeeperVisitorCheckOutScreenState
+    extends State<GatekeeperVisitorCheckOutScreen> {
   final _searchController = TextEditingController();
   String _query = '';
   Visitor? _selected;
@@ -35,11 +37,13 @@ class _GatekeeperVisitorCheckOutScreenState extends State<GatekeeperVisitorCheck
     if (_selected == null) return;
     setState(() => _isSubmitting = true);
     final now = DateTime.now();
-    context.read<VisitorsBloc>().add(CheckOutVisitorEvent(
-          visitorId: _selected!.id,
-          departureTime: now,
-          duration: formatVisitDuration(_selected!.arrivalTime, now),
-        ));
+    context.read<VisitorsBloc>().add(
+      CheckOutVisitorEvent(
+        visitorId: _selected!.id,
+        departureTime: now,
+        duration: formatVisitDuration(_selected!.arrivalTime, now),
+      ),
+    );
     Navigator.of(context).pop();
   }
 
@@ -54,7 +58,8 @@ class _GatekeeperVisitorCheckOutScreenState extends State<GatekeeperVisitorCheck
   Widget _buildList(BuildContext context) {
     return BlocBuilder<VisitorsBloc, VisitorsState>(
       builder: (context, state) {
-        if (state is! VisitorsLoaded) return const Center(child: CircularProgressIndicator());
+        if (state is! VisitorsLoaded)
+          return const Center(child: CircularProgressIndicator());
         final visitors = state.activeVisitors.where((v) {
           if (_query.isEmpty) return true;
           final q = _query.toLowerCase();
@@ -66,12 +71,18 @@ class _GatekeeperVisitorCheckOutScreenState extends State<GatekeeperVisitorCheck
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('${state.activeVisitors.length} visitors currently inside', style: Theme.of(context).textTheme.bodyMedium),
+              Text(
+                '${state.activeVisitors.length} visitors currently inside',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
               const SizedBox(height: 12),
               TextField(
                 controller: _searchController,
                 style: const TextStyle(fontSize: 18),
-                decoration: const InputDecoration(hintText: 'Search by name or phone', prefixIcon: Icon(Icons.search)),
+                decoration: const InputDecoration(
+                  hintText: 'Search by name or phone',
+                  prefixIcon: Icon(Icons.search),
+                ),
                 onChanged: (v) => setState(() => _query = v),
               ),
               const SizedBox(height: 16),
@@ -100,8 +111,19 @@ class _GatekeeperVisitorCheckOutScreenState extends State<GatekeeperVisitorCheck
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(visitor.fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                  Text('${visitor.purpose} • ${visitor.host}', style: Theme.of(context).textTheme.bodySmall),
+                                  Text(
+                                    visitor.fullName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${visitor.purpose} • ${visitor.host}',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
+                                  ),
                                 ],
                               ),
                             ),
@@ -128,9 +150,19 @@ class _GatekeeperVisitorCheckOutScreenState extends State<GatekeeperVisitorCheck
         children: [
           AvatarInitials(name: visitor.fullName, size: 96),
           const SizedBox(height: 16),
-          Text(visitor.fullName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-          Text('${visitor.purpose} • Visiting ${visitor.host}', textAlign: TextAlign.center),
-          Text('Arrived ${formatVisitDuration(visitor.arrivalTime, DateTime.now())} ago', style: Theme.of(context).textTheme.bodyMedium),
+          Text(
+            visitor.fullName,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          Text(
+            '${visitor.purpose} • Visiting ${visitor.host}',
+            textAlign: TextAlign.center,
+          ),
+          Text(
+            'Arrived ${formatVisitDuration(visitor.arrivalTime, DateTime.now())} ago',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
           const SizedBox(height: 32),
           GatekeeperPrimaryButton(
             label: 'CHECK OUT',
@@ -141,7 +173,9 @@ class _GatekeeperVisitorCheckOutScreenState extends State<GatekeeperVisitorCheck
           ),
           const SizedBox(height: 12),
           TextButton(
-            onPressed: _isSubmitting ? null : () => setState(() => _selected = null),
+            onPressed: _isSubmitting
+                ? null
+                : () => setState(() => _selected = null),
             child: const Text('Not this visitor — go back'),
           ),
         ],

@@ -27,7 +27,7 @@ class CateringLocalDataSourceImpl implements CateringLocalDataSource {
       ..academicYear = record.academicYear
       ..term = record.term
       ..isSynced = false;
-    
+
     await isar.writeTxn(() async {
       await isar.mealRecordIsars.put(isarRecord);
     });

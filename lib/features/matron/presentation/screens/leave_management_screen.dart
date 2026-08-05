@@ -37,14 +37,20 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
       body: BlocConsumer<MatronBloc, MatronState>(
         listener: (context, state) {
           if (state is MatronActionSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
           } else if (state is MatronError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: semanticColors.error),
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: semanticColors.error,
+              ),
             );
           }
         },
-        buildWhen: (previous, current) => current is LeaveRequestsLoaded || current is MatronLoading,
+        buildWhen: (previous, current) =>
+            current is LeaveRequestsLoaded || current is MatronLoading,
         builder: (context, state) {
           if (state is! LeaveRequestsLoaded) {
             return const Center(child: CircularProgressIndicator());
@@ -56,7 +62,8 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
               message: 'Tap + to record a new leave request.',
             );
           }
-          final sorted = [...state.requests]..sort((a, b) {
+          final sorted = [...state.requests]
+            ..sort((a, b) {
               final aOverdue = a.isOverdue ? 0 : 1;
               final bOverdue = b.isOverdue ? 0 : 1;
               return aOverdue.compareTo(bOverdue);
@@ -122,15 +129,27 @@ class _LeaveCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Text(request.studentName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                child: Text(
+                  request.studentName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
               ),
-              StatusBadge(label: isOverdue ? 'Overdue' : request.status, color: statusColor),
+              StatusBadge(
+                label: isOverdue ? 'Overdue' : request.status,
+                color: statusColor,
+              ),
             ],
           ),
           const SizedBox(height: 4),
           Text(request.reason, style: Theme.of(context).textTheme.bodyMedium),
           if (request.destination != null)
-            Text('Destination: ${request.destination}', style: Theme.of(context).textTheme.bodySmall),
+            Text(
+              'Destination: ${request.destination}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           const SizedBox(height: 4),
           Text(
             'Depart ${DateFormat('MMM d').format(request.departureDate)} - '
@@ -143,30 +162,39 @@ class _LeaveCard extends StatelessWidget {
             children: [
               if (request.status == 'Pending') ...[
                 TextButton(
-                  onPressed: () => context.read<MatronBloc>().add(UpdateLeaveStatusEvent(
-                        request.id,
-                        'Rejected',
-                        approvedBy: currentUserName,
-                      )),
-                  child: Text('Reject', style: TextStyle(color: semanticColors.error)),
+                  onPressed: () => context.read<MatronBloc>().add(
+                    UpdateLeaveStatusEvent(
+                      request.id,
+                      'Rejected',
+                      approvedBy: currentUserName,
+                    ),
+                  ),
+                  child: Text(
+                    'Reject',
+                    style: TextStyle(color: semanticColors.error),
+                  ),
                 ),
                 FilledButton(
-                  onPressed: () => context.read<MatronBloc>().add(UpdateLeaveStatusEvent(
-                        request.id,
-                        'Out',
-                        approvedBy: currentUserName,
-                      )),
+                  onPressed: () => context.read<MatronBloc>().add(
+                    UpdateLeaveStatusEvent(
+                      request.id,
+                      'Out',
+                      approvedBy: currentUserName,
+                    ),
+                  ),
                   child: const Text('Approve & Depart'),
                 ),
               ],
               if (request.status == 'Out' || isOverdue)
                 FilledButton(
-                  onPressed: () => context.read<MatronBloc>().add(UpdateLeaveStatusEvent(
-                        request.id,
-                        'Returned',
-                        approvedBy: currentUserName,
-                        actualReturnDate: DateTime.now(),
-                      )),
+                  onPressed: () => context.read<MatronBloc>().add(
+                    UpdateLeaveStatusEvent(
+                      request.id,
+                      'Returned',
+                      approvedBy: currentUserName,
+                      actualReturnDate: DateTime.now(),
+                    ),
+                  ),
                   child: const Text('Mark Returned'),
                 ),
             ],
@@ -213,31 +241,54 @@ class _RequestLeaveSheetState extends State<_RequestLeaveSheet> {
           if (state is MatronActionSuccess) Navigator.pop(context);
         },
         builder: (context, state) {
-          final students = state is BoardingStudentsLoaded ? state.students : <BoardingStudent>[];
+          final students = state is BoardingStudentsLoaded
+              ? state.students
+              : <BoardingStudent>[];
           return SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('New Leave Request', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                Text(
+                  'New Leave Request',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(labelText: 'Student', border: OutlineInputBorder()),
-                  items: students.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
+                  decoration: const InputDecoration(
+                    labelText: 'Student',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: students
+                      .map(
+                        (s) =>
+                            DropdownMenuItem(value: s.id, child: Text(s.name)),
+                      )
+                      .toList(),
                   onChanged: (val) => setState(() {
                     _selectedStudentId = val;
-                    _selectedStudentName = students.firstWhere((s) => s.id == val).name;
+                    _selectedStudentName = students
+                        .firstWhere((s) => s.id == val)
+                        .name;
                   }),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: _reasonController,
-                  decoration: const InputDecoration(labelText: 'Reason', border: OutlineInputBorder()),
+                  decoration: const InputDecoration(
+                    labelText: 'Reason',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: _destinationController,
-                  decoration: const InputDecoration(labelText: 'Destination (optional)', border: OutlineInputBorder()),
+                  decoration: const InputDecoration(
+                    labelText: 'Destination (optional)',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -245,15 +296,22 @@ class _RequestLeaveSheetState extends State<_RequestLeaveSheet> {
                     Expanded(
                       child: OutlinedButton.icon(
                         icon: const Icon(Icons.calendar_today),
-                        label: Text('Depart: ${DateFormat('MMM d').format(_departureDate)}'),
+                        label: Text(
+                          'Depart: ${DateFormat('MMM d').format(_departureDate)}',
+                        ),
                         onPressed: () async {
                           final date = await showDatePicker(
                             context: context,
                             initialDate: _departureDate,
-                            firstDate: DateTime.now().subtract(const Duration(days: 1)),
-                            lastDate: DateTime.now().add(const Duration(days: 90)),
+                            firstDate: DateTime.now().subtract(
+                              const Duration(days: 1),
+                            ),
+                            lastDate: DateTime.now().add(
+                              const Duration(days: 90),
+                            ),
                           );
-                          if (date != null) setState(() => _departureDate = date);
+                          if (date != null)
+                            setState(() => _departureDate = date);
                         },
                       ),
                     ),
@@ -261,15 +319,20 @@ class _RequestLeaveSheetState extends State<_RequestLeaveSheet> {
                     Expanded(
                       child: OutlinedButton.icon(
                         icon: const Icon(Icons.event_available),
-                        label: Text('Return: ${DateFormat('MMM d').format(_expectedReturnDate)}'),
+                        label: Text(
+                          'Return: ${DateFormat('MMM d').format(_expectedReturnDate)}',
+                        ),
                         onPressed: () async {
                           final date = await showDatePicker(
                             context: context,
                             initialDate: _expectedReturnDate,
                             firstDate: _departureDate,
-                            lastDate: DateTime.now().add(const Duration(days: 120)),
+                            lastDate: DateTime.now().add(
+                              const Duration(days: 120),
+                            ),
                           );
-                          if (date != null) setState(() => _expectedReturnDate = date);
+                          if (date != null)
+                            setState(() => _expectedReturnDate = date);
                         },
                       ),
                     ),
@@ -282,19 +345,24 @@ class _RequestLeaveSheetState extends State<_RequestLeaveSheet> {
                     onPressed: _selectedStudentId == null
                         ? null
                         : () {
-                            context.read<MatronBloc>().add(RequestLeaveEvent(LeaveRequest(
+                            context.read<MatronBloc>().add(
+                              RequestLeaveEvent(
+                                LeaveRequest(
                                   id: '',
                                   studentId: _selectedStudentId!,
                                   studentName: _selectedStudentName ?? '',
                                   dormitoryId: '',
                                   reason: _reasonController.text.trim(),
-                                  destination: _destinationController.text.trim().isEmpty
+                                  destination:
+                                      _destinationController.text.trim().isEmpty
                                       ? null
                                       : _destinationController.text.trim(),
                                   requestedBy: widget.requestedBy,
                                   departureDate: _departureDate,
                                   expectedReturnDate: _expectedReturnDate,
-                                )));
+                                ),
+                              ),
+                            );
                           },
                     child: const Text('Submit Request'),
                   ),

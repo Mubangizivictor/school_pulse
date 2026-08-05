@@ -20,5 +20,12 @@ class LibraryEligibilityView extends Equatable {
   });
 
   @override
-  List<Object?> get props => [studentId, name, eligible, currentlyBorrowed, overdueCount, message];
+  List<Object?> get props => [
+    studentId,
+    name,
+    eligible,
+    currentlyBorrowed,
+    overdueCount,
+    message,
+  ];
 }

@@ -4,7 +4,8 @@ import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/usecases/usecase.dart';
 import '../repositories/relationship_repository.dart';
 
-class RecordEnrolmentChange implements UseCase<void, RecordEnrolmentChangeParams> {
+class RecordEnrolmentChange
+    implements UseCase<void, RecordEnrolmentChangeParams> {
   final RelationshipRepository repository;
 
   RecordEnrolmentChange(this.repository);
@@ -43,5 +44,13 @@ class RecordEnrolmentChangeParams extends Equatable {
   });
 
   @override
-  List<Object?> get props => [schoolId, studentId, classId, streamId, academicYearId, recordedBy, reason];
+  List<Object?> get props => [
+    schoolId,
+    studentId,
+    classId,
+    streamId,
+    academicYearId,
+    recordedBy,
+    reason,
+  ];
 }

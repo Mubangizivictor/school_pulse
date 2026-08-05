@@ -24,7 +24,10 @@ class StaffShell extends StatelessWidget {
     return false;
   }
 
-  static const List<UserRole> _teacherRoles = [UserRole.classTeacher, UserRole.subjectTeacher];
+  static const List<UserRole> _teacherRoles = [
+    UserRole.classTeacher,
+    UserRole.subjectTeacher,
+  ];
 
   bool _isTeacher(BuildContext context) {
     final state = context.read<AuthBloc>().state;
@@ -71,20 +74,19 @@ class StaffShell extends StatelessWidget {
     final String location = GoRouterState.of(context).uri.path;
 
     bool isMoreSubRoute(String loc) {
-      return loc.startsWith('/staff/more') || 
-             loc.startsWith('/staff/profile') || 
-             loc.startsWith('/staff/notifications') ||
-             loc.startsWith('/staff/calendar') ||
-             loc.startsWith('/staff/tasks');
+      return loc.startsWith('/staff/more') ||
+          loc.startsWith('/staff/profile') ||
+          loc.startsWith('/staff/notifications') ||
+          loc.startsWith('/staff/calendar') ||
+          loc.startsWith('/staff/tasks');
     }
 
     if (_isAdmin(context)) {
       if (location.contains('/staff/admin/structure')) return 1;
       if (location.contains('/staff/admin/users')) {
-        final tab = GoRouterState.of(context).uri.queryParameters['tab'];
-        return tab == 'students' ? 3 : 2;
+        return 2;
       }
-      if (isMoreSubRoute(location)) return 4;
+      if (isMoreSubRoute(location)) return 3;
       if (location.startsWith('/staff/admin')) return 0;
       return 0;
     }
@@ -108,9 +110,11 @@ class StaffShell extends StatelessWidget {
     }
 
     if (_isNurse(context)) {
-      if (location.startsWith('/staff/nurse/records') || 
+      if (location.startsWith('/staff/nurse/records') ||
           location.startsWith('/staff/nurse/visits') ||
-          location.startsWith('/staff/nurse/medications')) return 1;
+          location.startsWith('/staff/nurse/medications')) {
+        return 1;
+      }
       if (location.startsWith('/staff/messages')) return 2;
       if (isMoreSubRoute(location)) return 3;
       return 0;
@@ -134,22 +138,39 @@ class StaffShell extends StatelessWidget {
   void _onItemTapped(int index, BuildContext context) {
     if (_isAdmin(context)) {
       switch (index) {
-        case 0: context.go(_homePath(context)); break;
-        case 1: context.go('/staff/admin/structure'); break;
-        case 2: context.go('/staff/admin/users'); break;
-        case 3: context.go('/staff/admin/users?tab=students'); break;
-        case 4: context.go('/staff/more'); break;
+        case 0:
+          context.go(_homePath(context));
+          break;
+        case 1:
+          context.go('/staff/admin/structure');
+          break;
+        case 2:
+          context.go('/staff/admin/users');
+          break;
+        case 3:
+          context.go('/staff/more');
+          break;
       }
       return;
     }
 
     if (_isTeacher(context)) {
       switch (index) {
-        case 0: context.go(_homePath(context)); break;
-        case 1: context.go('/staff/students'); break;
-        case 2: context.go('/staff/lessons'); break;
-        case 3: context.go('/staff/marks'); break;
-        case 4: context.go('/staff/more'); break;
+        case 0:
+          context.go(_homePath(context));
+          break;
+        case 1:
+          context.go('/staff/students');
+          break;
+        case 2:
+          context.go('/staff/lessons');
+          break;
+        case 3:
+          context.go('/staff/marks');
+          break;
+        case 4:
+          context.go('/staff/more');
+          break;
       }
       return;
     }
@@ -157,30 +178,56 @@ class StaffShell extends StatelessWidget {
     if (_isBoarding(context)) {
       final root = _boardingRoot(context);
       switch (index) {
-        case 0: context.go(_homePath(context)); break;
-        case 1: context.go('$root/dorms'); break;
-        case 2: context.go('/staff/tasks'); break;
-        case 3: context.go('/staff/messages'); break;
-        case 4: context.go('/staff/more'); break;
+        case 0:
+          context.go(_homePath(context));
+          break;
+        case 1:
+          context.go('$root/dorms');
+          break;
+        case 2:
+          context.go('/staff/tasks');
+          break;
+        case 3:
+          context.go('/staff/messages');
+          break;
+        case 4:
+          context.go('/staff/more');
+          break;
       }
       return;
     }
 
     if (_isNurse(context)) {
       switch (index) {
-        case 0: context.go(_homePath(context)); break;
-        case 1: context.go('/staff/nurse/records'); break;
-        case 2: context.go('/staff/messages'); break;
-        case 3: context.go('/staff/more'); break;
+        case 0:
+          context.go(_homePath(context));
+          break;
+        case 1:
+          context.go('/staff/nurse/records');
+          break;
+        case 2:
+          context.go('/staff/messages');
+          break;
+        case 3:
+          context.go('/staff/more');
+          break;
       }
       return;
     }
 
     switch (index) {
-      case 0: context.go(_homePath(context)); break;
-      case 1: context.go('/staff/tasks'); break;
-      case 2: context.go('/staff/messages'); break;
-      case 3: context.go('/staff/more'); break;
+      case 0:
+        context.go(_homePath(context));
+        break;
+      case 1:
+        context.go('/staff/tasks');
+        break;
+      case 2:
+        context.go('/staff/messages');
+        break;
+      case 3:
+        context.go('/staff/more');
+        break;
     }
   }
 
@@ -193,10 +240,16 @@ class StaffShell extends StatelessWidget {
         title: const Text('Logout'),
         content: const Text('Are you sure you want to log out?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Logout', style: TextStyle(color: AppColors.deepOrange)),
+            child: const Text(
+              'Logout',
+              style: TextStyle(color: AppColors.deepOrange),
+            ),
           ),
         ],
       ),
@@ -258,11 +311,6 @@ class StaffShell extends StatelessWidget {
         icon: Icon(Icons.people_outline_rounded, size: 24),
         selectedIcon: Icon(Icons.people_rounded, size: 24),
         label: 'Users',
-      ),
-      const NavigationDestination(
-        icon: Icon(Icons.school_outlined, size: 24),
-        selectedIcon: Icon(Icons.school_rounded, size: 24),
-        label: 'Students',
       ),
       const NavigationDestination(
         icon: Icon(Icons.grid_view_outlined, size: 24),
@@ -348,12 +396,12 @@ class StaffShell extends StatelessWidget {
     final destinations = isAdmin
         ? adminDestinations
         : isTeacher
-            ? teacherDestinations
-            : isBoarding
-                ? boardingDestinations
-                : _isNurse(context)
-                    ? nurseDestinations
-                    : operationalDestinations;
+        ? teacherDestinations
+        : isBoarding
+        ? boardingDestinations
+        : _isNurse(context)
+        ? nurseDestinations
+        : operationalDestinations;
 
     return Scaffold(
       body: Row(
@@ -364,10 +412,7 @@ class StaffShell extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.surfaceElevated(context),
                 border: Border(
-                  right: BorderSide(
-                    color: AppColors.border(context),
-                    width: 1,
-                  ),
+                  right: BorderSide(color: AppColors.border(context), width: 1),
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -380,11 +425,13 @@ class StaffShell extends StatelessWidget {
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.x4l),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.x4l,
+                    ),
                     child: PulseLogo(
                       size: 40,
-                      variant: MediaQuery.of(context).size.width > 1200 
-                          ? PulseLogoVariant.full 
+                      variant: MediaQuery.of(context).size.width > 1200
+                          ? PulseLogoVariant.full
                           : PulseLogoVariant.shield,
                     ),
                   ),
@@ -393,30 +440,37 @@ class StaffShell extends StatelessWidget {
                       backgroundColor: Colors.transparent,
                       extended: MediaQuery.of(context).size.width > 1200,
                       selectedIndex: _calculateSelectedIndex(context),
-                      onDestinationSelected: (idx) => _onItemTapped(idx, context),
+                      onDestinationSelected: (idx) =>
+                          _onItemTapped(idx, context),
                       minExtendedWidth: 280,
-                      labelType: MediaQuery.of(context).size.width > 1200 
-                          ? NavigationRailLabelType.none 
+                      labelType: MediaQuery.of(context).size.width > 1200
+                          ? NavigationRailLabelType.none
                           : NavigationRailLabelType.all,
-                      unselectedLabelTextStyle: AppTypography.labelMedium.copyWith(
-                        color: AppColors.textMuted(context),
-                      ),
-                      selectedLabelTextStyle: AppTypography.labelMedium.copyWith(
-                        color: AppColors.primary(context),
-                        fontWeight: FontWeight.bold,
-                      ),
+                      unselectedLabelTextStyle: AppTypography.labelMedium
+                          .copyWith(color: AppColors.textMuted(context)),
+                      selectedLabelTextStyle: AppTypography.labelMedium
+                          .copyWith(
+                            color: AppColors.primary(context),
+                            fontWeight: FontWeight.bold,
+                          ),
                       unselectedIconTheme: IconThemeData(
                         color: AppColors.textMuted(context),
                       ),
                       selectedIconTheme: IconThemeData(
                         color: AppColors.primary(context),
                       ),
-                      destinations: destinations.map((d) => NavigationRailDestination(
-                        icon: d.icon,
-                        selectedIcon: d.selectedIcon,
-                        label: Text(d.label),
-                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.m),
-                      )).toList(),
+                      destinations: destinations
+                          .map(
+                            (d) => NavigationRailDestination(
+                              icon: d.icon,
+                              selectedIcon: d.selectedIcon,
+                              label: Text(d.label),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: AppSpacing.m,
+                              ),
+                            ),
+                          )
+                          .toList(),
                     ),
                   ),
                   Padding(
@@ -429,7 +483,9 @@ class StaffShell extends StatelessWidget {
                   ),
                   Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.x3l),
-                    child: _LogoutButton(onPressed: () => _handleLogout(context)),
+                    child: _LogoutButton(
+                      onPressed: () => _handleLogout(context),
+                    ),
                   ),
                 ],
               ),
@@ -446,10 +502,7 @@ class StaffShell extends StatelessWidget {
           ? Container(
               decoration: BoxDecoration(
                 border: Border(
-                  top: BorderSide(
-                    color: AppColors.border(context),
-                    width: 0.5,
-                  ),
+                  top: BorderSide(color: AppColors.border(context), width: 0.5),
                 ),
               ),
               child: NavigationBarTheme(
@@ -473,13 +526,17 @@ class StaffShell extends StatelessWidget {
                   selectedIndex: _calculateSelectedIndex(context),
                   onDestinationSelected: (idx) => _onItemTapped(idx, context),
                   destinations: destinations.map((d) {
-                    final isSelected = destinations.indexOf(d) == _calculateSelectedIndex(context);
+                    final isSelected =
+                        destinations.indexOf(d) ==
+                        _calculateSelectedIndex(context);
                     return NavigationDestination(
                       icon: Icon(
                         isSelected
-                          ? (d.selectedIcon as Icon).icon
-                          : (d.icon as Icon).icon,
-                        color: isSelected ? AppColors.primary(context) : AppColors.textMuted(context),
+                            ? (d.selectedIcon as Icon).icon
+                            : (d.icon as Icon).icon,
+                        color: isSelected
+                            ? AppColors.primary(context)
+                            : AppColors.textMuted(context),
                         size: 24,
                       ),
                       label: d.label,
@@ -501,7 +558,7 @@ class _LogoutButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isExtended = MediaQuery.of(context).size.width > 1200;
-    
+
     if (isExtended) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),

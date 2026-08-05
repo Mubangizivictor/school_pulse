@@ -45,14 +45,19 @@ class PurchaseOrderIsar {
     );
   }
 
-  factory PurchaseOrderIsar.fromEntity(PurchaseOrder entity, {bool isSynced = true}) {
+  factory PurchaseOrderIsar.fromEntity(
+    PurchaseOrder entity, {
+    bool isSynced = true,
+  }) {
     return PurchaseOrderIsar()
       ..orderId = entity.id
       ..schoolId = entity.schoolId
       ..orderNumber = entity.orderNumber
       ..supplierId = entity.supplierId
       ..supplierName = entity.supplierName
-      ..items = entity.items.map((e) => OrderItemEmbeddable.fromEntity(e)).toList()
+      ..items = entity.items
+          .map((e) => OrderItemEmbeddable.fromEntity(e))
+          .toList()
       ..totalAmount = entity.totalAmount
       ..status = entity.status
       ..date = entity.date

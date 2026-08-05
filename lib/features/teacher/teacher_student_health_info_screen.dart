@@ -18,13 +18,18 @@ class TeacherStudentHealthInfoScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black),
+          icon: Icon(
+            Icons.arrow_back,
+            color: isDark ? Colors.white : Colors.black,
+          ),
           onPressed: () => context.pop(),
         ),
         title: Text(
           'Health Information',
           style: AppTypography.headlineSmall.copyWith(
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            color: isDark
+                ? AppColors.textPrimaryDark
+                : AppColors.textPrimaryLight,
           ),
         ),
       ),
@@ -36,7 +41,9 @@ class TeacherStudentHealthInfoScreen extends StatelessWidget {
             Text(
               'Medical Details',
               style: AppTypography.titleLarge.copyWith(
-                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -51,7 +58,9 @@ class TeacherStudentHealthInfoScreen extends StatelessWidget {
             Text(
               'Emergency Contact',
               style: AppTypography.titleLarge.copyWith(
-                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -67,11 +76,16 @@ class TeacherStudentHealthInfoScreen extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: () {},
                 icon: const Icon(Icons.edit, color: Colors.white),
-                label: const Text('Edit Health Info', style: TextStyle(color: Colors.white)),
+                label: const Text(
+                  'Edit Health Info',
+                  style: TextStyle(color: Colors.white),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.royalBlue,
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.l),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.m)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppSpacing.m),
+                  ),
                 ),
               ),
             ),
@@ -87,28 +101,40 @@ class TeacherStudentHealthInfoScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
         borderRadius: BorderRadius.circular(AppSpacing.l),
-        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+        ),
       ),
       child: Column(
-        children: items.map((item) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                item['label']!,
-                style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
-              ),
-              Text(
-                item['value']!,
-                style: AppTypography.bodyMedium.copyWith(
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                  fontWeight: FontWeight.bold,
+        children: items
+            .map(
+              (item) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      item['label']!,
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: isDark
+                            ? AppColors.textMutedDark
+                            : AppColors.textMutedLight,
+                      ),
+                    ),
+                    Text(
+                      item['value']!,
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-        )).toList(),
+            )
+            .toList(),
       ),
     );
   }

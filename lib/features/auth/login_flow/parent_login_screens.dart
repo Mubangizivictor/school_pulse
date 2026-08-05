@@ -57,36 +57,49 @@ class ParentAuthLayout extends StatelessWidget {
             child: ResponsiveBuilder(
               builder: (context, layout) {
                 final isDesktop = layout == ResponsiveLayout.desktop;
-                
+
                 return Container(
                   constraints: BoxConstraints(maxWidth: isDesktop ? 450 : 400),
-                  padding: isDesktop ? const EdgeInsets.all(AppSpacing.x4l) : null,
-                  decoration: isDesktop ? BoxDecoration(
-                    color: isDark ? AppColors.surfaceDark.withValues(alpha: 0.5) : Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: isDark ? AppColors.white.withValues(alpha: 0.1) : AppColors.borderLight,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ) : null,
+                  padding: isDesktop
+                      ? const EdgeInsets.all(AppSpacing.x4l)
+                      : null,
+                  decoration: isDesktop
+                      ? BoxDecoration(
+                          color: isDark
+                              ? AppColors.surfaceDark.withValues(alpha: 0.5)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: isDark
+                                ? AppColors.white.withValues(alpha: 0.1)
+                                : AppColors.borderLight,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        )
+                      : null,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const Center(
-                        child: PulseLogo(width: 320, variant: PulseLogoVariant.auth),
+                        child: PulseLogo(
+                          width: 320,
+                          variant: PulseLogoVariant.auth,
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.xl),
                       Text(
                         title,
                         style: AppTypography.headlineMedium.copyWith(
                           fontWeight: FontWeight.w800,
-                          color: isDark ? Colors.white : AppColors.textPrimaryLight,
+                          color: isDark
+                              ? Colors.white
+                              : AppColors.textPrimaryLight,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -95,7 +108,9 @@ class ParentAuthLayout extends StatelessWidget {
                         Text(
                           subtitle!,
                           style: AppTypography.bodyMedium.copyWith(
-                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                            color: isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondaryLight,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -105,7 +120,7 @@ class ParentAuthLayout extends StatelessWidget {
                     ],
                   ),
                 );
-              }
+              },
             ),
           ),
         ),
@@ -176,7 +191,10 @@ class _ChildIdScreenState extends State<ChildIdScreen> {
     return AuthPortalScaffold(
       accent: accent,
       children: [
-        const AuthHeroScene(accent: accent, badgeIcon: Icons.family_restroom_rounded),
+        const AuthHeroScene(
+          accent: accent,
+          badgeIcon: Icons.family_restroom_rounded,
+        ),
         const SizedBox(height: AppSpacing.l),
         Text(
           'Parent Portal',
@@ -215,7 +233,11 @@ class _ChildIdScreenState extends State<ChildIdScreen> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Icon(Icons.info_outline, color: AppColors.brightCyan, size: 26),
+              const Icon(
+                Icons.info_outline,
+                color: AppColors.brightCyan,
+                size: 26,
+              ),
               const SizedBox(width: AppSpacing.l),
               Expanded(
                 child: Column(
@@ -240,7 +262,11 @@ class _ChildIdScreenState extends State<ChildIdScreen> {
                 ),
               ),
               const SizedBox(width: AppSpacing.m),
-              const Icon(Icons.support_agent_rounded, color: AppColors.brightCyan, size: 32),
+              const Icon(
+                Icons.support_agent_rounded,
+                color: AppColors.brightCyan,
+                size: 32,
+              ),
             ],
           ),
         ),
@@ -273,23 +299,23 @@ class _ParentPhoneScreenState extends State<ParentPhoneScreen> {
 
   void _verifyPhone() {
     if (widget.accessCode == null) return;
-    
+
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     final inputPhone = PhoneFormatter.toE164(_phoneController.text);
-    
+
     Future.delayed(const Duration(milliseconds: 500), () {
       if (!mounted) return;
-      
+
       if (widget.accessCode!.phoneNumber == inputPhone) {
         setState(() => _isLoading = false);
-        context.push('/parent/login/pin', extra: {
-          'accessCode': widget.accessCode,
-          'phoneNumber': inputPhone,
-        });
+        context.push(
+          '/parent/login/pin',
+          extra: {'accessCode': widget.accessCode, 'phoneNumber': inputPhone},
+        );
       } else {
         setState(() {
           _isLoading = false;
@@ -309,7 +335,8 @@ class _ParentPhoneScreenState extends State<ParentPhoneScreen> {
   Widget build(BuildContext context) {
     return ParentAuthLayout(
       title: "Identity Verification",
-      subtitle: "Enter the phone number registered with this access code to continue.",
+      subtitle:
+          "Enter the phone number registered with this access code to continue.",
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -354,8 +381,9 @@ class _ParentPinScreenState extends State<ParentPinScreen> {
   String? _error;
 
   void _login() {
-    final isFirstTime = widget.accessCode.pin == null || widget.accessCode.pin!.isEmpty;
-    
+    final isFirstTime =
+        widget.accessCode.pin == null || widget.accessCode.pin!.isEmpty;
+
     if (isFirstTime) {
       if (_pinController.text.length < 4) {
         setState(() => _error = 'PIN must be 4 digits.');
@@ -365,18 +393,22 @@ class _ParentPinScreenState extends State<ParentPinScreen> {
         setState(() => _error = 'PINs do not match.');
         return;
       }
-      
-      context.read<AuthBloc>().add(CompleteParentPinSetupRequested(
-        code: widget.accessCode.parentCode,
-        phoneNumber: widget.phoneNumber,
-        newPin: _pinController.text,
-      ));
+
+      context.read<AuthBloc>().add(
+        CompleteParentPinSetupRequested(
+          code: widget.accessCode.parentCode,
+          phoneNumber: widget.phoneNumber,
+          newPin: _pinController.text,
+        ),
+      );
     } else {
-      context.read<AuthBloc>().add(LoginParentPressed(
-        code: widget.accessCode.parentCode,
-        phoneNumber: widget.phoneNumber,
-        pin: _pinController.text,
-      ));
+      context.read<AuthBloc>().add(
+        LoginParentPressed(
+          code: widget.accessCode.parentCode,
+          phoneNumber: widget.phoneNumber,
+          pin: _pinController.text,
+        ),
+      );
     }
   }
 
@@ -399,13 +431,14 @@ class _ParentPinScreenState extends State<ParentPinScreen> {
       },
       builder: (context, state) {
         final isLoading = state is AuthLoading;
-        final isFirstTime = widget.accessCode.pin == null || widget.accessCode.pin!.isEmpty;
+        final isFirstTime =
+            widget.accessCode.pin == null || widget.accessCode.pin!.isEmpty;
 
         return ParentAuthLayout(
           title: isFirstTime ? "Secure Your Portal" : "Enter Secure PIN",
-          subtitle: isFirstTime 
-            ? "Choose a 4-digit PIN to secure your portal access."
-            : "Enter your 4-digit PIN to access your account.",
+          subtitle: isFirstTime
+              ? "Choose a 4-digit PIN to secure your portal access."
+              : "Enter your 4-digit PIN to access your account.",
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -443,4 +476,3 @@ class _ParentPinScreenState extends State<ParentPinScreen> {
     );
   }
 }
-

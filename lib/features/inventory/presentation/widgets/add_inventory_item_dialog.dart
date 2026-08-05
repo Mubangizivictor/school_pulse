@@ -43,38 +43,53 @@ class _AddInventoryItemDialogState extends State<AddInventoryItemDialog> {
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: 'Item Name'),
-                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Required' : null,
               ),
               TextFormField(
                 controller: _categoryController,
                 decoration: const InputDecoration(labelText: 'Category'),
-                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Required' : null,
               ),
               Row(
                 children: [
                   Expanded(
                     child: TextFormField(
                       controller: _quantityController,
-                      decoration: const InputDecoration(labelText: 'Initial Quantity'),
+                      decoration: const InputDecoration(
+                        labelText: 'Initial Quantity',
+                      ),
                       keyboardType: TextInputType.number,
-                      validator: (value) => value == null || int.tryParse(value) == null ? 'Invalid' : null,
+                      validator: (value) =>
+                          value == null || int.tryParse(value) == null
+                          ? 'Invalid'
+                          : null,
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: TextFormField(
                       controller: _unitController,
-                      decoration: const InputDecoration(labelText: 'Unit (e.g., Pcs)'),
-                      validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                      decoration: const InputDecoration(
+                        labelText: 'Unit (e.g., Pcs)',
+                      ),
+                      validator: (value) =>
+                          value == null || value.isEmpty ? 'Required' : null,
                     ),
                   ),
                 ],
               ),
               TextFormField(
                 controller: _lowStockController,
-                decoration: const InputDecoration(labelText: 'Low Stock Threshold'),
+                decoration: const InputDecoration(
+                  labelText: 'Low Stock Threshold',
+                ),
                 keyboardType: TextInputType.number,
-                validator: (value) => value == null || int.tryParse(value) == null ? 'Invalid' : null,
+                validator: (value) =>
+                    value == null || int.tryParse(value) == null
+                    ? 'Invalid'
+                    : null,
               ),
             ],
           ),
@@ -85,10 +100,7 @@ class _AddInventoryItemDialogState extends State<AddInventoryItemDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
-        ElevatedButton(
-          onPressed: _submit,
-          child: const Text('Add'),
-        ),
+        ElevatedButton(onPressed: _submit, child: const Text('Add')),
       ],
     );
   }

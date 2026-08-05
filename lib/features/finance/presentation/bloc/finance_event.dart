@@ -28,7 +28,10 @@ class LoadFinanceDashboard extends FinanceEvent {
 class LoadStudentFinancialProfile extends FinanceEvent {
   final String studentId;
   final String schoolId;
-  const LoadStudentFinancialProfile({required this.studentId, required this.schoolId});
+  const LoadStudentFinancialProfile({
+    required this.studentId,
+    required this.schoolId,
+  });
 }
 
 class RecordNewPayment extends FinanceEvent {
@@ -83,7 +86,11 @@ class LoadBudgets extends FinanceEvent {
   final String schoolId;
   final String academicYear;
   final String term;
-  const LoadBudgets({required this.schoolId, required this.academicYear, required this.term});
+  const LoadBudgets({
+    required this.schoolId,
+    required this.academicYear,
+    required this.term,
+  });
 }
 
 class SaveSchoolBudget extends FinanceEvent {

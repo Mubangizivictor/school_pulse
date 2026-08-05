@@ -12,10 +12,12 @@ class TransportStudentLookupScreen extends StatefulWidget {
   const TransportStudentLookupScreen({super.key});
 
   @override
-  State<TransportStudentLookupScreen> createState() => _TransportStudentLookupScreenState();
+  State<TransportStudentLookupScreen> createState() =>
+      _TransportStudentLookupScreenState();
 }
 
-class _TransportStudentLookupScreenState extends State<TransportStudentLookupScreen> {
+class _TransportStudentLookupScreenState
+    extends State<TransportStudentLookupScreen> {
   final _searchController = TextEditingController();
   final _studentRepository = sl<StudentRepository>();
   final _projectionService = sl<TransportStudentProjectionService>();
@@ -46,7 +48,10 @@ class _TransportStudentLookupScreenState extends State<TransportStudentLookupScr
       _error = null;
     });
 
-    final result = await _studentRepository.searchStudents(schoolId: authState.user.schoolId, query: query);
+    final result = await _studentRepository.searchStudents(
+      schoolId: authState.user.schoolId,
+      query: query,
+    );
     result.fold(
       (failure) => setState(() => _error = failure.message),
       (students) => setState(() => _results = students),
@@ -101,7 +106,11 @@ class _TransportStudentLookupScreenState extends State<TransportStudentLookupScr
                 FilledButton(
                   onPressed: _searching ? null : _search,
                   child: _searching
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Text('Search'),
                 ),
               ],
@@ -110,7 +119,11 @@ class _TransportStudentLookupScreenState extends State<TransportStudentLookupScr
             if (_selectedStudent == null) ...[
               Expanded(
                 child: _results.isEmpty
-                    ? const Center(child: Text('Search for a student to view their route assignment'))
+                    ? const Center(
+                        child: Text(
+                          'Search for a student to view their route assignment',
+                        ),
+                      )
                     : ListView.builder(
                         itemCount: _results.length,
                         itemBuilder: (context, index) {
@@ -132,13 +145,17 @@ class _TransportStudentLookupScreenState extends State<TransportStudentLookupScr
                 icon: const Icon(Icons.arrow_back),
                 label: const Text('Back to results'),
               ),
-              if (_loadingView) const Center(child: CircularProgressIndicator()),
+              if (_loadingView)
+                const Center(child: CircularProgressIndicator()),
               if (_error != null)
                 Card(
                   color: Colors.red.shade50,
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Text(_error!, style: const TextStyle(color: Colors.red)),
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
                   ),
                 ),
               if (_view != null) _TransportViewCard(view: _view!),
@@ -185,7 +202,10 @@ class _InfoRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          SizedBox(width: 100, child: Text(label, style: const TextStyle(color: Colors.grey))),
+          SizedBox(
+            width: 100,
+            child: Text(label, style: const TextStyle(color: Colors.grey)),
+          ),
           Expanded(child: Text(value)),
         ],
       ),

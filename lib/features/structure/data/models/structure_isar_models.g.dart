@@ -2776,33 +2776,43 @@ const AcademicTermIsarSchema = CollectionSchema(
       name: r'endDate',
       type: IsarType.dateTime,
     ),
-    r'isCurrent': PropertySchema(
+    r'isArchived': PropertySchema(
       id: 2,
+      name: r'isArchived',
+      type: IsarType.bool,
+    ),
+    r'isCurrent': PropertySchema(
+      id: 3,
       name: r'isCurrent',
       type: IsarType.bool,
     ),
     r'name': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'name',
       type: IsarType.string,
     ),
     r'order': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'order',
       type: IsarType.long,
     ),
+    r'periodType': PropertySchema(
+      id: 6,
+      name: r'periodType',
+      type: IsarType.string,
+    ),
     r'schoolId': PropertySchema(
-      id: 5,
+      id: 7,
       name: r'schoolId',
       type: IsarType.string,
     ),
     r'startDate': PropertySchema(
-      id: 6,
+      id: 8,
       name: r'startDate',
       type: IsarType.dateTime,
     ),
     r'termId': PropertySchema(
-      id: 7,
+      id: 9,
       name: r'termId',
       type: IsarType.string,
     )
@@ -2843,6 +2853,7 @@ int _academicTermIsarEstimateSize(
   var bytesCount = offsets.last;
   bytesCount += 3 + object.academicYearId.length * 3;
   bytesCount += 3 + object.name.length * 3;
+  bytesCount += 3 + object.periodType.length * 3;
   bytesCount += 3 + object.schoolId.length * 3;
   bytesCount += 3 + object.termId.length * 3;
   return bytesCount;
@@ -2856,12 +2867,14 @@ void _academicTermIsarSerialize(
 ) {
   writer.writeString(offsets[0], object.academicYearId);
   writer.writeDateTime(offsets[1], object.endDate);
-  writer.writeBool(offsets[2], object.isCurrent);
-  writer.writeString(offsets[3], object.name);
-  writer.writeLong(offsets[4], object.order);
-  writer.writeString(offsets[5], object.schoolId);
-  writer.writeDateTime(offsets[6], object.startDate);
-  writer.writeString(offsets[7], object.termId);
+  writer.writeBool(offsets[2], object.isArchived);
+  writer.writeBool(offsets[3], object.isCurrent);
+  writer.writeString(offsets[4], object.name);
+  writer.writeLong(offsets[5], object.order);
+  writer.writeString(offsets[6], object.periodType);
+  writer.writeString(offsets[7], object.schoolId);
+  writer.writeDateTime(offsets[8], object.startDate);
+  writer.writeString(offsets[9], object.termId);
 }
 
 AcademicTermIsar _academicTermIsarDeserialize(
@@ -2874,12 +2887,14 @@ AcademicTermIsar _academicTermIsarDeserialize(
   object.academicYearId = reader.readString(offsets[0]);
   object.endDate = reader.readDateTime(offsets[1]);
   object.id = id;
-  object.isCurrent = reader.readBool(offsets[2]);
-  object.name = reader.readString(offsets[3]);
-  object.order = reader.readLong(offsets[4]);
-  object.schoolId = reader.readString(offsets[5]);
-  object.startDate = reader.readDateTime(offsets[6]);
-  object.termId = reader.readString(offsets[7]);
+  object.isArchived = reader.readBool(offsets[2]);
+  object.isCurrent = reader.readBool(offsets[3]);
+  object.name = reader.readString(offsets[4]);
+  object.order = reader.readLong(offsets[5]);
+  object.periodType = reader.readString(offsets[6]);
+  object.schoolId = reader.readString(offsets[7]);
+  object.startDate = reader.readDateTime(offsets[8]);
+  object.termId = reader.readString(offsets[9]);
   return object;
 }
 
@@ -2897,14 +2912,18 @@ P _academicTermIsarDeserializeProp<P>(
     case 2:
       return (reader.readBool(offset)) as P;
     case 3:
-      return (reader.readString(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 4:
-      return (reader.readLong(offset)) as P;
-    case 5:
       return (reader.readString(offset)) as P;
+    case 5:
+      return (reader.readLong(offset)) as P;
     case 6:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 7:
+      return (reader.readString(offset)) as P;
+    case 8:
+      return (reader.readDateTime(offset)) as P;
+    case 9:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -3354,6 +3373,16 @@ extension AcademicTermIsarQueryFilter
   }
 
   QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterFilterCondition>
+      isArchivedEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isArchived',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterFilterCondition>
       isCurrentEqualTo(bool value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -3551,6 +3580,142 @@ extension AcademicTermIsarQueryFilter
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterFilterCondition>
+      periodTypeEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'periodType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterFilterCondition>
+      periodTypeGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'periodType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterFilterCondition>
+      periodTypeLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'periodType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterFilterCondition>
+      periodTypeBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'periodType',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterFilterCondition>
+      periodTypeStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'periodType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterFilterCondition>
+      periodTypeEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'periodType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterFilterCondition>
+      periodTypeContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'periodType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterFilterCondition>
+      periodTypeMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'periodType',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterFilterCondition>
+      periodTypeIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'periodType',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterFilterCondition>
+      periodTypeIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'periodType',
+        value: '',
       ));
     });
   }
@@ -3921,6 +4086,20 @@ extension AcademicTermIsarQuerySortBy
   }
 
   QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterSortBy>
+      sortByIsArchived() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isArchived', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterSortBy>
+      sortByIsArchivedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isArchived', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterSortBy>
       sortByIsCurrent() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isCurrent', Sort.asc);
@@ -3957,6 +4136,20 @@ extension AcademicTermIsarQuerySortBy
       sortByOrderDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'order', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterSortBy>
+      sortByPeriodType() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'periodType', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterSortBy>
+      sortByPeriodTypeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'periodType', Sort.desc);
     });
   }
 
@@ -4047,6 +4240,20 @@ extension AcademicTermIsarQuerySortThenBy
   }
 
   QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterSortBy>
+      thenByIsArchived() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isArchived', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterSortBy>
+      thenByIsArchivedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isArchived', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterSortBy>
       thenByIsCurrent() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isCurrent', Sort.asc);
@@ -4083,6 +4290,20 @@ extension AcademicTermIsarQuerySortThenBy
       thenByOrderDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'order', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterSortBy>
+      thenByPeriodType() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'periodType', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterSortBy>
+      thenByPeriodTypeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'periodType', Sort.desc);
     });
   }
 
@@ -4147,6 +4368,13 @@ extension AcademicTermIsarQueryWhereDistinct
   }
 
   QueryBuilder<AcademicTermIsar, AcademicTermIsar, QDistinct>
+      distinctByIsArchived() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isArchived');
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QDistinct>
       distinctByIsCurrent() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'isCurrent');
@@ -4164,6 +4392,13 @@ extension AcademicTermIsarQueryWhereDistinct
       distinctByOrder() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'order');
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QDistinct>
+      distinctByPeriodType({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'periodType', caseSensitive: caseSensitive);
     });
   }
 
@@ -4210,6 +4445,12 @@ extension AcademicTermIsarQueryProperty
     });
   }
 
+  QueryBuilder<AcademicTermIsar, bool, QQueryOperations> isArchivedProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isArchived');
+    });
+  }
+
   QueryBuilder<AcademicTermIsar, bool, QQueryOperations> isCurrentProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'isCurrent');
@@ -4225,6 +4466,13 @@ extension AcademicTermIsarQueryProperty
   QueryBuilder<AcademicTermIsar, int, QQueryOperations> orderProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'order');
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, String, QQueryOperations>
+      periodTypeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'periodType');
     });
   }
 

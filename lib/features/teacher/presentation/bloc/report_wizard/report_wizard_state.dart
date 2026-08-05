@@ -58,14 +58,14 @@ class ReportWizardState extends Equatable {
 
   @override
   List<Object?> get props => [
-        selectedClassId,
-        selectedClassName,
-        selectedYear,
-        selectedTerm,
-        selectedProfile,
-        enabledSections,
-        selectedStudentIds,
-        status,
-        errorMessage,
-      ];
+    selectedClassId,
+    selectedClassName,
+    selectedYear,
+    selectedTerm,
+    selectedProfile,
+    enabledSections,
+    selectedStudentIds,
+    status,
+    errorMessage,
+  ];
 }

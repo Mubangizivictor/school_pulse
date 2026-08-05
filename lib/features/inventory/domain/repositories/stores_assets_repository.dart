@@ -32,18 +32,29 @@ abstract class StoresAssetsRepository {
   Future<Either<Failure, void>> addSupplier(Supplier supplier);
   Future<Either<Failure, List<PurchaseOrder>>> getPurchaseOrders();
   Future<Either<Failure, void>> createPurchaseOrder(PurchaseOrder order);
-  Future<Either<Failure, void>> updatePurchaseOrderStatus(String orderId, PurchaseOrderStatus status);
-  
+  Future<Either<Failure, void>> updatePurchaseOrderStatus(
+    String orderId,
+    PurchaseOrderStatus status,
+  );
+
   // Procurement Requests
   Future<Either<Failure, List<ProcurementRequest>>> getProcurementRequests();
-  Future<Either<Failure, void>> createProcurementRequest(ProcurementRequest request);
-  Future<Either<Failure, void>> updateProcurementRequestStatus(String requestId, ProcurementStatus status, {String? directorNote});
+  Future<Either<Failure, void>> createProcurementRequest(
+    ProcurementRequest request,
+  );
+  Future<Either<Failure, void>> updateProcurementRequestStatus(
+    String requestId,
+    ProcurementStatus status, {
+    String? directorNote,
+  });
 
   // Repairs & Maintenance
   Future<Either<Failure, List<RepairRecord>>> getRepairRecords();
   Future<Either<Failure, void>> requestRepair(RepairRecord repair);
   Future<Either<Failure, List<MaintenanceRecord>>> getMaintenanceSchedule();
-  Future<Either<Failure, void>> scheduleMaintenance(MaintenanceRecord maintenance);
+  Future<Either<Failure, void>> scheduleMaintenance(
+    MaintenanceRecord maintenance,
+  );
 
   // Offline Sync
   Future<void> syncOfflineData();

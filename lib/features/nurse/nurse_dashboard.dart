@@ -121,7 +121,9 @@ class _NurseDashboardScreenState extends State<NurseDashboardScreen> {
                   )
                   .toList();
               final authState = context.watch<AuthBloc>().state;
-              final userName = authState is AuthAuthenticated ? authState.user.name : 'User';
+              final userName = authState is AuthAuthenticated
+                  ? authState.user.name
+                  : 'User';
 
               return RefreshIndicator(
                 onRefresh: () async {
@@ -142,13 +144,17 @@ class _NurseDashboardScreenState extends State<NurseDashboardScreen> {
                             children: [
                               Text(
                                 'Welcome back,',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: Theme.of(context).colorScheme.outline,
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.outline,
                                     ),
                               ),
                               Text(
                                 userName,
-                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                style: Theme.of(context).textTheme.headlineSmall
+                                    ?.copyWith(
                                       fontWeight: FontWeight.w900,
                                       letterSpacing: -0.5,
                                     ),
@@ -159,11 +165,15 @@ class _NurseDashboardScreenState extends State<NurseDashboardScreen> {
                         Row(
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.chat_bubble_outline_rounded),
+                              icon: const Icon(
+                                Icons.chat_bubble_outline_rounded,
+                              ),
                               onPressed: () => context.push('/staff/messages'),
                               tooltip: 'Messages',
                               style: IconButton.styleFrom(
-                                backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+                                backgroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainer,
                               ),
                             ),
                             const SizedBox(width: 8),

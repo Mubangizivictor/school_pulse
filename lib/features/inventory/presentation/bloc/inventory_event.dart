@@ -27,7 +27,14 @@ class AddStockRequested extends InventoryEvent {
   });
 
   @override
-  List<Object?> get props => [itemId, itemName, category, unit, lowStockThreshold, quantity];
+  List<Object?> get props => [
+    itemId,
+    itemName,
+    category,
+    unit,
+    lowStockThreshold,
+    quantity,
+  ];
 }
 
 class IssueItemRequested extends InventoryEvent {

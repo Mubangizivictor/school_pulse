@@ -19,14 +19,19 @@ class _RollCallEntry {
   final DateTime date;
   final AttendanceSummary summary;
 
-  const _RollCallEntry({required this.title, required this.date, required this.summary});
+  const _RollCallEntry({
+    required this.title,
+    required this.date,
+    required this.summary,
+  });
 }
 
 class AttendanceHistoryScreen extends StatefulWidget {
   const AttendanceHistoryScreen({super.key});
 
   @override
-  State<AttendanceHistoryScreen> createState() => _AttendanceHistoryScreenState();
+  State<AttendanceHistoryScreen> createState() =>
+      _AttendanceHistoryScreenState();
 }
 
 class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
@@ -36,15 +41,19 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
   void initState() {
     super.initState();
     final authState = context.read<AuthBloc>().state;
-    final schoolId = authState is AuthAuthenticated ? authState.user.schoolId : '';
+    final schoolId = authState is AuthAuthenticated
+        ? authState.user.schoolId
+        : '';
     // Last 7 days, one WatchAttendance call per day - the bloc/repository
     // only support a single-date query, so history is built by requesting
     // each day and letting _AttendanceUpdated accumulate.
     for (var i = 0; i < 7; i++) {
-      context.read<MatronBloc>().add(WatchAttendance(
-            schoolId: schoolId,
-            date: DateTime.now().subtract(Duration(days: i)),
-          ));
+      context.read<MatronBloc>().add(
+        WatchAttendance(
+          schoolId: schoolId,
+          date: DateTime.now().subtract(Duration(days: i)),
+        ),
+      );
     }
   }
 
@@ -65,8 +74,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
         date: first.date,
         summary: summary,
       );
-    }).toList()
-      ..sort((a, b) => b.date.compareTo(a.date));
+    }).toList()..sort((a, b) => b.date.compareTo(a.date));
   }
 
   @override
@@ -89,9 +97,13 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
               children: [
                 Row(
                   children: [
-                    Expanded(child: _buildFilter(context, 'Date Range', 'Last 7 Days')),
+                    Expanded(
+                      child: _buildFilter(context, 'Date Range', 'Last 7 Days'),
+                    ),
                     const SizedBox(width: AppSpacing.m),
-                    Expanded(child: _buildFilter(context, 'Category', 'Boarding')),
+                    Expanded(
+                      child: _buildFilter(context, 'Category', 'Boarding'),
+                    ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.m),
@@ -105,9 +117,15 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
           Expanded(
             child: BlocBuilder<MatronBloc, MatronState>(
               builder: (context, state) {
-                final records = state is AttendanceLoaded ? state.attendance : const <BoardingAttendance>[];
+                final records = state is AttendanceLoaded
+                    ? state.attendance
+                    : const <BoardingAttendance>[];
                 final history = _groupByRollCall(records)
-                    .where((entry) => entry.title.toLowerCase().contains(_searchQuery.toLowerCase()))
+                    .where(
+                      (entry) => entry.title.toLowerCase().contains(
+                        _searchQuery.toLowerCase(),
+                      ),
+                    )
                     .toList();
 
                 if (history.isEmpty) {
@@ -150,7 +168,10 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppColors.border(context)),
           ),
-          child: Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+          child: Text(
+            value,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
         ),
       ],
     );
@@ -180,7 +201,8 @@ class _HistoryCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: (isPerfect ? colors.success : colors.warning).withValues(alpha: 0.1),
+                  color: (isPerfect ? colors.success : colors.warning)
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -196,11 +218,16 @@ class _HistoryCard extends StatelessWidget {
                   children: [
                     Text(
                       entry.title,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
                     ),
                     Text(
                       DateFormat('d/M/yyyy • h:mm a').format(entry.date),
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.grey),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.labelSmall?.copyWith(color: Colors.grey),
                     ),
                   ],
                 ),
@@ -220,7 +247,8 @@ class _HistoryCard extends StatelessWidget {
                       children: [
                         Text(
                           'Attendance Rate',
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                         Text(
                           rate == null ? '—' : '${rate.round()}%',
@@ -238,7 +266,9 @@ class _HistoryCard extends StatelessWidget {
                       child: LinearProgressIndicator(
                         value: rate == null ? 0 : rate / 100,
                         backgroundColor: AppColors.surfaceElevated(context),
-                        valueColor: AlwaysStoppedAnimation<Color>(isPerfect ? colors.success : colors.warning),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          isPerfect ? colors.success : colors.warning,
+                        ),
                         minHeight: 6,
                       ),
                     ),
@@ -250,11 +280,18 @@ class _HistoryCard extends StatelessWidget {
                 children: [
                   Text(
                     '${entry.summary.present}',
-                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16,
+                    ),
                   ),
                   Text(
                     'of ${entry.summary.totalMarked}',
-                    style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),

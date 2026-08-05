@@ -27,15 +27,15 @@ class WastageRecord extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        mealCategoryId,
-        mealCategoryName,
-        date,
-        quantityPrepared,
-        quantityServed,
-        quantityWasted,
-        unit,
-        reason,
-        costImpact,
-      ];
+    id,
+    mealCategoryId,
+    mealCategoryName,
+    date,
+    quantityPrepared,
+    quantityServed,
+    quantityWasted,
+    unit,
+    reason,
+    costImpact,
+  ];
 }

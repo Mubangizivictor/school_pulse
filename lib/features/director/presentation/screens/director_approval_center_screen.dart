@@ -12,9 +12,7 @@ class DirectorApprovalCenterScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Approval Center'),
-      ),
+      appBar: AppBar(title: const Text('Approval Center')),
       body: BlocBuilder<DirectorBloc, DirectorState>(
         builder: (context, state) {
           if (state is DirectorApprovalsLoading) {
@@ -24,7 +22,7 @@ class DirectorApprovalCenterScreen extends StatelessWidget {
           } else if (state is DirectorApprovalsError) {
             return Center(child: Text('Error: ${state.message}'));
           }
-          
+
           // Trigger load if not loaded
           context.read<DirectorBloc>().add(DirectorApprovalsRequested());
           return const Center(child: CircularProgressIndicator());
@@ -33,7 +31,10 @@ class DirectorApprovalCenterScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildApprovalList(BuildContext context, List<DirectorApproval> approvals) {
+  Widget _buildApprovalList(
+    BuildContext context,
+    List<DirectorApproval> approvals,
+  ) {
     if (approvals.isEmpty) {
       return const Center(child: Text('No pending approvals'));
     }
@@ -67,7 +68,9 @@ class _ApprovalCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: _getStatusColor(approval.status).withValues(alpha: 0.1),
+                  color: _getStatusColor(
+                    approval.status,
+                  ).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
@@ -81,12 +84,18 @@ class _ApprovalCard extends StatelessWidget {
               ),
               Text(
                 '${approval.amount.toStringAsFixed(2)} UGX',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          Text(approval.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(
+            approval.title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 4),
           Text(
             'Requested by ${approval.requesterName} • ${approval.department}',
@@ -99,7 +108,8 @@ class _ApprovalCard extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () => _showActionDialog(context, approval, 'reject'),
+                  onPressed: () =>
+                      _showActionDialog(context, approval, 'reject'),
                   style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
                   child: const Text('Reject'),
                 ),
@@ -107,14 +117,16 @@ class _ApprovalCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () => _showActionDialog(context, approval, 'clarify'),
+                  onPressed: () =>
+                      _showActionDialog(context, approval, 'clarify'),
                   child: const Text('Clarify'),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () => _showActionDialog(context, approval, 'approve'),
+                  onPressed: () =>
+                      _showActionDialog(context, approval, 'approve'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
@@ -131,14 +143,22 @@ class _ApprovalCard extends StatelessWidget {
 
   Color _getStatusColor(ApprovalStatus status) {
     switch (status) {
-      case ApprovalStatus.pending: return Colors.orange;
-      case ApprovalStatus.approved: return Colors.green;
-      case ApprovalStatus.rejected: return Colors.red;
-      case ApprovalStatus.clarificationRequested: return Colors.blue;
+      case ApprovalStatus.pending:
+        return Colors.orange;
+      case ApprovalStatus.approved:
+        return Colors.green;
+      case ApprovalStatus.rejected:
+        return Colors.red;
+      case ApprovalStatus.clarificationRequested:
+        return Colors.blue;
     }
   }
 
-  void _showActionDialog(BuildContext context, DirectorApproval approval, String action) {
+  void _showActionDialog(
+    BuildContext context,
+    DirectorApproval approval,
+    String action,
+  ) {
     final commentController = TextEditingController();
     showDialog(
       context: context,
@@ -147,7 +167,9 @@ class _ApprovalCard extends StatelessWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Are you sure you want to $action this request for ${approval.amount} UGX?'),
+            Text(
+              'Are you sure you want to $action this request for ${approval.amount} UGX?',
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: commentController,
@@ -166,11 +188,13 @@ class _ApprovalCard extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              context.read<DirectorBloc>().add(DirectorApprovalActionRequested(
-                approvalId: approval.id,
-                action: action,
-                comment: commentController.text,
-              ));
+              context.read<DirectorBloc>().add(
+                DirectorApprovalActionRequested(
+                  approvalId: approval.id,
+                  action: action,
+                  comment: commentController.text,
+                ),
+              );
               Navigator.pop(context);
             },
             child: Text(action.toUpperCase()),

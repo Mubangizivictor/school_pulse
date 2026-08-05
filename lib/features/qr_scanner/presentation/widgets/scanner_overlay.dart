@@ -15,9 +15,7 @@ class ScannerOverlay extends StatelessWidget {
           child: Stack(
             children: [
               Container(
-                decoration: const BoxDecoration(
-                  color: Colors.transparent,
-                ),
+                decoration: const BoxDecoration(color: Colors.transparent),
               ),
               Center(
                 child: Container(

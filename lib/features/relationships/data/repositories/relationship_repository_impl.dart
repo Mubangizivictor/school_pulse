@@ -15,24 +15,24 @@ class RelationshipRepositoryImpl implements RelationshipRepository {
   RelationshipRepositoryImpl({required this.remoteDataSource});
 
   @override
-  Future<Either<Failure, List<ParentStudentRelationship>>> getRelationshipsForStudent(
-    String schoolId,
-    String studentId,
-  ) async {
+  Future<Either<Failure, List<ParentStudentRelationship>>>
+  getRelationshipsForStudent(String schoolId, String studentId) async {
     try {
-      return Right(await remoteDataSource.getRelationshipsForStudent(schoolId, studentId));
+      return Right(
+        await remoteDataSource.getRelationshipsForStudent(schoolId, studentId),
+      );
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, List<ParentStudentRelationship>>> getRelationshipsForParent(
-    String schoolId,
-    String userId,
-  ) async {
+  Future<Either<Failure, List<ParentStudentRelationship>>>
+  getRelationshipsForParent(String schoolId, String userId) async {
     try {
-      return Right(await remoteDataSource.getRelationshipsForParent(schoolId, userId));
+      return Right(
+        await remoteDataSource.getRelationshipsForParent(schoolId, userId),
+      );
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -85,7 +85,9 @@ class RelationshipRepositoryImpl implements RelationshipRepository {
     RelationshipType? newType,
   }) async {
     try {
-      final existing = await remoteDataSource.getRelationshipById(relationshipId);
+      final existing = await remoteDataSource.getRelationshipById(
+        relationshipId,
+      );
 
       await remoteDataSource.supersedeRelationship(relationshipId, {
         'status': RelationshipStatus.superseded.name,
@@ -135,7 +137,8 @@ class RelationshipRepositoryImpl implements RelationshipRepository {
       final model = PeoplePolicyModel(
         schoolId: policy.schoolId,
         maxStandardGuardians: policy.maxStandardGuardians,
-        allowAdditionalEmergencyContacts: policy.allowAdditionalEmergencyContacts,
+        allowAdditionalEmergencyContacts:
+            policy.allowAdditionalEmergencyContacts,
         sponsorsGetFinanceAccess: policy.sponsorsGetFinanceAccess,
         updatedBy: policy.updatedBy,
       );
@@ -185,7 +188,9 @@ class RelationshipRepositoryImpl implements RelationshipRepository {
     String studentId,
   ) async {
     try {
-      return Right(await remoteDataSource.getEnrolmentHistory(schoolId, studentId));
+      return Right(
+        await remoteDataSource.getEnrolmentHistory(schoolId, studentId),
+      );
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }

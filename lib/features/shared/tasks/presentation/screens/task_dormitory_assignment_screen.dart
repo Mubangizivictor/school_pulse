@@ -6,10 +6,12 @@ class TaskDormitoryAssignmentScreen extends StatefulWidget {
   const TaskDormitoryAssignmentScreen({super.key});
 
   @override
-  State<TaskDormitoryAssignmentScreen> createState() => _TaskDormitoryAssignmentScreenState();
+  State<TaskDormitoryAssignmentScreen> createState() =>
+      _TaskDormitoryAssignmentScreenState();
 }
 
-class _TaskDormitoryAssignmentScreenState extends State<TaskDormitoryAssignmentScreen> {
+class _TaskDormitoryAssignmentScreenState
+    extends State<TaskDormitoryAssignmentScreen> {
   String? _selectedDorm;
   final List<Map<String, dynamic>> _dormitories = [
     {'name': 'Sunset House', 'type': 'Boys', 'occupancy': '45/50'},
@@ -30,7 +32,11 @@ class _TaskDormitoryAssignmentScreenState extends State<TaskDormitoryAssignmentS
         elevation: 0,
         title: Text(
           'Assign Dormitory',
-          style: TextStyle(color: AppColors.textPrimary(context), fontWeight: FontWeight.w900, fontSize: 20),
+          style: TextStyle(
+            color: AppColors.textPrimary(context),
+            fontWeight: FontWeight.w900,
+            fontSize: 20,
+          ),
         ),
         leading: IconButton(
           icon: Icon(Icons.close, color: AppColors.textPrimary(context)),
@@ -61,12 +67,14 @@ class _TaskDormitoryAssignmentScreenState extends State<TaskDormitoryAssignmentS
                   padding: const EdgeInsets.only(bottom: 12.0),
                   child: AppCard(
                     padding: const EdgeInsets.all(16),
-                    color: isSelected 
-                        ? AppColors.royalBlue.withValues(alpha: 0.1) 
+                    color: isSelected
+                        ? AppColors.royalBlue.withValues(alpha: 0.1)
                         : (isDark ? AppColors.surfaceDark : Colors.white),
-                    borderColor: isSelected 
-                        ? AppColors.royalBlue 
-                        : (isDark ? AppColors.borderDark : AppColors.borderLight),
+                    borderColor: isSelected
+                        ? AppColors.royalBlue
+                        : (isDark
+                              ? AppColors.borderDark
+                              : AppColors.borderLight),
                     onTap: () => setState(() => _selectedDorm = dorm['name']),
                     child: Row(
                       children: [
@@ -74,12 +82,18 @@ class _TaskDormitoryAssignmentScreenState extends State<TaskDormitoryAssignmentS
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: (dorm['type'] == 'Boys' ? AppColors.electricBlue : Colors.pinkAccent).withValues(alpha: 0.1),
+                            color:
+                                (dorm['type'] == 'Boys'
+                                        ? AppColors.electricBlue
+                                        : Colors.pinkAccent)
+                                    .withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
                             Icons.home_work_outlined,
-                            color: dorm['type'] == 'Boys' ? AppColors.electricBlue : Colors.pinkAccent,
+                            color: dorm['type'] == 'Boys'
+                                ? AppColors.electricBlue
+                                : Colors.pinkAccent,
                             size: 20,
                           ),
                         ),
@@ -90,20 +104,33 @@ class _TaskDormitoryAssignmentScreenState extends State<TaskDormitoryAssignmentS
                             children: [
                               Text(
                                 dorm['name'],
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimary(context)),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: AppColors.textPrimary(context),
+                                ),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 '${dorm['type']} • Occupancy: ${dorm['occupancy']}',
-                                style: TextStyle(fontSize: 13, color: AppColors.textMuted(context)),
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textMuted(context),
+                                ),
                               ),
                             ],
                           ),
                         ),
                         if (isSelected)
-                          const Icon(Icons.check_circle, color: AppColors.royalBlue)
+                          const Icon(
+                            Icons.check_circle,
+                            color: AppColors.royalBlue,
+                          )
                         else
-                          Icon(Icons.circle_outlined, color: AppColors.textMuted(context)),
+                          Icon(
+                            Icons.circle_outlined,
+                            color: AppColors.textMuted(context),
+                          ),
                       ],
                     ),
                   ),
@@ -117,12 +144,18 @@ class _TaskDormitoryAssignmentScreenState extends State<TaskDormitoryAssignmentS
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: AppColors.background(context),
-          border: Border(top: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight)),
+          border: Border(
+            top: BorderSide(
+              color: isDark ? AppColors.borderDark : AppColors.borderLight,
+            ),
+          ),
         ),
         child: SafeArea(
           child: PrimaryButton(
             label: 'Confirm Assignment',
-            onPressed: _selectedDorm == null ? null : () => Navigator.pop(context, _selectedDorm),
+            onPressed: _selectedDorm == null
+                ? null
+                : () => Navigator.pop(context, _selectedDorm),
           ),
         ),
       ),

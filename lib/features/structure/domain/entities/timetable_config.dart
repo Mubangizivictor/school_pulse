@@ -71,6 +71,12 @@ class TimetableConfig extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [teachingDays, weekendDays, periodsPerDay, schoolStartTime, schoolEndTime, slots];
+  List<Object?> get props => [
+    teachingDays,
+    weekendDays,
+    periodsPerDay,
+    schoolStartTime,
+    schoolEndTime,
+    slots,
+  ];
 }

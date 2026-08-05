@@ -22,6 +22,15 @@ class AppointmentModel extends Appointment {
     required super.scheduledStart,
     required super.scheduledEnd,
     required super.reason,
+    super.location,
+    super.campus,
+    super.notes,
+    super.priority,
+    super.recurrence,
+    super.reminderMinutes,
+    super.attachmentUrls,
+    super.visitorId,
+    super.requiresApproval,
     super.attachmentUrl,
     super.status,
     required super.createdAt,
@@ -53,6 +62,15 @@ class AppointmentModel extends Appointment {
       scheduledStart: a.scheduledStart,
       scheduledEnd: a.scheduledEnd,
       reason: a.reason,
+      location: a.location,
+      campus: a.campus,
+      notes: a.notes,
+      priority: a.priority,
+      recurrence: a.recurrence,
+      reminderMinutes: a.reminderMinutes,
+      attachmentUrls: a.attachmentUrls,
+      visitorId: a.visitorId,
+      requiresApproval: a.requiresApproval,
       attachmentUrl: a.attachmentUrl,
       status: a.status,
       createdAt: a.createdAt,
@@ -93,6 +111,19 @@ class AppointmentModel extends Appointment {
       scheduledStart: toDate(map['scheduledStart'])!,
       scheduledEnd: toDate(map['scheduledEnd'])!,
       reason: map['reason'] ?? '',
+      location: map['location'],
+      campus: map['campus'],
+      notes: map['notes'],
+      priority: map['priority'] ?? 'normal',
+      recurrence: map['recurrence'] ?? 'doesNotRepeat',
+      reminderMinutes: ((map['reminderMinutes'] as List?) ?? const [15])
+          .map((v) => v as int)
+          .toList(),
+      attachmentUrls: ((map['attachmentUrls'] as List?) ?? const [])
+          .map((v) => v.toString())
+          .toList(),
+      visitorId: map['visitorId'],
+      requiresApproval: map['requiresApproval'] ?? false,
       attachmentUrl: map['attachmentUrl'],
       status: AppointmentStatus.values.firstWhere(
         (s) => s.name == map['status'],
@@ -127,17 +158,32 @@ class AppointmentModel extends Appointment {
       'scheduledStart': Timestamp.fromDate(scheduledStart),
       'scheduledEnd': Timestamp.fromDate(scheduledEnd),
       'reason': reason,
+      'location': location,
+      'campus': campus,
+      'notes': notes,
+      'priority': priority,
+      'recurrence': recurrence,
+      'reminderMinutes': reminderMinutes,
+      'attachmentUrls': attachmentUrls,
+      'visitorId': visitorId,
+      'requiresApproval': requiresApproval,
       'attachmentUrl': attachmentUrl,
       'status': status.name,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
       'respondedBy': respondedBy,
       'responseNote': responseNote,
-      'proposedStart': proposedStart != null ? Timestamp.fromDate(proposedStart!) : null,
-      'checkInTime': checkInTime != null ? Timestamp.fromDate(checkInTime!) : null,
+      'proposedStart': proposedStart != null
+          ? Timestamp.fromDate(proposedStart!)
+          : null,
+      'checkInTime': checkInTime != null
+          ? Timestamp.fromDate(checkInTime!)
+          : null,
       'checkInBy': checkInBy,
       'checkInPhotoUrl': checkInPhotoUrl,
-      'checkOutTime': checkOutTime != null ? Timestamp.fromDate(checkOutTime!) : null,
+      'checkOutTime': checkOutTime != null
+          ? Timestamp.fromDate(checkOutTime!)
+          : null,
     };
   }
 }

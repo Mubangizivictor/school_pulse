@@ -25,7 +25,9 @@ class ReportTemplateModel extends ReportTemplate {
       logoPosition: map['logoPosition'] ?? 'center',
       photoPosition: map['photoPosition'] ?? 'right',
       tableLayout: map['tableLayout'] ?? 'traditional',
-      enabledSections: List<String>.from(map['enabledSections'] ?? ['attendance', 'behaviour', 'comments']),
+      enabledSections: List<String>.from(
+        map['enabledSections'] ?? ['attendance', 'behaviour', 'comments'],
+      ),
       colorTheme: map['colorTheme'] ?? 'blue',
       backgroundWatermarkUrl: map['backgroundWatermarkUrl'],
       showRanking: map['showRanking'] ?? false,

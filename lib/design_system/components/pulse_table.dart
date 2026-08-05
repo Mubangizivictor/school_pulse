@@ -52,7 +52,9 @@ class PulseTable<T> extends StatelessWidget {
           child: Text(
             emptyMessage,
             style: AppTypography.bodyMedium.copyWith(
-              color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+              color: isDark
+                  ? AppColors.textMutedDark
+                  : AppColors.textMutedLight,
             ),
           ),
         ),
@@ -71,32 +73,34 @@ class PulseTable<T> extends StatelessWidget {
         ),
         child: DataTable(
           headingRowColor: WidgetStateProperty.all(
-            isDark ? AppColors.deepNavy.withValues(alpha: 0.5) : AppColors.bgLight,
+            isDark
+                ? AppColors.deepNavy.withValues(alpha: 0.5)
+                : AppColors.bgLight,
           ),
           columnSpacing: AppSpacing.x3l,
           horizontalMargin: AppSpacing.xl,
           headingTextStyle: AppTypography.labelLarge.copyWith(
-            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+            color: isDark
+                ? AppColors.textSecondaryDark
+                : AppColors.textSecondaryLight,
             fontWeight: FontWeight.bold,
           ),
           dataTextStyle: AppTypography.bodyMedium.copyWith(
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            color: isDark
+                ? AppColors.textPrimaryDark
+                : AppColors.textPrimaryLight,
           ),
           columns: columns
               .map(
-                (col) => DataColumn(
-                  label: Text(col.title),
-                  numeric: col.isNumeric,
-                ),
+                (col) =>
+                    DataColumn(label: Text(col.title), numeric: col.isNumeric),
               )
               .toList(),
           rows: items
               .map(
                 (item) => DataRow(
                   cells: columns
-                      .map(
-                        (col) => DataCell(col.cellBuilder(item)),
-                      )
+                      .map((col) => DataCell(col.cellBuilder(item)))
                       .toList(),
                 ),
               )

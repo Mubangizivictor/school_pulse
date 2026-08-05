@@ -31,8 +31,12 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
   void initState() {
     super.initState();
     final authState = context.read<AuthBloc>().state;
-    final schoolId = authState is AuthAuthenticated ? authState.user.schoolId : '';
-    context.read<MatronBloc>().add(WatchAttendance(schoolId: schoolId, date: _date));
+    final schoolId = authState is AuthAuthenticated
+        ? authState.user.schoolId
+        : '';
+    context.read<MatronBloc>().add(
+      WatchAttendance(schoolId: schoolId, date: _date),
+    );
   }
 
   @override
@@ -58,7 +62,9 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
         ),
         body: BlocBuilder<MatronBloc, MatronState>(
           builder: (context, state) {
-            final records = state is AttendanceLoaded ? state.attendance : const <BoardingAttendance>[];
+            final records = state is AttendanceLoaded
+                ? state.attendance
+                : const <BoardingAttendance>[];
 
             return Column(
               children: [
@@ -73,8 +79,16 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
                   child: TabBarView(
                     children: [
                       _buildList(context, records, semanticColors),
-                      _buildList(context, records.where((r) => r.status != 'Absent').toList(), semanticColors),
-                      _buildList(context, records.where((r) => r.status == 'Absent').toList(), semanticColors),
+                      _buildList(
+                        context,
+                        records.where((r) => r.status != 'Absent').toList(),
+                        semanticColors,
+                      ),
+                      _buildList(
+                        context,
+                        records.where((r) => r.status == 'Absent').toList(),
+                        semanticColors,
+                      ),
                     ],
                   ),
                 ),
@@ -82,7 +96,9 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
                   padding: const EdgeInsets.all(AppSpacing.l),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceElevated(context),
-                    border: Border(top: BorderSide(color: AppColors.border(context))),
+                    border: Border(
+                      top: BorderSide(color: AppColors.border(context)),
+                    ),
                   ),
                   child: SafeArea(
                     top: false,
@@ -101,9 +117,17 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
     );
   }
 
-  Widget _buildList(BuildContext context, List<BoardingAttendance> records, SemanticColors colors) {
-    final filtered = records.where((r) =>
-        r.studentName.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+  Widget _buildList(
+    BuildContext context,
+    List<BoardingAttendance> records,
+    SemanticColors colors,
+  ) {
+    final filtered = records
+        .where(
+          (r) =>
+              r.studentName.toLowerCase().contains(_searchQuery.toLowerCase()),
+        )
+        .toList();
 
     if (filtered.isEmpty) {
       return const EmptyState(
@@ -135,11 +159,16 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
                     children: [
                       Text(
                         record.studentName,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                       ),
                       Text(
                         record.dormitoryId,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.grey)
+                        style: Theme.of(
+                          context,
+                        ).textTheme.labelSmall?.copyWith(color: Colors.grey),
                       ),
                     ],
                   ),
@@ -155,7 +184,11 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
                     const SizedBox(height: 4),
                     Text(
                       DateFormat('h:mm a').format(record.date),
-                      style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w500),
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),

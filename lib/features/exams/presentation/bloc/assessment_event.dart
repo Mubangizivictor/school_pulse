@@ -39,11 +39,7 @@ class UpdateMarkLocal extends AssessmentEvent {
   final double? score;
   final String? comment;
 
-  const UpdateMarkLocal({
-    required this.studentId,
-    this.score,
-    this.comment,
-  });
+  const UpdateMarkLocal({required this.studentId, this.score, this.comment});
 
   @override
   List<Object?> get props => [studentId, score, comment];

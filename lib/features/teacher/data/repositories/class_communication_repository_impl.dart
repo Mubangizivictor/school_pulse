@@ -43,15 +43,15 @@ class ClassCommunicationRepositoryImpl implements ClassCommunicationRepository {
 
     final classId = context.classId;
     if (classId == null || classId.isEmpty) {
-      return const Left(ValidationFailure(
-        'This responsibility is not tied to a class.',
-      ));
+      return const Left(
+        ValidationFailure('This responsibility is not tied to a class.'),
+      );
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(NetworkFailure(
-        'You are offline. Announcements need a connection.',
-      ));
+      return const Left(
+        NetworkFailure('You are offline. Announcements need a connection.'),
+      );
     }
 
     try {
@@ -63,9 +63,9 @@ class ClassCommunicationRepositoryImpl implements ClassCommunicationRepository {
       );
       return Right(announcements);
     } catch (_) {
-      return const Left(ServerFailure(
-        'Could not load announcements. Pull down to retry.',
-      ));
+      return const Left(
+        ServerFailure('Could not load announcements. Pull down to retry.'),
+      );
     }
   }
 
@@ -96,9 +96,11 @@ class ClassCommunicationRepositoryImpl implements ClassCommunicationRepository {
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(OfflineNotAllowedFailure(
-        'Saving an announcement needs an internet connection.',
-      ));
+      return const Left(
+        OfflineNotAllowedFailure(
+          'Saving an announcement needs an internet connection.',
+        ),
+      );
     }
 
     final prepared = isNew
@@ -141,9 +143,11 @@ class ClassCommunicationRepositoryImpl implements ClassCommunicationRepository {
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(OfflineNotAllowedFailure(
-        'Sending an announcement needs an internet connection.',
-      ));
+      return const Left(
+        OfflineNotAllowedFailure(
+          'Sending an announcement needs an internet connection.',
+        ),
+      );
     }
 
     // Resolved from the live roster, not from anything stored on the draft:

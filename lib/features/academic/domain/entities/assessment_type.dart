@@ -59,16 +59,16 @@ class AssessmentType extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        name,
-        code,
-        weight,
-        maxMark,
-        passingMark,
-        academicTerm,
-        academicYear,
-        subjectId,
-        classId,
-        status,
-      ];
+    id,
+    name,
+    code,
+    weight,
+    maxMark,
+    passingMark,
+    academicTerm,
+    academicYear,
+    subjectId,
+    classId,
+    status,
+  ];
 }

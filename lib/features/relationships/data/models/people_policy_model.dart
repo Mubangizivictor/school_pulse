@@ -15,7 +15,8 @@ class PeoplePolicyModel extends PeoplePolicy {
     return PeoplePolicyModel(
       schoolId: schoolId,
       maxStandardGuardians: map['maxStandardGuardians'] ?? 2,
-      allowAdditionalEmergencyContacts: map['allowAdditionalEmergencyContacts'] ?? true,
+      allowAdditionalEmergencyContacts:
+          map['allowAdditionalEmergencyContacts'] ?? true,
       sponsorsGetFinanceAccess: map['sponsorsGetFinanceAccess'] ?? false,
       updatedAt: (map['updatedAt'] as Timestamp?)?.toDate(),
       updatedBy: map['updatedBy'],

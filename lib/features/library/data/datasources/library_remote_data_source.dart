@@ -11,19 +11,43 @@ abstract class LibraryRemoteDataSource {
   Future<void> addResource(LibraryResourceModel resource);
   Future<void> updateResource(LibraryResourceModel resource);
   Future<void> deleteResource(String schoolId, String resourceId);
-  Future<LibraryResourceModel?> getResourceByBarcode(String schoolId, String barcode);
-  Future<void> updateResourceStatus(String schoolId, String resourceId, String status);
+  Future<LibraryResourceModel?> getResourceByBarcode(
+    String schoolId,
+    String barcode,
+  );
+  Future<void> updateResourceStatus(
+    String schoolId,
+    String resourceId,
+    String status,
+  );
 
   // Borrowing
-  Stream<List<LibraryBorrowingModel>> watchBorrowingHistory(String schoolId, {String? borrowerId});
-  Future<LibraryBorrowingModel?> getBorrowingById(String schoolId, String borrowingId);
+  Stream<List<LibraryBorrowingModel>> watchBorrowingHistory(
+    String schoolId, {
+    String? borrowerId,
+  });
+  Future<LibraryBorrowingModel?> getBorrowingById(
+    String schoolId,
+    String borrowingId,
+  );
   Future<void> issueResource(LibraryBorrowingModel borrowing);
-  Future<void> updateBorrowingStatus(String schoolId, String borrowingId, Map<String, dynamic> data);
+  Future<void> updateBorrowingStatus(
+    String schoolId,
+    String borrowingId,
+    Map<String, dynamic> data,
+  );
 
   // Reservations
-  Stream<List<LibraryReservationModel>> watchReservations(String schoolId, {String? borrowerId});
+  Stream<List<LibraryReservationModel>> watchReservations(
+    String schoolId, {
+    String? borrowerId,
+  });
   Future<void> addReservation(LibraryReservationModel reservation);
-  Future<void> updateReservationStatus(String schoolId, String reservationId, String status);
+  Future<void> updateReservationStatus(
+    String schoolId,
+    String reservationId,
+    String status,
+  );
 
   // Stats
   Future<Map<String, dynamic>> getLibraryStats(String schoolId);
@@ -45,9 +69,11 @@ class LibraryRemoteDataSourceImpl implements LibraryRemoteDataSource {
         .doc(schoolId)
         .collection('library_resources')
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => LibraryResourceModel.fromFirestore(doc))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => LibraryResourceModel.fromFirestore(doc))
+              .toList(),
+        );
   }
 
   @override
@@ -81,7 +107,10 @@ class LibraryRemoteDataSourceImpl implements LibraryRemoteDataSource {
   }
 
   @override
-  Future<LibraryResourceModel?> getResourceByBarcode(String schoolId, String barcode) async {
+  Future<LibraryResourceModel?> getResourceByBarcode(
+    String schoolId,
+    String barcode,
+  ) async {
     final snapshot = await firestore
         .collection('schools')
         .doc(schoolId)
@@ -89,13 +118,17 @@ class LibraryRemoteDataSourceImpl implements LibraryRemoteDataSource {
         .where('barcode', isEqualTo: barcode)
         .limit(1)
         .get();
-    
+
     if (snapshot.docs.isEmpty) return null;
     return LibraryResourceModel.fromFirestore(snapshot.docs.first);
   }
 
   @override
-  Future<void> updateResourceStatus(String schoolId, String resourceId, String status) async {
+  Future<void> updateResourceStatus(
+    String schoolId,
+    String resourceId,
+    String status,
+  ) async {
     await firestore
         .collection('schools')
         .doc(schoolId)
@@ -105,29 +138,41 @@ class LibraryRemoteDataSourceImpl implements LibraryRemoteDataSource {
   }
 
   @override
-  Stream<List<LibraryBorrowingModel>> watchBorrowingHistory(String schoolId, {String? borrowerId}) {
+  Stream<List<LibraryBorrowingModel>> watchBorrowingHistory(
+    String schoolId, {
+    String? borrowerId,
+  }) {
     Query query = firestore
         .collection('schools')
         .doc(schoolId)
         .collection('library_borrowings');
-    
+
     if (borrowerId != null) {
       query = query.where('borrowerId', isEqualTo: borrowerId);
     }
 
-    return query.orderBy('borrowDate', descending: true).snapshots().map((snapshot) =>
-        snapshot.docs.map((doc) => LibraryBorrowingModel.fromFirestore(doc)).toList());
+    return query
+        .orderBy('borrowDate', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => LibraryBorrowingModel.fromFirestore(doc))
+              .toList(),
+        );
   }
 
   @override
-  Future<LibraryBorrowingModel?> getBorrowingById(String schoolId, String borrowingId) async {
+  Future<LibraryBorrowingModel?> getBorrowingById(
+    String schoolId,
+    String borrowingId,
+  ) async {
     final doc = await firestore
         .collection('schools')
         .doc(schoolId)
         .collection('library_borrowings')
         .doc(borrowingId)
         .get();
-    
+
     if (!doc.exists) return null;
     return LibraryBorrowingModel.fromFirestore(doc);
   }
@@ -135,13 +180,13 @@ class LibraryRemoteDataSourceImpl implements LibraryRemoteDataSource {
   @override
   Future<void> issueResource(LibraryBorrowingModel borrowing) async {
     final batch = firestore.batch();
-    
+
     final borrowingRef = firestore
         .collection('schools')
         .doc(borrowing.schoolId)
         .collection('library_borrowings')
         .doc(borrowing.id.isEmpty ? null : borrowing.id);
-    
+
     batch.set(borrowingRef, borrowing.toFirestore());
 
     final resourceRef = firestore
@@ -149,23 +194,25 @@ class LibraryRemoteDataSourceImpl implements LibraryRemoteDataSource {
         .doc(borrowing.schoolId)
         .collection('library_resources')
         .doc(borrowing.resourceId);
-    
-    batch.update(resourceRef, {
-      'availableCopies': FieldValue.increment(-1),
-    });
+
+    batch.update(resourceRef, {'availableCopies': FieldValue.increment(-1)});
 
     await batch.commit();
   }
 
   @override
-  Future<void> updateBorrowingStatus(String schoolId, String borrowingId, Map<String, dynamic> data) async {
+  Future<void> updateBorrowingStatus(
+    String schoolId,
+    String borrowingId,
+    Map<String, dynamic> data,
+  ) async {
     await firestore
         .collection('schools')
         .doc(schoolId)
         .collection('library_borrowings')
         .doc(borrowingId)
         .update(data);
-    
+
     // If status is returned, we should increment availableCopies
     if (data['status'] == BorrowingStatus.returned.name) {
       final borrowingDoc = await firestore
@@ -174,7 +221,7 @@ class LibraryRemoteDataSourceImpl implements LibraryRemoteDataSource {
           .collection('library_borrowings')
           .doc(borrowingId)
           .get();
-      
+
       if (borrowingDoc.exists) {
         final resourceId = borrowingDoc.data()?['resourceId'];
         if (resourceId != null) {
@@ -190,18 +237,27 @@ class LibraryRemoteDataSourceImpl implements LibraryRemoteDataSource {
   }
 
   @override
-  Stream<List<LibraryReservationModel>> watchReservations(String schoolId, {String? borrowerId}) {
+  Stream<List<LibraryReservationModel>> watchReservations(
+    String schoolId, {
+    String? borrowerId,
+  }) {
     Query query = firestore
         .collection('schools')
         .doc(schoolId)
         .collection('library_reservations');
-    
+
     if (borrowerId != null) {
       query = query.where('borrowerId', isEqualTo: borrowerId);
     }
 
-    return query.orderBy('reservationDate', descending: true).snapshots().map((snapshot) =>
-        snapshot.docs.map((doc) => LibraryReservationModel.fromFirestore(doc)).toList());
+    return query
+        .orderBy('reservationDate', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => LibraryReservationModel.fromFirestore(doc))
+              .toList(),
+        );
   }
 
   @override
@@ -214,7 +270,11 @@ class LibraryRemoteDataSourceImpl implements LibraryRemoteDataSource {
   }
 
   @override
-  Future<void> updateReservationStatus(String schoolId, String reservationId, String status) async {
+  Future<void> updateReservationStatus(
+    String schoolId,
+    String reservationId,
+    String status,
+  ) async {
     await firestore
         .collection('schools')
         .doc(schoolId)
@@ -230,7 +290,7 @@ class LibraryRemoteDataSourceImpl implements LibraryRemoteDataSource {
         .doc(schoolId)
         .collection('library_resources')
         .get();
-    
+
     final activeBorrowings = await firestore
         .collection('schools')
         .doc(schoolId)
@@ -249,12 +309,15 @@ class LibraryRemoteDataSourceImpl implements LibraryRemoteDataSource {
     // Calculate trends for the last 6 months
     final now = DateTime.now();
     final sixMonthsAgo = DateTime(now.year, now.month - 5, 1);
-    
+
     final allBorrowings = await firestore
         .collection('schools')
         .doc(schoolId)
         .collection('library_borrowings')
-        .where('borrowDate', isGreaterThanOrEqualTo: Timestamp.fromDate(sixMonthsAgo))
+        .where(
+          'borrowDate',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(sixMonthsAgo),
+        )
         .get();
 
     Map<String, int> monthlyTrends = {};
@@ -286,9 +349,13 @@ class LibraryRemoteDataSourceImpl implements LibraryRemoteDataSource {
         .doc(schoolId)
         .collection('library_policies')
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => LibraryPolicyModel.fromFirestore(doc.data(), doc.id))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map(
+                (doc) => LibraryPolicyModel.fromFirestore(doc.data(), doc.id),
+              )
+              .toList(),
+        );
   }
 
   @override

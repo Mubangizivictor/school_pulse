@@ -12,7 +12,9 @@ class ClassResourcesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final primaryColor = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
@@ -28,11 +30,18 @@ class ClassResourcesScreen extends StatelessWidget {
           children: [
             Text(
               'Class Resources',
-              style: AppTypography.titleLarge.copyWith(color: primaryColor, fontWeight: FontWeight.bold),
+              style: AppTypography.titleLarge.copyWith(
+                color: primaryColor,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             Text(
               'P5 East',
-              style: AppTypography.labelSmall.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+              style: AppTypography.labelSmall.copyWith(
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
             ),
           ],
         ),
@@ -47,15 +56,45 @@ class ClassResourcesScreen extends StatelessWidget {
         padding: const EdgeInsets.all(AppSpacing.xl),
         children: [
           _buildCategoryHeader('Study Materials', Icons.auto_stories, isDark),
-          _buildResourceItem('Math_Algebra_Notes.pdf', '1.2 MB • 2 days ago', Icons.picture_as_pdf, Colors.red, isDark),
-          _buildResourceItem('English_Grammar_Guide.docx', '850 KB • 1 week ago', Icons.description, Colors.blue, isDark),
+          _buildResourceItem(
+            'Math_Algebra_Notes.pdf',
+            '1.2 MB • 2 days ago',
+            Icons.picture_as_pdf,
+            Colors.red,
+            isDark,
+          ),
+          _buildResourceItem(
+            'English_Grammar_Guide.docx',
+            '850 KB • 1 week ago',
+            Icons.description,
+            Colors.blue,
+            isDark,
+          ),
           const SizedBox(height: AppSpacing.xl),
           _buildCategoryHeader('Shared Media', Icons.collections, isDark),
-          _buildResourceItem('Class_Project_Photo.jpg', '4.5 MB • 3 days ago', Icons.image, Colors.green, isDark),
-          _buildResourceItem('Science_Experiment_Video.mp4', '15.8 MB • Yesterday', Icons.videocam, Colors.purple, isDark),
+          _buildResourceItem(
+            'Class_Project_Photo.jpg',
+            '4.5 MB • 3 days ago',
+            Icons.image,
+            Colors.green,
+            isDark,
+          ),
+          _buildResourceItem(
+            'Science_Experiment_Video.mp4',
+            '15.8 MB • Yesterday',
+            Icons.videocam,
+            Colors.purple,
+            isDark,
+          ),
           const SizedBox(height: AppSpacing.xl),
           _buildCategoryHeader('Documents', Icons.folder, isDark),
-          _buildResourceItem('Term_2_Syllabus.pdf', '2.4 MB • 1 month ago', Icons.picture_as_pdf, Colors.red, isDark),
+          _buildResourceItem(
+            'Term_2_Syllabus.pdf',
+            '2.4 MB • 1 month ago',
+            Icons.picture_as_pdf,
+            Colors.red,
+            isDark,
+          ),
         ],
       ),
     );
@@ -71,7 +110,9 @@ class ClassResourcesScreen extends StatelessWidget {
           Text(
             title,
             style: AppTypography.titleMedium.copyWith(
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              color: isDark
+                  ? AppColors.textPrimaryDark
+                  : AppColors.textPrimaryLight,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -80,7 +121,13 @@ class ClassResourcesScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildResourceItem(String name, String meta, IconData icon, Color iconColor, bool isDark) {
+  Widget _buildResourceItem(
+    String name,
+    String meta,
+    IconData icon,
+    Color iconColor,
+    bool isDark,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.m),
       child: PulseCard(
@@ -104,7 +151,9 @@ class ClassResourcesScreen extends StatelessWidget {
                   Text(
                     name,
                     style: AppTypography.bodyMedium.copyWith(
-                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
                       fontWeight: FontWeight.bold,
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -112,13 +161,21 @@ class ClassResourcesScreen extends StatelessWidget {
                   Text(
                     meta,
                     style: AppTypography.labelSmall.copyWith(
-                      color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                      color: isDark
+                          ? AppColors.textMutedDark
+                          : AppColors.textMutedLight,
                     ),
                   ),
                 ],
               ),
             ),
-            Icon(Icons.more_vert, size: 20, color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+            Icon(
+              Icons.more_vert,
+              size: 20,
+              color: isDark
+                  ? AppColors.textMutedDark
+                  : AppColors.textMutedLight,
+            ),
           ],
         ),
       ),

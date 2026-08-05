@@ -31,7 +31,7 @@ class ReportPolicyService {
   }) async {
     if (policy.option == ReleaseOption.viewEveryoneDownloadCleared) return true;
     if (policy.option == ReleaseOption.everyoneImmediate) return true;
-    
+
     // For other options, viewing might also be restricted
     return await canDownloadReport(studentId: studentId, policy: policy);
   }
@@ -40,7 +40,8 @@ class ReportPolicyService {
     final result = await financeRepository.getFees(studentId);
     return result.fold(
       (failure) => false,
-      (fees) => fees.every((fee) => fee.status.toString().split('.').last == 'paid'),
+      (fees) =>
+          fees.every((fee) => fee.status.toString().split('.').last == 'paid'),
     );
   }
 }

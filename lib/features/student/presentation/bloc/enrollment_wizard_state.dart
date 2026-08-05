@@ -7,7 +7,7 @@ class EnrollmentWizardState extends Equatable {
   final int currentStep;
   final EnrollmentWizardStatus status;
   final String? errorMessage;
-  
+
   // Data collected during the wizard
   final String studentName;
   final DateTime? dateOfBirth;
@@ -80,22 +80,22 @@ class EnrollmentWizardState extends Equatable {
 
   @override
   List<Object?> get props => [
-        currentStep,
-        status,
-        errorMessage,
-        studentName,
-        dateOfBirth,
-        gender,
-        targetClassId,
-        targetStreamId,
-        academicYearId,
-        previousSchool,
-        applicantParentName,
-        applicantParentPhone,
-        attachedDocuments,
-        uploadingDocuments,
-        admissionType,
-      ];
+    currentStep,
+    status,
+    errorMessage,
+    studentName,
+    dateOfBirth,
+    gender,
+    targetClassId,
+    targetStreamId,
+    academicYearId,
+    previousSchool,
+    applicantParentName,
+    applicantParentPhone,
+    attachedDocuments,
+    uploadingDocuments,
+    admissionType,
+  ];
 
   bool get isFirstStep => currentStep == 1;
   bool get isLastStep => currentStep == 12;
@@ -108,7 +108,8 @@ class EnrollmentWizardState extends Equatable {
       case 4:
         return studentName.trim().isNotEmpty && dateOfBirth != null;
       case 6:
-        return applicantParentName.trim().isNotEmpty && applicantParentPhone.trim().isNotEmpty;
+        return applicantParentName.trim().isNotEmpty &&
+            applicantParentPhone.trim().isNotEmpty;
       case 7:
         return targetClassId != null && academicYearId != null;
       default:

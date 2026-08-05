@@ -29,7 +29,7 @@ class NotificationCenterBloc
   DateTime? _cursor;
 
   NotificationCenterBloc({required this.repository})
-      : super(const NotificationCenterState()) {
+    : super(const NotificationCenterState()) {
     on<NotificationCenterStarted>(_onStarted);
     on<NotificationCenterRefreshed>(_onRefreshed);
     on<NotificationCenterLoadedMore>(_onLoadedMore);
@@ -89,14 +89,18 @@ class NotificationCenterBloc
 
     // Push anything the user did while offline, then drop rows past their
     // retention window so the cache does not grow without bound.
-    unawaited(repository.syncPendingStateChanges(
-      schoolId: event.schoolId,
-      recipientUserId: event.userId,
-    ));
-    unawaited(repository.purgeExpired(
-      schoolId: event.schoolId,
-      recipientUserId: event.userId,
-    ));
+    unawaited(
+      repository.syncPendingStateChanges(
+        schoolId: event.schoolId,
+        recipientUserId: event.userId,
+      ),
+    );
+    unawaited(
+      repository.purgeExpired(
+        schoolId: event.schoolId,
+        recipientUserId: event.userId,
+      ),
+    );
   }
 
   /// (Re)binds the item and count streams for the current filter.
@@ -107,53 +111,59 @@ class NotificationCenterBloc
     _countsSub?.cancel();
     _cursor = null;
 
-    _itemsSub = repository.watchNotifications(_queryFrom(state)).listen(
-      (page) {
-        _cursor = page.nextCursor;
-        add(NotificationCenterDataReceived(
+    _itemsSub = repository.watchNotifications(_queryFrom(state)).listen((page) {
+      _cursor = page.nextCursor;
+      add(
+        NotificationCenterDataReceived(
           items: page.items,
           fromCache: page.fromCache,
           hasMore: page.hasMore,
-        ));
-      },
-    );
+        ),
+      );
+    });
 
     _countsSub = repository
         .watchCounts(schoolId: _schoolId!, recipientUserId: _userId!)
         .listen((counts) {
-      add(NotificationCountsReceived(
-        unread: counts.unread,
-        pinned: counts.pinned,
-        total: counts.total,
-        requiringAcknowledgement: counts.requiringAcknowledgement,
-      ));
-    });
+          add(
+            NotificationCountsReceived(
+              unread: counts.unread,
+              pinned: counts.pinned,
+              total: counts.total,
+              requiringAcknowledgement: counts.requiringAcknowledgement,
+            ),
+          );
+        });
   }
 
   void _onDataReceived(
     NotificationCenterDataReceived event,
     Emitter<NotificationCenterState> emit,
   ) {
-    emit(state.copyWith(
-      status: NotificationCenterStatus.ready,
-      items: event.items,
-      hasMore: event.hasMore,
-      isOffline: event.fromCache,
-      isLoadingMore: false,
-      clearFailure: true,
-    ));
+    emit(
+      state.copyWith(
+        status: NotificationCenterStatus.ready,
+        items: event.items,
+        hasMore: event.hasMore,
+        isOffline: event.fromCache,
+        isLoadingMore: false,
+        clearFailure: true,
+      ),
+    );
   }
 
   void _onCountsReceived(
     NotificationCountsReceived event,
     Emitter<NotificationCenterState> emit,
   ) {
-    emit(state.copyWith(
-      unreadCount: event.unread,
-      pinnedCount: event.pinned,
-      totalCount: event.total,
-      acknowledgementCount: event.requiringAcknowledgement,
-    ));
+    emit(
+      state.copyWith(
+        unreadCount: event.unread,
+        pinnedCount: event.pinned,
+        totalCount: event.total,
+        acknowledgementCount: event.requiringAcknowledgement,
+      ),
+    );
   }
 
   Future<void> _onRefreshed(
@@ -173,19 +183,23 @@ class NotificationCenterBloc
 
     final result = await repository.getNotifications(_queryFrom(state));
     result.fold(
-      (failure) => emit(state.copyWith(
-        status: NotificationCenterStatus.failure,
-        failure: failure,
-      )),
+      (failure) => emit(
+        state.copyWith(
+          status: NotificationCenterStatus.failure,
+          failure: failure,
+        ),
+      ),
       (page) {
         _cursor = page.nextCursor;
-        emit(state.copyWith(
-          status: NotificationCenterStatus.ready,
-          items: page.items,
-          hasMore: page.hasMore,
-          isOffline: page.fromCache,
-          clearFailure: true,
-        ));
+        emit(
+          state.copyWith(
+            status: NotificationCenterStatus.ready,
+            items: page.items,
+            hasMore: page.hasMore,
+            isOffline: page.fromCache,
+            clearFailure: true,
+          ),
+        );
       },
     );
   }
@@ -198,8 +212,9 @@ class NotificationCenterBloc
 
     emit(state.copyWith(isLoadingMore: true));
 
-    final result =
-        await repository.getNotifications(_queryFrom(state, cursor: _cursor));
+    final result = await repository.getNotifications(
+      _queryFrom(state, cursor: _cursor),
+    );
 
     result.fold(
       (failure) => emit(state.copyWith(isLoadingMore: false, failure: failure)),
@@ -210,11 +225,13 @@ class NotificationCenterBloc
         final existingIds = state.items.map((n) => n.id).toSet();
         final appended = page.items.where((n) => !existingIds.contains(n.id));
 
-        emit(state.copyWith(
-          items: [...state.items, ...appended],
-          hasMore: page.hasMore,
-          isLoadingMore: false,
-        ));
+        emit(
+          state.copyWith(
+            items: [...state.items, ...appended],
+            hasMore: page.hasMore,
+            isLoadingMore: false,
+          ),
+        );
       },
     );
   }
@@ -224,24 +241,28 @@ class NotificationCenterBloc
     Emitter<NotificationCenterState> emit,
   ) async {
     if (event.reset) {
-      emit(state.copyWith(
-        categoryFilter: const {},
-        priorityFilter: const {},
-        clearReadFilter: true,
-        pinnedOnly: false,
-        includeArchived: false,
-        clearStudentFilter: true,
-        searchTerm: '',
-      ));
+      emit(
+        state.copyWith(
+          categoryFilter: const {},
+          priorityFilter: const {},
+          clearReadFilter: true,
+          pinnedOnly: false,
+          includeArchived: false,
+          clearStudentFilter: true,
+          searchTerm: '',
+        ),
+      );
     } else {
-      emit(state.copyWith(
-        categoryFilter: event.categories,
-        priorityFilter: event.priorities,
-        readFilter: event.isRead,
-        pinnedOnly: event.pinnedOnly,
-        includeArchived: event.includeArchived,
-        studentFilter: event.relatedStudentId,
-      ));
+      emit(
+        state.copyWith(
+          categoryFilter: event.categories,
+          priorityFilter: event.priorities,
+          readFilter: event.isRead,
+          pinnedOnly: event.pinnedOnly,
+          includeArchived: event.includeArchived,
+          studentFilter: event.relatedStudentId,
+        ),
+      );
     }
 
     _subscribe();
@@ -314,7 +335,10 @@ class NotificationCenterBloc
       notificationId: event.notificationId,
       recipientUserId: _userId!,
     );
-    result.fold((failure) => emit(state.copyWith(failure: failure)), (_) => null);
+    result.fold(
+      (failure) => emit(state.copyWith(failure: failure)),
+      (_) => null,
+    );
   }
 
   Future<void> _onPinToggled(
@@ -353,7 +377,10 @@ class NotificationCenterBloc
       notificationId: event.notificationId,
       recipientUserId: _userId!,
     );
-    result.fold((failure) => emit(state.copyWith(failure: failure)), (_) => null);
+    result.fold(
+      (failure) => emit(state.copyWith(failure: failure)),
+      (_) => null,
+    );
   }
 
   Future<void> _onAllMarkedRead(

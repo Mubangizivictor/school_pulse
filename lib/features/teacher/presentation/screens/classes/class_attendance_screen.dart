@@ -13,7 +13,9 @@ class ClassAttendanceScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final primaryColor = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
@@ -29,11 +31,18 @@ class ClassAttendanceScreen extends StatelessWidget {
           children: [
             Text(
               'Class Attendance',
-              style: AppTypography.titleLarge.copyWith(color: primaryColor, fontWeight: FontWeight.bold),
+              style: AppTypography.titleLarge.copyWith(
+                color: primaryColor,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             Text(
               'P5 East • Today, 15 May 2024',
-              style: AppTypography.labelSmall.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+              style: AppTypography.labelSmall.copyWith(
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
             ),
           ],
         ),
@@ -48,17 +57,26 @@ class ClassAttendanceScreen extends StatelessWidget {
         children: [
           _buildSummary(context, isDark),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.m),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xl,
+              vertical: AppSpacing.m,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   'Students (32)',
-                  style: AppTypography.titleMedium.copyWith(color: primaryColor, fontWeight: FontWeight.bold),
+                  style: AppTypography.titleMedium.copyWith(
+                    color: primaryColor,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 TextButton(
                   onPressed: () {},
-                  child: const Text('Mark All', style: TextStyle(color: AppColors.successGreen)),
+                  child: const Text(
+                    'Mark All',
+                    style: TextStyle(color: AppColors.successGreen),
+                  ),
                 ),
               ],
             ),
@@ -67,8 +85,10 @@ class ClassAttendanceScreen extends StatelessWidget {
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
               itemCount: 10,
-              separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.m),
-              itemBuilder: (context, index) => _buildAttendanceItem(index, isDark),
+              separatorBuilder: (context, index) =>
+                  const SizedBox(height: AppSpacing.m),
+              itemBuilder: (context, index) =>
+                  _buildAttendanceItem(index, isDark),
             ),
           ),
           Padding(
@@ -88,33 +108,73 @@ class ClassAttendanceScreen extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.xl),
       child: Row(
         children: [
-          Expanded(child: _buildSummaryCard('30', 'Present', '93.8%', AppColors.successGreen, isDark)),
+          Expanded(
+            child: _buildSummaryCard(
+              '30',
+              'Present',
+              '93.8%',
+              AppColors.successGreen,
+              isDark,
+            ),
+          ),
           const SizedBox(width: AppSpacing.m),
-          Expanded(child: _buildSummaryCard('2', 'Absent', '6.2%', AppColors.danger(context), isDark)),
+          Expanded(
+            child: _buildSummaryCard(
+              '2',
+              'Absent',
+              '6.2%',
+              AppColors.danger(context),
+              isDark,
+            ),
+          ),
           const SizedBox(width: AppSpacing.m),
-          Expanded(child: _buildSummaryCard('0', 'Late', '0%', AppColors.goldenYellow, isDark)),
+          Expanded(
+            child: _buildSummaryCard(
+              '0',
+              'Late',
+              '0%',
+              AppColors.goldenYellow,
+              isDark,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildSummaryCard(String count, String label, String percentage, Color color, bool isDark) {
+  Widget _buildSummaryCard(
+    String count,
+    String label,
+    String percentage,
+    Color color,
+    bool isDark,
+  ) {
     return PulseCard(
       padding: const EdgeInsets.all(AppSpacing.m),
       child: Column(
         children: [
           Text(
             count,
-            style: AppTypography.titleLarge.copyWith(color: color, fontWeight: FontWeight.bold),
+            style: AppTypography.titleLarge.copyWith(
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           Text(
             label,
-            style: AppTypography.labelSmall.copyWith(color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+            style: AppTypography.labelSmall.copyWith(
+              color: isDark
+                  ? AppColors.textMutedDark
+                  : AppColors.textMutedLight,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             percentage,
-            style: AppTypography.labelSmall.copyWith(color: color, fontWeight: FontWeight.bold),
+            style: AppTypography.labelSmall.copyWith(
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),
@@ -122,7 +182,14 @@ class ClassAttendanceScreen extends StatelessWidget {
   }
 
   Widget _buildAttendanceItem(int index, bool isDark) {
-    final names = ['Abalo Peter', 'Adong Grace', 'Aguti Brian', 'Anywar Doris', 'Atim Charles', 'Bamuwamye Sarah'];
+    final names = [
+      'Abalo Peter',
+      'Adong Grace',
+      'Aguti Brian',
+      'Anywar Doris',
+      'Atim Charles',
+      'Bamuwamye Sarah',
+    ];
     final name = names[index % names.length];
     final isPresent = index != 3; // Mocking one absent student
 
@@ -131,13 +198,17 @@ class ClassAttendanceScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
         borderRadius: BorderRadius.circular(AppSpacing.m),
-        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+        ),
       ),
       child: Row(
         children: [
           CircleAvatar(
             radius: 20,
-            backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=att_$index'),
+            backgroundImage: NetworkImage(
+              'https://i.pravatar.cc/150?u=att_$index',
+            ),
           ),
           const SizedBox(width: AppSpacing.m),
           Expanded(
@@ -147,14 +218,18 @@ class ClassAttendanceScreen extends StatelessWidget {
                 Text(
                   name,
                   style: AppTypography.bodyMedium.copyWith(
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
                   'S1-2024-040$index',
                   style: AppTypography.labelSmall.copyWith(
-                    color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                    color: isDark
+                        ? AppColors.textMutedDark
+                        : AppColors.textMutedLight,
                   ),
                 ),
               ],
@@ -162,11 +237,23 @@ class ClassAttendanceScreen extends StatelessWidget {
           ),
           Row(
             children: [
-              _buildAttendanceAction(Icons.check_circle, isPresent ? AppColors.successGreen : AppColors.disabledDark, () {}),
+              _buildAttendanceAction(
+                Icons.check_circle,
+                isPresent ? AppColors.successGreen : AppColors.disabledDark,
+                () {},
+              ),
               const SizedBox(width: AppSpacing.s),
-              _buildAttendanceAction(Icons.cancel, !isPresent ? AppColors.errorRed : AppColors.disabledDark, () {}),
+              _buildAttendanceAction(
+                Icons.cancel,
+                !isPresent ? AppColors.errorRed : AppColors.disabledDark,
+                () {},
+              ),
               const SizedBox(width: AppSpacing.s),
-              _buildAttendanceAction(Icons.watch_later, AppColors.disabledDark, () {}),
+              _buildAttendanceAction(
+                Icons.watch_later,
+                AppColors.disabledDark,
+                () {},
+              ),
             ],
           ),
         ],
@@ -174,7 +261,11 @@ class ClassAttendanceScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAttendanceAction(IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildAttendanceAction(
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return InkWell(
       onTap: onTap,
       child: Icon(icon, color: color, size: 28),

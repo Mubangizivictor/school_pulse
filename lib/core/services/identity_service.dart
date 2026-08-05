@@ -5,7 +5,7 @@ class IdentityService {
   final FirebaseFirestore _firestore;
 
   IdentityService({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   /// Validates a school code during setup.
   /// 3-6 characters, Uppercase only, No spaces, No special symbols.
@@ -83,8 +83,12 @@ class IdentityService {
       if (isNumeric) {
         suffix = List.generate(length, (_) => random.nextInt(10)).join();
       } else {
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Avoid confusing chars
-        suffix = List.generate(length, (_) => chars[random.nextInt(chars.length)]).join();
+        const chars =
+            'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Avoid confusing chars
+        suffix = List.generate(
+          length,
+          (_) => chars[random.nextInt(chars.length)],
+        ).join();
       }
       code = '$prefix$suffix';
 
@@ -103,7 +107,8 @@ class IdentityService {
   /// This token does NOT contain any personal information.
   String generateSecureReference() {
     final random = Random.secure();
-    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const chars =
+        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     return List.generate(32, (_) => chars[random.nextInt(chars.length)]).join();
   }
 }

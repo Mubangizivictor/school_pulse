@@ -17,7 +17,8 @@ class StaffAttendanceRecord {
     required this.location,
   });
 
-  factory StaffAttendanceRecord.fromMap(Map<String, dynamic> map) => StaffAttendanceRecord(
+  factory StaffAttendanceRecord.fromMap(Map<String, dynamic> map) =>
+      StaffAttendanceRecord(
         schoolId: map['schoolId'] ?? '',
         staffId: map['staffId'] ?? '',
         clockIn: (map['clockIn'] as Timestamp).toDate(),
@@ -27,11 +28,11 @@ class StaffAttendanceRecord {
       );
 
   Map<String, dynamic> toMap() => {
-        'schoolId': schoolId,
-        'staffId': staffId,
-        'clockIn': Timestamp.fromDate(clockIn),
-        'clockOut': clockOut != null ? Timestamp.fromDate(clockOut!) : null,
-        'status': status,
-        'location': location,
-      };
+    'schoolId': schoolId,
+    'staffId': staffId,
+    'clockIn': Timestamp.fromDate(clockIn),
+    'clockOut': clockOut != null ? Timestamp.fromDate(clockOut!) : null,
+    'status': status,
+    'location': location,
+  };
 }

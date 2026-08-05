@@ -55,7 +55,9 @@ class RepairRecordModel extends RepairRecord {
       'status': status.name,
       'partsUsed': partsUsed,
       'requestDate': Timestamp.fromDate(requestDate),
-      'completionDate': completionDate != null ? Timestamp.fromDate(completionDate!) : null,
+      'completionDate': completionDate != null
+          ? Timestamp.fromDate(completionDate!)
+          : null,
       'notes': notes,
       'beforePhotoUrl': beforePhotoUrl,
       'afterPhotoUrl': afterPhotoUrl,

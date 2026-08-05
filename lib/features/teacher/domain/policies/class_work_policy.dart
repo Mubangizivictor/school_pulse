@@ -21,11 +21,12 @@ class ClassWorkDecision {
   final String? message;
 
   const ClassWorkDecision.allowed()
-      : isAllowed = true,
-        refusal = null,
-        message = null;
+    : isAllowed = true,
+      refusal = null,
+      message = null;
 
-  const ClassWorkDecision.refused(this.refusal, this.message) : isAllowed = false;
+  const ClassWorkDecision.refused(this.refusal, this.message)
+    : isAllowed = false;
 }
 
 /// The rules governing class work a teacher sets and the conduct they record.

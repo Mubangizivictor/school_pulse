@@ -63,23 +63,30 @@ class VerifyFingerprint {
     String? operatorId,
     String? location,
   }) async {
-    final storedTemplate = await repository.getBiometricTemplate(schoolId, personId);
+    final storedTemplate = await repository.getBiometricTemplate(
+      schoolId,
+      personId,
+    );
     if (storedTemplate == null) {
       return false;
     }
 
     final isValid = await deviceService.verify(storedTemplate);
-    
-    await repository.logEvent(BiometricAuditLog(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      schoolId: schoolId,
-      personId: personId,
-      deviceId: deviceId,
-      operatorId: operatorId,
-      eventType: isValid ? BiometricEventType.verificationSuccess : BiometricEventType.verificationFailed,
-      timestamp: DateTime.now(),
-      location: location,
-    ));
+
+    await repository.logEvent(
+      BiometricAuditLog(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        schoolId: schoolId,
+        personId: personId,
+        deviceId: deviceId,
+        operatorId: operatorId,
+        eventType: isValid
+            ? BiometricEventType.verificationSuccess
+            : BiometricEventType.verificationFailed,
+        timestamp: DateTime.now(),
+        location: location,
+      ),
+    );
 
     return isValid;
   }

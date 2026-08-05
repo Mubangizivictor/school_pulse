@@ -10,9 +10,7 @@ class CreateFolderScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        title: const Text('Create Folder'),
-      ),
+      appBar: AppBar(title: const Text('Create Folder')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
@@ -22,7 +20,9 @@ class CreateFolderScreen extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -51,11 +51,15 @@ class CreateFolderScreen extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.xl),
             DropdownButtonFormField<String>(
-              decoration: const InputDecoration(labelText: 'Select Parent Folder'),
+              decoration: const InputDecoration(
+                labelText: 'Select Parent Folder',
+              ),
               value: 'General Resources',
-              items: ['General Resources', 'Mathematics', 'Science']
-                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                  .toList(),
+              items: [
+                'General Resources',
+                'Mathematics',
+                'Science',
+              ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
               onChanged: (v) {},
             ),
             const SizedBox(height: AppSpacing.xl),
@@ -102,7 +106,9 @@ class _ColorOption extends StatelessWidget {
         color: color,
         shape: BoxShape.circle,
         border: isSelected ? Border.all(color: Colors.white, width: 3) : null,
-        boxShadow: isSelected ? [BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 8)] : null,
+        boxShadow: isSelected
+            ? [BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 8)]
+            : null,
       ),
     );
   }

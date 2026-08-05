@@ -8,28 +8,27 @@ void main() {
 
   group('rendering', () {
     test('substitutes every supplied token', () {
-      final result = renderer.render(
-        DefaultNotificationTemplates.studentAbsent,
-        {
-          TemplateField.studentName: 'Brian Mukasa',
-          TemplateField.className: 'P.6A',
-          TemplateField.date: '1 August',
-        },
-      );
+      final result = renderer
+          .render(DefaultNotificationTemplates.studentAbsent, {
+            TemplateField.studentName: 'Brian Mukasa',
+            TemplateField.className: 'P.6A',
+            TemplateField.date: '1 August',
+          });
 
-      expect(result.body, 'Brian Mukasa was marked absent in P.6A on 1 August.');
+      expect(
+        result.body,
+        'Brian Mukasa was marked absent in P.6A on 1 August.',
+      );
       expect(result.isComplete, isTrue);
     });
 
     test('substitutes tokens in the title too', () {
-      final result = renderer.render(
-        DefaultNotificationTemplates.homeworkAssigned,
-        {
-          TemplateField.subjectName: 'Mathematics',
-          TemplateField.dueDate: 'Friday',
-          TemplateField.className: 'P.6A',
-        },
-      );
+      final result = renderer
+          .render(DefaultNotificationTemplates.homeworkAssigned, {
+            TemplateField.subjectName: 'Mathematics',
+            TemplateField.dueDate: 'Friday',
+            TemplateField.className: 'P.6A',
+          });
 
       expect(result.title, 'New Mathematics homework');
     });
@@ -50,27 +49,23 @@ void main() {
     });
 
     test('treats a blank value as missing', () {
-      final result = renderer.render(
-        DefaultNotificationTemplates.studentAbsent,
-        {
-          TemplateField.studentName: '   ',
-          TemplateField.className: 'P.6A',
-          TemplateField.date: '1 August',
-        },
-      );
+      final result = renderer
+          .render(DefaultNotificationTemplates.studentAbsent, {
+            TemplateField.studentName: '   ',
+            TemplateField.className: 'P.6A',
+            TemplateField.date: '1 August',
+          });
 
       expect(result.missingFields, contains(TemplateField.studentName));
     });
 
     test('renders the full body when the template has one', () {
-      final result = renderer.render(
-        DefaultNotificationTemplates.emergencyClosure,
-        {
-          TemplateField.schoolName: 'School Pulse Academy',
-          TemplateField.date: 'Tuesday',
-          TemplateField.reason: 'burst water main',
-        },
-      );
+      final result = renderer
+          .render(DefaultNotificationTemplates.emergencyClosure, {
+            TemplateField.schoolName: 'School Pulse Academy',
+            TemplateField.date: 'Tuesday',
+            TemplateField.reason: 'burst water main',
+          });
 
       expect(result.fullBody, contains('School Pulse Academy will be CLOSED'));
       expect(result.fullBody, contains('burst water main'));

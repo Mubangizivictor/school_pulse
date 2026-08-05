@@ -36,17 +36,17 @@ class NurseStudentView extends Equatable {
 
   @override
   List<Object?> get props => [
-        studentId,
-        name,
-        photoUrl,
-        age,
-        classId,
-        hasClinicalAccess,
-        allergies,
-        currentMedications,
-        chronicIllnesses,
-        emergencyContactName,
-        emergencyContactPhone,
-        recentClinicVisitCount,
-      ];
+    studentId,
+    name,
+    photoUrl,
+    age,
+    classId,
+    hasClinicalAccess,
+    allergies,
+    currentMedications,
+    chronicIllnesses,
+    emergencyContactName,
+    emergencyContactPhone,
+    recentClinicVisitCount,
+  ];
 }

@@ -41,7 +41,10 @@ class StudentAcademicsScreen extends StatelessWidget {
                     return AppCard(
                       margin: const EdgeInsets.only(bottom: 12),
                       child: ListTile(
-                        title: Text(record.subject, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        title: Text(
+                          record.subject,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         subtitle: Text('${record.term} ${record.year}'),
                         trailing: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -55,7 +58,10 @@ class StudentAcademicsScreen extends StatelessWidget {
                                 color: Theme.of(context).colorScheme.primary,
                               ),
                             ),
-                            Text(record.grade, style: Theme.of(context).textTheme.labelSmall),
+                            Text(
+                              record.grade,
+                              style: Theme.of(context).textTheme.labelSmall,
+                            ),
                           ],
                         ),
                       ),

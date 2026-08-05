@@ -7,7 +7,7 @@ abstract class VisitorRemoteDataSource {
   Future<List<Map<String, dynamic>>> getPreApprovedVisitors(String schoolId);
   Future<void> markPreApprovedAsUsed(String preApprovedId);
   Future<void> addToBlacklist(Map<String, dynamic> blacklistData);
-  
+
   // Enterprise features
   Future<List<Map<String, dynamic>>> getScheduledVisits(String schoolId);
   Future<void> updateScheduledVisit(String visitId, Map<String, dynamic> data);
@@ -27,17 +27,17 @@ class VisitorRemoteDataSourceImpl implements VisitorRemoteDataSource {
         .where('schoolId', isEqualTo: schoolId)
         .orderBy('arrivalTime', descending: true)
         .get();
-    return snapshot.docs.map((doc) => {
-      ...doc.data(),
-      'id': doc.id,
-    }).toList();
+    return snapshot.docs.map((doc) => {...doc.data(), 'id': doc.id}).toList();
   }
 
   @override
   Future<void> syncVisitor(Map<String, dynamic> visitorData) async {
     final id = visitorData['id'];
     final data = Map<String, dynamic>.from(visitorData)..remove('id');
-    await firestore.collection('visitors').doc(id).set(data, SetOptions(merge: true));
+    await firestore
+        .collection('visitors')
+        .doc(id)
+        .set(data, SetOptions(merge: true));
   }
 
   @override
@@ -46,23 +46,19 @@ class VisitorRemoteDataSourceImpl implements VisitorRemoteDataSource {
         .collection('visitor_blacklist')
         .where('schoolId', isEqualTo: schoolId)
         .get();
-    return snapshot.docs.map((doc) => {
-      ...doc.data(),
-      'id': doc.id,
-    }).toList();
+    return snapshot.docs.map((doc) => {...doc.data(), 'id': doc.id}).toList();
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getPreApprovedVisitors(String schoolId) async {
+  Future<List<Map<String, dynamic>>> getPreApprovedVisitors(
+    String schoolId,
+  ) async {
     final snapshot = await firestore
         .collection('pre_approved_visitors')
         .where('schoolId', isEqualTo: schoolId)
         .where('isUsed', isEqualTo: false)
         .get();
-    return snapshot.docs.map((doc) => {
-      ...doc.data(),
-      'id': doc.id,
-    }).toList();
+    return snapshot.docs.map((doc) => {...doc.data(), 'id': doc.id}).toList();
   }
 
   @override
@@ -87,14 +83,14 @@ class VisitorRemoteDataSourceImpl implements VisitorRemoteDataSource {
         .where('schoolId', isEqualTo: schoolId)
         .where('isCheckedIn', isEqualTo: false)
         .get();
-    return snapshot.docs.map((doc) => {
-      ...doc.data(),
-      'id': doc.id,
-    }).toList();
+    return snapshot.docs.map((doc) => {...doc.data(), 'id': doc.id}).toList();
   }
 
   @override
-  Future<void> updateScheduledVisit(String visitId, Map<String, dynamic> data) async {
+  Future<void> updateScheduledVisit(
+    String visitId,
+    Map<String, dynamic> data,
+  ) async {
     await firestore.collection('scheduled_visits').doc(visitId).update(data);
   }
 
@@ -102,19 +98,21 @@ class VisitorRemoteDataSourceImpl implements VisitorRemoteDataSource {
   Future<void> syncPackageDelivery(Map<String, dynamic> deliveryData) async {
     final id = deliveryData['id'];
     final data = Map<String, dynamic>.from(deliveryData)..remove('id');
-    await firestore.collection('package_deliveries').doc(id).set(data, SetOptions(merge: true));
+    await firestore
+        .collection('package_deliveries')
+        .doc(id)
+        .set(data, SetOptions(merge: true));
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getPackageDeliveries(String schoolId) async {
+  Future<List<Map<String, dynamic>>> getPackageDeliveries(
+    String schoolId,
+  ) async {
     final snapshot = await firestore
         .collection('package_deliveries')
         .where('schoolId', isEqualTo: schoolId)
         .orderBy('arrivalTime', descending: true)
         .get();
-    return snapshot.docs.map((doc) => {
-      ...doc.data(),
-      'id': doc.id,
-    }).toList();
+    return snapshot.docs.map((doc) => {...doc.data(), 'id': doc.id}).toList();
   }
 }

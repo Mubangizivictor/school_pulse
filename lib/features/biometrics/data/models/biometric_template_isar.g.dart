@@ -23,11 +23,7 @@ const BiometricTemplateIsarSchema = CollectionSchema(
       name: r'encryptedTemplate',
       type: IsarType.string,
     ),
-    r'isSynced': PropertySchema(
-      id: 1,
-      name: r'isSynced',
-      type: IsarType.bool,
-    ),
+    r'isSynced': PropertySchema(id: 1, name: r'isSynced', type: IsarType.bool),
     r'personId': PropertySchema(
       id: 2,
       name: r'personId',
@@ -47,7 +43,7 @@ const BiometricTemplateIsarSchema = CollectionSchema(
       id: 5,
       name: r'updatedAt',
       type: IsarType.dateTime,
-    )
+    ),
   },
   estimateSize: _biometricTemplateIsarEstimateSize,
   serialize: _biometricTemplateIsarSerialize,
@@ -65,9 +61,9 @@ const BiometricTemplateIsarSchema = CollectionSchema(
           name: r'personId',
           type: IndexType.hash,
           caseSensitive: true,
-        )
+        ),
       ],
-    )
+    ),
   },
   links: {},
   embeddedSchemas: {},
@@ -150,12 +146,16 @@ Id _biometricTemplateIsarGetId(BiometricTemplateIsar object) {
 }
 
 List<IsarLinkBase<dynamic>> _biometricTemplateIsarGetLinks(
-    BiometricTemplateIsar object) {
+  BiometricTemplateIsar object,
+) {
   return [];
 }
 
 void _biometricTemplateIsarAttach(
-    IsarCollection<dynamic> col, Id id, BiometricTemplateIsar object) {
+  IsarCollection<dynamic> col,
+  Id id,
+  BiometricTemplateIsar object,
+) {
   object.id = id;
 }
 
@@ -178,13 +178,15 @@ extension BiometricTemplateIsarByIndex
   }
 
   Future<List<BiometricTemplateIsar?>> getAllByPersonId(
-      List<String> personIdValues) {
+    List<String> personIdValues,
+  ) {
     final values = personIdValues.map((e) => [e]).toList();
     return getAllByIndex(r'personId', values);
   }
 
   List<BiometricTemplateIsar?> getAllByPersonIdSync(
-      List<String> personIdValues) {
+    List<String> personIdValues,
+  ) {
     final values = personIdValues.map((e) => [e]).toList();
     return getAllByIndexSync(r'personId', values);
   }
@@ -211,8 +213,10 @@ extension BiometricTemplateIsarByIndex
     return putAllByIndex(r'personId', objects);
   }
 
-  List<Id> putAllByPersonIdSync(List<BiometricTemplateIsar> objects,
-      {bool saveLinks = true}) {
+  List<Id> putAllByPersonIdSync(
+    List<BiometricTemplateIsar> objects, {
+    bool saveLinks = true,
+  }) {
     return putAllByIndexSync(r'personId', objects, saveLinks: saveLinks);
   }
 }
@@ -220,27 +224,29 @@ extension BiometricTemplateIsarByIndex
 extension BiometricTemplateIsarQueryWhereSort
     on QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QWhere> {
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterWhere>
-      anyId() {
+  anyId() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(const IdWhereClause.any());
     });
   }
 }
 
-extension BiometricTemplateIsarQueryWhere on QueryBuilder<BiometricTemplateIsar,
-    BiometricTemplateIsar, QWhereClause> {
+extension BiometricTemplateIsarQueryWhere
+    on
+        QueryBuilder<
+          BiometricTemplateIsar,
+          BiometricTemplateIsar,
+          QWhereClause
+        > {
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterWhereClause>
-      idEqualTo(Id id) {
+  idEqualTo(Id id) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IdWhereClause.between(
-        lower: id,
-        upper: id,
-      ));
+      return query.addWhereClause(IdWhereClause.between(lower: id, upper: id));
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterWhereClause>
-      idNotEqualTo(Id id) {
+  idNotEqualTo(Id id) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
@@ -263,7 +269,7 @@ extension BiometricTemplateIsarQueryWhere on QueryBuilder<BiometricTemplateIsar,
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterWhereClause>
-      idGreaterThan(Id id, {bool include = false}) {
+  idGreaterThan(Id id, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         IdWhereClause.greaterThan(lower: id, includeLower: include),
@@ -272,7 +278,7 @@ extension BiometricTemplateIsarQueryWhere on QueryBuilder<BiometricTemplateIsar,
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterWhereClause>
-      idLessThan(Id id, {bool include = false}) {
+  idLessThan(Id id, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         IdWhereClause.lessThan(upper: id, includeUpper: include),
@@ -281,118 +287,151 @@ extension BiometricTemplateIsarQueryWhere on QueryBuilder<BiometricTemplateIsar,
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterWhereClause>
-      idBetween(
+  idBetween(
     Id lowerId,
     Id upperId, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IdWhereClause.between(
-        lower: lowerId,
-        includeLower: includeLower,
-        upper: upperId,
-        includeUpper: includeUpper,
-      ));
+      return query.addWhereClause(
+        IdWhereClause.between(
+          lower: lowerId,
+          includeLower: includeLower,
+          upper: upperId,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterWhereClause>
-      personIdEqualTo(String personId) {
+  personIdEqualTo(String personId) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'personId',
-        value: [personId],
-      ));
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(indexName: r'personId', value: [personId]),
+      );
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterWhereClause>
-      personIdNotEqualTo(String personId) {
+  personIdNotEqualTo(String personId) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'personId',
-              lower: [],
-              upper: [personId],
-              includeUpper: false,
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'personId',
-              lower: [personId],
-              includeLower: false,
-              upper: [],
-            ));
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'personId',
+                lower: [],
+                upper: [personId],
+                includeUpper: false,
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'personId',
+                lower: [personId],
+                includeLower: false,
+                upper: [],
+              ),
+            );
       } else {
         return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'personId',
-              lower: [personId],
-              includeLower: false,
-              upper: [],
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'personId',
-              lower: [],
-              upper: [personId],
-              includeUpper: false,
-            ));
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'personId',
+                lower: [personId],
+                includeLower: false,
+                upper: [],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'personId',
+                lower: [],
+                upper: [personId],
+                includeUpper: false,
+              ),
+            );
       }
     });
   }
 }
 
-extension BiometricTemplateIsarQueryFilter on QueryBuilder<
-    BiometricTemplateIsar, BiometricTemplateIsar, QFilterCondition> {
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> encryptedTemplateEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+extension BiometricTemplateIsarQueryFilter
+    on
+        QueryBuilder<
+          BiometricTemplateIsar,
+          BiometricTemplateIsar,
+          QFilterCondition
+        > {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  encryptedTemplateEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'encryptedTemplate',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'encryptedTemplate',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> encryptedTemplateGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'encryptedTemplate',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> encryptedTemplateLessThan(
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  encryptedTemplateGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'encryptedTemplate',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'encryptedTemplate',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> encryptedTemplateBetween(
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  encryptedTemplateLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'encryptedTemplate',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  encryptedTemplateBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -400,203 +439,264 @@ extension BiometricTemplateIsarQueryFilter on QueryBuilder<
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'encryptedTemplate',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'encryptedTemplate',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> encryptedTemplateStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  encryptedTemplateStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'encryptedTemplate',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'encryptedTemplate',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> encryptedTemplateEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  encryptedTemplateEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'encryptedTemplate',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'encryptedTemplate',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-          QAfterFilterCondition>
-      encryptedTemplateContains(String value, {bool caseSensitive = true}) {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  encryptedTemplateContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'encryptedTemplate',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'encryptedTemplate',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-          QAfterFilterCondition>
-      encryptedTemplateMatches(String pattern, {bool caseSensitive = true}) {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  encryptedTemplateMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'encryptedTemplate',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'encryptedTemplate',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> encryptedTemplateIsEmpty() {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  encryptedTemplateIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'encryptedTemplate',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'encryptedTemplate', value: ''),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> encryptedTemplateIsNotEmpty() {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  encryptedTemplateIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'encryptedTemplate',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'encryptedTemplate', value: ''),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> idEqualTo(Id value) {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  idEqualTo(Id value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'id',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'id', value: value),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> idGreaterThan(
-    Id value, {
-    bool include = false,
-  }) {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  idGreaterThan(Id value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'id',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'id',
+          value: value,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> idLessThan(
-    Id value, {
-    bool include = false,
-  }) {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  idLessThan(Id value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'id',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'id',
+          value: value,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> idBetween(
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  idBetween(
     Id lower,
     Id upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'id',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'id',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> isSyncedEqualTo(bool value) {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  isSyncedEqualTo(bool value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'isSynced',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'isSynced', value: value),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> personIdEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  personIdEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'personId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'personId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> personIdGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'personId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> personIdLessThan(
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  personIdGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'personId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'personId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> personIdBetween(
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  personIdLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'personId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  personIdBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -604,137 +704,180 @@ extension BiometricTemplateIsarQueryFilter on QueryBuilder<
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'personId',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'personId',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> personIdStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  personIdStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'personId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'personId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> personIdEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  personIdEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'personId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'personId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-          QAfterFilterCondition>
-      personIdContains(String value, {bool caseSensitive = true}) {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  personIdContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'personId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'personId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-          QAfterFilterCondition>
-      personIdMatches(String pattern, {bool caseSensitive = true}) {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  personIdMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'personId',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'personId',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> personIdIsEmpty() {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  personIdIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'personId',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'personId', value: ''),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> personIdIsNotEmpty() {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  personIdIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'personId',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'personId', value: ''),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> personTypeEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  personTypeEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'personType',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'personType',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> personTypeGreaterThan(
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  personTypeGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'personType',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'personType',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> personTypeLessThan(
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  personTypeLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'personType',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'personType',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> personTypeBetween(
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  personTypeBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -742,137 +885,180 @@ extension BiometricTemplateIsarQueryFilter on QueryBuilder<
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'personType',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'personType',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> personTypeStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  personTypeStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'personType',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'personType',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> personTypeEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  personTypeEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'personType',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'personType',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-          QAfterFilterCondition>
-      personTypeContains(String value, {bool caseSensitive = true}) {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  personTypeContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'personType',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'personType',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-          QAfterFilterCondition>
-      personTypeMatches(String pattern, {bool caseSensitive = true}) {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  personTypeMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'personType',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'personType',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> personTypeIsEmpty() {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  personTypeIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'personType',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'personType', value: ''),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> personTypeIsNotEmpty() {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  personTypeIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'personType',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'personType', value: ''),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> schoolIdEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  schoolIdEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'schoolId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'schoolId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> schoolIdGreaterThan(
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  schoolIdGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'schoolId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'schoolId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> schoolIdLessThan(
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  schoolIdLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'schoolId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'schoolId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> schoolIdBetween(
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  schoolIdBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -880,233 +1066,282 @@ extension BiometricTemplateIsarQueryFilter on QueryBuilder<
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'schoolId',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'schoolId',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> schoolIdStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  schoolIdStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'schoolId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'schoolId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> schoolIdEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  schoolIdEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'schoolId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'schoolId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-          QAfterFilterCondition>
-      schoolIdContains(String value, {bool caseSensitive = true}) {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  schoolIdContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'schoolId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'schoolId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-          QAfterFilterCondition>
-      schoolIdMatches(String pattern, {bool caseSensitive = true}) {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  schoolIdMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'schoolId',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'schoolId',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> schoolIdIsEmpty() {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  schoolIdIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'schoolId',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'schoolId', value: ''),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> schoolIdIsNotEmpty() {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  schoolIdIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'schoolId',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'schoolId', value: ''),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> updatedAtEqualTo(DateTime value) {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  updatedAtEqualTo(DateTime value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'updatedAt',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'updatedAt', value: value),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> updatedAtGreaterThan(
-    DateTime value, {
-    bool include = false,
-  }) {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  updatedAtGreaterThan(DateTime value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'updatedAt',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'updatedAt',
+          value: value,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> updatedAtLessThan(
-    DateTime value, {
-    bool include = false,
-  }) {
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  updatedAtLessThan(DateTime value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'updatedAt',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'updatedAt',
+          value: value,
+        ),
+      );
     });
   }
 
-  QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar,
-      QAfterFilterCondition> updatedAtBetween(
+  QueryBuilder<
+    BiometricTemplateIsar,
+    BiometricTemplateIsar,
+    QAfterFilterCondition
+  >
+  updatedAtBetween(
     DateTime lower,
     DateTime upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'updatedAt',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'updatedAt',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 }
 
-extension BiometricTemplateIsarQueryObject on QueryBuilder<
-    BiometricTemplateIsar, BiometricTemplateIsar, QFilterCondition> {}
+extension BiometricTemplateIsarQueryObject
+    on
+        QueryBuilder<
+          BiometricTemplateIsar,
+          BiometricTemplateIsar,
+          QFilterCondition
+        > {}
 
-extension BiometricTemplateIsarQueryLinks on QueryBuilder<BiometricTemplateIsar,
-    BiometricTemplateIsar, QFilterCondition> {}
+extension BiometricTemplateIsarQueryLinks
+    on
+        QueryBuilder<
+          BiometricTemplateIsar,
+          BiometricTemplateIsar,
+          QFilterCondition
+        > {}
 
 extension BiometricTemplateIsarQuerySortBy
     on QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QSortBy> {
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterSortBy>
-      sortByEncryptedTemplate() {
+  sortByEncryptedTemplate() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'encryptedTemplate', Sort.asc);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterSortBy>
-      sortByEncryptedTemplateDesc() {
+  sortByEncryptedTemplateDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'encryptedTemplate', Sort.desc);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterSortBy>
-      sortByIsSynced() {
+  sortByIsSynced() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isSynced', Sort.asc);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterSortBy>
-      sortByIsSyncedDesc() {
+  sortByIsSyncedDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isSynced', Sort.desc);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterSortBy>
-      sortByPersonId() {
+  sortByPersonId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'personId', Sort.asc);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterSortBy>
-      sortByPersonIdDesc() {
+  sortByPersonIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'personId', Sort.desc);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterSortBy>
-      sortByPersonType() {
+  sortByPersonType() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'personType', Sort.asc);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterSortBy>
-      sortByPersonTypeDesc() {
+  sortByPersonTypeDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'personType', Sort.desc);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterSortBy>
-      sortBySchoolId() {
+  sortBySchoolId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schoolId', Sort.asc);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterSortBy>
-      sortBySchoolIdDesc() {
+  sortBySchoolIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schoolId', Sort.desc);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterSortBy>
-      sortByUpdatedAt() {
+  sortByUpdatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'updatedAt', Sort.asc);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterSortBy>
-      sortByUpdatedAtDesc() {
+  sortByUpdatedAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'updatedAt', Sort.desc);
     });
@@ -1116,98 +1351,98 @@ extension BiometricTemplateIsarQuerySortBy
 extension BiometricTemplateIsarQuerySortThenBy
     on QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QSortThenBy> {
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterSortBy>
-      thenByEncryptedTemplate() {
+  thenByEncryptedTemplate() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'encryptedTemplate', Sort.asc);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterSortBy>
-      thenByEncryptedTemplateDesc() {
+  thenByEncryptedTemplateDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'encryptedTemplate', Sort.desc);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterSortBy>
-      thenById() {
+  thenById() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.asc);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterSortBy>
-      thenByIdDesc() {
+  thenByIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.desc);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterSortBy>
-      thenByIsSynced() {
+  thenByIsSynced() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isSynced', Sort.asc);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterSortBy>
-      thenByIsSyncedDesc() {
+  thenByIsSyncedDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isSynced', Sort.desc);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterSortBy>
-      thenByPersonId() {
+  thenByPersonId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'personId', Sort.asc);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterSortBy>
-      thenByPersonIdDesc() {
+  thenByPersonIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'personId', Sort.desc);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterSortBy>
-      thenByPersonType() {
+  thenByPersonType() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'personType', Sort.asc);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterSortBy>
-      thenByPersonTypeDesc() {
+  thenByPersonTypeDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'personType', Sort.desc);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterSortBy>
-      thenBySchoolId() {
+  thenBySchoolId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schoolId', Sort.asc);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterSortBy>
-      thenBySchoolIdDesc() {
+  thenBySchoolIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schoolId', Sort.desc);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterSortBy>
-      thenByUpdatedAt() {
+  thenByUpdatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'updatedAt', Sort.asc);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QAfterSortBy>
-      thenByUpdatedAtDesc() {
+  thenByUpdatedAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'updatedAt', Sort.desc);
     });
@@ -1217,51 +1452,58 @@ extension BiometricTemplateIsarQuerySortThenBy
 extension BiometricTemplateIsarQueryWhereDistinct
     on QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QDistinct> {
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QDistinct>
-      distinctByEncryptedTemplate({bool caseSensitive = true}) {
+  distinctByEncryptedTemplate({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'encryptedTemplate',
-          caseSensitive: caseSensitive);
+      return query.addDistinctBy(
+        r'encryptedTemplate',
+        caseSensitive: caseSensitive,
+      );
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QDistinct>
-      distinctByIsSynced() {
+  distinctByIsSynced() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'isSynced');
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QDistinct>
-      distinctByPersonId({bool caseSensitive = true}) {
+  distinctByPersonId({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'personId', caseSensitive: caseSensitive);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QDistinct>
-      distinctByPersonType({bool caseSensitive = true}) {
+  distinctByPersonType({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'personType', caseSensitive: caseSensitive);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QDistinct>
-      distinctBySchoolId({bool caseSensitive = true}) {
+  distinctBySchoolId({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'schoolId', caseSensitive: caseSensitive);
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, BiometricTemplateIsar, QDistinct>
-      distinctByUpdatedAt() {
+  distinctByUpdatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'updatedAt');
     });
   }
 }
 
-extension BiometricTemplateIsarQueryProperty on QueryBuilder<
-    BiometricTemplateIsar, BiometricTemplateIsar, QQueryProperty> {
+extension BiometricTemplateIsarQueryProperty
+    on
+        QueryBuilder<
+          BiometricTemplateIsar,
+          BiometricTemplateIsar,
+          QQueryProperty
+        > {
   QueryBuilder<BiometricTemplateIsar, int, QQueryOperations> idProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'id');
@@ -1269,42 +1511,42 @@ extension BiometricTemplateIsarQueryProperty on QueryBuilder<
   }
 
   QueryBuilder<BiometricTemplateIsar, String, QQueryOperations>
-      encryptedTemplateProperty() {
+  encryptedTemplateProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'encryptedTemplate');
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, bool, QQueryOperations>
-      isSyncedProperty() {
+  isSyncedProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'isSynced');
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, String, QQueryOperations>
-      personIdProperty() {
+  personIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'personId');
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, String, QQueryOperations>
-      personTypeProperty() {
+  personTypeProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'personType');
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, String, QQueryOperations>
-      schoolIdProperty() {
+  schoolIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'schoolId');
     });
   }
 
   QueryBuilder<BiometricTemplateIsar, DateTime, QQueryOperations>
-      updatedAtProperty() {
+  updatedAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'updatedAt');
     });

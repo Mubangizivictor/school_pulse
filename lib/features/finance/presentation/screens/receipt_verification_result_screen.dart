@@ -12,7 +12,10 @@ class ReceiptVerificationResultScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
-    final currencyFormatter = NumberFormat.currency(symbol: 'UGX ', decimalDigits: 0);
+    final currencyFormatter = NumberFormat.currency(
+      symbol: 'UGX ',
+      decimalDigits: 0,
+    );
     final dateFormatter = DateFormat('dd MMM yyyy, HH:mm');
 
     return Scaffold(
@@ -63,7 +66,10 @@ class ReceiptVerificationResultScreen extends StatelessWidget {
                     ),
                     child: Column(
                       children: [
-                        const Text('TOTAL AMOUNT PAID', style: TextStyle(fontSize: 12)),
+                        const Text(
+                          'TOTAL AMOUNT PAID',
+                          style: TextStyle(fontSize: 12),
+                        ),
                         const SizedBox(height: 4),
                         Text(
                           currencyFormatter.format(payment.amount),

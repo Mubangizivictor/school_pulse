@@ -53,7 +53,8 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
     final currentState = context.read<SystemConfigBloc>().state;
     if (currentState is SystemConfigLoaded) {
       _initializeControllers(currentState.config);
-    } else if (currentState is SystemConfigError && currentState.config != null) {
+    } else if (currentState is SystemConfigError &&
+        currentState.config != null) {
       _initializeControllers(currentState.config!);
     }
   }
@@ -81,8 +82,12 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
     _phoneController.text = config.schoolPhone ?? '';
     _termController.text = config.currentTerm;
     _yearController.text = config.academicYear;
-    _primaryColor = config.primaryColor != null ? Color(int.parse(config.primaryColor!)) : null;
-    _secondaryColor = config.secondaryColor != null ? Color(int.parse(config.secondaryColor!)) : null;
+    _primaryColor = config.primaryColor != null
+        ? Color(int.parse(config.primaryColor!))
+        : null;
+    _secondaryColor = config.secondaryColor != null
+        ? Color(int.parse(config.secondaryColor!))
+        : null;
     _termStart = config.termStart;
     _termEnd = config.termEnd;
     _mfaEnabled = config.mfaEnabled;
@@ -124,7 +129,9 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
             _initializeControllers(state.config);
           } else if (state is SystemConfigUpdated) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Configuration updated successfully')),
+              const SnackBar(
+                content: Text('Configuration updated successfully'),
+              ),
             );
           } else if (state is SystemConfigError) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -147,10 +154,12 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
           final config = state is SystemConfigLoaded
               ? state.config
               : (state is SystemConfigLogoUploading
-                  ? state.config
-                  : (state is SystemConfigUpdated
-                      ? state.config
-                      : (state is SystemConfigError ? state.config : null)));
+                    ? state.config
+                    : (state is SystemConfigUpdated
+                          ? state.config
+                          : (state is SystemConfigError
+                                ? state.config
+                                : null)));
 
           if (config != null) {
             return SingleChildScrollView(
@@ -202,7 +211,9 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
       final newConfig = SystemConfig(
         schoolName: _nameController.text,
         schoolMotto: _mottoController.text,
-        schoolLogoUrl: _logoUrlController.text.isEmpty ? oldConfig.schoolLogoUrl : _logoUrlController.text,
+        schoolLogoUrl: _logoUrlController.text.isEmpty
+            ? oldConfig.schoolLogoUrl
+            : _logoUrlController.text,
         schoolAddress: _addressController.text,
         schoolEmail: _emailController.text,
         schoolPhone: _phoneController.text,
@@ -227,7 +238,10 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Contact Information', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const Text(
+            'Contact Information',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
           const SizedBox(height: 20),
           TextFormField(
             controller: _addressController,
@@ -271,14 +285,21 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
     );
   }
 
-  Widget _buildSchoolIdentitySection(BuildContext context, SystemConfig config, SystemConfigState state) {
+  Widget _buildSchoolIdentitySection(
+    BuildContext context,
+    SystemConfig config,
+    SystemConfigState state,
+  ) {
     final isUploadingLogo = state is SystemConfigLogoUploading;
 
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('School Identity', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const Text(
+            'School Identity',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
           const SizedBox(height: 20),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -292,9 +313,13 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
                       width: 100,
                       height: 100,
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Theme.of(context).dividerColor),
+                        border: Border.all(
+                          color: Theme.of(context).dividerColor,
+                        ),
                         image: config.schoolLogoUrl != null
                             ? DecorationImage(
                                 image: NetworkImage(config.schoolLogoUrl!),
@@ -333,13 +358,20 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
                   children: [
                     TextFormField(
                       controller: _nameController,
-                      decoration: const InputDecoration(labelText: 'School Name', hintText: 'e.g. Kampala Heights Academy'),
-                      validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                      decoration: const InputDecoration(
+                        labelText: 'School Name',
+                        hintText: 'e.g. Kampala Heights Academy',
+                      ),
+                      validator: (value) =>
+                          value == null || value.isEmpty ? 'Required' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _mottoController,
-                      decoration: const InputDecoration(labelText: 'School Motto', hintText: 'e.g. Excellence in Service'),
+                      decoration: const InputDecoration(
+                        labelText: 'School Motto',
+                        hintText: 'e.g. Excellence in Service',
+                      ),
                     ),
                   ],
                 ),
@@ -356,7 +388,9 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       if (context.mounted) {
-        context.read<SystemConfigBloc>().add(UploadSchoolLogo(File(pickedFile.path)));
+        context.read<SystemConfigBloc>().add(
+          UploadSchoolLogo(File(pickedFile.path)),
+        );
       }
     }
   }
@@ -366,7 +400,10 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Branding & Theme', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const Text(
+            'Branding & Theme',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
           const SizedBox(height: 20),
           Row(
             children: [
@@ -383,7 +420,9 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
                       decoration: BoxDecoration(
                         color: _primaryColor ?? Theme.of(context).primaryColor,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Theme.of(context).dividerColor),
+                        border: Border.all(
+                          color: Theme.of(context).dividerColor,
+                        ),
                       ),
                     ),
                   ),
@@ -401,9 +440,13 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: _secondaryColor ?? Theme.of(context).colorScheme.secondary,
+                        color:
+                            _secondaryColor ??
+                            Theme.of(context).colorScheme.secondary,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Theme.of(context).dividerColor),
+                        border: Border.all(
+                          color: Theme.of(context).dividerColor,
+                        ),
                       ),
                     ),
                   ),
@@ -423,7 +466,8 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
         title: const Text('Pick a color'),
         content: SingleChildScrollView(
           child: ColorPicker(
-            pickerColor: (isPrimary ? _primaryColor : _secondaryColor) ?? Colors.blue,
+            pickerColor:
+                (isPrimary ? _primaryColor : _secondaryColor) ?? Colors.blue,
             onColorChanged: (color) {
               setState(() {
                 if (isPrimary) {
@@ -436,7 +480,10 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Done')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Done'),
+          ),
         ],
       ),
     );
@@ -447,23 +494,34 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Term & Session Management', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const Text(
+            'Term & Session Management',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
           const SizedBox(height: 20),
           Row(
             children: [
               Expanded(
                 child: TextFormField(
                   controller: _termController,
-                  decoration: const InputDecoration(labelText: 'Current Term', hintText: 'Term 3'),
-                  validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                  decoration: const InputDecoration(
+                    labelText: 'Current Term',
+                    hintText: 'Term 3',
+                  ),
+                  validator: (value) =>
+                      value == null || value.isEmpty ? 'Required' : null,
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: TextFormField(
                   controller: _yearController,
-                  decoration: const InputDecoration(labelText: 'Academic Year', hintText: '2023/2024'),
-                  validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                  decoration: const InputDecoration(
+                    labelText: 'Academic Year',
+                    hintText: '2023/2024',
+                  ),
+                  validator: (value) =>
+                      value == null || value.isEmpty ? 'Required' : null,
                 ),
               ),
             ],
@@ -475,8 +533,15 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
                 child: InkWell(
                   onTap: () => _selectDate(context, true),
                   child: InputDecorator(
-                    decoration: const InputDecoration(labelText: 'Term Start Date', suffixIcon: Icon(Icons.calendar_today)),
-                    child: Text(_termStart != null ? DateFormat('MMM dd, yyyy').format(_termStart!) : 'Select Date'),
+                    decoration: const InputDecoration(
+                      labelText: 'Term Start Date',
+                      suffixIcon: Icon(Icons.calendar_today),
+                    ),
+                    child: Text(
+                      _termStart != null
+                          ? DateFormat('MMM dd, yyyy').format(_termStart!)
+                          : 'Select Date',
+                    ),
                   ),
                 ),
               ),
@@ -485,8 +550,15 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
                 child: InkWell(
                   onTap: () => _selectDate(context, false),
                   child: InputDecorator(
-                    decoration: const InputDecoration(labelText: 'Term End Date', suffixIcon: Icon(Icons.calendar_today)),
-                    child: Text(_termEnd != null ? DateFormat('MMM dd, yyyy').format(_termEnd!) : 'Select Date'),
+                    decoration: const InputDecoration(
+                      labelText: 'Term End Date',
+                      suffixIcon: Icon(Icons.calendar_today),
+                    ),
+                    child: Text(
+                      _termEnd != null
+                          ? DateFormat('MMM dd, yyyy').format(_termEnd!)
+                          : 'Select Date',
+                    ),
                   ),
                 ),
               ),
@@ -523,7 +595,10 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
 
   void _addGate() {
     final name = _newGateController.text.trim();
-    if (name.isEmpty || _gates.any((g) => g.toLowerCase() == name.toLowerCase())) return;
+    if (name.isEmpty ||
+        _gates.any((g) => g.toLowerCase() == name.toLowerCase())) {
+      return;
+    }
     setState(() {
       _gates.add(name);
       _newGateController.clear();
@@ -545,21 +620,29 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Visitor Gates', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const Text(
+            'Visitor Gates',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
           const SizedBox(height: 4),
           Text(
             'Define the physical entry points gatekeepers can select when checking in a visitor.',
-            style: TextStyle(color: Theme.of(context).colorScheme.outline, fontSize: 12),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.outline,
+              fontSize: 12,
+            ),
           ),
           const SizedBox(height: 16),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: _gates
-                .map((gate) => Chip(
-                      label: Text(gate),
-                      onDeleted: () => _removeGate(gate),
-                    ))
+                .map(
+                  (gate) => Chip(
+                    label: Text(gate),
+                    onDeleted: () => _removeGate(gate),
+                  ),
+                )
                 .toList(),
           ),
           const SizedBox(height: 16),
@@ -590,18 +673,27 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('External Integrations', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const Text(
+            'External Integrations',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
           const SizedBox(height: 20),
           ListTile(
             leading: const Icon(Icons.sms_outlined),
             title: const Text('SMS Gateway (Twilio)'),
-            subtitle: Text('Status: ${config.smsGatewayStatus} • ${config.smsCredits} Credits remaining'),
+            subtitle: Text(
+              'Status: ${config.smsGatewayStatus} • ${config.smsCredits} Credits remaining',
+            ),
             trailing: Switch(
               value: config.smsGatewayStatus == 'Connected',
               onChanged: (connect) {
-                context.read<SystemConfigBloc>().add(UpdateSystemConfig(
-                      config.copyWith(smsGatewayStatus: connect ? 'Connected' : 'Disconnected'),
-                    ));
+                context.read<SystemConfigBloc>().add(
+                  UpdateSystemConfig(
+                    config.copyWith(
+                      smsGatewayStatus: connect ? 'Connected' : 'Disconnected',
+                    ),
+                  ),
+                );
               },
             ),
           ),
@@ -609,7 +701,9 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
           ListTile(
             leading: const Icon(Icons.payment_outlined),
             title: const Text('Subscription & Billing'),
-            subtitle: const Text('MTN Mobile Money & Airtel Money - view plan, renew, payment history'),
+            subtitle: const Text(
+              'MTN Mobile Money & Airtel Money - view plan, renew, payment history',
+            ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/staff/admin/subscription'),
           ),
@@ -635,7 +729,12 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
                 return const Center(child: CircularProgressIndicator());
               }
               if (sessions.isEmpty) {
-                return const Center(child: Text('No past sessions archived yet.\nThey appear here once you change the term or academic year.', textAlign: TextAlign.center));
+                return const Center(
+                  child: Text(
+                    'No past sessions archived yet.\nThey appear here once you change the term or academic year.',
+                    textAlign: TextAlign.center,
+                  ),
+                );
               }
               return ListView.separated(
                 itemCount: sessions.length,
@@ -644,7 +743,9 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
                   final s = sessions[index];
                   return ListTile(
                     dense: true,
-                    title: Text('${s['currentTerm'] ?? ''} • ${s['academicYear'] ?? ''}'),
+                    title: Text(
+                      '${s['currentTerm'] ?? ''} • ${s['academicYear'] ?? ''}',
+                    ),
                     subtitle: Text(
                       '${s['termStart'] != null ? DateFormat('MMM dd, yyyy').format(DateTime.parse(s['termStart'])) : ''} - ${s['termEnd'] != null ? DateFormat('MMM dd, yyyy').format(DateTime.parse(s['termEnd'])) : ''}',
                     ),
@@ -655,7 +756,10 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
         ],
       ),
     );
@@ -666,11 +770,16 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Security & Access Control', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const Text(
+            'Security & Access Control',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
           const SizedBox(height: 20),
           CheckboxListTile(
             title: const Text('Require MFA for Admin/Bursar roles'),
-            subtitle: const Text('Saved as school policy - not yet enforced automatically at login'),
+            subtitle: const Text(
+              'Saved as school policy - not yet enforced automatically at login',
+            ),
             value: _mfaEnabled,
             onChanged: (v) {
               setState(() {

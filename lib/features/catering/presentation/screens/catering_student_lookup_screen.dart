@@ -12,10 +12,12 @@ class CateringStudentLookupScreen extends StatefulWidget {
   const CateringStudentLookupScreen({super.key});
 
   @override
-  State<CateringStudentLookupScreen> createState() => _CateringStudentLookupScreenState();
+  State<CateringStudentLookupScreen> createState() =>
+      _CateringStudentLookupScreenState();
 }
 
-class _CateringStudentLookupScreenState extends State<CateringStudentLookupScreen> {
+class _CateringStudentLookupScreenState
+    extends State<CateringStudentLookupScreen> {
   final _searchController = TextEditingController();
   final _studentRepository = sl<StudentRepository>();
   final _eligibilityService = sl<CateringEligibilityService>();
@@ -46,7 +48,10 @@ class _CateringStudentLookupScreenState extends State<CateringStudentLookupScree
       _error = null;
     });
 
-    final result = await _studentRepository.searchStudents(schoolId: authState.user.schoolId, query: query);
+    final result = await _studentRepository.searchStudents(
+      schoolId: authState.user.schoolId,
+      query: query,
+    );
     result.fold(
       (failure) => setState(() => _error = failure.message),
       (students) => setState(() => _results = students),
@@ -101,7 +106,11 @@ class _CateringStudentLookupScreenState extends State<CateringStudentLookupScree
                 FilledButton(
                   onPressed: _searching ? null : _search,
                   child: _searching
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Text('Search'),
                 ),
               ],
@@ -110,7 +119,11 @@ class _CateringStudentLookupScreenState extends State<CateringStudentLookupScree
             if (_selectedStudent == null) ...[
               Expanded(
                 child: _results.isEmpty
-                    ? const Center(child: Text('Search for a student to verify meal eligibility'))
+                    ? const Center(
+                        child: Text(
+                          'Search for a student to verify meal eligibility',
+                        ),
+                      )
                     : ListView.builder(
                         itemCount: _results.length,
                         itemBuilder: (context, index) {
@@ -132,13 +145,17 @@ class _CateringStudentLookupScreenState extends State<CateringStudentLookupScree
                 icon: const Icon(Icons.arrow_back),
                 label: const Text('Back to results'),
               ),
-              if (_loadingView) const Center(child: CircularProgressIndicator()),
+              if (_loadingView)
+                const Center(child: CircularProgressIndicator()),
               if (_error != null)
                 Card(
                   color: Colors.red.shade50,
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Text(_error!, style: const TextStyle(color: Colors.red)),
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
                   ),
                 ),
               if (_view != null) _CateringViewCard(view: _view!),
@@ -165,8 +182,12 @@ class _CateringViewCard extends StatelessWidget {
             Row(
               children: [
                 CircleAvatar(
-                  backgroundImage: view.photoUrl != null ? NetworkImage(view.photoUrl!) : null,
-                  child: view.photoUrl == null ? const Icon(Icons.person) : null,
+                  backgroundImage: view.photoUrl != null
+                      ? NetworkImage(view.photoUrl!)
+                      : null,
+                  child: view.photoUrl == null
+                      ? const Icon(Icons.person)
+                      : null,
                 ),
                 const SizedBox(width: 12),
                 Text(view.name, style: Theme.of(context).textTheme.titleLarge),
@@ -175,13 +196,17 @@ class _CateringViewCard extends StatelessWidget {
             const SizedBox(height: 12),
             Chip(
               label: Text(view.eligible ? 'Meal Authorized' : 'Not Authorized'),
-              backgroundColor: view.eligible ? Colors.green.shade100 : Colors.red.shade100,
+              backgroundColor: view.eligible
+                  ? Colors.green.shade100
+                  : Colors.red.shade100,
             ),
             const SizedBox(height: 8),
             Text(view.message),
             if (view.dietaryRestrictions.isNotEmpty) ...[
               const SizedBox(height: 12),
-              Text('Dietary restrictions: ${view.dietaryRestrictions.join(', ')}'),
+              Text(
+                'Dietary restrictions: ${view.dietaryRestrictions.join(', ')}',
+              ),
             ],
           ],
         ),

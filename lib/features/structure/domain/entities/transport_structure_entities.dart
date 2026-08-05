@@ -5,6 +5,7 @@ import 'package:equatable/equatable.dart';
 /// master-data definition other modules could eventually read from.
 class TransportRoute extends Equatable {
   final String id;
+  final String schoolId;
   final String name;
   final String code;
   final String description;
@@ -12,6 +13,7 @@ class TransportRoute extends Equatable {
 
   const TransportRoute({
     required this.id,
+    required this.schoolId,
     required this.name,
     this.code = '',
     this.description = '',
@@ -20,6 +22,7 @@ class TransportRoute extends Equatable {
 
   TransportRoute copyWith({
     String? id,
+    String? schoolId,
     String? name,
     String? code,
     String? description,
@@ -27,6 +30,7 @@ class TransportRoute extends Equatable {
   }) {
     return TransportRoute(
       id: id ?? this.id,
+      schoolId: schoolId ?? this.schoolId,
       name: name ?? this.name,
       code: code ?? this.code,
       description: description ?? this.description,
@@ -35,12 +39,13 @@ class TransportRoute extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, name, code, description, isActive];
+  List<Object?> get props => [id, schoolId, name, code, description, isActive];
 }
 
 /// A stop/pickup point along a route.
 class TransportStop extends Equatable {
   final String id;
+  final String schoolId;
   final String routeId;
   final String name;
   final int order;
@@ -50,6 +55,7 @@ class TransportStop extends Equatable {
 
   const TransportStop({
     required this.id,
+    required this.schoolId,
     required this.routeId,
     required this.name,
     this.order = 0,
@@ -60,6 +66,7 @@ class TransportStop extends Equatable {
 
   TransportStop copyWith({
     String? id,
+    String? schoolId,
     String? routeId,
     String? name,
     int? order,
@@ -69,6 +76,7 @@ class TransportStop extends Equatable {
   }) {
     return TransportStop(
       id: id ?? this.id,
+      schoolId: schoolId ?? this.schoolId,
       routeId: routeId ?? this.routeId,
       name: name ?? this.name,
       order: order ?? this.order,
@@ -79,12 +87,22 @@ class TransportStop extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, routeId, name, order, pickupTime, zone, isActive];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    routeId,
+    name,
+    order,
+    pickupTime,
+    zone,
+    isActive,
+  ];
 }
 
 /// A vehicle (bus number, plate, capacity) optionally assigned to a route.
 class TransportVehicle extends Equatable {
   final String id;
+  final String schoolId;
   final String busNumber;
   final String plateNumber;
   final int capacity;
@@ -94,6 +112,7 @@ class TransportVehicle extends Equatable {
 
   const TransportVehicle({
     required this.id,
+    required this.schoolId,
     required this.busNumber,
     this.plateNumber = '',
     this.capacity = 0,
@@ -104,6 +123,7 @@ class TransportVehicle extends Equatable {
 
   TransportVehicle copyWith({
     String? id,
+    String? schoolId,
     String? busNumber,
     String? plateNumber,
     int? capacity,
@@ -113,6 +133,7 @@ class TransportVehicle extends Equatable {
   }) {
     return TransportVehicle(
       id: id ?? this.id,
+      schoolId: schoolId ?? this.schoolId,
       busNumber: busNumber ?? this.busNumber,
       plateNumber: plateNumber ?? this.plateNumber,
       capacity: capacity ?? this.capacity,
@@ -123,6 +144,14 @@ class TransportVehicle extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [id, busNumber, plateNumber, capacity, driverName, routeId, isActive];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    busNumber,
+    plateNumber,
+    capacity,
+    driverName,
+    routeId,
+    isActive,
+  ];
 }

@@ -46,25 +46,28 @@ class StaffAvailability extends Equatable {
       endMinuteOfDay: endMinuteOfDay ?? this.endMinuteOfDay,
       slotDurationMinutes: slotDurationMinutes ?? this.slotDurationMinutes,
       bufferMinutes: bufferMinutes ?? this.bufferMinutes,
-      maxAppointmentsPerDay: maxAppointmentsPerDay ?? this.maxAppointmentsPerDay,
+      maxAppointmentsPerDay:
+          maxAppointmentsPerDay ?? this.maxAppointmentsPerDay,
       unavailableDates: unavailableDates ?? this.unavailableDates,
     );
   }
 
   bool isUnavailableOn(DateTime date) {
-    return unavailableDates.any((d) => d.year == date.year && d.month == date.month && d.day == date.day);
+    return unavailableDates.any(
+      (d) => d.year == date.year && d.month == date.month && d.day == date.day,
+    );
   }
 
   @override
   List<Object?> get props => [
-        staffId,
-        schoolId,
-        workingDays,
-        startMinuteOfDay,
-        endMinuteOfDay,
-        slotDurationMinutes,
-        bufferMinutes,
-        maxAppointmentsPerDay,
-        unavailableDates,
-      ];
+    staffId,
+    schoolId,
+    workingDays,
+    startMinuteOfDay,
+    endMinuteOfDay,
+    slotDurationMinutes,
+    bufferMinutes,
+    maxAppointmentsPerDay,
+    unavailableDates,
+  ];
 }

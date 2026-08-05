@@ -46,25 +46,27 @@ class LocalNotificationService {
     );
     await _plugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(_channel);
   }
 
-  static Future<void> show({required String title, required String body}) async {
+  static Future<void> show({
+    required String title,
+    required String body,
+  }) async {
     // Ensure permission is granted before showing (Android 13+ and iOS)
     await _plugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.requestNotificationsPermission();
 
     await _plugin
         .resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>()
-        ?.requestPermissions(
-          alert: true,
-          badge: true,
-          sound: true,
-        );
+          IOSFlutterLocalNotificationsPlugin
+        >()
+        ?.requestPermissions(alert: true, badge: true, sound: true);
 
     await _plugin.show(
       id: DateTime.now().millisecondsSinceEpoch ~/ 1000,

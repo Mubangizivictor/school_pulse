@@ -18,13 +18,18 @@ class TeacherStudentAssessmentsScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black),
+          icon: Icon(
+            Icons.arrow_back,
+            color: isDark ? Colors.white : Colors.black,
+          ),
           onPressed: () => context.pop(),
         ),
         title: Text(
           'Assessments',
           style: AppTypography.headlineSmall.copyWith(
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            color: isDark
+                ? AppColors.textPrimaryDark
+                : AppColors.textPrimaryLight,
           ),
         ),
       ),
@@ -34,9 +39,16 @@ class TeacherStudentAssessmentsScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
             child: Row(
               children: [
-                Expanded(child: _DropdownSelector(label: 'All Subjects', isDark: isDark)),
+                Expanded(
+                  child: _DropdownSelector(
+                    label: 'All Subjects',
+                    isDark: isDark,
+                  ),
+                ),
                 const SizedBox(width: AppSpacing.m),
-                Expanded(child: _DropdownSelector(label: 'Term 2', isDark: isDark)),
+                Expanded(
+                  child: _DropdownSelector(label: 'Term 2', isDark: isDark),
+                ),
               ],
             ),
           ),
@@ -65,17 +77,33 @@ class _DropdownSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: AppSpacing.s),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.m,
+        vertical: AppSpacing.s,
+      ),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
         borderRadius: BorderRadius.circular(AppSpacing.s),
-        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight)),
-          Icon(Icons.keyboard_arrow_down, color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight, size: 20),
+          Text(
+            label,
+            style: AppTypography.bodyMedium.copyWith(
+              color: isDark
+                  ? AppColors.textPrimaryDark
+                  : AppColors.textPrimaryLight,
+            ),
+          ),
+          Icon(
+            Icons.keyboard_arrow_down,
+            color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+            size: 20,
+          ),
         ],
       ),
     );
@@ -95,7 +123,9 @@ class _AssessmentTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
         borderRadius: BorderRadius.circular(AppSpacing.l),
-        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+        ),
       ),
       child: Row(
         children: [
@@ -105,19 +135,28 @@ class _AssessmentTile extends StatelessWidget {
               children: [
                 Text(
                   'Mathematics',
-                  style: AppTypography.labelSmall.copyWith(color: AppColors.royalBlue, fontWeight: FontWeight.bold),
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.royalBlue,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'End of Term Test',
                   style: AppTypography.titleMedium.copyWith(
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
                   '15 May 2024',
-                  style: AppTypography.bodySmall.copyWith(color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+                  style: AppTypography.bodySmall.copyWith(
+                    color: isDark
+                        ? AppColors.textMutedDark
+                        : AppColors.textMutedLight,
+                  ),
                 ),
               ],
             ),
@@ -128,13 +167,18 @@ class _AssessmentTile extends StatelessWidget {
               Text(
                 '85/100',
                 style: AppTypography.titleMedium.copyWith(
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               Text(
                 '85%',
-                style: AppTypography.labelSmall.copyWith(color: AppColors.successGreen, fontWeight: FontWeight.bold),
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.successGreen,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),

@@ -39,20 +39,20 @@ class LibraryBorrowing extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        resourceId,
-        resourceTitle,
-        borrowerId,
-        borrowerName,
-        borrowerType,
-        borrowDate,
-        dueDate,
-        returnDate,
-        status,
-        fineAmount,
-        finePaid,
-        issuedBy,
-        receivedBy,
-      ];
+    id,
+    schoolId,
+    resourceId,
+    resourceTitle,
+    borrowerId,
+    borrowerName,
+    borrowerType,
+    borrowDate,
+    dueDate,
+    returnDate,
+    status,
+    fineAmount,
+    finePaid,
+    issuedBy,
+    receivedBy,
+  ];
 }

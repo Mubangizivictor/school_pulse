@@ -22,7 +22,10 @@ class AdmissionApplicationModel extends AdmissionApplication {
     super.attachedDocuments,
   });
 
-  factory AdmissionApplicationModel.fromMap(Map<String, dynamic> map, String id) {
+  factory AdmissionApplicationModel.fromMap(
+    Map<String, dynamic> map,
+    String id,
+  ) {
     return AdmissionApplicationModel(
       id: id,
       schoolId: map['schoolId'] ?? '',
@@ -39,7 +42,9 @@ class AdmissionApplicationModel extends AdmissionApplication {
       appliedAt: (map['appliedAt'] as Timestamp).toDate(),
       reviewerId: map['reviewerId'],
       reviewComments: map['reviewComments'],
-      attachedDocuments: Map<String, String>.from(map['attachedDocuments'] ?? {}),
+      attachedDocuments: Map<String, String>.from(
+        map['attachedDocuments'] ?? {},
+      ),
     );
   }
 

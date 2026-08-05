@@ -15,16 +15,16 @@ class ClassObservationsScreen extends StatelessWidget {
     return BlocProvider(
       create: (context) => sl<DeanBloc>()..add(ClassObservationsRequested()),
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Class Observations'),
-        ),
+        appBar: AppBar(title: const Text('Class Observations')),
         body: BlocBuilder<DeanBloc, DeanState>(
           builder: (context, state) {
             if (state is DeanLoading) {
               return const Center(child: CircularProgressIndicator());
             } else if (state is ClassObservationsLoaded) {
               if (state.observations.isEmpty) {
-                return const Center(child: Text('No class observations recorded yet.'));
+                return const Center(
+                  child: Text('No class observations recorded yet.'),
+                );
               }
               return _buildObservationList(state.observations);
             } else if (state is DeanError) {
@@ -58,7 +58,9 @@ class ClassObservationsScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Teacher: ${obs.teacherName} • ${obs.className}'),
-                Text('Date: ${DateFormat('MMM dd, yyyy').format(obs.observedAt)}'),
+                Text(
+                  'Date: ${DateFormat('MMM dd, yyyy').format(obs.observedAt)}',
+                ),
                 const SizedBox(height: 4),
                 _buildRatingBar(obs.rating),
               ],

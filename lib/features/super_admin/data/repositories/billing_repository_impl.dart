@@ -9,8 +9,14 @@ class BillingRepositoryImpl implements BillingRepository {
   BillingRepositoryImpl({required this.remoteDataSource});
 
   @override
-  Future<List<Invoice>> getInvoices({String? schoolId, PaymentStatus? status}) async {
-    return await remoteDataSource.getInvoices(schoolId: schoolId, status: status);
+  Future<List<Invoice>> getInvoices({
+    String? schoolId,
+    PaymentStatus? status,
+  }) async {
+    return await remoteDataSource.getInvoices(
+      schoolId: schoolId,
+      status: status,
+    );
   }
 
   @override

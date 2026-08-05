@@ -5,7 +5,7 @@ import '../../data/models/audit_log.dart';
 
 abstract class AdminDashboardState extends Equatable {
   const AdminDashboardState();
-  
+
   @override
   List<Object> get props => [];
 }
@@ -22,7 +22,7 @@ class AdminDashboardLoaded extends AdminDashboardState {
 
   @override
   List<Object> get props => [stats, recentLogs];
-  
+
   AdminDashboardLoaded copyWith({
     AdminDashboardStats? stats,
     List<AuditLog>? recentLogs,

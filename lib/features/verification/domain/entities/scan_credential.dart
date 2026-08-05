@@ -47,7 +47,12 @@ class FingerprintScanCredential extends ScanCredential {
   });
 
   @override
-  List<Object?> get props => [claimedIdentityId, claimedIdentityType, deviceId, capturedAt];
+  List<Object?> get props => [
+    claimedIdentityId,
+    claimedIdentityType,
+    deviceId,
+    capturedAt,
+  ];
 }
 
 class ManualCodeScanCredential extends ScanCredential {

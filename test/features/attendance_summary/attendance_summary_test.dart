@@ -24,15 +24,18 @@ void main() {
       expect(summary.ratePercent, isNull);
     });
 
-    test('authorised absences count toward the denominator but not the rate', () {
-      final summary = AttendanceRateCalculator.summarize([
-        MarkClassification.present,
-        MarkClassification.authorisedAbsent,
-      ]);
+    test(
+      'authorised absences count toward the denominator but not the rate',
+      () {
+        final summary = AttendanceRateCalculator.summarize([
+          MarkClassification.present,
+          MarkClassification.authorisedAbsent,
+        ]);
 
-      expect(summary.totalMarked, 2);
-      expect(summary.ratePercent, closeTo(50.0, 0.001));
-    });
+        expect(summary.totalMarked, 2);
+        expect(summary.ratePercent, closeTo(50.0, 0.001));
+      },
+    );
 
     test('a perfect record rates 100', () {
       final summary = AttendanceRateCalculator.summarize([
@@ -74,12 +77,21 @@ void main() {
     });
 
     test('absent counts as unauthorised', () {
-      expect(classifyStudentStatus('absent'), MarkClassification.unauthorisedAbsent);
+      expect(
+        classifyStudentStatus('absent'),
+        MarkClassification.unauthorisedAbsent,
+      );
     });
 
-    test('an unrecognised status falls back to unauthorised, never silently present', () {
-      expect(classifyStudentStatus('whatever'), MarkClassification.unauthorisedAbsent);
-    });
+    test(
+      'an unrecognised status falls back to unauthorised, never silently present',
+      () {
+        expect(
+          classifyStudentStatus('whatever'),
+          MarkClassification.unauthorisedAbsent,
+        );
+      },
+    );
   });
 
   group('classifyBoardingStatus', () {
@@ -88,14 +100,29 @@ void main() {
       expect(classifyBoardingStatus('Late'), MarkClassification.present);
     });
 
-    test('leave and sick count as authorised absence, distinct from a bare absent', () {
-      expect(classifyBoardingStatus('Leave'), MarkClassification.authorisedAbsent);
-      expect(classifyBoardingStatus('Sick'), MarkClassification.authorisedAbsent);
-      expect(classifyBoardingStatus('Absent'), MarkClassification.unauthorisedAbsent);
-    });
+    test(
+      'leave and sick count as authorised absence, distinct from a bare absent',
+      () {
+        expect(
+          classifyBoardingStatus('Leave'),
+          MarkClassification.authorisedAbsent,
+        );
+        expect(
+          classifyBoardingStatus('Sick'),
+          MarkClassification.authorisedAbsent,
+        );
+        expect(
+          classifyBoardingStatus('Absent'),
+          MarkClassification.unauthorisedAbsent,
+        );
+      },
+    );
 
     test('an unrecognised status falls back to unauthorised', () {
-      expect(classifyBoardingStatus('Mystery'), MarkClassification.unauthorisedAbsent);
+      expect(
+        classifyBoardingStatus('Mystery'),
+        MarkClassification.unauthorisedAbsent,
+      );
     });
   });
 }

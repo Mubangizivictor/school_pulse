@@ -66,7 +66,14 @@ class ReplaceNfcCardEvent extends StudentIdentityEvent {
   });
 
   @override
-  List<Object?> get props => [oldCardUid, newCardUid, studentId, uniqueSystemId, schoolId, reason];
+  List<Object?> get props => [
+    oldCardUid,
+    newCardUid,
+    studentId,
+    uniqueSystemId,
+    schoolId,
+    reason,
+  ];
 }
 
 class RevokeNfcCardEvent extends StudentIdentityEvent {

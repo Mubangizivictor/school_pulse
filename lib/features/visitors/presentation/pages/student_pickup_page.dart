@@ -92,7 +92,10 @@ class _StudentPickupPageState extends State<StudentPickupPage> {
   }
 
   bool get _canSubmit =>
-      _isVerified && _selectedGate != null && (_matchedAuthorization != null || _overrideNotAuthorized) && !_isSubmitting;
+      _isVerified &&
+      _selectedGate != null &&
+      (_matchedAuthorization != null || _overrideNotAuthorized) &&
+      !_isSubmitting;
 
   Future<void> _submitPickup() async {
     if (!_canSubmit || _selectedStudent == null) return;
@@ -142,7 +145,8 @@ class _StudentPickupPageState extends State<StudentPickupPage> {
         'guardianPhone': _phoneController.text.trim(),
         'relationship': _relationController.text.trim(),
         'matchedAuthorizationId': _matchedAuthorization?.id,
-        'overrideNotAuthorized': _matchedAuthorization == null && _overrideNotAuthorized,
+        'overrideNotAuthorized':
+            _matchedAuthorization == null && _overrideNotAuthorized,
       },
     );
     securityBloc.add(RecordStudentMovementRequested(movement));
@@ -152,7 +156,8 @@ class _StudentPickupPageState extends State<StudentPickupPage> {
         studentId: student.id,
         parentIds: student.parentIds,
         title: 'Pickup Confirmed',
-        body: '${student.name} was picked up by ${_guardianNameController.text.trim()} at ${TimeOfDay.now().format(context)}.',
+        body:
+            '${student.name} was picked up by ${_guardianNameController.text.trim()} at ${TimeOfDay.now().format(context)}.',
       );
     }
 
@@ -177,15 +182,27 @@ class _StudentPickupPageState extends State<StudentPickupPage> {
                 if (state.gates.isEmpty) return const SizedBox.shrink();
                 _selectedGate ??= state.gates.first;
                 return DropdownButtonFormField<Gate>(
-                  initialValue: state.gates.contains(_selectedGate) ? _selectedGate : state.gates.first,
-                  decoration: const InputDecoration(labelText: 'Gate', border: OutlineInputBorder()),
-                  items: state.gates.map((g) => DropdownMenuItem(value: g, child: Text(g.name))).toList(),
+                  initialValue: state.gates.contains(_selectedGate)
+                      ? _selectedGate
+                      : state.gates.first,
+                  decoration: const InputDecoration(
+                    labelText: 'Gate',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: state.gates
+                      .map(
+                        (g) => DropdownMenuItem(value: g, child: Text(g.name)),
+                      )
+                      .toList(),
                   onChanged: (g) => setState(() => _selectedGate = g),
                 );
               },
             ),
             const SizedBox(height: 16),
-            const Text('Search Student', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text(
+              'Search Student',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
             TextField(
               controller: _searchController,
@@ -195,7 +212,9 @@ class _StudentPickupPageState extends State<StudentPickupPage> {
                   icon: const Icon(Icons.search),
                   onPressed: () {
                     if (_searchController.text.isNotEmpty) {
-                      context.read<StudentsBloc>().add(SearchStudents(_searchController.text));
+                      context.read<StudentsBloc>().add(
+                        SearchStudents(_searchController.text),
+                      );
                     }
                   },
                 ),
@@ -213,27 +232,39 @@ class _StudentPickupPageState extends State<StudentPickupPage> {
                 if (state is StudentsLoading) {
                   return const Center(child: CircularProgressIndicator());
                 } else if (state is StudentsError) {
-                  return Text(state.message, style: const TextStyle(color: Colors.red));
+                  return Text(
+                    state.message,
+                    style: const TextStyle(color: Colors.red),
+                  );
                 } else if (state is StudentsLoaded) {
                   if (state.students.isEmpty) {
                     return const Text('No students found.');
                   }
                   return Column(
-                    children: state.students.map((student) => ListTile(
-                      title: Text(student.name),
-                      subtitle: Text('${student.className} - ${student.studentId}'),
-                      trailing: _selectedStudent?.id == student.id
-                          ? const Icon(Icons.check_circle, color: Colors.green)
-                          : null,
-                      onTap: () {
-                        setState(() {
-                          _selectedStudent = student;
-                          _matchedAuthorization = null;
-                          _overrideNotAuthorized = false;
-                        });
-                        _loadAuthorizations(student.id);
-                      },
-                    )).toList(),
+                    children: state.students
+                        .map(
+                          (student) => ListTile(
+                            title: Text(student.name),
+                            subtitle: Text(
+                              '${student.className} - ${student.studentId}',
+                            ),
+                            trailing: _selectedStudent?.id == student.id
+                                ? const Icon(
+                                    Icons.check_circle,
+                                    color: Colors.green,
+                                  )
+                                : null,
+                            onTap: () {
+                              setState(() {
+                                _selectedStudent = student;
+                                _matchedAuthorization = null;
+                                _overrideNotAuthorized = false;
+                              });
+                              _loadAuthorizations(student.id);
+                            },
+                          ),
+                        )
+                        .toList(),
                   );
                 }
                 return const SizedBox.shrink();
@@ -253,7 +284,13 @@ class _StudentPickupPageState extends State<StudentPickupPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(_selectedStudent!.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                            Text(
+                              _selectedStudent!.name,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                             Text('Class: ${_selectedStudent!.className}'),
                             Text('ID: ${_selectedStudent!.studentId}'),
                           ],
@@ -265,63 +302,97 @@ class _StudentPickupPageState extends State<StudentPickupPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              Text('Authorized Pickup Persons', style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                'Authorized Pickup Persons',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
               const SizedBox(height: 8),
               if (_isLoadingAuthorizations)
                 const Center(child: CircularProgressIndicator())
               else if (_authorizations.isEmpty)
-                const Text('No one is pre-authorized for this student. An override reason will be required.',
-                    style: TextStyle(color: Colors.orange))
+                const Text(
+                  'No one is pre-authorized for this student. An override reason will be required.',
+                  style: TextStyle(color: Colors.orange),
+                )
               else
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: _authorizations.map((auth) => Chip(
-                        avatar: auth.photoUrl != null ? CircleAvatar(backgroundImage: NetworkImage(auth.photoUrl!)) : null,
-                        label: Text('${auth.authorizedPersonName} (${auth.relationship})'),
-                      )).toList(),
+                  children: _authorizations
+                      .map(
+                        (auth) => Chip(
+                          avatar: auth.photoUrl != null
+                              ? CircleAvatar(
+                                  backgroundImage: NetworkImage(auth.photoUrl!),
+                                )
+                              : null,
+                          label: Text(
+                            '${auth.authorizedPersonName} (${auth.relationship})',
+                          ),
+                        ),
+                      )
+                      .toList(),
                 ),
               const SizedBox(height: 24),
-              const Text('Guardian Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const Text(
+                'Guardian Details',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _guardianNameController,
                 decoration: InputDecoration(
                   labelText: 'Guardian Full Name',
                   border: const OutlineInputBorder(),
-                  suffixIcon: _matchedAuthorization != null ? const Icon(Icons.verified, color: Colors.green) : null,
+                  suffixIcon: _matchedAuthorization != null
+                      ? const Icon(Icons.verified, color: Colors.green)
+                      : null,
                 ),
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _phoneController,
-                decoration: const InputDecoration(labelText: 'Phone Number', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                  labelText: 'Phone Number',
+                  border: OutlineInputBorder(),
+                ),
                 keyboardType: TextInputType.phone,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _relationController,
-                decoration: const InputDecoration(labelText: 'Relationship to Student', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                  labelText: 'Relationship to Student',
+                  border: OutlineInputBorder(),
+                ),
               ),
               if (_matchedAuthorization == null) ...[
                 const SizedBox(height: 12),
                 CheckboxListTile(
                   value: _overrideNotAuthorized,
-                  onChanged: (v) => setState(() => _overrideNotAuthorized = v ?? false),
-                  title: const Text('This person is not on the authorized list — override and log anyway'),
+                  onChanged: (v) =>
+                      setState(() => _overrideNotAuthorized = v ?? false),
+                  title: const Text(
+                    'This person is not on the authorized list — override and log anyway',
+                  ),
                   controlAffinity: ListTileControlAffinity.leading,
                 ),
               ],
               const SizedBox(height: 24),
-              const Text('Guardian Signature', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const Text(
+                'Guardian Signature',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 8),
-              SignaturePad(onChanged: (img) => setState(() => _isVerified = img != null)),
+              SignaturePad(
+                onChanged: (img) => setState(() => _isVerified = img != null),
+              ),
               const SizedBox(height: 32),
               PrimaryButton(
                 label: 'Confirm & Log Pickup',
                 onPressed: _canSubmit ? _submitPickup : null,
               ),
-            ]
+            ],
           ],
         ),
       ),

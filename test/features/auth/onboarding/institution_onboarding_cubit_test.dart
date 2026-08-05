@@ -26,24 +26,30 @@ void main() {
     expect(cubit.state.completedSteps, isEmpty);
   });
 
-  test('advance moves through every step in order and persists progress', () async {
-    final cubit = buildCubit();
+  test(
+    'advance moves through every step in order and persists progress',
+    () async {
+      final cubit = buildCubit();
 
-    for (final expectedNext in onboardingStepOrder.skip(1)) {
-      await cubit.advance();
-      expect(cubit.state.currentStep, expectedNext);
-    }
+      for (final expectedNext in onboardingStepOrder.skip(1)) {
+        await cubit.advance();
+        expect(cubit.state.currentStep, expectedNext);
+      }
 
-    final doc = await firestore
-        .collection('onboarding_state')
-        .doc('${userId}_$institutionId')
-        .get();
-    expect(doc.data()!['currentStep'], OnboardingStep.completed.name);
-    expect(
-      doc.data()!['completedSteps'],
-      onboardingStepOrder.take(onboardingStepOrder.length - 1).map((s) => s.name).toList(),
-    );
-  });
+      final doc = await firestore
+          .collection('onboarding_state')
+          .doc('${userId}_$institutionId')
+          .get();
+      expect(doc.data()!['currentStep'], OnboardingStep.completed.name);
+      expect(
+        doc.data()!['completedSteps'],
+        onboardingStepOrder
+            .take(onboardingStepOrder.length - 1)
+            .map((s) => s.name)
+            .toList(),
+      );
+    },
+  );
 
   test('advance does not go past completed', () async {
     final cubit = buildCubit();
@@ -54,17 +60,20 @@ void main() {
   });
 
   test('load resumes from previously persisted progress', () async {
-    await firestore.collection('onboarding_state').doc('${userId}_$institutionId').set({
-      'userId': userId,
-      'institutionId': institutionId,
-      'currentStep': OnboardingStep.mfaStub.name,
-      'completedSteps': [
-        OnboardingStep.identityConfirm.name,
-        OnboardingStep.passwordChange.name,
-        OnboardingStep.contactVerify.name,
-      ],
-      'mfaRequired': true,
-    });
+    await firestore
+        .collection('onboarding_state')
+        .doc('${userId}_$institutionId')
+        .set({
+          'userId': userId,
+          'institutionId': institutionId,
+          'currentStep': OnboardingStep.mfaStub.name,
+          'completedSteps': [
+            OnboardingStep.identityConfirm.name,
+            OnboardingStep.passwordChange.name,
+            OnboardingStep.contactVerify.name,
+          ],
+          'mfaRequired': true,
+        });
 
     final cubit = buildCubit();
     await cubit.load();

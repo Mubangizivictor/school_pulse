@@ -12,7 +12,9 @@ class ClassMoreOptionsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final primaryColor = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
@@ -28,11 +30,18 @@ class ClassMoreOptionsScreen extends StatelessWidget {
           children: [
             Text(
               'More Options',
-              style: AppTypography.titleLarge.copyWith(color: primaryColor, fontWeight: FontWeight.bold),
+              style: AppTypography.titleLarge.copyWith(
+                color: primaryColor,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             Text(
               'P5 East',
-              style: AppTypography.labelSmall.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+              style: AppTypography.labelSmall.copyWith(
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
             ),
           ],
         ),
@@ -40,13 +49,62 @@ class ClassMoreOptionsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.xl),
         children: [
-          _buildOptionItem(context, 'Behaviour Records', Icons.gavel, AppColors.successGreen, isDark, () => context.push('/staff/classes/$classId/behaviour')),
-          _buildOptionItem(context, 'Class Resources', Icons.description, AppColors.royalBlue, isDark, () => context.push('/staff/classes/$classId/resources')),
-          _buildOptionItem(context, 'Lesson Plans', Icons.menu_book, AppColors.electricBlue, isDark, () {}),
-          _buildOptionItem(context, 'Photos & Media', Icons.photo_library, AppColors.brightOrange, isDark, () {}),
-          _buildOptionItem(context, 'Student Documents', Icons.folder_shared, AppColors.brightCyan, isDark, () {}),
-          _buildOptionItem(context, 'Class Settings', Icons.settings, AppColors.textMutedDark, isDark, () {}),
-          _buildOptionItem(context, 'Archive Class', Icons.archive, AppColors.danger(context), isDark, () {}),
+          _buildOptionItem(
+            context,
+            'Behaviour Records',
+            Icons.gavel,
+            AppColors.successGreen,
+            isDark,
+            () => context.push('/staff/classes/$classId/behaviour'),
+          ),
+          _buildOptionItem(
+            context,
+            'Class Resources',
+            Icons.description,
+            AppColors.royalBlue,
+            isDark,
+            () => context.push('/staff/classes/$classId/resources'),
+          ),
+          _buildOptionItem(
+            context,
+            'Lesson Plans',
+            Icons.menu_book,
+            AppColors.electricBlue,
+            isDark,
+            () {},
+          ),
+          _buildOptionItem(
+            context,
+            'Photos & Media',
+            Icons.photo_library,
+            AppColors.brightOrange,
+            isDark,
+            () {},
+          ),
+          _buildOptionItem(
+            context,
+            'Student Documents',
+            Icons.folder_shared,
+            AppColors.brightCyan,
+            isDark,
+            () {},
+          ),
+          _buildOptionItem(
+            context,
+            'Class Settings',
+            Icons.settings,
+            AppColors.textMutedDark,
+            isDark,
+            () {},
+          ),
+          _buildOptionItem(
+            context,
+            'Archive Class',
+            Icons.archive,
+            AppColors.danger(context),
+            isDark,
+            () {},
+          ),
         ],
       ),
     );
@@ -80,14 +138,18 @@ class ClassMoreOptionsScreen extends StatelessWidget {
               child: Text(
                 label,
                 style: AppTypography.titleMedium.copyWith(
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
                   fontWeight: FontWeight.w500,
                 ),
               ),
             ),
             Icon(
               Icons.chevron_right,
-              color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+              color: isDark
+                  ? AppColors.textMutedDark
+                  : AppColors.textMutedLight,
             ),
           ],
         ),

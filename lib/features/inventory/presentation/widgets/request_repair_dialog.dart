@@ -29,7 +29,9 @@ class _RequestRepairDialogState extends State<RequestRepairDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Request Repair ${widget.asset != null ? "for ${widget.asset!.name}" : ""}'),
+      title: Text(
+        'Request Repair ${widget.asset != null ? "for ${widget.asset!.name}" : ""}',
+      ),
       content: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -38,13 +40,18 @@ class _RequestRepairDialogState extends State<RequestRepairDialog> {
             children: [
               TextFormField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Issue Description'),
+                decoration: const InputDecoration(
+                  labelText: 'Issue Description',
+                ),
                 maxLines: 3,
-                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Required' : null,
               ),
               TextFormField(
                 controller: _estimatedCostController,
-                decoration: const InputDecoration(labelText: 'Estimated Cost (Optional)'),
+                decoration: const InputDecoration(
+                  labelText: 'Estimated Cost (Optional)',
+                ),
                 keyboardType: TextInputType.number,
               ),
             ],

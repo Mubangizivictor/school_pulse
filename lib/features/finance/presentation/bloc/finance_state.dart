@@ -22,10 +22,7 @@ class FinanceLoaded extends FinanceState {
   final List<FeeItem> fees;
   final List<PaymentRecord> paymentHistory;
 
-  const FinanceLoaded({
-    required this.fees,
-    required this.paymentHistory,
-  });
+  const FinanceLoaded({required this.fees, required this.paymentHistory});
 
   @override
   List<Object?> get props => [fees, paymentHistory];

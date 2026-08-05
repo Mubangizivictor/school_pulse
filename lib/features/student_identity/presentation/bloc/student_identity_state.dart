@@ -30,7 +30,11 @@ class StudentIdentityLoaded extends StudentIdentityState {
 // state after an NFC lifecycle action succeeds.
 class StudentIdentityActionSuccess extends StudentIdentityLoaded {
   final String message;
-  const StudentIdentityActionSuccess(this.message, super.identity, {super.assignedCardUid});
+  const StudentIdentityActionSuccess(
+    this.message,
+    super.identity, {
+    super.assignedCardUid,
+  });
 
   @override
   List<Object?> get props => [message, identity, assignedCardUid];

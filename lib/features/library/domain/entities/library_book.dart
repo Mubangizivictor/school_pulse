@@ -18,5 +18,12 @@ class LibraryBook extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, studentId, title, author, dueDate, isReturned];
+  List<Object?> get props => [
+    id,
+    studentId,
+    title,
+    author,
+    dueDate,
+    isReturned,
+  ];
 }

@@ -9,25 +9,47 @@ abstract class SecurityRemoteDataSource {
 
   // Student Movement
   Future<void> recordStudentMovement(StudentMovementModel movement);
-  Stream<List<StudentMovementModel>> watchStudentMovements(String schoolId, {DateTime? date, String? gateId, String? studentId});
+  Stream<List<StudentMovementModel>> watchStudentMovements(
+    String schoolId, {
+    DateTime? date,
+    String? gateId,
+    String? studentId,
+  });
 
   // Staff Movement
   Future<void> recordStaffMovement(StaffMovementModel movement);
-  Stream<List<StaffMovementModel>> watchStaffMovements(String schoolId, {DateTime? date, String? gateId});
+  Stream<List<StaffMovementModel>> watchStaffMovements(
+    String schoolId, {
+    DateTime? date,
+    String? gateId,
+  });
 
   // Pickup Management
-  Future<List<PickupAuthorizationModel>> getPickupAuthorizations(String schoolId, String studentId);
+  Future<List<PickupAuthorizationModel>> getPickupAuthorizations(
+    String schoolId,
+    String studentId,
+  );
   Future<void> addPickupAuthorization(PickupAuthorizationModel authorization);
 
   // Incidents
   Future<void> reportIncident(SecurityIncidentModel incident);
   Stream<List<SecurityIncidentModel>> watchIncidents(String schoolId);
-  Future<void> updateIncidentStatus(String schoolId, String incidentId, String status, String resolution);
+  Future<void> updateIncidentStatus(
+    String schoolId,
+    String incidentId,
+    String status,
+    String resolution,
+  );
 
   // Emergency
   Future<void> triggerEmergency(EmergencyEventModel event);
   Stream<List<EmergencyEventModel>> watchActiveEmergencies(String schoolId);
-  Future<void> resolveEmergency(String schoolId, String emergencyId, DateTime endTime, List<String> actions);
+  Future<void> resolveEmergency(
+    String schoolId,
+    String emergencyId,
+    DateTime endTime,
+    List<String> actions,
+  );
 
   // Patrols
   Future<void> recordPatrol(SecurityPatrolModel patrol);
@@ -35,7 +57,11 @@ abstract class SecurityRemoteDataSource {
 
   // Lost and Found
   Future<void> reportFoundItem(LostAndFoundItemModel item);
-  Future<void> claimItem(String schoolId, String itemId, Map<String, dynamic> claimDetails);
+  Future<void> claimItem(
+    String schoolId,
+    String itemId,
+    Map<String, dynamic> claimDetails,
+  );
   Stream<List<LostAndFoundItemModel>> watchLostAndFound(String schoolId);
 
   // Dashboard Stats
@@ -54,7 +80,10 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
         .doc(schoolId)
         .collection('gates')
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => GateModel.fromFirestore(doc)).toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => GateModel.fromFirestore(doc)).toList(),
+        );
   }
 
   @override
@@ -97,7 +126,12 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
   }
 
   @override
-  Stream<List<StudentMovementModel>> watchStudentMovements(String schoolId, {DateTime? date, String? gateId, String? studentId}) {
+  Stream<List<StudentMovementModel>> watchStudentMovements(
+    String schoolId, {
+    DateTime? date,
+    String? gateId,
+    String? studentId,
+  }) {
     Query query = firestore
         .collection('schools')
         .doc(schoolId)
@@ -106,7 +140,9 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
     if (date != null) {
       final start = DateTime(date.year, date.month, date.day);
       final end = start.add(const Duration(days: 1));
-      query = query.where('timestamp', isGreaterThanOrEqualTo: start).where('timestamp', isLessThan: end);
+      query = query
+          .where('timestamp', isGreaterThanOrEqualTo: start)
+          .where('timestamp', isLessThan: end);
     }
 
     if (gateId != null) {
@@ -117,8 +153,14 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
       query = query.where('studentId', isEqualTo: studentId);
     }
 
-    return query.orderBy('timestamp', descending: true).snapshots().map(
-        (snapshot) => snapshot.docs.map((doc) => StudentMovementModel.fromFirestore(doc)).toList());
+    return query
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => StudentMovementModel.fromFirestore(doc))
+              .toList(),
+        );
   }
 
   @override
@@ -132,7 +174,11 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
   }
 
   @override
-  Stream<List<StaffMovementModel>> watchStaffMovements(String schoolId, {DateTime? date, String? gateId}) {
+  Stream<List<StaffMovementModel>> watchStaffMovements(
+    String schoolId, {
+    DateTime? date,
+    String? gateId,
+  }) {
     Query query = firestore
         .collection('schools')
         .doc(schoolId)
@@ -141,19 +187,30 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
     if (date != null) {
       final start = DateTime(date.year, date.month, date.day);
       final end = start.add(const Duration(days: 1));
-      query = query.where('timestamp', isGreaterThanOrEqualTo: start).where('timestamp', isLessThan: end);
+      query = query
+          .where('timestamp', isGreaterThanOrEqualTo: start)
+          .where('timestamp', isLessThan: end);
     }
 
     if (gateId != null) {
       query = query.where('gateId', isEqualTo: gateId);
     }
 
-    return query.orderBy('timestamp', descending: true).snapshots().map(
-        (snapshot) => snapshot.docs.map((doc) => StaffMovementModel.fromFirestore(doc)).toList());
+    return query
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => StaffMovementModel.fromFirestore(doc))
+              .toList(),
+        );
   }
 
   @override
-  Future<List<PickupAuthorizationModel>> getPickupAuthorizations(String schoolId, String studentId) async {
+  Future<List<PickupAuthorizationModel>> getPickupAuthorizations(
+    String schoolId,
+    String studentId,
+  ) async {
     // Firestore rejects a collection-group `list` query up front unless it
     // can statically prove every possible result satisfies the security
     // rule - a rule referencing resource.data.schoolId only "proves" if the
@@ -165,11 +222,15 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
         .where('schoolId', isEqualTo: schoolId)
         .where('studentId', isEqualTo: studentId)
         .get();
-    return snapshot.docs.map((doc) => PickupAuthorizationModel.fromFirestore(doc)).toList();
+    return snapshot.docs
+        .map((doc) => PickupAuthorizationModel.fromFirestore(doc))
+        .toList();
   }
 
   @override
-  Future<void> addPickupAuthorization(PickupAuthorizationModel authorization) async {
+  Future<void> addPickupAuthorization(
+    PickupAuthorizationModel authorization,
+  ) async {
     await firestore
         .collection('schools')
         .doc(authorization.schoolId)
@@ -196,20 +257,26 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
         .collection('security_incidents')
         .orderBy('timestamp', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => SecurityIncidentModel.fromFirestore(doc)).toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => SecurityIncidentModel.fromFirestore(doc))
+              .toList(),
+        );
   }
 
   @override
-  Future<void> updateIncidentStatus(String schoolId, String incidentId, String status, String resolution) async {
+  Future<void> updateIncidentStatus(
+    String schoolId,
+    String incidentId,
+    String status,
+    String resolution,
+  ) async {
     await firestore
         .collection('schools')
         .doc(schoolId)
         .collection('security_incidents')
         .doc(incidentId)
-        .update({
-      'status': status,
-      'report': resolution,
-    });
+        .update({'status': status, 'report': resolution});
   }
 
   @override
@@ -230,21 +297,30 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
         .collection('emergency_events')
         .where('status', isEqualTo: 'Active')
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => EmergencyEventModel.fromFirestore(doc)).toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => EmergencyEventModel.fromFirestore(doc))
+              .toList(),
+        );
   }
 
   @override
-  Future<void> resolveEmergency(String schoolId, String emergencyId, DateTime endTime, List<String> actions) async {
+  Future<void> resolveEmergency(
+    String schoolId,
+    String emergencyId,
+    DateTime endTime,
+    List<String> actions,
+  ) async {
     await firestore
         .collection('schools')
         .doc(schoolId)
         .collection('emergency_events')
         .doc(emergencyId)
         .update({
-      'status': 'Resolved',
-      'endTime': Timestamp.fromDate(endTime),
-      'responseActions': actions,
-    });
+          'status': 'Resolved',
+          'endTime': Timestamp.fromDate(endTime),
+          'responseActions': actions,
+        });
   }
 
   @override
@@ -265,7 +341,11 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
         .collection('security_patrols')
         .orderBy('timestamp', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => SecurityPatrolModel.fromFirestore(doc)).toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => SecurityPatrolModel.fromFirestore(doc))
+              .toList(),
+        );
   }
 
   @override
@@ -279,16 +359,17 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
   }
 
   @override
-  Future<void> claimItem(String schoolId, String itemId, Map<String, dynamic> claimDetails) async {
+  Future<void> claimItem(
+    String schoolId,
+    String itemId,
+    Map<String, dynamic> claimDetails,
+  ) async {
     await firestore
         .collection('schools')
         .doc(schoolId)
         .collection('lost_and_found')
         .doc(itemId)
-        .update({
-      'isClaimed': true,
-      'claimDetails': claimDetails,
-    });
+        .update({'isClaimed': true, 'claimDetails': claimDetails});
   }
 
   @override
@@ -299,20 +380,35 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
         .collection('lost_and_found')
         .orderBy('dateFound', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => LostAndFoundItemModel.fromFirestore(doc)).toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => LostAndFoundItemModel.fromFirestore(doc))
+              .toList(),
+        );
   }
 
   @override
-  Future<Map<String, dynamic>> getSecurityDashboardStats(String schoolId) async {
+  Future<Map<String, dynamic>> getSecurityDashboardStats(
+    String schoolId,
+  ) async {
     // This would typically involve several count queries or a cloud function.
     // For now, return placeholders or do basic counts if possible.
-    final gates = await firestore.collection('schools').doc(schoolId).collection('gates').get();
+    final gates = await firestore
+        .collection('schools')
+        .doc(schoolId)
+        .collection('gates')
+        .get();
     final studentsIn = await firestore
         .collection('schools')
         .doc(schoolId)
         .collection('student_movements')
         .where('direction', isEqualTo: 'In')
-        .where('timestamp', isGreaterThanOrEqualTo: DateTime.now().subtract(const Duration(hours: 24)))
+        .where(
+          'timestamp',
+          isGreaterThanOrEqualTo: DateTime.now().subtract(
+            const Duration(hours: 24),
+          ),
+        )
         .get();
     // Visitors are stored in a top-level `visitors` collection scoped by a
     // `schoolId` field, not nested under schools/{schoolId} - see
@@ -326,7 +422,12 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
         .collection('schools')
         .doc(schoolId)
         .collection('security_incidents')
-        .where('timestamp', isGreaterThanOrEqualTo: DateTime.now().subtract(const Duration(hours: 24)))
+        .where(
+          'timestamp',
+          isGreaterThanOrEqualTo: DateTime.now().subtract(
+            const Duration(hours: 24),
+          ),
+        )
         .get();
     final pendingIncidents = await firestore
         .collection('schools')
@@ -348,7 +449,12 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
         .doc(schoolId)
         .collection('staff_movements')
         .where('direction', isEqualTo: 'In')
-        .where('timestamp', isGreaterThanOrEqualTo: DateTime.now().subtract(const Duration(hours: 24)))
+        .where(
+          'timestamp',
+          isGreaterThanOrEqualTo: DateTime.now().subtract(
+            const Duration(hours: 24),
+          ),
+        )
         .get();
 
     return {
@@ -360,7 +466,10 @@ class SecurityRemoteDataSourceImpl implements SecurityRemoteDataSource {
       'incidentsToday': incidentsToday.docs.length,
       'pendingIncidents': pendingIncidents.docs.length,
       'activeEmergencies': activeEmergencies.docs.length,
-      'peopleCurrentlyInside': studentsIn.docs.length + visitorsIn.docs.length + staffMovementsToday.docs.length,
+      'peopleCurrentlyInside':
+          studentsIn.docs.length +
+          visitorsIn.docs.length +
+          staffMovementsToday.docs.length,
     };
   }
 }

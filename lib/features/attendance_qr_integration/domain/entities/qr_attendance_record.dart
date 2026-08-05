@@ -29,15 +29,15 @@ class QrAttendanceRecord extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        studentUniqueId,
-        studentName,
-        className,
-        status,
-        timestamp,
-        scannedBy,
-        schoolId,
-        module,
-        isSynced,
-      ];
+    id,
+    studentUniqueId,
+    studentName,
+    className,
+    status,
+    timestamp,
+    scannedBy,
+    schoolId,
+    module,
+    isSynced,
+  ];
 }

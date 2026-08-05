@@ -40,9 +40,9 @@ class QrAttendanceDashboardScreen extends StatelessWidget {
               const SnackBar(content: Text('Attendance synced successfully!')),
             );
           } else if (state is AttendanceQrError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
           }
         },
         builder: (context, state) {
@@ -69,7 +69,9 @@ class QrAttendanceDashboardScreen extends StatelessWidget {
                         subtitle: 'Local logs pending',
                         icon: Icons.cloud_upload,
                         color: Colors.orange,
-                        onTap: () => context.read<AttendanceQrBloc>().add(SyncAttendanceEvent()),
+                        onTap: () => context.read<AttendanceQrBloc>().add(
+                          SyncAttendanceEvent(),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -81,12 +83,22 @@ class QrAttendanceDashboardScreen extends StatelessWidget {
                         icon: Icons.table_chart,
                         color: Colors.green,
                         onTap: () async {
-                          final recordsResult = await context.read<AttendanceQrBloc>().attendanceRepository.getPendingSyncRecords();
+                          final recordsResult = await context
+                              .read<AttendanceQrBloc>()
+                              .attendanceRepository
+                              .getPendingSyncRecords();
                           recordsResult.fold(
-                            (failure) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(failure.message))),
+                            (failure) =>
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(failure.message)),
+                                ),
                             (records) {
                               if (records.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No records to export.')));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('No records to export.'),
+                                  ),
+                                );
                                 return;
                               }
                               // Trigger export logic
@@ -95,14 +107,25 @@ class QrAttendanceDashboardScreen extends StatelessWidget {
                                 context: context,
                                 builder: (context) => AlertDialog(
                                   title: const Text('Export Attendance'),
-                                  content: Text('Export ${records.length} records to Google Sheets?'),
+                                  content: Text(
+                                    'Export ${records.length} records to Google Sheets?',
+                                  ),
                                   actions: [
-                                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('Cancel'),
+                                    ),
                                     TextButton(
                                       onPressed: () {
                                         // TODO: Invoke GoogleSheetsService via Bloc or direct
                                         Navigator.pop(context);
-                                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Export started...')));
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Export started...'),
+                                          ),
+                                        );
                                       },
                                       child: const Text('Export'),
                                     ),
@@ -123,7 +146,9 @@ class QrAttendanceDashboardScreen extends StatelessWidget {
                   label: const Text('START SCANNING'),
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size(double.infinity, 60),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ],

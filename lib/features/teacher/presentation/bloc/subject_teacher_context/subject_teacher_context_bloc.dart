@@ -44,17 +44,21 @@ class SubjectTeacherContextBloc
   ) async {
     _schoolId = event.schoolId;
     _userId = event.userId;
-    emit(state.copyWith(isLoading: true, clearError: true, clearUnavailable: true));
+    emit(
+      state.copyWith(isLoading: true, clearError: true, clearUnavailable: true),
+    );
 
-    final period = await calendarService.getCurrentPeriod();
+    final period = await calendarService.getCurrentPeriod(_schoolId!);
     if (!period.hasYear) {
       // Nothing in the panel can be scoped without a year, so this is its own
       // state rather than an empty student list with no explanation.
-      emit(state.copyWith(
-        isLoading: false,
-        unavailableReason: ContextUnavailableReason.noAcademicYear,
-        clearActive: true,
-      ));
+      emit(
+        state.copyWith(
+          isLoading: false,
+          unavailableReason: ContextUnavailableReason.noAcademicYear,
+          clearActive: true,
+        ),
+      );
       return;
     }
 
@@ -65,29 +69,35 @@ class SubjectTeacherContextBloc
     );
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        isLoading: false,
-        errorMessage: _messageFor(failure),
-        unavailableReason: ContextUnavailableReason.loadFailed,
-      )),
+      (failure) => emit(
+        state.copyWith(
+          isLoading: false,
+          errorMessage: _messageFor(failure),
+          unavailableReason: ContextUnavailableReason.loadFailed,
+        ),
+      ),
       (resolution) {
         if (!resolution.hasActive) {
-          emit(state.copyWith(
-            isLoading: false,
-            available: resolution.available,
-            unavailableReason: ContextUnavailableReason.noAssignments,
-            clearActive: true,
-          ));
+          emit(
+            state.copyWith(
+              isLoading: false,
+              available: resolution.available,
+              unavailableReason: ContextUnavailableReason.noAssignments,
+              clearActive: true,
+            ),
+          );
           return;
         }
-        emit(state.copyWith(
-          isLoading: false,
-          active: resolution.active,
-          available: resolution.available,
-          notice: resolution.switchReason,
-          clearUnavailable: true,
-          clearError: true,
-        ));
+        emit(
+          state.copyWith(
+            isLoading: false,
+            active: resolution.active,
+            available: resolution.available,
+            notice: resolution.switchReason,
+            clearUnavailable: true,
+            clearError: true,
+          ),
+        );
       },
     );
 
@@ -115,7 +125,12 @@ class SubjectTeacherContextBloc
         // The switch was refused - the assignment is gone or suspended. Keep
         // the current responsibility in effect and reload the list so the
         // stale entry disappears from the switcher.
-        emit(state.copyWith(isSwitching: false, errorMessage: _messageFor(failure)));
+        emit(
+          state.copyWith(
+            isSwitching: false,
+            errorMessage: _messageFor(failure),
+          ),
+        );
         add(const ContextAssignmentsChanged());
       },
       (context) async {
@@ -124,13 +139,15 @@ class SubjectTeacherContextBloc
           userId: userId,
           academicYearId: context.academicYearId,
         );
-        emit(state.copyWith(
-          isSwitching: false,
-          active: context,
-          available: refreshed.getOrElse(() => state.available),
-          clearUnavailable: true,
-          clearError: true,
-        ));
+        emit(
+          state.copyWith(
+            isSwitching: false,
+            active: context,
+            available: refreshed.getOrElse(() => state.available),
+            clearUnavailable: true,
+            clearError: true,
+          ),
+        );
       },
     );
   }
@@ -143,12 +160,14 @@ class SubjectTeacherContextBloc
 
     final result = await responsibilityService.revalidate();
     result.fold(
-      (failure) => emit(state.copyWith(
-        errorMessage: _messageFor(failure),
-        unavailableReason: failure is AssignmentInvalidFailure
-            ? ContextUnavailableReason.assignmentSuspended
-            : null,
-      )),
+      (failure) => emit(
+        state.copyWith(
+          errorMessage: _messageFor(failure),
+          unavailableReason: failure is AssignmentInvalidFailure
+              ? ContextUnavailableReason.assignmentSuspended
+              : null,
+        ),
+      ),
       // Permissions are re-read on revalidate, so a narrowed scope reaches
       // the screens that are already open.
       (context) => emit(state.copyWith(active: context, clearError: true)),
@@ -172,19 +191,23 @@ class SubjectTeacherContextBloc
       (failure) => emit(state.copyWith(errorMessage: _messageFor(failure))),
       (resolution) {
         if (!resolution.hasActive) {
-          emit(state.copyWith(
-            available: resolution.available,
-            unavailableReason: ContextUnavailableReason.noAssignments,
-            clearActive: true,
-          ));
+          emit(
+            state.copyWith(
+              available: resolution.available,
+              unavailableReason: ContextUnavailableReason.noAssignments,
+              clearActive: true,
+            ),
+          );
           return;
         }
-        emit(state.copyWith(
-          active: resolution.active,
-          available: resolution.available,
-          notice: resolution.switchReason,
-          clearUnavailable: true,
-        ));
+        emit(
+          state.copyWith(
+            active: resolution.active,
+            available: resolution.available,
+            notice: resolution.switchReason,
+            clearUnavailable: true,
+          ),
+        );
       },
     );
   }
@@ -219,22 +242,22 @@ class SubjectTeacherContextBloc
     _assignmentWatch = assignmentRepository
         .watchAssignments(schoolId: schoolId, userId: userId)
         .listen(
-      (_) => add(const ContextAssignmentsChanged()),
-      // A dropped listener must not break the panel; the periodic revalidate
-      // before writes still catches revocations.
-      onError: (_) {},
-    );
+          (_) => add(const ContextAssignmentsChanged()),
+          // A dropped listener must not break the panel; the periodic revalidate
+          // before writes still catches revocations.
+          onError: (_) {},
+        );
   }
 
   String _messageFor(Failure failure) => switch (failure) {
-        AssignmentInvalidFailure() => failure.message,
-        PermissionDeniedFailure() => failure.message,
-        NetworkFailure() => 'You are offline. Showing your saved responsibilities.',
-        CacheFailure() => 'Could not read your saved responsibilities.',
-        // Raw Firestore text never reaches the user - it leaks document
-        // paths and internal ids.
-        _ => 'Could not load your responsibilities. Pull down to retry.',
-      };
+    AssignmentInvalidFailure() => failure.message,
+    PermissionDeniedFailure() => failure.message,
+    NetworkFailure() => 'You are offline. Showing your saved responsibilities.',
+    CacheFailure() => 'Could not read your saved responsibilities.',
+    // Raw Firestore text never reaches the user - it leaks document
+    // paths and internal ids.
+    _ => 'Could not load your responsibilities. Pull down to retry.',
+  };
 
   @override
   Future<void> close() {

@@ -50,58 +50,100 @@ class FinanceBloc extends Bloc<FinanceEvent, FinanceState> {
     );
   }
 
-  Future<void> _onLoadFinanceDashboard(LoadFinanceDashboard event, Emitter<FinanceState> emit) async {
+  Future<void> _onLoadFinanceDashboard(
+    LoadFinanceDashboard event,
+    Emitter<FinanceState> emit,
+  ) async {
     emit(FinanceLoading());
-    final kpisResult = await repository.getFinancialDashboardKPIs(event.schoolId);
-    final transactionsResult = await repository.getSchoolPayments(event.schoolId);
-    final expendituresResult = await repository.getExpenditureRequests(event.schoolId);
+    final kpisResult = await repository.getFinancialDashboardKPIs(
+      event.schoolId,
+    );
+    final transactionsResult = await repository.getSchoolPayments(
+      event.schoolId,
+    );
+    final expendituresResult = await repository.getExpenditureRequests(
+      event.schoolId,
+    );
 
     kpisResult.fold(
       (failure) => emit(const FinanceError('Failed to load dashboard KPIs')),
       (kpis) {
-        emit(FinanceDashboardLoaded(
-          kpis: kpis,
-          recentTransactions: transactionsResult.getOrElse(() => []),
-          pendingApprovals: expendituresResult.getOrElse(() => []).where((e) => e.status.name == 'pending').toList(),
-        ));
+        emit(
+          FinanceDashboardLoaded(
+            kpis: kpis,
+            recentTransactions: transactionsResult.getOrElse(() => []),
+            pendingApprovals: expendituresResult
+                .getOrElse(() => [])
+                .where((e) => e.status.name == 'pending')
+                .toList(),
+          ),
+        );
       },
     );
   }
 
-  Future<void> _onLoadStudentFinancialProfile(LoadStudentFinancialProfile event, Emitter<FinanceState> emit) async {
+  Future<void> _onLoadStudentFinancialProfile(
+    LoadStudentFinancialProfile event,
+    Emitter<FinanceState> emit,
+  ) async {
     emit(FinanceLoading());
-    final accountResult = await repository.getStudentFinancialAccount(event.studentId, event.schoolId);
-    final historyResult = await repository.getPaymentHistory(event.studentId, event.schoolId);
+    final accountResult = await repository.getStudentFinancialAccount(
+      event.studentId,
+      event.schoolId,
+    );
+    final historyResult = await repository.getPaymentHistory(
+      event.studentId,
+      event.schoolId,
+    );
 
     accountResult.fold(
       (failure) => emit(const FinanceError('Failed to load financial account')),
-      (account) => emit(StudentFinancialProfileLoaded(
-        account: account,
-        paymentHistory: historyResult.getOrElse(() => []),
-      )),
+      (account) => emit(
+        StudentFinancialProfileLoaded(
+          account: account,
+          paymentHistory: historyResult.getOrElse(() => []),
+        ),
+      ),
     );
   }
 
-  Future<void> _onRecordNewPayment(RecordNewPayment event, Emitter<FinanceState> emit) async {
+  Future<void> _onRecordNewPayment(
+    RecordNewPayment event,
+    Emitter<FinanceState> emit,
+  ) async {
     final result = await repository.recordPayment(event.payment);
     result.fold(
       (failure) => emit(const FinanceError('Failed to record payment')),
-      (receiptId) => emit(FinanceActionSuccess('Payment recorded successfully. Receipt #: $receiptId')),
+      (receiptId) => emit(
+        FinanceActionSuccess(
+          'Payment recorded successfully. Receipt #: $receiptId',
+        ),
+      ),
     );
   }
 
-  Future<void> _onPrintReceipt(PrintReceipt event, Emitter<FinanceState> emit) async {
+  Future<void> _onPrintReceipt(
+    PrintReceipt event,
+    Emitter<FinanceState> emit,
+  ) async {
     final success = await printerService.printFeeReceipt(
       event.payment,
       event.studentName,
       event.className,
     );
     if (!success) {
-      emit(const FinanceError('Failed to print receipt. Check printer connection.'));
+      emit(
+        const FinanceError(
+          'Failed to print receipt. Check printer connection.',
+        ),
+      );
     }
   }
 
-  Future<void> _onVerifyFinanceReceipt(VerifyFinanceReceipt event, Emitter<FinanceState> emit) async {
+  Future<void> _onVerifyFinanceReceipt(
+    VerifyFinanceReceipt event,
+    Emitter<FinanceState> emit,
+  ) async {
     emit(FinanceLoading());
     // Format: PAY|schoolId|paymentId
     final parts = event.qrData.split('|');
@@ -124,7 +166,10 @@ class FinanceBloc extends Bloc<FinanceEvent, FinanceState> {
     );
   }
 
-  Future<void> _onCheckStudentEligibility(CheckStudentEligibility event, Emitter<FinanceState> emit) async {
+  Future<void> _onCheckStudentEligibility(
+    CheckStudentEligibility event,
+    Emitter<FinanceState> emit,
+  ) async {
     emit(FinanceLoading());
     final result = await financeService.checkEligibility(
       studentId: event.studentId,
@@ -134,15 +179,22 @@ class FinanceBloc extends Bloc<FinanceEvent, FinanceState> {
 
     result.fold(
       (failure) => emit(FinanceError(failure.message)),
-      (isEligible) => emit(EligibilityChecked(
-        isEligible: isEligible,
-        serviceType: event.serviceType,
-        reason: isEligible ? null : 'Outstanding balance exceeds threshold for ${event.serviceType.toLowerCase()} access.',
-      )),
+      (isEligible) => emit(
+        EligibilityChecked(
+          isEligible: isEligible,
+          serviceType: event.serviceType,
+          reason: isEligible
+              ? null
+              : 'Outstanding balance exceeds threshold for ${event.serviceType.toLowerCase()} access.',
+        ),
+      ),
     );
   }
 
-  Future<void> _onLoadExpenditureRequests(LoadExpenditureRequests event, Emitter<FinanceState> emit) async {
+  Future<void> _onLoadExpenditureRequests(
+    LoadExpenditureRequests event,
+    Emitter<FinanceState> emit,
+  ) async {
     emit(FinanceLoading());
     final result = await repository.getExpenditureRequests(event.schoolId);
     result.fold(
@@ -151,15 +203,22 @@ class FinanceBloc extends Bloc<FinanceEvent, FinanceState> {
     );
   }
 
-  Future<void> _onSubmitExpenditureRequest(SubmitExpenditureRequest event, Emitter<FinanceState> emit) async {
+  Future<void> _onSubmitExpenditureRequest(
+    SubmitExpenditureRequest event,
+    Emitter<FinanceState> emit,
+  ) async {
     final result = await repository.createExpenditureRequest(event.request);
     result.fold(
-      (failure) => emit(const FinanceError('Failed to submit expenditure request')),
+      (failure) =>
+          emit(const FinanceError('Failed to submit expenditure request')),
       (_) => emit(const FinanceActionSuccess('Expenditure request submitted')),
     );
   }
 
-  Future<void> _onUpdateExpenditureApproval(UpdateExpenditureApproval event, Emitter<FinanceState> emit) async {
+  Future<void> _onUpdateExpenditureApproval(
+    UpdateExpenditureApproval event,
+    Emitter<FinanceState> emit,
+  ) async {
     final result = await repository.updateExpenditureStatus(
       event.requestId,
       event.status,
@@ -174,16 +233,26 @@ class FinanceBloc extends Bloc<FinanceEvent, FinanceState> {
     );
   }
 
-  Future<void> _onLoadBudgets(LoadBudgets event, Emitter<FinanceState> emit) async {
+  Future<void> _onLoadBudgets(
+    LoadBudgets event,
+    Emitter<FinanceState> emit,
+  ) async {
     emit(FinanceLoading());
-    final result = await repository.getBudgets(event.schoolId, event.academicYear, event.term);
+    final result = await repository.getBudgets(
+      event.schoolId,
+      event.academicYear,
+      event.term,
+    );
     result.fold(
       (failure) => emit(const FinanceError('Failed to load budgets')),
       (budgets) => emit(BudgetsLoaded(budgets)),
     );
   }
 
-  Future<void> _onSaveSchoolBudget(SaveSchoolBudget event, Emitter<FinanceState> emit) async {
+  Future<void> _onSaveSchoolBudget(
+    SaveSchoolBudget event,
+    Emitter<FinanceState> emit,
+  ) async {
     final result = await repository.saveBudget(event.budget);
     result.fold(
       (failure) => emit(const FinanceError('Failed to save budget')),
@@ -191,19 +260,28 @@ class FinanceBloc extends Bloc<FinanceEvent, FinanceState> {
     );
   }
 
-  Future<void> _onLoadFeeCategories(LoadFeeCategories event, Emitter<FinanceState> emit) async {
+  Future<void> _onLoadFeeCategories(
+    LoadFeeCategories event,
+    Emitter<FinanceState> emit,
+  ) async {
     emit(FinanceLoading());
     final categoriesResult = await repository.getFeeCategories(event.schoolId);
     categoriesResult.fold(
       (failure) => emit(const FinanceError('Failed to load fee categories')),
-      (categories) => emit(FeeConfigurationLoaded(
-        categories: categories,
-        structures: const [], // Will be loaded by another event if needed or combined
-      )),
+      (categories) => emit(
+        FeeConfigurationLoaded(
+          categories: categories,
+          structures:
+              const [], // Will be loaded by another event if needed or combined
+        ),
+      ),
     );
   }
 
-  Future<void> _onSaveSchoolFeeCategory(SaveSchoolFeeCategory event, Emitter<FinanceState> emit) async {
+  Future<void> _onSaveSchoolFeeCategory(
+    SaveSchoolFeeCategory event,
+    Emitter<FinanceState> emit,
+  ) async {
     final result = await repository.saveFeeCategory(event.category);
     result.fold(
       (failure) => emit(const FinanceError('Failed to save fee category')),
@@ -211,19 +289,24 @@ class FinanceBloc extends Bloc<FinanceEvent, FinanceState> {
     );
   }
 
-  Future<void> _onLoadFeeStructures(LoadFeeStructures event, Emitter<FinanceState> emit) async {
+  Future<void> _onLoadFeeStructures(
+    LoadFeeStructures event,
+    Emitter<FinanceState> emit,
+  ) async {
     emit(FinanceLoading());
     final structuresResult = await repository.getFeeStructures(event.schoolId);
     structuresResult.fold(
       (failure) => emit(const FinanceError('Failed to load fee structures')),
-      (structures) => emit(FeeConfigurationLoaded(
-        categories: const [], 
-        structures: structures,
-      )),
+      (structures) => emit(
+        FeeConfigurationLoaded(categories: const [], structures: structures),
+      ),
     );
   }
 
-  Future<void> _onSaveSchoolFeeStructure(SaveSchoolFeeStructure event, Emitter<FinanceState> emit) async {
+  Future<void> _onSaveSchoolFeeStructure(
+    SaveSchoolFeeStructure event,
+    Emitter<FinanceState> emit,
+  ) async {
     final result = await repository.saveFeeStructure(event.structure);
     result.fold(
       (failure) => emit(const FinanceError('Failed to save fee structure')),

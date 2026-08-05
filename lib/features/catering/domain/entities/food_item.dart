@@ -20,5 +20,13 @@ class FoodItem extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, name, unit, currentStock, reorderLevel, category, expiryDate];
+  List<Object?> get props => [
+    id,
+    name,
+    unit,
+    currentStock,
+    reorderLevel,
+    category,
+    expiryDate,
+  ];
 }

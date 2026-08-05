@@ -97,23 +97,23 @@ class School extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        name,
-        tenantId,
-        address,
-        contactEmail,
-        contactPhone,
-        status,
-        subscriptionPlanId,
-        createdAt,
-        subscriptionExpiry,
-        enabledFeatures,
-        metadata,
-        classification,
-        classificationOther,
-        divisions,
-        displayLabel,
-      ];
+    id,
+    name,
+    tenantId,
+    address,
+    contactEmail,
+    contactPhone,
+    status,
+    subscriptionPlanId,
+    createdAt,
+    subscriptionExpiry,
+    enabledFeatures,
+    metadata,
+    classification,
+    classificationOther,
+    divisions,
+    displayLabel,
+  ];
 
   School copyWith({
     String? name,

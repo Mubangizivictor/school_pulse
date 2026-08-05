@@ -12,7 +12,7 @@ class LibraryResourceIsar {
 
   @Index(unique: true, replace: true)
   late String remoteId;
-  
+
   late String schoolId;
   late String libraryId;
   late String barcode;
@@ -58,7 +58,9 @@ class LibraryResourceIsar {
       purchaseDate: purchaseDate,
       purchaseCost: purchaseCost,
       supplier: supplier,
-      condition: ResourceCondition.values.firstWhere((e) => e.name == condition),
+      condition: ResourceCondition.values.firstWhere(
+        (e) => e.name == condition,
+      ),
       type: ResourceType.values.firstWhere((e) => e.name == type),
       status: ResourceStatus.values.firstWhere((e) => e.name == status),
       coverImageUrl: coverImageUrl,

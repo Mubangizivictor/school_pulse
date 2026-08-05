@@ -17,12 +17,7 @@ class CurriculumManagementScreen extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Curriculum Management'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: () {},
-            ),
-          ],
+          actions: [IconButton(icon: const Icon(Icons.add), onPressed: () {})],
         ),
         body: BlocBuilder<DeanBloc, DeanState>(
           builder: (context, state) {
@@ -38,47 +33,96 @@ class CurriculumManagementScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         ListTile(
-                          title: Text(curriculum.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          title: Text(
+                            curriculum.name,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
                           subtitle: Text(curriculum.description),
                           trailing: const Icon(Icons.edit_outlined),
                         ),
                         const Divider(),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Levels:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                              const Text(
+                                'Levels:',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
                               const SizedBox(height: 4),
                               Wrap(
                                 spacing: 8,
                                 children: curriculum.applicableLevels
-                                    .map((l) => Chip(label: Text(l, style: const TextStyle(fontSize: 10)), visualDensity: VisualDensity.compact))
+                                    .map(
+                                      (l) => Chip(
+                                        label: Text(
+                                          l,
+                                          style: const TextStyle(fontSize: 10),
+                                        ),
+                                        visualDensity: VisualDensity.compact,
+                                      ),
+                                    )
                                     .toList(),
                               ),
                               const SizedBox(height: 16),
-                              const Text('Assessment Weighting:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                              ...curriculum.calendarConfig.defaultWeighting.map((w) => Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 2),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(w.type, style: const TextStyle(fontSize: 12)),
-                                        Text('${w.weight}%', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                      ],
-                                    ),
-                                  )),
+                              const Text(
+                                'Assessment Weighting:',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              ...curriculum.calendarConfig.defaultWeighting.map(
+                                (w) => Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 2,
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        w.type,
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                      Text(
+                                        '${w.weight}%',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                               const SizedBox(height: 16),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text('Subjects (${curriculum.subjects.length})', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                  Text(
+                                    'Subjects (${curriculum.subjects.length})',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                   TextButton(
                                     onPressed: () {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) => SubjectListScreen(curriculum: curriculum),
+                                          builder: (context) =>
+                                              SubjectListScreen(
+                                                curriculum: curriculum,
+                                              ),
                                         ),
                                       );
                                     },

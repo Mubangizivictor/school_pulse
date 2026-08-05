@@ -21,19 +21,23 @@ class AttendanceConfirmationScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Confirm Attendance'),
-      ),
+      appBar: AppBar(title: const Text('Confirm Attendance')),
       body: BlocListener<AttendanceQrBloc, AttendanceQrState>(
         listener: (context, state) {
           if (state is AttendanceMarkedSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.green),
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.green,
+              ),
             );
             Navigator.of(context).pop();
           } else if (state is AttendanceQrError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+              ),
             );
           }
         },
@@ -57,7 +61,8 @@ class AttendanceConfirmationScreen extends StatelessWidget {
                       label: 'Present',
                       color: Colors.green,
                       icon: Icons.check_circle,
-                      onPressed: () => _markAttendance(context, QrAttendanceStatus.present),
+                      onPressed: () =>
+                          _markAttendance(context, QrAttendanceStatus.present),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -66,7 +71,8 @@ class AttendanceConfirmationScreen extends StatelessWidget {
                       label: 'Late',
                       color: Colors.orange,
                       icon: Icons.access_time,
-                      onPressed: () => _markAttendance(context, QrAttendanceStatus.late),
+                      onPressed: () =>
+                          _markAttendance(context, QrAttendanceStatus.late),
                     ),
                   ),
                 ],
@@ -76,7 +82,8 @@ class AttendanceConfirmationScreen extends StatelessWidget {
                 label: 'Excused',
                 color: Colors.blue,
                 icon: Icons.info,
-                onPressed: () => _markAttendance(context, QrAttendanceStatus.excused),
+                onPressed: () =>
+                    _markAttendance(context, QrAttendanceStatus.excused),
               ),
               const Spacer(),
               TextButton(
@@ -101,16 +108,16 @@ class AttendanceConfirmationScreen extends StatelessWidget {
     }
 
     context.read<AttendanceQrBloc>().add(
-          MarkAttendanceEvent(
-            studentUniqueId: student.id,
-            studentName: student.name,
-            className: student.className,
-            status: status,
-            scannedBy: scannedBy,
-            schoolId: schoolId,
-            module: module,
-          ),
-        );
+      MarkAttendanceEvent(
+        studentUniqueId: student.id,
+        studentName: student.name,
+        className: student.className,
+        status: status,
+        scannedBy: scannedBy,
+        schoolId: schoolId,
+        module: module,
+      ),
+    );
   }
 }
 
@@ -125,22 +132,32 @@ class _StudentProfileHeader extends StatelessWidget {
       children: [
         CircleAvatar(
           radius: 60,
-          backgroundImage: student.photoUrl != null ? NetworkImage(student.photoUrl!) : null,
-          child: student.photoUrl == null ? const Icon(Icons.person, size: 60) : null,
+          backgroundImage: student.photoUrl != null
+              ? NetworkImage(student.photoUrl!)
+              : null,
+          child: student.photoUrl == null
+              ? const Icon(Icons.person, size: 60)
+              : null,
         ),
         const SizedBox(height: 16),
         Text(
           student.name,
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
         Text(
           'Class: ${student.className}',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(color: Colors.grey),
         ),
         Text(
           'ID: ${student.studentId}',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: Colors.grey),
         ),
       ],
     );
@@ -165,7 +182,13 @@ class _StatusButton extends StatelessWidget {
     return ElevatedButton.icon(
       onPressed: onPressed,
       icon: Icon(icon, color: Colors.white),
-      label: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      label: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
       style: ElevatedButton.styleFrom(
         backgroundColor: color,
         padding: const EdgeInsets.symmetric(vertical: 16),

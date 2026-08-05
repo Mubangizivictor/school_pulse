@@ -15,7 +15,11 @@ class _Recipient {
   final String name;
   final String subtitle;
 
-  const _Recipient({required this.id, required this.name, required this.subtitle});
+  const _Recipient({
+    required this.id,
+    required this.name,
+    required this.subtitle,
+  });
 }
 
 class AdminMessagesScreen extends StatefulWidget {
@@ -55,7 +59,8 @@ class _AdminMessagesScreenState extends State<AdminMessagesScreen> {
             return EmptyState(
               icon: Icons.forum_outlined,
               title: 'No direct messages yet',
-              message: 'Send an individual message to a parent or staff member.',
+              message:
+                  'Send an individual message to a parent or staff member.',
               ctaLabel: 'New Message',
               onCtaPressed: () => _showComposeDialog(context),
             );
@@ -71,15 +76,31 @@ class _AdminMessagesScreenState extends State<AdminMessagesScreen> {
               return AppCard(
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: (isParent ? Colors.purple : Colors.blue).withValues(alpha: 0.1),
-                    child: Icon(isParent ? Icons.family_restroom : Icons.badge_outlined,
-                        color: isParent ? Colors.purple : Colors.blue, size: 18),
+                    backgroundColor: (isParent ? Colors.purple : Colors.blue)
+                        .withValues(alpha: 0.1),
+                    child: Icon(
+                      isParent ? Icons.family_restroom : Icons.badge_outlined,
+                      color: isParent ? Colors.purple : Colors.blue,
+                      size: 18,
+                    ),
                   ),
-                  title: Text(data['title'] as String? ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(data['body'] as String? ?? '', maxLines: 2, overflow: TextOverflow.ellipsis),
+                  title: Text(
+                    data['title'] as String? ?? '',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    data['body'] as String? ?? '',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   trailing: Text(
-                    _formatTimestamp((data['timestamp'] as Timestamp?)?.toDate()),
-                    style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.outline),
+                    _formatTimestamp(
+                      (data['timestamp'] as Timestamp?)?.toDate(),
+                    ),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
                   ),
                 ),
               );
@@ -105,22 +126,34 @@ class _AdminMessagesScreenState extends State<AdminMessagesScreen> {
       di.sl<GetAllAccessCodes>()(),
     ]);
 
-    final staff = (results[0] as dynamic).fold(
-      (_) => const <UserEntity>[],
-      (List<UserEntity> s) => s.where((m) => m.isActive).toList(),
-    ) as List<UserEntity>;
-    final codes = (results[1] as dynamic).fold(
-      (_) => const <ParentAccessCode>[],
-      (List<ParentAccessCode> c) => c.where((c) => c.isActive).toList(),
-    ) as List<ParentAccessCode>;
+    final staff =
+        (results[0] as dynamic).fold(
+              (_) => const <UserEntity>[],
+              (List<UserEntity> s) => s.where((m) => m.isActive).toList(),
+            )
+            as List<UserEntity>;
+    final codes =
+        (results[1] as dynamic).fold(
+              (_) => const <ParentAccessCode>[],
+              (List<ParentAccessCode> c) => c.where((c) => c.isActive).toList(),
+            )
+            as List<ParentAccessCode>;
 
     return [
-      ...staff.map((s) => _Recipient(id: s.id, name: s.name, subtitle: UserRoleDisplay.name(s.role))),
-      ...codes.map((c) => _Recipient(
-            id: 'parent_${c.parentCode}',
-            name: c.parentName ?? 'Unnamed Parent',
-            subtitle: 'Parent • ${c.studentNames.join(', ')}',
-          )),
+      ...staff.map(
+        (s) => _Recipient(
+          id: s.id,
+          name: s.name,
+          subtitle: UserRoleDisplay.name(s.role),
+        ),
+      ),
+      ...codes.map(
+        (c) => _Recipient(
+          id: 'parent_${c.parentCode}',
+          name: c.parentName ?? 'Unnamed Parent',
+          subtitle: 'Parent • ${c.studentNames.join(', ')}',
+        ),
+      ),
     ];
   }
 
@@ -137,7 +170,12 @@ class _AdminMessagesScreenState extends State<AdminMessagesScreen> {
         future: _loadRecipients(),
         builder: (dialogContext, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const AlertDialog(content: SizedBox(height: 100, child: Center(child: CircularProgressIndicator())));
+            return const AlertDialog(
+              content: SizedBox(
+                height: 100,
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            );
           }
           final recipients = snapshot.data ?? const [];
 
@@ -145,7 +183,13 @@ class _AdminMessagesScreenState extends State<AdminMessagesScreen> {
             builder: (dialogContext, setDialogState) {
               final filtered = query.isEmpty
                   ? recipients
-                  : recipients.where((r) => r.name.toLowerCase().contains(query.toLowerCase())).toList();
+                  : recipients
+                        .where(
+                          (r) => r.name.toLowerCase().contains(
+                            query.toLowerCase(),
+                          ),
+                        )
+                        .toList();
 
               return AlertDialog(
                 title: const Text('New Message'),
@@ -157,7 +201,10 @@ class _AdminMessagesScreenState extends State<AdminMessagesScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (selected == null) ...[
-                        Text('To:', style: Theme.of(context).textTheme.labelMedium),
+                        Text(
+                          'To:',
+                          style: Theme.of(context).textTheme.labelMedium,
+                        ),
                         const SizedBox(height: 8),
                         TextField(
                           decoration: const InputDecoration(
@@ -178,8 +225,13 @@ class _AdminMessagesScreenState extends State<AdminMessagesScreen> {
                                     return ListTile(
                                       dense: true,
                                       title: Text(r.name),
-                                      subtitle: Text(r.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
-                                      onTap: () => setDialogState(() => selected = r),
+                                      subtitle: Text(
+                                        r.subtitle,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      onTap: () =>
+                                          setDialogState(() => selected = r),
                                     );
                                   },
                                 ),
@@ -190,7 +242,8 @@ class _AdminMessagesScreenState extends State<AdminMessagesScreen> {
                             Expanded(
                               child: Chip(
                                 label: Text(selected!.name),
-                                onDeleted: () => setDialogState(() => selected = null),
+                                onDeleted: () =>
+                                    setDialogState(() => selected = null),
                               ),
                             ),
                           ],
@@ -198,7 +251,9 @@ class _AdminMessagesScreenState extends State<AdminMessagesScreen> {
                         const SizedBox(height: 16),
                         TextField(
                           controller: titleController,
-                          decoration: const InputDecoration(labelText: 'Subject'),
+                          decoration: const InputDecoration(
+                            labelText: 'Subject',
+                          ),
                         ),
                         const SizedBox(height: 16),
                         Expanded(
@@ -207,7 +262,10 @@ class _AdminMessagesScreenState extends State<AdminMessagesScreen> {
                             maxLines: null,
                             expands: true,
                             textAlignVertical: TextAlignVertical.top,
-                            decoration: const InputDecoration(labelText: 'Message', alignLabelWithHint: true),
+                            decoration: const InputDecoration(
+                              labelText: 'Message',
+                              alignLabelWithHint: true,
+                            ),
                           ),
                         ),
                       ],
@@ -215,13 +273,18 @@ class _AdminMessagesScreenState extends State<AdminMessagesScreen> {
                   ),
                 ),
                 actions: [
-                  TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    child: const Text('Cancel'),
+                  ),
                   if (selected != null)
                     FilledButton(
                       onPressed: isSending
                           ? null
                           : () async {
-                              if (titleController.text.trim().isEmpty || bodyController.text.trim().isEmpty) return;
+                              if (titleController.text.trim().isEmpty ||
+                                  bodyController.text.trim().isEmpty)
+                                return;
                               setDialogState(() => isSending = true);
                               try {
                                 // Capped so a hung write can never leave the
@@ -233,18 +296,28 @@ class _AdminMessagesScreenState extends State<AdminMessagesScreen> {
                                       body: bodyController.text.trim(),
                                     )
                                     .timeout(const Duration(seconds: 15));
-                                if (dialogContext.mounted) Navigator.pop(dialogContext);
+                                if (dialogContext.mounted)
+                                  Navigator.pop(dialogContext);
                               } catch (e) {
                                 setDialogState(() => isSending = false);
                                 if (dialogContext.mounted) {
-                                  ScaffoldMessenger.of(dialogContext).showSnackBar(
-                                    SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                                  ScaffoldMessenger.of(
+                                    dialogContext,
+                                  ).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error: $e'),
+                                      backgroundColor: Colors.red,
+                                    ),
                                   );
                                 }
                               }
                             },
                       child: isSending
-                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
                           : const Text('Send'),
                     ),
                 ],

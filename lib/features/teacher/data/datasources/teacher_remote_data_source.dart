@@ -100,7 +100,8 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
     required DateTime date,
     required Map<String, String> attendance,
   }) async {
-    final dateStr = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+    final dateStr =
+        "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
 
     // 'attendance_records' is the collection the parent app reads, so the
     // register a teacher submits here is what parents see. One doc per
@@ -123,10 +124,10 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
     });
 
     // Per-class daily summary that the attendance history screen lists.
-    final presentCount =
-        attendance.values.where((s) => s == 'present').length;
-    final logRef =
-        firestore.collection('attendance_logs').doc('${className}_$dateStr');
+    final presentCount = attendance.values.where((s) => s == 'present').length;
+    final logRef = firestore
+        .collection('attendance_logs')
+        .doc('${className}_$dateStr');
     batch.set(logRef, {
       'schoolId': schoolId,
       'className': className,
@@ -153,9 +154,12 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
     // correct marks by re-submitting. Written to 'academic_records', the
     // collection the parent academics and report card screens read.
     final batch = firestore.batch();
-    final slug = [subject, term, year, assessment]
-        .join('_')
-        .replaceAll(RegExp(r'\s+'), '-');
+    final slug = [
+      subject,
+      term,
+      year,
+      assessment,
+    ].join('_').replaceAll(RegExp(r'\s+'), '-');
 
     marks.forEach((studentId, score) {
       final docRef = firestore
@@ -180,11 +184,13 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
   }
 
   @override
-  Future<List<AttendanceHistoryRecord>> getAttendanceHistory(String teacherId) async {
+  Future<List<AttendanceHistoryRecord>> getAttendanceHistory(
+    String teacherId,
+  ) async {
     // In a real app, we might filter by teacherId if classes are assigned to teachers
     // For now, let's just fetch recent attendance records from the 'attendance_logs' collection
     // which should summarize daily attendance per class.
-    
+
     final snapshot = await firestore
         .collection('attendance_logs')
         .orderBy('date', descending: true)
@@ -204,11 +210,16 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
   }
 
   @override
-  Future<TeacherDashboardStats> getTeacherDashboardStats(String teacherId) async {
+  Future<TeacherDashboardStats> getTeacherDashboardStats(
+    String teacherId,
+  ) async {
     // In a real app, this would be fetched from a teacher-specific stats doc
     // For now, let's provide some realistic default data or fetch from school_stats
-    final statsDoc = await firestore.collection('school_stats').doc('teacher_$teacherId').get();
-    
+    final statsDoc = await firestore
+        .collection('school_stats')
+        .doc('teacher_$teacherId')
+        .get();
+
     if (statsDoc.exists) {
       final data = statsDoc.data()!;
       return TeacherDashboardStats(
@@ -220,12 +231,16 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
         attendanceTaken: data['attendanceTaken'] ?? 0,
         marksEntered: data['marksEntered'] ?? 0,
         reportsGenerated: data['reportsGenerated'] ?? 0,
-        classProgress: (data['classProgress'] as List? ?? []).map((cp) => ClassProgress(
-          title: cp['title'] ?? '',
-          progress: (cp['progress'] ?? 0.0).toDouble(),
-          subtitle: cp['subtitle'] ?? '',
-          className: cp['className'] ?? '',
-        )).toList(),
+        classProgress: (data['classProgress'] as List? ?? [])
+            .map(
+              (cp) => ClassProgress(
+                title: cp['title'] ?? '',
+                progress: (cp['progress'] ?? 0.0).toDouble(),
+                subtitle: cp['subtitle'] ?? '',
+                className: cp['className'] ?? '',
+              ),
+            )
+            .toList(),
       );
     }
 
@@ -262,7 +277,9 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
         dueDate: (data['dueDate'] as Timestamp).toDate(),
         createdAt: (data['createdAt'] as Timestamp).toDate(),
         teacherId: data['teacherId'] ?? '',
-        attachments: (data['attachments'] as List?)?.map((e) => e as String).toList(),
+        attachments: (data['attachments'] as List?)
+            ?.map((e) => e as String)
+            .toList(),
       );
     }).toList();
   }
@@ -320,7 +337,11 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
         term: data['term'] ?? '',
         year: data['year'] ?? '',
         comment: data['comment'] ?? '',
-        recommendations: (data['recommendations'] as List?)?.map((e) => e as String).toList() ?? [],
+        recommendations:
+            (data['recommendations'] as List?)
+                ?.map((e) => e as String)
+                .toList() ??
+            [],
         teacherId: data['teacherId'] ?? '',
         updatedAt: (data['updatedAt'] as Timestamp).toDate(),
       );
@@ -375,7 +396,8 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
 
   @override
   Future<void> saveCompetencyRating(CompetencyRating rating) async {
-    final docId = '${rating.studentId}_${rating.term}_${rating.year}_${rating.competency.replaceAll(' ', '_')}';
+    final docId =
+        '${rating.studentId}_${rating.term}_${rating.year}_${rating.competency.replaceAll(' ', '_')}';
     await firestore.collection('competency_ratings').doc(docId).set({
       'studentId': rating.studentId,
       'className': rating.className,
@@ -399,7 +421,7 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
     final batch = firestore.batch();
 
     for (final studentId in studentIds) {
-      // In a real app, this might trigger a Cloud Function or 
+      // In a real app, this might trigger a Cloud Function or
       // create a 'report_card' doc that the PDF generator listens to.
       // For now, we'll create the shell record that makes it visible to parents/deans.
       final docId = '${studentId}_${term}_${year}';

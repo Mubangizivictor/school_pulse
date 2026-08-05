@@ -91,8 +91,9 @@ class SubjectTeacherContextState extends Equatable {
       isSwitching: isSwitching ?? this.isSwitching,
       active: clearActive ? null : (active ?? this.active),
       available: available ?? this.available,
-      unavailableReason:
-          clearUnavailable ? null : (unavailableReason ?? this.unavailableReason),
+      unavailableReason: clearUnavailable
+          ? null
+          : (unavailableReason ?? this.unavailableReason),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       notice: clearNotice ? null : (notice ?? this.notice),
     );
@@ -100,12 +101,12 @@ class SubjectTeacherContextState extends Equatable {
 
   @override
   List<Object?> get props => [
-        isLoading,
-        isSwitching,
-        active,
-        available,
-        unavailableReason,
-        errorMessage,
-        notice,
-      ];
+    isLoading,
+    isSwitching,
+    active,
+    available,
+    unavailableReason,
+    errorMessage,
+    notice,
+  ];
 }

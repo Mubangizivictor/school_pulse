@@ -18,13 +18,18 @@ class TeacherStudentAttendanceScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black),
+          icon: Icon(
+            Icons.arrow_back,
+            color: isDark ? Colors.white : Colors.black,
+          ),
           onPressed: () => context.pop(),
         ),
         title: Text(
           'Attendance',
           style: AppTypography.headlineSmall.copyWith(
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            color: isDark
+                ? AppColors.textPrimaryDark
+                : AppColors.textPrimaryLight,
           ),
         ),
       ),
@@ -42,7 +47,9 @@ class TeacherStudentAttendanceScreen extends StatelessWidget {
                   Text(
                     'This Term',
                     style: AppTypography.titleMedium.copyWith(
-                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -52,7 +59,9 @@ class TeacherStudentAttendanceScreen extends StatelessWidget {
                   Text(
                     'Recent Records',
                     style: AppTypography.titleMedium.copyWith(
-                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -83,11 +92,35 @@ class TeacherStudentAttendanceScreen extends StatelessWidget {
   Widget _buildSummaryCards(bool isDark) {
     return Row(
       children: [
-        Expanded(child: _SummaryCard(label: 'Present', value: '28', percentage: '87.5%', color: AppColors.successGreen, isDark: isDark)),
+        Expanded(
+          child: _SummaryCard(
+            label: 'Present',
+            value: '28',
+            percentage: '87.5%',
+            color: AppColors.successGreen,
+            isDark: isDark,
+          ),
+        ),
         const SizedBox(width: AppSpacing.m),
-        Expanded(child: _SummaryCard(label: 'Absent', value: '4', percentage: '12.5%', color: AppColors.errorRed, isDark: isDark)),
+        Expanded(
+          child: _SummaryCard(
+            label: 'Absent',
+            value: '4',
+            percentage: '12.5%',
+            color: AppColors.errorRed,
+            isDark: isDark,
+          ),
+        ),
         const SizedBox(width: AppSpacing.m),
-        Expanded(child: _SummaryCard(label: 'Late', value: '1', percentage: '3.1%', color: AppColors.royalBlue, isDark: isDark)),
+        Expanded(
+          child: _SummaryCard(
+            label: 'Late',
+            value: '1',
+            percentage: '3.1%',
+            color: AppColors.royalBlue,
+            isDark: isDark,
+          ),
+        ),
       ],
     );
   }
@@ -102,19 +135,44 @@ class TeacherStudentAttendanceScreen extends StatelessWidget {
     ];
 
     return Column(
-      children: months.map((m) => _MonthlyRow(name: m['name']!, value: m['value']!, isDark: isDark)).toList(),
+      children: months
+          .map(
+            (m) => _MonthlyRow(
+              name: m['name']!,
+              value: m['value']!,
+              isDark: isDark,
+            ),
+          )
+          .toList(),
     );
   }
 
   Widget _buildRecentRecords(bool isDark) {
     final records = [
-      {'date': '31 May 2024', 'status': 'Present', 'color': AppColors.successGreen},
-      {'date': '30 May 2024', 'status': 'Present', 'color': AppColors.successGreen},
+      {
+        'date': '31 May 2024',
+        'status': 'Present',
+        'color': AppColors.successGreen,
+      },
+      {
+        'date': '30 May 2024',
+        'status': 'Present',
+        'color': AppColors.successGreen,
+      },
       {'date': '29 May 2024', 'status': 'Absent', 'color': AppColors.errorRed},
     ];
 
     return Column(
-      children: records.map((r) => _RecentRecordRow(date: r['date'] as String, status: r['status'] as String, color: r['color'] as Color, isDark: isDark)).toList(),
+      children: records
+          .map(
+            (r) => _RecentRecordRow(
+              date: r['date'] as String,
+              status: r['status'] as String,
+              color: r['color'] as Color,
+              isDark: isDark,
+            ),
+          )
+          .toList(),
     );
   }
 }
@@ -124,7 +182,11 @@ class _TabItem extends StatelessWidget {
   final bool isSelected;
   final bool isDark;
 
-  const _TabItem({required this.label, required this.isSelected, required this.isDark});
+  const _TabItem({
+    required this.label,
+    required this.isSelected,
+    required this.isDark,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -133,7 +195,9 @@ class _TabItem extends StatelessWidget {
         Text(
           label,
           style: AppTypography.labelLarge.copyWith(
-            color: isSelected ? AppColors.royalBlue : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+            color: isSelected
+                ? AppColors.royalBlue
+                : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
         ),
@@ -156,7 +220,13 @@ class _SummaryCard extends StatelessWidget {
   final Color color;
   final bool isDark;
 
-  const _SummaryCard({required this.label, required this.value, required this.percentage, required this.color, required this.isDark});
+  const _SummaryCard({
+    required this.label,
+    required this.value,
+    required this.percentage,
+    required this.color,
+    required this.isDark,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -165,15 +235,38 @@ class _SummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
         borderRadius: BorderRadius.circular(AppSpacing.m),
-        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: AppTypography.labelSmall.copyWith(color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight)),
+          Text(
+            label,
+            style: AppTypography.labelSmall.copyWith(
+              color: isDark
+                  ? AppColors.textMutedDark
+                  : AppColors.textMutedLight,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(value, style: AppTypography.headlineSmall.copyWith(color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight, fontWeight: FontWeight.bold)),
-          Text(percentage, style: AppTypography.labelSmall.copyWith(color: color, fontWeight: FontWeight.bold)),
+          Text(
+            value,
+            style: AppTypography.headlineSmall.copyWith(
+              color: isDark
+                  ? AppColors.textPrimaryDark
+                  : AppColors.textPrimaryLight,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            percentage,
+            style: AppTypography.labelSmall.copyWith(
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
@@ -185,7 +278,11 @@ class _MonthlyRow extends StatelessWidget {
   final String value;
   final bool isDark;
 
-  const _MonthlyRow({required this.name, required this.value, required this.isDark});
+  const _MonthlyRow({
+    required this.name,
+    required this.value,
+    required this.isDark,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -194,8 +291,21 @@ class _MonthlyRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(name, style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight)),
-          Text(value, style: AppTypography.bodyMedium.copyWith(color: AppColors.successGreen, fontWeight: FontWeight.bold)),
+          Text(
+            name,
+            style: AppTypography.bodyMedium.copyWith(
+              color: isDark
+                  ? AppColors.textMutedDark
+                  : AppColors.textMutedLight,
+            ),
+          ),
+          Text(
+            value,
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.successGreen,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
@@ -208,7 +318,12 @@ class _RecentRecordRow extends StatelessWidget {
   final Color color;
   final bool isDark;
 
-  const _RecentRecordRow({required this.date, required this.status, required this.color, required this.isDark});
+  const _RecentRecordRow({
+    required this.date,
+    required this.status,
+    required this.color,
+    required this.isDark,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -217,12 +332,25 @@ class _RecentRecordRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(date, style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight)),
+          Text(
+            date,
+            style: AppTypography.bodyMedium.copyWith(
+              color: isDark
+                  ? AppColors.textPrimaryDark
+                  : AppColors.textPrimaryLight,
+            ),
+          ),
           Row(
             children: [
               Icon(Icons.circle, size: 8, color: color),
               const SizedBox(width: 4),
-              Text(status, style: AppTypography.bodyMedium.copyWith(color: color, fontWeight: FontWeight.bold)),
+              Text(
+                status,
+                style: AppTypography.bodyMedium.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
         ],

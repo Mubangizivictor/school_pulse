@@ -36,7 +36,14 @@ class RespondToAppointmentAction extends AppointmentActionEvent {
   });
 
   @override
-  List<Object?> get props => [appointment, status, respondedBy, responseNote, proposedStart, proposedEnd];
+  List<Object?> get props => [
+    appointment,
+    status,
+    respondedBy,
+    responseNote,
+    proposedStart,
+    proposedEnd,
+  ];
 }
 
 class CancelAppointmentAction extends AppointmentActionEvent {
@@ -44,7 +51,11 @@ class CancelAppointmentAction extends AppointmentActionEvent {
   final String cancelledBy;
   final String? reason;
 
-  const CancelAppointmentAction({required this.appointment, required this.cancelledBy, this.reason});
+  const CancelAppointmentAction({
+    required this.appointment,
+    required this.cancelledBy,
+    this.reason,
+  });
 
   @override
   List<Object?> get props => [appointment, cancelledBy, reason];
@@ -55,7 +66,11 @@ class CheckInAppointmentAction extends AppointmentActionEvent {
   final String checkedInBy;
   final String? photoUrl;
 
-  const CheckInAppointmentAction({required this.appointment, required this.checkedInBy, this.photoUrl});
+  const CheckInAppointmentAction({
+    required this.appointment,
+    required this.checkedInBy,
+    this.photoUrl,
+  });
 
   @override
   List<Object?> get props => [appointment, checkedInBy, photoUrl];

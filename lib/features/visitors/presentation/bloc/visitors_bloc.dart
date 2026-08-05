@@ -19,7 +19,7 @@ class VisitorsBloc extends Bloc<VisitorsEvent, VisitorsState> {
   final MarkPreApprovedAsUsed markPreApprovedAsUsed;
   final SyncVisitors syncVisitors;
   final NotificationService notificationService = NotificationService();
-  
+
   // Enterprise UseCases
   final GetActiveVisitors getActiveVisitors;
   final GetOverstayedVisitors getOverstayedVisitors;
@@ -67,7 +67,7 @@ class VisitorsBloc extends Bloc<VisitorsEvent, VisitorsState> {
     on<SyncPendingVisitors>(_onSyncVisitors);
     on<LoadPreApprovedVisitors>(_onLoadPreApprovedVisitors);
     on<AddToBlacklistEvent>(_onAddToBlacklist);
-    
+
     // Enterprise events
     on<LoadEmergencyRollCall>(_onLoadEmergencyRollCall);
     on<LoadScheduledVisits>(_onLoadScheduledVisits);
@@ -80,35 +80,44 @@ class VisitorsBloc extends Bloc<VisitorsEvent, VisitorsState> {
     on<ReissueBadgeEvent>(_onReissueBadge);
   }
 
-  Future<void> _onLoadVisitors(LoadVisitors event, Emitter<VisitorsState> emit) async {
+  Future<void> _onLoadVisitors(
+    LoadVisitors event,
+    Emitter<VisitorsState> emit,
+  ) async {
     emit(VisitorsLoading());
     final result = await getVisitors(event.schoolId);
     final blacklistResult = await getVisitorBlacklist(event.schoolId);
     final activeResult = await getActiveVisitors(event.schoolId);
     final overstayedResult = await getOverstayedVisitors(event.schoolId);
-    
+
     result.fold(
       (failure) => emit(const VisitorsError('Failed to load visitors')),
       (visitors) {
-        final blacklist = blacklistResult.fold((_) => <VisitorBlacklist>[], (b) => b);
+        final blacklist = blacklistResult.fold(
+          (_) => <VisitorBlacklist>[],
+          (b) => b,
+        );
         final active = activeResult.fold((_) => <Visitor>[], (a) => a);
         final overstayed = overstayedResult.fold((_) => <Visitor>[], (o) => o);
 
-        emit(VisitorsLoaded(
-          visitors: visitors,
-          blacklist: blacklist,
-          activeVisitors: active,
-          overstayedVisitors: overstayed,
-        ));
-        
+        emit(
+          VisitorsLoaded(
+            visitors: visitors,
+            blacklist: blacklist,
+            activeVisitors: active,
+            overstayedVisitors: overstayed,
+          ),
+        );
+
         // Notify about overstays with throttling (once per hour)
         final now = DateTime.now();
-        if (overstayed.isNotEmpty && 
-            (_lastOverstayAlertTime == null || 
-             now.difference(_lastOverstayAlertTime!).inHours >= 1)) {
+        if (overstayed.isNotEmpty &&
+            (_lastOverstayAlertTime == null ||
+                now.difference(_lastOverstayAlertTime!).inHours >= 1)) {
           notificationService.sendSecurityAlert(
             title: 'Overstay Alert',
-            body: '${overstayed.length} visitors have exceeded their expected duration.',
+            body:
+                '${overstayed.length} visitors have exceeded their expected duration.',
           );
           _lastOverstayAlertTime = now;
         }
@@ -121,14 +130,20 @@ class VisitorsBloc extends Bloc<VisitorsEvent, VisitorsState> {
     );
   }
 
-  Future<void> _onWatchVisitorsList(WatchVisitorsList event, Emitter<VisitorsState> emit) async {
+  Future<void> _onWatchVisitorsList(
+    WatchVisitorsList event,
+    Emitter<VisitorsState> emit,
+  ) async {
     await _visitorsSubscription?.cancel();
     _visitorsSubscription = watchVisitors(event.schoolId).listen((visitors) {
       add(LoadVisitors(event.schoolId));
     });
   }
 
-  Future<void> _onCheckInVisitor(CheckInNewVisitor event, Emitter<VisitorsState> emit) async {
+  Future<void> _onCheckInVisitor(
+    CheckInNewVisitor event,
+    Emitter<VisitorsState> emit,
+  ) async {
     final result = await checkInVisitor(event.visitor);
     result.fold(
       (failure) => emit(const VisitorsError('Failed to check in visitor')),
@@ -145,7 +160,8 @@ class VisitorsBloc extends Bloc<VisitorsEvent, VisitorsState> {
           notificationService.sendDirectNotification(
             userId: event.visitor.hostId!,
             title: 'Visitor Arrived',
-            body: '${event.visitor.fullName} is here to see you for ${event.visitor.purpose}.',
+            body:
+                '${event.visitor.fullName} is here to see you for ${event.visitor.purpose}.',
           );
         }
 
@@ -155,8 +171,15 @@ class VisitorsBloc extends Bloc<VisitorsEvent, VisitorsState> {
     );
   }
 
-  Future<void> _onCheckOutVisitor(CheckOutVisitorEvent event, Emitter<VisitorsState> emit) async {
-    final result = await checkOutVisitor(event.visitorId, event.departureTime, event.duration);
+  Future<void> _onCheckOutVisitor(
+    CheckOutVisitorEvent event,
+    Emitter<VisitorsState> emit,
+  ) async {
+    final result = await checkOutVisitor(
+      event.visitorId,
+      event.departureTime,
+      event.duration,
+    );
     result.fold(
       (failure) => emit(const VisitorsError('Failed to check out visitor')),
       (visitor) {
@@ -166,87 +189,102 @@ class VisitorsBloc extends Bloc<VisitorsEvent, VisitorsState> {
     );
   }
 
-  Future<void> _onSearchVisitors(SearchVisitorsEvent event, Emitter<VisitorsState> emit) async {
+  Future<void> _onSearchVisitors(
+    SearchVisitorsEvent event,
+    Emitter<VisitorsState> emit,
+  ) async {
     if (event.query.isEmpty) {
       add(LoadVisitors(event.schoolId));
       return;
     }
     final result = await searchVisitors(event.schoolId, event.query);
-    result.fold(
-      (failure) => emit(const VisitorsError('Search failed')),
-      (visitors) {
-        if (state is VisitorsLoaded) {
-          final currentState = state as VisitorsLoaded;
-          emit(currentState.copyWith(visitors: visitors));
-        } else {
-          emit(VisitorsLoaded(visitors: visitors));
-        }
-      },
-    );
+    result.fold((failure) => emit(const VisitorsError('Search failed')), (
+      visitors,
+    ) {
+      if (state is VisitorsLoaded) {
+        final currentState = state as VisitorsLoaded;
+        emit(currentState.copyWith(visitors: visitors));
+      } else {
+        emit(VisitorsLoaded(visitors: visitors));
+      }
+    });
   }
 
-  Future<void> _onSyncVisitors(SyncPendingVisitors event, Emitter<VisitorsState> emit) async {
+  Future<void> _onSyncVisitors(
+    SyncPendingVisitors event,
+    Emitter<VisitorsState> emit,
+  ) async {
     await syncVisitors();
   }
 
-  Future<void> _onLoadPreApprovedVisitors(LoadPreApprovedVisitors event, Emitter<VisitorsState> emit) async {
+  Future<void> _onLoadPreApprovedVisitors(
+    LoadPreApprovedVisitors event,
+    Emitter<VisitorsState> emit,
+  ) async {
     final result = await getPreApprovedVisitors(event.schoolId);
-    result.fold(
-      (failure) => null,
-      (preApproved) {
-        if (state is VisitorsLoaded) {
-          final currentState = state as VisitorsLoaded;
-          emit(currentState.copyWith(preApprovedVisitors: preApproved));
-        }
-      },
-    );
+    result.fold((failure) => null, (preApproved) {
+      if (state is VisitorsLoaded) {
+        final currentState = state as VisitorsLoaded;
+        emit(currentState.copyWith(preApprovedVisitors: preApproved));
+      }
+    });
   }
 
-  Future<void> _onAddToBlacklist(AddToBlacklistEvent event, Emitter<VisitorsState> emit) async {
+  Future<void> _onAddToBlacklist(
+    AddToBlacklistEvent event,
+    Emitter<VisitorsState> emit,
+  ) async {
     final result = await addToBlacklist(event.blacklist);
     result.fold(
       (failure) => emit(const VisitorsError('Failed to blacklist visitor')),
       (_) {
         if (state is VisitorsLoaded) {
           final currentState = state as VisitorsLoaded;
-          final updatedBlacklist = List<VisitorBlacklist>.from(currentState.blacklist)
-            ..add(event.blacklist);
+          final updatedBlacklist = List<VisitorBlacklist>.from(
+            currentState.blacklist,
+          )..add(event.blacklist);
           emit(currentState.copyWith(blacklist: updatedBlacklist));
         }
       },
     );
   }
 
-  Future<void> _onLoadEmergencyRollCall(LoadEmergencyRollCall event, Emitter<VisitorsState> emit) async {
+  Future<void> _onLoadEmergencyRollCall(
+    LoadEmergencyRollCall event,
+    Emitter<VisitorsState> emit,
+  ) async {
     final result = await getActiveVisitors(event.schoolId);
-    result.fold(
-      (failure) => null,
-      (active) {
-        if (state is VisitorsLoaded) {
-          emit((state as VisitorsLoaded).copyWith(activeVisitors: active));
-        }
-      },
-    );
+    result.fold((failure) => null, (active) {
+      if (state is VisitorsLoaded) {
+        emit((state as VisitorsLoaded).copyWith(activeVisitors: active));
+      }
+    });
   }
 
-  Future<void> _onLoadScheduledVisits(LoadScheduledVisits event, Emitter<VisitorsState> emit) async {
+  Future<void> _onLoadScheduledVisits(
+    LoadScheduledVisits event,
+    Emitter<VisitorsState> emit,
+  ) async {
     final result = await getScheduledVisits(event.schoolId);
-    result.fold(
-      (failure) => null,
-      (visits) {
-        if (state is VisitorsLoaded) {
-          emit((state as VisitorsLoaded).copyWith(scheduledVisits: visits));
-        }
-      },
-    );
+    result.fold((failure) => null, (visits) {
+      if (state is VisitorsLoaded) {
+        emit((state as VisitorsLoaded).copyWith(scheduledVisits: visits));
+      }
+    });
   }
 
-  Future<void> _onApproveScheduledVisit(ApproveScheduledVisitEvent event, Emitter<VisitorsState> emit) async {
+  Future<void> _onApproveScheduledVisit(
+    ApproveScheduledVisitEvent event,
+    Emitter<VisitorsState> emit,
+  ) async {
     await approveScheduledVisit(event.visitId);
     _reloadScheduledVisitsFromState();
   }
 
-  Future<void> _onRejectScheduledVisit(RejectScheduledVisitEvent event, Emitter<VisitorsState> emit) async {
+  Future<void> _onRejectScheduledVisit(
+    RejectScheduledVisitEvent event,
+    Emitter<VisitorsState> emit,
+  ) async {
     await rejectScheduledVisit(event.visitId);
     _reloadScheduledVisitsFromState();
   }
@@ -256,69 +294,87 @@ class VisitorsBloc extends Bloc<VisitorsEvent, VisitorsState> {
       final loaded = state as VisitorsLoaded;
       final schoolId = loaded.visitors.isNotEmpty
           ? loaded.visitors.first.schoolId
-          : (loaded.scheduledVisits.isNotEmpty ? loaded.scheduledVisits.first.schoolId : null);
+          : (loaded.scheduledVisits.isNotEmpty
+                ? loaded.scheduledVisits.first.schoolId
+                : null);
       if (schoolId != null) {
         add(LoadScheduledVisits(schoolId));
       }
     }
   }
 
-  Future<void> _onLoadPackageDeliveries(LoadPackageDeliveries event, Emitter<VisitorsState> emit) async {
+  Future<void> _onLoadPackageDeliveries(
+    LoadPackageDeliveries event,
+    Emitter<VisitorsState> emit,
+  ) async {
     final result = await getPackageDeliveries(event.schoolId);
-    result.fold(
-      (failure) => null,
-      (packages) {
-        if (state is VisitorsLoaded) {
-          emit((state as VisitorsLoaded).copyWith(packageDeliveries: packages));
-        }
-      },
-    );
+    result.fold((failure) => null, (packages) {
+      if (state is VisitorsLoaded) {
+        emit((state as VisitorsLoaded).copyWith(packageDeliveries: packages));
+      }
+    });
   }
 
-  Future<void> _onLogPackageDelivery(LogNewPackageDelivery event, Emitter<VisitorsState> emit) async {
+  Future<void> _onLogPackageDelivery(
+    LogNewPackageDelivery event,
+    Emitter<VisitorsState> emit,
+  ) async {
     final result = await logPackageDelivery(event.delivery);
-    result.fold(
-      (failure) => emit(const VisitorsError('Failed to log package')),
-      (_) {
-        // Notify recipient if they exist
-        if (event.delivery.recipientId != null) {
-          notificationService.sendDirectNotification(
-            userId: event.delivery.recipientId!,
-            title: 'Package Arrived',
-            body: 'A package from ${event.delivery.courierName} has been received for you at the gate.',
-          );
-        }
-        add(LoadPackageDeliveries(event.delivery.schoolId));
-      },
-    );
+    result.fold((failure) => emit(const VisitorsError('Failed to log package')), (
+      _,
+    ) {
+      // Notify recipient if they exist
+      if (event.delivery.recipientId != null) {
+        notificationService.sendDirectNotification(
+          userId: event.delivery.recipientId!,
+          title: 'Package Arrived',
+          body:
+              'A package from ${event.delivery.courierName} has been received for you at the gate.',
+        );
+      }
+      add(LoadPackageDeliveries(event.delivery.schoolId));
+    });
   }
 
-  Future<void> _onMarkPackageCollected(MarkPackageCollectedEvent event, Emitter<VisitorsState> emit) async {
+  Future<void> _onMarkPackageCollected(
+    MarkPackageCollectedEvent event,
+    Emitter<VisitorsState> emit,
+  ) async {
     await markPackageAsCollected(event.packageId, event.collectedBy);
     if (state is VisitorsLoaded) {
-       final visitors = (state as VisitorsLoaded).visitors;
-       if (visitors.isNotEmpty) {
-         add(LoadPackageDeliveries(visitors.first.schoolId));
-       }
+      final visitors = (state as VisitorsLoaded).visitors;
+      if (visitors.isNotEmpty) {
+        add(LoadPackageDeliveries(visitors.first.schoolId));
+      }
     }
   }
 
-  Future<void> _onExportVisitors(ExportVisitorsEvent event, Emitter<VisitorsState> emit) async {
+  Future<void> _onExportVisitors(
+    ExportVisitorsEvent event,
+    Emitter<VisitorsState> emit,
+  ) async {
     emit(VisitorsExporting());
-    final result = await exportVisitorsToSheets(event.schoolId, event.schoolName);
-    result.fold(
-      (failure) => emit(VisitorsError(failure.message)),
-      (_) {
-        emit(const VisitorsExportSuccess('Visitor logs exported successfully to Google Sheets'));
-        // Return to Loaded state after a short delay or just emit loaded again
-        if (state is VisitorsLoaded || true) {
-           add(LoadVisitors(event.schoolId));
-        }
-      },
+    final result = await exportVisitorsToSheets(
+      event.schoolId,
+      event.schoolName,
     );
+    result.fold((failure) => emit(VisitorsError(failure.message)), (_) {
+      emit(
+        const VisitorsExportSuccess(
+          'Visitor logs exported successfully to Google Sheets',
+        ),
+      );
+      // Return to Loaded state after a short delay or just emit loaded again
+      if (state is VisitorsLoaded || true) {
+        add(LoadVisitors(event.schoolId));
+      }
+    });
   }
 
-  Future<void> _onReissueBadge(ReissueBadgeEvent event, Emitter<VisitorsState> emit) async {
+  Future<void> _onReissueBadge(
+    ReissueBadgeEvent event,
+    Emitter<VisitorsState> emit,
+  ) async {
     final result = await reissueBadge(event.visitorId);
     result.fold(
       (failure) => emit(const VisitorsError('Failed to reissue badge')),
@@ -335,4 +391,3 @@ class VisitorsBloc extends Bloc<VisitorsEvent, VisitorsState> {
     return super.close();
   }
 }
-

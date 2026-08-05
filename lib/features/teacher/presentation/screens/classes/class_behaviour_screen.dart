@@ -34,17 +34,19 @@ class _ClassBehaviourScreenState extends State<ClassBehaviourScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final primaryColor = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
 
     return BlocBuilder<ClassTeacherContextBloc, ClassTeacherContextState>(
       builder: (context, contextState) {
         final active = contextState.active;
         final placement = active == null
             ? ''
-            : [active.className, active.streamName]
-                .where((e) => e != null && e.isNotEmpty)
-                .join(' ');
+            : [
+                active.className,
+                active.streamName,
+              ].where((e) => e != null && e.isNotEmpty).join(' ');
 
         return Scaffold(
           backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
@@ -60,8 +62,10 @@ class _ClassBehaviourScreenState extends State<ClassBehaviourScreen> {
               children: [
                 Text(
                   'Behaviour Records',
-                  style: AppTypography.titleLarge
-                      .copyWith(color: primaryColor, fontWeight: FontWeight.bold),
+                  style: AppTypography.titleLarge.copyWith(
+                    color: primaryColor,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text(
                   // The teacher's actual class, not a hardcoded label.
@@ -100,15 +104,17 @@ class _ClassBehaviourScreenState extends State<ClassBehaviourScreen> {
                     if (message == null) return;
                     ScaffoldMessenger.of(context)
                       ..hideCurrentSnackBar()
-                      ..showSnackBar(SnackBar(
-                        content: Text(message),
-                        backgroundColor: state.successMessage != null
-                            ? AppColors.success(context)
-                            : AppColors.danger(context),
-                      ));
-                    context
-                        .read<ClassWorkBloc>()
-                        .add(const ClassWorkFeedbackCleared());
+                      ..showSnackBar(
+                        SnackBar(
+                          content: Text(message),
+                          backgroundColor: state.successMessage != null
+                              ? AppColors.success(context)
+                              : AppColors.danger(context),
+                        ),
+                      );
+                    context.read<ClassWorkBloc>().add(
+                      const ClassWorkFeedbackCleared(),
+                    );
                   },
                   builder: (context, state) {
                     if (state.isLoading) {
@@ -126,8 +132,9 @@ class _ClassBehaviourScreenState extends State<ClassBehaviourScreen> {
                           child: state.behaviourRecords.isEmpty
                               ? Center(
                                   child: Padding(
-                                    padding:
-                                        const EdgeInsets.all(AppSpacing.x3l),
+                                    padding: const EdgeInsets.all(
+                                      AppSpacing.x3l,
+                                    ),
                                     child: Text(
                                       'No behaviour or achievement records for '
                                       'your class yet.',
@@ -145,12 +152,13 @@ class _ClassBehaviourScreenState extends State<ClassBehaviourScreen> {
                                   itemCount: state.behaviourRecords.length,
                                   separatorBuilder: (context, index) =>
                                       const SizedBox(height: AppSpacing.m),
-                                  itemBuilder: (context, index) => _buildLogItem(
-                                    context,
-                                    state,
-                                    state.behaviourRecords[index],
-                                    isDark,
-                                  ),
+                                  itemBuilder: (context, index) =>
+                                      _buildLogItem(
+                                        context,
+                                        state,
+                                        state.behaviourRecords[index],
+                                        isDark,
+                                      ),
                                 ),
                         ),
                         Padding(
@@ -226,8 +234,10 @@ class _ClassBehaviourScreenState extends State<ClassBehaviourScreen> {
       children: [
         Text(
           value,
-          style: AppTypography.headlineSmall
-              .copyWith(color: color, fontWeight: FontWeight.bold),
+          style: AppTypography.headlineSmall.copyWith(
+            color: color,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         Text(
           label,
@@ -247,8 +257,7 @@ class _ClassBehaviourScreenState extends State<ClassBehaviourScreen> {
   ) {
     final category = state.categoryFor(record.categoryCode);
     final isPositive = category?.isPositive ?? false;
-    final color =
-        isPositive ? AppColors.successGreen : AppColors.errorRed;
+    final color = isPositive ? AppColors.successGreen : AppColors.errorRed;
 
     return PulseCard(
       padding: const EdgeInsets.all(AppSpacing.l),
@@ -393,7 +402,9 @@ class _ClassBehaviourScreenState extends State<ClassBehaviourScreen> {
       isScrollControlled: true,
       backgroundColor: AppColors.surfaceElevated(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.xl)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppSpacing.xl),
+        ),
       ),
       builder: (sheetContext) => BlocProvider.value(
         value: bloc,
@@ -476,7 +487,10 @@ class _RecordSheetState extends State<_RecordSheet> {
                 for (final category in widget.categories)
                   DropdownMenuItem(
                     value: category,
-                    child: Text(category.label, overflow: TextOverflow.ellipsis),
+                    child: Text(
+                      category.label,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
               ],
               onChanged: (value) => setState(() {
@@ -536,25 +550,27 @@ class _RecordSheetState extends State<_RecordSheet> {
     final student = _student!;
     final category = _category!;
 
-    context.read<ClassWorkBloc>().add(ClassBehaviourRecorded(
-          ClassBehaviourRecord(
-            id: '',
-            // Coordinates are stamped from the verified context by the
-            // repository; the form supplies only what the teacher typed.
-            schoolId: '',
-            classId: student.classId,
-            academicYearId: student.academicYearId,
-            studentId: student.studentId,
-            studentName: student.name,
-            categoryCode: category.code,
-            note: _noteController.text.trim(),
-            recommendation: _recommendationController.text.trim().isEmpty
-                ? null
-                : _recommendationController.text.trim(),
-            followUpRequired: _followUp,
-            recordedAt: DateTime.now(),
-          ),
-        ));
+    context.read<ClassWorkBloc>().add(
+      ClassBehaviourRecorded(
+        ClassBehaviourRecord(
+          id: '',
+          // Coordinates are stamped from the verified context by the
+          // repository; the form supplies only what the teacher typed.
+          schoolId: '',
+          classId: student.classId,
+          academicYearId: student.academicYearId,
+          studentId: student.studentId,
+          studentName: student.name,
+          categoryCode: category.code,
+          note: _noteController.text.trim(),
+          recommendation: _recommendationController.text.trim().isEmpty
+              ? null
+              : _recommendationController.text.trim(),
+          followUpRequired: _followUp,
+          recordedAt: DateTime.now(),
+        ),
+      ),
+    );
     Navigator.of(context).pop();
   }
 }

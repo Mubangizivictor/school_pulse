@@ -41,16 +41,20 @@ class LeaveManagementScreen extends StatelessWidget {
                 DataColumn(label: Text('Sick')),
               ],
               rows: const [
-                DataRow(cells: [
-                  DataCell(Text('Sarah Johnson')),
-                  DataCell(Text('12/21')),
-                  DataCell(Text('5/10')),
-                ]),
-                DataRow(cells: [
-                  DataCell(Text('John Mukasa')),
-                  DataCell(Text('18/21')),
-                  DataCell(Text('2/10')),
-                ]),
+                DataRow(
+                  cells: [
+                    DataCell(Text('Sarah Johnson')),
+                    DataCell(Text('12/21')),
+                    DataCell(Text('5/10')),
+                  ],
+                ),
+                DataRow(
+                  cells: [
+                    DataCell(Text('John Mukasa')),
+                    DataCell(Text('18/21')),
+                    DataCell(Text('2/10')),
+                  ],
+                ),
               ],
             ),
           ),
@@ -95,7 +99,11 @@ class _LeaveRequestTile extends StatelessWidget {
           ),
           child: Text(
             status,
-            style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 12),
+            style: TextStyle(
+              color: statusColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
           ),
         ),
       ),

@@ -97,39 +97,47 @@ void main() {
 
     when(() => network.isConnected).thenAnswer((_) async => true);
     when(() => local.cacheEnrollments(any())).thenAnswer((_) async {});
-    when(() => audit.record(
-          context: any(named: 'context'),
-          action: any(named: 'action'),
-          entityType: any(named: 'entityType'),
-          entityId: any(named: 'entityId'),
-          previousValue: any(named: 'previousValue'),
-          newValue: any(named: 'newValue'),
-          reason: any(named: 'reason'),
-          offlineOperationId: any(named: 'offlineOperationId'),
-        )).thenAnswer((_) async {});
+    when(
+      () => audit.record(
+        context: any(named: 'context'),
+        action: any(named: 'action'),
+        entityType: any(named: 'entityType'),
+        entityId: any(named: 'entityId'),
+        previousValue: any(named: 'previousValue'),
+        newValue: any(named: 'newValue'),
+        reason: any(named: 'reason'),
+        offlineOperationId: any(named: 'offlineOperationId'),
+      ),
+    ).thenAnswer((_) async {});
   });
 
   group('subject student list', () {
     test('lists only the class members enrolled in this subject', () async {
       // Four students sit in Grade 10A; two of them take Mathematics.
-      when(() => remote.getEnrollments(
-            schoolId: any(named: 'schoolId'),
-            subjectId: any(named: 'subjectId'),
-            classId: any(named: 'classId'),
-            academicYearId: any(named: 'academicYearId'),
-            streamId: any(named: 'streamId'),
-          )).thenAnswer((_) async => [_enrollment('s1'), _enrollment('s3')]);
-      when(() => remote.getClassRoster(
-            schoolId: any(named: 'schoolId'),
-            classId: any(named: 'classId'),
-            academicYearId: any(named: 'academicYearId'),
-            streamId: any(named: 'streamId'),
-          )).thenAnswer((_) async => [
-            _student('s1', 'Amina'),
-            _student('s2', 'Brian'),
-            _student('s3', 'Chloe'),
-            _student('s4', 'Daniel'),
-          ]);
+      when(
+        () => remote.getEnrollments(
+          schoolId: any(named: 'schoolId'),
+          subjectId: any(named: 'subjectId'),
+          classId: any(named: 'classId'),
+          academicYearId: any(named: 'academicYearId'),
+          streamId: any(named: 'streamId'),
+        ),
+      ).thenAnswer((_) async => [_enrollment('s1'), _enrollment('s3')]);
+      when(
+        () => remote.getClassRoster(
+          schoolId: any(named: 'schoolId'),
+          classId: any(named: 'classId'),
+          academicYearId: any(named: 'academicYearId'),
+          streamId: any(named: 'streamId'),
+        ),
+      ).thenAnswer(
+        (_) async => [
+          _student('s1', 'Amina'),
+          _student('s2', 'Brian'),
+          _student('s3', 'Chloe'),
+          _student('s4', 'Daniel'),
+        ],
+      );
 
       final result = await repository.getSubjectStudents(context: _context());
 
@@ -138,23 +146,30 @@ void main() {
     });
 
     test('excludes students whose enrollment was removed', () async {
-      when(() => remote.getEnrollments(
-            schoolId: any(named: 'schoolId'),
-            subjectId: any(named: 'subjectId'),
-            classId: any(named: 'classId'),
-            academicYearId: any(named: 'academicYearId'),
-            streamId: any(named: 'streamId'),
-          )).thenAnswer((_) async => [
-            _enrollment('s1'),
-            _enrollment('s2', status: SubjectEnrollmentStatus.removed),
-          ]);
-      when(() => remote.getClassRoster(
-            schoolId: any(named: 'schoolId'),
-            classId: any(named: 'classId'),
-            academicYearId: any(named: 'academicYearId'),
-            streamId: any(named: 'streamId'),
-          )).thenAnswer((_) async =>
-              [_student('s1', 'Amina'), _student('s2', 'Brian')]);
+      when(
+        () => remote.getEnrollments(
+          schoolId: any(named: 'schoolId'),
+          subjectId: any(named: 'subjectId'),
+          classId: any(named: 'classId'),
+          academicYearId: any(named: 'academicYearId'),
+          streamId: any(named: 'streamId'),
+        ),
+      ).thenAnswer(
+        (_) async => [
+          _enrollment('s1'),
+          _enrollment('s2', status: SubjectEnrollmentStatus.removed),
+        ],
+      );
+      when(
+        () => remote.getClassRoster(
+          schoolId: any(named: 'schoolId'),
+          classId: any(named: 'classId'),
+          academicYearId: any(named: 'academicYearId'),
+          streamId: any(named: 'streamId'),
+        ),
+      ).thenAnswer(
+        (_) async => [_student('s1', 'Amina'), _student('s2', 'Brian')],
+      );
 
       final result = await repository.getSubjectStudents(context: _context());
 
@@ -171,54 +186,65 @@ void main() {
         (f) => expect(f, isA<PermissionDeniedFailure>()),
         (_) => fail('should not return students'),
       );
-      verifyNever(() => remote.getEnrollments(
-            schoolId: any(named: 'schoolId'),
-            subjectId: any(named: 'subjectId'),
-            classId: any(named: 'classId'),
-            academicYearId: any(named: 'academicYearId'),
-            streamId: any(named: 'streamId'),
-          ));
+      verifyNever(
+        () => remote.getEnrollments(
+          schoolId: any(named: 'schoolId'),
+          subjectId: any(named: 'subjectId'),
+          classId: any(named: 'classId'),
+          academicYearId: any(named: 'academicYearId'),
+          streamId: any(named: 'streamId'),
+        ),
+      );
     });
 
     test('reads the cache when offline instead of failing', () async {
       when(() => network.isConnected).thenAnswer((_) async => false);
-      when(() => local.getEnrollments(
-            schoolId: any(named: 'schoolId'),
-            subjectId: any(named: 'subjectId'),
-            classId: any(named: 'classId'),
-            academicYearId: any(named: 'academicYearId'),
-            streamId: any(named: 'streamId'),
-          )).thenAnswer((_) async => []);
+      when(
+        () => local.getEnrollments(
+          schoolId: any(named: 'schoolId'),
+          subjectId: any(named: 'subjectId'),
+          classId: any(named: 'classId'),
+          academicYearId: any(named: 'academicYearId'),
+          streamId: any(named: 'streamId'),
+        ),
+      ).thenAnswer((_) async => []);
 
       final result = await repository.getSubjectStudents(context: _context());
 
       expect(result.isRight(), isTrue);
-      verify(() => local.getEnrollments(
-            schoolId: any(named: 'schoolId'),
-            subjectId: any(named: 'subjectId'),
-            classId: any(named: 'classId'),
-            academicYearId: any(named: 'academicYearId'),
-            streamId: any(named: 'streamId'),
-          )).called(1);
+      verify(
+        () => local.getEnrollments(
+          schoolId: any(named: 'schoolId'),
+          subjectId: any(named: 'subjectId'),
+          classId: any(named: 'classId'),
+          academicYearId: any(named: 'academicYearId'),
+          streamId: any(named: 'streamId'),
+        ),
+      ).called(1);
     });
   });
 
   group('adding students to a subject', () {
     test('offers only class members who are not already enrolled', () async {
-      when(() => remote.getClassRoster(
-            schoolId: any(named: 'schoolId'),
-            classId: any(named: 'classId'),
-            academicYearId: any(named: 'academicYearId'),
-            streamId: any(named: 'streamId'),
-          )).thenAnswer((_) async =>
-              [_student('s1', 'Amina'), _student('s2', 'Brian')]);
-      when(() => remote.getEnrollments(
-            schoolId: any(named: 'schoolId'),
-            subjectId: any(named: 'subjectId'),
-            classId: any(named: 'classId'),
-            academicYearId: any(named: 'academicYearId'),
-            streamId: any(named: 'streamId'),
-          )).thenAnswer((_) async => [_enrollment('s1')]);
+      when(
+        () => remote.getClassRoster(
+          schoolId: any(named: 'schoolId'),
+          classId: any(named: 'classId'),
+          academicYearId: any(named: 'academicYearId'),
+          streamId: any(named: 'streamId'),
+        ),
+      ).thenAnswer(
+        (_) async => [_student('s1', 'Amina'), _student('s2', 'Brian')],
+      );
+      when(
+        () => remote.getEnrollments(
+          schoolId: any(named: 'schoolId'),
+          subjectId: any(named: 'subjectId'),
+          classId: any(named: 'classId'),
+          academicYearId: any(named: 'academicYearId'),
+          streamId: any(named: 'streamId'),
+        ),
+      ).thenAnswer((_) async => [_enrollment('s1')]);
 
       final result = await repository.getEligibleStudents(context: _context());
 
@@ -256,16 +282,18 @@ void main() {
 
       expect(result.isRight(), isTrue);
       verify(() => remote.createEnrollments(any())).called(1);
-      verify(() => audit.record(
-            context: any(named: 'context'),
-            action: any(named: 'action'),
-            entityType: any(named: 'entityType'),
-            entityId: any(named: 'entityId'),
-            previousValue: any(named: 'previousValue'),
-            newValue: any(named: 'newValue'),
-            reason: any(named: 'reason'),
-            offlineOperationId: any(named: 'offlineOperationId'),
-          )).called(2);
+      verify(
+        () => audit.record(
+          context: any(named: 'context'),
+          action: any(named: 'action'),
+          entityType: any(named: 'entityType'),
+          entityId: any(named: 'entityId'),
+          previousValue: any(named: 'previousValue'),
+          newValue: any(named: 'newValue'),
+          reason: any(named: 'reason'),
+          offlineOperationId: any(named: 'offlineOperationId'),
+        ),
+      ).called(2);
     });
   });
 
@@ -289,11 +317,13 @@ void main() {
     });
 
     test('will not let a teacher drop a mandatory subject outright', () async {
-      when(() => remote.getEnrollmentsForStudent(
-            schoolId: any(named: 'schoolId'),
-            studentId: any(named: 'studentId'),
-            academicYearId: any(named: 'academicYearId'),
-          )).thenAnswer((_) async => [_enrollment('s1', isMandatory: true)]);
+      when(
+        () => remote.getEnrollmentsForStudent(
+          schoolId: any(named: 'schoolId'),
+          studentId: any(named: 'studentId'),
+          academicYearId: any(named: 'academicYearId'),
+        ),
+      ).thenAnswer((_) async => [_enrollment('s1', isMandatory: true)]);
 
       final result = await repository.removeStudent(
         context: _context(),
@@ -310,11 +340,13 @@ void main() {
     });
 
     test('closes the enrollment rather than deleting the record', () async {
-      when(() => remote.getEnrollmentsForStudent(
-            schoolId: any(named: 'schoolId'),
-            studentId: any(named: 'studentId'),
-            academicYearId: any(named: 'academicYearId'),
-          )).thenAnswer((_) async => [_enrollment('s1')]);
+      when(
+        () => remote.getEnrollmentsForStudent(
+          schoolId: any(named: 'schoolId'),
+          studentId: any(named: 'studentId'),
+          academicYearId: any(named: 'academicYearId'),
+        ),
+      ).thenAnswer((_) async => [_enrollment('s1')]);
 
       final result = await repository.removeStudent(
         context: _context(),
@@ -323,25 +355,29 @@ void main() {
         requiresApproval: false,
       );
 
-      expect(result.getOrElse(() => SubjectEnrollmentStatus.active),
-          SubjectEnrollmentStatus.removed);
+      expect(
+        result.getOrElse(() => SubjectEnrollmentStatus.active),
+        SubjectEnrollmentStatus.removed,
+      );
 
       // The row is updated, never deleted - the marks already recorded
       // against it have to survive.
-      final captured = verify(() => remote.updateEnrollment(captureAny()))
-          .captured
-          .single as SubjectEnrollment;
+      final captured =
+          verify(() => remote.updateEnrollment(captureAny())).captured.single
+              as SubjectEnrollment;
       expect(captured.status, SubjectEnrollmentStatus.removed);
       expect(captured.effectiveTo, isNotNull);
       expect(captured.removalReason, 'Switched to Fine Art');
     });
 
     test('holds the enrollment open when approval is required', () async {
-      when(() => remote.getEnrollmentsForStudent(
-            schoolId: any(named: 'schoolId'),
-            studentId: any(named: 'studentId'),
-            academicYearId: any(named: 'academicYearId'),
-          )).thenAnswer((_) async => [_enrollment('s1')]);
+      when(
+        () => remote.getEnrollmentsForStudent(
+          schoolId: any(named: 'schoolId'),
+          studentId: any(named: 'studentId'),
+          academicYearId: any(named: 'academicYearId'),
+        ),
+      ).thenAnswer((_) async => [_enrollment('s1')]);
 
       final result = await repository.removeStudent(
         context: _context(),
@@ -350,12 +386,14 @@ void main() {
         requiresApproval: true,
       );
 
-      expect(result.getOrElse(() => SubjectEnrollmentStatus.active),
-          SubjectEnrollmentStatus.pendingRemoval);
+      expect(
+        result.getOrElse(() => SubjectEnrollmentStatus.active),
+        SubjectEnrollmentStatus.pendingRemoval,
+      );
 
-      final captured = verify(() => remote.updateEnrollment(captureAny()))
-          .captured
-          .single as SubjectEnrollment;
+      final captured =
+          verify(() => remote.updateEnrollment(captureAny())).captured.single
+              as SubjectEnrollment;
       // Still in force until somebody approves it.
       expect(captured.removedAt, isNull);
       expect(captured.effectiveTo, isNull);

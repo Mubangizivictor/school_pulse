@@ -10,15 +10,23 @@ import '../repositories/relationship_repository.dart';
 /// (ordinary parents/staff never get write access to this collection at
 /// all), this usecase just requires a non-empty reason client-side too so
 /// the UI fails fast instead of round-tripping to a denied write.
-class ReallocateRelationship implements UseCase<ParentStudentRelationship, ReallocateRelationshipParams> {
+class ReallocateRelationship
+    implements
+        UseCase<ParentStudentRelationship, ReallocateRelationshipParams> {
   final RelationshipRepository repository;
 
   ReallocateRelationship(this.repository);
 
   @override
-  Future<Either<Failure, ParentStudentRelationship>> call(ReallocateRelationshipParams params) {
+  Future<Either<Failure, ParentStudentRelationship>> call(
+    ReallocateRelationshipParams params,
+  ) {
     if (params.reason.trim().isEmpty) {
-      return Future.value(const Left(ServerFailure('A reason is required to reallocate a relationship.')));
+      return Future.value(
+        const Left(
+          ServerFailure('A reason is required to reallocate a relationship.'),
+        ),
+      );
     }
     return repository.reallocateRelationship(
       schoolId: params.schoolId,
@@ -49,5 +57,12 @@ class ReallocateRelationshipParams extends Equatable {
   });
 
   @override
-  List<Object?> get props => [schoolId, relationshipId, reason, reallocatedBy, newUserId, newType];
+  List<Object?> get props => [
+    schoolId,
+    relationshipId,
+    reason,
+    reallocatedBy,
+    newUserId,
+    newType,
+  ];
 }

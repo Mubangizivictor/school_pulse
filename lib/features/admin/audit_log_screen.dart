@@ -31,7 +31,8 @@ class AuditLogScreen extends StatelessWidget {
             return const EmptyState(
               icon: Icons.error_outline_rounded,
               title: 'Couldn\'t load the audit log',
-              message: 'Something went wrong on our end. Pull to refresh or check back shortly.',
+              message:
+                  'Something went wrong on our end. Pull to refresh or check back shortly.',
             );
           }
           final logs = snapshot.data ?? const [];
@@ -50,19 +51,44 @@ class AuditLogScreen extends StatelessWidget {
               final log = logs[index];
               final color = _parseColor(log.colorHex);
               return AppCard(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: Container(
                     padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
-                    child: Icon(_iconMap[log.iconName] ?? Icons.info, size: 16, color: color),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      _iconMap[log.iconName] ?? Icons.info,
+                      size: 16,
+                      color: color,
+                    ),
                   ),
-                  title: Text(log.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                  subtitle: Text(log.description, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.outline)),
+                  title: Text(
+                    log.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                  subtitle: Text(
+                    log.description,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                  ),
                   trailing: Text(
                     _formatFull(log.timestamp),
-                    style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.outline),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
                   ),
                 ),
               );

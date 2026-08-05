@@ -10,7 +10,10 @@ class ReportReleasePolicyModel extends ReportReleasePolicy {
     super.restrictionMessage,
   });
 
-  factory ReportReleasePolicyModel.fromMap(Map<String, dynamic> map, String id) {
+  factory ReportReleasePolicyModel.fromMap(
+    Map<String, dynamic> map,
+    String id,
+  ) {
     return ReportReleasePolicyModel(
       id: id,
       schoolId: map['schoolId'] ?? '',
@@ -19,7 +22,9 @@ class ReportReleasePolicyModel extends ReportReleasePolicy {
         orElse: () => ReleaseOption.everyoneImmediate,
       ),
       releaseDate: (map['releaseDate'] as Timestamp?)?.toDate(),
-      restrictionMessage: map['restrictionMessage'] ?? "Your report card has been published but cannot be downloaded because your school's fee clearance policy has not yet been met. Please contact the Bursar for assistance.",
+      restrictionMessage:
+          map['restrictionMessage'] ??
+          "Your report card has been published but cannot be downloaded because your school's fee clearance policy has not yet been met. Please contact the Bursar for assistance.",
     );
   }
 
@@ -27,7 +32,9 @@ class ReportReleasePolicyModel extends ReportReleasePolicy {
     return {
       'schoolId': schoolId,
       'option': option.toString().split('.').last,
-      'releaseDate': releaseDate != null ? Timestamp.fromDate(releaseDate!) : null,
+      'releaseDate': releaseDate != null
+          ? Timestamp.fromDate(releaseDate!)
+          : null,
       'restrictionMessage': restrictionMessage,
     };
   }

@@ -55,19 +55,29 @@ class VisitorIdCardService {
                     padding: const pw.EdgeInsets.symmetric(vertical: 10),
                     decoration: const pw.BoxDecoration(
                       color: PdfColors.orange,
-                      borderRadius: pw.BorderRadius.vertical(top: pw.Radius.circular(8)),
+                      borderRadius: pw.BorderRadius.vertical(
+                        top: pw.Radius.circular(8),
+                      ),
                     ),
                     child: pw.Column(
                       children: [
                         pw.Text(
                           schoolName.toUpperCase(),
-                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12, color: PdfColors.white),
+                          style: pw.TextStyle(
+                            fontWeight: pw.FontWeight.bold,
+                            fontSize: 12,
+                            color: PdfColors.white,
+                          ),
                           textAlign: pw.TextAlign.center,
                         ),
                         pw.SizedBox(height: 4),
                         pw.Text(
                           'VISITOR PASS',
-                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: PdfColors.white),
+                          style: pw.TextStyle(
+                            fontWeight: pw.FontWeight.bold,
+                            fontSize: 10,
+                            color: PdfColors.white,
+                          ),
                         ),
                       ],
                     ),
@@ -79,26 +89,47 @@ class VisitorIdCardService {
                       height: 80,
                       decoration: pw.BoxDecoration(
                         shape: pw.BoxShape.circle,
-                        image: pw.DecorationImage(image: pw.MemoryImage(visitorPhotoBytes), fit: pw.BoxFit.cover),
+                        image: pw.DecorationImage(
+                          image: pw.MemoryImage(visitorPhotoBytes),
+                          fit: pw.BoxFit.cover,
+                        ),
                       ),
                     )
                   else
                     pw.Container(
                       width: 80,
                       height: 80,
-                      decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.orange100),
+                      decoration: const pw.BoxDecoration(
+                        shape: pw.BoxShape.circle,
+                        color: PdfColors.orange100,
+                      ),
                     ),
                   pw.SizedBox(height: 10),
-                  pw.Text(visitorName.toUpperCase(),
-                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16), textAlign: pw.TextAlign.center),
+                  pw.Text(
+                    visitorName.toUpperCase(),
+                    style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                    textAlign: pw.TextAlign.center,
+                  ),
                   pw.SizedBox(height: 15),
                   _buildCardRow('Host:', host),
                   _buildCardRow('Purpose:', purpose),
-                  _buildCardRow('Date:', arrivalTime.toLocal().toString().split(' ').first),
+                  _buildCardRow(
+                    'Date:',
+                    arrivalTime.toLocal().toString().split(' ').first,
+                  ),
                   pw.Spacer(),
                   pw.Image(pw.MemoryImage(qrBytes), width: 100, height: 100),
                   pw.SizedBox(height: 5),
-                  pw.Text(badgeNumber, style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
+                  pw.Text(
+                    badgeNumber,
+                    style: const pw.TextStyle(
+                      fontSize: 8,
+                      color: PdfColors.grey700,
+                    ),
+                  ),
                   pw.SizedBox(height: 12),
                 ],
               ),
@@ -117,8 +148,14 @@ class VisitorIdCardService {
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
-          pw.Text(label, style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
-          pw.Text(value, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+          pw.Text(
+            label,
+            style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+          ),
+          pw.Text(
+            value,
+            style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+          ),
         ],
       ),
     );

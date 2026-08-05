@@ -23,6 +23,7 @@ abstract class StructureRepository {
   Future<void> updateLevel(EducationalLevel level);
   Future<void> deleteLevel(String levelId);
   Future<void> archiveLevel(String levelId);
+  Future<void> restoreLevel(String levelId);
 
   // Academic Years
   Stream<List<AcademicYear>> watchAcademicYears(String schoolId);
@@ -30,6 +31,8 @@ abstract class StructureRepository {
   Future<void> updateAcademicYear(AcademicYear year);
   Future<void> deleteAcademicYear(String yearId);
   Future<void> setCurrentAcademicYear(String yearId, String schoolId);
+  Future<void> archiveAcademicYear(String yearId);
+  Future<void> restoreAcademicYear(String yearId);
 
   // Academic Terms
   Stream<List<AcademicTerm>> watchAcademicTerms(String schoolId);
@@ -37,6 +40,8 @@ abstract class StructureRepository {
   Future<void> updateAcademicTerm(AcademicTerm term);
   Future<void> deleteAcademicTerm(String termId);
   Future<void> setCurrentAcademicTerm(String termId, String schoolId);
+  Future<void> archiveAcademicTerm(String termId);
+  Future<void> restoreAcademicTerm(String termId);
 
   // Classes
   Stream<List<SchoolClass>> watchClasses(String schoolId);
@@ -44,12 +49,15 @@ abstract class StructureRepository {
   Future<void> updateClass(SchoolClass schoolClass);
   Future<void> deleteClass(String classId);
   Future<void> archiveClass(String classId);
+  Future<void> restoreClass(String classId);
 
   // Streams / Sections
   Stream<List<ClassStream>> watchStreams(String schoolId);
   Future<void> addStream(ClassStream stream);
   Future<void> updateStream(ClassStream stream);
   Future<void> deleteStream(String streamId);
+  Future<void> archiveStream(String streamId);
+  Future<void> restoreStream(String streamId);
 
   // Subjects
   Stream<List<Subject>> watchSubjects(String schoolId);
@@ -82,7 +90,10 @@ abstract class StructureRepository {
 
   // Institution Profile
   Stream<InstitutionProfile> watchInstitutionProfile(String schoolId);
-  Future<void> updateInstitutionProfile(InstitutionProfile profile, String schoolId);
+  Future<void> updateInstitutionProfile(
+    InstitutionProfile profile,
+    String schoolId,
+  );
 
   // Campuses
   Stream<List<Campus>> watchCampuses(String schoolId);
@@ -180,13 +191,17 @@ abstract class StructureRepository {
   Future<void> deleteAttendanceSession(String sessionId);
 
   // Announcement Categories
-  Stream<List<AnnouncementCategoryDef>> watchAnnouncementCategories(String schoolId);
+  Stream<List<AnnouncementCategoryDef>> watchAnnouncementCategories(
+    String schoolId,
+  );
   Future<void> addAnnouncementCategory(AnnouncementCategoryDef category);
   Future<void> updateAnnouncementCategory(AnnouncementCategoryDef category);
   Future<void> deleteAnnouncementCategory(String categoryId);
 
   // Notification Categories
-  Stream<List<NotificationCategoryDef>> watchNotificationCategories(String schoolId);
+  Stream<List<NotificationCategoryDef>> watchNotificationCategories(
+    String schoolId,
+  );
   Future<void> addNotificationCategory(NotificationCategoryDef category);
   Future<void> updateNotificationCategory(NotificationCategoryDef category);
   Future<void> deleteNotificationCategory(String categoryId);

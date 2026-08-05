@@ -31,7 +31,10 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Task Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const Text(
+              'Task Details',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: _titleController,
@@ -43,9 +46,11 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
             const SizedBox(height: 16),
             InkWell(
               onTap: () {
-                 Navigator.push(
+                Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const TaskTypeSelectionScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const TaskTypeSelectionScreen(),
+                  ),
                 );
               },
               child: InputDecorator(
@@ -54,10 +59,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(_category),
-                    const Icon(Icons.chevron_right),
-                  ],
+                  children: [Text(_category), const Icon(Icons.chevron_right)],
                 ),
               ),
             ),
@@ -71,11 +73,17 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            const Text('Assignment & Priority', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const Text(
+              'Assignment & Priority',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
             const SizedBox(height: 12),
             _buildDropdownField('Assigned to', 'Mrs. Akello Mary'),
             const SizedBox(height: 16),
-            const Text('Priority', style: TextStyle(fontSize: 14, color: Colors.grey)),
+            const Text(
+              'Priority',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -87,7 +95,10 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               ],
             ),
             const SizedBox(height: 24),
-            const Text('Schedule', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const Text(
+              'Schedule',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -100,7 +111,10 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Checklist', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Text(
+                  'Checklist',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
                 TextButton.icon(
                   onPressed: () {},
                   icon: const Icon(Icons.add, size: 18),
@@ -135,10 +149,14 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected ? color.withValues(alpha: 0.1) : Colors.transparent,
+            color: isSelected
+                ? color.withValues(alpha: 0.1)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: isSelected ? color : Theme.of(context).colorScheme.outlineVariant,
+              color: isSelected
+                  ? color
+                  : Theme.of(context).colorScheme.outlineVariant,
             ),
           ),
           child: Row(
@@ -153,7 +171,9 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               Text(
                 label,
                 style: TextStyle(
-                  color: isSelected ? color : Theme.of(context).colorScheme.onSurface,
+                  color: isSelected
+                      ? color
+                      : Theme.of(context).colorScheme.onSurface,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                   fontSize: 13,
                 ),
@@ -170,10 +190,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
       decoration: InputDecoration(labelText: label),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(value),
-          const Icon(Icons.arrow_drop_down),
-        ],
+        children: [Text(value), const Icon(Icons.arrow_drop_down)],
       ),
     );
   }
@@ -204,14 +221,20 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+          color: Theme.of(
+            context,
+          ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           children: [
             const Icon(Icons.drag_indicator, size: 20, color: Colors.grey),
             const SizedBox(width: 8),
-            const Icon(Icons.radio_button_unchecked, size: 20, color: Colors.grey),
+            const Icon(
+              Icons.radio_button_unchecked,
+              size: 20,
+              color: Colors.grey,
+            ),
             const SizedBox(width: 12),
             Expanded(child: Text(title, style: const TextStyle(fontSize: 14))),
             const Icon(Icons.close, size: 18, color: Colors.grey),

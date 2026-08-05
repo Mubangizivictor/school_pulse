@@ -1,6 +1,16 @@
 import 'package:flutter/material.dart';
 
-enum MessageType { text, image, video, file, audio, location, contact, poll, event }
+enum MessageType {
+  text,
+  image,
+  video,
+  file,
+  audio,
+  location,
+  contact,
+  poll,
+  event,
+}
 
 enum ChatType { direct, group, broadcast, channel, event }
 
@@ -41,11 +51,16 @@ class MessageContact {
 
   /// "Mr. Kofi Mensah" -> "KM", "Finance Office" -> "FO"
   String get initials {
-    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
     if (parts.isEmpty) return '?';
     if (parts.length == 1) {
       final single = parts.first;
-      return (single.length >= 2 ? single.substring(0, 2) : single).toUpperCase();
+      return (single.length >= 2 ? single.substring(0, 2) : single)
+          .toUpperCase();
     }
     return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
   }

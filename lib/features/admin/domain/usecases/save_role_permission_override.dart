@@ -5,7 +5,8 @@ import 'package:school_pulse/core/usecases/usecase.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/admin/domain/repositories/role_permission_override_repository.dart';
 
-class SaveRolePermissionOverride implements UseCase<void, SaveRolePermissionOverrideParams> {
+class SaveRolePermissionOverride
+    implements UseCase<void, SaveRolePermissionOverrideParams> {
   final RolePermissionOverrideRepository repository;
 
   SaveRolePermissionOverride(this.repository);

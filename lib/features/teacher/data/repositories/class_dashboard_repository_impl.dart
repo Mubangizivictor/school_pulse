@@ -47,17 +47,19 @@ class ClassDashboardRepositoryImpl implements ClassDashboardRepository {
 
     final classId = context.classId;
     if (classId == null || classId.isEmpty) {
-      return const Left(ValidationFailure(
-        'This responsibility is not tied to a class.',
-      ));
+      return const Left(
+        ValidationFailure('This responsibility is not tied to a class.'),
+      );
     }
 
     if (!await networkInfo.isConnected) {
       final cached = await _cached(context, classId);
       if (cached != null) return Right(cached);
-      return const Left(NetworkFailure(
-        'You are offline and this class has not been loaded on this device yet.',
-      ));
+      return const Left(
+        NetworkFailure(
+          'You are offline and this class has not been loaded on this device yet.',
+        ),
+      );
     }
 
     try {
@@ -94,7 +96,10 @@ class ClassDashboardRepositoryImpl implements ClassDashboardRepository {
       final activity = await activityFuture;
       final pending = await pendingFuture;
 
-      final totalStudents = roster.fold((_) => 0, (students) => students.length);
+      final totalStudents = roster.fold(
+        (_) => 0,
+        (students) => students.length,
+      );
 
       // Absences are derived from the roster rather than trusted from the
       // session document: a student admitted after the register was taken
@@ -102,18 +107,18 @@ class ClassDashboardRepositoryImpl implements ClassDashboardRepository {
       final resolvedAttendance = attendance == null
           ? const ClassAttendanceToday()
           : attendance.absentCount == 0 &&
-                  attendance.isSubmitted &&
-                  totalStudents > attendance.markedCount
-              ? ClassAttendanceToday(
-                  hasSession: attendance.hasSession,
-                  isSubmitted: attendance.isSubmitted,
-                  presentCount: attendance.presentCount,
-                  absentCount: totalStudents - attendance.markedCount,
-                  lateCount: attendance.lateCount,
-                  excusedCount: attendance.excusedCount,
-                  submittedAt: attendance.submittedAt,
-                )
-              : attendance;
+                attendance.isSubmitted &&
+                totalStudents > attendance.markedCount
+          ? ClassAttendanceToday(
+              hasSession: attendance.hasSession,
+              isSubmitted: attendance.isSubmitted,
+              presentCount: attendance.presentCount,
+              absentCount: totalStudents - attendance.markedCount,
+              lateCount: attendance.lateCount,
+              excusedCount: attendance.excusedCount,
+              submittedAt: attendance.submittedAt,
+            )
+          : attendance;
 
       final summary = ClassDashboardSummary(
         totalStudents: totalStudents,
@@ -140,9 +145,11 @@ class ClassDashboardRepositoryImpl implements ClassDashboardRepository {
     } catch (_) {
       final cached = await _cached(context, classId);
       if (cached != null) return Right(cached);
-      return const Left(ServerFailure(
-        'Could not load your class dashboard. Pull down to retry.',
-      ));
+      return const Left(
+        ServerFailure(
+          'Could not load your class dashboard. Pull down to retry.',
+        ),
+      );
     }
   }
 

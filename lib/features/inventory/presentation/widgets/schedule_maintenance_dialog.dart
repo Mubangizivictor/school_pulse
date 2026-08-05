@@ -11,7 +11,8 @@ class ScheduleMaintenanceDialog extends StatefulWidget {
   const ScheduleMaintenanceDialog({super.key, this.asset});
 
   @override
-  State<ScheduleMaintenanceDialog> createState() => _ScheduleMaintenanceDialogState();
+  State<ScheduleMaintenanceDialog> createState() =>
+      _ScheduleMaintenanceDialogState();
 }
 
 class _ScheduleMaintenanceDialogState extends State<ScheduleMaintenanceDialog> {
@@ -29,7 +30,9 @@ class _ScheduleMaintenanceDialogState extends State<ScheduleMaintenanceDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Schedule Maintenance ${widget.asset != null ? "for ${widget.asset!.name}" : ""}'),
+      title: Text(
+        'Schedule Maintenance ${widget.asset != null ? "for ${widget.asset!.name}" : ""}',
+      ),
       content: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -37,7 +40,9 @@ class _ScheduleMaintenanceDialogState extends State<ScheduleMaintenanceDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (widget.asset == null)
-                const Text('Please select an asset first (UI for selection to be added)'),
+                const Text(
+                  'Please select an asset first (UI for selection to be added)',
+                ),
               DropdownButtonFormField<MaintenanceType>(
                 initialValue: _type,
                 items: MaintenanceType.values.map((type) {
@@ -47,18 +52,25 @@ class _ScheduleMaintenanceDialogState extends State<ScheduleMaintenanceDialog> {
                   );
                 }).toList(),
                 onChanged: (val) => setState(() => _type = val!),
-                decoration: const InputDecoration(labelText: 'Maintenance Type'),
+                decoration: const InputDecoration(
+                  labelText: 'Maintenance Type',
+                ),
               ),
               TextFormField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Description / Task'),
+                decoration: const InputDecoration(
+                  labelText: 'Description / Task',
+                ),
                 maxLines: 2,
-                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Required' : null,
               ),
               const SizedBox(height: 16),
               ListTile(
                 title: const Text('Scheduled Date'),
-                subtitle: Text('${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}'),
+                subtitle: Text(
+                  '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                ),
                 trailing: const Icon(Icons.calendar_today),
                 onTap: _pickDate,
               ),
@@ -101,7 +113,9 @@ class _ScheduleMaintenanceDialogState extends State<ScheduleMaintenanceDialog> {
         status: MaintenanceStatus.scheduled,
       );
 
-      context.read<StoresAssetsBloc>().add(ScheduleMaintenanceRequested(maintenance));
+      context.read<StoresAssetsBloc>().add(
+        ScheduleMaintenanceRequested(maintenance),
+      );
       Navigator.pop(context);
     }
   }

@@ -33,18 +33,18 @@ class PayrollRecord extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        staffId,
-        staffName,
-        month,
-        baseSalary,
-        allowances,
-        bonuses,
-        deductions,
-        nssfEmployee,
-        nssfEmployer,
-        paye,
-        netPay,
-        createdAt,
-      ];
+    id,
+    staffId,
+    staffName,
+    month,
+    baseSalary,
+    allowances,
+    bonuses,
+    deductions,
+    nssfEmployee,
+    nssfEmployer,
+    paye,
+    netPay,
+    createdAt,
+  ];
 }

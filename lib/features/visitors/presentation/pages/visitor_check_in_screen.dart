@@ -31,7 +31,11 @@ class VisitorCheckInScreen extends StatefulWidget {
   final PreApprovedVisitor? preApprovedVisitor;
   final ScheduledVisit? scheduledVisit;
 
-  const VisitorCheckInScreen({super.key, this.preApprovedVisitor, this.scheduledVisit});
+  const VisitorCheckInScreen({
+    super.key,
+    this.preApprovedVisitor,
+    this.scheduledVisit,
+  });
 
   @override
   State<VisitorCheckInScreen> createState() => _VisitorCheckInScreenState();
@@ -136,18 +140,22 @@ class _VisitorCheckInScreenState extends State<VisitorCheckInScreen> {
     setState(() {
       _selectedStudent = student;
       if (_purposeController.text.isEmpty) {
-        _purposeController.text = 'Visiting ${student.name} (${student.className})';
+        _purposeController.text =
+            'Visiting ${student.name} (${student.className})';
       }
     });
   }
 
   Future<String?> _saveSignature() async {
     if (_signatureImage == null) return null;
-    final byteData = await _signatureImage!.toByteData(format: ui.ImageByteFormat.png);
+    final byteData = await _signatureImage!.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
     if (byteData == null) return null;
-    
+
     final directory = await getApplicationDocumentsDirectory();
-    final path = '${directory.path}/signature_${DateTime.now().millisecondsSinceEpoch}.png';
+    final path =
+        '${directory.path}/signature_${DateTime.now().millisecondsSinceEpoch}.png';
     final file = File(path);
     await file.writeAsBytes(byteData.buffer.asUint8List());
     return path;
@@ -156,9 +164,13 @@ class _VisitorCheckInScreenState extends State<VisitorCheckInScreen> {
   void _checkBlacklist(String phone) {
     final state = context.read<VisitorsBloc>().state;
     if (state is VisitorsLoaded) {
-      final isBlacklisted = state.blacklist.any((b) =>
-          (b.phone.isNotEmpty && b.phone == phone) ||
-          (b.fullName.isNotEmpty && b.fullName.toLowerCase() == _fullNameController.text.toLowerCase()));
+      final isBlacklisted = state.blacklist.any(
+        (b) =>
+            (b.phone.isNotEmpty && b.phone == phone) ||
+            (b.fullName.isNotEmpty &&
+                b.fullName.toLowerCase() ==
+                    _fullNameController.text.toLowerCase()),
+      );
       if (isBlacklisted != _isBlacklisted) {
         setState(() {
           _isBlacklisted = isBlacklisted;
@@ -173,7 +185,9 @@ class _VisitorCheckInScreenState extends State<VisitorCheckInScreen> {
       final authState = context.read<AuthBloc>().state;
       if (authState is AuthAuthenticated) {
         if (!mounted) return;
-        context.read<VisitorsBloc>().add(SearchVisitorsEvent(authState.user.schoolId, phone));
+        context.read<VisitorsBloc>().add(
+          SearchVisitorsEvent(authState.user.schoolId, phone),
+        );
       }
     }
   }
@@ -191,13 +205,17 @@ class _VisitorCheckInScreenState extends State<VisitorCheckInScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_category == VisitorCategory.parent && _selectedStudent == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select which student this parent is visiting')),
+        const SnackBar(
+          content: Text('Please select which student this parent is visiting'),
+        ),
       );
       return;
     }
     if (!_agreementAccepted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please accept the visitor agreement to continue')),
+        const SnackBar(
+          content: Text('Please accept the visitor agreement to continue'),
+        ),
       );
       return;
     }
@@ -206,7 +224,10 @@ class _VisitorCheckInScreenState extends State<VisitorCheckInScreen> {
     if (authState is! AuthAuthenticated) return;
 
     final gates = _availableGates(context);
-    final selectedGate = (_selectedGate != null && gates.contains(_selectedGate)) ? _selectedGate! : gates.first;
+    final selectedGate =
+        (_selectedGate != null && gates.contains(_selectedGate))
+        ? _selectedGate!
+        : gates.first;
 
     final signaturePath = await _saveSignature();
     if (!mounted) return;
@@ -216,16 +237,24 @@ class _VisitorCheckInScreenState extends State<VisitorCheckInScreen> {
       schoolId: authState.user.schoolId,
       fullName: _fullNameController.text,
       phone: _phoneController.text,
-      vehicleNumber: _vehicleNumberController.text.isEmpty ? null : _vehicleNumberController.text,
-      parkingSlot: _parkingSlotController.text.isEmpty ? null : _parkingSlotController.text,
+      vehicleNumber: _vehicleNumberController.text.isEmpty
+          ? null
+          : _vehicleNumberController.text,
+      parkingSlot: _parkingSlotController.text.isEmpty
+          ? null
+          : _parkingSlotController.text,
       company: _companyController.text.isEmpty ? null : _companyController.text,
       host: _hostController.text,
       hostId: widget.scheduledVisit?.hostId,
       department: _departmentController.text,
       purpose: _purposeController.text,
       category: _category,
-      expectedDuration: _expectedDurationController.text.isEmpty ? null : _expectedDurationController.text,
-      itemsCarried: _itemsCarriedController.text.isEmpty ? null : _itemsCarriedController.text,
+      expectedDuration: _expectedDurationController.text.isEmpty
+          ? null
+          : _expectedDurationController.text,
+      itemsCarried: _itemsCarriedController.text.isEmpty
+          ? null
+          : _itemsCarriedController.text,
       notes: _notesController.text.isEmpty ? null : _notesController.text,
       arrivalTime: DateTime.now(),
       status: VisitorStatus.checkedIn,
@@ -240,14 +269,13 @@ class _VisitorCheckInScreenState extends State<VisitorCheckInScreen> {
       studentId: _selectedStudent?.id,
     );
 
-    context.read<VisitorsBloc>().add(CheckInNewVisitor(
-          visitor,
-          preApprovedId: widget.preApprovedVisitor?.id,
-        ));
-    
+    context.read<VisitorsBloc>().add(
+      CheckInNewVisitor(visitor, preApprovedId: widget.preApprovedVisitor?.id),
+    );
+
     // Show Preview/Print Badge Dialog
     if (!mounted) return;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -259,21 +287,31 @@ class _VisitorCheckInScreenState extends State<VisitorCheckInScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => context.pop(), child: const Text('Close')),
-          ElevatedButton(onPressed: () async {
-            final printerService = sl<PrinterService>();
-            final isConnected = await printerService.isConnected();
-            if (isConnected) {
-              await printerService.printVisitorBadge(visitor);
-              if (context.mounted) context.pop();
-            } else {
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Printer not connected. Please check settings.')),
-                );
+          TextButton(
+            onPressed: () => context.pop(),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final printerService = sl<PrinterService>();
+              final isConnected = await printerService.isConnected();
+              if (isConnected) {
+                await printerService.printVisitorBadge(visitor);
+                if (context.mounted) context.pop();
+              } else {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Printer not connected. Please check settings.',
+                      ),
+                    ),
+                  );
+                }
               }
-            }
-          }, child: const Text('Print Badge')),
+            },
+            child: const Text('Print Badge'),
+          ),
         ],
       ),
     ).then((_) {
@@ -295,7 +333,12 @@ class _VisitorCheckInScreenState extends State<VisitorCheckInScreen> {
               color: Colors.grey[200],
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: Theme.of(context).dividerColor),
-              image: _idImage != null ? DecorationImage(image: FileImage(_idImage!), fit: BoxFit.cover) : null,
+              image: _idImage != null
+                  ? DecorationImage(
+                      image: FileImage(_idImage!),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
             ),
             child: _idImage == null
                 ? const Icon(Icons.badge_outlined, color: Colors.grey)
@@ -307,13 +350,21 @@ class _VisitorCheckInScreenState extends State<VisitorCheckInScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('National ID / Passport photo (optional)', style: Theme.of(context).textTheme.bodyMedium),
+              Text(
+                'National ID / Passport photo (optional)',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
               const SizedBox(height: 4),
               Row(
                 children: [
                   TextButton.icon(
                     onPressed: _takeIdPhoto,
-                    icon: Icon(_idImage == null ? Icons.camera_alt_outlined : Icons.refresh, size: 18),
+                    icon: Icon(
+                      _idImage == null
+                          ? Icons.camera_alt_outlined
+                          : Icons.refresh,
+                      size: 18,
+                    ),
                     label: Text(_idImage == null ? 'Take Photo' : 'Retake'),
                   ),
                   if (_idImage != null)
@@ -340,7 +391,10 @@ class _VisitorCheckInScreenState extends State<VisitorCheckInScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Which student are you visiting? *', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text(
+            'Which student are you visiting? *',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           TextField(
             controller: _studentSearchController,
@@ -349,7 +403,10 @@ class _VisitorCheckInScreenState extends State<VisitorCheckInScreen> {
               prefixIcon: const Icon(Icons.search),
               filled: true,
               fillColor: Theme.of(context).colorScheme.surface,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
               isDense: true,
             ),
             onChanged: (query) {
@@ -385,7 +442,8 @@ class _VisitorCheckInScreenState extends State<VisitorCheckInScreen> {
           ] else
             BlocBuilder<StudentsBloc, StudentsState>(
               builder: (context, state) {
-                if (_studentSearchController.text.trim().isEmpty) return const SizedBox.shrink();
+                if (_studentSearchController.text.trim().isEmpty)
+                  return const SizedBox.shrink();
                 if (state is StudentsLoading) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 12),
@@ -415,7 +473,9 @@ class _VisitorCheckInScreenState extends State<VisitorCheckInScreen> {
                           dense: true,
                           leading: const Icon(Icons.school_outlined),
                           title: Text(student.name),
-                          subtitle: Text('${student.className} • ${student.studentId}'),
+                          subtitle: Text(
+                            '${student.className} • ${student.studentId}',
+                          ),
                           onTap: () => _onStudentSelected(student),
                         );
                       },
@@ -433,9 +493,7 @@ class _VisitorCheckInScreenState extends State<VisitorCheckInScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Visitor Check-in'),
-      ),
+      appBar: AppBar(title: const Text('Visitor Check-in')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -446,7 +504,8 @@ class _VisitorCheckInScreenState extends State<VisitorCheckInScreen> {
               if (_isBlacklisted)
                 const AlertBanner(
                   title: 'Blacklist Warning',
-                  message: 'This visitor is on the blacklist. Please follow security protocols.',
+                  message:
+                      'This visitor is on the blacklist. Please follow security protocols.',
                   color: Colors.red,
                   icon: Icons.warning,
                 ),
@@ -456,9 +515,15 @@ class _VisitorCheckInScreenState extends State<VisitorCheckInScreen> {
                     CircleAvatar(
                       radius: 60,
                       backgroundColor: Colors.grey[200],
-                      backgroundImage: _image != null ? FileImage(_image!) : null,
+                      backgroundImage: _image != null
+                          ? FileImage(_image!)
+                          : null,
                       child: _image == null
-                          ? const Icon(Icons.person, size: 60, color: Colors.grey)
+                          ? const Icon(
+                              Icons.person,
+                              size: 60,
+                              color: Colors.grey,
+                            )
                           : null,
                     ),
                     Positioned(
@@ -467,7 +532,10 @@ class _VisitorCheckInScreenState extends State<VisitorCheckInScreen> {
                       child: CircleAvatar(
                         backgroundColor: Theme.of(context).primaryColor,
                         child: IconButton(
-                          icon: const Icon(Icons.camera_alt, color: Colors.white),
+                          icon: const Icon(
+                            Icons.camera_alt,
+                            color: Colors.white,
+                          ),
                           onPressed: _takePhoto,
                         ),
                       ),
@@ -479,7 +547,10 @@ class _VisitorCheckInScreenState extends State<VisitorCheckInScreen> {
               Center(
                 child: Text(
                   'Visitor photo (optional)',
-                  style: TextStyle(color: Theme.of(context).colorScheme.outline, fontSize: 12),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.outline,
+                    fontSize: 12,
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
@@ -488,26 +559,51 @@ class _VisitorCheckInScreenState extends State<VisitorCheckInScreen> {
                   Expanded(
                     child: DropdownButtonFormField<VisitorCategory>(
                       initialValue: _category,
-                      decoration: const InputDecoration(labelText: 'Category', prefixIcon: Icon(Icons.category_outlined)),
-                      items: VisitorCategory.values.map((c) => DropdownMenuItem(value: c, child: Text(c.name.toUpperCase()))).toList(),
+                      decoration: const InputDecoration(
+                        labelText: 'Category',
+                        prefixIcon: Icon(Icons.category_outlined),
+                      ),
+                      items: VisitorCategory.values
+                          .map(
+                            (c) => DropdownMenuItem(
+                              value: c,
+                              child: Text(c.name.toUpperCase()),
+                            ),
+                          )
+                          .toList(),
                       onChanged: (v) => setState(() {
                         _category = v!;
-                        if (_category != VisitorCategory.parent) _selectedStudent = null;
+                        if (_category != VisitorCategory.parent)
+                          _selectedStudent = null;
                       }),
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: Builder(builder: (context) {
-                      final gates = _availableGates(context);
-                      final selected = (_selectedGate != null && gates.contains(_selectedGate)) ? _selectedGate : gates.first;
-                      return DropdownButtonFormField<String>(
-                        initialValue: selected,
-                        decoration: const InputDecoration(labelText: 'Gate', prefixIcon: Icon(Icons.door_front_door_outlined)),
-                        items: gates.map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
-                        onChanged: (v) => setState(() => _selectedGate = v),
-                      );
-                    }),
+                    child: Builder(
+                      builder: (context) {
+                        final gates = _availableGates(context);
+                        final selected =
+                            (_selectedGate != null &&
+                                gates.contains(_selectedGate))
+                            ? _selectedGate
+                            : gates.first;
+                        return DropdownButtonFormField<String>(
+                          initialValue: selected,
+                          decoration: const InputDecoration(
+                            labelText: 'Gate',
+                            prefixIcon: Icon(Icons.door_front_door_outlined),
+                          ),
+                          items: gates
+                              .map(
+                                (g) =>
+                                    DropdownMenuItem(value: g, child: Text(g)),
+                              )
+                              .toList(),
+                          onChanged: (v) => setState(() => _selectedGate = v),
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),
@@ -529,12 +625,16 @@ class _VisitorCheckInScreenState extends State<VisitorCheckInScreen> {
                   prefixIcon: const Icon(Icons.phone_outlined),
                   suffixIcon: BlocBuilder<VisitorsBloc, VisitorsState>(
                     builder: (context, state) {
-                      if (state is VisitorsLoaded && _phoneController.text.length >= 9) {
-                        final history = state.visitors.where((v) => v.phone == _phoneController.text).toList();
+                      if (state is VisitorsLoaded &&
+                          _phoneController.text.length >= 9) {
+                        final history = state.visitors
+                            .where((v) => v.phone == _phoneController.text)
+                            .toList();
                         if (history.isNotEmpty) {
                           return IconButton(
                             icon: const Icon(Icons.history, color: Colors.blue),
-                            onPressed: () => _autoFillFromHistory(history.first),
+                            onPressed: () =>
+                                _autoFillFromHistory(history.first),
                             tooltip: 'Auto-fill from history',
                           );
                         }
@@ -625,13 +725,19 @@ class _VisitorCheckInScreenState extends State<VisitorCheckInScreen> {
               const SizedBox(height: 12),
               CheckboxListTile(
                 value: _agreementAccepted,
-                onChanged: (v) => setState(() => _agreementAccepted = v ?? false),
+                onChanged: (v) =>
+                    setState(() => _agreementAccepted = v ?? false),
                 controlAffinity: ListTileControlAffinity.leading,
                 contentPadding: EdgeInsets.zero,
-                title: const Text('I have read and agree to the visitor agreement above'),
+                title: const Text(
+                  'I have read and agree to the visitor agreement above',
+                ),
               ),
               const SizedBox(height: 8),
-              const Text('Visitor Signature (optional)', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text(
+                'Visitor Signature (optional)',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 8),
               SignaturePad(
                 onChanged: (image) {
@@ -639,10 +745,7 @@ class _VisitorCheckInScreenState extends State<VisitorCheckInScreen> {
                 },
               ),
               const SizedBox(height: 32),
-              PrimaryButton(
-                label: 'Check In Visitor',
-                onPressed: _submit,
-              ),
+              PrimaryButton(label: 'Check In Visitor', onPressed: _submit),
               const SizedBox(height: 16),
             ],
           ),
@@ -651,4 +754,3 @@ class _VisitorCheckInScreenState extends State<VisitorCheckInScreen> {
     );
   }
 }
-

@@ -9,9 +9,7 @@ class TeacherSubjectsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        title: const Text('My Subjects'),
-      ),
+      appBar: AppBar(title: const Text('My Subjects')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -80,11 +78,17 @@ class _SubjectCard extends StatelessWidget {
               children: [
                 Text(
                   subject,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
                 Text(
                   className,
-                  style: TextStyle(color: AppColors.textSecondary(context), fontSize: 14),
+                  style: TextStyle(
+                    color: AppColors.textSecondary(context),
+                    fontSize: 14,
+                  ),
                 ),
               ],
             ),
@@ -94,11 +98,17 @@ class _SubjectCard extends StatelessWidget {
             children: [
               Text(
                 '$students',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
               Text(
                 'Students',
-                style: TextStyle(color: AppColors.textMuted(context), fontSize: 12),
+                style: TextStyle(
+                  color: AppColors.textMuted(context),
+                  fontSize: 12,
+                ),
               ),
             ],
           ),
@@ -108,11 +118,17 @@ class _SubjectCard extends StatelessWidget {
             children: [
               Text(
                 '$periodsPerWeek',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
               Text(
                 'Periods/Week',
-                style: TextStyle(color: AppColors.textMuted(context), fontSize: 12),
+                style: TextStyle(
+                  color: AppColors.textMuted(context),
+                  fontSize: 12,
+                ),
               ),
             ],
           ),

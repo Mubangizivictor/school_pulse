@@ -69,67 +69,127 @@ void main() {
     );
   });
 
-  test('checks permission even for an unresolved identity, then denies with the unresolved reason', () async {
-    const unresolved = UnresolvedResolvedIdentity(reason: 'unknown_credential');
-    when(() => permissionEvaluator.can(Permission.securityIdentityVerify, operatorUser, gate: gate))
-        .thenAnswer((_) async => const Right(true));
+  test(
+    'checks permission even for an unresolved identity, then denies with the unresolved reason',
+    () async {
+      const unresolved = UnresolvedResolvedIdentity(
+        reason: 'unknown_credential',
+      );
+      when(
+        () => permissionEvaluator.can(
+          Permission.securityIdentityVerify,
+          operatorUser,
+          gate: gate,
+        ),
+      ).thenAnswer((_) async => const Right(true));
 
-    final result = await policy.evaluate(identity: unresolved, context: context);
+      final result = await policy.evaluate(
+        identity: unresolved,
+        context: context,
+      );
 
-    expect(result.isRight(), isTrue);
-    final decision = result.getOrElse(() => throw Exception());
-    expect(decision.outcome, VerificationOutcome.denied);
-    expect(decision.reasonCode, 'unknown_credential');
-    verify(() => permissionEvaluator.can(Permission.securityIdentityVerify, operatorUser, gate: gate)).called(1);
-  });
+      expect(result.isRight(), isTrue);
+      final decision = result.getOrElse(() => throw Exception());
+      expect(decision.outcome, VerificationOutcome.denied);
+      expect(decision.reasonCode, 'unknown_credential');
+      verify(
+        () => permissionEvaluator.can(
+          Permission.securityIdentityVerify,
+          operatorUser,
+          gate: gate,
+        ),
+      ).called(1);
+    },
+  );
 
-  test('denies an unauthorized operator with NOT_AUTHORIZED even for an unresolved identity, never leaking the reason', () async {
-    const unresolved = UnresolvedResolvedIdentity(reason: 'unknown_credential');
-    when(() => permissionEvaluator.can(Permission.securityIdentityVerify, operatorUser, gate: gate))
-        .thenAnswer((_) async => const Right(false));
+  test(
+    'denies an unauthorized operator with NOT_AUTHORIZED even for an unresolved identity, never leaking the reason',
+    () async {
+      const unresolved = UnresolvedResolvedIdentity(
+        reason: 'unknown_credential',
+      );
+      when(
+        () => permissionEvaluator.can(
+          Permission.securityIdentityVerify,
+          operatorUser,
+          gate: gate,
+        ),
+      ).thenAnswer((_) async => const Right(false));
 
-    final result = await policy.evaluate(identity: unresolved, context: context);
+      final result = await policy.evaluate(
+        identity: unresolved,
+        context: context,
+      );
 
-    final decision = result.getOrElse(() => throw Exception());
-    expect(decision.outcome, VerificationOutcome.denied);
-    expect(decision.reasonCode, 'NOT_AUTHORIZED');
-  });
+      final decision = result.getOrElse(() => throw Exception());
+      expect(decision.outcome, VerificationOutcome.denied);
+      expect(decision.reasonCode, 'NOT_AUTHORIZED');
+    },
+  );
 
-  test('denies when the operator lacks the security.identity.verify permission', () async {
-    when(() => permissionEvaluator.can(Permission.securityIdentityVerify, operatorUser, gate: gate))
-        .thenAnswer((_) async => const Right(false));
+  test(
+    'denies when the operator lacks the security.identity.verify permission',
+    () async {
+      when(
+        () => permissionEvaluator.can(
+          Permission.securityIdentityVerify,
+          operatorUser,
+          gate: gate,
+        ),
+      ).thenAnswer((_) async => const Right(false));
 
-    final result = await policy.evaluate(identity: student, context: context);
+      final result = await policy.evaluate(identity: student, context: context);
 
-    final decision = result.getOrElse(() => throw Exception());
-    expect(decision.outcome, VerificationOutcome.denied);
-    expect(decision.reasonCode, 'NOT_AUTHORIZED');
-  });
+      final decision = result.getOrElse(() => throw Exception());
+      expect(decision.outcome, VerificationOutcome.denied);
+      expect(decision.reasonCode, 'NOT_AUTHORIZED');
+    },
+  );
 
-  test('allows and suggests "In" when the student has no movements recorded today', () async {
-    when(() => permissionEvaluator.can(Permission.securityIdentityVerify, operatorUser, gate: gate))
-        .thenAnswer((_) async => const Right(true));
-    when(() => securityRepository.watchStudentMovements(
+  test(
+    'allows and suggests "In" when the student has no movements recorded today',
+    () async {
+      when(
+        () => permissionEvaluator.can(
+          Permission.securityIdentityVerify,
+          operatorUser,
+          gate: gate,
+        ),
+      ).thenAnswer((_) async => const Right(true));
+      when(
+        () => securityRepository.watchStudentMovements(
           'school-1',
           date: any(named: 'date'),
           gateId: 'gate-1',
-        )).thenAnswer((_) => Stream.value(const []));
+        ),
+      ).thenAnswer((_) => Stream.value(const []));
 
-    final result = await policy.evaluate(identity: student, context: context);
+      final result = await policy.evaluate(identity: student, context: context);
 
-    final decision = result.getOrElse(() => throw Exception());
-    expect(decision.outcome, VerificationOutcome.allowed);
-    expect(decision.suggestedDirection, 'In');
-  });
+      final decision = result.getOrElse(() => throw Exception());
+      expect(decision.outcome, VerificationOutcome.allowed);
+      expect(decision.suggestedDirection, 'In');
+    },
+  );
 
-  test('suggests "Out" when the student\'s last movement today was "In"', () async {
-    when(() => permissionEvaluator.can(Permission.securityIdentityVerify, operatorUser, gate: gate))
-        .thenAnswer((_) async => const Right(true));
-    when(() => securityRepository.watchStudentMovements(
+  test(
+    'suggests "Out" when the student\'s last movement today was "In"',
+    () async {
+      when(
+        () => permissionEvaluator.can(
+          Permission.securityIdentityVerify,
+          operatorUser,
+          gate: gate,
+        ),
+      ).thenAnswer((_) async => const Right(true));
+      when(
+        () => securityRepository.watchStudentMovements(
           'school-1',
           date: any(named: 'date'),
           gateId: 'gate-1',
-        )).thenAnswer((_) => Stream.value([
+        ),
+      ).thenAnswer(
+        (_) => Stream.value([
           StudentMovement(
             id: 'm1',
             studentId: 'student-1',
@@ -144,12 +204,14 @@ void main() {
             deviceId: 'device-1',
             schoolId: 'school-1',
           ),
-        ]));
+        ]),
+      );
 
-    final result = await policy.evaluate(identity: student, context: context);
+      final result = await policy.evaluate(identity: student, context: context);
 
-    final decision = result.getOrElse(() => throw Exception());
-    expect(decision.outcome, VerificationOutcome.allowed);
-    expect(decision.suggestedDirection, 'Out');
-  });
+      final decision = result.getOrElse(() => throw Exception());
+      expect(decision.outcome, VerificationOutcome.allowed);
+      expect(decision.suggestedDirection, 'Out');
+    },
+  );
 }

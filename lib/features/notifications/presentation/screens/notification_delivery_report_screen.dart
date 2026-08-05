@@ -54,9 +54,9 @@ class NotificationDeliveryReportScreen extends StatelessWidget {
     return _ReportScaffold(
       child: StreamBuilder<List<NotificationDeliveryReport>>(
         stream: di.sl<NotificationSendService>().watchMyRequests(
-              schoolId: user.schoolId,
-              senderId: user.id,
-            ),
+          schoolId: user.schoolId,
+          senderId: user.id,
+        ),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
@@ -136,8 +136,10 @@ class _SummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sent = reports.where((r) => r.isSent).toList();
-    final totalRecipients =
-        sent.fold<int>(0, (sum, r) => sum + r.recipientCount);
+    final totalRecipients = sent.fold<int>(
+      0,
+      (sum, r) => sum + r.recipientCount,
+    );
     final totalSuccess = sent.fold<int>(0, (sum, r) => sum + r.successCount);
     final totalFailure = sent.fold<int>(0, (sum, r) => sum + r.failureCount);
     final scheduled = reports.where((r) => r.isScheduled).length;

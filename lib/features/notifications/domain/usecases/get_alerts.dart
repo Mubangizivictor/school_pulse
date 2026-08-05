@@ -8,7 +8,10 @@ class GetAlerts {
 
   GetAlerts(this.repository);
 
-  Future<Either<Failure, List<Alert>>> call(List<String> studentIds, {List<String> groups = const []}) async {
+  Future<Either<Failure, List<Alert>>> call(
+    List<String> studentIds, {
+    List<String> groups = const [],
+  }) async {
     return await repository.getAlerts(studentIds, groups: groups);
   }
 }

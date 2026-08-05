@@ -41,5 +41,11 @@ class SendNotification extends NotificationsEvent {
   });
 
   @override
-  List<Object> get props => [title, body, targetGroups, imageUrl ?? '', isAnnouncement];
+  List<Object> get props => [
+    title,
+    body,
+    targetGroups,
+    imageUrl ?? '',
+    isAnnouncement,
+  ];
 }

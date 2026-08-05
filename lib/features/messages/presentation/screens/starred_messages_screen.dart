@@ -36,7 +36,10 @@ class StarredMessagesScreen extends StatelessWidget {
           stream: context.messages.watchStarredMessages(user.id),
           builder: (context, snapshot) {
             if (snapshot.hasError) {
-              return _buildMessage(context, 'Could not load starred messages.\n${snapshot.error}');
+              return _buildMessage(
+                context,
+                'Could not load starred messages.\n${snapshot.error}',
+              );
             }
             if (!snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
@@ -55,13 +58,18 @@ class StarredMessagesScreen extends StatelessWidget {
               itemBuilder: (context, index) {
                 final ref = starred[index];
                 return InkWell(
-                  onTap: () => context.push('/messages/chat/${ref.conversationId}'),
+                  onTap: () =>
+                      context.push('/messages/chat/${ref.conversationId}'),
                   child: Container(
                     margin: const EdgeInsets.only(bottom: AppSpacing.m),
                     decoration: BoxDecoration(
                       color: isDark ? AppColors.surfaceDark : Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+                      border: Border.all(
+                        color: isDark
+                            ? AppColors.borderDark
+                            : AppColors.borderLight,
+                      ),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(AppSpacing.m),
@@ -77,7 +85,10 @@ class StarredMessagesScreen extends StatelessWidget {
                                   ref.message.senderName.isEmpty
                                       ? '?'
                                       : ref.message.senderName[0].toUpperCase(),
-                                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -85,15 +96,25 @@ class StarredMessagesScreen extends StatelessWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(ref.message.senderName, style: AppTypography.titleSmall),
-                                    Text('in ${ref.conversationTitle}',
-                                        style: AppTypography.labelSmall
-                                            .copyWith(color: AppColors.textMuted(context))),
+                                    Text(
+                                      ref.message.senderName,
+                                      style: AppTypography.titleSmall,
+                                    ),
+                                    Text(
+                                      'in ${ref.conversationTitle}',
+                                      style: AppTypography.labelSmall.copyWith(
+                                        color: AppColors.textMuted(context),
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.star, size: 18, color: AppColors.goldenYellow),
+                                icon: const Icon(
+                                  Icons.star,
+                                  size: 18,
+                                  color: AppColors.goldenYellow,
+                                ),
                                 onPressed: () => context.messages.setStarred(
                                   ref.conversationId,
                                   ref.message.id,
@@ -115,9 +136,12 @@ class StarredMessagesScreen extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
                               Text(
-                                DateFormat('h:mm a • dd/MM/yy').format(ref.message.timestamp),
-                                style: AppTypography.labelSmall
-                                    .copyWith(color: AppColors.textMuted(context)),
+                                DateFormat(
+                                  'h:mm a • dd/MM/yy',
+                                ).format(ref.message.timestamp),
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: AppColors.textMuted(context),
+                                ),
                               ),
                             ],
                           ),
@@ -141,7 +165,9 @@ class StarredMessagesScreen extends StatelessWidget {
         child: Text(
           text,
           textAlign: TextAlign.center,
-          style: AppTypography.bodyMedium.copyWith(color: AppColors.textMuted(context)),
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textMuted(context),
+          ),
         ),
       ),
     );

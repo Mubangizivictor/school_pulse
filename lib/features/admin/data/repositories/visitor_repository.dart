@@ -10,15 +10,17 @@ class VisitorRepository {
         .collection('visitors')
         .orderBy('checkIn', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Visitor.fromMap(doc.data(), doc.id))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => Visitor.fromMap(doc.data(), doc.id))
+              .toList(),
+        );
   }
 
-  Future<List<Visitor>> getVisitorsOnce() async {
+  Future<List<Visitor>> getVisitorsOnce(String schoolId) async {
     final snapshot = await _firestore
         .collection('visitors')
-        .orderBy('checkIn', descending: true)
+        .where('schoolId', isEqualTo: schoolId)
         .get();
     return snapshot.docs
         .map((doc) => Visitor.fromMap(doc.data(), doc.id))
@@ -41,9 +43,11 @@ class VisitorRepository {
         .collection('appointments')
         .orderBy('scheduledTime', descending: false)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Appointment.fromMap(doc.data(), doc.id))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => Appointment.fromMap(doc.data(), doc.id))
+              .toList(),
+        );
   }
 
   Future<void> createAppointment(Appointment appointment) async {

@@ -7,7 +7,8 @@ import 'package:school_pulse/features/verification/domain/entities/scan_credenti
 import 'package:school_pulse/features/verification/domain/entities/verification_context.dart';
 import 'package:school_pulse/features/verification/presentation/adapters/fingerprint_credential_reader_adapter.dart';
 
-class MockBiometricDeviceService extends Mock implements BiometricDeviceService {}
+class MockBiometricDeviceService extends Mock
+    implements BiometricDeviceService {}
 
 void main() {
   late MockBiometricDeviceService deviceService;
@@ -70,19 +71,24 @@ void main() {
     verify(() => deviceService.disconnect()).called(1);
   });
 
-  test('captureForClaimedIdentity emits a FingerprintScanCredential carrying the claimed identity', () async {
-    final emitted = <FingerprintScanCredential>[];
-    adapter.credentials.listen((c) => emitted.add(c as FingerprintScanCredential));
+  test(
+    'captureForClaimedIdentity emits a FingerprintScanCredential carrying the claimed identity',
+    () async {
+      final emitted = <FingerprintScanCredential>[];
+      adapter.credentials.listen(
+        (c) => emitted.add(c as FingerprintScanCredential),
+      );
 
-    await adapter.captureForClaimedIdentity(
-      claimedIdentityId: 'student-1',
-      claimedIdentityType: 'student',
-      deviceId: 'device-1',
-    );
-    await Future.delayed(Duration.zero);
+      await adapter.captureForClaimedIdentity(
+        claimedIdentityId: 'student-1',
+        claimedIdentityType: 'student',
+        deviceId: 'device-1',
+      );
+      await Future.delayed(Duration.zero);
 
-    expect(emitted, hasLength(1));
-    expect(emitted.single.claimedIdentityId, 'student-1');
-    expect(emitted.single.claimedIdentityType, 'student');
-  });
+      expect(emitted, hasLength(1));
+      expect(emitted.single.claimedIdentityId, 'student-1');
+      expect(emitted.single.claimedIdentityType, 'student');
+    },
+  );
 }

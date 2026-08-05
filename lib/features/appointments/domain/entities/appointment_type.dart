@@ -50,7 +50,8 @@ class AppointmentType extends Equatable {
       name: name ?? this.name,
       department: department ?? this.department,
       category: category ?? this.category,
-      defaultDurationMinutes: defaultDurationMinutes ?? this.defaultDurationMinutes,
+      defaultDurationMinutes:
+          defaultDurationMinutes ?? this.defaultDurationMinutes,
       requiresApproval: requiresApproval ?? this.requiresApproval,
       active: active ?? this.active,
       targetRoles: targetRoles ?? this.targetRoles,
@@ -59,14 +60,14 @@ class AppointmentType extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        name,
-        department,
-        category,
-        defaultDurationMinutes,
-        requiresApproval,
-        active,
-        targetRoles,
-      ];
+    id,
+    schoolId,
+    name,
+    department,
+    category,
+    defaultDurationMinutes,
+    requiresApproval,
+    active,
+    targetRoles,
+  ];
 }

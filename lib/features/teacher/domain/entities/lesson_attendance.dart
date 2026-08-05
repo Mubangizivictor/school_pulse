@@ -24,8 +24,7 @@ enum LessonAttendanceStatus {
   }
 
   /// Whether the student was in the room. Late counts - they attended.
-  bool get countsAsPresent =>
-      this == present || this == late;
+  bool get countsAsPresent => this == present || this == late;
 
   /// Whether the absence was authorised, which reports separate from
   /// unexplained absence.
@@ -35,14 +34,14 @@ enum LessonAttendanceStatus {
 
 extension LessonAttendanceStatusDisplay on LessonAttendanceStatus {
   String get label => switch (this) {
-        LessonAttendanceStatus.notMarked => 'Not marked',
-        LessonAttendanceStatus.present => 'Present',
-        LessonAttendanceStatus.absent => 'Absent',
-        LessonAttendanceStatus.late => 'Late',
-        LessonAttendanceStatus.excused => 'Excused',
-        LessonAttendanceStatus.medical => 'Medical',
-        LessonAttendanceStatus.approvedLeave => 'Approved leave',
-      };
+    LessonAttendanceStatus.notMarked => 'Not marked',
+    LessonAttendanceStatus.present => 'Present',
+    LessonAttendanceStatus.absent => 'Absent',
+    LessonAttendanceStatus.late => 'Late',
+    LessonAttendanceStatus.excused => 'Excused',
+    LessonAttendanceStatus.medical => 'Medical',
+    LessonAttendanceStatus.approvedLeave => 'Approved leave',
+  };
 }
 
 /// One student's mark for one lesson.
@@ -142,9 +141,11 @@ class LessonAttendance extends Equatable {
   int get presentCount => entries.where((e) => e.status.countsAsPresent).length;
 
   int get absentCount => entries
-      .where((e) =>
-          e.status == LessonAttendanceStatus.absent ||
-          e.status.isAuthorisedAbsence)
+      .where(
+        (e) =>
+            e.status == LessonAttendanceStatus.absent ||
+            e.status.isAuthorisedAbsence,
+      )
       .length;
 
   int get unmarkedCount => entries.where((e) => !e.isMarked).length;
@@ -153,7 +154,8 @@ class LessonAttendance extends Equatable {
 
   /// Submitted registers are locked by default; editing needs a correction
   /// path with a reason, not a plain save.
-  bool get isEditable => status == AttendanceRegisterStatus.draft ||
+  bool get isEditable =>
+      status == AttendanceRegisterStatus.draft ||
       status == AttendanceRegisterStatus.returnedForCorrection;
 
   LessonAttendanceEntry? entryFor(String studentId) =>
@@ -187,21 +189,21 @@ class LessonAttendance extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        campusId,
-        lessonId,
-        academicYearId,
-        termId,
-        subjectId,
-        classId,
-        streamId,
-        staffId,
-        roleAssignmentId,
-        entries,
-        status,
-        submittedAt,
-        deviceId,
-        updatedAt,
-      ];
+    id,
+    schoolId,
+    campusId,
+    lessonId,
+    academicYearId,
+    termId,
+    subjectId,
+    classId,
+    streamId,
+    staffId,
+    roleAssignmentId,
+    entries,
+    status,
+    submittedAt,
+    deviceId,
+    updatedAt,
+  ];
 }

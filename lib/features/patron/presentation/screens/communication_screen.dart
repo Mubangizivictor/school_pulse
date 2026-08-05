@@ -37,14 +37,20 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
       body: BlocConsumer<PatronBloc, PatronState>(
         listener: (context, state) {
           if (state is PatronActionSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
           } else if (state is PatronError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Theme.of(context).colorScheme.error),
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Theme.of(context).colorScheme.error,
+              ),
             );
           }
         },
-        buildWhen: (previous, current) => current is AnnouncementsLoaded || current is PatronLoading,
+        buildWhen: (previous, current) =>
+            current is AnnouncementsLoaded || current is PatronLoading,
         builder: (context, state) {
           if (state is! AnnouncementsLoaded) {
             return const Center(child: CircularProgressIndicator());
@@ -64,8 +70,14 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
               return AppCard(
                 margin: const EdgeInsets.only(bottom: 12),
                 child: ListTile(
-                  leading: const Icon(Icons.campaign_outlined, color: Colors.orange),
-                  title: Text(a.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  leading: const Icon(
+                    Icons.campaign_outlined,
+                    color: Colors.orange,
+                  ),
+                  title: Text(
+                    a.title,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -76,16 +88,25 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
                         Wrap(
                           spacing: 6,
                           children: a.targetGroups
-                              .map((g) => Chip(
-                                    label: Text(g, style: const TextStyle(fontSize: 10)),
-                                    padding: EdgeInsets.zero,
-                                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  ))
+                              .map(
+                                (g) => Chip(
+                                  label: Text(
+                                    g,
+                                    style: const TextStyle(fontSize: 10),
+                                  ),
+                                  padding: EdgeInsets.zero,
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                              )
                               .toList(),
                         ),
                       ],
                       const SizedBox(height: 4),
-                      Text(DateFormat('MMM d, yyyy h:mm a').format(a.date), style: Theme.of(context).textTheme.labelSmall),
+                      Text(
+                        DateFormat('MMM d, yyyy h:mm a').format(a.date),
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
                     ],
                   ),
                 ),
@@ -146,17 +167,28 @@ class _ComposeSheetState extends State<_ComposeSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('New Announcement', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+            Text(
+              'New Announcement',
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: _titleController,
-              decoration: const InputDecoration(labelText: 'Title', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: 'Title',
+                border: OutlineInputBorder(),
+              ),
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _contentController,
-              decoration: const InputDecoration(labelText: 'Message', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: 'Message',
+                border: OutlineInputBorder(),
+              ),
               maxLines: 4,
               onChanged: (_) => setState(() {}),
             ),
@@ -184,17 +216,23 @@ class _ComposeSheetState extends State<_ComposeSheet> {
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: (_titleController.text.isEmpty || _contentController.text.isEmpty)
+                onPressed:
+                    (_titleController.text.isEmpty ||
+                        _contentController.text.isEmpty)
                     ? null
                     : () {
-                        context.read<PatronBloc>().add(PostAnnouncementEvent(BoardingAnnouncement(
+                        context.read<PatronBloc>().add(
+                          PostAnnouncementEvent(
+                            BoardingAnnouncement(
                               id: '',
                               title: _titleController.text.trim(),
                               content: _contentController.text.trim(),
                               date: DateTime.now(),
                               authorName: widget.authorName,
                               targetGroups: _selectedGroups.toList(),
-                            )));
+                            ),
+                          ),
+                        );
                       },
                 child: const Text('Send Announcement'),
               ),

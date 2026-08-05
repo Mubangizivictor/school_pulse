@@ -37,17 +37,17 @@ class MedicalInventoryItem extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        name,
-        type,
-        category,
-        quantity,
-        unit,
-        reorderLevel,
-        supplier,
-        purchaseDate,
-        expiryDate,
-        batchNumber,
-        schoolId,
-      ];
+    id,
+    name,
+    type,
+    category,
+    quantity,
+    unit,
+    reorderLevel,
+    supplier,
+    purchaseDate,
+    expiryDate,
+    batchNumber,
+    schoolId,
+  ];
 }

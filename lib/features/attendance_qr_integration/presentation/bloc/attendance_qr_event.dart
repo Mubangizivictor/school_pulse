@@ -36,7 +36,15 @@ class MarkAttendanceEvent extends AttendanceQrEvent {
   });
 
   @override
-  List<Object?> get props => [studentUniqueId, studentName, className, status, scannedBy, schoolId, module];
+  List<Object?> get props => [
+    studentUniqueId,
+    studentName,
+    className,
+    status,
+    scannedBy,
+    schoolId,
+    module,
+  ];
 }
 
 class SyncAttendanceEvent extends AttendanceQrEvent {}

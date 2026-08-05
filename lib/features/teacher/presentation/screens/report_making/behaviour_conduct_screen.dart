@@ -17,7 +17,8 @@ class BehaviourConductScreen extends StatefulWidget {
   const BehaviourConductScreen({
     super.key,
     this.className = 'P.1 North',
-    this.studentId = 'student_1', // In a real app, passed from the student selection
+    this.studentId =
+        'student_1', // In a real app, passed from the student selection
     this.term = 'Term 1',
     this.year = '2024',
   });
@@ -44,31 +45,34 @@ class _BehaviourConductScreenState extends State<BehaviourConductScreen> {
   }
 
   void _fetchRatings() {
-    context.read<TeacherBloc>().add(TeacherCompetencyRatingsRequested(
-          className: widget.className,
-          term: widget.term,
-          year: widget.year,
-          competency: 'Behaviour', // Using a generic tag for behavioural ratings
-        ));
+    context.read<TeacherBloc>().add(
+      TeacherCompetencyRatingsRequested(
+        className: widget.className,
+        term: widget.term,
+        year: widget.year,
+        competency: 'Behaviour', // Using a generic tag for behavioural ratings
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Behaviour & Conduct'),
-      ),
+      appBar: AppBar(title: const Text('Behaviour & Conduct')),
       body: BlocConsumer<TeacherBloc, TeacherState>(
         listener: (context, state) {
           if (state is TeacherError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+              ),
             );
           }
           if (state is TeacherOperationSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
           }
         },
         builder: (context, state) {
@@ -78,7 +82,9 @@ class _BehaviourConductScreenState extends State<BehaviourConductScreen> {
 
           List<CompetencyRating> currentRatings = [];
           if (state is TeacherCompetencyRatingsLoaded) {
-            currentRatings = state.ratings.where((r) => r.studentId == widget.studentId).toList();
+            currentRatings = state.ratings
+                .where((r) => r.studentId == widget.studentId)
+                .toList();
           }
 
           return Column(
@@ -90,7 +96,12 @@ class _BehaviourConductScreenState extends State<BehaviourConductScreen> {
                     const SectionHeader(title: 'Rate each area (1 - 5 Stars)'),
                     const SizedBox(height: 12),
                     ...behaviours.map((label) {
-                      final rating = currentRatings.where((r) => r.competency == label).firstOrNull?.level ?? 0;
+                      final rating =
+                          currentRatings
+                              .where((r) => r.competency == label)
+                              .firstOrNull
+                              ?.level ??
+                          0;
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8.0),
                         child: Row(
@@ -110,10 +121,14 @@ class _BehaviourConductScreenState extends State<BehaviourConductScreen> {
                                   onTap: () => _saveBehaviourRating(
                                     label,
                                     starLevel,
-                                    currentRatings.where((r) => r.competency == label).firstOrNull,
+                                    currentRatings
+                                        .where((r) => r.competency == label)
+                                        .firstOrNull,
                                   ),
                                   child: Icon(
-                                    starLevel <= rating ? Icons.star : Icons.star_border,
+                                    starLevel <= rating
+                                        ? Icons.star
+                                        : Icons.star_border,
                                     color: AppColors.warning(context),
                                     size: 28,
                                   ),
@@ -129,7 +144,9 @@ class _BehaviourConductScreenState extends State<BehaviourConductScreen> {
                     const SizedBox(height: 12),
                     AppCard(
                       color: AppColors.success(context).withValues(alpha: 0.1),
-                      borderColor: AppColors.success(context).withValues(alpha: 0.3),
+                      borderColor: AppColors.success(
+                        context,
+                      ).withValues(alpha: 0.3),
                       child: Center(
                         child: Text(
                           'Based on star ratings above',
@@ -148,7 +165,8 @@ class _BehaviourConductScreenState extends State<BehaviourConductScreen> {
                 padding: const EdgeInsets.all(16.0),
                 child: PrimaryButton(
                   label: 'Save & Next',
-                  onPressed: () => context.push('/staff/reports/teacher-comment'),
+                  onPressed: () =>
+                      context.push('/staff/reports/teacher-comment'),
                 ),
               ),
             ],
@@ -158,24 +176,29 @@ class _BehaviourConductScreenState extends State<BehaviourConductScreen> {
     );
   }
 
-  void _saveBehaviourRating(String label, int level, CompetencyRating? existingRating) {
-    final rating = (existingRating ??
-            CompetencyRating(
-              id: '',
-              studentId: widget.studentId,
-              className: widget.className,
-              term: widget.term,
-              year: widget.year,
-              competency: label,
-              level: level,
-              teacherId: 'teacher_1',
-              updatedAt: DateTime.now(),
-            ))
-        .copyWith(level: level, updatedAt: DateTime.now());
+  void _saveBehaviourRating(
+    String label,
+    int level,
+    CompetencyRating? existingRating,
+  ) {
+    final rating =
+        (existingRating ??
+                CompetencyRating(
+                  id: '',
+                  studentId: widget.studentId,
+                  className: widget.className,
+                  term: widget.term,
+                  year: widget.year,
+                  competency: label,
+                  level: level,
+                  teacherId: 'teacher_1',
+                  updatedAt: DateTime.now(),
+                ))
+            .copyWith(level: level, updatedAt: DateTime.now());
 
     context.read<TeacherBloc>().add(TeacherCompetencyRatingSaved(rating));
-    
-    // For simplicity, we trigger a refresh. 
+
+    // For simplicity, we trigger a refresh.
     // In a real app, the BLoC state would be updated more gracefully.
     _fetchRatings();
   }

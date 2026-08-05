@@ -23,15 +23,15 @@ class TeacherWorkload extends Equatable {
 
   @override
   List<Object?> get props => [
-        teacherId,
-        teacherName,
-        assignedSubjects,
-        weeklyLessonsCount,
-        lessonsDelivered,
-        lessonsMissed,
-        assessmentsCreated,
-        marksPending,
-      ];
+    teacherId,
+    teacherName,
+    assignedSubjects,
+    weeklyLessonsCount,
+    lessonsDelivered,
+    lessonsMissed,
+    assessmentsCreated,
+    marksPending,
+  ];
 }
 
 class AssignedSubject extends Equatable {
@@ -50,5 +50,11 @@ class AssignedSubject extends Equatable {
   });
 
   @override
-  List<Object?> get props => [subjectId, subjectName, classId, className, weeklyLessons];
+  List<Object?> get props => [
+    subjectId,
+    subjectName,
+    classId,
+    className,
+    weeklyLessons,
+  ];
 }

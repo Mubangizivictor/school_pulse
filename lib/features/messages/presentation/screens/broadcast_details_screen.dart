@@ -14,10 +14,7 @@ import 'package:school_pulse/features/messages/presentation/messaging_context.da
 class BroadcastDetailsScreen extends StatefulWidget {
   final String broadcastId;
 
-  const BroadcastDetailsScreen({
-    super.key,
-    required this.broadcastId,
-  });
+  const BroadcastDetailsScreen({super.key, required this.broadcastId});
 
   @override
   State<BroadcastDetailsScreen> createState() => _BroadcastDetailsScreenState();
@@ -34,7 +31,10 @@ class _BroadcastDetailsScreenState extends State<BroadcastDetailsScreen> {
       appBar: AppBar(
         title: Text(
           'Broadcast Info',
-          style: AppTypography.titleLarge.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+          style: AppTypography.titleLarge.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -45,15 +45,22 @@ class _BroadcastDetailsScreenState extends State<BroadcastDetailsScreen> {
       ),
       body: MessagingUserBuilder(
         builder: (context, user) => StreamBuilder<ChatConversation?>(
-          stream: context.messages.watchConversation(widget.broadcastId, user.id),
+          stream: context.messages.watchConversation(
+            widget.broadcastId,
+            user.id,
+          ),
           builder: (context, snapshot) {
             final conversation = snapshot.data;
             if (conversation == null) {
               return Center(
                 child: snapshot.connectionState == ConnectionState.waiting
                     ? const CircularProgressIndicator()
-                    : Text('Broadcast not found',
-                        style: AppTypography.bodyMedium.copyWith(color: Colors.white60)),
+                    : Text(
+                        'Broadcast not found',
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: Colors.white60,
+                        ),
+                      ),
               );
             }
             return _buildBody(context, user, conversation);
@@ -63,9 +70,17 @@ class _BroadcastDetailsScreenState extends State<BroadcastDetailsScreen> {
     );
   }
 
-  Widget _buildBody(BuildContext context, UserEntity user, ChatConversation conversation) {
-    final recipients = conversation.participants.where((p) => p.id != user.id).toList();
-    final visible = _showAllRecipients ? recipients : recipients.take(_previewCount).toList();
+  Widget _buildBody(
+    BuildContext context,
+    UserEntity user,
+    ChatConversation conversation,
+  ) {
+    final recipients = conversation.participants
+        .where((p) => p.id != user.id)
+        .toList();
+    final visible = _showAllRecipients
+        ? recipients
+        : recipients.take(_previewCount).toList();
     final amAdmin = conversation.isAdmin(user.id);
 
     return SingleChildScrollView(
@@ -82,15 +97,24 @@ class _BroadcastDetailsScreenState extends State<BroadcastDetailsScreen> {
                   decoration: BoxDecoration(
                     color: AppColors.electricBlue.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.electricBlue.withValues(alpha: 0.2), width: 1),
+                    border: Border.all(
+                      color: AppColors.electricBlue.withValues(alpha: 0.2),
+                      width: 1,
+                    ),
                     image: conversation.avatarUrl != null
                         ? DecorationImage(
-                            image: NetworkImage(conversation.avatarUrl!), fit: BoxFit.cover)
+                            image: NetworkImage(conversation.avatarUrl!),
+                            fit: BoxFit.cover,
+                          )
                         : null,
                   ),
                   child: conversation.avatarUrl != null
                       ? null
-                      : const Icon(Icons.campaign_rounded, size: 50, color: AppColors.electricBlue),
+                      : const Icon(
+                          Icons.campaign_rounded,
+                          size: 50,
+                          color: AppColors.electricBlue,
+                        ),
                 ),
                 const SizedBox(height: AppSpacing.l),
                 Text(
@@ -105,7 +129,9 @@ class _BroadcastDetailsScreenState extends State<BroadcastDetailsScreen> {
                 Text(
                   '${conversation.type == ChatType.channel ? 'Channel' : 'Broadcast'} • '
                   '${recipients.length} recipients',
-                  style: AppTypography.bodyMedium.copyWith(color: Colors.white60),
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: Colors.white60,
+                  ),
                 ),
               ],
             ),
@@ -134,12 +160,18 @@ class _BroadcastDetailsScreenState extends State<BroadcastDetailsScreen> {
                     padding: const EdgeInsets.all(AppSpacing.l),
                     child: Row(
                       children: [
-                        const Icon(Icons.lock_outline, size: 18, color: Colors.white54),
+                        const Icon(
+                          Icons.lock_outline,
+                          size: 18,
+                          color: Colors.white54,
+                        ),
                         const SizedBox(width: AppSpacing.m),
                         Expanded(
                           child: Text(
                             'Recipients are only visible to whoever manages this list.',
-                            style: AppTypography.bodyMedium.copyWith(color: Colors.white60),
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: Colors.white60,
+                            ),
                           ),
                         ),
                       ],
@@ -148,8 +180,12 @@ class _BroadcastDetailsScreenState extends State<BroadcastDetailsScreen> {
                 else if (recipients.isEmpty)
                   Padding(
                     padding: const EdgeInsets.all(AppSpacing.l),
-                    child:
-                        Text('No recipients yet', style: AppTypography.bodyMedium.copyWith(color: Colors.white60)),
+                    child: Text(
+                      'No recipients yet',
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: Colors.white60,
+                      ),
+                    ),
                   )
                 else
                   ListView.separated(
@@ -163,32 +199,55 @@ class _BroadcastDetailsScreenState extends State<BroadcastDetailsScreen> {
                     ),
                     itemBuilder: (context, index) {
                       final recipient = visible[index];
-                      final role = UserRole.values.where((r) => r.name == recipient.role);
+                      final role = UserRole.values.where(
+                        (r) => r.name == recipient.role,
+                      );
                       return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 4,
+                        ),
                         leading: CircleAvatar(
                           radius: 24,
-                          backgroundColor: AppColors.electricBlue.withValues(alpha: 0.15),
+                          backgroundColor: AppColors.electricBlue.withValues(
+                            alpha: 0.15,
+                          ),
                           child: Text(
-                            recipient.name.isEmpty ? '?' : recipient.name[0].toUpperCase(),
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                            recipient.name.isEmpty
+                                ? '?'
+                                : recipient.name[0].toUpperCase(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                         title: Text(
                           recipient.name,
-                          style: AppTypography.bodyLarge
-                              .copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                          style: AppTypography.bodyLarge.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         subtitle: Text(
-                          role.isEmpty ? recipient.role : UserRoleDisplay.name(role.first),
-                          style: AppTypography.bodySmall.copyWith(color: Colors.white60),
+                          role.isEmpty
+                              ? recipient.role
+                              : UserRoleDisplay.name(role.first),
+                          style: AppTypography.bodySmall.copyWith(
+                            color: Colors.white60,
+                          ),
                         ),
                         trailing: amAdmin
                             ? IconButton(
-                                icon: const Icon(Icons.person_remove_outlined,
-                                    size: 18, color: Colors.redAccent),
-                                onPressed: () =>
-                                    context.messages.removeMember(conversation.id, recipient.id),
+                                icon: const Icon(
+                                  Icons.person_remove_outlined,
+                                  size: 18,
+                                  color: Colors.redAccent,
+                                ),
+                                onPressed: () => context.messages.removeMember(
+                                  conversation.id,
+                                  recipient.id,
+                                ),
                               )
                             : null,
                       );
@@ -197,13 +256,17 @@ class _BroadcastDetailsScreenState extends State<BroadcastDetailsScreen> {
                 if (amAdmin && recipients.length > _previewCount) ...[
                   const Divider(height: 1, color: Colors.white10),
                   TextButton(
-                    onPressed: () => setState(() => _showAllRecipients = !_showAllRecipients),
+                    onPressed: () => setState(
+                      () => _showAllRecipients = !_showAllRecipients,
+                    ),
                     child: Text(
                       _showAllRecipients
                           ? 'Show fewer'
                           : 'View all ${recipients.length} recipients',
-                      style: AppTypography.bodyMedium
-                          .copyWith(color: AppColors.electricBlue, fontWeight: FontWeight.bold),
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.electricBlue,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
@@ -211,7 +274,8 @@ class _BroadcastDetailsScreenState extends State<BroadcastDetailsScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.x3l),
-          if (conversation.description != null && conversation.description!.isNotEmpty)
+          if (conversation.description != null &&
+              conversation.description!.isNotEmpty)
             _buildInfoTile(
               context,
               icon: Icons.info_outline,
@@ -230,13 +294,16 @@ class _BroadcastDetailsScreenState extends State<BroadcastDetailsScreen> {
             context,
             icon: Icons.admin_panel_settings_outlined,
             title: 'Who can send messages?',
-            subtitle: conversation.messagePolicy == MessagePolicy.everyone ? 'All members' : 'Admins only',
+            subtitle: conversation.messagePolicy == MessagePolicy.everyone
+                ? 'All members'
+                : 'Admins only',
           ),
           const SizedBox(height: AppSpacing.x3l),
           SizedBox(
             width: double.infinity,
             child: TextButton(
-              onPressed: () => _confirmDelete(context, user, conversation, amAdmin),
+              onPressed: () =>
+                  _confirmDelete(context, user, conversation, amAdmin),
               style: TextButton.styleFrom(
                 foregroundColor: Colors.redAccent,
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.l),
@@ -265,15 +332,25 @@ class _BroadcastDetailsScreenState extends State<BroadcastDetailsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(amAdmin ? 'Delete broadcast list?' : 'Leave broadcast list?'),
-        content: Text(amAdmin
-            ? 'Recipients will stop receiving messages from this list.'
-            : 'You will stop receiving messages from this list.'),
+        title: Text(
+          amAdmin ? 'Delete broadcast list?' : 'Leave broadcast list?',
+        ),
+        content: Text(
+          amAdmin
+              ? 'Recipients will stop receiving messages from this list.'
+              : 'You will stop receiving messages from this list.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(amAdmin ? 'Delete' : 'Leave', style: const TextStyle(color: Colors.red)),
+            child: Text(
+              amAdmin ? 'Delete' : 'Leave',
+              style: const TextStyle(color: Colors.red),
+            ),
           ),
         ],
       ),
@@ -316,9 +393,13 @@ class _BroadcastDetailsScreenState extends State<BroadcastDetailsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: AppTypography.titleSmall
-                          .copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
+                  Text(
+                    title,
+                    style: AppTypography.titleSmall.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     subtitle,

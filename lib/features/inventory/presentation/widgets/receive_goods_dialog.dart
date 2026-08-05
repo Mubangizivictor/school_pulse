@@ -35,33 +35,41 @@ class _ReceiveGoodsDialogState extends State<ReceiveGoodsDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Current Quantity: ${widget.item.quantity} ${widget.item.unit}'),
+              Text(
+                'Current Quantity: ${widget.item.quantity} ${widget.item.unit}',
+              ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _quantityController,
-                decoration: const InputDecoration(labelText: 'Quantity Received'),
+                decoration: const InputDecoration(
+                  labelText: 'Quantity Received',
+                ),
                 keyboardType: TextInputType.number,
                 validator: (value) {
-                  if (value == null || int.tryParse(value) == null) return 'Invalid';
+                  if (value == null || int.tryParse(value) == null)
+                    return 'Invalid';
                   if (int.parse(value) <= 0) return 'Must be > 0';
                   return null;
                 },
               ),
               TextFormField(
                 controller: _noteController,
-                decoration: const InputDecoration(labelText: 'Notes (e.g., Supplier, Invoice #)'),
-                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                decoration: const InputDecoration(
+                  labelText: 'Notes (e.g., Supplier, Invoice #)',
+                ),
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Required' : null,
               ),
             ],
           ),
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        ElevatedButton(
-          onPressed: _submit,
-          child: const Text('Add to Stock'),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
         ),
+        ElevatedButton(onPressed: _submit, child: const Text('Add to Stock')),
       ],
     );
   }

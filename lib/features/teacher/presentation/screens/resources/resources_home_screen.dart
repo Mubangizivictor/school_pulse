@@ -11,7 +11,7 @@ class ResourcesHomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final semantic = Theme.of(context).extension<SemanticColors>()!;
-    
+
     return Scaffold(
       backgroundColor: AppColors.background(context),
       appBar: AppBar(
@@ -53,26 +53,39 @@ class ResourcesHomeScreen extends StatelessWidget {
                   ),
                   const Text(
                     'This Term',
-                    style: TextStyle(
-                      color: Colors.white60,
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: Colors.white60, fontSize: 12),
                   ),
                   const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _ResourceStat(label: 'Documents', count: 68, color: Colors.blue[200]!),
-                      _ResourceStat(label: 'Videos', count: 24, color: Colors.purple[200]!),
-                      _ResourceStat(label: 'Links', count: 18, color: Colors.orange[200]!),
-                      _ResourceStat(label: 'Images', count: 14, color: Colors.green[200]!),
+                      _ResourceStat(
+                        label: 'Documents',
+                        count: 68,
+                        color: Colors.blue[200]!,
+                      ),
+                      _ResourceStat(
+                        label: 'Videos',
+                        count: 24,
+                        color: Colors.purple[200]!,
+                      ),
+                      _ResourceStat(
+                        label: 'Links',
+                        count: 18,
+                        color: Colors.orange[200]!,
+                      ),
+                      _ResourceStat(
+                        label: 'Images',
+                        count: 14,
+                        color: Colors.green[200]!,
+                      ),
                     ],
                   ),
                 ],
               ),
             ),
             const SizedBox(height: AppSpacing.x3l),
-            
+
             const SectionHeader(title: 'Quick Actions'),
             const SizedBox(height: AppSpacing.l),
             AppCard(
@@ -107,7 +120,8 @@ class ResourcesHomeScreen extends StatelessWidget {
             SectionHeader(
               title: 'Recent Resources',
               actionLabel: 'View All',
-              onActionPressed: () => context.push('/staff/resources/my-resources'),
+              onActionPressed: () =>
+                  context.push('/staff/resources/my-resources'),
             ),
             const SizedBox(height: AppSpacing.l),
             AppCard(

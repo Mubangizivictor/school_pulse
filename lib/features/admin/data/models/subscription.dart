@@ -17,7 +17,12 @@ class Subscription {
 
   factory Subscription.fromFirestore(Map<String, dynamic>? data) {
     if (data == null) {
-      return const Subscription(plan: 'No Plan', status: SubscriptionStatus.none, renewalDate: null, amountUgx: 0);
+      return const Subscription(
+        plan: 'No Plan',
+        status: SubscriptionStatus.none,
+        renewalDate: null,
+        amountUgx: 0,
+      );
     }
     return Subscription(
       plan: data['plan'] ?? 'Basic',

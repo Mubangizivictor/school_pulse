@@ -10,16 +10,22 @@ class GetStudentsForAssessmentParams {
   GetStudentsForAssessmentParams({required this.classId, this.streamId});
 }
 
-class GetStudentsForAssessment implements UseCase<List<Student>, GetStudentsForAssessmentParams> {
+class GetStudentsForAssessment
+    implements UseCase<List<Student>, GetStudentsForAssessmentParams> {
   // We need to fetch students assigned to a specific class/stream
   // This likely interacts with the Student module
-  final dynamic studentRepository; // Replace with actual StudentRepository when available
+  final dynamic
+  studentRepository; // Replace with actual StudentRepository when available
 
   GetStudentsForAssessment(this.studentRepository);
 
   @override
-  Future<Either<Failure, List<Student>>> call(GetStudentsForAssessmentParams params) async {
+  Future<Either<Failure, List<Student>>> call(
+    GetStudentsForAssessmentParams params,
+  ) async {
     // Implementation would call studentRepository.getStudentsByClass
-    return Left(ServerFailure("Not implemented: Needs StudentRepository integration"));
+    return Left(
+      ServerFailure("Not implemented: Needs StudentRepository integration"),
+    );
   }
 }

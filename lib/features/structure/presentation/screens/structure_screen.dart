@@ -1,340 +1,429 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/features/structure/domain/services/structure_setup_progress_calculator.dart';
+import 'package:school_pulse/features/structure/presentation/bloc/structure_bloc.dart';
+import 'package:school_pulse/features/structure/presentation/bloc/structure_state.dart';
 
+/// Structure's route-backed control panel. It exposes a small, clear category
+/// navigator rather than an unbounded grid of settings.
 class StructureScreen extends StatelessWidget {
-  const StructureScreen({super.key});
+  const StructureScreen({super.key, this.initialSection = 'overview'});
+
+  final String initialSection;
+  static const _sections = [
+    ('overview', 'Overview'),
+    ('institution', 'Institution'),
+    ('academics', 'Academics'),
+    ('people', 'People'),
+    ('operations', 'Operations'),
+    ('rules', 'Rules'),
+    ('templates', 'Templates'),
+    ('features', 'Features'),
+  ];
 
   @override
   Widget build(BuildContext context) {
+    final selected = _sections.any((item) => item.$1 == initialSection)
+        ? initialSection
+        : 'overview';
     return Scaffold(
-      backgroundColor: const Color(0xFF020716),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          children: [
-            _buildHeader(context),
-            const SizedBox(height: 16),
-            _buildModuleBanner(context),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Quick Overview',
-                  style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
-                ),
-                GestureDetector(
-                  onTap: () {},
-                  child: const Row(
-                    children: [
-                      Text(
-                        'View All',
-                        style: TextStyle(color: Color(0xFF176BFF), fontSize: 12, fontWeight: FontWeight.w500),
-                      ),
-                      SizedBox(width: 4),
-                      Icon(Icons.chevron_right, color: Color(0xFF176BFF), size: 16),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _buildQuickOverview(context),
-            const SizedBox(height: 24),
-            const Text(
-              'Structure Settings',
-              style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            _buildSettingsGrid(context),
-            const SizedBox(height: 20),
-            _buildBottomProgress(context),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(2),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
-            child: const CircleAvatar(
-              radius: 18,
-              backgroundColor: Colors.white,
-              child: Icon(Icons.school, color: Color(0xFF06164A), size: 20),
-            ),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: AppBar(
+        title: const Text('Structure'),
+        actions: [
+          IconButton(
+            tooltip: 'Setup progress',
+            onPressed: () => context.push('/staff/admin/structure/progress'),
+            icon: const Icon(Icons.task_alt_outlined),
           ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Sunshine Model Academy',
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                Row(
-                  children: [
-                    Text('School Admin', style: TextStyle(color: Color(0xFF8190AA), fontSize: 12)),
-                    Icon(Icons.keyboard_arrow_down, color: Color(0xFF8190AA), size: 16),
-                  ],
-                ),
-              ],
-            ),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'validation') {
+                context.push('/staff/admin/structure/validation');
+              }
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'validation', child: Text('Check setup')),
+            ],
           ),
-          _buildHeaderIcon(Icons.notifications_outlined, '8'),
-          const SizedBox(width: 12),
-          _buildHeaderIcon(Icons.mail_outline, '12'),
         ],
       ),
-    );
-  }
-
-  Widget _buildModuleBanner(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0B1B3B).withOpacity(0.5),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1A315B)),
-      ),
-      child: Row(
+      body: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFF0D2554),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.account_tree_outlined, color: Color(0xFF176BFF), size: 24),
-          ),
-          const SizedBox(width: 16),
+          _CategoryNavigation(selected: selected),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Structure Module',
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Configure and manage the foundation of your school in one place.',
-                  style: TextStyle(color: const Color(0xFF8190AA), fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFF11A85B).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: const BoxDecoration(color: Color(0xFF11A85B), shape: BoxShape.circle),
-                ),
-                const SizedBox(width: 6),
-                const Text('Active', style: TextStyle(color: Color(0xFF11A85B), fontSize: 10, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          const Icon(Icons.chevron_right, color: Color(0xFF8190AA), size: 20),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeaderIcon(IconData icon, String badge) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(color: const Color(0xFF0B1B3B), borderRadius: BorderRadius.circular(8)),
-          child: Icon(icon, color: Colors.white, size: 20),
-        ),
-        Positioned(
-          right: -2,
-          top: -2,
-          child: Container(
-            padding: const EdgeInsets.all(3),
-            decoration: const BoxDecoration(color: Color(0xFFF04400), shape: BoxShape.circle),
-            child: Text(badge, style: const TextStyle(color: Colors.white, fontSize: 7, fontWeight: FontWeight.bold)),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuickOverview(BuildContext context) {
-    return Row(
-      children: [
-        _buildOverviewTile(Icons.layers_outlined, '12', 'Configured\nItems', const Color(0xFF176BFF)),
-        const SizedBox(width: 8),
-        _buildOverviewTile(Icons.check_circle_outline, '8', 'Completed\nSections', const Color(0xFF11A85B)),
-        const SizedBox(width: 8),
-        _buildOverviewTile(Icons.schedule, '2', 'Pending\nSetup', const Color(0xFFFFB400)),
-        const SizedBox(width: 8),
-        _buildOverviewTile(Icons.pie_chart_outline, '85%', 'Setup\nProgress', const Color(0xFFBD00FF)),
-      ],
-    );
-  }
-
-  Widget _buildOverviewTile(IconData icon, String value, String label, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        decoration: BoxDecoration(
-          color: const Color(0xFF0B1B3B).withOpacity(0.5),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFF1A315B)),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(height: 8),
-            Text(value, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF8190AA), fontSize: 10, height: 1.2),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSettingsGrid(BuildContext context) {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 3,
-      mainAxisSpacing: 8,
-      crossAxisSpacing: 8,
-      childAspectRatio: 1.0,
-      children: [
-        _buildGridTile(context, Icons.calendar_month, 'Academic Year', const Color(0xFF176BFF), '/staff/admin/structure/academic?tab=0'),
-        _buildGridTile(context, Icons.event_note, 'Terms & Semesters', const Color(0xFFFFB400), '/staff/admin/structure/academic?tab=0'),
-        _buildGridTile(context, Icons.menu_book, 'Academic Units', const Color(0xFFBD00FF), '/staff/admin/structure/academic?tab=1'),
-        _buildGridTile(context, Icons.groups_outlined, 'Classes & Groups', const Color(0xFF11A85B), '/staff/admin/structure/academic?tab=1'),
-        _buildGridTile(context, Icons.account_balance, 'Departments', const Color(0xFF00C8FF), '/staff/admin/structure/people?tab=0'),
-        _buildGridTile(context, Icons.book_outlined, 'Subjects & Courses', const Color(0xFFFF3377), '/staff/admin/structure/academic?tab=2'),
-        _buildGridTile(context, Icons.home_outlined, 'Houses', const Color(0xFFFFB400), '/staff/admin/structure/campus?tab=1'),
-        _buildGridTile(context, Icons.apartment, 'Campuses', const Color(0xFF11A85B), '/staff/admin/structure/campus?tab=0'),
-        _buildGridTile(context, Icons.schedule, 'Timetable Settings', const Color(0xFF176BFF), '/staff/admin/structure/operations'),
-        _buildGridTile(context, Icons.calendar_today, 'School Calendar', const Color(0xFFFF3377), '/staff/calendar'),
-        _buildGridTile(context, Icons.trending_up, 'Promotion Rules', const Color(0xFF11A85B), '/staff/admin/structure/assessment'),
-        _buildGridTile(context, Icons.settings_outlined, 'More Settings', const Color(0xFFFFB400), '/staff/admin/structure/operations'),
-      ],
-    );
-  }
-
-  Widget _buildGridTile(BuildContext context, IconData icon, String title, Color color, String route) {
-    return AppCard(
-      onTap: () => context.push(route),
-      padding: const EdgeInsets.all(8),
-      color: const Color(0xFF0B1B3B).withOpacity(0.5),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.white, 
-              fontSize: 11, 
-              fontWeight: FontWeight.w600,
-              height: 1.1,
+            child: BlocBuilder<StructureBloc, StructureState>(
+              builder: (context, state) =>
+                  _CategoryBody(section: selected, state: state),
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildBottomProgress(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0B1B3B).withOpacity(0.5),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1A315B)),
-      ),
-      child: Row(
-        children: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              const SizedBox(
-                width: 44,
-                height: 44,
-                child: CircularProgressIndicator(
-                  value: 0.85,
-                  strokeWidth: 4,
-                  backgroundColor: Color(0xFF020716),
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF176BFF)),
+class _CategoryNavigation extends StatelessWidget {
+  const _CategoryNavigation({required this.selected});
+  final String selected;
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 54,
+    child: ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      scrollDirection: Axis.horizontal,
+      itemCount: StructureScreen._sections.length,
+      separatorBuilder: (_, _) => const SizedBox(width: 8),
+      itemBuilder: (context, index) {
+        final item = StructureScreen._sections[index];
+        final active = item.$1 == selected;
+        return Material(
+          color: active
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(10),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: () =>
+                context.go('/staff/admin/structure?section=${item.$1}'),
+            child: Container(
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: active
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.outline,
                 ),
               ),
-              const Text(
-                '85%',
-                style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900),
+              child: Text(
+                item.$2,
+                style: TextStyle(
+                  color: active
+                      ? Theme.of(context).colorScheme.onPrimary
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    ),
+  );
+}
+
+class _CategoryBody extends StatelessWidget {
+  const _CategoryBody({required this.section, required this.state});
+  final String section;
+  final StructureState state;
+
+  @override
+  Widget build(BuildContext context) {
+    if (section == 'overview') return _Overview(state: state);
+    final pages = <String, List<_Destination>>{
+      'institution': [
+        _Destination(
+          'Institution profile',
+          'School identity, contact and regional settings',
+          Icons.account_balance_outlined,
+          '/staff/admin/structure/institution',
+        ),
+      ],
+      'academics': [
+        _Destination(
+          'Academic setup',
+          'Years, terms, levels, classes and subjects',
+          Icons.school_outlined,
+          '/staff/admin/structure/academic',
+        ),
+        _Destination(
+          'Assessment & grading',
+          'Fee categories, assessment types and grading systems',
+          Icons.fact_check_outlined,
+          '/staff/admin/structure/assessment',
+        ),
+        _Destination(
+          'Timetable',
+          'Teaching days, periods and school hours',
+          Icons.schedule_outlined,
+          '/staff/admin/structure/timetable-config',
+        ),
+      ],
+      'people': [
+        _Destination(
+          'People structure',
+          'Departments, designations and staff roles',
+          Icons.groups_outlined,
+          '/staff/admin/structure/people',
+        ),
+        _Destination(
+          'Houses & campus life',
+          'Houses, clubs and societies',
+          Icons.home_work_outlined,
+          '/staff/admin/structure/campus?tab=1',
+        ),
+      ],
+      'operations': [
+        _Destination(
+          'Campuses & facilities',
+          'Campuses, facilities, hostels and transport structure',
+          Icons.apartment_outlined,
+          '/staff/admin/structure/campus',
+        ),
+        _Destination(
+          'Operational configuration',
+          'Timetable, attendance and communication defaults',
+          Icons.tune_outlined,
+          '/staff/admin/structure/operations',
+        ),
+      ],
+      'rules': [
+        _Destination(
+          'Attendance configuration',
+          'Sessions, types and attendance rules',
+          Icons.how_to_reg_outlined,
+          '/staff/admin/structure/attendance-config',
+        ),
+        _Destination(
+          'Assessment & progression',
+          'Grading systems and promotion configuration',
+          Icons.rule_outlined,
+          '/staff/admin/structure/assessment?tab=2',
+        ),
+        _Destination(
+          'Timetable rules',
+          'Working days and hours',
+          Icons.schedule_outlined,
+          '/staff/admin/structure/timetable-config',
+        ),
+      ],
+      'templates': [
+        _Destination(
+          'Communication templates',
+          'Announcement categories and message templates',
+          Icons.campaign_outlined,
+          '/staff/admin/structure/communication-config',
+        ),
+        _Destination(
+          'Document templates',
+          'Manage generated document templates',
+          Icons.description_outlined,
+          '/staff/admin/structure/document-templates',
+        ),
+        _Destination(
+          'Custom fields',
+          'Extend school records without code changes',
+          Icons.view_list_outlined,
+          '/staff/admin/structure/custom-fields',
+        ),
+      ],
+      'features': [
+        _Destination(
+          'Feature settings',
+          'Enable optional modules for this school',
+          Icons.toggle_on_outlined,
+          '/staff/admin/structure/feature-toggles',
+        ),
+      ],
+    };
+    return _DestinationList(items: pages[section] ?? const []);
+  }
+}
+
+class _Overview extends StatelessWidget {
+  const _Overview({required this.state});
+  final StructureState state;
+  @override
+  Widget build(BuildContext context) {
+    final progress = StructureSetupProgressCalculator().calculate(state);
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainer,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Theme.of(context).colorScheme.outline),
+          ),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 52,
+                height: 52,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    CircularProgressIndicator(
+                      value: progress.ratio,
+                      color: Theme.of(context).colorScheme.primary,
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
+                      strokeWidth: 5,
+                    ),
+                    Text(
+                      '${progress.percentage}%',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Configuration health',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      '${progress.configuredCount} configured · ${progress.pendingCount} need attention',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          const SizedBox(width: 16),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+        const SizedBox(height: 20),
+        Text(
+          'Academic status',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 10),
+        _StatusRow(label: 'Academic years', value: state.academicYears.length),
+        _StatusRow(label: 'Educational levels', value: state.levels.length),
+        _StatusRow(label: 'Classes', value: state.classes.length),
+        _StatusRow(label: 'Subjects', value: state.subjects.length),
+        _StatusRow(label: 'Departments', value: state.departments.length),
+        const SizedBox(height: 18),
+        FilledButton.icon(
+          onPressed: () => context.push('/staff/admin/structure/wizard'),
+          icon: const Icon(Icons.play_arrow_rounded),
+          label: const Text('Continue setup'),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatusRow extends StatelessWidget {
+  const _StatusRow({required this.label, required this.value});
+  final String label;
+  final int value;
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(bottom: 8),
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surfaceContainer,
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        Text(
+          '$value',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _Destination {
+  const _Destination(this.title, this.subtitle, this.icon, this.route);
+  final String title, subtitle, route;
+  final IconData icon;
+}
+
+class _DestinationList extends StatelessWidget {
+  const _DestinationList({required this.items});
+  final List<_Destination> items;
+  @override
+  Widget build(BuildContext context) => ListView.separated(
+    padding: const EdgeInsets.all(16),
+    itemCount: items.length,
+    separatorBuilder: (_, _) => const SizedBox(height: 10),
+    itemBuilder: (context, index) {
+      final item = items[index];
+      return Material(
+        color: Theme.of(context).colorScheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => context.push(item.route),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
               children: [
-                Text(
-                  'Structure Setup Progress',
-                  style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                Icon(item.icon, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.title,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        item.subtitle,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  "You're doing great! Complete the remaining sections to finish school setup.",
-                  style: TextStyle(color: Color(0xFF8190AA), fontSize: 10),
+                Icon(
+                  Icons.chevron_right,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF176BFF),
-              foregroundColor: Colors.white,
-              minimumSize: const Size(100, 36),
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Continue Setup', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+      );
+    },
+  );
 }

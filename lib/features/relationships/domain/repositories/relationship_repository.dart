@@ -6,15 +6,11 @@ import '../entities/student_enrolment.dart';
 import '../entities/relationship_enums.dart';
 
 abstract class RelationshipRepository {
-  Future<Either<Failure, List<ParentStudentRelationship>>> getRelationshipsForStudent(
-    String schoolId,
-    String studentId,
-  );
+  Future<Either<Failure, List<ParentStudentRelationship>>>
+  getRelationshipsForStudent(String schoolId, String studentId);
 
-  Future<Either<Failure, List<ParentStudentRelationship>>> getRelationshipsForParent(
-    String schoolId,
-    String userId,
-  );
+  Future<Either<Failure, List<ParentStudentRelationship>>>
+  getRelationshipsForParent(String schoolId, String userId);
 
   Future<Either<Failure, ParentStudentRelationship>> createRelationship({
     required String schoolId,

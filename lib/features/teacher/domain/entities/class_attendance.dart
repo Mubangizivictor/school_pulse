@@ -137,12 +137,14 @@ class AttendanceStatusResolver {
     if (active.isEmpty) return defaults;
 
     return active
-        .map((t) => ClassAttendanceOption(
-              code: t.id,
-              label: t.name,
-              colorHex: t.colorHex,
-              classification: classify(t.id, t.name),
-            ))
+        .map(
+          (t) => ClassAttendanceOption(
+            code: t.id,
+            label: t.name,
+            colorHex: t.colorHex,
+            classification: classify(t.id, t.name),
+          ),
+        )
         .toList();
   }
 
@@ -287,9 +289,7 @@ class ClassAttendanceSession extends Equatable {
     List<ClassAttendanceOption> options,
   ) {
     final byCode = {for (final o in options) o.code: o.classification};
-    final counts = {
-      for (final c in AttendanceClassification.values) c: 0,
-    };
+    final counts = {for (final c in AttendanceClassification.values) c: 0};
     for (final entry in entries) {
       if (!entry.isMarked) continue;
       final classification = byCode[entry.statusCode];
@@ -349,33 +349,39 @@ class ClassAttendanceSession extends Equatable {
             ),
           ]
         : entries
-            .map((e) => e.studentId == studentId
-                ? e.copyWith(statusCode: statusCode, note: note, markedAt: now)
-                : e)
-            .toList();
+              .map(
+                (e) => e.studentId == studentId
+                    ? e.copyWith(
+                        statusCode: statusCode,
+                        note: note,
+                        markedAt: now,
+                      )
+                    : e,
+              )
+              .toList();
     return copyWith(entries: updated);
   }
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        campusId,
-        classId,
-        className,
-        streamId,
-        academicYearId,
-        termId,
-        sessionType,
-        date,
-        status,
-        entries,
-        submittedAt,
-        submittedBy,
-        roleAssignmentId,
-        deviceId,
-        lastCorrectedAt,
-      ];
+    id,
+    schoolId,
+    campusId,
+    classId,
+    className,
+    streamId,
+    academicYearId,
+    termId,
+    sessionType,
+    date,
+    status,
+    entries,
+    submittedAt,
+    submittedBy,
+    roleAssignmentId,
+    deviceId,
+    lastCorrectedAt,
+  ];
 }
 
 /// A request to change a register the teacher may no longer edit directly.
@@ -425,22 +431,22 @@ class AttendanceCorrectionRequest extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        sessionId,
-        classId,
-        academicYearId,
-        studentId,
-        previousStatusCode,
-        requestedStatusCode,
-        reason,
-        requestedByUserId,
-        requestedByStaffId,
-        roleAssignmentId,
-        requestedAt,
-        status,
-        decidedByUserId,
-        decidedAt,
-        decisionNote,
-      ];
+    id,
+    schoolId,
+    sessionId,
+    classId,
+    academicYearId,
+    studentId,
+    previousStatusCode,
+    requestedStatusCode,
+    reason,
+    requestedByUserId,
+    requestedByStaffId,
+    roleAssignmentId,
+    requestedAt,
+    status,
+    decidedByUserId,
+    decidedAt,
+    decisionNote,
+  ];
 }

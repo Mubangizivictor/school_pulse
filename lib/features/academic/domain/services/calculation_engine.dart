@@ -63,7 +63,12 @@ class CalculationEngine {
         return range;
       }
     }
-    return const GradeRange(grade: 'Ungraded', minScore: 0, maxScore: 0, remarks: 'No matching grade range configured');
+    return const GradeRange(
+      grade: 'Ungraded',
+      minScore: 0,
+      maxScore: 0,
+      remarks: 'No matching grade range configured',
+    );
   }
 
   static double calculateOverallAverage(List<SubjectResult> results) {

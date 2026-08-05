@@ -46,10 +46,12 @@ class StaffAlertsRepository {
 
     void emit() {
       final seen = <String>{};
-      final merged = [...direct, ...broadcasts].where((a) => seen.add(a.id)).toList()
-        ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
-      
-      if (kDebugMode) print('StaffAlertsRepository: Emitting ${merged.length} alerts');
+      final merged =
+          [...direct, ...broadcasts].where((a) => seen.add(a.id)).toList()
+            ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+      if (kDebugMode)
+        print('StaffAlertsRepository: Emitting ${merged.length} alerts');
       if (!controller.isClosed) {
         controller.add(merged);
       }
@@ -57,8 +59,9 @@ class StaffAlertsRepository {
 
     controller = StreamController<List<StaffAlert>>.broadcast(
       onListen: () {
-        if (kDebugMode) print('StaffAlertsRepository: Watching alerts for $uid');
-        
+        if (kDebugMode)
+          print('StaffAlertsRepository: Watching alerts for $uid');
+
         // Use a small delay to ensure the UI listener is fully attached
         // before we emit the initial empty state.
         Future.delayed(const Duration(milliseconds: 100), () => emit());
@@ -69,8 +72,11 @@ class StaffAlertsRepository {
             emit();
           },
           onError: (e) {
-            if (kDebugMode) print('StaffAlertsRepository: Direct alerts error (Index likely building): $e');
-            direct = []; 
+            if (kDebugMode)
+              print(
+                'StaffAlertsRepository: Direct alerts error (Index likely building): $e',
+              );
+            direct = [];
             emit();
           },
         );
@@ -82,7 +88,8 @@ class StaffAlertsRepository {
               emit();
             },
             onError: (e) {
-              if (kDebugMode) print('StaffAlertsRepository: Broadcast alerts error: $e');
+              if (kDebugMode)
+                print('StaffAlertsRepository: Broadcast alerts error: $e');
               broadcasts = [];
               emit();
             },

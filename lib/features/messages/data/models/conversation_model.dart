@@ -23,12 +23,14 @@ class ConversationModel {
     final data = doc.data() ?? const {};
 
     final participants = (data['participants'] as List? ?? const [])
-        .map((p) => MessageParticipant(
-              id: p['id'] as String? ?? '',
-              name: p['name'] as String? ?? '',
-              role: p['role'] as String? ?? '',
-              avatarUrl: p['avatarUrl'] as String?,
-            ))
+        .map(
+          (p) => MessageParticipant(
+            id: p['id'] as String? ?? '',
+            name: p['name'] as String? ?? '',
+            role: p['role'] as String? ?? '',
+            avatarUrl: p['avatarUrl'] as String?,
+          ),
+        )
         .toList();
 
     final type = ChatType.values.firstWhere(
@@ -49,7 +51,9 @@ class ConversationModel {
       subtitle = '${participants.length} members';
     }
 
-    final unreadCounts = Map<String, dynamic>.from(data['unreadCounts'] ?? const {});
+    final unreadCounts = Map<String, dynamic>.from(
+      data['unreadCounts'] ?? const {},
+    );
     final pinnedMessage = data['pinnedMessage'] as Map<String, dynamic>?;
 
     return ChatConversation(
@@ -58,14 +62,27 @@ class ConversationModel {
       subtitle: subtitle,
       avatarUrl: data['avatarUrl'] as String?,
       type: type,
-      lastMessage: _lastMessage(data['lastMessage'] as Map<String, dynamic>?, currentUserId),
+      lastMessage: _lastMessage(
+        data['lastMessage'] as Map<String, dynamic>?,
+        currentUserId,
+      ),
       unreadCount: (unreadCounts[currentUserId] as num?)?.toInt() ?? 0,
       participants: participants,
-      isPinned: List<String>.from(data['pinnedBy'] ?? const []).contains(currentUserId),
-      isMuted: List<String>.from(data['mutedBy'] ?? const []).contains(currentUserId),
-      isArchived: List<String>.from(data['archivedBy'] ?? const []).contains(currentUserId),
-      isAccepted: List<String>.from(data['acceptedBy'] ?? const []).contains(currentUserId),
-      isSpam: List<String>.from(data['spamBy'] ?? const []).contains(currentUserId),
+      isPinned: List<String>.from(
+        data['pinnedBy'] ?? const [],
+      ).contains(currentUserId),
+      isMuted: List<String>.from(
+        data['mutedBy'] ?? const [],
+      ).contains(currentUserId),
+      isArchived: List<String>.from(
+        data['archivedBy'] ?? const [],
+      ).contains(currentUserId),
+      isAccepted: List<String>.from(
+        data['acceptedBy'] ?? const [],
+      ).contains(currentUserId),
+      isSpam: List<String>.from(
+        data['spamBy'] ?? const [],
+      ).contains(currentUserId),
       schoolId: data['schoolId'] as String? ?? '',
       description: data['description'] as String?,
       adminIds: List<String>.from(data['adminIds'] ?? const []),
@@ -82,7 +99,10 @@ class ConversationModel {
 
   /// An empty placeholder (id == '') means "no messages yet" - see
   /// [ChatConversation.hasMessages].
-  static ChatMessage _lastMessage(Map<String, dynamic>? data, String currentUserId) {
+  static ChatMessage _lastMessage(
+    Map<String, dynamic>? data,
+    String currentUserId,
+  ) {
     if (data == null) {
       return ChatMessage(
         id: '',
@@ -127,7 +147,14 @@ class ConversationModel {
       'avatarUrl': avatarUrl,
       'participantIds': participants.map((p) => p.id).toList(),
       'participants': participants
-          .map((p) => {'id': p.id, 'name': p.name, 'role': p.role, 'avatarUrl': p.avatarUrl})
+          .map(
+            (p) => {
+              'id': p.id,
+              'name': p.name,
+              'role': p.role,
+              'avatarUrl': p.avatarUrl,
+            },
+          )
           .toList(),
       'adminIds': adminIds,
       'createdBy': createdBy,

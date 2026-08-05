@@ -18,7 +18,8 @@ abstract class ClassAttendanceRepository {
   /// A student missing from the map was never marked, which is deliberately
   /// distinct from being marked absent: defaulting the unmarked to absent
   /// would put an absence on a record no teacher actually recorded.
-  Future<Either<Failure, Map<String, LessonAttendanceStatus>>> getStatusesForDate({
+  Future<Either<Failure, Map<String, LessonAttendanceStatus>>>
+  getStatusesForDate({
     required ActiveResponsibilityContext context,
     required DateTime date,
   });

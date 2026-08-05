@@ -39,10 +39,7 @@ class _DeanApprovalsScreenState extends State<DeanApprovalsScreen>
         ),
         body: TabBarView(
           controller: _tabController,
-          children: [
-            _ReportCardApprovals(),
-            _AssessmentApprovals(),
-          ],
+          children: [_ReportCardApprovals(), _AssessmentApprovals()],
         ),
       ),
     );

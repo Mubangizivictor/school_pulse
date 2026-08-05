@@ -27,7 +27,9 @@ class _ExpenditureScreenState extends State<ExpenditureScreen> {
   void _loadExpenditures() {
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
-      context.read<FinanceBloc>().add(LoadExpenditureRequests(authState.user.schoolId));
+      context.read<FinanceBloc>().add(
+        LoadExpenditureRequests(authState.user.schoolId),
+      );
     }
   }
 
@@ -81,9 +83,12 @@ class _ExpenditureScreenState extends State<ExpenditureScreen> {
     );
   }
 
-  Widget _buildExpenditureItem(BuildContext context, ExpenditureRequest request) {
+  Widget _buildExpenditureItem(
+    BuildContext context,
+    ExpenditureRequest request,
+  ) {
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
-    
+
     Color statusColor;
     switch (request.status) {
       case ExpenditureStatus.approved:
@@ -115,12 +120,18 @@ class _ExpenditureScreenState extends State<ExpenditureScreen> {
               StatusBadge(label: request.status.name, color: statusColor),
               Text(
                 CurrencyFormatter.ugx(request.amount),
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          Text(request.description, style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            request.description,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const SizedBox(height: 4),
           Text(
             'Requested by: ${request.requesterName}',

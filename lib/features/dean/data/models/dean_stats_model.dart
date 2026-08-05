@@ -52,7 +52,8 @@ class DeanStatsModel extends AcademicDashboardStats {
           .toList(),
       attendanceTrend: (json['attendanceTrend'] ?? 0).toDouble(),
       homeworkCompletionRate: (json['homeworkCompletionRate'] ?? 0).toDouble(),
-      teacherLessonCompletionRate: (json['teacherLessonCompletionRate'] ?? 0).toDouble(),
+      teacherLessonCompletionRate: (json['teacherLessonCompletionRate'] ?? 0)
+          .toDouble(),
       activeAlerts: (json['activeAlerts'] as List? ?? [])
           .map((e) => AcademicAlertModel.fromJson(e))
           .toList(),

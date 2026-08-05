@@ -31,7 +31,9 @@ class InventoryItemModel extends InventoryItem {
       reorderLevel: data['reorderLevel'] as int?,
       warehouseLocation: data['warehouseLocation'] as String?,
       storeLocation: data['storeLocation'] as String?,
-      expiryDate: data['expiryDate'] != null ? (data['expiryDate'] as Timestamp).toDate() : null,
+      expiryDate: data['expiryDate'] != null
+          ? (data['expiryDate'] as Timestamp).toDate()
+          : null,
     );
   }
 

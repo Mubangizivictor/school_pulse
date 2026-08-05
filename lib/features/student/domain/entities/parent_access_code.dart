@@ -36,16 +36,16 @@ class ParentAccessCode extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        parentCode,
-        schoolId,
-        studentIds,
-        studentNames,
-        parentName,
-        phoneNumber,
-        pin,
-        mustChangePin,
-        isActive,
-        deactivationReason,
-      ];
+    id,
+    parentCode,
+    schoolId,
+    studentIds,
+    studentNames,
+    parentName,
+    phoneNumber,
+    pin,
+    mustChangePin,
+    isActive,
+    deactivationReason,
+  ];
 }

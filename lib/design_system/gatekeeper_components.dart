@@ -49,7 +49,10 @@ class GatekeeperActionTile extends StatelessWidget {
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ],
           ),
@@ -65,7 +68,11 @@ class GatekeeperActionTile extends StatelessWidget {
                 ),
                 child: Text(
                   badgeCount! > 99 ? '99+' : '$badgeCount',
-                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -124,14 +131,19 @@ class GatekeeperPrimaryButton extends StatelessWidget {
           backgroundColor: color,
           foregroundColor: Colors.white,
           disabledBackgroundColor: color.withValues(alpha: 0.4),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
         ),
         icon: isLoading
             ? const SizedBox(
                 height: 22,
                 width: 22,
-                child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: Colors.white,
+                ),
               )
             : Icon(icon, size: 26),
         label: Text(label),
@@ -166,7 +178,9 @@ class GatekeeperStatusChip extends StatelessWidget {
       case GatekeeperConnectionState.online:
         color = colors.success;
         icon = Icons.cloud_done_outlined;
-        label = pendingSyncCount > 0 ? 'Online • $pendingSyncCount waiting' : 'Online';
+        label = pendingSyncCount > 0
+            ? 'Online • $pendingSyncCount waiting'
+            : 'Online';
         break;
       case GatekeeperConnectionState.syncing:
         color = colors.info;
@@ -176,7 +190,9 @@ class GatekeeperStatusChip extends StatelessWidget {
       case GatekeeperConnectionState.offline:
         color = colors.warning;
         icon = Icons.cloud_off_outlined;
-        label = pendingSyncCount > 0 ? 'No internet • $pendingSyncCount saved' : 'No internet';
+        label = pendingSyncCount > 0
+            ? 'No internet • $pendingSyncCount saved'
+            : 'No internet';
         break;
     }
     return Container(
@@ -191,7 +207,14 @@ class GatekeeperStatusChip extends StatelessWidget {
         children: [
           Icon(icon, size: 16, color: color),
           const SizedBox(width: 6),
-          Text(label, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w700)),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );

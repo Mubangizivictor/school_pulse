@@ -4,9 +4,20 @@ import '../../domain/entities/fee_category_entities.dart';
 import '../../domain/entities/assessment_grading_entities.dart';
 import 'structure_ui_kit.dart';
 
-const List<String> kGradingSystemTypes = ['Letter (A-F)', 'Numeric (1-9)', 'Percentage', 'Competency Based', 'Custom'];
+const List<String> kGradingSystemTypes = [
+  'Letter (A-F)',
+  'Numeric (1-9)',
+  'Percentage',
+  'Competency Based',
+  'Custom',
+];
 
-Future<void> showFeeCategoryFormDialog(BuildContext context, {FeeCategory? existing, required void Function(FeeCategory) onSave}) {
+Future<void> showFeeCategoryFormDialog(
+  BuildContext context, {
+  FeeCategory? existing,
+  required String schoolId,
+  required void Function(FeeCategory) onSave,
+}) {
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController(text: existing?.name);
   final codeController = TextEditingController(text: existing?.code);
@@ -24,7 +35,9 @@ Future<void> showFeeCategoryFormDialog(BuildContext context, {FeeCategory? exist
         children: [
           TextFormField(
             controller: nameController,
-            decoration: const InputDecoration(labelText: 'Category Name (e.g. Tuition, Transport)'),
+            decoration: const InputDecoration(
+              labelText: 'Category Name (e.g. Tuition, Transport)',
+            ),
             validator: (v) => v == null || v.isEmpty ? 'Required' : null,
           ),
           TextFormField(
@@ -33,7 +46,9 @@ Future<void> showFeeCategoryFormDialog(BuildContext context, {FeeCategory? exist
           ),
           TextFormField(
             controller: descController,
-            decoration: const InputDecoration(labelText: 'Description (optional)'),
+            decoration: const InputDecoration(
+              labelText: 'Description (optional)',
+            ),
             maxLines: 2,
           ),
           SwitchListTile(
@@ -54,23 +69,33 @@ Future<void> showFeeCategoryFormDialog(BuildContext context, {FeeCategory? exist
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(FeeCategory(
-        id: existing?.id ?? const Uuid().v4(),
-        name: nameController.text,
-        code: codeController.text,
-        description: descController.text,
-        isMandatory: isMandatory,
-        isActive: isActive,
-      ));
+      onSave(
+        FeeCategory(
+          id: existing?.id ?? const Uuid().v4(),
+          schoolId: existing?.schoolId ?? schoolId,
+          name: nameController.text,
+          code: codeController.text,
+          description: descController.text,
+          isMandatory: isMandatory,
+          isActive: isActive,
+        ),
+      );
       Navigator.pop(context);
     },
   );
 }
 
-Future<void> showAssessmentTypeFormDialog(BuildContext context, {AssessmentTypeDef? existing, required void Function(AssessmentTypeDef) onSave}) {
+Future<void> showAssessmentTypeFormDialog(
+  BuildContext context, {
+  AssessmentTypeDef? existing,
+  required String schoolId,
+  required void Function(AssessmentTypeDef) onSave,
+}) {
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController(text: existing?.name);
-  final weightController = TextEditingController(text: existing?.weightPercentage.toString() ?? '0');
+  final weightController = TextEditingController(
+    text: existing?.weightPercentage.toString() ?? '0',
+  );
   final descController = TextEditingController(text: existing?.description);
   bool isActive = existing?.isActive ?? true;
 
@@ -84,7 +109,9 @@ Future<void> showAssessmentTypeFormDialog(BuildContext context, {AssessmentTypeD
         children: [
           TextFormField(
             controller: nameController,
-            decoration: const InputDecoration(labelText: 'Type Name (e.g. CAT, Assignment, Final Exam)'),
+            decoration: const InputDecoration(
+              labelText: 'Type Name (e.g. CAT, Assignment, Final Exam)',
+            ),
             validator: (v) => v == null || v.isEmpty ? 'Required' : null,
           ),
           TextFormField(
@@ -94,7 +121,9 @@ Future<void> showAssessmentTypeFormDialog(BuildContext context, {AssessmentTypeD
           ),
           TextFormField(
             controller: descController,
-            decoration: const InputDecoration(labelText: 'Description (optional)'),
+            decoration: const InputDecoration(
+              labelText: 'Description (optional)',
+            ),
             maxLines: 2,
           ),
           if (existing != null)
@@ -109,22 +138,32 @@ Future<void> showAssessmentTypeFormDialog(BuildContext context, {AssessmentTypeD
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(AssessmentTypeDef(
-        id: existing?.id ?? const Uuid().v4(),
-        name: nameController.text,
-        weightPercentage: double.tryParse(weightController.text) ?? 0,
-        description: descController.text,
-        isActive: isActive,
-      ));
+      onSave(
+        AssessmentTypeDef(
+          id: existing?.id ?? const Uuid().v4(),
+          schoolId: existing?.schoolId ?? schoolId,
+          name: nameController.text,
+          weightPercentage: double.tryParse(weightController.text) ?? 0,
+          description: descController.text,
+          isActive: isActive,
+        ),
+      );
       Navigator.pop(context);
     },
   );
 }
 
-Future<void> showGradingSystemFormDialog(BuildContext context, {GradingSystemDef? existing, required void Function(GradingSystemDef) onSave}) {
+Future<void> showGradingSystemFormDialog(
+  BuildContext context, {
+  GradingSystemDef? existing,
+  required String schoolId,
+  required void Function(GradingSystemDef) onSave,
+}) {
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController(text: existing?.name);
-  String selectedType = kGradingSystemTypes.contains(existing?.type) ? existing!.type : kGradingSystemTypes.first;
+  String selectedType = kGradingSystemTypes.contains(existing?.type)
+      ? existing!.type
+      : kGradingSystemTypes.first;
   bool isDefault = existing?.isDefault ?? false;
   bool isActive = existing?.isActive ?? true;
 
@@ -144,7 +183,9 @@ Future<void> showGradingSystemFormDialog(BuildContext context, {GradingSystemDef
           DropdownButtonFormField<String>(
             initialValue: selectedType,
             decoration: const InputDecoration(labelText: 'Type'),
-            items: kGradingSystemTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+            items: kGradingSystemTypes
+                .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                .toList(),
             onChanged: (v) => setState(() => selectedType = v ?? selectedType),
           ),
           SwitchListTile(
@@ -165,13 +206,16 @@ Future<void> showGradingSystemFormDialog(BuildContext context, {GradingSystemDef
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(GradingSystemDef(
-        id: existing?.id ?? const Uuid().v4(),
-        name: nameController.text,
-        type: selectedType,
-        isDefault: isDefault,
-        isActive: isActive,
-      ));
+      onSave(
+        GradingSystemDef(
+          id: existing?.id ?? const Uuid().v4(),
+          schoolId: existing?.schoolId ?? schoolId,
+          name: nameController.text,
+          type: selectedType,
+          isDefault: isDefault,
+          isActive: isActive,
+        ),
+      );
       Navigator.pop(context);
     },
   );
@@ -181,14 +225,21 @@ Future<void> showGradeBandFormDialog(
   BuildContext context, {
   GradeBand? existing,
   required List<GradingSystemDef> gradingSystems,
+  required String schoolId,
   required void Function(GradeBand) onSave,
 }) {
   final formKey = GlobalKey<FormState>();
   final gradeController = TextEditingController(text: existing?.grade);
-  final minController = TextEditingController(text: existing?.minScore.toString() ?? '0');
-  final maxController = TextEditingController(text: existing?.maxScore.toString() ?? '0');
+  final minController = TextEditingController(
+    text: existing?.minScore.toString() ?? '0',
+  );
+  final maxController = TextEditingController(
+    text: existing?.maxScore.toString() ?? '0',
+  );
   final remarksController = TextEditingController(text: existing?.remarks);
-  final orderController = TextEditingController(text: existing?.order.toString() ?? '0');
+  final orderController = TextEditingController(
+    text: existing?.order.toString() ?? '0',
+  );
   String? selectedSystemId = existing?.gradingSystemId.isNotEmpty == true
       ? existing!.gradingSystemId
       : (gradingSystems.isNotEmpty ? gradingSystems.first.id : null);
@@ -204,13 +255,17 @@ Future<void> showGradeBandFormDialog(
           DropdownButtonFormField<String>(
             initialValue: selectedSystemId,
             decoration: const InputDecoration(labelText: 'Grading System'),
-            items: gradingSystems.map((g) => DropdownMenuItem(value: g.id, child: Text(g.name))).toList(),
+            items: gradingSystems
+                .map((g) => DropdownMenuItem(value: g.id, child: Text(g.name)))
+                .toList(),
             onChanged: (v) => setState(() => selectedSystemId = v),
             validator: (v) => v == null ? 'Select a grading system' : null,
           ),
           TextFormField(
             controller: gradeController,
-            decoration: const InputDecoration(labelText: 'Grade (e.g. A, Distinction, 1)'),
+            decoration: const InputDecoration(
+              labelText: 'Grade (e.g. A, Distinction, 1)',
+            ),
             validator: (v) => v == null || v.isEmpty ? 'Required' : null,
           ),
           Row(
@@ -219,7 +274,9 @@ Future<void> showGradeBandFormDialog(
                 child: TextFormField(
                   controller: minController,
                   decoration: const InputDecoration(labelText: 'Min Score'),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -227,7 +284,9 @@ Future<void> showGradeBandFormDialog(
                 child: TextFormField(
                   controller: maxController,
                   decoration: const InputDecoration(labelText: 'Max Score'),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                 ),
               ),
             ],
@@ -246,15 +305,18 @@ Future<void> showGradeBandFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(GradeBand(
-        id: existing?.id ?? const Uuid().v4(),
-        gradingSystemId: selectedSystemId!,
-        grade: gradeController.text,
-        minScore: double.tryParse(minController.text) ?? 0,
-        maxScore: double.tryParse(maxController.text) ?? 0,
-        remarks: remarksController.text,
-        order: int.tryParse(orderController.text) ?? 0,
-      ));
+      onSave(
+        GradeBand(
+          id: existing?.id ?? const Uuid().v4(),
+          schoolId: existing?.schoolId ?? schoolId,
+          gradingSystemId: selectedSystemId!,
+          grade: gradeController.text,
+          minScore: double.tryParse(minController.text) ?? 0,
+          maxScore: double.tryParse(maxController.text) ?? 0,
+          remarks: remarksController.text,
+          order: int.tryParse(orderController.text) ?? 0,
+        ),
+      );
       Navigator.pop(context);
     },
   );

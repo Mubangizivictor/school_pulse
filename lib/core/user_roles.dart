@@ -29,31 +29,56 @@ enum UserRole {
 class UserRoleDisplay {
   static String name(UserRole role) {
     switch (role) {
-      case UserRole.parent: return 'Parent';
-      case UserRole.student: return 'Student';
-      case UserRole.director: return 'Director';
-      case UserRole.headTeacher: return 'Head Teacher';
-      case UserRole.deputyHead: return 'Deputy Head';
-      case UserRole.deanOfStudies: return 'Dean of Studies';
-      case UserRole.schoolAdmin: return 'School Admin';
-      case UserRole.bursar: return 'Bursar';
-      case UserRole.classTeacher: return 'Class Teacher';
-      case UserRole.subjectTeacher: return 'Subject Teacher';
-      case UserRole.librarian: return 'Librarian';
-      case UserRole.nurse: return 'Nurse';
-      case UserRole.boardingMatron: return 'Matron (Girls)';
-      case UserRole.boardingPatron: return 'Patron (Boys)';
-      case UserRole.transportCoordinator: return 'Transport';
-      case UserRole.guidanceDiscipline: return 'Guidance & Discipline';
-      case UserRole.storeInventory: return 'Store Inventory';
-      case UserRole.gatekeeper: return 'Gatekeeper';
-      case UserRole.securityHead: return 'Head of Security';
-      case UserRole.gamesMaster: return 'Games Master';
-      case UserRole.cateringManager: return 'Catering Manager';
-      case UserRole.religiousLeader: return 'Religious Leader';
-      case UserRole.receptionist: return 'Receptionist';
-      case UserRole.hrOfficer: return 'HR Officer';
-      case UserRole.superAdmin: return 'Platform Owner';
+      case UserRole.parent:
+        return 'Parent';
+      case UserRole.student:
+        return 'Student';
+      case UserRole.director:
+        return 'Director';
+      case UserRole.headTeacher:
+        return 'Head Teacher';
+      case UserRole.deputyHead:
+        return 'Deputy Head';
+      case UserRole.deanOfStudies:
+        return 'Dean of Studies';
+      case UserRole.schoolAdmin:
+        return 'School Admin';
+      case UserRole.bursar:
+        return 'Bursar';
+      case UserRole.classTeacher:
+        return 'Class Teacher';
+      case UserRole.subjectTeacher:
+        return 'Subject Teacher';
+      case UserRole.librarian:
+        return 'Librarian';
+      case UserRole.nurse:
+        return 'Nurse';
+      case UserRole.boardingMatron:
+        return 'Matron (Girls)';
+      case UserRole.boardingPatron:
+        return 'Patron (Boys)';
+      case UserRole.transportCoordinator:
+        return 'Transport';
+      case UserRole.guidanceDiscipline:
+        return 'Guidance & Discipline';
+      case UserRole.storeInventory:
+        return 'Store Inventory';
+      case UserRole.gatekeeper:
+        return 'Gatekeeper';
+      case UserRole.securityHead:
+        return 'Head of Security';
+      case UserRole.gamesMaster:
+        return 'Games Master';
+      case UserRole.cateringManager:
+        return 'Catering Manager';
+      case UserRole.religiousLeader:
+        return 'Religious Leader';
+      case UserRole.receptionist:
+        return 'Receptionist';
+      case UserRole.hrOfficer:
+        return 'HR Officer';
+      case UserRole.superAdmin:
+        return 'Platform Owner';
     }
   }
 
@@ -84,9 +109,12 @@ class UserRoleDisplay {
   /// role (unscoped - e.g. an admin previewing the same screen).
   static String? matronGenderScope(UserRole role) {
     switch (role) {
-      case UserRole.boardingMatron: return 'Female';
-      case UserRole.boardingPatron: return 'Male';
-      default: return null;
+      case UserRole.boardingMatron:
+        return 'Female';
+      case UserRole.boardingPatron:
+        return 'Male';
+      default:
+        return null;
     }
   }
 }
@@ -104,7 +132,11 @@ class NotificationGroups {
     UserRole.bursar,
   ];
 
-  static const securityRoles = [UserRole.securityHead, UserRole.gatekeeper, UserRole.receptionist];
+  static const securityRoles = [
+    UserRole.securityHead,
+    UserRole.gatekeeper,
+    UserRole.receptionist,
+  ];
 
   static List<String> forRole(UserRole role) {
     if (role == UserRole.parent) return const ['Parents'];
@@ -112,7 +144,7 @@ class NotificationGroups {
     if (teacherRoles.contains(role)) groups.add('Teachers Only');
     if (adminRoles.contains(role)) groups.add('Bursars & Admin');
     if (securityRoles.contains(role)) groups.add('Security');
-    
+
     if (role == UserRole.boardingMatron) groups.add('Matrons (Girls)');
     if (role == UserRole.boardingPatron) groups.add('Patrons (Boys)');
 

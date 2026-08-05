@@ -41,10 +41,7 @@ class StudentAppBar extends StatelessWidget implements PreferredSizeWidget {
               ),
             ],
           ),
-          actions: [
-            ...?actions,
-            const NotificationBellButton(),
-          ],
+          actions: [...?actions, const NotificationBellButton()],
         );
       },
     );

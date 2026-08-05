@@ -20,7 +20,8 @@ class BillingPage extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => context.read<SuperAdminBloc>().add(LoadSuperAdminDashboard()),
+            onPressed: () =>
+                context.read<SuperAdminBloc>().add(LoadSuperAdminDashboard()),
           ),
           if (!isSuperAdminWide(context)) const SuperAdminLogoutButton(),
         ],
@@ -51,14 +52,19 @@ class _InvoiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormat = NumberFormat.currency(symbol: 'UGX ', decimalDigits: 0);
+    final currencyFormat = NumberFormat.currency(
+      symbol: 'UGX ',
+      decimalDigits: 0,
+    );
     final dateFormat = DateFormat('MMM dd, yyyy');
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         title: Text(invoice.schoolName),
-        subtitle: Text('Due: ${dateFormat.format(invoice.dueDate)} • ${invoice.billingPeriod}'),
+        subtitle: Text(
+          'Due: ${dateFormat.format(invoice.dueDate)} • ${invoice.billingPeriod}',
+        ),
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
@@ -67,7 +73,10 @@ class _InvoiceCard extends StatelessWidget {
               currencyFormat.format(invoice.amount),
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            StatusBadge(label: invoice.status.name, color: _paymentStatusColor(invoice.status)),
+            StatusBadge(
+              label: invoice.status.name,
+              color: _paymentStatusColor(invoice.status),
+            ),
           ],
         ),
         onTap: () {
@@ -79,8 +88,8 @@ class _InvoiceCard extends StatelessWidget {
 }
 
 Color _paymentStatusColor(PaymentStatus status) => switch (status) {
-      PaymentStatus.completed => Colors.green,
-      PaymentStatus.pending => Colors.orange,
-      PaymentStatus.failed => Colors.red,
-      PaymentStatus.refunded => Colors.blue,
-    };
+  PaymentStatus.completed => Colors.green,
+  PaymentStatus.pending => Colors.orange,
+  PaymentStatus.failed => Colors.red,
+  PaymentStatus.refunded => Colors.blue,
+};

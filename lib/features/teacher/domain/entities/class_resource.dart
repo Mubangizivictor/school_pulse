@@ -27,12 +27,20 @@ enum ClassResourceKind {
   static ClassResourceKind fromExtension(String extension) {
     final ext = extension.toLowerCase().replaceAll('.', '');
     return switch (ext) {
-      'pdf' || 'doc' || 'docx' || 'txt' || 'rtf' || 'odt' =>
-        ClassResourceKind.document,
+      'pdf' ||
+      'doc' ||
+      'docx' ||
+      'txt' ||
+      'rtf' ||
+      'odt' => ClassResourceKind.document,
       'xls' || 'xlsx' || 'csv' || 'ods' => ClassResourceKind.spreadsheet,
       'ppt' || 'pptx' || 'odp' => ClassResourceKind.presentation,
-      'png' || 'jpg' || 'jpeg' || 'gif' || 'webp' || 'heic' =>
-        ClassResourceKind.image,
+      'png' ||
+      'jpg' ||
+      'jpeg' ||
+      'gif' ||
+      'webp' ||
+      'heic' => ClassResourceKind.image,
       'mp3' || 'wav' || 'm4a' || 'aac' || 'ogg' => ClassResourceKind.audio,
       'mp4' || 'mov' || 'm4v' || 'webm' => ClassResourceKind.video,
       _ => ClassResourceKind.other,
@@ -49,8 +57,9 @@ enum ClassResourceOrigin {
   /// detaches it from this class and leaves the original alone.
   attached;
 
-  static ClassResourceOrigin fromId(String? id) =>
-      id == 'attached' ? ClassResourceOrigin.attached : ClassResourceOrigin.ownUpload;
+  static ClassResourceOrigin fromId(String? id) => id == 'attached'
+      ? ClassResourceOrigin.attached
+      : ClassResourceOrigin.ownUpload;
 }
 
 /// Who a resource has been shared with. Always inside the class - the options
@@ -69,10 +78,10 @@ enum ClassResourceAudience {
   }
 
   String get label => switch (this) {
-        ClassResourceAudience.teacherOnly => 'Only me',
-        ClassResourceAudience.students => 'My class',
-        ClassResourceAudience.studentsAndGuardians => 'Class and guardians',
-      };
+    ClassResourceAudience.teacherOnly => 'Only me',
+    ClassResourceAudience.students => 'My class',
+    ClassResourceAudience.studentsAndGuardians => 'Class and guardians',
+  };
 }
 
 /// One file, link or folder in the class's resource area.
@@ -197,28 +206,28 @@ class ClassResource extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        campusId,
-        classId,
-        academicYearId,
-        termId,
-        name,
-        description,
-        kind,
-        origin,
-        audience,
-        storagePath,
-        downloadUrl,
-        externalUrl,
-        sizeBytes,
-        mimeType,
-        folderId,
-        sourceResourceId,
-        availableOffline,
-        uploadedByUserId,
-        uploadedAt,
-        roleAssignmentId,
-        downloadCount,
-      ];
+    id,
+    schoolId,
+    campusId,
+    classId,
+    academicYearId,
+    termId,
+    name,
+    description,
+    kind,
+    origin,
+    audience,
+    storagePath,
+    downloadUrl,
+    externalUrl,
+    sizeBytes,
+    mimeType,
+    folderId,
+    sourceResourceId,
+    availableOffline,
+    uploadedByUserId,
+    uploadedAt,
+    roleAssignmentId,
+    downloadCount,
+  ];
 }

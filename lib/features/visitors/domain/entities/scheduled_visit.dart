@@ -28,5 +28,17 @@ class ScheduledVisit extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, schoolId, fullName, phone, host, hostId, purpose, scheduledTime, isApproved, isRejected, isCheckedIn];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    fullName,
+    phone,
+    host,
+    hostId,
+    purpose,
+    scheduledTime,
+    isApproved,
+    isRejected,
+    isCheckedIn,
+  ];
 }

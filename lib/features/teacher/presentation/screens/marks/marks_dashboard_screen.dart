@@ -49,7 +49,10 @@ class MarksDashboardScreen extends StatelessWidget {
                   ),
                   TextButton(
                     onPressed: () => context.push('/staff/marks/history'),
-                    child: Text('View All', style: TextStyle(color: AppColors.primary(context))),
+                    child: Text(
+                      'View All',
+                      style: TextStyle(color: AppColors.primary(context)),
+                    ),
                   ),
                 ],
               ),
@@ -73,7 +76,10 @@ class MarksDashboardScreen extends StatelessWidget {
             children: [
               Text(
                 'Good Afternoon,',
-                style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12),
+                style: TextStyle(
+                  color: AppColors.textSecondary(context),
+                  fontSize: 12,
+                ),
               ),
               Text(
                 'Mr. Okot John',
@@ -85,19 +91,28 @@ class MarksDashboardScreen extends StatelessWidget {
               ),
               Text(
                 'Subject Teacher • Mathematics',
-                style: TextStyle(color: AppColors.primary(context), fontSize: 12),
+                style: TextStyle(
+                  color: AppColors.primary(context),
+                  fontSize: 12,
+                ),
               ),
             ],
           ),
         ),
         IconButton(
-          icon: Icon(Icons.chat_bubble_outline, color: AppColors.textPrimary(context)),
+          icon: Icon(
+            Icons.chat_bubble_outline,
+            color: AppColors.textPrimary(context),
+          ),
           onPressed: () {},
         ),
         Stack(
           children: [
             IconButton(
-              icon: Icon(Icons.notifications_none, color: AppColors.textPrimary(context)),
+              icon: Icon(
+                Icons.notifications_none,
+                color: AppColors.textPrimary(context),
+              ),
               onPressed: () {},
             ),
             Positioned(
@@ -105,8 +120,14 @@ class MarksDashboardScreen extends StatelessWidget {
               top: 8,
               child: Container(
                 padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(color: AppColors.danger(context), shape: BoxShape.circle),
-                child: const Text('1', style: TextStyle(color: Colors.white, fontSize: 8)),
+                decoration: BoxDecoration(
+                  color: AppColors.danger(context),
+                  shape: BoxShape.circle,
+                ),
+                child: const Text(
+                  '1',
+                  style: TextStyle(color: Colors.white, fontSize: 8),
+                ),
               ),
             ),
           ],
@@ -121,21 +142,32 @@ class MarksDashboardScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
+        border: Border.all(
+          color: AppColors.border(context).withValues(alpha: 0.5),
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
-              Text('Class: ', style: TextStyle(color: AppColors.textSecondary(context))),
+              Text(
+                'Class: ',
+                style: TextStyle(color: AppColors.textSecondary(context)),
+              ),
               Text(
                 'Grade 10A (Science)',
-                style: TextStyle(color: AppColors.textPrimary(context), fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: AppColors.textPrimary(context),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
-          Icon(Icons.keyboard_arrow_down, color: AppColors.textPrimary(context)),
+          Icon(
+            Icons.keyboard_arrow_down,
+            color: AppColors.textPrimary(context),
+          ),
         ],
       ),
     );
@@ -147,14 +179,19 @@ class MarksDashboardScreen extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: isDark 
+          colors: isDark
               ? [const Color(0xFF1E1B4B), AppColors.surfaceElevated(context)]
-              : [AppColors.primary(context).withValues(alpha: 0.1), AppColors.surfaceElevated(context)],
+              : [
+                  AppColors.primary(context).withValues(alpha: 0.1),
+                  AppColors.surfaceElevated(context),
+                ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
+        border: Border.all(
+          color: AppColors.border(context).withValues(alpha: 0.5),
+        ),
       ),
       child: Column(
         children: [
@@ -166,7 +203,11 @@ class MarksDashboardScreen extends StatelessWidget {
                   color: AppColors.primary(context).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(Icons.functions, color: AppColors.primary(context), size: 20),
+                child: Icon(
+                  Icons.functions,
+                  color: AppColors.primary(context),
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -183,7 +224,10 @@ class MarksDashboardScreen extends StatelessWidget {
                     ),
                     Text(
                       'Term 2, 2024/2025',
-                      style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12),
+                      style: TextStyle(
+                        color: AppColors.textSecondary(context),
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
@@ -196,8 +240,18 @@ class MarksDashboardScreen extends StatelessWidget {
             children: [
               _buildMetric(context, '5', 'Assessments'),
               _buildMetric(context, '18', 'Marks Entered'),
-              _buildMetric(context, '84%', 'Average Score', valueColor: AppColors.goldenYellow),
-              _buildMetric(context, '2', 'Pending', valueColor: AppColors.deepOrange),
+              _buildMetric(
+                context,
+                '84%',
+                'Average Score',
+                valueColor: AppColors.goldenYellow,
+              ),
+              _buildMetric(
+                context,
+                '2',
+                'Pending',
+                valueColor: AppColors.deepOrange,
+              ),
             ],
           ),
         ],
@@ -205,7 +259,12 @@ class MarksDashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMetric(BuildContext context, String value, String label, {Color? valueColor}) {
+  Widget _buildMetric(
+    BuildContext context,
+    String value,
+    String label, {
+    Color? valueColor,
+  }) {
     return Column(
       children: [
         Text(
@@ -217,7 +276,10 @@ class MarksDashboardScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        Text(label, style: TextStyle(color: AppColors.textMuted(context), fontSize: 10)),
+        Text(
+          label,
+          style: TextStyle(color: AppColors.textMuted(context), fontSize: 10),
+        ),
       ],
     );
   }
@@ -225,16 +287,36 @@ class MarksDashboardScreen extends StatelessWidget {
   Widget _buildQuickActions(BuildContext context) {
     return Row(
       children: [
-        _buildActionItem(context, 'Enter Marks', Icons.edit_note, '/staff/marks/select-assessment'),
+        _buildActionItem(
+          context,
+          'Enter Marks',
+          Icons.edit_note,
+          '/staff/marks/select-assessment',
+        ),
         const SizedBox(width: 12),
-        _buildActionItem(context, 'Import Marks', Icons.file_upload_outlined, '/staff/marks/import'),
+        _buildActionItem(
+          context,
+          'Import Marks',
+          Icons.file_upload_outlined,
+          '/staff/marks/import',
+        ),
         const SizedBox(width: 12),
-        _buildActionItem(context, 'Mark Analytics', Icons.bar_chart, '/staff/marks/analytics'),
+        _buildActionItem(
+          context,
+          'Mark Analytics',
+          Icons.bar_chart,
+          '/staff/marks/analytics',
+        ),
       ],
     );
   }
 
-  Widget _buildActionItem(BuildContext context, String label, IconData icon, String route) {
+  Widget _buildActionItem(
+    BuildContext context,
+    String label,
+    IconData icon,
+    String route,
+  ) {
     return Expanded(
       child: InkWell(
         onTap: () => context.push(route),
@@ -243,7 +325,9 @@ class MarksDashboardScreen extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.surfaceElevated(context),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
+            border: Border.all(
+              color: AppColors.border(context).withValues(alpha: 0.5),
+            ),
           ),
           child: Column(
             children: [
@@ -267,21 +351,47 @@ class MarksDashboardScreen extends StatelessWidget {
   Widget _buildRecentAssessments(BuildContext context) {
     return Column(
       children: [
-        _buildAssessmentItem(context, 'Mid Term Test', 'Test', 'Completed', AppColors.success(context)),
-        _buildAssessmentItem(context, 'Assignment 2', 'Assignment', 'Pending', AppColors.warning(context)),
-        _buildAssessmentItem(context, 'Quiz 1', 'Quiz', 'Completed', AppColors.success(context)),
+        _buildAssessmentItem(
+          context,
+          'Mid Term Test',
+          'Test',
+          'Completed',
+          AppColors.success(context),
+        ),
+        _buildAssessmentItem(
+          context,
+          'Assignment 2',
+          'Assignment',
+          'Pending',
+          AppColors.warning(context),
+        ),
+        _buildAssessmentItem(
+          context,
+          'Quiz 1',
+          'Quiz',
+          'Completed',
+          AppColors.success(context),
+        ),
       ],
     );
   }
 
-  Widget _buildAssessmentItem(BuildContext context, String title, String type, String status, Color statusColor) {
+  Widget _buildAssessmentItem(
+    BuildContext context,
+    String title,
+    String type,
+    String status,
+    Color statusColor,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
+        border: Border.all(
+          color: AppColors.border(context).withValues(alpha: 0.5),
+        ),
       ),
       child: Row(
         children: [
@@ -291,11 +401,17 @@ class MarksDashboardScreen extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyle(color: AppColors.textPrimary(context), fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: AppColors.textPrimary(context),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text(
                   type,
-                  style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12),
+                  style: TextStyle(
+                    color: AppColors.textSecondary(context),
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
@@ -308,11 +424,19 @@ class MarksDashboardScreen extends StatelessWidget {
             ),
             child: Text(
               status,
-              style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: statusColor,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           const SizedBox(width: 8),
-          Icon(Icons.chevron_right, color: AppColors.textMuted(context), size: 16),
+          Icon(
+            Icons.chevron_right,
+            color: AppColors.textMuted(context),
+            size: 16,
+          ),
         ],
       ),
     );

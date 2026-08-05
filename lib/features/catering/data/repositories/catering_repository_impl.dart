@@ -24,7 +24,8 @@ class CateringRepositoryImpl implements CateringRepository {
   });
 
   @override
-  Future<Either<Failure, Map<String, dynamic>>> getCateringDashboardData() async {
+  Future<Either<Failure, Map<String, dynamic>>>
+  getCateringDashboardData() async {
     try {
       final data = await remoteDataSource.getCateringDashboardData();
       return Right(data);
@@ -90,9 +91,13 @@ class CateringRepositoryImpl implements CateringRepository {
   }
 
   @override
-  Future<Either<Failure, Map<String, dynamic>>> verifyStudentMealEligibility(String studentId) async {
+  Future<Either<Failure, Map<String, dynamic>>> verifyStudentMealEligibility(
+    String studentId,
+  ) async {
     try {
-      final data = await remoteDataSource.verifyStudentMealEligibility(studentId);
+      final data = await remoteDataSource.verifyStudentMealEligibility(
+        studentId,
+      );
       return Right(data);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -115,14 +120,14 @@ class CateringRepositoryImpl implements CateringRepository {
         academicYear: record.academicYear,
         term: record.term,
       );
-      
+
       // Always cache locally first for offline support
       await localDataSource.cacheMealRecord(model);
-      
+
       // Try to sync to remote if possible
       try {
         await remoteDataSource.recordMealServed(model);
-        // If successful, we could mark as synced immediately, 
+        // If successful, we could mark as synced immediately,
         // but typically a background sync worker handles this.
       } catch (e) {
         // Silently fail remote record, it's cached locally
@@ -151,12 +156,16 @@ class CateringRepositoryImpl implements CateringRepository {
         'requestedBy': request.requestedBy,
         'requestedAt': request.requestedAt.toIso8601String(),
         'status': request.status.name,
-        'items': request.items.map((item) => {
-          'foodItemId': item.foodItemId,
-          'foodItemName': item.foodItemName,
-          'quantity': item.quantity,
-          'unit': item.unit,
-        }).toList(),
+        'items': request.items
+            .map(
+              (item) => {
+                'foodItemId': item.foodItemId,
+                'foodItemName': item.foodItemName,
+                'quantity': item.quantity,
+                'unit': item.unit,
+              },
+            )
+            .toList(),
       };
       await remoteDataSource.createStockRequest(requestData);
       return const Right(null);
@@ -169,21 +178,33 @@ class CateringRepositoryImpl implements CateringRepository {
   Future<Either<Failure, List<StockRequest>>> getStockRequests() async {
     try {
       final rawRequests = await remoteDataSource.getStockRequests();
-      final requests = rawRequests.map((data) => StockRequest(
-        id: data['id'],
-        requestedBy: data['requestedBy'],
-        requestedAt: DateTime.parse(data['requestedAt']),
-        status: StockRequestStatus.values.firstWhere((e) => e.name == data['status']),
-        items: (data['items'] as List).map((item) => StockRequestItem(
-          foodItemId: item['foodItemId'],
-          foodItemName: item['foodItemName'],
-          quantity: item['quantity'],
-          unit: item['unit'],
-        )).toList(),
-        approvedBy: data['approvedBy'],
-        approvedAt: data['approvedAt'] != null ? DateTime.parse(data['approvedAt']) : null,
-        comments: data['comments'],
-      )).toList();
+      final requests = rawRequests
+          .map(
+            (data) => StockRequest(
+              id: data['id'],
+              requestedBy: data['requestedBy'],
+              requestedAt: DateTime.parse(data['requestedAt']),
+              status: StockRequestStatus.values.firstWhere(
+                (e) => e.name == data['status'],
+              ),
+              items: (data['items'] as List)
+                  .map(
+                    (item) => StockRequestItem(
+                      foodItemId: item['foodItemId'],
+                      foodItemName: item['foodItemName'],
+                      quantity: item['quantity'],
+                      unit: item['unit'],
+                    ),
+                  )
+                  .toList(),
+              approvedBy: data['approvedBy'],
+              approvedAt: data['approvedAt'] != null
+                  ? DateTime.parse(data['approvedAt'])
+                  : null,
+              comments: data['comments'],
+            ),
+          )
+          .toList();
       return Right(requests);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -191,9 +212,15 @@ class CateringRepositoryImpl implements CateringRepository {
   }
 
   @override
-  Future<Either<Failure, List<MealRecord>>> getMealAttendanceReport(DateTime start, DateTime end) async {
+  Future<Either<Failure, List<MealRecord>>> getMealAttendanceReport(
+    DateTime start,
+    DateTime end,
+  ) async {
     try {
-      final records = await remoteDataSource.getMealAttendanceReport(start, end);
+      final records = await remoteDataSource.getMealAttendanceReport(
+        start,
+        end,
+      );
       return Right(records);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -201,7 +228,10 @@ class CateringRepositoryImpl implements CateringRepository {
   }
 
   @override
-  Future<Either<Failure, List<WastageRecord>>> getWastageRecords(DateTime start, DateTime end) async {
+  Future<Either<Failure, List<WastageRecord>>> getWastageRecords(
+    DateTime start,
+    DateTime end,
+  ) async {
     try {
       final records = await remoteDataSource.getWastageRecords(start, end);
       return Right(records);
@@ -233,9 +263,15 @@ class CateringRepositoryImpl implements CateringRepository {
   }
 
   @override
-  Future<Either<Failure, Map<String, dynamic>>> getCateringFinancialReport(DateTime start, DateTime end) async {
+  Future<Either<Failure, Map<String, dynamic>>> getCateringFinancialReport(
+    DateTime start,
+    DateTime end,
+  ) async {
     try {
-      final report = await remoteDataSource.getCateringFinancialReport(start, end);
+      final report = await remoteDataSource.getCateringFinancialReport(
+        start,
+        end,
+      );
       return Right(report);
     } catch (e) {
       return Left(ServerFailure(e.toString()));

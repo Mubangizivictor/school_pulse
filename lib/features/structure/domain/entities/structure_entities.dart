@@ -44,7 +44,15 @@ class EducationalLevel extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, schoolId, name, code, order, description, isActive];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    name,
+    code,
+    order,
+    description,
+    isActive,
+  ];
 }
 
 /// A school year (e.g. "2026"). Multiple years can exist at once - past
@@ -90,11 +98,30 @@ class AcademicYear extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, schoolId, name, startDate, endDate, isCurrent, isArchived];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    name,
+    startDate,
+    endDate,
+    isCurrent,
+    isArchived,
+  ];
 }
+
+/// The calendaring system a school uses to divide an academic year.
+/// A school picks whichever fits how it actually runs (three terms, two
+/// semesters, four quarters, ...) - nothing is assumed to be terms.
+enum AcademicPeriodType { term, semester, quarter, trimester, module, custom }
 
 /// A term/semester/quarter within an academic year. The school decides the
 /// system (Term 1-3, Semester 1-2, Quarter 1-4, ...) - nothing is assumed.
+///
+/// Kept as `AcademicTerm` rather than renamed to `AcademicPeriod` so the
+/// repository interface, Isar cache, bloc events, and existing callers
+/// (e.g. lib/features/teacher/data/services/academic_calendar_service_impl.dart)
+/// don't need to move; `periodType` is what lets this same class represent
+/// any of the calendaring systems above.
 class AcademicTerm extends Equatable {
   final String id;
   final String schoolId;
@@ -104,6 +131,8 @@ class AcademicTerm extends Equatable {
   final DateTime startDate;
   final DateTime endDate;
   final bool isCurrent;
+  final AcademicPeriodType periodType;
+  final bool isArchived;
 
   const AcademicTerm({
     required this.id,
@@ -114,6 +143,8 @@ class AcademicTerm extends Equatable {
     required this.startDate,
     required this.endDate,
     this.isCurrent = false,
+    this.periodType = AcademicPeriodType.term,
+    this.isArchived = false,
   });
 
   AcademicTerm copyWith({
@@ -125,6 +156,8 @@ class AcademicTerm extends Equatable {
     DateTime? startDate,
     DateTime? endDate,
     bool? isCurrent,
+    AcademicPeriodType? periodType,
+    bool? isArchived,
   }) {
     return AcademicTerm(
       id: id ?? this.id,
@@ -135,12 +168,24 @@ class AcademicTerm extends Equatable {
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
       isCurrent: isCurrent ?? this.isCurrent,
+      periodType: periodType ?? this.periodType,
+      isArchived: isArchived ?? this.isArchived,
     );
   }
 
   @override
-  List<Object?> get props =>
-      [id, schoolId, academicYearId, name, order, startDate, endDate, isCurrent];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    academicYearId,
+    name,
+    order,
+    startDate,
+    endDate,
+    isCurrent,
+    periodType,
+    isArchived,
+  ];
 }
 
 /// A class/grade (P1, S1, Baby Class, Year 8, Grade 12, Level 300, ...).
@@ -189,7 +234,16 @@ class SchoolClass extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, schoolId, name, code, levelId, capacity, description, isActive];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    name,
+    code,
+    levelId,
+    capacity,
+    description,
+    isActive,
+  ];
 }
 
 /// A stream/section within a class (East, West, A, B, Blue, ...). Named
@@ -234,7 +288,15 @@ class ClassStream extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, schoolId, name, code, classId, capacity, isActive];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    name,
+    code,
+    classId,
+    capacity,
+    isActive,
+  ];
 }
 
 /// A subject, assignable to any set of levels/classes. No subject list is
@@ -304,20 +366,20 @@ class Subject extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        name,
-        code,
-        departmentId,
-        color,
-        description,
-        isElective,
-        isPractical,
-        creditUnits,
-        isActive,
-        assignedLevelIds,
-        assignedClassIds,
-      ];
+    id,
+    schoolId,
+    name,
+    code,
+    departmentId,
+    color,
+    description,
+    isElective,
+    isPractical,
+    creditUnits,
+    isActive,
+    assignedLevelIds,
+    assignedClassIds,
+  ];
 }
 
 /// A staff department (Science, ICT, Administration, Transport, Stores, ...
@@ -356,14 +418,22 @@ class Department extends Equatable {
       name: name ?? this.name,
       code: code ?? this.code,
       description: description ?? this.description,
-      headOfDepartmentStaffId: headOfDepartmentStaffId ?? this.headOfDepartmentStaffId,
+      headOfDepartmentStaffId:
+          headOfDepartmentStaffId ?? this.headOfDepartmentStaffId,
       isActive: isActive ?? this.isActive,
     );
   }
 
   @override
-  List<Object?> get props =>
-      [id, schoolId, name, code, description, headOfDepartmentStaffId, isActive];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    name,
+    code,
+    description,
+    headOfDepartmentStaffId,
+    isActive,
+  ];
 }
 
 /// A job title a staff member can hold (Principal, Bursar, Librarian,
@@ -444,5 +514,12 @@ class StaffRole extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, schoolId, name, designationId, description, isActive];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    name,
+    designationId,
+    description,
+    isActive,
+  ];
 }

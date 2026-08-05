@@ -32,9 +32,12 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
   @override
   void initState() {
     super.initState();
-    context
-        .read<StudentIdentityBloc>()
-        .add(LoadStudentIdentityEvent(widget.student.id, schoolId: widget.student.schoolId));
+    context.read<StudentIdentityBloc>().add(
+      LoadStudentIdentityEvent(
+        widget.student.id,
+        schoolId: widget.student.schoolId,
+      ),
+    );
   }
 
   @override
@@ -59,11 +62,13 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
       body: BlocConsumer<StudentIdentityBloc, StudentIdentityState>(
         listener: (context, state) {
           if (state is StudentIdentityActionSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
           } else if (state is StudentIdentityError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
           }
         },
         builder: (context, state) {
@@ -91,7 +96,11 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
                     const SizedBox(height: 24),
                     const Divider(),
                     const SizedBox(height: 8),
-                    _NfcCardSection(student: widget.student, identity: state.identity, assignedCardUid: state.assignedCardUid),
+                    _NfcCardSection(
+                      student: widget.student,
+                      identity: state.identity,
+                      assignedCardUid: state.assignedCardUid,
+                    ),
                     const SizedBox(height: 24),
                     const Divider(),
                     const SizedBox(height: 8),
@@ -123,8 +132,8 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
                   ElevatedButton(
                     onPressed: () {
                       context.read<StudentIdentityBloc>().add(
-                            GenerateStudentIdentityEvent(widget.student),
-                          );
+                        GenerateStudentIdentityEvent(widget.student),
+                      );
                     },
                     child: const Text('Generate Identity'),
                   ),
@@ -136,8 +145,8 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
             child: ElevatedButton(
               onPressed: () {
                 context.read<StudentIdentityBloc>().add(
-                      GenerateStudentIdentityEvent(widget.student),
-                    );
+                  GenerateStudentIdentityEvent(widget.student),
+                );
               },
               child: const Text('Generate Student ID'),
             ),
@@ -147,9 +156,14 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
     );
   }
 
-  Future<void> _printIdCard(BuildContext context, StudentIdentity identity) async {
+  Future<void> _printIdCard(
+    BuildContext context,
+    StudentIdentity identity,
+  ) async {
     final idCardService = GetIt.I<IdCardService>();
-    final schoolName = context.read<ThemeProvider>().config?.schoolName ?? 'School Pulse Academy';
+    final schoolName =
+        context.read<ThemeProvider>().config?.schoolName ??
+        'School Pulse Academy';
     try {
       final pdfData = await idCardService.generateIdCardPdf(
         schoolName: schoolName,
@@ -163,9 +177,9 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
       await idCardService.printIdCard(pdfData);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to print ID card: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to print ID card: $e')));
       }
     }
   }
@@ -175,14 +189,13 @@ class _IdCardPreview extends StatelessWidget {
   final Student student;
   final StudentIdentity identity;
 
-  const _IdCardPreview({
-    required this.student,
-    required this.identity,
-  });
+  const _IdCardPreview({required this.student, required this.identity});
 
   @override
   Widget build(BuildContext context) {
-    final schoolName = context.watch<ThemeProvider>().config?.schoolName ?? 'SCHOOL PULSE ACADEMY';
+    final schoolName =
+        context.watch<ThemeProvider>().config?.schoolName ??
+        'SCHOOL PULSE ACADEMY';
     final primaryColor = Theme.of(context).primaryColor;
 
     return Card(
@@ -195,10 +208,7 @@ class _IdCardPreview extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              primaryColor.withValues(alpha: 0.05),
-              Colors.white,
-            ],
+            colors: [primaryColor.withValues(alpha: 0.05), Colors.white],
           ),
         ),
         padding: const EdgeInsets.all(20),
@@ -208,9 +218,9 @@ class _IdCardPreview extends StatelessWidget {
             Text(
               schoolName.toUpperCase(),
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: primaryColor,
-                  ),
+                fontWeight: FontWeight.bold,
+                color: primaryColor,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
@@ -265,7 +275,10 @@ class _IdCardPreview extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+          Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+          ),
         ],
       ),
     );
@@ -279,7 +292,11 @@ class _NfcCardSection extends StatefulWidget {
   final StudentIdentity identity;
   final String? assignedCardUid;
 
-  const _NfcCardSection({required this.student, required this.identity, required this.assignedCardUid});
+  const _NfcCardSection({
+    required this.student,
+    required this.identity,
+    required this.assignedCardUid,
+  });
 
   @override
   State<_NfcCardSection> createState() => _NfcCardSectionState();
@@ -331,23 +348,25 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
     );
 
     if (mounted) {
-      unawaited(showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Scan NFC Card'),
-          content: Text(promptMessage),
-          actions: [
-            TextButton(
-              onPressed: () {
-                if (!completer.isCompleted) completer.complete(null);
-                Navigator.pop(dialogContext);
-              },
-              child: const Text('Cancel'),
-            ),
-          ],
+      unawaited(
+        showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Scan NFC Card'),
+            content: Text(promptMessage),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  if (!completer.isCompleted) completer.complete(null);
+                  Navigator.pop(dialogContext);
+                },
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
         ),
-      ));
+      );
     }
 
     await adapter.start(placeholderContext);
@@ -370,7 +389,8 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
         children: [
           for (final reason in const ['Lost', 'Stolen', 'Damaged', 'Other'])
             SimpleDialogOption(
-              onPressed: () => Navigator.pop(dialogContext, reason.toLowerCase()),
+              onPressed: () =>
+                  Navigator.pop(dialogContext, reason.toLowerCase()),
               child: Text(reason),
             ),
         ],
@@ -379,14 +399,18 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
   }
 
   void _assign() async {
-    final uid = await _scanCard('Hold the new card near the device to assign it.');
+    final uid = await _scanCard(
+      'Hold the new card near the device to assign it.',
+    );
     if (uid == null || !mounted) return;
-    context.read<StudentIdentityBloc>().add(AssignNfcCardEvent(
-          cardUid: uid,
-          studentId: widget.student.id,
-          uniqueSystemId: widget.identity.uniqueSystemId,
-          schoolId: widget.student.schoolId,
-        ));
+    context.read<StudentIdentityBloc>().add(
+      AssignNfcCardEvent(
+        cardUid: uid,
+        studentId: widget.student.id,
+        uniqueSystemId: widget.identity.uniqueSystemId,
+        schoolId: widget.student.schoolId,
+      ),
+    );
   }
 
   void _replace() async {
@@ -394,16 +418,20 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
     if (oldUid == null) return;
     final reason = await _pickReason();
     if (reason == null || !mounted) return;
-    final newUid = await _scanCard('Hold the replacement card near the device.');
+    final newUid = await _scanCard(
+      'Hold the replacement card near the device.',
+    );
     if (newUid == null || !mounted) return;
-    context.read<StudentIdentityBloc>().add(ReplaceNfcCardEvent(
-          oldCardUid: oldUid,
-          newCardUid: newUid,
-          studentId: widget.student.id,
-          uniqueSystemId: widget.identity.uniqueSystemId,
-          schoolId: widget.student.schoolId,
-          reason: reason,
-        ));
+    context.read<StudentIdentityBloc>().add(
+      ReplaceNfcCardEvent(
+        oldCardUid: oldUid,
+        newCardUid: newUid,
+        studentId: widget.student.id,
+        uniqueSystemId: widget.identity.uniqueSystemId,
+        schoolId: widget.student.schoolId,
+        reason: reason,
+      ),
+    );
   }
 
   void _revoke() async {
@@ -411,22 +439,26 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
     if (uid == null) return;
     final reason = await _pickReason();
     if (reason == null || !mounted) return;
-    context.read<StudentIdentityBloc>().add(RevokeNfcCardEvent(
-          cardUid: uid,
-          studentId: widget.student.id,
-          schoolId: widget.student.schoolId,
-          reason: reason,
-        ));
+    context.read<StudentIdentityBloc>().add(
+      RevokeNfcCardEvent(
+        cardUid: uid,
+        studentId: widget.student.id,
+        schoolId: widget.student.schoolId,
+        reason: reason,
+      ),
+    );
   }
 
   void _reactivate() {
     final uid = widget.assignedCardUid;
     if (uid == null) return;
-    context.read<StudentIdentityBloc>().add(ReactivateNfcCardEvent(
-          cardUid: uid,
-          studentId: widget.student.id,
-          schoolId: widget.student.schoolId,
-        ));
+    context.read<StudentIdentityBloc>().add(
+      ReactivateNfcCardEvent(
+        cardUid: uid,
+        studentId: widget.student.id,
+        schoolId: widget.student.schoolId,
+      ),
+    );
   }
 
   @override
@@ -443,12 +475,18 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
       children: [
         Row(
           children: [
-            const Text('NFC Card', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const Text(
+              'NFC Card',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
             const SizedBox(width: 12),
             Chip(
               label: Text(status.toUpperCase()),
               backgroundColor: statusColor.withValues(alpha: 0.12),
-              labelStyle: TextStyle(color: statusColor, fontWeight: FontWeight.w600),
+              labelStyle: TextStyle(
+                color: statusColor,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),
@@ -464,7 +502,11 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
                 FilledButton.icon(
                   onPressed: _assign,
                   icon: const Icon(Icons.nfc),
-                  label: Text(status == 'revoked' ? 'Assign Replacement Card' : 'Assign Card'),
+                  label: Text(
+                    status == 'revoked'
+                        ? 'Assign Replacement Card'
+                        : 'Assign Card',
+                  ),
                 ),
               if (status == 'active' && widget.assignedCardUid != null) ...[
                 OutlinedButton.icon(

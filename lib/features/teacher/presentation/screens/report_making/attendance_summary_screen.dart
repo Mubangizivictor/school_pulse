@@ -18,22 +18,23 @@ class AttendanceSummaryScreen extends StatefulWidget {
   });
 
   @override
-  State<AttendanceSummaryScreen> createState() => _AttendanceSummaryScreenState();
+  State<AttendanceSummaryScreen> createState() =>
+      _AttendanceSummaryScreenState();
 }
 
 class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<TeacherBloc>().add(TeacherAttendanceHistoryRequested(widget.teacherId));
+    context.read<TeacherBloc>().add(
+      TeacherAttendanceHistoryRequested(widget.teacherId),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Attendance & Punctuality'),
-      ),
+      appBar: AppBar(title: const Text('Attendance & Punctuality')),
       body: BlocBuilder<TeacherBloc, TeacherState>(
         builder: (context, state) {
           if (state is TeacherLoading) {
@@ -42,7 +43,9 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
 
           if (state is TeacherAttendanceHistoryLoaded) {
             // Filter history for the specific class
-            final classHistory = state.history.where((h) => h.className == widget.className).toList();
+            final classHistory = state.history
+                .where((h) => h.className == widget.className)
+                .toList();
 
             final int daysOpen = classHistory.length;
             int totalPresent = 0;
@@ -55,8 +58,13 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
             // Let's assume for this mock/demo that we are showing metrics for a specific student
             // and we would need a GetStudentAttendanceHistory use case.
             // For now, let's use the class metrics as a placeholder but with real data counts.
-            
-            final double attendanceRate = daysOpen > 0 ? (totalPresent / (daysOpen * (classHistory.firstOrNull?.totalCount ?? 1))) * 100 : 0;
+
+            final double attendanceRate = daysOpen > 0
+                ? (totalPresent /
+                          (daysOpen *
+                              (classHistory.firstOrNull?.totalCount ?? 1))) *
+                      100
+                : 0;
 
             return Column(
               children: [
@@ -66,9 +74,20 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
                     children: [
                       const SectionHeader(title: 'Class Summary'),
                       const SizedBox(height: 12),
-                      _AttendanceMetricItem(label: 'Days School Open', value: '$daysOpen'),
-                      _AttendanceMetricItem(label: 'Avg. Students Present', value: daysOpen > 0 ? (totalPresent / daysOpen).toStringAsFixed(1) : '0'),
-                      _AttendanceMetricItem(label: 'Total Present Markings', value: '$totalPresent'),
+                      _AttendanceMetricItem(
+                        label: 'Days School Open',
+                        value: '$daysOpen',
+                      ),
+                      _AttendanceMetricItem(
+                        label: 'Avg. Students Present',
+                        value: daysOpen > 0
+                            ? (totalPresent / daysOpen).toStringAsFixed(1)
+                            : '0',
+                      ),
+                      _AttendanceMetricItem(
+                        label: 'Total Present Markings',
+                        value: '$totalPresent',
+                      ),
                       const SizedBox(height: 32),
                       Center(
                         child: Column(
@@ -90,7 +109,8 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
                                   child: CircularProgressIndicator(
                                     value: attendanceRate / 100,
                                     strokeWidth: 12,
-                                    backgroundColor: AppColors.surfaceContainerHigh(context),
+                                    backgroundColor:
+                                        AppColors.surfaceContainerHigh(context),
                                     color: AppColors.success(context),
                                   ),
                                 ),
@@ -118,7 +138,8 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
                   padding: const EdgeInsets.all(16.0),
                   child: PrimaryButton(
                     label: 'Save & Next',
-                    onPressed: () => context.push('/staff/reports/behaviour-conduct'),
+                    onPressed: () =>
+                        context.push('/staff/reports/behaviour-conduct'),
                   ),
                 ),
               ],

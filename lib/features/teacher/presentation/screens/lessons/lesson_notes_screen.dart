@@ -63,7 +63,11 @@ class LessonNotesScreen extends StatelessWidget {
               color: AppColors.primarySoft(context),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(Icons.book, color: AppColors.primary(context), size: 20),
+            child: Icon(
+              Icons.book,
+              color: AppColors.primary(context),
+              size: 20,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(

@@ -24,7 +24,9 @@ class VisitorDetailsScreen extends StatelessWidget {
 
   Future<void> _printVisitorPass(BuildContext context) async {
     final idCardService = GetIt.I<VisitorIdCardService>();
-    final schoolName = context.read<ThemeProvider>().config?.schoolName ?? 'School Pulse Academy';
+    final schoolName =
+        context.read<ThemeProvider>().config?.schoolName ??
+        'School Pulse Academy';
     try {
       final pdfData = await idCardService.generateVisitorIdCardPdf(
         schoolName: schoolName,
@@ -37,7 +39,9 @@ class VisitorDetailsScreen extends StatelessWidget {
       await idCardService.printIdCard(pdfData);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to print visitor pass: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to print visitor pass: $e')),
+        );
       }
     }
   }
@@ -71,7 +75,7 @@ class VisitorDetailsScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               if (reasonController.text.isEmpty) return;
-              
+
               final blacklist = VisitorBlacklist(
                 id: const Uuid().v4(),
                 schoolId: visitor.schoolId,
@@ -90,7 +94,10 @@ class VisitorDetailsScreen extends StatelessWidget {
               );
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Confirm Blacklist', style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'Confirm Blacklist',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -103,10 +110,16 @@ class VisitorDetailsScreen extends StatelessWidget {
       builder: (dialogContext) => AlertDialog(
         title: const Text('New Badge Issued'),
         content: SingleChildScrollView(
-          child: VisitorBadgeWidget(visitor: reissued, schoolName: 'School Pulse'),
+          child: VisitorBadgeWidget(
+            visitor: reissued,
+            schoolName: 'School Pulse',
+          ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
           ElevatedButton(
             onPressed: () async {
               final printerService = sl<PrinterService>();
@@ -133,98 +146,147 @@ class VisitorDetailsScreen extends StatelessWidget {
         }
       },
       child: Scaffold(
-      appBar: AppBar(
-        title: const Text('Visitor Details'),
-        actions: [
-          if (visitor.status == VisitorStatus.checkedIn)
-            IconButton(
-              icon: const Icon(Icons.qr_code),
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => VisitorQRScreen(visitor: visitor)),
+        appBar: AppBar(
+          title: const Text('Visitor Details'),
+          actions: [
+            if (visitor.status == VisitorStatus.checkedIn)
+              IconButton(
+                icon: const Icon(Icons.qr_code),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => VisitorQRScreen(visitor: visitor),
+                  ),
+                ),
+                tooltip: 'Show QR Pass',
               ),
-              tooltip: 'Show QR Pass',
+            IconButton(
+              icon: const Icon(Icons.print_outlined),
+              onPressed: () => _printVisitorPass(context),
+              tooltip: 'Print Visitor Pass',
             ),
-          IconButton(
-            icon: const Icon(Icons.print_outlined),
-            onPressed: () => _printVisitorPass(context),
-            tooltip: 'Print Visitor Pass',
-          ),
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'blacklist') {
-                _showBlacklistDialog(context);
-              } else if (value == 'reissue') {
-                context.read<VisitorsBloc>().add(ReissueBadgeEvent(visitor.id));
-              }
-            },
-            itemBuilder: (context) => [
-              if (visitor.status == VisitorStatus.checkedIn)
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'blacklist') {
+                  _showBlacklistDialog(context);
+                } else if (value == 'reissue') {
+                  context.read<VisitorsBloc>().add(
+                    ReissueBadgeEvent(visitor.id),
+                  );
+                }
+              },
+              itemBuilder: (context) => [
+                if (visitor.status == VisitorStatus.checkedIn)
+                  const PopupMenuItem(
+                    value: 'reissue',
+                    child: Row(
+                      children: [
+                        Icon(Icons.badge_outlined, color: Colors.blue),
+                        SizedBox(width: 8),
+                        Text('Reissue Badge (Lost)'),
+                      ],
+                    ),
+                  ),
                 const PopupMenuItem(
-                  value: 'reissue',
+                  value: 'blacklist',
                   child: Row(
                     children: [
-                      Icon(Icons.badge_outlined, color: Colors.blue),
+                      Icon(Icons.block, color: Colors.red),
                       SizedBox(width: 8),
-                      Text('Reissue Badge (Lost)'),
+                      Text('Blacklist Visitor'),
                     ],
                   ),
                 ),
-              const PopupMenuItem(
-                value: 'blacklist',
-                child: Row(
-                  children: [
-                    Icon(Icons.block, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Blacklist Visitor'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(context),
-            const SizedBox(height: 24),
-            _buildStatusCard(context),
-            const SizedBox(height: 24),
-            _buildInfoSection(context, 'Visitor Information', [
-              _InfoRow(label: 'Phone', value: visitor.phone, icon: Icons.phone),
-              if (visitor.nationalId != null)
-                _InfoRow(label: 'National ID', value: visitor.nationalId!, icon: Icons.badge),
-              if (visitor.company != null)
-                _InfoRow(label: 'Company', value: visitor.company!, icon: Icons.business),
-              if (visitor.vehicleNumber != null)
-                _InfoRow(label: 'Vehicle', value: visitor.vehicleNumber!, icon: Icons.directions_car),
-              if (visitor.parkingSlot != null)
-                _InfoRow(label: 'Parking Slot', value: visitor.parkingSlot!, icon: Icons.local_parking),
-            ]),
-            if (visitor.idImageLocalPath != null || visitor.idImageUrl != null) ...[
-              const SizedBox(height: 24),
-              _buildIdImageSection(context),
-            ],
-            const SizedBox(height: 24),
-            _buildInfoSection(context, 'Visit Details', [
-              _InfoRow(label: 'Host', value: visitor.host, icon: Icons.person_pin),
-              _InfoRow(label: 'Department', value: visitor.department, icon: Icons.corporate_fare),
-              _InfoRow(label: 'Purpose', value: visitor.purpose, icon: Icons.comment),
-              if (visitor.gateId != null)
-                _InfoRow(label: 'Gate', value: visitor.gateId!, icon: Icons.sensor_door_outlined),
-              if (visitor.itemsCarried != null)
-                _InfoRow(label: 'Items', value: visitor.itemsCarried!, icon: Icons.inventory_2),
-              if (visitor.notes != null)
-                _InfoRow(label: 'Notes', value: visitor.notes!, icon: Icons.note),
-            ]),
-            const SizedBox(height: 24),
-            _buildHistorySection(context),
+              ],
+            ),
           ],
         ),
-      ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(context),
+              const SizedBox(height: 24),
+              _buildStatusCard(context),
+              const SizedBox(height: 24),
+              _buildInfoSection(context, 'Visitor Information', [
+                _InfoRow(
+                  label: 'Phone',
+                  value: visitor.phone,
+                  icon: Icons.phone,
+                ),
+                if (visitor.nationalId != null)
+                  _InfoRow(
+                    label: 'National ID',
+                    value: visitor.nationalId!,
+                    icon: Icons.badge,
+                  ),
+                if (visitor.company != null)
+                  _InfoRow(
+                    label: 'Company',
+                    value: visitor.company!,
+                    icon: Icons.business,
+                  ),
+                if (visitor.vehicleNumber != null)
+                  _InfoRow(
+                    label: 'Vehicle',
+                    value: visitor.vehicleNumber!,
+                    icon: Icons.directions_car,
+                  ),
+                if (visitor.parkingSlot != null)
+                  _InfoRow(
+                    label: 'Parking Slot',
+                    value: visitor.parkingSlot!,
+                    icon: Icons.local_parking,
+                  ),
+              ]),
+              if (visitor.idImageLocalPath != null ||
+                  visitor.idImageUrl != null) ...[
+                const SizedBox(height: 24),
+                _buildIdImageSection(context),
+              ],
+              const SizedBox(height: 24),
+              _buildInfoSection(context, 'Visit Details', [
+                _InfoRow(
+                  label: 'Host',
+                  value: visitor.host,
+                  icon: Icons.person_pin,
+                ),
+                _InfoRow(
+                  label: 'Department',
+                  value: visitor.department,
+                  icon: Icons.corporate_fare,
+                ),
+                _InfoRow(
+                  label: 'Purpose',
+                  value: visitor.purpose,
+                  icon: Icons.comment,
+                ),
+                if (visitor.gateId != null)
+                  _InfoRow(
+                    label: 'Gate',
+                    value: visitor.gateId!,
+                    icon: Icons.sensor_door_outlined,
+                  ),
+                if (visitor.itemsCarried != null)
+                  _InfoRow(
+                    label: 'Items',
+                    value: visitor.itemsCarried!,
+                    icon: Icons.inventory_2,
+                  ),
+                if (visitor.notes != null)
+                  _InfoRow(
+                    label: 'Notes',
+                    value: visitor.notes!,
+                    icon: Icons.note,
+                  ),
+              ]),
+              const SizedBox(height: 24),
+              _buildHistorySection(context),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -233,10 +295,11 @@ class VisitorDetailsScreen extends StatelessWidget {
     return BlocBuilder<VisitorsBloc, VisitorsState>(
       builder: (context, state) {
         if (state is! VisitorsLoaded) return const SizedBox.shrink();
-        final pastVisits = state.visitors
-            .where((v) => v.phone == visitor.phone && v.id != visitor.id)
-            .toList()
-          ..sort((a, b) => b.arrivalTime.compareTo(a.arrivalTime));
+        final pastVisits =
+            state.visitors
+                .where((v) => v.phone == visitor.phone && v.id != visitor.id)
+                .toList()
+              ..sort((a, b) => b.arrivalTime.compareTo(a.arrivalTime));
 
         if (pastVisits.isEmpty) return const SizedBox.shrink();
 
@@ -245,7 +308,9 @@ class VisitorDetailsScreen extends StatelessWidget {
           children: [
             Text(
               'Visit History (${pastVisits.length})',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             AppCard(
@@ -257,11 +322,18 @@ class VisitorDetailsScreen extends StatelessWidget {
                     children: [
                       ListTile(
                         leading: Icon(
-                          v.status == VisitorStatus.checkedIn ? Icons.login : Icons.logout,
+                          v.status == VisitorStatus.checkedIn
+                              ? Icons.login
+                              : Icons.logout,
                           size: 20,
-                          color: v.status == VisitorStatus.checkedIn ? Colors.green : Colors.grey,
+                          color: v.status == VisitorStatus.checkedIn
+                              ? Colors.green
+                              : Colors.grey,
                         ),
-                        title: Text(v.purpose, style: const TextStyle(fontWeight: FontWeight.w500)),
+                        title: Text(
+                          v.purpose,
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
                         subtitle: Text(
                           'Host: ${v.host} • ${DateFormat('MMM dd, yyyy hh:mm a').format(v.arrivalTime)}',
                         ),
@@ -287,7 +359,7 @@ class VisitorDetailsScreen extends StatelessWidget {
         imageProvider = FileImage(file);
       }
     }
-    
+
     if (imageProvider == null && visitor.photoUrl != null) {
       imageProvider = NetworkImage(visitor.photoUrl!);
     }
@@ -297,7 +369,9 @@ class VisitorDetailsScreen extends StatelessWidget {
         CircleAvatar(
           radius: 40,
           backgroundImage: imageProvider,
-          child: imageProvider == null ? const Icon(Icons.person, size: 40) : null,
+          child: imageProvider == null
+              ? const Icon(Icons.person, size: 40)
+              : null,
         ),
         const SizedBox(width: 16),
         Expanded(
@@ -306,10 +380,16 @@ class VisitorDetailsScreen extends StatelessWidget {
             children: [
               Text(
                 visitor.fullName,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               if (visitor.isBlacklisted)
-                const StatusBadge(label: 'BLACKLISTED', color: Colors.red, icon: Icons.warning),
+                const StatusBadge(
+                  label: 'BLACKLISTED',
+                  color: Colors.red,
+                  icon: Icons.warning,
+                ),
             ],
           ),
         ),
@@ -320,7 +400,9 @@ class VisitorDetailsScreen extends StatelessWidget {
   Widget _buildStatusCard(BuildContext context) {
     final isCheckedIn = visitor.status == VisitorStatus.checkedIn;
     return AppCard(
-      color: isCheckedIn ? Colors.green.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
+      color: isCheckedIn
+          ? Colors.green.withValues(alpha: 0.1)
+          : Colors.grey.withValues(alpha: 0.1),
       child: Row(
         children: [
           Icon(
@@ -355,7 +437,8 @@ class VisitorDetailsScreen extends StatelessWidget {
 
   Widget _buildIdImageSection(BuildContext context) {
     ImageProvider imageProvider;
-    if (visitor.idImageLocalPath != null && File(visitor.idImageLocalPath!).existsSync()) {
+    if (visitor.idImageLocalPath != null &&
+        File(visitor.idImageLocalPath!).existsSync()) {
       imageProvider = FileImage(File(visitor.idImageLocalPath!));
     } else {
       imageProvider = NetworkImage(visitor.idImageUrl!);
@@ -366,7 +449,9 @@ class VisitorDetailsScreen extends StatelessWidget {
       children: [
         Text(
           'ID Document',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
         InkWell(
@@ -390,13 +475,19 @@ class VisitorDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoSection(BuildContext context, String title, List<_InfoRow> rows) {
+  Widget _buildInfoSection(
+    BuildContext context,
+    String title,
+    List<_InfoRow> rows,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
         AppCard(
@@ -408,8 +499,14 @@ class VisitorDetailsScreen extends StatelessWidget {
                 children: [
                   ListTile(
                     leading: Icon(row.icon, size: 20),
-                    title: Text(row.label, style: Theme.of(context).textTheme.bodySmall),
-                    subtitle: Text(row.value, style: const TextStyle(fontWeight: FontWeight.w500)),
+                    title: Text(
+                      row.label,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    subtitle: Text(
+                      row.value,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
                     visualDensity: VisualDensity.compact,
                   ),
                   if (!isLast) const Divider(height: 1),

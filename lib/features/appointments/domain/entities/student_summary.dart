@@ -7,7 +7,11 @@ class StudentSummary extends Equatable {
   final String name;
   final String classId;
 
-  const StudentSummary({required this.id, required this.name, required this.classId});
+  const StudentSummary({
+    required this.id,
+    required this.name,
+    required this.classId,
+  });
 
   @override
   List<Object?> get props => [id, name, classId];

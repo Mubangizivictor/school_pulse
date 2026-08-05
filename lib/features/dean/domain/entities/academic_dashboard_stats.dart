@@ -49,28 +49,28 @@ class AcademicDashboardStats extends Equatable {
 
   @override
   List<Object?> get props => [
-        totalStudents,
-        totalTeachers,
-        totalClasses,
-        totalSubjects,
-        currentAcademicYear,
-        currentTerm,
-        activeTimetables,
-        lessonsConductedToday,
-        lessonsMissedToday,
-        assessmentsPending,
-        marksPendingEntry,
-        reportCardsPendingApproval,
-        reportCardsPublished,
-        overallSchoolAverage,
-        topPerformingClasses,
-        bottomPerformingClasses,
-        subjectRankings,
-        attendanceTrend,
-        homeworkCompletionRate,
-        teacherLessonCompletionRate,
-        activeAlerts,
-      ];
+    totalStudents,
+    totalTeachers,
+    totalClasses,
+    totalSubjects,
+    currentAcademicYear,
+    currentTerm,
+    activeTimetables,
+    lessonsConductedToday,
+    lessonsMissedToday,
+    assessmentsPending,
+    marksPendingEntry,
+    reportCardsPendingApproval,
+    reportCardsPublished,
+    overallSchoolAverage,
+    topPerformingClasses,
+    bottomPerformingClasses,
+    subjectRankings,
+    attendanceTrend,
+    homeworkCompletionRate,
+    teacherLessonCompletionRate,
+    activeAlerts,
+  ];
 }
 
 class ClassPerformance extends Equatable {
@@ -78,7 +78,11 @@ class ClassPerformance extends Equatable {
   final String className;
   final double average;
 
-  const ClassPerformance({required this.classId, required this.className, required this.average});
+  const ClassPerformance({
+    required this.classId,
+    required this.className,
+    required this.average,
+  });
 
   @override
   List<Object?> get props => [classId, className, average];
@@ -89,7 +93,11 @@ class SubjectPerformance extends Equatable {
   final String subjectName;
   final double average;
 
-  const SubjectPerformance({required this.subjectId, required this.subjectName, required this.average});
+  const SubjectPerformance({
+    required this.subjectId,
+    required this.subjectName,
+    required this.average,
+  });
 
   @override
   List<Object?> get props => [subjectId, subjectName, average];

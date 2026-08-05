@@ -20,5 +20,11 @@ class StudentIdentity extends Equatable {
   });
 
   @override
-  List<Object?> get props => [studentId, uniqueSystemId, schoolStudentId, qrCodeData, nfcStatus];
+  List<Object?> get props => [
+    studentId,
+    uniqueSystemId,
+    schoolStudentId,
+    qrCodeData,
+    nfcStatus,
+  ];
 }

@@ -37,7 +37,9 @@ class SubjectSyncServiceImpl implements SubjectSyncService {
     // operation and race to delete it.
     if (_draining) return const SyncResult();
     if (!await networkInfo.isConnected) {
-      final waiting = await localDataSource.getPendingOperations(schoolId: schoolId);
+      final waiting = await localDataSource.getPendingOperations(
+        schoolId: schoolId,
+      );
       return SyncResult(remaining: waiting.length);
     }
 
@@ -49,7 +51,9 @@ class SubjectSyncServiceImpl implements SubjectSyncService {
     try {
       // Oldest first, so a lesson start lands before the register that
       // belongs to it.
-      final pending = await localDataSource.getPendingOperations(schoolId: schoolId);
+      final pending = await localDataSource.getPendingOperations(
+        schoolId: schoolId,
+      );
 
       for (final row in pending) {
         final operation = row.toEntity();
@@ -60,8 +64,11 @@ class SubjectSyncServiceImpl implements SubjectSyncService {
               await localDataSource.deleteOperation(operation.operationId);
               synced++;
             case _ReplayOutcome.conflict:
-              await _mark(operation, OfflineSyncStatus.conflict,
-                  'Changed on the server while you were offline.');
+              await _mark(
+                operation,
+                OfflineSyncStatus.conflict,
+                'Changed on the server while you were offline.',
+              );
               conflicted++;
             case _ReplayOutcome.gone:
               // The record this operation targets no longer exists - the
@@ -80,7 +87,9 @@ class SubjectSyncServiceImpl implements SubjectSyncService {
       // already landed.
       await auditService.flushPending();
 
-      final left = await localDataSource.getPendingOperations(schoolId: schoolId);
+      final left = await localDataSource.getPendingOperations(
+        schoolId: schoolId,
+      );
       return SyncResult(
         synced: synced,
         failed: failed,
@@ -175,8 +184,9 @@ class SubjectSyncServiceImpl implements SubjectSyncService {
         operation.copyWith(
           status: status,
           lastError: message,
-          retryCount:
-              incrementRetry ? operation.retryCount + 1 : operation.retryCount,
+          retryCount: incrementRetry
+              ? operation.retryCount + 1
+              : operation.retryCount,
         ),
       ),
     );

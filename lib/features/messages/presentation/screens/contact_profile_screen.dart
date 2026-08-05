@@ -32,7 +32,9 @@ class ContactProfileScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: Icon(Icons.more_vert, color: AppColors.textPrimary(context)),
-            onPressed: () => context.showMessagingSnack('No further options for this contact'),
+            onPressed: () => context.showMessagingSnack(
+              'No further options for this contact',
+            ),
           ),
         ],
       ),
@@ -46,8 +48,12 @@ class ContactProfileScreen extends StatelessWidget {
             final data = snapshot.data;
             if (data == null) {
               return Center(
-                child: Text('Contact not found',
-                    style: AppTypography.bodyMedium.copyWith(color: AppColors.textMuted(context))),
+                child: Text(
+                  'Contact not found',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.textMuted(context),
+                  ),
+                ),
               );
             }
             return _buildBody(context, user, data);
@@ -58,13 +64,19 @@ class ContactProfileScreen extends StatelessWidget {
   }
 
   Future<_ProfileData?> _resolve(BuildContext context, UserEntity user) async {
-    final conversation = await context.messages.watchConversation(contactId, user.id).first;
+    final conversation = await context.messages
+        .watchConversation(contactId, user.id)
+        .first;
     if (conversation != null && conversation.type == ChatType.direct) {
       final others = conversation.participants.where((p) => p.id != user.id);
       if (others.isNotEmpty) {
         final other = others.first;
         return _ProfileData(
-          contact: MessageContact(id: other.id, name: other.name, role: other.role),
+          contact: MessageContact(
+            id: other.id,
+            name: other.name,
+            role: other.role,
+          ),
           conversationId: conversation.id,
         );
       }
@@ -72,13 +84,17 @@ class ContactProfileScreen extends StatelessWidget {
     if (!context.mounted) return null;
 
     final contact = await context.messages.getContact(contactId);
-    return contact == null ? null : _ProfileData(contact: contact, conversationId: null);
+    return contact == null
+        ? null
+        : _ProfileData(contact: contact, conversationId: null);
   }
 
   Widget _buildBody(BuildContext context, UserEntity user, _ProfileData data) {
     final contact = data.contact;
     final role = UserRole.values.where((r) => r.name == contact.role);
-    final roleLabel = role.isEmpty ? contact.role : UserRoleDisplay.name(role.first);
+    final roleLabel = role.isEmpty
+        ? contact.role
+        : UserRoleDisplay.name(role.first);
 
     return SingleChildScrollView(
       child: Column(
@@ -108,7 +124,9 @@ class ContactProfileScreen extends StatelessWidget {
                 Text(contact.name, style: AppTypography.headlineSmall),
                 Text(
                   '$roleLabel • ${user.schoolName ?? 'School'}',
-                  style: AppTypography.bodyMedium.copyWith(color: AppColors.textMuted(context)),
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.textMuted(context),
+                  ),
                 ),
               ],
             ),
@@ -128,12 +146,15 @@ class ContactProfileScreen extends StatelessWidget {
                   icon: Icons.phone_outlined,
                   label: 'Call',
                   onTap: () => context.showMessagingSnack(
-                      'Phone numbers are not shared through the school directory'),
+                    'Phone numbers are not shared through the school directory',
+                  ),
                 ),
                 _ActionButton(
                   icon: Icons.videocam_outlined,
                   label: 'Video',
-                  onTap: () => context.showMessagingSnack('Video calls are not available yet'),
+                  onTap: () => context.showMessagingSnack(
+                    'Video calls are not available yet',
+                  ),
                 ),
                 _ActionButton(
                   icon: Icons.share_outlined,
@@ -147,7 +168,11 @@ class ContactProfileScreen extends StatelessWidget {
           _buildSection(context, [
             _buildDetailItem(context, 'Role', roleLabel, Icons.badge_outlined),
             _buildDetailItem(
-                context, 'School', user.schoolName ?? user.schoolId, Icons.business_outlined),
+              context,
+              'School',
+              user.schoolName ?? user.schoolId,
+              Icons.business_outlined,
+            ),
           ]),
           _buildSection(context, [
             _buildDetailItem(
@@ -191,9 +216,17 @@ class ContactProfileScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _openChat(BuildContext context, UserEntity user, _ProfileData data) async {
-    final id = data.conversationId ??
-        await context.messages.startDirectConversation(me: user, contact: data.contact);
+  Future<void> _openChat(
+    BuildContext context,
+    UserEntity user,
+    _ProfileData data,
+  ) async {
+    final id =
+        data.conversationId ??
+        await context.messages.startDirectConversation(
+          me: user,
+          contact: data.contact,
+        );
     if (!context.mounted) return;
     context.go('/messages/chat/$id');
   }
@@ -203,11 +236,17 @@ class ContactProfileScreen extends StatelessWidget {
     UserEntity user,
     MessageContact contact,
   ) async {
-    final conversations = await context.messages.watchConversations(user.id).first;
+    final conversations = await context.messages
+        .watchConversations(user.id)
+        .first;
     if (!context.mounted) return;
 
     final shared = conversations
-        .where((c) => c.type != ChatType.direct && c.participants.any((p) => p.id == contact.id))
+        .where(
+          (c) =>
+              c.type != ChatType.direct &&
+              c.participants.any((p) => p.id == contact.id),
+        )
         .map((c) => c.title)
         .toList();
 
@@ -217,7 +256,10 @@ class ContactProfileScreen extends StatelessWidget {
         title: const Text('Groups in common'),
         content: Text(shared.isEmpty ? 'None yet.' : shared.join('\n')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
         ],
       ),
     );
@@ -225,10 +267,16 @@ class ContactProfileScreen extends StatelessWidget {
 
   /// Only meaningful once there is a conversation to point staff at - there
   /// is nothing to review about a directory entry on its own.
-  Future<void> _report(BuildContext context, UserEntity user, _ProfileData data) async {
+  Future<void> _report(
+    BuildContext context,
+    UserEntity user,
+    _ProfileData data,
+  ) async {
     final conversationId = data.conversationId;
     if (conversationId == null) {
-      context.showMessagingSnack('Open a chat with this person first, then report it');
+      context.showMessagingSnack(
+        'Open a chat with this person first, then report it',
+      );
       return;
     }
 
@@ -253,7 +301,10 @@ class ContactProfileScreen extends StatelessWidget {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Report', style: TextStyle(color: Colors.red)),
@@ -273,15 +324,23 @@ class ContactProfileScreen extends StatelessWidget {
     context.showMessagingSnack('Reported to the school administrator');
   }
 
-  Future<void> _block(BuildContext context, UserEntity user, _ProfileData data) async {
+  Future<void> _block(
+    BuildContext context,
+    UserEntity user,
+    _ProfileData data,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text('Block ${data.contact.name}?'),
         content: const Text(
-            'The chat will be removed from your inbox and filed as spam. School staff can still reach you.'),
+          'The chat will be removed from your inbox and filed as spam. School staff can still reach you.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Block', style: TextStyle(color: Colors.red)),
@@ -304,7 +363,10 @@ class ContactProfileScreen extends StatelessWidget {
   Widget _buildSection(BuildContext context, List<Widget> children) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: AppSpacing.s),
+      margin: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.m,
+        vertical: AppSpacing.s,
+      ),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -322,17 +384,35 @@ class ContactProfileScreen extends StatelessWidget {
   }) {
     return ListTile(
       leading: Icon(icon, color: AppColors.electricBlue, size: 20),
-      title: Text(label, style: AppTypography.labelSmall.copyWith(color: AppColors.textMuted(context))),
-      subtitle: Text(value, style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w500)),
-      trailing: onTap != null ? const Icon(Icons.chevron_right, size: 20) : null,
+      title: Text(
+        label,
+        style: AppTypography.labelSmall.copyWith(
+          color: AppColors.textMuted(context),
+        ),
+      ),
+      subtitle: Text(
+        value,
+        style: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w500),
+      ),
+      trailing: onTap != null
+          ? const Icon(Icons.chevron_right, size: 20)
+          : null,
       onTap: onTap,
     );
   }
 
-  Widget _buildActionRow(IconData icon, String label, Color color, VoidCallback onTap) {
+  Widget _buildActionRow(
+    IconData icon,
+    String label,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return ListTile(
       leading: Icon(icon, color: color),
-      title: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+      title: Text(
+        label,
+        style: TextStyle(color: color, fontWeight: FontWeight.w600),
+      ),
       onTap: onTap,
     );
   }
@@ -350,7 +430,11 @@ class _ActionButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
 
-  const _ActionButton({required this.icon, required this.label, required this.onTap});
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -367,7 +451,10 @@ class _ActionButton extends StatelessWidget {
             child: Icon(icon, color: AppColors.electricBlue),
           ),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(fontSize: 12, color: AppColors.electricBlue)),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: AppColors.electricBlue),
+          ),
         ],
       ),
     );

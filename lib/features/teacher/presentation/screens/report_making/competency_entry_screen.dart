@@ -35,31 +35,34 @@ class _CompetencyEntryScreenState extends State<CompetencyEntryScreen> {
   void initState() {
     super.initState();
     final wizardState = context.read<ReportWizardBloc>().state;
-    context.read<TeacherBloc>().add(TeacherCompetencyRatingsRequested(
-          className: wizardState.selectedClassName ?? widget.className,
-          term: wizardState.selectedTerm ?? widget.term,
-          year: wizardState.selectedYear ?? widget.year,
-          competency: competency,
-        ));
+    context.read<TeacherBloc>().add(
+      TeacherCompetencyRatingsRequested(
+        className: wizardState.selectedClassName ?? widget.className,
+        term: wizardState.selectedTerm ?? widget.term,
+        year: wizardState.selectedYear ?? widget.year,
+        competency: competency,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Competency Development'),
-      ),
+      appBar: AppBar(title: const Text('Competency Development')),
       body: BlocConsumer<TeacherBloc, TeacherState>(
         listener: (context, state) {
           if (state is TeacherError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+              ),
             );
           }
           if (state is TeacherOperationSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
           }
         },
         builder: (context, state) {
@@ -77,7 +80,10 @@ class _CompetencyEntryScreenState extends State<CompetencyEntryScreen> {
     );
   }
 
-  Widget _buildContent(List<TeacherStudent> students, List<CompetencyRating> ratings) {
+  Widget _buildContent(
+    List<TeacherStudent> students,
+    List<CompetencyRating> ratings,
+  ) {
     return Column(
       children: [
         Container(
@@ -125,11 +131,16 @@ class _CompetencyEntryScreenState extends State<CompetencyEntryScreen> {
             separatorBuilder: (_, __) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
               final student = students[index];
-              final rating = ratings.where((r) => r.studentId == student.id).firstOrNull;
+              final rating = ratings
+                  .where((r) => r.studentId == student.id)
+                  .firstOrNull;
               final currentLevel = rating?.level ?? 0;
 
               return AppCard(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 child: Row(
                   children: [
                     Expanded(
@@ -153,7 +164,9 @@ class _CompetencyEntryScreenState extends State<CompetencyEntryScreen> {
                             width: 32,
                             height: 32,
                             decoration: BoxDecoration(
-                              color: isSelected ? levelColor : Colors.transparent,
+                              color: isSelected
+                                  ? levelColor
+                                  : Colors.transparent,
                               borderRadius: BorderRadius.circular(4),
                               border: Border.all(color: levelColor),
                             ),
@@ -161,7 +174,9 @@ class _CompetencyEntryScreenState extends State<CompetencyEntryScreen> {
                               child: Text(
                                 '$level',
                                 style: TextStyle(
-                                  color: isSelected ? AppColors.white : levelColor,
+                                  color: isSelected
+                                      ? AppColors.white
+                                      : levelColor,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -187,34 +202,43 @@ class _CompetencyEntryScreenState extends State<CompetencyEntryScreen> {
     );
   }
 
-  void _saveRating(TeacherStudent student, int level, CompetencyRating? existingRating) {
+  void _saveRating(
+    TeacherStudent student,
+    int level,
+    CompetencyRating? existingRating,
+  ) {
     final authState = context.read<AuthBloc>().state;
     final wizardState = context.read<ReportWizardBloc>().state;
-    final teacherId = authState is AuthAuthenticated ? authState.user.id : 'teacher_1';
+    final teacherId = authState is AuthAuthenticated
+        ? authState.user.id
+        : 'teacher_1';
 
-    final rating = (existingRating ??
-            CompetencyRating(
-              id: '',
-              studentId: student.id,
-              className: wizardState.selectedClassName ?? widget.className,
-              term: wizardState.selectedTerm ?? widget.term,
-              year: wizardState.selectedYear ?? widget.year,
-              competency: competency,
-              level: level,
-              teacherId: teacherId,
-              updatedAt: DateTime.now(),
-            ))
-        .copyWith(level: level, updatedAt: DateTime.now());
+    final rating =
+        (existingRating ??
+                CompetencyRating(
+                  id: '',
+                  studentId: student.id,
+                  className: wizardState.selectedClassName ?? widget.className,
+                  term: wizardState.selectedTerm ?? widget.term,
+                  year: wizardState.selectedYear ?? widget.year,
+                  competency: competency,
+                  level: level,
+                  teacherId: teacherId,
+                  updatedAt: DateTime.now(),
+                ))
+            .copyWith(level: level, updatedAt: DateTime.now());
 
     context.read<TeacherBloc>().add(TeacherCompetencyRatingSaved(rating));
-    
+
     // Optimistically update the UI by re-requesting the data
-    context.read<TeacherBloc>().add(TeacherCompetencyRatingsRequested(
-          className: wizardState.selectedClassName ?? widget.className,
-          term: wizardState.selectedTerm ?? widget.term,
-          year: wizardState.selectedYear ?? widget.year,
-          competency: competency,
-        ));
+    context.read<TeacherBloc>().add(
+      TeacherCompetencyRatingsRequested(
+        className: wizardState.selectedClassName ?? widget.className,
+        term: wizardState.selectedTerm ?? widget.term,
+        year: wizardState.selectedYear ?? widget.year,
+        competency: competency,
+      ),
+    );
   }
 
   Color _getLevelColor(BuildContext context, int level) {

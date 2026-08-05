@@ -19,12 +19,12 @@ class CommunicationDecision {
   final String? message;
 
   const CommunicationDecision.allowed()
-      : isAllowed = true,
-        refusal = null,
-        message = null;
+    : isAllowed = true,
+      refusal = null,
+      message = null;
 
   const CommunicationDecision.refused(this.refusal, this.message)
-      : isAllowed = false;
+    : isAllowed = false;
 }
 
 /// Who a class teacher may talk to, and what they may post.
@@ -123,8 +123,7 @@ class ClassCommunicationPolicy {
     required String studentId,
     required List<ClassStudentSummary> roster,
   }) {
-    final student =
-        roster.where((s) => s.studentId == studentId).firstOrNull;
+    final student = roster.where((s) => s.studentId == studentId).firstOrNull;
 
     if (student == null) {
       return const CommunicationDecision.refused(
@@ -155,7 +154,10 @@ class ClassCommunicationPolicy {
     required ClassAnnouncement announcement,
     required List<ClassStudentSummary> roster,
   }) {
-    final active = roster.where((s) => s.isActive).map((s) => s.studentId).toList();
+    final active = roster
+        .where((s) => s.isActive)
+        .map((s) => s.studentId)
+        .toList();
 
     return ClassAnnouncementRecipients(
       studentIds: announcement.audience.includesStudents ? active : const [],

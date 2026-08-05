@@ -45,14 +45,20 @@ class _ExamsDashboardView extends StatelessWidget {
 
   void _verifyExamEligibility(BuildContext context, String studentId) {
     final authState = context.read<AuthBloc>().state as AuthAuthenticated;
-    context.read<FinanceBloc>().add(CheckStudentEligibility(
-          studentId: studentId,
-          schoolId: authState.user.schoolId,
-          serviceType: 'EXAM',
-        ));
+    context.read<FinanceBloc>().add(
+      CheckStudentEligibility(
+        studentId: studentId,
+        schoolId: authState.user.schoolId,
+        serviceType: 'EXAM',
+      ),
+    );
   }
 
-  void _showEligibilityResult(BuildContext context, bool isEligible, String? reason) {
+  void _showEligibilityResult(
+    BuildContext context,
+    bool isEligible,
+    String? reason,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -62,9 +68,12 @@ class _ExamsDashboardView extends StatelessWidget {
           size: 64,
         ),
         title: Text(isEligible ? 'Clear for Exam' : 'Financial Hold'),
-        content: Text(isEligible 
-          ? 'Student is cleared to sit for exams.' 
-          : reason ?? 'Please refer student to the bursar\'s office for financial clearance.'),
+        content: Text(
+          isEligible
+              ? 'Student is cleared to sit for exams.'
+              : reason ??
+                    'Please refer student to the bursar\'s office for financial clearance.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -117,15 +126,18 @@ class _ExamsDashboardView extends StatelessWidget {
                   context.read<ExamsBloc>().add(ExamsDashboardRequested());
                 },
                 child: ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 15,
+                  ),
                   children: [
                     FadeInSlide(
                       child: Text(
                         "Examination Management",
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: -0.5,
-                            ),
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.5,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 15),
@@ -173,12 +185,27 @@ class _ExamsDashboardView extends StatelessWidget {
                           child: AppCard(
                             child: ListTile(
                               leading: CircleAvatar(
-                                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                                child: Icon(Icons.quiz_outlined, color: Theme.of(context).colorScheme.primary),
+                                backgroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.primaryContainer,
+                                child: Icon(
+                                  Icons.quiz_outlined,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
                               ),
-                              title: Text(exam.subject, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text('${exam.className} • ${exam.session}'),
-                              trailing: Text(exam.date, style: Theme.of(context).textTheme.bodySmall),
+                              title: Text(
+                                exam.subject,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              subtitle: Text(
+                                '${exam.className} • ${exam.session}',
+                              ),
+                              trailing: Text(
+                                exam.date,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
                             ),
                           ),
                         ),
@@ -232,10 +259,13 @@ class _ExamsSkeleton extends StatelessWidget {
         const SizedBox(height: 24),
         const Skeleton(width: 120, height: 20),
         const SizedBox(height: 12),
-        ...List.generate(3, (index) => const Padding(
-          padding: EdgeInsets.only(bottom: 12),
-          child: Skeleton(height: 72, borderRadius: 12),
-        )),
+        ...List.generate(
+          3,
+          (index) => const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: Skeleton(height: 72, borderRadius: 12),
+          ),
+        ),
       ],
     );
   }

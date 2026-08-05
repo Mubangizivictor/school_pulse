@@ -29,16 +29,16 @@ class MealRecord extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        studentId,
-        studentName,
-        classId,
-        mealCategoryId,
-        mealCategoryName,
-        servedAt,
-        servedBy,
-        schoolId,
-        academicYear,
-        term,
-      ];
+    id,
+    studentId,
+    studentName,
+    classId,
+    mealCategoryId,
+    mealCategoryName,
+    servedAt,
+    servedBy,
+    schoolId,
+    academicYear,
+    term,
+  ];
 }

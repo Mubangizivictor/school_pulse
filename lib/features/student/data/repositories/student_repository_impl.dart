@@ -85,7 +85,10 @@ class StudentRepositoryImpl implements StudentRepository {
   }
 
   @override
-  Future<Either<Failure, void>> updateStudent(Student student, {required String recordedBy}) async {
+  Future<Either<Failure, void>> updateStudent(
+    Student student, {
+    required String recordedBy,
+  }) async {
     try {
       final before = await remoteDataSource.getStudentById(student.id);
       final model = StudentModel(
@@ -112,7 +115,8 @@ class StudentRepositoryImpl implements StudentRepository {
       );
       await remoteDataSource.updateStudent(model);
 
-      final placementChanged = before.classId != student.classId ||
+      final placementChanged =
+          before.classId != student.classId ||
           before.streamId != student.streamId ||
           before.academicYearId != student.academicYearId;
       if (placementChanged) {
@@ -317,31 +321,33 @@ class StudentRepositoryImpl implements StudentRepository {
           streamId: targetStreamId,
           academicYearId: targetAcademicYearId,
         );
-        updatedStudents.add(StudentModel(
-          id: updated.id,
-          schoolId: updated.schoolId,
-          name: updated.name,
-          photoUrl: updated.photoUrl,
-          studentCode: updated.studentCode,
-          admissionNumber: updated.admissionNumber,
-          qrReference: updated.qrReference,
-          dateOfBirth: updated.dateOfBirth,
-          gender: updated.gender,
-          classId: updated.classId,
-          streamId: updated.streamId,
-          academicYearId: updated.academicYearId,
-          previousSchool: updated.previousSchool,
-          status: updated.status,
-          medicalInfo: updated.medicalInfo,
-          emergencyContacts: updated.emergencyContacts,
-          parentIds: updated.parentIds,
-          documents: updated.documents,
-          campusId: updated.campusId,
-          level: updated.level,
-          dormLeadershipRole: updated.dormLeadershipRole,
-          dormLeadershipDormId: updated.dormLeadershipDormId,
-          dormLeadershipDormName: updated.dormLeadershipDormName,
-        ));
+        updatedStudents.add(
+          StudentModel(
+            id: updated.id,
+            schoolId: updated.schoolId,
+            name: updated.name,
+            photoUrl: updated.photoUrl,
+            studentCode: updated.studentCode,
+            admissionNumber: updated.admissionNumber,
+            qrReference: updated.qrReference,
+            dateOfBirth: updated.dateOfBirth,
+            gender: updated.gender,
+            classId: updated.classId,
+            streamId: updated.streamId,
+            academicYearId: updated.academicYearId,
+            previousSchool: updated.previousSchool,
+            status: updated.status,
+            medicalInfo: updated.medicalInfo,
+            emergencyContacts: updated.emergencyContacts,
+            parentIds: updated.parentIds,
+            documents: updated.documents,
+            campusId: updated.campusId,
+            level: updated.level,
+            dormLeadershipRole: updated.dormLeadershipRole,
+            dormLeadershipDormId: updated.dormLeadershipDormId,
+            dormLeadershipDormName: updated.dormLeadershipDormName,
+          ),
+        );
       }
       await remoteDataSource.batchUpdateStudents(updatedStudents);
 

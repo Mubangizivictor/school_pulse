@@ -25,8 +25,9 @@ class MessagesRepositoryImpl implements MessagesRepository {
   CollectionReference<Map<String, dynamic>> get _conversations =>
       firestore.collection('conversations');
 
-  CollectionReference<Map<String, dynamic>> _messagesOf(String conversationId) =>
-      _conversations.doc(conversationId).collection('messages');
+  CollectionReference<Map<String, dynamic>> _messagesOf(
+    String conversationId,
+  ) => _conversations.doc(conversationId).collection('messages');
 
   // --- Inbox -------------------------------------------------------------
 
@@ -38,23 +39,33 @@ class MessagesRepositoryImpl implements MessagesRepository {
         .limit(_kConversationLimit)
         .snapshots()
         .map((snapshot) {
-      final conversations = snapshot.docs
-          .where((doc) => !List<String>.from(doc.data()['deletedBy'] ?? const []).contains(userId))
-          .map((doc) => ConversationModel.fromDoc(doc, userId))
-          .toList();
-      // Firestore can only order by one field; pinning is a per-viewer flag,
-      // so it has to be applied here rather than in the query.
-      conversations.sort((a, b) {
-        if (a.isPinned != b.isPinned) return a.isPinned ? -1 : 1;
-        return b.lastMessage.timestamp.compareTo(a.lastMessage.timestamp);
-      });
-      return conversations;
-    });
+          final conversations = snapshot.docs
+              .where(
+                (doc) => !List<String>.from(
+                  doc.data()['deletedBy'] ?? const [],
+                ).contains(userId),
+              )
+              .map((doc) => ConversationModel.fromDoc(doc, userId))
+              .toList();
+          // Firestore can only order by one field; pinning is a per-viewer flag,
+          // so it has to be applied here rather than in the query.
+          conversations.sort((a, b) {
+            if (a.isPinned != b.isPinned) return a.isPinned ? -1 : 1;
+            return b.lastMessage.timestamp.compareTo(a.lastMessage.timestamp);
+          });
+          return conversations;
+        });
   }
 
   @override
-  Stream<ChatConversation?> watchConversation(String conversationId, String userId) {
-    return _conversations.doc(conversationId).snapshots().map(
+  Stream<ChatConversation?> watchConversation(
+    String conversationId,
+    String userId,
+  ) {
+    return _conversations
+        .doc(conversationId)
+        .snapshots()
+        .map(
           (doc) => doc.exists ? ConversationModel.fromDoc(doc, userId) : null,
         );
   }
@@ -83,15 +94,17 @@ class MessagesRepositoryImpl implements MessagesRepository {
     final bothNonStaff = !_isStaff(me.role.name) && !_isStaff(contact.role);
     final acceptedBy = bothNonStaff ? [me.id] : [me.id, contact.id];
 
-    await ref.set(ConversationModel.toCreateJson(
-      schoolId: me.schoolId,
-      type: ChatType.direct,
-      title: '',
-      participants: [_selfContact(me), contact],
-      createdBy: me.id,
-      adminIds: [me.id, contact.id],
-      acceptedBy: acceptedBy,
-    ));
+    await ref.set(
+      ConversationModel.toCreateJson(
+        schoolId: me.schoolId,
+        type: ChatType.direct,
+        title: '',
+        participants: [_selfContact(me), contact],
+        createdBy: me.id,
+        adminIds: [me.id, contact.id],
+        acceptedBy: acceptedBy,
+      ),
+    );
     return id;
   }
 
@@ -110,19 +123,21 @@ class MessagesRepositoryImpl implements MessagesRepository {
       ...members.where((m) => m.id != me.id),
     ];
     final ref = _conversations.doc();
-    await ref.set(ConversationModel.toCreateJson(
-      schoolId: me.schoolId,
-      type: type,
-      title: title,
-      description: description,
-      avatarUrl: avatarUrl,
-      participants: participants,
-      createdBy: me.id,
-      adminIds: [me.id],
-      // Groups, broadcasts and channels are never gated behind a request.
-      acceptedBy: participants.map((p) => p.id).toList(),
-      messagePolicy: messagePolicy,
-    ));
+    await ref.set(
+      ConversationModel.toCreateJson(
+        schoolId: me.schoolId,
+        type: type,
+        title: title,
+        description: description,
+        avatarUrl: avatarUrl,
+        participants: participants,
+        createdBy: me.id,
+        adminIds: [me.id],
+        // Groups, broadcasts and channels are never gated behind a request.
+        acceptedBy: participants.map((p) => p.id).toList(),
+        messagePolicy: messagePolicy,
+      ),
+    );
     return ref.id;
   }
 
@@ -200,7 +215,10 @@ class MessagesRepositoryImpl implements MessagesRepository {
   }
 
   @override
-  Future<void> addMembers(String conversationId, List<MessageContact> members) async {
+  Future<void> addMembers(
+    String conversationId,
+    List<MessageContact> members,
+  ) async {
     final ref = _conversations.doc(conversationId);
     final doc = await ref.get();
     if (!doc.exists) return;
@@ -216,7 +234,14 @@ class MessagesRepositoryImpl implements MessagesRepository {
       'participantIds': FieldValue.arrayUnion(added.map((m) => m.id).toList()),
       'participants': [
         ...existing,
-        ...added.map((m) => {'id': m.id, 'name': m.name, 'role': m.role, 'avatarUrl': m.avatarUrl}),
+        ...added.map(
+          (m) => {
+            'id': m.id,
+            'name': m.name,
+            'role': m.role,
+            'avatarUrl': m.avatarUrl,
+          },
+        ),
       ],
       'acceptedBy': FieldValue.arrayUnion(added.map((m) => m.id).toList()),
       'updatedAt': FieldValue.serverTimestamp(),
@@ -276,11 +301,13 @@ class MessagesRepositoryImpl implements MessagesRepository {
         .orderBy('timestamp', descending: true)
         .limit(limit)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => ChatMessageModel.fromDoc(doc, userId))
-            .toList()
-            .reversed
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => ChatMessageModel.fromDoc(doc, userId))
+              .toList()
+              .reversed
+              .toList(),
+        );
   }
 
   @override
@@ -306,7 +333,9 @@ class MessagesRepositoryImpl implements MessagesRepository {
     final conversation = await conversationRef.get();
     if (!conversation.exists) return;
 
-    final participantIds = List<String>.from(conversation.data()!['participantIds'] ?? const []);
+    final participantIds = List<String>.from(
+      conversation.data()!['participantIds'] ?? const [],
+    );
     final messageRef = _messagesOf(conversationId).doc();
 
     final batch = firestore.batch();
@@ -370,18 +399,23 @@ class MessagesRepositoryImpl implements MessagesRepository {
   }
 
   @override
-  Future<void> markConversationRead(String conversationId, String userId) async {
-    await _conversations.doc(conversationId).update({'unreadCounts.$userId': 0});
+  Future<void> markConversationRead(
+    String conversationId,
+    String userId,
+  ) async {
+    await _conversations.doc(conversationId).update({
+      'unreadCounts.$userId': 0,
+    });
 
     // Firestore has no "array does not contain" filter, so stamp readBy on
     // the recent window and skip the ones already marked.
-    final recent = await _messagesOf(conversationId)
-        .orderBy('timestamp', descending: true)
-        .limit(50)
-        .get();
+    final recent = await _messagesOf(
+      conversationId,
+    ).orderBy('timestamp', descending: true).limit(50).get();
 
     final unread = recent.docs.where(
-      (doc) => !List<String>.from(doc.data()['readBy'] ?? const []).contains(userId),
+      (doc) =>
+          !List<String>.from(doc.data()['readBy'] ?? const []).contains(userId),
     );
     if (unread.isEmpty) return;
 
@@ -395,16 +429,29 @@ class MessagesRepositoryImpl implements MessagesRepository {
   }
 
   @override
-  Future<void> setStarred(String conversationId, String messageId, String userId, bool value) {
+  Future<void> setStarred(
+    String conversationId,
+    String messageId,
+    String userId,
+    bool value,
+  ) {
     return _messagesOf(conversationId).doc(messageId).update({
-      'starredBy': value ? FieldValue.arrayUnion([userId]) : FieldValue.arrayRemove([userId]),
+      'starredBy': value
+          ? FieldValue.arrayUnion([userId])
+          : FieldValue.arrayRemove([userId]),
     });
   }
 
   @override
-  Future<void> setMessagePinned(String conversationId, ChatMessage message, bool value) async {
+  Future<void> setMessagePinned(
+    String conversationId,
+    ChatMessage message,
+    bool value,
+  ) async {
     final batch = firestore.batch();
-    batch.update(_messagesOf(conversationId).doc(message.id), {'isPinned': value});
+    batch.update(_messagesOf(conversationId).doc(message.id), {
+      'isPinned': value,
+    });
     // The banner at the top of the chat reads from the conversation doc, so
     // it has to be kept in step with the message flag.
     batch.update(_conversations.doc(conversationId), {
@@ -433,11 +480,15 @@ class MessagesRepositoryImpl implements MessagesRepository {
     });
 
     final conversation = await conversationRef.get();
-    final lastMessage = conversation.data()?['lastMessage'] as Map<String, dynamic>?;
+    final lastMessage =
+        conversation.data()?['lastMessage'] as Map<String, dynamic>?;
     if (lastMessage != null && lastMessage['id'] == messageId) {
-      batch.update(conversationRef, {'lastMessage.content': 'This message was deleted'});
+      batch.update(conversationRef, {
+        'lastMessage.content': 'This message was deleted',
+      });
     }
-    final pinned = conversation.data()?['pinnedMessage'] as Map<String, dynamic>?;
+    final pinned =
+        conversation.data()?['pinnedMessage'] as Map<String, dynamic>?;
     if (pinned != null && pinned['id'] == messageId) {
       batch.update(conversationRef, {'pinnedMessage': null});
     }
@@ -446,7 +497,11 @@ class MessagesRepositoryImpl implements MessagesRepository {
   }
 
   @override
-  Future<void> editMessage(String conversationId, String messageId, String content) async {
+  Future<void> editMessage(
+    String conversationId,
+    String messageId,
+    String content,
+  ) async {
     final conversationRef = _conversations.doc(conversationId);
     final batch = firestore.batch();
 
@@ -456,7 +511,8 @@ class MessagesRepositoryImpl implements MessagesRepository {
     });
 
     final conversation = await conversationRef.get();
-    final lastMessage = conversation.data()?['lastMessage'] as Map<String, dynamic>?;
+    final lastMessage =
+        conversation.data()?['lastMessage'] as Map<String, dynamic>?;
     if (lastMessage != null && lastMessage['id'] == messageId) {
       batch.update(conversationRef, {'lastMessage.content': content});
     }
@@ -476,7 +532,9 @@ class MessagesRepositoryImpl implements MessagesRepository {
       final doc = await transaction.get(ref);
       if (!doc.exists) return;
 
-      final reactions = Map<String, dynamic>.from(doc.data()!['reactions'] ?? const {});
+      final reactions = Map<String, dynamic>.from(
+        doc.data()!['reactions'] ?? const {},
+      );
       // One reaction per person, so the transaction first has to find which
       // emoji they are currently on.
       String? previous;
@@ -516,7 +574,9 @@ class MessagesRepositoryImpl implements MessagesRepository {
       final doc = await transaction.get(ref);
       if (!doc.exists) return;
 
-      final votes = Map<String, dynamic>.from(doc.data()!['pollVotes'] ?? const {});
+      final votes = Map<String, dynamic>.from(
+        doc.data()!['pollVotes'] ?? const {},
+      );
       String? previous;
       for (final entry in votes.entries) {
         if (List<String>.from(entry.value ?? const []).contains(userId)) {
@@ -570,15 +630,20 @@ class MessagesRepositoryImpl implements MessagesRepository {
   }
 
   @override
-  Stream<List<ChatMessage>> watchAttachments(String conversationId, String userId) {
+  Stream<List<ChatMessage>> watchAttachments(
+    String conversationId,
+    String userId,
+  ) {
     return _messagesOf(conversationId)
         .orderBy('timestamp', descending: true)
         .limit(_kMessageLimit)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => ChatMessageModel.fromDoc(doc, userId))
-            .where((m) => !m.isDeleted && (m.mediaUrl != null || _hasLink(m)))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => ChatMessageModel.fromDoc(doc, userId))
+              .where((m) => !m.isDeleted && (m.mediaUrl != null || _hasLink(m)))
+              .toList(),
+        );
   }
 
   // --- Across conversations ----------------------------------------------
@@ -607,7 +672,10 @@ class MessagesRepositoryImpl implements MessagesRepository {
   }
 
   @override
-  Future<List<ChatMessageRef>> searchMessages(String userId, String query) async {
+  Future<List<ChatMessageRef>> searchMessages(
+    String userId,
+    String query,
+  ) async {
     final term = query.trim().toLowerCase();
     if (term.isEmpty) return const [];
 
@@ -619,7 +687,11 @@ class MessagesRepositoryImpl implements MessagesRepository {
         .get();
 
     final matches = results.docs
-        .where((doc) => (doc.data()['content'] as String? ?? '').toLowerCase().contains(term))
+        .where(
+          (doc) => (doc.data()['content'] as String? ?? '')
+              .toLowerCase()
+              .contains(term),
+        )
         .where((doc) => doc.data()['isDeleted'] != true)
         .toList();
     if (matches.isEmpty) return const [];
@@ -642,22 +714,30 @@ class MessagesRepositoryImpl implements MessagesRepository {
   // --- Directory ---------------------------------------------------------
 
   @override
-  Future<List<MessageContact>> getContacts(String schoolId, {String? excludeId}) async {
+  Future<List<MessageContact>> getContacts(
+    String schoolId, {
+    String? excludeId,
+  }) async {
     final snapshot = await firestore
         .collection('school_contacts')
         .where('schoolId', isEqualTo: schoolId)
         .where('isActive', isEqualTo: true)
         .get();
 
-    final contacts = snapshot.docs
-        .where((doc) => doc.id != excludeId)
-        .map((doc) => MessageContact(
-              id: doc.id,
-              name: doc.data()['name'] as String? ?? 'Unknown',
-              role: doc.data()['role'] as String? ?? '',
-            ))
-        .toList()
-      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final contacts =
+        snapshot.docs
+            .where((doc) => doc.id != excludeId)
+            .map(
+              (doc) => MessageContact(
+                id: doc.id,
+                name: doc.data()['name'] as String? ?? 'Unknown',
+                role: doc.data()['role'] as String? ?? '',
+              ),
+            )
+            .toList()
+          ..sort(
+            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+          );
     return contacts;
   }
 
@@ -673,7 +753,10 @@ class MessagesRepositoryImpl implements MessagesRepository {
   }
 
   @override
-  Future<List<MessageContact>> getRecentContacts(String userId, {int limit = 4}) async {
+  Future<List<MessageContact>> getRecentContacts(
+    String userId, {
+    int limit = 4,
+  }) async {
     final snapshot = await _conversations
         .where('participantIds', arrayContains: userId)
         .orderBy('updatedAt', descending: true)
@@ -684,14 +767,17 @@ class MessagesRepositoryImpl implements MessagesRepository {
     final recent = <MessageContact>[];
     for (final doc in snapshot.docs) {
       if (doc.data()['type'] != ChatType.direct.name) continue;
-      for (final participant in (doc.data()['participants'] as List? ?? const [])) {
+      for (final participant
+          in (doc.data()['participants'] as List? ?? const [])) {
         final id = participant['id'] as String? ?? '';
         if (id == userId || id.isEmpty || !seen.add(id)) continue;
-        recent.add(MessageContact(
-          id: id,
-          name: participant['name'] as String? ?? 'Unknown',
-          role: participant['role'] as String? ?? '',
-        ));
+        recent.add(
+          MessageContact(
+            id: id,
+            name: participant['name'] as String? ?? 'Unknown',
+            role: participant['role'] as String? ?? '',
+          ),
+        );
       }
       if (recent.length >= limit) break;
     }
@@ -707,7 +793,9 @@ class MessagesRepositoryImpl implements MessagesRepository {
     bool value,
   ) {
     return _conversations.doc(conversationId).update({
-      field: value ? FieldValue.arrayUnion([userId]) : FieldValue.arrayRemove([userId]),
+      field: value
+          ? FieldValue.arrayUnion([userId])
+          : FieldValue.arrayRemove([userId]),
     });
   }
 
@@ -732,25 +820,29 @@ class MessagesRepositoryImpl implements MessagesRepository {
     Stream<QuerySnapshot<Map<String, dynamic>>> messages,
     String userId,
   ) {
-    return Rx.combineLatest2<QuerySnapshot<Map<String, dynamic>>, List<ChatConversation>,
-        List<ChatMessageRef>>(
-      messages,
-      watchConversations(userId),
-      (snapshot, conversations) {
-        final titles = {for (final c in conversations) c.id: c.title};
-        return snapshot.docs.where((doc) => doc.data()['isDeleted'] != true).map((doc) {
-          final conversationId = doc.reference.parent.parent!.id;
-          return ChatMessageRef(
-            message: ChatMessageModel.fromDoc(doc, userId),
-            conversationId: conversationId,
-            conversationTitle: titles[conversationId] ?? 'Conversation',
-          );
-        }).toList();
-      },
-    );
+    return Rx.combineLatest2<
+      QuerySnapshot<Map<String, dynamic>>,
+      List<ChatConversation>,
+      List<ChatMessageRef>
+    >(messages, watchConversations(userId), (snapshot, conversations) {
+      final titles = {for (final c in conversations) c.id: c.title};
+      return snapshot.docs.where((doc) => doc.data()['isDeleted'] != true).map((
+        doc,
+      ) {
+        final conversationId = doc.reference.parent.parent!.id;
+        return ChatMessageRef(
+          message: ChatMessageModel.fromDoc(doc, userId),
+          conversationId: conversationId,
+          conversationTitle: titles[conversationId] ?? 'Conversation',
+        );
+      }).toList();
+    });
   }
 
-  Future<Map<String, String>> _conversationTitles(Set<String> ids, String userId) async {
+  Future<Map<String, String>> _conversationTitles(
+    Set<String> ids,
+    String userId,
+  ) async {
     final titles = <String, String>{};
     for (final id in ids) {
       final doc = await _conversations.doc(id).get();
@@ -760,11 +852,11 @@ class MessagesRepositoryImpl implements MessagesRepository {
   }
 
   MessageContact _selfContact(UserEntity me) => MessageContact(
-        id: me.id,
-        name: me.name,
-        role: me.role.name,
-        avatarUrl: me.photoUrl,
-      );
+    id: me.id,
+    name: me.name,
+    role: me.role.name,
+    avatarUrl: me.photoUrl,
+  );
 
   /// Mirrors the `isStaff()` helper in firestore.rules: anyone who isn't a
   /// parent or a student.

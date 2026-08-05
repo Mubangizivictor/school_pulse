@@ -67,11 +67,11 @@ class GradeRange extends Equatable {
 
   @override
   List<Object?> get props => [
-        grade,
-        minScore,
-        maxScore,
-        remarks,
-        gradePoint,
-        performanceLevel,
-      ];
+    grade,
+    minScore,
+    maxScore,
+    remarks,
+    gradePoint,
+    performanceLevel,
+  ];
 }

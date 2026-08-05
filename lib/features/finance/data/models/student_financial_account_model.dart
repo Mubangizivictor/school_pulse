@@ -30,12 +30,16 @@ class StudentFinancialAccountModel extends StudentFinancialAccount {
       totalBilled: (data['totalBilled'] ?? 0).toDouble(),
       totalPaid: (data['totalPaid'] ?? 0).toDouble(),
       paymentHistory: (data['paymentHistory'] as List? ?? [])
-          .map((item) => PaymentRecordModel.fromMap(
-                item as Map<String, dynamic>,
-                item['id'] ?? '',
-              ))
+          .map(
+            (item) => PaymentRecordModel.fromMap(
+              item as Map<String, dynamic>,
+              item['id'] ?? '',
+            ),
+          )
           .toList(),
-      applicableRestrictions: List<String>.from(data['applicableRestrictions'] ?? []),
+      applicableRestrictions: List<String>.from(
+        data['applicableRestrictions'] ?? [],
+      ),
     );
   }
 

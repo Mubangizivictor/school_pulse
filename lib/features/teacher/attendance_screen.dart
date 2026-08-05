@@ -14,7 +14,8 @@ class TeacherAttendanceScreen extends StatefulWidget {
   const TeacherAttendanceScreen({super.key});
 
   @override
-  State<TeacherAttendanceScreen> createState() => _TeacherAttendanceScreenState();
+  State<TeacherAttendanceScreen> createState() =>
+      _TeacherAttendanceScreenState();
 }
 
 class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
@@ -27,9 +28,9 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
   void _open() {
     final active = context.read<ClassTeacherContextBloc>().state.active;
     if (active == null) return;
-    context
-        .read<ClassAttendanceBloc>()
-        .add(ClassAttendanceOpened(active, date: DateTime.now()));
+    context.read<ClassAttendanceBloc>().add(
+      ClassAttendanceOpened(active, date: DateTime.now()),
+    );
   }
 
   @override
@@ -76,16 +77,18 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
               if (message == null) return;
               ScaffoldMessenger.of(context)
                 ..hideCurrentSnackBar()
-                ..showSnackBar(SnackBar(
-                  content: Text(message),
-                  backgroundColor: state.successMessage != null
-                      ? AppColors.success(context)
-                      : AppColors.danger(context),
-                  behavior: SnackBarBehavior.floating,
-                ));
-              context
-                  .read<ClassAttendanceBloc>()
-                  .add(const ClassAttendanceFeedbackCleared());
+                ..showSnackBar(
+                  SnackBar(
+                    content: Text(message),
+                    backgroundColor: state.successMessage != null
+                        ? AppColors.success(context)
+                        : AppColors.danger(context),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              context.read<ClassAttendanceBloc>().add(
+                const ClassAttendanceFeedbackCleared(),
+              );
             },
             builder: (context, state) {
               if (state.isLoading) return const _AttendanceSkeleton();
@@ -135,11 +138,9 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                         TextButton.icon(
                           onPressed: state.isSaving || !state.isEditable
                               ? null
-                              : () => context
-                                  .read<ClassAttendanceBloc>()
-                                  .add(ClassAttendanceAllMarked(
-                                    _presentCode(state),
-                                  )),
+                              : () => context.read<ClassAttendanceBloc>().add(
+                                  ClassAttendanceAllMarked(_presentCode(state)),
+                                ),
                           icon: Icon(
                             Icons.done_all,
                             size: 18,
@@ -193,7 +194,8 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                                               student.name,
                                               style: TextStyle(
                                                 color: AppColors.textPrimary(
-                                                    context),
+                                                  context,
+                                                ),
                                                 fontWeight: FontWeight.bold,
                                               ),
                                             ),
@@ -201,9 +203,10 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                                               student.admissionNumber,
                                               style: AppTypography.labelSmall
                                                   .copyWith(
-                                                color: AppColors.textMuted(
-                                                    context),
-                                              ),
+                                                    color: AppColors.textMuted(
+                                                      context,
+                                                    ),
+                                                  ),
                                             ),
                                           ],
                                         ),
@@ -250,25 +253,25 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
             Icons.lock_outline,
           )
         : state.isSubmitted
-            ? (
-                state.isEditable
-                    ? 'Submitted. Tap a student to correct their mark.'
-                    : 'Submitted. You do not have permission to change it.',
-                AppColors.success(context),
-                Icons.check_circle_outline,
-              )
-            : state.unmarkedCount > 0
-                ? (
-                    '${state.unmarkedCount} of ${state.students.length} still '
-                        'to mark.',
-                    AppColors.warning(context),
-                    Icons.pending_outlined,
-                  )
-                : (
-                    'All students marked. Ready to submit.',
-                    AppColors.primary(context),
-                    Icons.done_all,
-                  );
+        ? (
+            state.isEditable
+                ? 'Submitted. Tap a student to correct their mark.'
+                : 'Submitted. You do not have permission to change it.',
+            AppColors.success(context),
+            Icons.check_circle_outline,
+          )
+        : state.unmarkedCount > 0
+        ? (
+            '${state.unmarkedCount} of ${state.students.length} still '
+                'to mark.',
+            AppColors.warning(context),
+            Icons.pending_outlined,
+          )
+        : (
+            'All students marked. Ready to submit.',
+            AppColors.primary(context),
+            Icons.done_all,
+          );
 
     return Container(
       width: double.infinity,
@@ -344,17 +347,19 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
     final reason = await _askReason(context);
     if (reason == null || !context.mounted) return;
 
-    bloc.add(state.isEditable
-        ? ClassAttendanceCorrected(
-            studentId: studentId,
-            statusCode: statusCode,
-            reason: reason,
-          )
-        : ClassAttendanceCorrectionRequested(
-            studentId: studentId,
-            statusCode: statusCode,
-            reason: reason,
-          ));
+    bloc.add(
+      state.isEditable
+          ? ClassAttendanceCorrected(
+              studentId: studentId,
+              statusCode: statusCode,
+              reason: reason,
+            )
+          : ClassAttendanceCorrectionRequested(
+              studentId: studentId,
+              statusCode: statusCode,
+              reason: reason,
+            ),
+    );
   }
 
   Future<String?> _askReason(BuildContext context) async {
@@ -412,9 +417,12 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
           option.code.toLowerCase().contains('late')
               ? AppColors.warning(context)
               : AppColors.success(context),
-        AttendanceClassification.authorisedAbsence =>
-          AppColors.information(context),
-        AttendanceClassification.unauthorisedAbsence => AppColors.danger(context),
+        AttendanceClassification.authorisedAbsence => AppColors.information(
+          context,
+        ),
+        AttendanceClassification.unauthorisedAbsence => AppColors.danger(
+          context,
+        ),
       };
 
   Widget _buildSubmitBar(BuildContext context, ClassAttendanceState state) {
@@ -442,9 +450,9 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                   label: 'Save draft',
                   onPressed: state.isSaving
                       ? null
-                      : () => context
-                          .read<ClassAttendanceBloc>()
-                          .add(const ClassAttendanceDraftSaved()),
+                      : () => context.read<ClassAttendanceBloc>().add(
+                          const ClassAttendanceDraftSaved(),
+                        ),
                 ),
               ),
               const SizedBox(width: AppSpacing.m),
@@ -455,9 +463,9 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                 label: state.isSubmitted ? 'Submitted' : 'Submit Attendance',
                 isLoading: state.isSaving,
                 onPressed: canSubmit
-                    ? () => context
-                        .read<ClassAttendanceBloc>()
-                        .add(const ClassAttendanceSubmitted())
+                    ? () => context.read<ClassAttendanceBloc>().add(
+                        const ClassAttendanceSubmitted(),
+                      )
                     : null,
               ),
             ),
@@ -529,11 +537,7 @@ class _StatusButton extends StatelessWidget {
             color: isSelected ? color : color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(
-            icon,
-            size: 18,
-            color: isSelected ? Colors.white : color,
-          ),
+          child: Icon(icon, size: 18, color: isSelected ? Colors.white : color),
         ),
       ),
     );

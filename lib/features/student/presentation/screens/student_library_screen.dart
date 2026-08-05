@@ -19,7 +19,8 @@ class StudentLibraryScreen extends StatefulWidget {
   State<StudentLibraryScreen> createState() => _StudentLibraryScreenState();
 }
 
-class _StudentLibraryScreenState extends State<StudentLibraryScreen> with SingleTickerProviderStateMixin {
+class _StudentLibraryScreenState extends State<StudentLibraryScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -101,19 +102,21 @@ class _MyBorrowingsTab extends StatelessWidget {
             itemCount: activeBorrowings.length,
             itemBuilder: (context, index) {
               final borrowing = activeBorrowings[index];
-              final isOverdue = borrowing.status == BorrowingStatus.overdue ||
+              final isOverdue =
+                  borrowing.status == BorrowingStatus.overdue ||
                   borrowing.dueDate.isBefore(DateTime.now());
 
               return AppCard(
                 margin: const EdgeInsets.only(bottom: 12),
                 child: ListTile(
-                  leading: const CircleAvatar(
-                    child: Icon(Icons.book),
+                  leading: const CircleAvatar(child: Icon(Icons.book)),
+                  title: Text(
+                    borrowing.resourceTitle,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  title: Text(borrowing.resourceTitle,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text(
-                      'Issued: ${DateFormat('MMM dd, yyyy').format(borrowing.borrowDate)}'),
+                    'Issued: ${DateFormat('MMM dd, yyyy').format(borrowing.borrowDate)}',
+                  ),
                   trailing: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -122,7 +125,9 @@ class _MyBorrowingsTab extends StatelessWidget {
                         'Due: ${DateFormat('MMM dd').format(borrowing.dueDate)}',
                         style: TextStyle(
                           color: isOverdue ? Colors.red : Colors.grey[700],
-                          fontWeight: isOverdue ? FontWeight.bold : FontWeight.normal,
+                          fontWeight: isOverdue
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                         ),
                       ),
                       if (isOverdue)
@@ -150,7 +155,11 @@ class _DigitalLibraryTab extends StatelessWidget {
       builder: (context, state) {
         if (state is LibraryResourcesLoaded) {
           final digitalResources = state.resources
-              .where((r) => r.digitalAttachmentUrl != null && r.digitalAttachmentUrl!.isNotEmpty)
+              .where(
+                (r) =>
+                    r.digitalAttachmentUrl != null &&
+                    r.digitalAttachmentUrl!.isNotEmpty,
+              )
               .toList();
 
           if (digitalResources.isEmpty) {
@@ -207,11 +216,17 @@ class _DigitalResourceCard extends StatelessWidget {
               width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.grey[200],
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(8),
+                ),
               ),
               child: resource.coverImageUrl != null
                   ? Image.network(resource.coverImageUrl!, fit: BoxFit.cover)
-                  : Icon(Icons.picture_as_pdf, size: 48, color: Colors.red[400]),
+                  : Icon(
+                      Icons.picture_as_pdf,
+                      size: 48,
+                      color: Colors.red[400],
+                    ),
             ),
           ),
           Padding(
@@ -223,7 +238,10 @@ class _DigitalResourceCard extends StatelessWidget {
                   resource.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -235,7 +253,11 @@ class _DigitalResourceCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Icon(Icons.download, size: 14, color: Theme.of(context).primaryColor),
+                    Icon(
+                      Icons.download,
+                      size: 14,
+                      color: Theme.of(context).primaryColor,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'Access',

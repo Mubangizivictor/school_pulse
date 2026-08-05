@@ -77,7 +77,10 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                             children: [
                               Text(
                                 item.name,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
                               ),
                               Text(
                                 item.category,
@@ -96,14 +99,17 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                                 color: item.isOutOfStock
                                     ? semanticColors.error
                                     : item.isLowStock
-                                        ? semanticColors.warning
-                                        : null,
+                                    ? semanticColors.warning
+                                    : null,
                               ),
                             ),
                             if (item.isLowStock)
                               Text(
                                 'Low Stock',
-                                style: TextStyle(color: semanticColors.warning, fontSize: 10),
+                                style: TextStyle(
+                                  color: semanticColors.warning,
+                                  fontSize: 10,
+                                ),
                               ),
                           ],
                         ),
@@ -117,7 +123,8 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                           onPressed: () {
                             showDialog(
                               context: context,
-                              builder: (context) => IssueStockDialog(item: item),
+                              builder: (context) =>
+                                  IssueStockDialog(item: item),
                             );
                           },
                           icon: const Icon(Icons.outbox_rounded, size: 18),
@@ -128,10 +135,14 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                           onPressed: () {
                             showDialog(
                               context: context,
-                              builder: (context) => ReceiveGoodsDialog(item: item),
+                              builder: (context) =>
+                                  ReceiveGoodsDialog(item: item),
                             );
                           },
-                          icon: const Icon(Icons.add_business_rounded, size: 18),
+                          icon: const Icon(
+                            Icons.add_business_rounded,
+                            size: 18,
+                          ),
                           label: const Text('Receive'),
                         ),
                       ],

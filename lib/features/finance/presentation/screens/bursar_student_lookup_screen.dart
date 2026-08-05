@@ -12,7 +12,8 @@ class BursarStudentLookupScreen extends StatefulWidget {
   const BursarStudentLookupScreen({super.key});
 
   @override
-  State<BursarStudentLookupScreen> createState() => _BursarStudentLookupScreenState();
+  State<BursarStudentLookupScreen> createState() =>
+      _BursarStudentLookupScreenState();
 }
 
 class _BursarStudentLookupScreenState extends State<BursarStudentLookupScreen> {
@@ -46,7 +47,10 @@ class _BursarStudentLookupScreenState extends State<BursarStudentLookupScreen> {
       _error = null;
     });
 
-    final result = await _studentRepository.searchStudents(schoolId: authState.user.schoolId, query: query);
+    final result = await _studentRepository.searchStudents(
+      schoolId: authState.user.schoolId,
+      query: query,
+    );
     result.fold(
       (failure) => setState(() => _error = failure.message),
       (students) => setState(() => _results = students),
@@ -102,7 +106,11 @@ class _BursarStudentLookupScreenState extends State<BursarStudentLookupScreen> {
                 FilledButton(
                   onPressed: _searching ? null : _search,
                   child: _searching
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Text('Search'),
                 ),
               ],
@@ -111,7 +119,11 @@ class _BursarStudentLookupScreenState extends State<BursarStudentLookupScreen> {
             if (_selectedStudent == null) ...[
               Expanded(
                 child: _results.isEmpty
-                    ? const Center(child: Text('Search for a student to view their balance'))
+                    ? const Center(
+                        child: Text(
+                          'Search for a student to view their balance',
+                        ),
+                      )
                     : ListView.builder(
                         itemCount: _results.length,
                         itemBuilder: (context, index) {
@@ -133,13 +145,17 @@ class _BursarStudentLookupScreenState extends State<BursarStudentLookupScreen> {
                 icon: const Icon(Icons.arrow_back),
                 label: const Text('Back to results'),
               ),
-              if (_loadingView) const Center(child: CircularProgressIndicator()),
+              if (_loadingView)
+                const Center(child: CircularProgressIndicator()),
               if (_error != null)
                 Card(
                   color: Colors.red.shade50,
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Text(_error!, style: const TextStyle(color: Colors.red)),
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
                   ),
                 ),
               if (_view != null) _BursarViewCard(view: _view!),
@@ -172,7 +188,9 @@ class _BursarViewCard extends StatelessWidget {
             const SizedBox(height: 8),
             Chip(
               label: Text(view.isFullyPaid ? 'Fully Paid' : 'Balance Due'),
-              backgroundColor: view.isFullyPaid ? Colors.green.shade100 : Colors.orange.shade100,
+              backgroundColor: view.isFullyPaid
+                  ? Colors.green.shade100
+                  : Colors.orange.shade100,
             ),
           ],
         ),
@@ -192,7 +210,10 @@ class _InfoRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          SizedBox(width: 160, child: Text(label, style: const TextStyle(color: Colors.grey))),
+          SizedBox(
+            width: 160,
+            child: Text(label, style: const TextStyle(color: Colors.grey)),
+          ),
           Expanded(child: Text(value)),
         ],
       ),

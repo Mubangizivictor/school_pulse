@@ -13,15 +13,14 @@ class InstitutionContextCubit extends Cubit<InstitutionContextState> {
   final InstitutionContextRepository repository;
   final SharedPreferences preferences;
 
-  static const _lastInstitutionKey = 'institution_context.current_institution_id';
+  static const _lastInstitutionKey =
+      'institution_context.current_institution_id';
 
   StreamSubscription? _watchSubscription;
   String? _currentInstitutionId;
 
-  InstitutionContextCubit({
-    required this.repository,
-    required this.preferences,
-  }) : super(const InstitutionContextInitial());
+  InstitutionContextCubit({required this.repository, required this.preferences})
+    : super(const InstitutionContextInitial());
 
   String? get currentInstitutionId => _currentInstitutionId;
 
@@ -34,16 +33,15 @@ class InstitutionContextCubit extends Cubit<InstitutionContextState> {
     await preferences.setString(_lastInstitutionKey, institutionId);
 
     await _watchSubscription?.cancel();
-    _watchSubscription = repository.watchContext(institutionId).listen(
-      (context) {
-        if (context.isSuspended) {
-          emit(InstitutionContextSuspended(context));
-        } else {
-          emit(InstitutionContextLoaded(context));
-        }
-      },
-      onError: (error) => emit(InstitutionContextError(error.toString())),
-    );
+    _watchSubscription = repository.watchContext(institutionId).listen((
+      context,
+    ) {
+      if (context.isSuspended) {
+        emit(InstitutionContextSuspended(context));
+      } else {
+        emit(InstitutionContextLoaded(context));
+      }
+    }, onError: (error) => emit(InstitutionContextError(error.toString())));
   }
 
   /// Switches the active institution context for a multi-institution user.

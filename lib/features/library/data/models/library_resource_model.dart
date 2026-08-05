@@ -89,7 +89,9 @@ class LibraryResourceModel extends LibraryResource {
       'rack': rack,
       'totalQuantity': totalQuantity,
       'availableCopies': availableCopies,
-      'purchaseDate': purchaseDate != null ? Timestamp.fromDate(purchaseDate!) : null,
+      'purchaseDate': purchaseDate != null
+          ? Timestamp.fromDate(purchaseDate!)
+          : null,
       'purchaseCost': purchaseCost,
       'supplier': supplier,
       'condition': condition.name,

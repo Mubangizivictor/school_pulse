@@ -72,7 +72,11 @@ class StoresAssetsLocalDataSourceImpl implements StoresAssetsLocalDataSource {
 
   @override
   Future<List<StockMovementIsar>> getRecentMovements() async {
-    return await isar.stockMovementIsars.where().sortByDateDesc().limit(50).findAll();
+    return await isar.stockMovementIsars
+        .where()
+        .sortByDateDesc()
+        .limit(50)
+        .findAll();
   }
 
   @override
@@ -140,11 +144,16 @@ class StoresAssetsLocalDataSourceImpl implements StoresAssetsLocalDataSource {
 
   @override
   Future<List<ProcurementRequestIsar>> getProcurementRequests() async {
-    return await isar.procurementRequestIsars.where().sortByDateDesc().findAll();
+    return await isar.procurementRequestIsars
+        .where()
+        .sortByDateDesc()
+        .findAll();
   }
 
   @override
-  Future<void> cacheProcurementRequests(List<ProcurementRequestIsar> requests) async {
+  Future<void> cacheProcurementRequests(
+    List<ProcurementRequestIsar> requests,
+  ) async {
     await isar.writeTxn(() async {
       await isar.procurementRequestIsars.clear();
       await isar.procurementRequestIsars.putAll(requests);
@@ -159,8 +168,13 @@ class StoresAssetsLocalDataSourceImpl implements StoresAssetsLocalDataSource {
   }
 
   @override
-  Future<ProcurementRequestIsar?> getProcurementRequestById(String requestId) async {
-    return await isar.procurementRequestIsars.filter().requestIdEqualTo(requestId).findFirst();
+  Future<ProcurementRequestIsar?> getProcurementRequestById(
+    String requestId,
+  ) async {
+    return await isar.procurementRequestIsars
+        .filter()
+        .requestIdEqualTo(requestId)
+        .findFirst();
   }
 
   @override
@@ -196,11 +210,17 @@ class StoresAssetsLocalDataSourceImpl implements StoresAssetsLocalDataSource {
 
   @override
   Future<List<StockMovementIsar>> getUnsyncedMovements() async {
-    return await isar.stockMovementIsars.filter().isSyncedEqualTo(false).findAll();
+    return await isar.stockMovementIsars
+        .filter()
+        .isSyncedEqualTo(false)
+        .findAll();
   }
 
   @override
   Future<List<ProcurementRequestIsar>> getUnsyncedProcurementRequests() async {
-    return await isar.procurementRequestIsars.filter().isSyncedEqualTo(false).findAll();
+    return await isar.procurementRequestIsars
+        .filter()
+        .isSyncedEqualTo(false)
+        .findAll();
   }
 }

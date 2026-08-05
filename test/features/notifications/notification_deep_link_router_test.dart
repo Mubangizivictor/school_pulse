@@ -190,57 +190,63 @@ void main() {
   });
 
   group('messaging', () {
-    test('routes to the conversation using the related conversation id',
-        () async {
-      final result = await router.resolve(
-        notification: _notification(
-          type: NotificationType.newMessage,
-          relatedConversationId: 'chat-42',
-          recipientUserId: 'user-1',
-        ),
-        user: _user(id: 'user-1'),
-      );
+    test(
+      'routes to the conversation using the related conversation id',
+      () async {
+        final result = await router.resolve(
+          notification: _notification(
+            type: NotificationType.newMessage,
+            relatedConversationId: 'chat-42',
+            recipientUserId: 'user-1',
+          ),
+          user: _user(id: 'user-1'),
+        );
 
-      expect(result.isAllowed, isTrue);
-      expect(result.destination!.route, '/messages/chat/chat-42');
-    });
+        expect(result.isAllowed, isTrue);
+        expect(result.destination!.route, '/messages/chat/chat-42');
+      },
+    );
 
-    test('falls back to the details screen when no conversation id exists',
-        () async {
-      final result = await router.resolve(
-        notification: _notification(
-          type: NotificationType.newMessage,
-          recipientUserId: 'user-1',
-        ),
-        user: _user(id: 'user-1'),
-      );
+    test(
+      'falls back to the details screen when no conversation id exists',
+      () async {
+        final result = await router.resolve(
+          notification: _notification(
+            type: NotificationType.newMessage,
+            recipientUserId: 'user-1',
+          ),
+          user: _user(id: 'user-1'),
+        );
 
-      expect(result.isAllowed, isTrue);
-      expect(
-        result.destination!.kind,
-        NotificationDestinationKind.notificationDetails,
-      );
-    });
+        expect(result.isAllowed, isTrue);
+        expect(
+          result.destination!.kind,
+          NotificationDestinationKind.notificationDetails,
+        );
+      },
+    );
   });
 
   group('expiry and missing targets', () {
-    test('an expired notification still opens its own details screen',
-        () async {
-      final result = await router.resolve(
-        notification: _notification(
-          type: NotificationType.reportCardPublished,
-          relatedStudentId: 'student-1',
-          expiresAt: DateTime(2020, 1, 1),
-        ),
-        user: _user(roles: [UserRole.parent], studentIds: ['student-1']),
-      );
+    test(
+      'an expired notification still opens its own details screen',
+      () async {
+        final result = await router.resolve(
+          notification: _notification(
+            type: NotificationType.reportCardPublished,
+            relatedStudentId: 'student-1',
+            expiresAt: DateTime(2020, 1, 1),
+          ),
+          user: _user(roles: [UserRole.parent], studentIds: ['student-1']),
+        );
 
-      expect(result.isAllowed, isTrue);
-      expect(
-        result.destination!.kind,
-        NotificationDestinationKind.notificationDetails,
-      );
-    });
+        expect(result.isAllowed, isTrue);
+        expect(
+          result.destination!.kind,
+          NotificationDestinationKind.notificationDetails,
+        );
+      },
+    );
 
     test('refuses when the target record no longer exists', () async {
       final result = await router.resolve(
@@ -270,9 +276,7 @@ void main() {
 
     test('students land on the parent-side shell', () async {
       final result = await router.resolve(
-        notification: _notification(
-          type: NotificationType.announcement,
-        ),
+        notification: _notification(type: NotificationType.announcement),
         user: _user(roles: [UserRole.student], studentId: 'student-1'),
       );
 

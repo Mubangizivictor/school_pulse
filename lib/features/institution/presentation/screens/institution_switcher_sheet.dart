@@ -56,7 +56,8 @@ class InstitutionSwitcherSheet extends StatelessWidget {
                   return const EmptyState(
                     icon: Icons.apartment_outlined,
                     title: 'No other institutions',
-                    message: 'You are not a member of any other institution yet.',
+                    message:
+                        'You are not a member of any other institution yet.',
                   );
                 }
                 return ListView.builder(
@@ -65,22 +66,38 @@ class InstitutionSwitcherSheet extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final data = memberships[index].data();
                     final institutionId = data['institutionId'] as String;
-                    final isActive = context.read<InstitutionContextCubit>().currentInstitutionId ==
+                    final isActive =
+                        context
+                            .read<InstitutionContextCubit>()
+                            .currentInstitutionId ==
                         institutionId;
-                    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                      future: firestore.collection('schools').doc(institutionId).get(),
+                    return FutureBuilder<
+                      DocumentSnapshot<Map<String, dynamic>>
+                    >(
+                      future: firestore
+                          .collection('schools')
+                          .doc(institutionId)
+                          .get(),
                       builder: (context, schoolSnapshot) {
-                        final name = schoolSnapshot.data?.data()?['displayLabel'] ??
+                        final name =
+                            schoolSnapshot.data?.data()?['displayLabel'] ??
                             schoolSnapshot.data?.data()?['name'] ??
                             institutionId;
                         return ListTile(
                           leading: const Icon(Icons.apartment_outlined),
                           title: Text(name as String),
-                          trailing: isActive ? const Icon(Icons.check_circle, color: Colors.green) : null,
+                          trailing: isActive
+                              ? const Icon(
+                                  Icons.check_circle,
+                                  color: Colors.green,
+                                )
+                              : null,
                           onTap: isActive
                               ? null
                               : () {
-                                  context.read<InstitutionContextCubit>().switchTo(institutionId);
+                                  context
+                                      .read<InstitutionContextCubit>()
+                                      .switchTo(institutionId);
                                   Navigator.of(context).pop();
                                 },
                         );

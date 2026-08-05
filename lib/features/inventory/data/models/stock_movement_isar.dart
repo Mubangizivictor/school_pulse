@@ -32,7 +32,10 @@ class StockMovementIsar {
     this.isSynced = false,
   });
 
-  factory StockMovementIsar.fromEntity(StockMovement entity, {bool isSynced = true}) {
+  factory StockMovementIsar.fromEntity(
+    StockMovement entity, {
+    bool isSynced = true,
+  }) {
     return StockMovementIsar(date: entity.date)
       ..movementId = entity.id
       ..itemId = entity.itemId

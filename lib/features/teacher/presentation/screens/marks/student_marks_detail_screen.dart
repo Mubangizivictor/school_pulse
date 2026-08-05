@@ -17,9 +17,14 @@ class StudentMarksDetailScreen extends StatelessWidget {
           icon: Icon(Icons.chevron_left, color: AppColors.textPrimary(context)),
           onPressed: () => context.pop(),
         ),
-        title: Text('Student Marks Detail',
-            style: TextStyle(
-                color: AppColors.textPrimary(context), fontSize: 18, fontWeight: FontWeight.bold)),
+        title: Text(
+          'Student Marks Detail',
+          style: TextStyle(
+            color: AppColors.textPrimary(context),
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -31,15 +36,28 @@ class StudentMarksDetailScreen extends StatelessWidget {
               backgroundImage: NetworkImage('https://placeholder.com/150'),
             ),
             const SizedBox(height: 12),
-            Text('Akena Brian',
-                style: TextStyle(
-                    color: AppColors.textPrimary(context),
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold)),
-            Text('ADM/2022/001',
-                style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12)),
-            Text('Grade 10A',
-                style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12)),
+            Text(
+              'Akena Brian',
+              style: TextStyle(
+                color: AppColors.textPrimary(context),
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              'ADM/2022/001',
+              style: TextStyle(
+                color: AppColors.textSecondary(context),
+                fontSize: 12,
+              ),
+            ),
+            Text(
+              'Grade 10A',
+              style: TextStyle(
+                color: AppColors.textSecondary(context),
+                fontSize: 12,
+              ),
+            ),
             const SizedBox(height: 32),
             _buildAssessmentSummary(context),
             const SizedBox(height: 24),
@@ -56,15 +74,20 @@ class StudentMarksDetailScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
+        border: Border.all(
+          color: AppColors.border(context).withValues(alpha: 0.5),
+        ),
       ),
       child: Column(
         children: [
-          Text('Mid Term Test',
-              style: TextStyle(
-                  color: AppColors.textPrimary(context),
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold)),
+          Text(
+            'Mid Term Test',
+            style: TextStyle(
+              color: AppColors.textPrimary(context),
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -85,13 +108,21 @@ class StudentMarksDetailScreen extends StatelessWidget {
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('16',
-                          style: TextStyle(
-                              color: AppColors.textPrimary(context),
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold)),
-                      Text('/ 40',
-                          style: TextStyle(color: AppColors.textSecondary(context), fontSize: 10)),
+                      Text(
+                        '16',
+                        style: TextStyle(
+                          color: AppColors.textPrimary(context),
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        '/ 40',
+                        style: TextStyle(
+                          color: AppColors.textSecondary(context),
+                          fontSize: 10,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -99,9 +130,19 @@ class StudentMarksDetailScreen extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildStatItem(context, 'Percentage', '40%', AppColors.success(context)),
+                  _buildStatItem(
+                    context,
+                    'Percentage',
+                    '40%',
+                    AppColors.success(context),
+                  ),
                   const SizedBox(height: 12),
-                  _buildStatItem(context, 'Grade', 'C', AppColors.warning(context)),
+                  _buildStatItem(
+                    context,
+                    'Grade',
+                    'C',
+                    AppColors.warning(context),
+                  ),
                 ],
               ),
             ],
@@ -111,12 +152,30 @@ class StudentMarksDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatItem(BuildContext context, String label, String value, Color color) {
+  Widget _buildStatItem(
+    BuildContext context,
+    String label,
+    String value,
+    Color color,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12)),
-        Text(value, style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.bold)),
+        Text(
+          label,
+          style: TextStyle(
+            color: AppColors.textSecondary(context),
+            fontSize: 12,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ],
     );
   }
@@ -125,34 +184,73 @@ class StudentMarksDetailScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Component Breakdown',
-            style: TextStyle(
-                color: AppColors.textPrimary(context), fontSize: 16, fontWeight: FontWeight.bold)),
+        Text(
+          'Component Breakdown',
+          style: TextStyle(
+            color: AppColors.textPrimary(context),
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 12),
-        _buildComponentItem(context, 'Section A', '16 / 20', AppColors.success(context)),
-        _buildComponentItem(context, 'Section B', '-- / 10', AppColors.textMuted(context)),
-        _buildComponentItem(context, 'Section C', '-- / 10', AppColors.textMuted(context)),
+        _buildComponentItem(
+          context,
+          'Section A',
+          '16 / 20',
+          AppColors.success(context),
+        ),
+        _buildComponentItem(
+          context,
+          'Section B',
+          '-- / 10',
+          AppColors.textMuted(context),
+        ),
+        _buildComponentItem(
+          context,
+          'Section C',
+          '-- / 10',
+          AppColors.textMuted(context),
+        ),
       ],
     );
   }
 
-  Widget _buildComponentItem(BuildContext context, String name, String score, Color scoreColor) {
+  Widget _buildComponentItem(
+    BuildContext context,
+    String name,
+    String score,
+    Color scoreColor,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
+        border: Border.all(
+          color: AppColors.border(context).withValues(alpha: 0.5),
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(name, style: TextStyle(color: AppColors.textPrimary(context), fontSize: 14)),
-          Text(score, style: TextStyle(color: scoreColor, fontSize: 14, fontWeight: FontWeight.bold)),
+          Text(
+            name,
+            style: TextStyle(
+              color: AppColors.textPrimary(context),
+              fontSize: 14,
+            ),
+          ),
+          Text(
+            score,
+            style: TextStyle(
+              color: scoreColor,
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
   }
 }
-

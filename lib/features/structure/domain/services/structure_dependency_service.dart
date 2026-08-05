@@ -56,7 +56,10 @@ class StructureDependencyService {
   /// always returns 0 until a future phase adds that field. Documented
   /// as a stub, not a silent false "safe to delete" signal masquerading
   /// as a real check.
-  Future<int> countStaffInDepartment(String schoolId, String departmentId) async {
+  Future<int> countStaffInDepartment(
+    String schoolId,
+    String departmentId,
+  ) async {
     return 0;
   }
 

@@ -45,10 +45,12 @@ class AcademicBloc extends Bloc<AcademicEvent, AcademicState> {
     );
     result.fold(
       (failure) => emit(AcademicError(message: failure.message)),
-      (records) => emit(AcademicLoaded(
-        academicRecords: records,
-        attendanceRecords: currentAttendance,
-      )),
+      (records) => emit(
+        AcademicLoaded(
+          academicRecords: records,
+          attendanceRecords: currentAttendance,
+        ),
+      ),
     );
   }
 
@@ -72,10 +74,12 @@ class AcademicBloc extends Bloc<AcademicEvent, AcademicState> {
     );
     result.fold(
       (failure) => emit(AcademicError(message: failure.message)),
-      (records) => emit(AcademicLoaded(
-        academicRecords: currentAcademic,
-        attendanceRecords: records,
-      )),
+      (records) => emit(
+        AcademicLoaded(
+          academicRecords: currentAcademic,
+          attendanceRecords: records,
+        ),
+      ),
     );
   }
 
@@ -93,9 +97,11 @@ class AcademicBloc extends Bloc<AcademicEvent, AcademicState> {
 
     result.fold(
       (failure) => emit(AcademicError(message: failure.message)),
-      (reportCards) => emit(AcademicReportCardLoaded(
-        reportCards.isNotEmpty ? reportCards.first : null,
-      )),
+      (reportCards) => emit(
+        AcademicReportCardLoaded(
+          reportCards.isNotEmpty ? reportCards.first : null,
+        ),
+      ),
     );
   }
 }

@@ -10,7 +10,10 @@ class TransportBloc extends Bloc<TransportEvent, TransportState> {
     on<FetchTransportInfo>(_onFetchTransportInfo);
   }
 
-  Future<void> _onFetchTransportInfo(FetchTransportInfo event, Emitter<TransportState> emit) async {
+  Future<void> _onFetchTransportInfo(
+    FetchTransportInfo event,
+    Emitter<TransportState> emit,
+  ) async {
     emit(TransportLoading());
     final result = await getTransportInfo(event.studentId);
     result.fold(

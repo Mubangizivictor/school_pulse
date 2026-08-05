@@ -130,18 +130,18 @@ class OfflineOperation extends Equatable {
 
   @override
   List<Object?> get props => [
-        operationId,
-        entityType,
-        entityId,
-        action,
-        payload,
-        createdAt,
-        retryCount,
-        lastError,
-        status,
-        schoolId,
-        userId,
-        roleAssignmentId,
-        deviceId,
-      ];
+    operationId,
+    entityType,
+    entityId,
+    action,
+    payload,
+    createdAt,
+    retryCount,
+    lastError,
+    status,
+    schoolId,
+    userId,
+    roleAssignmentId,
+    deviceId,
+  ];
 }

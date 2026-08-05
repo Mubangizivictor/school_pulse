@@ -11,10 +11,12 @@ class ReligiousLeaderDashboardScreen extends StatefulWidget {
   const ReligiousLeaderDashboardScreen({super.key});
 
   @override
-  State<ReligiousLeaderDashboardScreen> createState() => _ReligiousLeaderDashboardScreenState();
+  State<ReligiousLeaderDashboardScreen> createState() =>
+      _ReligiousLeaderDashboardScreenState();
 }
 
-class _ReligiousLeaderDashboardScreenState extends State<ReligiousLeaderDashboardScreen> {
+class _ReligiousLeaderDashboardScreenState
+    extends State<ReligiousLeaderDashboardScreen> {
   @override
   void initState() {
     super.initState();
@@ -26,16 +28,14 @@ class _ReligiousLeaderDashboardScreenState extends State<ReligiousLeaderDashboar
     return Scaffold(
       appBar: AppBar(
         title: const Text('Religious & Spiritual Life'),
-        actions: [
-          const NotificationBellButton(),
-        ],
+        actions: [const NotificationBellButton()],
       ),
       body: BlocConsumer<ReligionBloc, ReligionState>(
         listener: (context, state) {
           if (state is ReligionActionSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
           }
         },
         builder: (context, state) {
@@ -53,14 +53,19 @@ class _ReligiousLeaderDashboardScreenState extends State<ReligiousLeaderDashboar
                 context.read<ReligionBloc>().add(ReligionDashboardRequested());
               },
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 15,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     FadeInSlide(
                       child: Text(
                         'Spiritual Oversight',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 15),
@@ -94,15 +99,16 @@ class _ReligiousLeaderDashboardScreenState extends State<ReligiousLeaderDashboar
                     const SizedBox(height: 24),
                     const SectionHeader(title: 'Upcoming Activities'),
                     const SizedBox(height: 12),
-                    ...state.activities.map((activity) => FadeInSlide(
-                      child: _ActivityCard(activity: activity),
-                    )),
+                    ...state.activities.map(
+                      (activity) =>
+                          FadeInSlide(child: _ActivityCard(activity: activity)),
+                    ),
                     const SizedBox(height: 24),
                     const SectionHeader(title: 'Spiritual Groups'),
                     const SizedBox(height: 12),
-                    ...state.groups.map((group) => FadeInSlide(
-                      child: _GroupCard(group: group),
-                    )),
+                    ...state.groups.map(
+                      (group) => FadeInSlide(child: _GroupCard(group: group)),
+                    ),
                     const SizedBox(height: 32),
                     _QuickActions(),
                   ],
@@ -129,10 +135,18 @@ class _ActivityCard extends StatelessWidget {
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-          child: Text(activity.category[0], style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+          child: Text(
+            activity.category[0],
+            style: TextStyle(color: Theme.of(context).colorScheme.primary),
+          ),
         ),
-        title: Text(activity.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text('${activity.venue} • ${activity.dateTime.toString().split(' ')[0]}'),
+        title: Text(
+          activity.title,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(
+          '${activity.venue} • ${activity.dateTime.toString().split(' ')[0]}',
+        ),
         trailing: const Icon(Icons.chevron_right),
       ),
     );
@@ -149,11 +163,16 @@ class _GroupCard extends StatelessWidget {
     return AppCard(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
-        title: Text(group.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          group.name,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         subtitle: Text('Leader: ${group.leader}'),
         trailing: Text(
           '${group.memberCount} members',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
         ),
       ),
     );
@@ -169,7 +188,9 @@ class _QuickActions extends StatelessWidget {
           onPressed: () {},
           icon: const Icon(Icons.add),
           label: const Text('Add Activity'),
-          style: FilledButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
+          style: FilledButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+          ),
         ),
       ],
     );
@@ -196,10 +217,13 @@ class _ReligionSkeleton extends StatelessWidget {
         const SizedBox(height: 24),
         const Skeleton(width: 150, height: 20),
         const SizedBox(height: 12),
-        ...List.generate(3, (index) => const Padding(
-          padding: EdgeInsets.only(bottom: 12),
-          child: Skeleton(height: 70, borderRadius: 12),
-        )),
+        ...List.generate(
+          3,
+          (index) => const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: Skeleton(height: 70, borderRadius: 12),
+          ),
+        ),
       ],
     );
   }

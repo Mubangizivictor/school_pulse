@@ -7,23 +7,23 @@ class TaskCard extends StatelessWidget {
   final TaskEntity task;
   final VoidCallback? onTap;
 
-  const TaskCard({
-    super.key,
-    required this.task,
-    this.onTap,
-  });
+  const TaskCard({super.key, required this.task, this.onTap});
 
   Color _getCategoryColor(String category) {
     if (category.contains('Attendance')) return Colors.green;
-    if (category.contains('Hygiene') || category.contains('Inspection')) return Colors.purple;
-    if (category.contains('Welfare') || category.contains('Sarah')) return Colors.orange;
+    if (category.contains('Hygiene') || category.contains('Inspection'))
+      return Colors.purple;
+    if (category.contains('Welfare') || category.contains('Sarah'))
+      return Colors.orange;
     return Colors.blue;
   }
 
   IconData _getCategoryIcon(String category) {
     if (category.contains('Attendance')) return Icons.verified_user_outlined;
-    if (category.contains('Hygiene') || category.contains('Inspection')) return Icons.cleaning_services_outlined;
-    if (category.contains('Welfare') || category.contains('Sarah')) return Icons.favorite_border;
+    if (category.contains('Hygiene') || category.contains('Inspection'))
+      return Icons.cleaning_services_outlined;
+    if (category.contains('Welfare') || category.contains('Sarah'))
+      return Icons.favorite_border;
     return Icons.assignment_outlined;
   }
 
@@ -46,7 +46,11 @@ class TaskCard extends StatelessWidget {
               color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(_getCategoryIcon(task.category), color: color, size: 20),
+            child: Icon(
+              _getCategoryIcon(task.category),
+              color: color,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -55,7 +59,10 @@ class TaskCard extends StatelessWidget {
               children: [
                 Text(
                   task.title,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -69,7 +76,11 @@ class TaskCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     'Overdue by ${DateTime.now().difference(task.dueDate).inDays} days',
-                    style: TextStyle(color: semantic.error, fontSize: 11, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: semantic.error,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ],
@@ -95,10 +106,22 @@ class TaskCard extends StatelessWidget {
                   width: 20,
                   height: 20,
                   decoration: BoxDecoration(
-                    border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5)),
+                    border: Border.all(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.outline.withValues(alpha: 0.5),
+                    ),
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: isOverdue ? Center(child: Icon(Icons.close, color: semantic.error, size: 14)) : null,
+                  child: isOverdue
+                      ? Center(
+                          child: Icon(
+                            Icons.close,
+                            color: semantic.error,
+                            size: 14,
+                          ),
+                        )
+                      : null,
                 ),
               if (isOverdue) ...[
                 const SizedBox(height: 4),

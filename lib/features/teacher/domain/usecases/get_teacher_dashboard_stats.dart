@@ -4,7 +4,8 @@ import '../../../../core/usecases/usecase.dart';
 import '../entities/teacher_dashboard_stats.dart';
 import '../repositories/teacher_repository.dart';
 
-class GetTeacherDashboardStats implements UseCase<TeacherDashboardStats, String> {
+class GetTeacherDashboardStats
+    implements UseCase<TeacherDashboardStats, String> {
   final TeacherRepository repository;
 
   GetTeacherDashboardStats(this.repository);

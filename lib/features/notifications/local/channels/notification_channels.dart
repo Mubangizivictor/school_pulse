@@ -21,91 +21,94 @@ class NotificationChannels {
   /// notifications already scheduled against it still display.
   static const legacyChannelId = 'school_pulse_alerts';
 
-  static const _definitions = <String, ({String name, String description, Importance importance})>{
-    'emergency': (
-      name: 'Emergency Alerts',
-      description: 'School closures, security and safety alerts',
-      importance: Importance.max,
-    ),
-    'attendance': (
-      name: 'Attendance & Gate',
-      description: 'Arrival, departure, absence and roll-call alerts',
-      importance: Importance.high,
-    ),
-    'medical': (
-      name: 'Medical',
-      description: 'Nurse and health alerts',
-      importance: Importance.high,
-    ),
-    'security': (
-      name: 'Security',
-      description: 'Visitor arrivals and security incidents',
-      importance: Importance.high,
-    ),
-    'finance': (
-      name: 'Fees & Payments',
-      description: 'Fee reminders, receipts and payment confirmations',
-      importance: Importance.defaultImportance,
-    ),
-    'academics': (
-      name: 'Academics',
-      description: 'Homework, assignments, results and examinations',
-      importance: Importance.defaultImportance,
-    ),
-    'transport': (
-      name: 'Transport',
-      description: 'Bus boarding, drop-off and route alerts',
-      importance: Importance.high,
-    ),
-    'messages': (
-      name: 'Messages',
-      description: 'Direct and group conversations',
-      importance: Importance.high,
-    ),
-    'appointments': (
-      name: 'Appointments',
-      description: 'Appointment approvals, changes and reminders',
-      importance: Importance.defaultImportance,
-    ),
-    'library': (
-      name: 'Library',
-      description: 'Loans, returns and overdue reminders',
-      importance: Importance.low,
-    ),
-    'boarding': (
-      name: 'Boarding',
-      description: 'Dormitory and boarding notices',
-      importance: Importance.defaultImportance,
-    ),
-    'welfare': (
-      name: 'Welfare',
-      description: 'Discipline and counselling communications',
-      importance: Importance.defaultImportance,
-    ),
-    'announcements': (
-      name: 'Announcements',
-      description: 'Official school announcements',
-      importance: Importance.defaultImportance,
-    ),
-    'platform': (
-      name: 'System',
-      description: 'Subscription, billing and maintenance notices',
-      importance: Importance.low,
-    ),
-    'general': (
-      name: 'General',
-      description: 'Other notifications',
-      importance: Importance.defaultImportance,
-    ),
-  };
+  static const _definitions =
+      <String, ({String name, String description, Importance importance})>{
+        'emergency': (
+          name: 'Emergency Alerts',
+          description: 'School closures, security and safety alerts',
+          importance: Importance.max,
+        ),
+        'attendance': (
+          name: 'Attendance & Gate',
+          description: 'Arrival, departure, absence and roll-call alerts',
+          importance: Importance.high,
+        ),
+        'medical': (
+          name: 'Medical',
+          description: 'Nurse and health alerts',
+          importance: Importance.high,
+        ),
+        'security': (
+          name: 'Security',
+          description: 'Visitor arrivals and security incidents',
+          importance: Importance.high,
+        ),
+        'finance': (
+          name: 'Fees & Payments',
+          description: 'Fee reminders, receipts and payment confirmations',
+          importance: Importance.defaultImportance,
+        ),
+        'academics': (
+          name: 'Academics',
+          description: 'Homework, assignments, results and examinations',
+          importance: Importance.defaultImportance,
+        ),
+        'transport': (
+          name: 'Transport',
+          description: 'Bus boarding, drop-off and route alerts',
+          importance: Importance.high,
+        ),
+        'messages': (
+          name: 'Messages',
+          description: 'Direct and group conversations',
+          importance: Importance.high,
+        ),
+        'appointments': (
+          name: 'Appointments',
+          description: 'Appointment approvals, changes and reminders',
+          importance: Importance.defaultImportance,
+        ),
+        'library': (
+          name: 'Library',
+          description: 'Loans, returns and overdue reminders',
+          importance: Importance.low,
+        ),
+        'boarding': (
+          name: 'Boarding',
+          description: 'Dormitory and boarding notices',
+          importance: Importance.defaultImportance,
+        ),
+        'welfare': (
+          name: 'Welfare',
+          description: 'Discipline and counselling communications',
+          importance: Importance.defaultImportance,
+        ),
+        'announcements': (
+          name: 'Announcements',
+          description: 'Official school announcements',
+          importance: Importance.defaultImportance,
+        ),
+        'platform': (
+          name: 'System',
+          description: 'Subscription, billing and maintenance notices',
+          importance: Importance.low,
+        ),
+        'general': (
+          name: 'General',
+          description: 'Other notifications',
+          importance: Importance.defaultImportance,
+        ),
+      };
 
   /// Registers every channel. Safe to call repeatedly - Android treats channel
   /// creation as idempotent once an id exists.
   static Future<void> registerAll(
     FlutterLocalNotificationsPlugin plugin,
   ) async {
-    final android = plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final android = plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     if (android == null) return;
 
     for (final entry in _definitions.entries) {

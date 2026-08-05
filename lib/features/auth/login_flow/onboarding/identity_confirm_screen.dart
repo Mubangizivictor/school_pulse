@@ -7,7 +7,11 @@ class IdentityConfirmScreen extends StatelessWidget {
   final UserEntity user;
   final VoidCallback onConfirmed;
 
-  const IdentityConfirmScreen({super.key, required this.user, required this.onConfirmed});
+  const IdentityConfirmScreen({
+    super.key,
+    required this.user,
+    required this.onConfirmed,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +25,10 @@ class IdentityConfirmScreen extends StatelessWidget {
           OnboardingSummaryRow(label: 'Name', value: user.name),
           OnboardingSummaryRow(label: 'Email', value: user.email),
           OnboardingSummaryRow(label: 'Phone', value: user.phoneNumber ?? '—'),
-          OnboardingSummaryRow(label: 'Role', value: UserRoleDisplay.name(user.role)),
+          OnboardingSummaryRow(
+            label: 'Role',
+            value: UserRoleDisplay.name(user.role),
+          ),
         ],
       ),
     );

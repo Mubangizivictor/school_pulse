@@ -12,10 +12,12 @@ class StaffNotificationCenterScreen extends StatefulWidget {
   const StaffNotificationCenterScreen({super.key});
 
   @override
-  State<StaffNotificationCenterScreen> createState() => _StaffNotificationCenterScreenState();
+  State<StaffNotificationCenterScreen> createState() =>
+      _StaffNotificationCenterScreenState();
 }
 
-class _StaffNotificationCenterScreenState extends State<StaffNotificationCenterScreen> {
+class _StaffNotificationCenterScreenState
+    extends State<StaffNotificationCenterScreen> {
   final _repository = StaffAlertsRepository();
 
   @override
@@ -29,15 +31,14 @@ class _StaffNotificationCenterScreenState extends State<StaffNotificationCenterS
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
-      appBar: AppBar(
-        title: const Text('Notifications'),
-      ),
+      appBar: AppBar(title: const Text('Notifications')),
       body: StreamBuilder<List<StaffAlert>>(
         stream: _repository.watchAllForUser(uid: uid, groups: groups),
         initialData: const [],
         builder: (context, snapshot) {
           // Only show skeletons if we are truly waiting and have no data at all
-          if (snapshot.connectionState == ConnectionState.waiting && snapshot.data == null) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              snapshot.data == null) {
             return ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: 6,
@@ -51,7 +52,8 @@ class _StaffNotificationCenterScreenState extends State<StaffNotificationCenterS
             return const EmptyState(
               icon: Icons.error_outline_rounded,
               title: 'Couldn\'t load notifications',
-              message: 'Something went wrong on our end. Pull to refresh or check back shortly.',
+              message:
+                  'Something went wrong on our end. Pull to refresh or check back shortly.',
             );
           }
           final alerts = snapshot.data ?? const [];
@@ -59,7 +61,8 @@ class _StaffNotificationCenterScreenState extends State<StaffNotificationCenterS
             return const EmptyState(
               icon: Icons.notifications_none_rounded,
               title: 'No notifications yet',
-              message: 'Broadcasts and direct alerts sent to you will show up here.',
+              message:
+                  'Broadcasts and direct alerts sent to you will show up here.',
             );
           }
 
@@ -105,7 +108,10 @@ class _StaffNotificationCenterScreenState extends State<StaffNotificationCenterS
                           color: Colors.red,
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: const Icon(Icons.delete_outline, color: Colors.white),
+                        child: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.white,
+                        ),
                       ),
                       onDismissed: (direction) {
                         _repository.deleteAlert(alert.id);
@@ -137,7 +143,11 @@ class _AlertTile extends StatelessWidget {
   final bool isUnread;
   final VoidCallback onTap;
 
-  const _AlertTile({required this.alert, required this.isUnread, required this.onTap});
+  const _AlertTile({
+    required this.alert,
+    required this.isUnread,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -172,7 +182,11 @@ class _AlertTile extends StatelessWidget {
                     Expanded(
                       child: Text(
                         alert.title,
-                        style: TextStyle(fontWeight: isUnread ? FontWeight.w800 : FontWeight.w600),
+                        style: TextStyle(
+                          fontWeight: isUnread
+                              ? FontWeight.w800
+                              : FontWeight.w600,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),

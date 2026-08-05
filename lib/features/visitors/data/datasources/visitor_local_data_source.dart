@@ -13,10 +13,10 @@ abstract class VisitorLocalDataSource {
   Future<List<VisitorIsar>> getPendingSyncVisitors();
   Future<List<VisitorIsar>> getActiveVisitors(String schoolId);
   Future<List<VisitorIsar>> getOverstayedVisitors(String schoolId);
-  
+
   Future<List<VisitorBlacklistIsar>> getBlacklist(String schoolId);
   Future<void> saveBlacklist(List<VisitorBlacklistIsar> blacklist);
-  
+
   Future<List<PreApprovedVisitorIsar>> getPreApprovedVisitors(String schoolId);
   Future<void> savePreApprovedVisitors(List<PreApprovedVisitorIsar> visitors);
   Future<void> markPreApprovedAsUsed(String preApprovedId);
@@ -27,11 +27,11 @@ abstract class VisitorLocalDataSource {
   Future<void> markScheduledVisitApproved(String scheduledVisitId);
   Future<void> markScheduledVisitRejected(String scheduledVisitId);
   Future<void> markScheduledVisitCheckedIn(String scheduledVisitId);
-  
+
   // New methods for Package Deliveries
   Future<void> savePackageDelivery(PackageDeliveryIsar delivery);
   Future<List<PackageDeliveryIsar>> getPackageDeliveries(String schoolId);
-  
+
   Stream<List<VisitorIsar>> watchVisitors(String schoolId);
 }
 
@@ -66,10 +66,7 @@ class VisitorLocalDataSourceImpl implements VisitorLocalDataSource {
 
   @override
   Future<List<VisitorIsar>> getPendingSyncVisitors() async {
-    return await isar.visitorIsars
-        .filter()
-        .isSyncedEqualTo(false)
-        .findAll();
+    return await isar.visitorIsars.filter().isSyncedEqualTo(false).findAll();
   }
 
   @override
@@ -109,7 +106,9 @@ class VisitorLocalDataSourceImpl implements VisitorLocalDataSource {
   }
 
   @override
-  Future<List<PreApprovedVisitorIsar>> getPreApprovedVisitors(String schoolId) async {
+  Future<List<PreApprovedVisitorIsar>> getPreApprovedVisitors(
+    String schoolId,
+  ) async {
     return await isar.preApprovedVisitorIsars
         .filter()
         .schoolIdEqualTo(schoolId)
@@ -117,7 +116,9 @@ class VisitorLocalDataSourceImpl implements VisitorLocalDataSource {
   }
 
   @override
-  Future<void> savePreApprovedVisitors(List<PreApprovedVisitorIsar> visitors) async {
+  Future<void> savePreApprovedVisitors(
+    List<PreApprovedVisitorIsar> visitors,
+  ) async {
     await isar.writeTxn(() async {
       await isar.preApprovedVisitorIsars.clear();
       await isar.preApprovedVisitorIsars.putAll(visitors);
@@ -204,7 +205,9 @@ class VisitorLocalDataSourceImpl implements VisitorLocalDataSource {
   }
 
   @override
-  Future<List<PackageDeliveryIsar>> getPackageDeliveries(String schoolId) async {
+  Future<List<PackageDeliveryIsar>> getPackageDeliveries(
+    String schoolId,
+  ) async {
     return await isar.packageDeliveryIsars
         .filter()
         .schoolIdEqualTo(schoolId)

@@ -12,12 +12,7 @@ class LessonResourcesScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Lesson Resources'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {},
-          ),
-        ],
+        actions: [IconButton(icon: const Icon(Icons.add), onPressed: () {})],
       ),
       body: Column(
         children: [
@@ -73,7 +68,11 @@ class LessonResourcesScreen extends StatelessWidget {
               color: AppColors.primarySoft(context),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(Icons.book, color: AppColors.primary(context), size: 20),
+            child: Icon(
+              Icons.book,
+              color: AppColors.primary(context),
+              size: 20,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(

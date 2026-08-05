@@ -11,7 +11,9 @@ class LessonPlansRepositoryImpl implements LessonPlansRepository {
   LessonPlansRepositoryImpl({required this.remoteDataSource});
 
   @override
-  Future<Either<Failure, List<LessonPlan>>> getLessonPlans(String teacherId) async {
+  Future<Either<Failure, List<LessonPlan>>> getLessonPlans(
+    String teacherId,
+  ) async {
     try {
       final plans = await remoteDataSource.getLessonPlans(teacherId);
       return Right(plans);

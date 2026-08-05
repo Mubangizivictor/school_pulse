@@ -50,6 +50,14 @@ class CreateStaffAccountParams extends Equatable {
   });
 
   @override
-  List<Object?> get props =>
-      [name, email, schoolId, roles, password, assignedClass, subjects, academicYearId];
+  List<Object?> get props => [
+    name,
+    email,
+    schoolId,
+    roles,
+    password,
+    assignedClass,
+    subjects,
+    academicYearId,
+  ];
 }

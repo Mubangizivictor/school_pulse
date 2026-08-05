@@ -27,8 +27,10 @@ void main() {
 
     test('truncates something unreasonably long rather than overflowing', () {
       expect(classInitials('Foundation').length, lessThanOrEqualTo(5));
-      expect(classInitials('Lower Kindergarten Blue Group').length,
-          lessThanOrEqualTo(5));
+      expect(
+        classInitials('Lower Kindergarten Blue Group').length,
+        lessThanOrEqualTo(5),
+      );
     });
 
     test('falls back when there is no class name', () {

@@ -27,15 +27,15 @@ class LibraryPolicy extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        borrowerType,
-        maxBooks,
-        borrowDurationDays,
-        renewalLimit,
-        gracePeriodDays,
-        finePerDay,
-        lostBookChargeMultiplier,
-        canReserve,
-      ];
+    id,
+    schoolId,
+    borrowerType,
+    maxBooks,
+    borrowDurationDays,
+    renewalLimit,
+    gracePeriodDays,
+    finePerDay,
+    lostBookChargeMultiplier,
+    canReserve,
+  ];
 }

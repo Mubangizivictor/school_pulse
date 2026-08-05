@@ -18,62 +18,66 @@ class DirectorDashboardScreen extends StatelessWidget {
     final actionBg = Theme.of(context).colorScheme.surfaceContainer;
     context.read<DirectorBloc>().add(DirectorDashboardRequested());
     return Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          actions: [
-            NotificationBellButton(backgroundColor: actionBg),
-            const SizedBox(width: 8),
-          ],
-        ),
-        body: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildGreeting(context),
-                    const SizedBox(height: 24),
-                    _buildOverviewGrid(context),
-                    const SizedBox(height: 24),
-                    _buildFinancialPulse(context),
-                    const SizedBox(height: 24),
-                    _buildAcademicPulse(context),
-                    const SizedBox(height: 24),
-                    _buildActionCenter(context),
-                    const SizedBox(height: 24),
-                    _buildOperationalQuality(context),
-                    const SizedBox(height: 40),
-                  ],
-                ),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          NotificationBellButton(backgroundColor: actionBg),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildGreeting(context),
+                  const SizedBox(height: 24),
+                  _buildOverviewGrid(context),
+                  const SizedBox(height: 24),
+                  _buildFinancialPulse(context),
+                  const SizedBox(height: 24),
+                  _buildAcademicPulse(context),
+                  const SizedBox(height: 24),
+                  _buildActionCenter(context),
+                  const SizedBox(height: 24),
+                  _buildOperationalQuality(context),
+                  const SizedBox(height: 40),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildGreeting(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
-        final name = (state is AuthAuthenticated) ? state.user.name : 'Director';
+        final name = (state is AuthAuthenticated)
+            ? state.user.name
+            : 'Director';
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Welcome, $name',
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.bold)),
+            Text(
+              'Welcome, $name',
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
             BlocBuilder<DirectorBloc, DirectorState>(
               builder: (context, state) {
                 if (state is DirectorDashboardLoaded) {
                   return Text(
-                      'Institution Oversight • ${state.stats.activeAcademicYear} • ${state.stats.currentTerm}',
-                      style: TextStyle(color: Theme.of(context).hintColor));
+                    'Institution Oversight • ${state.stats.activeAcademicYear} • ${state.stats.currentTerm}',
+                    style: TextStyle(color: Theme.of(context).hintColor),
+                  );
                 }
                 return const Text('Loading school oversight data...');
               },
@@ -147,7 +151,8 @@ class DirectorDashboardScreen extends StatelessWidget {
                         _FinancialMetric(
                           label: 'Fee Collection',
                           value: '${stats.collectionPercentage}%',
-                          subValue: '${stats.collectedFees.toStringAsFixed(0)} / ${stats.expectedFees.toStringAsFixed(0)}',
+                          subValue:
+                              '${stats.collectedFees.toStringAsFixed(0)} / ${stats.expectedFees.toStringAsFixed(0)}',
                           isProgress: true,
                           percentage: stats.collectionPercentage / 100,
                           color: Colors.green,
@@ -156,7 +161,8 @@ class DirectorDashboardScreen extends StatelessWidget {
                         _FinancialMetric(
                           label: 'Budget Utilization',
                           value: '${stats.budgetUtilization}%',
-                          subValue: 'Exp: ${stats.totalExpenditure.toStringAsFixed(0)}',
+                          subValue:
+                              'Exp: ${stats.totalExpenditure.toStringAsFixed(0)}',
                           isProgress: true,
                           percentage: stats.budgetUtilization / 100,
                           color: Colors.orange,
@@ -167,9 +173,18 @@ class DirectorDashboardScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _RevenueItem(label: 'Monthly Rev', value: stats.monthlyRevenue),
-                        _RevenueItem(label: 'Term Rev', value: stats.termRevenue),
-                        _RevenueItem(label: 'Year Rev', value: stats.yearRevenue),
+                        _RevenueItem(
+                          label: 'Monthly Rev',
+                          value: stats.monthlyRevenue,
+                        ),
+                        _RevenueItem(
+                          label: 'Term Rev',
+                          value: stats.termRevenue,
+                        ),
+                        _RevenueItem(
+                          label: 'Year Rev',
+                          value: stats.yearRevenue,
+                        ),
                       ],
                     ),
                   ],
@@ -199,7 +214,8 @@ class DirectorDashboardScreen extends StatelessWidget {
                     child: _PerformanceCard(
                       label: 'School Average',
                       value: '${stats.overallSchoolAverage}%',
-                      trend: '${stats.improvementTrend > 0 ? "+" : ""}${stats.improvementTrend}%',
+                      trend:
+                          '${stats.improvementTrend > 0 ? "+" : ""}${stats.improvementTrend}%',
                       icon: Icons.analytics,
                       color: Colors.blue,
                     ),
@@ -225,9 +241,14 @@ class DirectorDashboardScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Top Performing Classes', style: TextStyle(fontWeight: FontWeight.bold)),
+                          const Text(
+                            'Top Performing Classes',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
                           const SizedBox(height: 8),
-                          ...stats.topClasses.map((c) => _ClassListTile(c: c, color: Colors.green)),
+                          ...stats.topClasses.map(
+                            (c) => _ClassListTile(c: c, color: Colors.green),
+                          ),
                         ],
                       ),
                     ),
@@ -238,9 +259,14 @@ class DirectorDashboardScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Classes Requiring Intervention', style: TextStyle(fontWeight: FontWeight.bold)),
+                          const Text(
+                            'Classes Requiring Intervention',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
                           const SizedBox(height: 8),
-                          ...stats.weakClasses.map((c) => _ClassListTile(c: c, color: Colors.red)),
+                          ...stats.weakClasses.map(
+                            (c) => _ClassListTile(c: c, color: Colors.red),
+                          ),
                         ],
                       ),
                     ),
@@ -257,12 +283,42 @@ class DirectorDashboardScreen extends StatelessWidget {
 
   Widget _buildActionCenter(BuildContext context) {
     final actions = [
-      {'icon': Icons.fact_check, 'label': 'Approval Center', 'color': Colors.blue, 'route': '/director/approvals'},
-      {'icon': Icons.insights, 'label': 'Strategic Reports', 'color': Colors.purple, 'route': '/director/reports'},
-      {'icon': Icons.track_changes, 'label': 'School Goals', 'color': Colors.orange, 'route': '/director/goals'},
-      {'icon': Icons.groups, 'label': 'Management Meetings', 'color': Colors.teal, 'route': '/director/meetings'},
-      {'icon': Icons.campaign, 'label': 'Announcements', 'color': Colors.red, 'route': '/director/announcements'},
-      {'icon': Icons.domain, 'label': 'Campus Monitor', 'color': Colors.indigo, 'route': '/director/campuses'},
+      {
+        'icon': Icons.fact_check,
+        'label': 'Approval Center',
+        'color': Colors.blue,
+        'route': '/director/approvals',
+      },
+      {
+        'icon': Icons.insights,
+        'label': 'Strategic Reports',
+        'color': Colors.purple,
+        'route': '/director/reports',
+      },
+      {
+        'icon': Icons.track_changes,
+        'label': 'School Goals',
+        'color': Colors.orange,
+        'route': '/director/goals',
+      },
+      {
+        'icon': Icons.groups,
+        'label': 'Management Meetings',
+        'color': Colors.teal,
+        'route': '/director/meetings',
+      },
+      {
+        'icon': Icons.campaign,
+        'label': 'Announcements',
+        'color': Colors.red,
+        'route': '/director/announcements',
+      },
+      {
+        'icon': Icons.domain,
+        'label': 'Campus Monitor',
+        'color': Colors.indigo,
+        'route': '/director/campuses',
+      },
     ];
 
     return Column(
@@ -270,42 +326,51 @@ class DirectorDashboardScreen extends StatelessWidget {
       children: [
         const SectionHeader(title: 'Director Command Center'),
         const SizedBox(height: 12),
-        LayoutBuilder(builder: (context, constraints) {
-          final crossAxisCount = constraints.maxWidth > 900 ? 6 : 3;
-          return GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.1,
-            ),
-            itemCount: actions.length,
-            itemBuilder: (context, index) {
-              final action = actions[index];
-              return AppCard(
-                onTap: () {
-                  if (action['route'] != null) {
-                    context.push(action['route'] as String);
-                  }
-                },
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(action['icon'] as IconData, color: action['color'] as Color, size: 28),
-                    const SizedBox(height: 8),
-                    Text(
-                      action['label'] as String,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              );
-            },
-          );
-        }),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final crossAxisCount = constraints.maxWidth > 900 ? 6 : 3;
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 1.1,
+              ),
+              itemCount: actions.length,
+              itemBuilder: (context, index) {
+                final action = actions[index];
+                return AppCard(
+                  onTap: () {
+                    if (action['route'] != null) {
+                      context.push(action['route'] as String);
+                    }
+                  },
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        action['icon'] as IconData,
+                        color: action['color'] as Color,
+                        size: 28,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        action['label'] as String,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
       ],
     );
   }
@@ -341,7 +406,9 @@ class DirectorDashboardScreen extends StatelessWidget {
                       label: 'Safety & Incidents',
                       value: '${stats.activeIncidents} Active',
                       icon: Icons.security,
-                      color: stats.activeIncidents > 0 ? Colors.red : Colors.green,
+                      color: stats.activeIncidents > 0
+                          ? Colors.red
+                          : Colors.green,
                     ),
                   ],
                 ),
@@ -401,12 +468,29 @@ class _OverviewCard extends StatelessWidget {
                 ),
                 child: Icon(icon, color: color, size: 20),
               ),
-              Text(trend, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+              Text(
+                trend,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
-          Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          Text(label, style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor, fontWeight: FontWeight.w500)),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(context).hintColor,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ],
       ),
     );
@@ -436,9 +520,15 @@ class _FinancialMetric extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+          ),
           const SizedBox(height: 4),
-          Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
           if (isProgress) ...[
             const SizedBox(height: 8),
             LinearProgressIndicator(
@@ -449,7 +539,10 @@ class _FinancialMetric extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 4),
-          Text(subValue, style: TextStyle(fontSize: 11, color: Theme.of(context).hintColor)),
+          Text(
+            subValue,
+            style: TextStyle(fontSize: 11, color: Theme.of(context).hintColor),
+          ),
         ],
       ),
     );
@@ -467,8 +560,14 @@ class _RevenueItem extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 11, color: Theme.of(context).hintColor)),
-        Text(value.toStringAsFixed(0), style: const TextStyle(fontWeight: FontWeight.bold)),
+        Text(
+          label,
+          style: TextStyle(fontSize: 11, color: Theme.of(context).hintColor),
+        ),
+        Text(
+          value.toStringAsFixed(0),
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
       ],
     );
   }
@@ -500,8 +599,21 @@ class _PerformanceCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(label, style: const TextStyle(fontSize: 12)),
-              Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              Text(trend, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.bold)),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                trend,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
         ],
@@ -521,13 +633,23 @@ class _ClassListTile extends StatelessWidget {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       dense: true,
-      title: Text(c.className, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+      title: Text(
+        c.className,
+        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+      ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('${c.average}%', style: TextStyle(fontWeight: FontWeight.bold, color: color)),
+          Text(
+            '${c.average}%',
+            style: TextStyle(fontWeight: FontWeight.bold, color: color),
+          ),
           const SizedBox(width: 4),
-          Icon(c.trend > 0 ? Icons.trending_up : Icons.trending_down, size: 14, color: color),
+          Icon(
+            c.trend > 0 ? Icons.trending_up : Icons.trending_down,
+            size: 14,
+            color: color,
+          ),
         ],
       ),
     );
@@ -551,8 +673,14 @@ class _QualityTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: Icon(icon, color: color),
-      title: Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-      trailing: Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+      title: Text(
+        label,
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+      ),
+      trailing: Text(
+        value,
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      ),
       dense: true,
     );
   }

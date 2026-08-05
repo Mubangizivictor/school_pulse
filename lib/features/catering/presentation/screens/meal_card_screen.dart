@@ -42,7 +42,9 @@ class MealCardScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.primary,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(12),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -114,7 +116,9 @@ class MealCardScreen extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade100,
-                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(12),
+                    ),
                   ),
                   child: const Text(
                     'SCHOOL PULSE CATERING SYSTEM',

@@ -41,15 +41,15 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
 
     final classId = context.classId;
     if (classId == null || classId.isEmpty) {
-      return const Left(ValidationFailure(
-        'This responsibility is not tied to a class.',
-      ));
+      return const Left(
+        ValidationFailure('This responsibility is not tied to a class.'),
+      );
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(NetworkFailure(
-        'You are offline. Class work needs a connection.',
-      ));
+      return const Left(
+        NetworkFailure('You are offline. Class work needs a connection.'),
+      );
     }
 
     try {
@@ -61,9 +61,9 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
       );
       return Right(homework);
     } catch (_) {
-      return const Left(ServerFailure(
-        'Could not load class work. Pull down to retry.',
-      ));
+      return const Left(
+        ServerFailure('Could not load class work. Pull down to retry.'),
+      );
     }
   }
 
@@ -96,9 +96,11 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(OfflineNotAllowedFailure(
-        'Setting class work needs an internet connection.',
-      ));
+      return const Left(
+        OfflineNotAllowedFailure(
+          'Setting class work needs an internet connection.',
+        ),
+      );
     }
 
     final isNew = homework.id.isEmpty;
@@ -147,15 +149,19 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
       hasPublishPermission: context.can(Permission.classHomeworkPublish),
     );
     if (!decision.isAllowed) {
-      return Left(decision.refusal == ClassWorkRefusal.publishNotPermitted
-          ? PermissionDeniedFailure(decision.message!)
-          : ValidationFailure(decision.message!));
+      return Left(
+        decision.refusal == ClassWorkRefusal.publishNotPermitted
+            ? PermissionDeniedFailure(decision.message!)
+            : ValidationFailure(decision.message!),
+      );
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(OfflineNotAllowedFailure(
-        'Publishing class work needs an internet connection.',
-      ));
+      return const Left(
+        OfflineNotAllowedFailure(
+          'Publishing class work needs an internet connection.',
+        ),
+      );
     }
 
     final published = homework.copyWith(
@@ -199,10 +205,12 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
     }
 
     if (reason.trim().length < 5) {
-      return const Left(ValidationFailure(
-        'Give a reason for cancelling this assignment.',
-        field: 'reason',
-      ));
+      return const Left(
+        ValidationFailure(
+          'Give a reason for cancelling this assignment.',
+          field: 'reason',
+        ),
+      );
     }
 
     // Cancelled rather than deleted: students and parents already saw it, and
@@ -260,15 +268,15 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
 
     final classId = context.classId;
     if (classId == null || classId.isEmpty) {
-      return const Left(ValidationFailure(
-        'This responsibility is not tied to a class.',
-      ));
+      return const Left(
+        ValidationFailure('This responsibility is not tied to a class.'),
+      );
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(NetworkFailure(
-        'You are offline. Behaviour records need a connection.',
-      ));
+      return const Left(
+        NetworkFailure('You are offline. Behaviour records need a connection.'),
+      );
     }
 
     try {
@@ -280,9 +288,9 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
       );
       return Right(records);
     } catch (_) {
-      return const Left(ServerFailure(
-        'Could not load behaviour records. Pull down to retry.',
-      ));
+      return const Left(
+        ServerFailure('Could not load behaviour records. Pull down to retry.'),
+      );
     }
   }
 
@@ -293,10 +301,12 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
     required List<String> rosterStudentIds,
   }) async {
     final categories = await getBehaviourCategories(context: context);
-    final resolved =
-        categories.getOrElse(() => BehaviourCategoryResolver.defaults);
+    final resolved = categories.getOrElse(
+      () => BehaviourCategoryResolver.defaults,
+    );
 
-    final isAchievement = resolved
+    final isAchievement =
+        resolved
             .where((c) => c.code == record.categoryCode)
             .firstOrNull
             ?.valence ==
@@ -321,15 +331,19 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
       note: record.note,
     );
     if (!decision.isAllowed) {
-      return Left(decision.refusal == ClassWorkRefusal.studentNotInClass
-          ? PermissionDeniedFailure(decision.message!)
-          : ValidationFailure(decision.message!));
+      return Left(
+        decision.refusal == ClassWorkRefusal.studentNotInClass
+            ? PermissionDeniedFailure(decision.message!)
+            : ValidationFailure(decision.message!),
+      );
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(OfflineNotAllowedFailure(
-        'Recording behaviour needs an internet connection.',
-      ));
+      return const Left(
+        OfflineNotAllowedFailure(
+          'Recording behaviour needs an internet connection.',
+        ),
+      );
     }
 
     final prepared = ClassBehaviourRecord(
@@ -345,7 +359,8 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
       categoryCode: record.categoryCode,
       note: record.note,
       recommendation: record.recommendation,
-      followUpRequired: record.followUpRequired ||
+      followUpRequired:
+          record.followUpRequired ||
           ClassWorkPolicy.defaultFollowUpFor(record.categoryCode, resolved),
       followUpClosed: false,
       recordedBy: context.userId,
@@ -394,9 +409,11 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(OfflineNotAllowedFailure(
-        'Updating a behaviour record needs an internet connection.',
-      ));
+      return const Left(
+        OfflineNotAllowedFailure(
+          'Updating a behaviour record needs an internet connection.',
+        ),
+      );
     }
 
     final updated = record.copyWith(

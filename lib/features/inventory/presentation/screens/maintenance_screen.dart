@@ -25,9 +25,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Maintenance Schedule'),
-      ),
+      appBar: AppBar(title: const Text('Maintenance Schedule')),
       body: BlocBuilder<StoresAssetsBloc, StoresAssetsState>(
         builder: (context, state) {
           if (state is StoresAssetsLoading) {
@@ -60,10 +58,16 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                         Expanded(
                           child: Text(
                             record.assetName,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
                         ),
-                        StatusBadge(label: record.status.name, color: _maintenanceStatusColor(record.status)),
+                        StatusBadge(
+                          label: record.status.name,
+                          color: _maintenanceStatusColor(record.status),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -71,7 +75,11 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
+                        const Icon(
+                          Icons.calendar_today,
+                          size: 14,
+                          color: Colors.grey,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           DateFormatter.format(record.scheduledDate),
@@ -109,8 +117,8 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
 }
 
 Color _maintenanceStatusColor(MaintenanceStatus status) => switch (status) {
-      MaintenanceStatus.scheduled => Colors.blue,
-      MaintenanceStatus.inProgress => Colors.orange,
-      MaintenanceStatus.completed => Colors.green,
-      MaintenanceStatus.cancelled => Colors.red,
-    };
+  MaintenanceStatus.scheduled => Colors.blue,
+  MaintenanceStatus.inProgress => Colors.orange,
+  MaintenanceStatus.completed => Colors.green,
+  MaintenanceStatus.cancelled => Colors.red,
+};

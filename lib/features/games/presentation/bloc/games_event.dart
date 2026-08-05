@@ -14,7 +14,10 @@ class UpdateHousePointsRequested extends GamesEvent {
   final String houseId;
   final int points;
 
-  const UpdateHousePointsRequested({required this.houseId, required this.points});
+  const UpdateHousePointsRequested({
+    required this.houseId,
+    required this.points,
+  });
 
   @override
   List<Object?> get props => [houseId, points];

@@ -23,10 +23,7 @@ class NotificationPresenter {
   /// not cached and may not be downloaded now (Data Saver, or offline).
   final Future<String?> Function(String url)? resolveLocalImage;
 
-  NotificationPresenter({
-    required this.plugin,
-    this.resolveLocalImage,
-  });
+  NotificationPresenter({required this.plugin, this.resolveLocalImage});
 
   /// Shows [payload] if policy permits.
   ///
@@ -64,8 +61,9 @@ class NotificationPresenter {
     required int systemNotificationId,
   }) async {
     final config = NotificationCategoryCatalog.of(item.category);
-    final (importance, priority) =
-        NotificationChannels.androidPriorityFor(item.priority);
+    final (importance, priority) = NotificationChannels.androidPriorityFor(
+      item.priority,
+    );
 
     // Lock-screen redaction. The public version is what shows on a locked
     // device; the full text is revealed once unlocked.
@@ -77,8 +75,9 @@ class NotificationPresenter {
     final androidDetails = AndroidNotificationDetails(
       config.channelId,
       NotificationChannels.channelNameFor(item.category),
-      channelDescription:
-          NotificationChannels.channelDescriptionFor(item.category),
+      channelDescription: NotificationChannels.channelDescriptionFor(
+        item.category,
+      ),
       importance: importance,
       priority: priority,
       playSound: evaluation.playSound,
@@ -87,7 +86,8 @@ class NotificationPresenter {
       // notification shade.
       groupKey: NotificationChannels.groupKeyFor(item.category),
       // Emergency alerts stay on screen until acknowledged.
-      ongoing: item.priority == NotificationPriority.urgent &&
+      ongoing:
+          item.priority == NotificationPriority.urgent &&
           item.requiresAcknowledgment,
       // Android renders this instead of the real content on a locked screen.
       visibility: evaluation.preview == LockScreenPreview.full
@@ -186,7 +186,8 @@ class NotificationPresenter {
   Future<String?> _localImagePath(NotificationItem item) async {
     final url = item.bannerImageUrl ?? item.thumbnailUrl;
     if (url == null || url.isEmpty) return null;
-    if (!NotificationCategoryCatalog.of(item.category).allowsImages) return null;
+    if (!NotificationCategoryCatalog.of(item.category).allowsImages)
+      return null;
 
     // An already-downloaded file is usable regardless of connection.
     final local = item.localImagePath;

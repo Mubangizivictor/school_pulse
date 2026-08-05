@@ -128,7 +128,8 @@ class NotificationPushPayload {
       relatedStudentName: _string(data['relatedStudentName']),
       relatedConversationId: _string(data['relatedConversationId']),
       deepLinkRoute: _string(data['deepLinkRoute']),
-      requiresAcknowledgment: _bool(data['requiresAcknowledgment']) ||
+      requiresAcknowledgment:
+          _bool(data['requiresAcknowledgment']) ||
           config.requiresAcknowledgment,
       collapseKey: _string(data['collapseKey']),
     );
@@ -144,7 +145,8 @@ class NotificationPushPayload {
       id: notificationId,
       title: title,
       description: body,
-      senderName: senderName ?? (isAutomated ? 'Automated System' : 'School Pulse'),
+      senderName:
+          senderName ?? (isAutomated ? 'Automated System' : 'School Pulse'),
       senderRole: senderRole ?? 'School Pulse',
       senderAvatar: senderPhotoUrl,
       timestamp: DateTime.now(),

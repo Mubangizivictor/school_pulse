@@ -4,13 +4,7 @@ import 'package:equatable/equatable.dart';
 /// assessment mark: teacher enters (draft/submitted), an optional moderator
 /// reviews (moderated), a final approver signs off (approved), then it
 /// becomes eligible to be aggregated into a published report card.
-enum MarkStatus {
-  draft,
-  submitted,
-  moderated,
-  approved,
-  published,
-}
+enum MarkStatus { draft, submitted, moderated, approved, published }
 
 class AssessmentMark extends Equatable {
   final String id;
@@ -51,23 +45,23 @@ class AssessmentMark extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        studentId,
-        assessmentTypeId,
-        subjectId,
-        classId,
-        academicTerm,
-        academicYear,
-        teacherId,
-        score,
-        competencyLevel,
-        teacherComment,
-        status,
-        createdAt,
-        updatedAt,
-        moderatedBy,
-        approvedBy,
-      ];
+    id,
+    studentId,
+    assessmentTypeId,
+    subjectId,
+    classId,
+    academicTerm,
+    academicYear,
+    teacherId,
+    score,
+    competencyLevel,
+    teacherComment,
+    status,
+    createdAt,
+    updatedAt,
+    moderatedBy,
+    approvedBy,
+  ];
 
   AssessmentMark copyWith({
     double? score,

@@ -20,21 +20,23 @@ class VisitorSyncWorker {
 
   Future<void> syncPendingRecords() async {
     final pending = await localDataSource.getPendingSyncVisitors();
-    
+
     for (var visitorIsar in pending) {
       try {
         Visitor visitor = visitorIsar.toEntity();
-        
+
         // 1. Upload photo if exists and not yet uploaded (remote path would be needed in entity if we tracked it)
         // For simplicity, we'll check if photoLocalPath exists and try to upload it if we don't have a remote URL
         // In a real app, you'd probably have a 'photoUrl' field in Visitor entity.
-        
+
         String? remotePhotoUrl;
         if (visitor.photoLocalPath != null) {
           final file = File(visitor.photoLocalPath!);
           if (await file.exists()) {
             final fileName = p.basename(visitor.photoLocalPath!);
-            final ref = storage.ref().child('visitors/${visitor.schoolId}/${visitor.id}/$fileName');
+            final ref = storage.ref().child(
+              'visitors/${visitor.schoolId}/${visitor.id}/$fileName',
+            );
             await ref.putFile(file);
             remotePhotoUrl = await ref.getDownloadURL();
           }
@@ -45,7 +47,9 @@ class VisitorSyncWorker {
           final file = File(visitor.idImageLocalPath!);
           if (await file.exists()) {
             final fileName = p.basename(visitor.idImageLocalPath!);
-            final ref = storage.ref().child('visitors/${visitor.schoolId}/${visitor.id}/$fileName');
+            final ref = storage.ref().child(
+              'visitors/${visitor.schoolId}/${visitor.id}/$fileName',
+            );
             await ref.putFile(file);
             remoteIdImageUrl = await ref.getDownloadURL();
           }
@@ -56,7 +60,9 @@ class VisitorSyncWorker {
           final file = File(visitor.signatureLocalPath!);
           if (await file.exists()) {
             final fileName = p.basename(visitor.signatureLocalPath!);
-            final ref = storage.ref().child('visitors/${visitor.schoolId}/${visitor.id}/$fileName');
+            final ref = storage.ref().child(
+              'visitors/${visitor.schoolId}/${visitor.id}/$fileName',
+            );
             await ref.putFile(file);
             remoteSignatureUrl = await ref.getDownloadURL();
           }
@@ -108,11 +114,14 @@ class VisitorSyncWorker {
         // Update record to reflect local files are gone
         final cleaned = synced.copyWith(
           photoLocalPath: remotePhotoUrl != null ? null : synced.photoLocalPath,
-          idImageLocalPath: remoteIdImageUrl != null ? null : synced.idImageLocalPath,
-          signatureLocalPath: remoteSignatureUrl != null ? null : synced.signatureLocalPath,
+          idImageLocalPath: remoteIdImageUrl != null
+              ? null
+              : synced.idImageLocalPath,
+          signatureLocalPath: remoteSignatureUrl != null
+              ? null
+              : synced.signatureLocalPath,
         );
         await localDataSource.saveVisitor(VisitorIsar.fromEntity(cleaned));
-        
       } catch (e) {
         // Log error and continue with next record
         // ignore: avoid_print

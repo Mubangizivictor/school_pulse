@@ -23,7 +23,10 @@ class InventoryBloc extends Bloc<InventoryEvent, InventoryState> {
     on<IssueItemRequested>(_onIssueItem);
   }
 
-  Future<void> _onLoadInventory(LoadInventory event, Emitter<InventoryState> emit) async {
+  Future<void> _onLoadInventory(
+    LoadInventory event,
+    Emitter<InventoryState> emit,
+  ) async {
     emit(InventoryLoading());
     final itemsResult = await getInventoryItems();
     final movementsResult = await getRecentMovements();
@@ -33,13 +36,17 @@ class InventoryBloc extends Bloc<InventoryEvent, InventoryState> {
       (items) {
         movementsResult.fold(
           (failure) => emit(InventoryError('Failed to load stock movements')),
-          (movements) => emit(InventoryLoaded(items: items, movements: movements)),
+          (movements) =>
+              emit(InventoryLoaded(items: items, movements: movements)),
         );
       },
     );
   }
 
-  Future<void> _onAddStock(AddStockRequested event, Emitter<InventoryState> emit) async {
+  Future<void> _onAddStock(
+    AddStockRequested event,
+    Emitter<InventoryState> emit,
+  ) async {
     final result = await addStock(
       itemId: event.itemId,
       itemName: event.itemName,
@@ -55,7 +62,10 @@ class InventoryBloc extends Bloc<InventoryEvent, InventoryState> {
     );
   }
 
-  Future<void> _onIssueItem(IssueItemRequested event, Emitter<InventoryState> emit) async {
+  Future<void> _onIssueItem(
+    IssueItemRequested event,
+    Emitter<InventoryState> emit,
+  ) async {
     final result = await issueItem(
       itemId: event.itemId,
       quantity: event.quantity,

@@ -34,7 +34,8 @@ class PermissionEvaluatorImpl implements PermissionEvaluator {
       final permissions = await _resolvePermissions(operatorUser);
       if (!permissions.contains(permissionId)) return const Right(false);
 
-      if (gate != null && !_passesGateScoping(permissions, operatorUser, gate)) {
+      if (gate != null &&
+          !_passesGateScoping(permissions, operatorUser, gate)) {
         return const Right(false);
       }
 
@@ -44,23 +45,33 @@ class PermissionEvaluatorImpl implements PermissionEvaluator {
     }
   }
 
-  bool _passesGateScoping(Set<String> permissions, UserEntity operatorUser, Gate gate) {
+  bool _passesGateScoping(
+    Set<String> permissions,
+    UserEntity operatorUser,
+    Gate gate,
+  ) {
     final hasOverride = permissions.contains(Permission.securityOverride);
     if (hasOverride) return true;
 
-    if (gate.assignedOfficerIds.isNotEmpty && !gate.assignedOfficerIds.contains(operatorUser.id)) {
+    if (gate.assignedOfficerIds.isNotEmpty &&
+        !gate.assignedOfficerIds.contains(operatorUser.id)) {
       return false;
     }
     if (gate.allowedUserRoles.isNotEmpty &&
-        !operatorUser.roles.any((r) => gate.allowedUserRoles.contains(r.name))) {
+        !operatorUser.roles.any(
+          (r) => gate.allowedUserRoles.contains(r.name),
+        )) {
       return false;
     }
     return true;
   }
 
   Future<Set<String>> _resolvePermissions(UserEntity operatorUser) async {
-    final snapshot = await localDataSource.getPermissionSnapshot(operatorUser.id);
-    final isFresh = snapshot != null &&
+    final snapshot = await localDataSource.getPermissionSnapshot(
+      operatorUser.id,
+    );
+    final isFresh =
+        snapshot != null &&
         snapshot.version == _permissionCatalogVersion &&
         snapshot.expiresAt.isAfter(DateTime.now());
 
@@ -70,14 +81,18 @@ class PermissionEvaluatorImpl implements PermissionEvaluator {
     // replaced per-role by any admin-saved override, rather than locking
     // the operator out on a fresh device or after a connectivity drop, then
     // opportunistically persist the snapshot.
-    final overridesResult = await overrideRepository.getOverrides(operatorUser.schoolId);
+    final overridesResult = await overrideRepository.getOverrides(
+      operatorUser.schoolId,
+    );
     final overrides = overridesResult.fold((_) => const {}, (o) => o);
     final computed = <String>{};
     for (final role in operatorUser.roles) {
       final override = overrides[role];
-      computed.addAll(override != null
-          ? override.permissions
-          : (RolePermissionDefaults.defaults[role] ?? const {}));
+      computed.addAll(
+        override != null
+            ? override.permissions
+            : (RolePermissionDefaults.defaults[role] ?? const {}),
+      );
     }
     await localDataSource.savePermissionSnapshot(
       OperatorPermissionSnapshotIsar()

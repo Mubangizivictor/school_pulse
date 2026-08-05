@@ -28,9 +28,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Maintenance Tickets'),
-        actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.build)),
-        ],
+        actions: [IconButton(onPressed: () {}, icon: const Icon(Icons.build))],
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
@@ -46,7 +44,10 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(ticket.assetName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      ticket.assetName,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     _PriorityBadge(priority: ticket.priority),
                   ],
                 ),
@@ -56,8 +57,14 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Status: ${ticket.status}', style: const TextStyle(fontWeight: FontWeight.w500)),
-                    Text(DateFormatter.relative(ticket.createdAt), style: Theme.of(context).textTheme.bodySmall),
+                    Text(
+                      'Status: ${ticket.status}',
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    Text(
+                      DateFormatter.relative(ticket.createdAt),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   ],
                 ),
               ],
@@ -75,11 +82,23 @@ class _PriorityBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color color = priority == 'High' ? Colors.red : (priority == 'Medium' ? Colors.orange : Colors.blue);
+    Color color = priority == 'High'
+        ? Colors.red
+        : (priority == 'Medium' ? Colors.orange : Colors.blue);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-      child: Text(priority.toUpperCase(), style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        priority.toUpperCase(),
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 }

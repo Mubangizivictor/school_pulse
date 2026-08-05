@@ -18,7 +18,8 @@ class AssessmentConfigScreen extends StatefulWidget {
   State<AssessmentConfigScreen> createState() => _AssessmentConfigScreenState();
 }
 
-class _AssessmentConfigScreenState extends State<AssessmentConfigScreen> with SingleTickerProviderStateMixin {
+class _AssessmentConfigScreenState extends State<AssessmentConfigScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -49,8 +50,14 @@ class _AssessmentConfigScreenState extends State<AssessmentConfigScreen> with Si
           return TabBarView(
             controller: _tabController,
             children: [
-              _AssessmentTypesTab(types: state.assessmentTypes, schoolId: widget.schoolId),
-              _GradingSystemsTab(systems: state.gradingSystems, schoolId: widget.schoolId),
+              _AssessmentTypesTab(
+                types: state.assessmentTypes,
+                schoolId: widget.schoolId,
+              ),
+              _GradingSystemsTab(
+                systems: state.gradingSystems,
+                schoolId: widget.schoolId,
+              ),
             ],
           );
         },
@@ -84,18 +91,38 @@ class _AssessmentConfigScreenState extends State<AssessmentConfigScreen> with Si
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Name (e.g. Midterm)')),
-              TextField(controller: codeController, decoration: const InputDecoration(labelText: 'Code (e.g. MT)')),
-              TextField(controller: weightController, decoration: const InputDecoration(labelText: 'Weight (%)'), keyboardType: TextInputType.number),
-              TextField(controller: maxMarkController, decoration: const InputDecoration(labelText: 'Max Mark'), keyboardType: TextInputType.number),
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Name (e.g. Midterm)',
+                ),
+              ),
+              TextField(
+                controller: codeController,
+                decoration: const InputDecoration(labelText: 'Code (e.g. MT)'),
+              ),
+              TextField(
+                controller: weightController,
+                decoration: const InputDecoration(labelText: 'Weight (%)'),
+                keyboardType: TextInputType.number,
+              ),
+              TextField(
+                controller: maxMarkController,
+                decoration: const InputDecoration(labelText: 'Max Mark'),
+                keyboardType: TextInputType.number,
+              ),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () {
-              if (nameController.text.isEmpty || weightController.text.isEmpty) return;
+              if (nameController.text.isEmpty || weightController.text.isEmpty)
+                return;
               final type = AssessmentTypeModel(
                 id: const Uuid().v4(),
                 name: nameController.text,
@@ -103,10 +130,12 @@ class _AssessmentConfigScreenState extends State<AssessmentConfigScreen> with Si
                 weight: double.tryParse(weightController.text) ?? 0,
                 maxMark: double.tryParse(maxMarkController.text) ?? 100,
                 passingMark: 0,
-                academicTerm: 'Term 1', 
+                academicTerm: 'Term 1',
                 academicYear: '2024',
               );
-              context.read<AssessmentBloc>().add(AddAssessmentType(widget.schoolId, type));
+              context.read<AssessmentBloc>().add(
+                AddAssessmentType(widget.schoolId, type),
+              );
               Navigator.pop(context);
             },
             child: const Text('Save'),
@@ -128,18 +157,26 @@ class _AssessmentConfigScreenState extends State<AssessmentConfigScreen> with Si
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: nameController, decoration: const InputDecoration(labelText: 'System Name')),
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'System Name'),
+              ),
               const SizedBox(height: 16),
               DropdownButton<GradingType>(
                 value: selectedType,
                 isExpanded: true,
-                items: GradingType.values.map((t) => DropdownMenuItem(value: t, child: Text(t.name))).toList(),
+                items: GradingType.values
+                    .map((t) => DropdownMenuItem(value: t, child: Text(t.name)))
+                    .toList(),
                 onChanged: (v) => setDialogState(() => selectedType = v!),
               ),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
             ElevatedButton(
               onPressed: () {
                 if (nameController.text.isEmpty) return;
@@ -150,7 +187,9 @@ class _AssessmentConfigScreenState extends State<AssessmentConfigScreen> with Si
                   type: selectedType,
                   ranges: const [], // Ranges would be added in a detail view
                 );
-                context.read<AssessmentBloc>().add(AddGradingSystem(widget.schoolId, system));
+                context.read<AssessmentBloc>().add(
+                  AddGradingSystem(widget.schoolId, system),
+                );
                 Navigator.pop(context);
               },
               child: const Text('Save'),
@@ -170,7 +209,11 @@ class _AssessmentTypesTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (types.isEmpty) {
-      return const EmptyState(icon: Icons.assignment, title: 'No Assessment Types', message: 'Add assessment types like CAT, Midterm, etc.');
+      return const EmptyState(
+        icon: Icons.assignment,
+        title: 'No Assessment Types',
+        message: 'Add assessment types like CAT, Midterm, etc.',
+      );
     }
     return ListView.builder(
       padding: const EdgeInsets.all(16),
@@ -180,7 +223,10 @@ class _AssessmentTypesTab extends StatelessWidget {
         return AppCard(
           margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
-            title: Text(type.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(
+              type.name,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             subtitle: Text('Weight: ${type.weight}% | Max: ${type.maxMark}'),
             trailing: IconButton(
               icon: const Icon(Icons.edit_outlined),
@@ -201,7 +247,11 @@ class _GradingSystemsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (systems.isEmpty) {
-      return const EmptyState(icon: Icons.grade, title: 'No Grading Systems', message: 'Configure grading scales for your school.');
+      return const EmptyState(
+        icon: Icons.grade,
+        title: 'No Grading Systems',
+        message: 'Configure grading scales for your school.',
+      );
     }
     return ListView.builder(
       padding: const EdgeInsets.all(16),
@@ -211,12 +261,21 @@ class _GradingSystemsTab extends StatelessWidget {
         return AppCard(
           margin: const EdgeInsets.only(bottom: 12),
           child: ExpansionTile(
-            title: Text(system.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(
+              system.name,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             subtitle: Text('Type: ${system.type.name}'),
-            children: system.ranges.map((range) => ListTile(
-              title: Text('${range.grade}: ${range.minScore} - ${range.maxScore}'),
-              subtitle: Text(range.remarks),
-            )).toList(),
+            children: system.ranges
+                .map(
+                  (range) => ListTile(
+                    title: Text(
+                      '${range.grade}: ${range.minScore} - ${range.maxScore}',
+                    ),
+                    subtitle: Text(range.remarks),
+                  ),
+                )
+                .toList(),
           ),
         );
       },

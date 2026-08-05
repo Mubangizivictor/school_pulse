@@ -35,18 +35,22 @@ class _PackageDeliveryPageState extends State<PackageDeliveryPage> {
       schoolId: authState.user.schoolId,
       recipientName: _recipientController.text,
       courierName: _courierController.text,
-      courierPhone: _phoneController.text.isEmpty ? null : _phoneController.text,
-      trackingNumber: _trackingController.text.isEmpty ? null : _trackingController.text,
+      courierPhone: _phoneController.text.isEmpty
+          ? null
+          : _phoneController.text,
+      trackingNumber: _trackingController.text.isEmpty
+          ? null
+          : _trackingController.text,
       arrivalTime: DateTime.now(),
     );
 
     context.read<VisitorsBloc>().add(LogNewPackageDelivery(package));
-    
+
     _recipientController.clear();
     _courierController.clear();
     _trackingController.clear();
     _phoneController.clear();
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Package logged successfully')),
     );
@@ -57,7 +61,9 @@ class _PackageDeliveryPageState extends State<PackageDeliveryPage> {
     super.initState();
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
-      context.read<VisitorsBloc>().add(LoadPackageDeliveries(authState.user.schoolId));
+      context.read<VisitorsBloc>().add(
+        LoadPackageDeliveries(authState.user.schoolId),
+      );
     }
   }
 
@@ -77,18 +83,32 @@ class _PackageDeliveryPageState extends State<PackageDeliveryPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text('Log New Delivery', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      const Text(
+                        'Log New Delivery',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _recipientController,
-                        decoration: const InputDecoration(labelText: 'Recipient Name *', prefixIcon: Icon(Icons.person)),
-                        validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                        decoration: const InputDecoration(
+                          labelText: 'Recipient Name *',
+                          prefixIcon: Icon(Icons.person),
+                        ),
+                        validator: (v) =>
+                            v?.isEmpty ?? true ? 'Required' : null,
                       ),
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: _courierController,
-                        decoration: const InputDecoration(labelText: 'Courier/Company *', prefixIcon: Icon(Icons.local_shipping)),
-                        validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                        decoration: const InputDecoration(
+                          labelText: 'Courier/Company *',
+                          prefixIcon: Icon(Icons.local_shipping),
+                        ),
+                        validator: (v) =>
+                            v?.isEmpty ?? true ? 'Required' : null,
                       ),
                       const SizedBox(height: 8),
                       Row(
@@ -96,7 +116,10 @@ class _PackageDeliveryPageState extends State<PackageDeliveryPage> {
                           Expanded(
                             child: TextFormField(
                               controller: _phoneController,
-                              decoration: const InputDecoration(labelText: 'Courier Phone', prefixIcon: Icon(Icons.phone)),
+                              decoration: const InputDecoration(
+                                labelText: 'Courier Phone',
+                                prefixIcon: Icon(Icons.phone),
+                              ),
                               keyboardType: TextInputType.phone,
                             ),
                           ),
@@ -104,7 +127,10 @@ class _PackageDeliveryPageState extends State<PackageDeliveryPage> {
                           Expanded(
                             child: TextFormField(
                               controller: _trackingController,
-                              decoration: const InputDecoration(labelText: 'Tracking #', prefixIcon: Icon(Icons.tag)),
+                              decoration: const InputDecoration(
+                                labelText: 'Tracking #',
+                                prefixIcon: Icon(Icons.tag),
+                              ),
                             ),
                           ),
                         ],
@@ -121,23 +147,36 @@ class _PackageDeliveryPageState extends State<PackageDeliveryPage> {
           Expanded(
             child: BlocBuilder<VisitorsBloc, VisitorsState>(
               builder: (context, state) {
-                if (state is VisitorsLoading) return const Center(child: CircularProgressIndicator());
+                if (state is VisitorsLoading)
+                  return const Center(child: CircularProgressIndicator());
                 if (state is VisitorsLoaded) {
-                  final packages = state.packageDeliveries.where((p) => !p.isCollected).toList();
-                  if (packages.isEmpty) return const Center(child: Text('No pending packages'));
-                  
+                  final packages = state.packageDeliveries
+                      .where((p) => !p.isCollected)
+                      .toList();
+                  if (packages.isEmpty)
+                    return const Center(child: Text('No pending packages'));
+
                   return ListView.builder(
                     itemCount: packages.length,
                     itemBuilder: (context, index) {
                       final package = packages[index];
                       return ListTile(
-                        leading: const CircleAvatar(child: Icon(Icons.inventory_2)),
+                        leading: const CircleAvatar(
+                          child: Icon(Icons.inventory_2),
+                        ),
                         title: Text(package.recipientName),
-                        subtitle: Text('${package.courierName} • ${DateFormat('HH:mm').format(package.arrivalTime)}'),
+                        subtitle: Text(
+                          '${package.courierName} • ${DateFormat('HH:mm').format(package.arrivalTime)}',
+                        ),
                         trailing: IconButton(
-                          icon: const Icon(Icons.check_circle_outline, color: Colors.green),
+                          icon: const Icon(
+                            Icons.check_circle_outline,
+                            color: Colors.green,
+                          ),
                           onPressed: () {
-                            context.read<VisitorsBloc>().add(MarkPackageCollectedEvent(package.id, 'Self'));
+                            context.read<VisitorsBloc>().add(
+                              MarkPackageCollectedEvent(package.id, 'Self'),
+                            );
                           },
                         ),
                       );

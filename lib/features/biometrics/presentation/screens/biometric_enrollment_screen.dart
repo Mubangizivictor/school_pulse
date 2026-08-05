@@ -30,7 +30,8 @@ class BiometricEnrollmentScreen extends StatefulWidget {
   });
 
   @override
-  State<BiometricEnrollmentScreen> createState() => _BiometricEnrollmentScreenState();
+  State<BiometricEnrollmentScreen> createState() =>
+      _BiometricEnrollmentScreenState();
 }
 
 class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
@@ -64,7 +65,9 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
       setState(() => _selectedDevice = device);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to connect: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to connect: $e')));
       }
     } finally {
       if (mounted) setState(() => _connecting = false);
@@ -74,12 +77,14 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
   void _enroll() {
     final authState = context.read<AuthBloc>().state;
     if (authState is! AuthAuthenticated || _selectedDevice == null) return;
-    context.read<BiometricsBloc>().add(EnrollStudentFingerprint(
-          schoolId: widget.schoolId,
-          studentId: widget.personId,
-          deviceId: _selectedDevice!.id,
-          operatorId: authState.user.id,
-        ));
+    context.read<BiometricsBloc>().add(
+      EnrollStudentFingerprint(
+        schoolId: widget.schoolId,
+        studentId: widget.personId,
+        deviceId: _selectedDevice!.id,
+        operatorId: authState.user.id,
+      ),
+    );
   }
 
   @override
@@ -87,14 +92,21 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
     return BlocProvider(
       create: (_) => sl<BiometricsBloc>(),
       child: Scaffold(
-        appBar: AppBar(title: Text('Enroll Fingerprint - ${widget.personName}')),
+        appBar: AppBar(
+          title: Text('Enroll Fingerprint - ${widget.personName}'),
+        ),
         body: BlocConsumer<BiometricsBloc, BiometricsState>(
           listener: (context, state) {
             if (state is BiometricOperationSuccess) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(state.message)));
             } else if (state is BiometricOperationFailure) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.red,
+                ),
               );
             }
           },
@@ -103,24 +115,36 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                Text('Provider: ${_deviceService.providerName}', style: Theme.of(context).textTheme.bodyMedium),
+                Text(
+                  'Provider: ${_deviceService.providerName}',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
                 const SizedBox(height: 16),
-                Text('Available Devices', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  'Available Devices',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const SizedBox(height: 8),
                 if (_devices.isEmpty) const Text('Scanning for devices…'),
                 for (final device in _devices)
                   Card(
                     child: ListTile(
                       leading: Icon(
-                        _selectedDevice?.id == device.id ? Icons.fingerprint : Icons.fingerprint_outlined,
-                        color: _selectedDevice?.id == device.id ? Colors.green : null,
+                        _selectedDevice?.id == device.id
+                            ? Icons.fingerprint
+                            : Icons.fingerprint_outlined,
+                        color: _selectedDevice?.id == device.id
+                            ? Colors.green
+                            : null,
                       ),
                       title: Text(device.name),
                       subtitle: Text(device.location),
                       trailing: _selectedDevice?.id == device.id
                           ? const Chip(label: Text('Connected'))
                           : TextButton(
-                              onPressed: _connecting ? null : () => _connect(device),
+                              onPressed: _connecting
+                                  ? null
+                                  : () => _connect(device),
                               child: const Text('Connect'),
                             ),
                     ),

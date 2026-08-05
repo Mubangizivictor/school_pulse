@@ -56,10 +56,17 @@ class SubscriptionPlansScreen extends StatelessWidget {
                         children: [
                           Text(
                             plan.name,
-                            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           if (plan.isDefault)
-                            const Chip(label: Text('DEFAULT', style: TextStyle(fontSize: 10))),
+                            const Chip(
+                              label: Text(
+                                'DEFAULT',
+                                style: TextStyle(fontSize: 10),
+                              ),
+                            ),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -77,7 +84,9 @@ class SubscriptionPlansScreen extends StatelessWidget {
                       _PlanFeature(label: '${plan.maxStudents} Students'),
                       _PlanFeature(label: '${plan.maxStaff} Staff'),
                       _PlanFeature(label: '${plan.storageLimitGb} GB Storage'),
-                      ...plan.includedFeatures.map((f) => _PlanFeature(label: f)),
+                      ...plan.includedFeatures.map(
+                        (f) => _PlanFeature(label: f),
+                      ),
                       const Spacer(),
                       OutlinedButton(
                         onPressed: () {},

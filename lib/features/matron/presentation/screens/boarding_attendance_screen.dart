@@ -13,13 +13,21 @@ import 'package:school_pulse/features/matron/presentation/bloc/matron_bloc.dart'
 import 'package:school_pulse/features/matron/presentation/bloc/matron_event.dart';
 import 'package:school_pulse/features/matron/presentation/bloc/matron_state.dart';
 
-const _kAttendanceTypes = ['Morning', 'Evening', 'Weekend', 'Holiday', 'Study', 'Activity'];
+const _kAttendanceTypes = [
+  'Morning',
+  'Evening',
+  'Weekend',
+  'Holiday',
+  'Study',
+  'Activity',
+];
 
 class BoardingAttendanceScreen extends StatefulWidget {
   const BoardingAttendanceScreen({super.key});
 
   @override
-  State<BoardingAttendanceScreen> createState() => _BoardingAttendanceScreenState();
+  State<BoardingAttendanceScreen> createState() =>
+      _BoardingAttendanceScreenState();
 }
 
 class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
@@ -38,14 +46,18 @@ class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
   }
 
   void _loadAttendance() {
-    context.read<MatronBloc>().add(WatchAttendance(
-          schoolId: _currentSchoolId(context),
-          date: selectedDate,
-          dormitoryId: selectedDormId,
-          type: selectedType,
-        ));
+    context.read<MatronBloc>().add(
+      WatchAttendance(
+        schoolId: _currentSchoolId(context),
+        date: selectedDate,
+        dormitoryId: selectedDormId,
+        type: selectedType,
+      ),
+    );
     if (selectedDormId != null) {
-      context.read<MatronBloc>().add(WatchBoardingStudents(dormitoryId: selectedDormId));
+      context.read<MatronBloc>().add(
+        WatchBoardingStudents(dormitoryId: selectedDormId),
+      );
     }
   }
 
@@ -78,14 +90,18 @@ class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
             child: BlocConsumer<MatronBloc, MatronState>(
               listener: (context, state) {
                 if (state is MatronActionSuccess) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text(state.message),
-                    backgroundColor: AppColors.success(context),
-                  ));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message),
+                      backgroundColor: AppColors.success(context),
+                    ),
+                  );
                 }
               },
               buildWhen: (previous, current) =>
-                  current is BoardingStudentsLoaded || current is AttendanceLoaded || current is MatronLoading,
+                  current is BoardingStudentsLoaded ||
+                  current is AttendanceLoaded ||
+                  current is MatronLoading,
               builder: (context, state) {
                 List<BoardingStudent> students = [];
                 if (state is BoardingStudentsLoaded) {
@@ -93,10 +109,13 @@ class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
                 }
                 if (state is AttendanceLoaded) {
                   for (var record in state.attendance) {
-                    attendanceMap[record.studentId] = StudentStatus.values.firstWhere(
-                      (e) => e.name.toLowerCase() == record.status.toLowerCase(),
-                      orElse: () => StudentStatus.present,
-                    );
+                    attendanceMap[record.studentId] = StudentStatus.values
+                        .firstWhere(
+                          (e) =>
+                              e.name.toLowerCase() ==
+                              record.status.toLowerCase(),
+                          orElse: () => StudentStatus.present,
+                        );
                   }
                 }
 
@@ -120,40 +139,65 @@ class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
                   );
                 }
 
-                final filteredStudents = students.where((s) => 
-                  s.name.toLowerCase().contains(_searchQuery.toLowerCase()) || 
-                  (s.id).toLowerCase().contains(_searchQuery.toLowerCase())
-                ).toList();
+                final filteredStudents = students
+                    .where(
+                      (s) =>
+                          s.name.toLowerCase().contains(
+                            _searchQuery.toLowerCase(),
+                          ) ||
+                          (s.id).toLowerCase().contains(
+                            _searchQuery.toLowerCase(),
+                          ),
+                    )
+                    .toList();
 
-                final missingCount = students.where((s) => (attendanceMap[s.id] ?? StudentStatus.present) == StudentStatus.absent).length;
+                final missingCount = students
+                    .where(
+                      (s) =>
+                          (attendanceMap[s.id] ?? StudentStatus.present) ==
+                          StudentStatus.absent,
+                    )
+                    .length;
 
                 return Column(
                   children: [
                     if (missingCount > 0)
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.s),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.l,
+                          vertical: AppSpacing.s,
+                        ),
                         child: AlertBanner(
                           title: 'Absentees Detected',
-                          message: '$missingCount marked absent — will alert parents on save.',
+                          message:
+                              '$missingCount marked absent — will alert parents on save.',
                           color: semanticColors.error,
                           icon: Icons.warning_amber_rounded,
                         ),
                       ),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.s),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.l,
+                        vertical: AppSpacing.s,
+                      ),
                       child: AppSearchField(
                         hintText: 'Search boarders...',
-                        onChanged: (value) => setState(() => _searchQuery = value),
+                        onChanged: (value) =>
+                            setState(() => _searchQuery = value),
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.s),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.l,
+                        vertical: AppSpacing.s,
+                      ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
                             '${filteredStudents.length} Students',
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                           TextButton.icon(
                             onPressed: () {
@@ -171,30 +215,52 @@ class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
                     ),
                     Expanded(
                       child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.l,
+                        ),
                         itemCount: filteredStudents.length,
                         itemBuilder: (context, index) {
                           final student = filteredStudents[index];
-                          final status = attendanceMap[student.id] ?? StudentStatus.present;
+                          final status =
+                              attendanceMap[student.id] ??
+                              StudentStatus.present;
                           return FadeInSlide(
                             delay: Duration(milliseconds: index * 30),
                             child: AppCard(
                               margin: const EdgeInsets.only(bottom: 8),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
                               child: Row(
                                 children: [
                                   AvatarInitials(name: student.name, size: 40),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Text(student.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                        Text('Bed: ${student.bedNumber ?? 'N/A'}', style: Theme.of(context).textTheme.labelSmall),
+                                        Text(
+                                          student.name,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Text(
+                                          'Bed: ${student.bedNumber ?? 'N/A'}',
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.labelSmall,
+                                        ),
                                       ],
                                     ),
                                   ),
-                                  _buildStatusToggle(student.id, status, semanticColors),
+                                  _buildStatusToggle(
+                                    student.id,
+                                    status,
+                                    semanticColors,
+                                  ),
                                 ],
                               ),
                             ),
@@ -213,7 +279,11 @@ class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
     );
   }
 
-  Widget _buildStatusToggle(String studentId, StudentStatus currentStatus, SemanticColors colors) {
+  Widget _buildStatusToggle(
+    String studentId,
+    StudentStatus currentStatus,
+    SemanticColors colors,
+  ) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -221,21 +291,24 @@ class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
           icon: Icons.check,
           color: colors.success,
           isSelected: currentStatus == StudentStatus.present,
-          onTap: () => setState(() => attendanceMap[studentId] = StudentStatus.present),
+          onTap: () =>
+              setState(() => attendanceMap[studentId] = StudentStatus.present),
         ),
         const SizedBox(width: 4),
         _StatusButton(
           icon: Icons.access_time,
           color: colors.warning,
           isSelected: currentStatus == StudentStatus.late,
-          onTap: () => setState(() => attendanceMap[studentId] = StudentStatus.late),
+          onTap: () =>
+              setState(() => attendanceMap[studentId] = StudentStatus.late),
         ),
         const SizedBox(width: 4),
         _StatusButton(
           icon: Icons.close,
           color: colors.error,
           isSelected: currentStatus == StudentStatus.absent,
-          onTap: () => setState(() => attendanceMap[studentId] = StudentStatus.absent),
+          onTap: () =>
+              setState(() => attendanceMap[studentId] = StudentStatus.absent),
         ),
       ],
     );
@@ -277,14 +350,19 @@ class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Date', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    const Text(
+                      'Date',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
                     const SizedBox(height: 4),
                     InkWell(
                       onTap: () async {
                         final date = await showDatePicker(
                           context: context,
                           initialDate: selectedDate,
-                          firstDate: DateTime.now().subtract(const Duration(days: 90)),
+                          firstDate: DateTime.now().subtract(
+                            const Duration(days: 90),
+                          ),
                           lastDate: DateTime.now(),
                         );
                         if (date != null) {
@@ -293,7 +371,10 @@ class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
                         }
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.surfaceElevated(context),
                           borderRadius: BorderRadius.circular(8),
@@ -301,11 +382,18 @@ class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.calendar_today, size: 16, color: AppColors.royalBlue),
+                            const Icon(
+                              Icons.calendar_today,
+                              size: 16,
+                              color: AppColors.royalBlue,
+                            ),
                             const SizedBox(width: 8),
                             Text(
                               '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ],
                         ),
@@ -321,7 +409,12 @@ class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
     );
   }
 
-  Widget _buildDropdown(BuildContext context, String label, String value, {required VoidCallback onTap}) {
+  Widget _buildDropdown(
+    BuildContext context,
+    String label,
+    String value, {
+    required VoidCallback onTap,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -339,8 +432,18 @@ class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                const Icon(Icons.keyboard_arrow_down, size: 20, color: Colors.grey),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const Icon(
+                  Icons.keyboard_arrow_down,
+                  size: 20,
+                  color: Colors.grey,
+                ),
               ],
             ),
           ),
@@ -353,13 +456,18 @@ class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surfaceDark,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) => ListView.builder(
         shrinkWrap: true,
         padding: const EdgeInsets.symmetric(vertical: 20),
         itemCount: dorms.length,
         itemBuilder: (context, index) => ListTile(
-          title: Text(dorms[index].name, style: const TextStyle(color: Colors.white)),
+          title: Text(
+            dorms[index].name,
+            style: const TextStyle(color: Colors.white),
+          ),
           onTap: () {
             setState(() {
               selectedDormId = dorms[index].id;
@@ -378,13 +486,18 @@ class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surfaceDark,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) => ListView.builder(
         shrinkWrap: true,
         padding: const EdgeInsets.symmetric(vertical: 20),
         itemCount: _kAttendanceTypes.length,
         itemBuilder: (context, index) => ListTile(
-          title: Text(_kAttendanceTypes[index], style: const TextStyle(color: Colors.white)),
+          title: Text(
+            _kAttendanceTypes[index],
+            style: const TextStyle(color: Colors.white),
+          ),
           onTap: () {
             setState(() => selectedType = _kAttendanceTypes[index]);
             _loadAttendance();
@@ -406,7 +519,9 @@ class _BoardingAttendanceScreenState extends State<BoardingAttendanceScreen> {
         top: false,
         child: PrimaryButton(
           label: 'Save Attendance',
-          onPressed: selectedDormId == null ? null : () => _saveAttendance(context),
+          onPressed: selectedDormId == null
+              ? null
+              : () => _saveAttendance(context),
         ),
       ),
     );
@@ -444,11 +559,17 @@ class _AttendanceSkeleton extends StatelessWidget {
     return Column(
       children: [
         const Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.s),
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.l,
+            vertical: AppSpacing.s,
+          ),
           child: Skeleton(height: 50, borderRadius: 12),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.s),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.l,
+            vertical: AppSpacing.s,
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -496,13 +617,8 @@ class _StatusButton extends StatelessWidget {
           color: isSelected ? color : color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(
-          icon,
-          size: 18,
-          color: isSelected ? Colors.white : color,
-        ),
+        child: Icon(icon, size: 18, color: isSelected ? Colors.white : color),
       ),
     );
   }
 }
-

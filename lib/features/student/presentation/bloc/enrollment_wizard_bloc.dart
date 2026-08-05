@@ -7,7 +7,8 @@ import '../../domain/services/document_service.dart';
 import 'enrollment_wizard_event.dart';
 import 'enrollment_wizard_state.dart';
 
-class EnrollmentWizardBloc extends Bloc<EnrollmentWizardEvent, EnrollmentWizardState> {
+class EnrollmentWizardBloc
+    extends Bloc<EnrollmentWizardEvent, EnrollmentWizardState> {
   final AdmissionService admissionService;
   final DocumentService documentService;
   final String draftId = const Uuid().v4();
@@ -30,13 +31,19 @@ class EnrollmentWizardBloc extends Bloc<EnrollmentWizardEvent, EnrollmentWizardS
     on<DocumentUploadRequested>(_onDocumentUploadRequested);
   }
 
-  void _onNextStep(NextStepRequested event, Emitter<EnrollmentWizardState> emit) {
+  void _onNextStep(
+    NextStepRequested event,
+    Emitter<EnrollmentWizardState> emit,
+  ) {
     if (state.currentStep < 12 && state.canContinue) {
       emit(state.copyWith(currentStep: state.currentStep + 1));
     }
   }
 
-  void _onPreviousStep(PreviousStepRequested event, Emitter<EnrollmentWizardState> emit) {
+  void _onPreviousStep(
+    PreviousStepRequested event,
+    Emitter<EnrollmentWizardState> emit,
+  ) {
     if (state.currentStep > 1) {
       emit(state.copyWith(currentStep: state.currentStep - 1));
     }
@@ -46,45 +53,83 @@ class EnrollmentWizardBloc extends Bloc<EnrollmentWizardEvent, EnrollmentWizardS
     emit(state.copyWith(currentStep: event.step));
   }
 
-  void _onStudentInfoUpdated(StudentInfoUpdated event, Emitter<EnrollmentWizardState> emit) {
-    emit(state.copyWith(
-      studentName: event.name,
-      dateOfBirth: event.dateOfBirth,
-      gender: event.gender,
-    ));
+  void _onStudentInfoUpdated(
+    StudentInfoUpdated event,
+    Emitter<EnrollmentWizardState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        studentName: event.name,
+        dateOfBirth: event.dateOfBirth,
+        gender: event.gender,
+      ),
+    );
   }
 
-  void _onAcademicPlacementUpdated(AcademicPlacementUpdated event, Emitter<EnrollmentWizardState> emit) {
-    emit(state.copyWith(
-      targetClassId: event.targetClassId,
-      targetStreamId: event.targetStreamId,
-      academicYearId: event.academicYearId,
-      previousSchool: event.previousSchool,
-    ));
+  void _onAcademicPlacementUpdated(
+    AcademicPlacementUpdated event,
+    Emitter<EnrollmentWizardState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        targetClassId: event.targetClassId,
+        targetStreamId: event.targetStreamId,
+        academicYearId: event.academicYearId,
+        previousSchool: event.previousSchool,
+      ),
+    );
   }
 
-  void _onParentInfoUpdated(ParentInfoUpdated event, Emitter<EnrollmentWizardState> emit) {
-    emit(state.copyWith(
-      applicantParentName: event.name,
-      applicantParentPhone: event.phone,
-    ));
+  void _onParentInfoUpdated(
+    ParentInfoUpdated event,
+    Emitter<EnrollmentWizardState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        applicantParentName: event.name,
+        applicantParentPhone: event.phone,
+      ),
+    );
   }
 
-  void _onDocumentUploaded(DocumentUploaded event, Emitter<EnrollmentWizardState> emit) {
+  void _onDocumentUploaded(
+    DocumentUploaded event,
+    Emitter<EnrollmentWizardState> emit,
+  ) {
     final docs = Map<String, String>.from(state.attachedDocuments);
     docs[event.type] = event.url;
-    final uploading = Set<String>.from(state.uploadingDocuments)..remove(event.type);
-    emit(state.copyWith(attachedDocuments: docs, uploadingDocuments: uploading, errorMessage: null));
+    final uploading = Set<String>.from(state.uploadingDocuments)
+      ..remove(event.type);
+    emit(
+      state.copyWith(
+        attachedDocuments: docs,
+        uploadingDocuments: uploading,
+        errorMessage: null,
+      ),
+    );
   }
 
-  void _onDocumentUploadStarted(DocumentUploadStarted event, Emitter<EnrollmentWizardState> emit) {
-    final uploading = Set<String>.from(state.uploadingDocuments)..add(event.type);
+  void _onDocumentUploadStarted(
+    DocumentUploadStarted event,
+    Emitter<EnrollmentWizardState> emit,
+  ) {
+    final uploading = Set<String>.from(state.uploadingDocuments)
+      ..add(event.type);
     emit(state.copyWith(uploadingDocuments: uploading));
   }
 
-  void _onDocumentUploadFailed(DocumentUploadFailed event, Emitter<EnrollmentWizardState> emit) {
-    final uploading = Set<String>.from(state.uploadingDocuments)..remove(event.type);
-    emit(state.copyWith(uploadingDocuments: uploading, errorMessage: event.message));
+  void _onDocumentUploadFailed(
+    DocumentUploadFailed event,
+    Emitter<EnrollmentWizardState> emit,
+  ) {
+    final uploading = Set<String>.from(state.uploadingDocuments)
+      ..remove(event.type);
+    emit(
+      state.copyWith(
+        uploadingDocuments: uploading,
+        errorMessage: event.message,
+      ),
+    );
   }
 
   Future<void> _onDocumentUploadRequested(
@@ -103,7 +148,10 @@ class EnrollmentWizardBloc extends Bloc<EnrollmentWizardEvent, EnrollmentWizardS
     );
   }
 
-  void _onAdmissionTypeSelected(AdmissionTypeSelected event, Emitter<EnrollmentWizardState> emit) {
+  void _onAdmissionTypeSelected(
+    AdmissionTypeSelected event,
+    Emitter<EnrollmentWizardState> emit,
+  ) {
     emit(state.copyWith(admissionType: event.type, currentStep: 2));
   }
 
@@ -111,11 +159,15 @@ class EnrollmentWizardBloc extends Bloc<EnrollmentWizardEvent, EnrollmentWizardS
     SubmitEnrollmentRequested event,
     Emitter<EnrollmentWizardState> emit,
   ) async {
-    if (state.dateOfBirth == null || state.targetClassId == null || state.academicYearId == null) {
-      emit(state.copyWith(
-        status: EnrollmentWizardStatus.failure,
-        errorMessage: 'Missing required information',
-      ));
+    if (state.dateOfBirth == null ||
+        state.targetClassId == null ||
+        state.academicYearId == null) {
+      emit(
+        state.copyWith(
+          status: EnrollmentWizardStatus.failure,
+          errorMessage: 'Missing required information',
+        ),
+      );
       return;
     }
 
@@ -139,13 +191,17 @@ class EnrollmentWizardBloc extends Bloc<EnrollmentWizardEvent, EnrollmentWizardS
     );
 
     final result = await admissionService.submitApplication(application);
-    
+
     result.fold(
-      (failure) => emit(state.copyWith(
-        status: EnrollmentWizardStatus.failure,
-        errorMessage: failure.message,
-      )),
-      (_) => emit(state.copyWith(status: EnrollmentWizardStatus.success, currentStep: 12)),
+      (failure) => emit(
+        state.copyWith(
+          status: EnrollmentWizardStatus.failure,
+          errorMessage: failure.message,
+        ),
+      ),
+      (_) => emit(
+        state.copyWith(status: EnrollmentWizardStatus.success, currentStep: 12),
+      ),
     );
   }
 }

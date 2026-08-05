@@ -41,7 +41,9 @@ class AppointmentNoteModel extends AppointmentNote {
       followUpRequired: map['followUpRequired'] ?? false,
       nextAppointmentSuggested: map['nextAppointmentSuggested'],
       privateRemarks: map['privateRemarks'],
-      createdAt: map['createdAt'] != null ? (map['createdAt'] as Timestamp).toDate() : DateTime.now(),
+      createdAt: map['createdAt'] != null
+          ? (map['createdAt'] as Timestamp).toDate()
+          : DateTime.now(),
     );
   }
 

@@ -94,10 +94,8 @@ class NotificationLocalDataSourceImpl implements NotificationLocalDataSource {
 
   /// Base query scoped to one tenant and recipient. Every read goes through
   /// this, so no code path can accidentally return another school's rows.
-  QueryBuilder<NotificationIsar, NotificationIsar, QAfterFilterCondition> _scoped(
-    String schoolId,
-    String recipientUserId,
-  ) {
+  QueryBuilder<NotificationIsar, NotificationIsar, QAfterFilterCondition>
+  _scoped(String schoolId, String recipientUserId) {
     return isar.notificationIsars
         .filter()
         .schoolIdEqualTo(schoolId)
@@ -135,27 +133,27 @@ class NotificationLocalDataSourceImpl implements NotificationLocalDataSource {
 
     if (q.categories.isNotEmpty) {
       builder = builder.and().anyOf(
-            q.categories,
-            (b, NotificationCategory c) => b.categoryEqualTo(c),
-          );
+        q.categories,
+        (b, NotificationCategory c) => b.categoryEqualTo(c),
+      );
     }
     if (q.priorities.isNotEmpty) {
       builder = builder.and().anyOf(
-            q.priorities,
-            (b, NotificationPriority p) => b.priorityEqualTo(p),
-          );
+        q.priorities,
+        (b, NotificationPriority p) => b.priorityEqualTo(p),
+      );
     }
 
     final term = q.searchTerm?.trim();
     if (term != null && term.isNotEmpty) {
       builder = builder.and().group(
-            (b) => b
-                .titleContains(term, caseSensitive: false)
-                .or()
-                .descriptionContains(term, caseSensitive: false)
-                .or()
-                .senderNameContains(term, caseSensitive: false),
-          );
+        (b) => b
+            .titleContains(term, caseSensitive: false)
+            .or()
+            .descriptionContains(term, caseSensitive: false)
+            .or()
+            .senderNameContains(term, caseSensitive: false),
+      );
     }
 
     return builder.sortByTimestampDesc().limit(q.limit).findAll();
@@ -218,9 +216,10 @@ class NotificationLocalDataSourceImpl implements NotificationLocalDataSource {
     required String schoolId,
     required String recipientUserId,
   }) async {
-    final rows = await _scoped(schoolId, recipientUserId)
-        .isArchivedEqualTo(false)
-        .findAll();
+    final rows = await _scoped(
+      schoolId,
+      recipientUserId,
+    ).isArchivedEqualTo(false).findAll();
     return _countsFrom(rows);
   }
 
@@ -293,9 +292,9 @@ class NotificationLocalDataSourceImpl implements NotificationLocalDataSource {
       var builder = _scoped(schoolId, recipientUserId);
       if (categories.isNotEmpty) {
         builder = builder.and().anyOf(
-              categories,
-              (b, NotificationCategory c) => b.categoryEqualTo(c),
-            );
+          categories,
+          (b, NotificationCategory c) => b.categoryEqualTo(c),
+        );
       }
       final rows = await builder.findAll();
 
@@ -338,7 +337,9 @@ class NotificationLocalDataSourceImpl implements NotificationLocalDataSource {
         }
         break;
       case PendingField.pinned:
-        row.status = value ? NotificationStatus.pinned : NotificationStatus.read;
+        row.status = value
+            ? NotificationStatus.pinned
+            : NotificationStatus.read;
         break;
       case PendingField.archived:
         row.isArchived = value;
@@ -351,10 +352,10 @@ class NotificationLocalDataSourceImpl implements NotificationLocalDataSource {
     required String schoolId,
     required String recipientUserId,
   }) {
-    return _scoped(schoolId, recipientUserId)
-        .and()
-        .hasPendingStateChangeEqualTo(true)
-        .findAll();
+    return _scoped(
+      schoolId,
+      recipientUserId,
+    ).and().hasPendingStateChangeEqualTo(true).findAll();
   }
 
   @override
@@ -425,10 +426,12 @@ class NotificationLocalDataSourceImpl implements NotificationLocalDataSource {
             // if it is past its retention window.
             .and()
             .not()
-            .group((b) => b
-                .requiresAcknowledgmentEqualTo(true)
-                .and()
-                .acknowledgedAtIsNull())
+            .group(
+              (b) => b
+                  .requiresAcknowledgmentEqualTo(true)
+                  .and()
+                  .acknowledgedAtIsNull(),
+            )
             .deleteAll();
       }
     });

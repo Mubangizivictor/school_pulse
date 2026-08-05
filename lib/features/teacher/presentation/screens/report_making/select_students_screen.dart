@@ -31,9 +31,7 @@ class _SelectStudentsScreenState extends State<SelectStudentsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Students (32)'),
-      ),
+      appBar: AppBar(title: const Text('Students (32)')),
       body: Column(
         children: [
           Padding(
@@ -109,9 +107,12 @@ class _SelectStudentsScreenState extends State<SelectStudentsScreen> {
             padding: const EdgeInsets.all(16.0),
             child: BlocBuilder<ReportWizardBloc, ReportWizardState>(
               builder: (context, state) {
-                final selectedCount = students.where((s) => s['selected'] == true).length;
+                final selectedCount = students
+                    .where((s) => s['selected'] == true)
+                    .length;
                 return PrimaryButton(
-                  label: 'Continue${selectedCount > 0 ? ' ($selectedCount)' : ''}',
+                  label:
+                      'Continue${selectedCount > 0 ? ' ($selectedCount)' : ''}',
                   onPressed: selectedCount == 0
                       ? null
                       : () {
@@ -119,9 +120,9 @@ class _SelectStudentsScreenState extends State<SelectStudentsScreen> {
                               .where((s) => s['selected'] == true)
                               .map((s) => s['id'] as String)
                               .toList();
-                          context
-                              .read<ReportWizardBloc>()
-                              .add(ReportWizardStudentsSelected(selectedIds));
+                          context.read<ReportWizardBloc>().add(
+                            ReportWizardStudentsSelected(selectedIds),
+                          );
                           context.push('/staff/reports/subject-progress');
                         },
                 );

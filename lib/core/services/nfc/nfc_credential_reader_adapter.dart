@@ -41,7 +41,9 @@ class NfcCredentialReaderAdapter implements CredentialReaderAdapter {
       onDiscovered: (tag) async {
         final uid = _extractUid(tag);
         if (uid != null) {
-          _controller.add(NfcScanCredential(cardUid: uid, scannedAt: DateTime.now()));
+          _controller.add(
+            NfcScanCredential(cardUid: uid, scannedAt: DateTime.now()),
+          );
         }
       },
       onError: (error) async {
@@ -66,7 +68,8 @@ class NfcCredentialReaderAdapter implements CredentialReaderAdapter {
   /// card's chipset and the host OS - there is no single cross-platform
   /// "get UID" call in `nfc_manager`.
   String? _extractUid(NfcTag tag) {
-    final identifier = NfcA.from(tag)?.identifier ??
+    final identifier =
+        NfcA.from(tag)?.identifier ??
         MifareClassic.from(tag)?.identifier ??
         MifareUltralight.from(tag)?.identifier ??
         IsoDep.from(tag)?.identifier ??
@@ -79,5 +82,8 @@ class NfcCredentialReaderAdapter implements CredentialReaderAdapter {
     return _hex(identifier);
   }
 
-  String _hex(Uint8List bytes) => bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join().toUpperCase();
+  String _hex(Uint8List bytes) => bytes
+      .map((b) => b.toRadixString(16).padLeft(2, '0'))
+      .join()
+      .toUpperCase();
 }

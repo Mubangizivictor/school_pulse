@@ -18,12 +18,12 @@ enum ClassAnnouncementStatus {
 
 extension ClassAnnouncementStatusDisplay on ClassAnnouncementStatus {
   String get label => switch (this) {
-        ClassAnnouncementStatus.draft => 'Draft',
-        ClassAnnouncementStatus.scheduled => 'Scheduled',
-        ClassAnnouncementStatus.published => 'Published',
-        ClassAnnouncementStatus.expired => 'Expired',
-        ClassAnnouncementStatus.archived => 'Archived',
-      };
+    ClassAnnouncementStatus.draft => 'Draft',
+    ClassAnnouncementStatus.scheduled => 'Scheduled',
+    ClassAnnouncementStatus.published => 'Published',
+    ClassAnnouncementStatus.expired => 'Expired',
+    ClassAnnouncementStatus.archived => 'Archived',
+  };
 }
 
 /// Who an announcement reaches.
@@ -175,27 +175,27 @@ class ClassAnnouncement extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        campusId,
-        classId,
-        className,
-        streamId,
-        academicYearId,
-        termId,
-        title,
-        body,
-        status,
-        audience,
-        attachments,
-        scheduledFor,
-        expiresAt,
-        publishedAt,
-        createdBy,
-        createdAt,
-        updatedBy,
-        updatedAt,
-        roleAssignmentId,
-        recipientCount,
-      ];
+    id,
+    schoolId,
+    campusId,
+    classId,
+    className,
+    streamId,
+    academicYearId,
+    termId,
+    title,
+    body,
+    status,
+    audience,
+    attachments,
+    scheduledFor,
+    expiresAt,
+    publishedAt,
+    createdBy,
+    createdAt,
+    updatedBy,
+    updatedAt,
+    roleAssignmentId,
+    recipientCount,
+  ];
 }

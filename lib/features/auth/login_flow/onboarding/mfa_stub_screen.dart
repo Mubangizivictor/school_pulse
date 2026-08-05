@@ -11,7 +11,11 @@ class MfaStubScreen extends StatelessWidget {
   final bool mfaRequired;
   final VoidCallback onContinue;
 
-  const MfaStubScreen({super.key, required this.mfaRequired, required this.onContinue});
+  const MfaStubScreen({
+    super.key,
+    required this.mfaRequired,
+    required this.onContinue,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -20,19 +24,23 @@ class MfaStubScreen extends StatelessWidget {
       title: 'Multi-Factor Authentication',
       subtitle: mfaRequired
           ? 'Your institution requires MFA. Enrollment will be available soon - '
-              'for now, continue and set it up when prompted in a future update.'
+                'for now, continue and set it up when prompted in a future update.'
           : 'Multi-factor authentication is not yet required for your institution.',
       primaryLabel: 'Continue',
       onPrimaryPressed: onContinue,
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.l),
         decoration: BoxDecoration(
-          color: (isDark ? AppColors.surfaceDark : AppColors.borderLight).withValues(alpha: 0.4),
+          color: (isDark ? AppColors.surfaceDark : AppColors.borderLight)
+              .withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
           children: [
-            Icon(Icons.shield_outlined, color: isDark ? Colors.white70 : AppColors.textSecondaryLight),
+            Icon(
+              Icons.shield_outlined,
+              color: isDark ? Colors.white70 : AppColors.textSecondaryLight,
+            ),
             const SizedBox(width: AppSpacing.m),
             Expanded(
               child: Text(

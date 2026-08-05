@@ -80,7 +80,8 @@ class NotificationCategoryCatalog {
   static const Color _slate = Color(0xFF94A3B8);
   static const Color _rose = Color(0xFFE11D48);
 
-  static const Map<NotificationCategory, NotificationCategoryConfig> _configs = {
+  static const Map<NotificationCategory, NotificationCategoryConfig>
+  _configs = {
     NotificationCategory.announcements: NotificationCategoryConfig(
       category: NotificationCategory.announcements,
       displayName: 'Announcements',
@@ -328,13 +329,14 @@ class NotificationCategoryCatalog {
     ),
   };
 
-  static const NotificationCategoryConfig _fallback = NotificationCategoryConfig(
-    category: NotificationCategory.others,
-    displayName: 'Notification',
-    icon: Icons.notifications,
-    color: _slate,
-    channelId: 'general',
-  );
+  static const NotificationCategoryConfig _fallback =
+      NotificationCategoryConfig(
+        category: NotificationCategory.others,
+        displayName: 'Notification',
+        icon: Icons.notifications,
+        color: _slate,
+        channelId: 'general',
+      );
 
   /// Config for [category], never null - unknown categories fall back to a
   /// neutral treatment rather than throwing inside a build method.

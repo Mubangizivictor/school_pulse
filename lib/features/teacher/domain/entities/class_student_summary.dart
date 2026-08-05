@@ -114,21 +114,21 @@ class ClassStudentSummary extends Equatable {
 
   @override
   List<Object?> get props => [
-        studentId,
-        schoolId,
-        name,
-        admissionNumber,
-        photoUrl,
-        classId,
-        className,
-        streamId,
-        streamName,
-        academicYearId,
-        status,
-        gender,
-        residency,
-        houseId,
-        houseName,
-        hasHealthAlert,
-      ];
+    studentId,
+    schoolId,
+    name,
+    admissionNumber,
+    photoUrl,
+    classId,
+    className,
+    streamId,
+    streamName,
+    academicYearId,
+    status,
+    gender,
+    residency,
+    houseId,
+    houseName,
+    hasHealthAlert,
+  ];
 }

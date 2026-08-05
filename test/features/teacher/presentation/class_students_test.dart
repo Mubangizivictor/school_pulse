@@ -27,9 +27,27 @@ ClassStudentSummary _student({
 
 void main() {
   final roster = [
-    _student(id: 's1', name: 'Abalo Peter', admissionNumber: '2021/PE/010', gender: 'Male', residency: ResidencyType.boarding),
-    _student(id: 's2', name: 'Adong Grace', admissionNumber: '2021/PE/011', gender: 'Female', residency: ResidencyType.day),
-    _student(id: 's3', name: 'Okello John', admissionNumber: '2021/PE/012', gender: 'Male', residency: ResidencyType.day),
+    _student(
+      id: 's1',
+      name: 'Abalo Peter',
+      admissionNumber: '2021/PE/010',
+      gender: 'Male',
+      residency: ResidencyType.boarding,
+    ),
+    _student(
+      id: 's2',
+      name: 'Adong Grace',
+      admissionNumber: '2021/PE/011',
+      gender: 'Female',
+      residency: ResidencyType.day,
+    ),
+    _student(
+      id: 's3',
+      name: 'Okello John',
+      admissionNumber: '2021/PE/012',
+      gender: 'Male',
+      residency: ResidencyType.day,
+    ),
   ];
 
   ClassStudentsState stateWith({
@@ -61,10 +79,7 @@ void main() {
     });
 
     test('report as not marked rather than defaulting to a status', () {
-      expect(
-        stateWith().statusOf('s1'),
-        LessonAttendanceStatus.notMarked,
-      );
+      expect(stateWith().statusOf('s1'), LessonAttendanceStatus.notMarked);
     });
 
     test('are excluded from both the Present and Absent tabs', () {
@@ -85,22 +100,26 @@ void main() {
 
   group('attendance counts', () {
     test('count lateness as attendance', () {
-      final state = stateWith(attendance: {
-        's1': LessonAttendanceStatus.present,
-        's2': LessonAttendanceStatus.late,
-        's3': LessonAttendanceStatus.absent,
-      });
+      final state = stateWith(
+        attendance: {
+          's1': LessonAttendanceStatus.present,
+          's2': LessonAttendanceStatus.late,
+          's3': LessonAttendanceStatus.absent,
+        },
+      );
 
       expect(state.presentCount, 2);
       expect(state.absentCount, 1);
     });
 
     test('count authorised absence as absence from the room', () {
-      final state = stateWith(attendance: {
-        's1': LessonAttendanceStatus.medical,
-        's2': LessonAttendanceStatus.approvedLeave,
-        's3': LessonAttendanceStatus.present,
-      });
+      final state = stateWith(
+        attendance: {
+          's1': LessonAttendanceStatus.medical,
+          's2': LessonAttendanceStatus.approvedLeave,
+          's3': LessonAttendanceStatus.present,
+        },
+      );
 
       expect(state.presentCount, 1);
       expect(state.absentCount, 2);
@@ -130,12 +149,17 @@ void main() {
 
   group('filters', () {
     test('narrow by gender', () {
-      expect(stateWith(gender: 'Female').visibleStudents.single.studentId, 's2');
+      expect(
+        stateWith(gender: 'Female').visibleStudents.single.studentId,
+        's2',
+      );
     });
 
     test('narrow by residency', () {
       expect(
-        stateWith(residency: ResidencyType.boarding).visibleStudents.single.studentId,
+        stateWith(
+          residency: ResidencyType.boarding,
+        ).visibleStudents.single.studentId,
         's1',
       );
     });

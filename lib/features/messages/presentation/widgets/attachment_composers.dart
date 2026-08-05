@@ -37,11 +37,15 @@ class _SheetShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: Container(
         margin: const EdgeInsets.all(AppSpacing.m),
         padding: const EdgeInsets.all(AppSpacing.l),
-        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.8),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.8,
+        ),
         decoration: BoxDecoration(
           color: isDark ? AppColors.surfaceDark : Colors.white,
           borderRadius: BorderRadius.circular(24),
@@ -50,7 +54,12 @@ class _SheetShell extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold)),
+            Text(
+              title,
+              style: AppTypography.titleMedium.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: AppSpacing.m),
             Flexible(child: SingleChildScrollView(child: child)),
           ],
@@ -129,15 +138,20 @@ class _PollComposerSheetState extends State<PollComposerSheet> {
                   // removed.
                   if (_options.length > 2)
                     IconButton(
-                      icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent),
-                      onPressed: () => setState(() => _options.removeAt(i).dispose()),
+                      icon: const Icon(
+                        Icons.remove_circle_outline,
+                        color: Colors.redAccent,
+                      ),
+                      onPressed: () =>
+                          setState(() => _options.removeAt(i).dispose()),
                     ),
                 ],
               ),
             ),
           if (_options.length < _maxOptions)
             TextButton.icon(
-              onPressed: () => setState(() => _options.add(TextEditingController())),
+              onPressed: () =>
+                  setState(() => _options.add(TextEditingController())),
               icon: const Icon(Icons.add, size: 18),
               label: const Text('Add option'),
             ),
@@ -147,25 +161,30 @@ class _PollComposerSheetState extends State<PollComposerSheet> {
             child: ElevatedButton(
               onPressed: _canSend
                   ? () => Navigator.pop(
-                        context,
-                        PollDraft(
-                          question: _question.text.trim(),
-                          options: _options
-                              .map((o) => o.text.trim())
-                              .where((o) => o.isNotEmpty)
-                              .toList(),
-                        ),
-                      )
+                      context,
+                      PollDraft(
+                        question: _question.text.trim(),
+                        options: _options
+                            .map((o) => o.text.trim())
+                            .where((o) => o.isNotEmpty)
+                            .toList(),
+                      ),
+                    )
                   : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.electricBlue,
                 foregroundColor: Colors.white,
                 disabledBackgroundColor: AppColors.disabled(context),
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 elevation: 0,
               ),
-              child: const Text('Send poll', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Send poll',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ),
         ],
@@ -245,7 +264,9 @@ class _EventComposerSheetState extends State<EventComposerSheet> {
             style: OutlinedButton.styleFrom(
               minimumSize: const Size.fromHeight(52),
               alignment: Alignment.centerLeft,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(4),
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.m),
@@ -265,23 +286,29 @@ class _EventComposerSheetState extends State<EventComposerSheet> {
               onPressed: _title.text.trim().isEmpty
                   ? null
                   : () => Navigator.pop(
-                        context,
-                        EventDraft(
-                          title: _title.text.trim(),
-                          start: _start,
-                          location:
-                              _location.text.trim().isEmpty ? null : _location.text.trim(),
-                        ),
+                      context,
+                      EventDraft(
+                        title: _title.text.trim(),
+                        start: _start,
+                        location: _location.text.trim().isEmpty
+                            ? null
+                            : _location.text.trim(),
                       ),
+                    ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.electricBlue,
                 foregroundColor: Colors.white,
                 disabledBackgroundColor: AppColors.disabled(context),
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 elevation: 0,
               ),
-              child: const Text('Send event', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Send event',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ),
         ],
@@ -309,7 +336,9 @@ class _ContactPickerSheetState extends State<ContactPickerSheet> {
     final term = _query.trim().toLowerCase();
     final filtered = term.isEmpty
         ? widget.contacts
-        : widget.contacts.where((c) => c.name.toLowerCase().contains(term)).toList();
+        : widget.contacts
+              .where((c) => c.name.toLowerCase().contains(term))
+              .toList();
 
     return _SheetShell(
       title: 'Share a contact',
@@ -327,8 +356,12 @@ class _ContactPickerSheetState extends State<ContactPickerSheet> {
           if (filtered.isEmpty)
             Padding(
               padding: const EdgeInsets.all(AppSpacing.l),
-              child: Text('No contacts match "$_query"',
-                  style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context))),
+              child: Text(
+                'No contacts match "$_query"',
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.textMuted(context),
+                ),
+              ),
             )
           else
             ListView.builder(
@@ -337,17 +370,27 @@ class _ContactPickerSheetState extends State<ContactPickerSheet> {
               itemCount: filtered.length,
               itemBuilder: (context, index) {
                 final contact = filtered[index];
-                final role = UserRole.values.where((r) => r.name == contact.role);
+                final role = UserRole.values.where(
+                  (r) => r.name == contact.role,
+                );
                 return ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: AppColors.electricBlue.withValues(alpha: 0.1),
-                    child: Text(contact.initials,
-                        style: const TextStyle(color: AppColors.electricBlue)),
+                    backgroundColor: AppColors.electricBlue.withValues(
+                      alpha: 0.1,
+                    ),
+                    child: Text(
+                      contact.initials,
+                      style: const TextStyle(color: AppColors.electricBlue),
+                    ),
                   ),
                   title: Text(contact.name, style: AppTypography.titleSmall),
                   subtitle: Text(
-                    role.isEmpty ? contact.role : UserRoleDisplay.name(role.first),
-                    style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context)),
+                    role.isEmpty
+                        ? contact.role
+                        : UserRoleDisplay.name(role.first),
+                    style: AppTypography.bodySmall.copyWith(
+                      color: AppColors.textMuted(context),
+                    ),
                   ),
                   onTap: () => Navigator.pop(context, contact),
                 );

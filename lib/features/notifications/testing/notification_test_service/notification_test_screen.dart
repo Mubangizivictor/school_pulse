@@ -44,14 +44,20 @@ class _NotificationTestScreenState extends State<NotificationTestScreen> {
   void _record(String label, bool success, String message) {
     if (!mounted) return;
     setState(() {
-      _log.insert(0, _LogEntry(label: label, success: success, detail: message));
+      _log.insert(
+        0,
+        _LogEntry(label: label, success: success, detail: message),
+      );
       if (_log.length > 20) _log.removeLast();
     });
   }
 
   /// Runs [action] with the busy flag set, so a slow network call cannot be
   /// fired twice by an impatient second tap.
-  Future<void> _run(String label, Future<TestDeliveryResult> Function() action) async {
+  Future<void> _run(
+    String label,
+    Future<TestDeliveryResult> Function() action,
+  ) async {
     if (_busy) return;
     final user = _user;
     if (user == null) {
@@ -183,10 +189,8 @@ class _NotificationTestScreenState extends State<NotificationTestScreen> {
                     label: 'Schedule in 15 seconds',
                     icon: Icons.schedule,
                     enabled: !_busy,
-                    onPressed: () => _run(
-                      'Scheduled local',
-                      () => _service.scheduleLocal(),
-                    ),
+                    onPressed: () =>
+                        _run('Scheduled local', () => _service.scheduleLocal()),
                   ),
                 ],
               ),
@@ -481,8 +485,9 @@ class _TestButton extends StatelessWidget {
         icon: Icon(icon, size: 18),
         label: Text(label),
         style: ElevatedButton.styleFrom(
-          backgroundColor:
-              primary ? const Color(0xFF6366F1) : const Color(0xFF334155),
+          backgroundColor: primary
+              ? const Color(0xFF6366F1)
+              : const Color(0xFF334155),
           foregroundColor: Colors.white,
           disabledBackgroundColor: const Color(0xFF334155),
           disabledForegroundColor: Colors.white38,

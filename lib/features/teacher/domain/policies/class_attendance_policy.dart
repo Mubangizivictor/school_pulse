@@ -24,10 +24,10 @@ class AttendanceDecision {
   final bool needsCorrectionRequest;
 
   const AttendanceDecision.allowed()
-      : isAllowed = true,
-        refusal = null,
-        message = null,
-        needsCorrectionRequest = false;
+    : isAllowed = true,
+      refusal = null,
+      message = null,
+      needsCorrectionRequest = false;
 
   const AttendanceDecision.refused(
     this.refusal,

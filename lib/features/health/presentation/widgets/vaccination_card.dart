@@ -20,7 +20,12 @@ class VaccinationCard extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Vaccination Records', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                Text(
+                  'Vaccination Records',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 if (onAdd != null)
                   IconButton(
                     icon: const Icon(Icons.add_circle_outline, size: 20),
@@ -32,7 +37,10 @@ class VaccinationCard extends StatelessWidget {
           if (records.isEmpty)
             const Padding(
               padding: EdgeInsets.only(bottom: 16, left: 16),
-              child: Text('No vaccination records found.', style: TextStyle(fontStyle: FontStyle.italic)),
+              child: Text(
+                'No vaccination records found.',
+                style: TextStyle(fontStyle: FontStyle.italic),
+              ),
             )
           else
             ListView.separated(
@@ -43,10 +51,25 @@ class VaccinationCard extends StatelessWidget {
               itemBuilder: (context, index) {
                 final record = records[index];
                 return ListTile(
-                  leading: const Icon(Icons.vaccines_outlined, color: Colors.blue),
-                  title: Text(record.vaccineName, style: const TextStyle(fontWeight: FontWeight.w500)),
-                  subtitle: Text('Administered: ${DateFormatter.format(record.dateAdministered)}'),
-                  trailing: const Tooltip(message: 'On file', child: Icon(Icons.verified_user, color: Colors.green, size: 16)),
+                  leading: const Icon(
+                    Icons.vaccines_outlined,
+                    color: Colors.blue,
+                  ),
+                  title: Text(
+                    record.vaccineName,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                  subtitle: Text(
+                    'Administered: ${DateFormatter.format(record.dateAdministered)}',
+                  ),
+                  trailing: const Tooltip(
+                    message: 'On file',
+                    child: Icon(
+                      Icons.verified_user,
+                      color: Colors.green,
+                      size: 16,
+                    ),
+                  ),
                 );
               },
             ),

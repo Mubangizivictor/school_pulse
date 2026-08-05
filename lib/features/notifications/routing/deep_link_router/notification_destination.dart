@@ -101,11 +101,11 @@ class DeepLinkResolution {
   final String? message;
 
   const DeepLinkResolution.allowed(NotificationDestination this.destination)
-      : refusal = null,
-        message = null;
+    : refusal = null,
+      message = null;
 
   const DeepLinkResolution.refused(this.refusal, this.message)
-      : destination = null;
+    : destination = null;
 
   bool get isAllowed => destination != null;
 }

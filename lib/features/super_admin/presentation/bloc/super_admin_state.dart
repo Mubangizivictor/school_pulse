@@ -31,16 +31,16 @@ class SuperAdminState extends Equatable {
 
   @override
   List<Object?> get props => [
-        status,
-        schools,
-        plans,
-        invoices,
-        transactions,
-        auditLogs,
-        stats,
-        errorMessage,
-        supportModeSchoolId,
-      ];
+    status,
+    schools,
+    plans,
+    invoices,
+    transactions,
+    auditLogs,
+    stats,
+    errorMessage,
+    supportModeSchoolId,
+  ];
 
   SuperAdminState copyWith({
     SuperAdminStatus? status,

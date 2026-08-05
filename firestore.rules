@@ -71,6 +71,13 @@ service cloud.firestore {
       return isSignedIn() && myUser().schoolId == schoolId;
     }
 
+    function canManageAppointments() {
+      return isStaff() && (
+        hasAnyRole(['schoolAdmin', 'director', 'headTeacher', 'deputyHead', 'receptionist', 'securityHead']) ||
+        (('permissions' in myUser()) && 'appointments.manage' in myUser().permissions)
+      );
+    }
+
     // Phase 3.5: tenant-lock hardening. A Structure record's schoolId is
     // its ownership boundary - once created, no client write may move it to
     // a different school by changing this field, even a staff member who is
@@ -123,7 +130,10 @@ service cloud.firestore {
            request.resource.data.mustChangePassword == false) ||
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['studentIds']) &&
            resource.data.role == 'parent' &&
-           request.resource.data.studentIds.size() > resource.data.studentIds.size())
+           request.resource.data.studentIds.size() > resource.data.studentIds.size()) ||
+          // Two-Factor Auth toggle in Security & Privacy - a user may only
+          // flip their own mfaEnabled flag, nothing else in the same write.
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mfaEnabled']))
         )) ||
         // Admin console (User Management: edit details, toggle active/
         // inactive, reassign roles) manages OTHER staff profiles - staff
@@ -153,14 +163,14 @@ service cloud.firestore {
           'schoolAdmin', 'headTeacher', 'director'
         ]) && isSameSchool(request.resource.data.schoolId) &&
         request.resource.data.keys().hasOnly([
-          'name', 'role', 'roles', 'schoolId', 'isActive'
+          'name', 'role', 'roles', 'schoolId', 'isActive', 'phone'
         ]);
       allow update: if hasAnyRole([
           'schoolAdmin', 'headTeacher', 'director'
         ]) && isSameSchool(resource.data.schoolId) &&
         request.resource.data.schoolId == resource.data.schoolId &&
         request.resource.data.keys().hasOnly([
-          'name', 'role', 'roles', 'schoolId', 'isActive'
+          'name', 'role', 'roles', 'schoolId', 'isActive', 'phone'
         ]);
       allow delete: if hasAnyRole([
           'schoolAdmin', 'headTeacher', 'director'
@@ -215,6 +225,20 @@ service cloud.firestore {
       allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
         request.resource.data.schoolId == resource.data.schoolId;
       allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
+    }
+
+    // QR/NFC identity lookup for ID cards - StudentIdentityRepository
+    // queries this by uniqueSystemId before reading the /students/{id} doc
+    // it references. No rule previously existed for this collection, which
+    // silently denied every QR/NFC scan (Attendance and elsewhere) with a
+    // permission-denied error. No schoolId field exists on this entity yet,
+    // so read stays staff-broad like /students/{studentId} above rather
+    // than a tenancy check that has nothing to check against; write is
+    // limited to the identity-generation flow (staff only).
+    match /student_identities/{identityId} {
+      allow read: if isStaff();
+      allow create, update: if isStaff();
+      allow delete: if false;
     }
 
     // Phase 4: real parent<->student link, replacing the bare
@@ -688,19 +712,18 @@ service cloud.firestore {
       );
     }
     match /meeting_appointments/{id} {
-      allow read: if isStaff() || (isParent() && resource.data.requesterId == request.auth.uid);
-      allow create: if isSignedIn() &&
-        isSameSchool(request.resource.data.schoolId) &&
-        request.resource.data.requesterId == request.auth.uid;
+      allow read: if isSameSchool(resource.data.schoolId) && (isStaff() || (isParent() && resource.data.requesterId == request.auth.uid));
+      allow create: if canManageAppointments() &&
+        isSameSchool(request.resource.data.schoolId);
       // Staff (approve/reject/reschedule/check-in/check-out/complete) can
       // update any field; the requesting parent can only ever flip status
       // (e.g. to cancel their own request) - never rewrite host, time, or
       // response fields.
-      allow update: if (isStaff() && isSameSchool(resource.data.schoolId)) || (
+      allow update: if (canManageAppointments() && isSameSchool(resource.data.schoolId)) || (
         isParent() && resource.data.requesterId == request.auth.uid &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'respondedBy', 'responseNote'])
       );
-      allow delete: if false;
+      allow delete: if canManageAppointments() && isSameSchool(resource.data.schoolId);
 
       // Confidential meeting outcomes/remarks - staff only, never the
       // parent who requested the meeting.
@@ -1192,10 +1215,8 @@ service cloud.firestore {
     match /inventory_movements/{id} {
       allow read, write: if isStaff();
     }
-    match /school_events/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
-    }
+    // Retired: replaced by schools/{schoolId}/calendar_events/{eventId}
+    // (schoolId-scoped, permission-gated) - see School Calendar rules above.
 
     // Subscription/billing. Status transitions (pending -> success/failed,
     // renewalDate extension) are only ever written by the Cloud Functions
@@ -1493,6 +1514,120 @@ service cloud.firestore {
       allow read: if isSameSchool(schoolId) && isStaff();
       allow create, update: if isSameSchool(schoolId) && schoolAcademicAdmin();
       allow delete: if false;
+    }
+
+    // School Calendar (academic years, terms, calendar events, settings).
+    // Only schoolAdmin by default, or a role explicitly granted
+    // 'calendar.manage' via role_permission_overrides, may write. Every
+    // other signed-in staff/parent/student in the same school has read-only
+    // access. See Permission.calendarManage in lib/core/permissions/permission.dart.
+    function hasCalendarManagePermission(schoolId) {
+      return hasAnyRole(['schoolAdmin']) || (
+        isStaff() && exists(/databases/$(database)/documents/schools/$(schoolId)/role_permission_overrides/$(myRole())) &&
+        'calendar.manage' in get(/databases/$(database)/documents/schools/$(schoolId)/role_permission_overrides/$(myRole())).data.permissions
+      );
+    }
+
+    match /schools/{schoolId}/academic_years/{yearId} {
+      allow read: if isSameSchool(schoolId);
+      allow write: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId);
+
+      match /terms/{termId} {
+        allow read: if isSameSchool(schoolId);
+        allow write: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId);
+      }
+    }
+
+    match /schools/{schoolId}/calendar_events/{eventId} {
+      allow read: if isSameSchool(schoolId);
+      allow create: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId) &&
+        request.resource.data.schoolId == schoolId;
+      allow update, delete: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId);
+    }
+
+    match /schools/{schoolId}/calendar_settings/{settingId} {
+      allow read: if isSameSchool(schoolId);
+      allow write: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId);
+    }
+
+    // School-wide Announcements. Default admin set (schoolAdmin, headTeacher,
+    // director), or a role explicitly granted 'announcement.manage' via
+    // role_permission_overrides, may write. Published announcements are
+    // readable by everyone in the same school; drafts are only readable by
+    // whoever can manage announcements. See Permission.announcementManage in
+    // lib/core/permissions/permission.dart.
+    function hasAnnouncementManagePermission(schoolId) {
+      return hasAnyRole(['schoolAdmin', 'headTeacher', 'director']) || (
+        isStaff() && exists(/databases/$(database)/documents/schools/$(schoolId)/role_permission_overrides/$(myRole())) &&
+        'announcement.manage' in get(/databases/$(database)/documents/schools/$(schoolId)/role_permission_overrides/$(myRole())).data.permissions
+      );
+    }
+
+    match /schools/{schoolId}/announcements/{announcementId} {
+      allow read: if isSameSchool(schoolId) &&
+        (resource.data.status == 'published' || hasAnnouncementManagePermission(schoolId));
+      allow create: if isSameSchool(schoolId) &&
+        hasAnnouncementManagePermission(schoolId) &&
+        request.resource.data.schoolId == schoolId;
+      allow update, delete: if isSameSchool(schoolId) && hasAnnouncementManagePermission(schoolId);
+    }
+
+    // Unified Attendance (attendance_hub). Marking is gated per-category by
+    // the matching attendance.*.scan permission (or attendance.override),
+    // resolved the same role-default-or-override way as calendar - see
+    // Permission.attendance*Scan in lib/core/permissions/permission.dart and
+    // permissionForCategory() in attendance_category_permission.dart. Read is
+    // staff-wide within the same school; writes are never permitted from
+    // parents/students.
+    function hasAttendancePermission(schoolId, permissionId) {
+      return hasAnyRole(['schoolAdmin', 'director', 'headTeacher', 'deputyHead']) || (
+        isStaff() && exists(/databases/$(database)/documents/schools/$(schoolId)/role_permission_overrides/$(myRole())) &&
+        (
+          permissionId in get(/databases/$(database)/documents/schools/$(schoolId)/role_permission_overrides/$(myRole())).data.permissions ||
+          'attendance.override' in get(/databases/$(database)/documents/schools/$(schoolId)/role_permission_overrides/$(myRole())).data.permissions
+        )
+      );
+    }
+
+    // category -> permission id doesn't follow a string pattern (students
+    // maps to 'attendance.class.scan', hostel to 'attendance.boarding.scan')
+    // so the mapping is spelled out explicitly here, mirroring
+    // permissionForCategory() in attendance_category_permission.dart exactly.
+    function attendanceCategoryPermission(category) {
+      return category == 'students' ? 'attendance.class.scan' :
+        category == 'staff' ? 'attendance.staff.scan' :
+        category == 'gate' ? 'attendance.gate.scan' :
+        category == 'meals' ? 'attendance.meals.scan' :
+        category == 'library' ? 'attendance.library.scan' :
+        category == 'transport' ? 'attendance.transport.scan' :
+        category == 'visitors' ? 'attendance.visitors.scan' :
+        category == 'hostel' ? 'attendance.boarding.scan' :
+        'attendance.custom.scan';
+    }
+
+    match /schools/{schoolId}/attendance_records/{recordId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+      allow create: if isSameSchool(schoolId) &&
+        hasAttendancePermission(schoolId, attendanceCategoryPermission(request.resource.data.category)) &&
+        request.resource.data.schoolId == schoolId;
+      // Records are corrected via a separate attendance_corrections trail,
+      // never overwritten in place - see AttendanceCorrectionRequest in the
+      // implementation plan. No update/delete path exists yet.
+      allow update, delete: if false;
+    }
+
+    // Google Sheets integration config/history for the Attendance feature -
+    // school-admin-managed like calendar_settings, since it changes where
+    // every category's attendance data flows.
+    match /schools/{schoolId}/attendance_sheets_integration/{docId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+      allow write: if isSameSchool(schoolId) && hasAnyRole(['schoolAdmin', 'director', 'headTeacher', 'deputyHead']);
+    }
+
+    match /schools/{schoolId}/attendance_sheets_sync_log/{logId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+      allow create: if isSameSchool(schoolId) && isStaff();
+      allow update, delete: if false;
     }
 
     match /schools/{schoolId}/subject_enrollments/{enrollmentId} {

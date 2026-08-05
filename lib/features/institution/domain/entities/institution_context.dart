@@ -48,13 +48,13 @@ class InstitutionContext extends Equatable {
 
   @override
   List<Object?> get props => [
-        institutionId,
-        displayLabel,
-        classification,
-        divisions,
-        status,
-        enabledFeatures,
-        loadedAt,
-        isOfflineCached,
-      ];
+    institutionId,
+    displayLabel,
+    classification,
+    divisions,
+    status,
+    enabledFeatures,
+    loadedAt,
+    isOfflineCached,
+  ];
 }

@@ -52,7 +52,9 @@ class _NotificationBellButtonState extends State<NotificationBellButton> {
       return IconButton(
         icon: const Icon(Icons.notifications_none_outlined),
         onPressed: () => context.push('/staff/notifications'),
-        style: backgroundColor != null ? IconButton.styleFrom(backgroundColor: backgroundColor) : null,
+        style: backgroundColor != null
+            ? IconButton.styleFrom(backgroundColor: backgroundColor)
+            : null,
       );
     }
     final uid = authState.user.id;
@@ -70,11 +72,11 @@ class _NotificationBellButtonState extends State<NotificationBellButton> {
         }.toList();
       }
     }
-    final notificationRoute = role == UserRole.parent 
-        ? '/parent/notifications' 
-        : role == UserRole.student 
-            ? '/student/notifications' 
-            : '/staff/notifications';
+    final notificationRoute = role == UserRole.parent
+        ? '/parent/notifications'
+        : role == UserRole.student
+        ? '/student/notifications'
+        : '/staff/notifications';
 
     final repository = _alerts;
     if (repository == null) {
@@ -83,21 +85,27 @@ class _NotificationBellButtonState extends State<NotificationBellButton> {
       return IconButton(
         icon: const Icon(Icons.notifications_none_outlined),
         onPressed: () => context.push(notificationRoute),
-        style: backgroundColor != null ? IconButton.styleFrom(backgroundColor: backgroundColor) : null,
+        style: backgroundColor != null
+            ? IconButton.styleFrom(backgroundColor: backgroundColor)
+            : null,
       );
     }
 
     return StreamBuilder<List<StaffAlert>>(
       stream: repository.watchAllForUser(uid: uid, groups: groups),
       builder: (context, snapshot) {
-        final unread = (snapshot.data ?? const []).where((a) => !a.isReadBy(uid)).length;
+        final unread = (snapshot.data ?? const [])
+            .where((a) => !a.isReadBy(uid))
+            .length;
         return Stack(
           clipBehavior: Clip.none,
           children: [
             IconButton(
               icon: const Icon(Icons.notifications_none_outlined),
               onPressed: () => context.push(notificationRoute),
-              style: backgroundColor != null ? IconButton.styleFrom(backgroundColor: backgroundColor) : null,
+              style: backgroundColor != null
+                  ? IconButton.styleFrom(backgroundColor: backgroundColor)
+                  : null,
             ),
             if (unread > 0)
               Positioned(
@@ -105,17 +113,27 @@ class _NotificationBellButtonState extends State<NotificationBellButton> {
                 top: 6,
                 child: IgnorePointer(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
                     constraints: const BoxConstraints(minWidth: 16),
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.error,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Theme.of(context).scaffoldBackgroundColor, width: 1.5),
+                      border: Border.all(
+                        color: Theme.of(context).scaffoldBackgroundColor,
+                        width: 1.5,
+                      ),
                     ),
                     child: Text(
                       unread > 9 ? '9+' : '$unread',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),

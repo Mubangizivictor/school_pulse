@@ -20,15 +20,15 @@ class ReligionBloc extends Bloc<ReligionEvent, ReligionState> {
     final activitiesResult = await repository.getUpcomingActivities();
     final groupsResult = await repository.getSpiritualGroups();
 
-    activitiesResult.fold(
-      (failure) => emit(ReligionError(failure.message)),
-      (activities) {
-        groupsResult.fold(
-          (failure) => emit(ReligionError(failure.message)),
-          (groups) => emit(ReligionLoaded(activities: activities, groups: groups)),
-        );
-      },
-    );
+    activitiesResult.fold((failure) => emit(ReligionError(failure.message)), (
+      activities,
+    ) {
+      groupsResult.fold(
+        (failure) => emit(ReligionError(failure.message)),
+        (groups) =>
+            emit(ReligionLoaded(activities: activities, groups: groups)),
+      );
+    });
   }
 
   Future<void> _onCreateReligionActivityRequested(
@@ -36,26 +36,23 @@ class ReligionBloc extends Bloc<ReligionEvent, ReligionState> {
     Emitter<ReligionState> emit,
   ) async {
     final result = await repository.createActivity(event.activity);
-    result.fold(
-      (failure) => emit(ReligionError(failure.message)),
-      (_) {
-        emit(const ReligionActionSuccess('Activity created successfully'));
-        add(ReligionDashboardRequested());
-      },
-    );
+    result.fold((failure) => emit(ReligionError(failure.message)), (_) {
+      emit(const ReligionActionSuccess('Activity created successfully'));
+      add(ReligionDashboardRequested());
+    });
   }
 
   Future<void> _onUpdateSpiritualGroupRequested(
     UpdateSpiritualGroupRequested event,
     Emitter<ReligionState> emit,
   ) async {
-    final result = await repository.updateGroupMemberCount(event.groupId, event.memberCount);
-    result.fold(
-      (failure) => emit(ReligionError(failure.message)),
-      (_) {
-        emit(const ReligionActionSuccess('Group updated successfully'));
-        add(ReligionDashboardRequested());
-      },
+    final result = await repository.updateGroupMemberCount(
+      event.groupId,
+      event.memberCount,
     );
+    result.fold((failure) => emit(ReligionError(failure.message)), (_) {
+      emit(const ReligionActionSuccess('Group updated successfully'));
+      add(ReligionDashboardRequested());
+    });
   }
 }

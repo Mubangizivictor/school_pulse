@@ -24,5 +24,14 @@ class StockAdjustment extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, itemId, itemName, quantityAdjusted, reason, notes, date, adjustedBy];
+  List<Object?> get props => [
+    id,
+    itemId,
+    itemName,
+    quantityAdjusted,
+    reason,
+    notes,
+    date,
+    adjustedBy,
+  ];
 }

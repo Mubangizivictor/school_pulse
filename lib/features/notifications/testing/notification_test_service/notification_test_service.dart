@@ -80,7 +80,8 @@ class NotificationTestService {
       // Prefixed so a test notification is never mistaken for a real record.
       id: 'test_${DateTime.now().millisecondsSinceEpoch}',
       title: title ?? '[TEST] ${_defaultTitleFor(category)}',
-      description: body ??
+      description:
+          body ??
           'This is a test notification sent from the delivery test screen.',
       senderName: 'Automated System',
       senderRole: 'Delivery test',
@@ -100,7 +101,8 @@ class NotificationTestService {
       metadata: const {'isTest': 'true'},
     );
 
-    final effectivePreferences = preferences ??
+    final effectivePreferences =
+        preferences ??
         NotificationPreferences.defaults(userId: userId, schoolId: schoolId);
 
     final evaluation = respectPreferences
@@ -175,7 +177,8 @@ class NotificationTestService {
       if (deviceCount == 0) {
         return const TestDeliveryResult(
           success: false,
-          message: 'No registered devices. Push permission may be denied, or '
+          message:
+              'No registered devices. Push permission may be denied, or '
               'this is a simulator without APNs.',
           deviceCount: 0,
         );
@@ -215,7 +218,8 @@ class NotificationTestService {
       await plugin.zonedSchedule(
         id: (fireAt.millisecondsSinceEpoch ~/ 1000) & 0x7fffffff,
         title: title ?? '[TEST] Scheduled notification',
-        body: body ??
+        body:
+            body ??
             'Scheduled ${delay.inSeconds}s earlier from the test screen.',
         // tz.local is initialised by LocalNotificationService at startup.
         scheduledDate: tz.TZDateTime.from(fireAt, tz.local),
@@ -233,7 +237,8 @@ class NotificationTestService {
       );
       return TestDeliveryResult(
         success: true,
-        message: 'Scheduled for ${delay.inSeconds}s from now. '
+        message:
+            'Scheduled for ${delay.inSeconds}s from now. '
             'Background the app to verify it still fires.',
       );
     } catch (e) {
@@ -256,7 +261,8 @@ class NotificationTestService {
     }
     return TestDeliveryResult(
       success: true,
-      message: 'Parsed as ${payload.type.name} / ${payload.category.name}, '
+      message:
+          'Parsed as ${payload.type.name} / ${payload.category.name}, '
           'priority ${payload.priority.name}.',
     );
   }

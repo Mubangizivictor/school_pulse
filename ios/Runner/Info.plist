@@ -28,6 +28,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>School Pulse uses the camera to capture visitor and ID photos and to scan QR codes for attendance.</string>
+	<key>NFCReaderUsageDescription</key>
+	<string>School Pulse uses NFC to read student ID cards for attendance and identity verification.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>School Pulse needs access to your photo library to attach images such as visitor photos and documents.</string>
 	<key>NSMicrophoneUsageDescription</key>

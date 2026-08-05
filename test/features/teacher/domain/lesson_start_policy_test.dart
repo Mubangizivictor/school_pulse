@@ -197,7 +197,10 @@ void main() {
 
     test('honours a school-configured window', () {
       const generous = LessonStartPolicy(
-        window: LessonStartWindow(early: Duration(hours: 1), late: Duration(hours: 6)),
+        window: LessonStartWindow(
+          early: Duration(hours: 1),
+          late: Duration(hours: 6),
+        ),
       );
       expect(
         generous.evaluate(

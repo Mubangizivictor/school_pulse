@@ -43,15 +43,32 @@ class StoresAssetsLoaded extends StoresAssetsState {
   });
 
   // Computed properties for Dashboard
-  double get totalStockValue => items.fold(0, (sum, item) => sum + (item.quantity * 0)); // Price not in entity yet
+  double get totalStockValue => items.fold(
+    0,
+    (sum, item) => sum + (item.quantity * 0),
+  ); // Price not in entity yet
   int get lowStockCount => items.where((i) => i.isLowStock).length;
   int get outOfStockCount => items.where((i) => i.isOutOfStock).length;
-  int get pendingPurchaseRequests => procurementRequests.where((o) => o.status == ProcurementStatus.pending).length;
-  int get assetsUnderRepair => repairs.where((r) => r.status == RepairStatus.inProgress).length;
-  int get repairsDue => repairs.where((r) => r.status == RepairStatus.pending).length;
+  int get pendingPurchaseRequests => procurementRequests
+      .where((o) => o.status == ProcurementStatus.pending)
+      .length;
+  int get assetsUnderRepair =>
+      repairs.where((r) => r.status == RepairStatus.inProgress).length;
+  int get repairsDue =>
+      repairs.where((r) => r.status == RepairStatus.pending).length;
 
   @override
-  List<Object?> get props => [items, assets, suppliers, purchaseOrders, repairs, maintenanceSchedule, recentMovements, procurementRequests, scannedAsset];
+  List<Object?> get props => [
+    items,
+    assets,
+    suppliers,
+    purchaseOrders,
+    repairs,
+    maintenanceSchedule,
+    recentMovements,
+    procurementRequests,
+    scannedAsset,
+  ];
 }
 
 class StoresAssetsError extends StoresAssetsState {

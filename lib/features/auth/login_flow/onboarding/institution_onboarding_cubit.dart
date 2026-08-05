@@ -14,11 +14,13 @@ class InstitutionOnboardingCubit extends Cubit<InstitutionOnboardingProgress> {
     required this.firestore,
     required this.userId,
     required this.institutionId,
-  }) : super(const InstitutionOnboardingProgress(
-          currentStep: OnboardingStep.identityConfirm,
-          completedSteps: [],
-          mfaRequired: false,
-        ));
+  }) : super(
+         const InstitutionOnboardingProgress(
+           currentStep: OnboardingStep.identityConfirm,
+           completedSteps: [],
+           mfaRequired: false,
+         ),
+       );
 
   DocumentReference<Map<String, dynamic>> get _docRef =>
       firestore.collection('onboarding_state').doc('${userId}_$institutionId');
@@ -27,13 +29,15 @@ class InstitutionOnboardingCubit extends Cubit<InstitutionOnboardingProgress> {
     final doc = await _docRef.get();
     if (!doc.exists) return;
     final data = doc.data()!;
-    emit(InstitutionOnboardingProgress(
-      currentStep: onboardingStepFromName(data['currentStep'] as String?),
-      completedSteps: (data['completedSteps'] as List<dynamic>? ?? [])
-          .map((s) => onboardingStepFromName(s as String))
-          .toList(),
-      mfaRequired: data['mfaRequired'] as bool? ?? false,
-    ));
+    emit(
+      InstitutionOnboardingProgress(
+        currentStep: onboardingStepFromName(data['currentStep'] as String?),
+        completedSteps: (data['completedSteps'] as List<dynamic>? ?? [])
+            .map((s) => onboardingStepFromName(s as String))
+            .toList(),
+        mfaRequired: data['mfaRequired'] as bool? ?? false,
+      ),
+    );
   }
 
   Future<void> advance() async {

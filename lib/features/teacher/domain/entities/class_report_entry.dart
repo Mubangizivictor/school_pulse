@@ -42,16 +42,16 @@ enum ReportEntryStatus {
 
 extension ReportEntryStatusDisplay on ReportEntryStatus {
   String get label => switch (this) {
-        ReportEntryStatus.draft => 'Draft',
-        ReportEntryStatus.inProgress => 'In progress',
-        ReportEntryStatus.submittedForReview => 'Submitted for review',
-        ReportEntryStatus.returnedForCorrection => 'Returned for correction',
-        ReportEntryStatus.classTeacherCompleted => 'Completed',
-        ReportEntryStatus.academicOfficeApproved => 'Approved',
-        ReportEntryStatus.leadershipApproved => 'Leadership approved',
-        ReportEntryStatus.published => 'Published',
-        ReportEntryStatus.archived => 'Archived',
-      };
+    ReportEntryStatus.draft => 'Draft',
+    ReportEntryStatus.inProgress => 'In progress',
+    ReportEntryStatus.submittedForReview => 'Submitted for review',
+    ReportEntryStatus.returnedForCorrection => 'Returned for correction',
+    ReportEntryStatus.classTeacherCompleted => 'Completed',
+    ReportEntryStatus.academicOfficeApproved => 'Approved',
+    ReportEntryStatus.leadershipApproved => 'Leadership approved',
+    ReportEntryStatus.published => 'Published',
+    ReportEntryStatus.archived => 'Archived',
+  };
 }
 
 /// A section of the report the class teacher fills in.
@@ -77,12 +77,12 @@ enum ReportSection {
   }
 
   String get label => switch (this) {
-        ReportSection.competencies => 'Competencies',
-        ReportSection.conduct => 'Conduct',
-        ReportSection.teacherComment => 'Teacher comment',
-        ReportSection.recommendations => 'Recommendations',
-        ReportSection.attendanceVerification => 'Attendance',
-      };
+    ReportSection.competencies => 'Competencies',
+    ReportSection.conduct => 'Conduct',
+    ReportSection.teacherComment => 'Teacher comment',
+    ReportSection.recommendations => 'Recommendations',
+    ReportSection.attendanceVerification => 'Attendance',
+  };
 }
 
 /// One competency rating against a school-defined domain and level.
@@ -265,28 +265,28 @@ class ClassReportEntry extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        campusId,
-        classId,
-        streamId,
-        academicYearId,
-        termId,
-        studentId,
-        studentName,
-        status,
-        competencies,
-        conduct,
-        overallConductCode,
-        teacherComment,
-        recommendations,
-        attendanceVerified,
-        returnReason,
-        updatedBy,
-        updatedAt,
-        submittedAt,
-        roleAssignmentId,
-      ];
+    id,
+    schoolId,
+    campusId,
+    classId,
+    streamId,
+    academicYearId,
+    termId,
+    studentId,
+    studentName,
+    status,
+    competencies,
+    conduct,
+    overallConductCode,
+    teacherComment,
+    recommendations,
+    attendanceVerified,
+    returnReason,
+    updatedBy,
+    updatedAt,
+    submittedAt,
+    roleAssignmentId,
+  ];
 }
 
 /// The school's report configuration - which sections apply, and what the
@@ -328,14 +328,14 @@ class ReportProfile extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        name,
-        enabledSections,
-        competencyDomains,
-        competencyLevels,
-        conductCriteria,
-        conductRatings,
-        commentMinLength,
-        requiresCompleteness,
-      ];
+    id,
+    name,
+    enabledSections,
+    competencyDomains,
+    competencyLevels,
+    conductCriteria,
+    conductRatings,
+    commentMinLength,
+    requiresCompleteness,
+  ];
 }

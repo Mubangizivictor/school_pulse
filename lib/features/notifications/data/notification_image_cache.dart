@@ -36,10 +36,8 @@ class NotificationImageCache {
 
   Directory? _directory;
 
-  NotificationImageCache({
-    required this.isOnWifi,
-    http.Client? client,
-  }) : client = client ?? http.Client();
+  NotificationImageCache({required this.isOnWifi, http.Client? client})
+    : client = client ?? http.Client();
 
   Future<Directory> _cacheDirectory() async {
     final existing = _directory;

@@ -27,8 +27,16 @@ class ClassActivityEntry extends Equatable {
   });
 
   @override
-  List<Object?> get props =>
-      [id, action, title, description, occurredAt, studentId, entityType, entityId];
+  List<Object?> get props => [
+    id,
+    action,
+    title,
+    description,
+    occurredAt,
+    studentId,
+    entityType,
+    entityId,
+  ];
 }
 
 /// Today's attendance position for the class.
@@ -59,14 +67,14 @@ class ClassAttendanceToday extends Equatable {
 
   @override
   List<Object?> get props => [
-        hasSession,
-        isSubmitted,
-        presentCount,
-        absentCount,
-        lateCount,
-        excusedCount,
-        submittedAt,
-      ];
+    hasSession,
+    isSubmitted,
+    presentCount,
+    absentCount,
+    lateCount,
+    excusedCount,
+    submittedAt,
+  ];
 }
 
 /// Everything the Class Teacher home tab renders, resolved in one pass.
@@ -148,14 +156,14 @@ class ClassDashboardSummary extends Equatable {
 
   @override
   List<Object?> get props => [
-        totalStudents,
-        attendance,
-        pendingAssignments,
-        pendingReports,
-        pendingBehaviourFollowUps,
-        unreadMessages,
-        todaysSchedule,
-        recentActivities,
-        isFromCache,
-      ];
+    totalStudents,
+    attendance,
+    pendingAssignments,
+    pendingReports,
+    pendingBehaviourFollowUps,
+    unreadMessages,
+    todaysSchedule,
+    recentActivities,
+    isFromCache,
+  ];
 }

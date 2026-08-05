@@ -66,9 +66,9 @@ class _AddDormitoryScreenState extends State<AddDormitoryScreen> {
   void _submit() {
     final name = _name.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a dormitory name.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Enter a dormitory name.')));
       return;
     }
     final location = _location.text.trim();
@@ -88,9 +88,9 @@ class _AddDormitoryScreenState extends State<AddDormitoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.dormitoryName == null
-            ? 'Add Dormitory'
-            : 'Edit Dormitory'),
+        title: Text(
+          widget.dormitoryName == null ? 'Add Dormitory' : 'Edit Dormitory',
+        ),
       ),
       body: SafeArea(
         child: Column(
@@ -275,7 +275,10 @@ class _SetDormLeadershipScreenState extends State<SetDormLeadershipScreen> {
               label: 'Save Leadership',
               onPressed: () => Navigator.pop(
                 context,
-                DormLeadershipResult(roomLeader: _leader, dormPrefect: _prefect),
+                DormLeadershipResult(
+                  roomLeader: _leader,
+                  dormPrefect: _prefect,
+                ),
               ),
             ),
           ],
@@ -318,15 +321,17 @@ class TransferHistoryScreen extends StatelessWidget {
 
     List<Widget> tiles(bool Function(TransferHistoryEntry) test) => entries
         .where(test)
-        .map((e) => TransferHistoryTile(
-              studentName: e.studentName,
-              fromLabel: e.fromLabel,
-              toLabel: e.toLabel,
-              typeLabel: e.isDormTransfer ? 'Dorm Transfer' : 'Bed Transfer',
-              typeColor: e.isDormTransfer ? Colors.purple : primary,
-              dateLabel: e.dateLabel,
-              timeLabel: e.timeLabel,
-            ))
+        .map(
+          (e) => TransferHistoryTile(
+            studentName: e.studentName,
+            fromLabel: e.fromLabel,
+            toLabel: e.toLabel,
+            typeLabel: e.isDormTransfer ? 'Dorm Transfer' : 'Bed Transfer',
+            typeColor: e.isDormTransfer ? Colors.purple : primary,
+            dateLabel: e.dateLabel,
+            timeLabel: e.timeLabel,
+          ),
+        )
         .toList();
 
     return DefaultTabController(

@@ -11,12 +11,22 @@
 class Permission {
   const Permission._();
 
+  // Appointments & schedule
+  static const appointmentsView = 'appointments.view';
+  static const appointmentsManage = 'appointments.manage';
+  static const appointmentsApprove = 'appointments.approve';
+
   // Attendance
   static const attendanceClassScan = 'attendance.class.scan';
   static const attendanceSubjectScan = 'attendance.subject.scan';
   static const attendanceStaffScan = 'attendance.staff.scan';
   static const attendanceBoardingScan = 'attendance.boarding.scan';
   static const attendanceGateScan = 'attendance.gate.scan';
+  static const attendanceMealsScan = 'attendance.meals.scan';
+  static const attendanceLibraryScan = 'attendance.library.scan';
+  static const attendanceTransportScan = 'attendance.transport.scan';
+  static const attendanceVisitorsScan = 'attendance.visitors.scan';
+  static const attendanceCustomScan = 'attendance.custom.scan';
   static const attendanceOverride = 'attendance.override';
 
   // Health
@@ -96,7 +106,8 @@ class Permission {
   static const notificationUseImages = 'notification.use_images';
   static const notificationUseAttachments = 'notification.use_attachments';
   static const notificationSendEmergency = 'notification.send_emergency';
-  static const notificationViewDeliveryReports = 'notification.view_delivery_reports';
+  static const notificationViewDeliveryReports =
+      'notification.view_delivery_reports';
   static const notificationManageTemplates = 'notification.manage_templates';
   static const notificationManageSettings = 'notification.manage_settings';
   static const notificationAcknowledge = 'notification.acknowledge';
@@ -123,7 +134,8 @@ class Permission {
 
   static const subjectAttendanceTake = 'subject.attendance.take';
   static const subjectAttendanceEdit = 'subject.attendance.edit';
-  static const subjectAttendanceEditHistorical = 'subject.attendance.edit_historical';
+  static const subjectAttendanceEditHistorical =
+      'subject.attendance.edit_historical';
 
   static const subjectLessonNoteCreate = 'subject.lesson_note.create';
   static const subjectLessonNoteEdit = 'subject.lesson_note.edit';
@@ -164,7 +176,8 @@ class Permission {
 
   static const classAttendanceTake = 'class.attendance.take';
   static const classAttendanceEdit = 'class.attendance.edit';
-  static const classAttendanceEditHistorical = 'class.attendance.edit_historical';
+  static const classAttendanceEditHistorical =
+      'class.attendance.edit_historical';
   static const classAttendanceView = 'class.attendance.view';
 
   static const classHomeworkCreate = 'class.homework.create';
@@ -190,7 +203,8 @@ class Permission {
   static const classReportCompetencyEntry = 'class.report.competency.entry';
   static const classReportConductEntry = 'class.report.conduct.entry';
   static const classReportCommentWrite = 'class.report.comment.write';
-  static const classReportRecommendationWrite = 'class.report.recommendation.write';
+  static const classReportRecommendationWrite =
+      'class.report.recommendation.write';
   static const classReportSubmit = 'class.report.submit';
   static const classReportGenerate = 'class.report.generate';
   static const classReportShare = 'class.report.share';
@@ -209,7 +223,22 @@ class Permission {
   /// assignment inside the same academic year and campus. Off unless the
   /// school grants it, and every use is reason-bearing and audited - see
   /// `ClassTeacherAssignmentService.validateAssignable`.
-  static const classTeacherMultiAssignOverride = 'class.teacher.multi_assign.override';
+  static const classTeacherMultiAssignOverride =
+      'class.teacher.multi_assign.override';
+
+  // School Calendar - governs create/edit/archive/restore/delete of academic
+  // years, terms, holidays, calendar events and calendar settings. Granted
+  // to School Administrator by default; any other role only gains it via an
+  // explicit per-school `role_permission_overrides` grant. Every other role
+  // has read-only calendar access without this permission.
+  static const calendarManage = 'calendar.manage';
+
+  // Announcements - governs create/edit/publish/delete of school-wide
+  // announcements. Granted to School Administrator, Head Teacher and
+  // Director by default; any other role only gains it via an explicit
+  // per-school `role_permission_overrides` grant. Every other role has
+  // read-only access to published announcements without this permission.
+  static const announcementManage = 'announcement.manage';
 
   /// Every permission ID declared above, grouped by category for UI
   /// consumers (e.g. the role-permission-override editor) that need to
@@ -222,6 +251,11 @@ class Permission {
     ('Attendance', attendanceStaffScan),
     ('Attendance', attendanceBoardingScan),
     ('Attendance', attendanceGateScan),
+    ('Attendance', attendanceMealsScan),
+    ('Attendance', attendanceLibraryScan),
+    ('Attendance', attendanceTransportScan),
+    ('Attendance', attendanceVisitorsScan),
+    ('Attendance', attendanceCustomScan),
     ('Attendance', attendanceOverride),
 
     ('Health', healthStudentVerify),
@@ -363,5 +397,8 @@ class Permission {
     ('Class Teacher Panel', classResourceDelete),
     ('Class Teacher Panel', classTimetableView),
     ('Class Teacher Panel', classTeacherMultiAssignOverride),
+
+    ('School Calendar', calendarManage),
+    ('Announcements', announcementManage),
   ];
 }

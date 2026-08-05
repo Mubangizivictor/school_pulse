@@ -10,7 +10,8 @@ import 'package:school_pulse/features/biometrics/presentation/bloc/biometrics_st
 
 class MockBiometricRepository extends Mock implements BiometricRepository {}
 
-class MockBiometricDeviceService extends Mock implements BiometricDeviceService {}
+class MockBiometricDeviceService extends Mock
+    implements BiometricDeviceService {}
 
 void main() {
   late BiometricsBloc bloc;
@@ -40,36 +41,44 @@ void main() {
   blocTest<BiometricsBloc, BiometricsState>(
     'captures a template via the connected device and saves it, emitting success',
     build: () {
-      when(() => deviceService.captureTemplate()).thenAnswer((_) async => 'encrypted-template');
-      when(() => repository.saveBiometricTemplate(
-            schoolId: schoolId,
-            personId: studentId,
-            personType: 'student',
-            template: 'encrypted-template',
-            deviceId: deviceId,
-            operatorId: operatorId,
-          )).thenAnswer((_) async {});
+      when(
+        () => deviceService.captureTemplate(),
+      ).thenAnswer((_) async => 'encrypted-template');
+      when(
+        () => repository.saveBiometricTemplate(
+          schoolId: schoolId,
+          personId: studentId,
+          personType: 'student',
+          template: 'encrypted-template',
+          deviceId: deviceId,
+          operatorId: operatorId,
+        ),
+      ).thenAnswer((_) async {});
       return bloc;
     },
-    act: (bloc) => bloc.add(EnrollStudentFingerprint(
-      schoolId: schoolId,
-      studentId: studentId,
-      deviceId: deviceId,
-      operatorId: operatorId,
-    )),
+    act: (bloc) => bloc.add(
+      EnrollStudentFingerprint(
+        schoolId: schoolId,
+        studentId: studentId,
+        deviceId: deviceId,
+        operatorId: operatorId,
+      ),
+    ),
     expect: () => [
       isA<BiometricEnrollmentInProgress>(),
       isA<BiometricOperationSuccess>(),
     ],
     verify: (_) {
-      verify(() => repository.saveBiometricTemplate(
-            schoolId: schoolId,
-            personId: studentId,
-            personType: 'student',
-            template: 'encrypted-template',
-            deviceId: deviceId,
-            operatorId: operatorId,
-          )).called(1);
+      verify(
+        () => repository.saveBiometricTemplate(
+          schoolId: schoolId,
+          personId: studentId,
+          personType: 'student',
+          template: 'encrypted-template',
+          deviceId: deviceId,
+          operatorId: operatorId,
+        ),
+      ).called(1);
     },
   );
 
@@ -79,25 +88,29 @@ void main() {
       when(() => deviceService.captureTemplate()).thenAnswer((_) async => null);
       return bloc;
     },
-    act: (bloc) => bloc.add(EnrollStudentFingerprint(
-      schoolId: schoolId,
-      studentId: studentId,
-      deviceId: deviceId,
-      operatorId: operatorId,
-    )),
+    act: (bloc) => bloc.add(
+      EnrollStudentFingerprint(
+        schoolId: schoolId,
+        studentId: studentId,
+        deviceId: deviceId,
+        operatorId: operatorId,
+      ),
+    ),
     expect: () => [
       isA<BiometricEnrollmentInProgress>(),
       isA<BiometricOperationFailure>(),
     ],
     verify: (_) {
-      verifyNever(() => repository.saveBiometricTemplate(
-            schoolId: any(named: 'schoolId'),
-            personId: any(named: 'personId'),
-            personType: any(named: 'personType'),
-            template: any(named: 'template'),
-            deviceId: any(named: 'deviceId'),
-            operatorId: any(named: 'operatorId'),
-          ));
+      verifyNever(
+        () => repository.saveBiometricTemplate(
+          schoolId: any(named: 'schoolId'),
+          personId: any(named: 'personId'),
+          personType: any(named: 'personType'),
+          template: any(named: 'template'),
+          deviceId: any(named: 'deviceId'),
+          operatorId: any(named: 'operatorId'),
+        ),
+      );
     },
   );
 }

@@ -19,17 +19,20 @@ class StructureSetupWizardScreen extends StatefulWidget {
   const StructureSetupWizardScreen({super.key});
 
   @override
-  State<StructureSetupWizardScreen> createState() => _StructureSetupWizardScreenState();
+  State<StructureSetupWizardScreen> createState() =>
+      _StructureSetupWizardScreenState();
 }
 
-class _StructureSetupWizardScreenState extends State<StructureSetupWizardScreen> {
+class _StructureSetupWizardScreenState
+    extends State<StructureSetupWizardScreen> {
   int _currentStep = 0;
   bool _isActivating = false;
 
   @override
   void initState() {
     super.initState();
-    final schoolId = (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
+    final schoolId =
+        (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
     context.read<StructureBloc>().add(LoadStructureData(schoolId));
   }
 
@@ -53,9 +56,9 @@ class _StructureSetupWizardScreenState extends State<StructureSetupWizardScreen>
         .collection('config')
         .doc('structure_setup')
         .set({
-      'structureSetupComplete': true,
-      'completedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+          'structureSetupComplete': true,
+          'completedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
     if (!mounted) return;
     setState(() => _isActivating = false);
     Navigator.pop(context);
@@ -63,48 +66,63 @@ class _StructureSetupWizardScreenState extends State<StructureSetupWizardScreen>
 
   @override
   Widget build(BuildContext context) {
-    final schoolId = (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
+    final schoolId =
+        (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
     return BlocBuilder<StructureBloc, StructureState>(
       builder: (context, state) {
         final issues = _validationIssues(state);
         return Scaffold(
-          backgroundColor: const Color(0xFF020716),
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
-            title: const Text('Structure Setup Wizard', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            title: Text(
+              'Structure Setup Wizard',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             leading: IconButton(
-              icon: const Icon(Icons.close, color: Colors.white),
+              icon: Icon(
+                Icons.close,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
               onPressed: () => Navigator.pop(context),
             ),
           ),
           body: Column(
             children: [
-              _buildStepIndicator(),
+              _buildStepIndicator(context),
               Expanded(
                 child: IndexedStack(
                   index: _currentStep,
                   children: [
-                    _buildReviewStep(state),
-                    _buildValidationStep(issues),
-                    _buildActivationStep(),
+                    _buildReviewStep(context, state),
+                    _buildValidationStep(context, issues),
+                    _buildActivationStep(context),
                   ],
                 ),
               ),
             ],
           ),
-          bottomNavigationBar: _buildBottomBar(schoolId, issues),
+          bottomNavigationBar: _buildBottomBar(context, schoolId, issues),
         );
       },
     );
   }
 
-  Widget _buildStepIndicator() {
+  Widget _buildStepIndicator(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.l, horizontal: AppSpacing.xl),
-      decoration: const BoxDecoration(
-        color: Color(0xFF071229),
-        border: Border(bottom: BorderSide(color: Color(0xFF1A315B))),
+      padding: const EdgeInsets.symmetric(
+        vertical: AppSpacing.l,
+        horizontal: AppSpacing.xl,
+      ),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(color: Theme.of(context).colorScheme.outline),
+        ),
       ),
       child: Row(
         children: [
@@ -118,21 +136,30 @@ class _StructureSetupWizardScreenState extends State<StructureSetupWizardScreen>
     );
   }
 
-  Widget _buildReviewStep(StructureState state) {
+  Widget _buildReviewStep(BuildContext context, StructureState state) {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.xl),
       children: [
-        const Text(
+        Text(
           'Review Your Structure',
-          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20, letterSpacing: -0.5, color: Colors.white),
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 20,
+            letterSpacing: -0.5,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'Ensure all core components are correctly configured before activating the module.',
-          style: TextStyle(color: Color(0xFF8190AA), fontSize: 14),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontSize: 14,
+          ),
         ),
         const SizedBox(height: AppSpacing.xl),
         _buildReviewCard(
+          context: context,
           title: 'Academic Structure',
           icon: Icons.school_outlined,
           color: Colors.blue,
@@ -145,6 +172,7 @@ class _StructureSetupWizardScreenState extends State<StructureSetupWizardScreen>
           isComplete: state.levels.isNotEmpty && state.academicYears.isNotEmpty,
         ),
         _buildReviewCard(
+          context: context,
           title: 'People & Org',
           icon: Icons.groups_outlined,
           color: Colors.orange,
@@ -155,6 +183,7 @@ class _StructureSetupWizardScreenState extends State<StructureSetupWizardScreen>
           isComplete: state.departments.isNotEmpty,
         ),
         _buildReviewCard(
+          context: context,
           title: 'Campus & Facilities',
           icon: Icons.location_city_outlined,
           color: Colors.teal,
@@ -171,6 +200,7 @@ class _StructureSetupWizardScreenState extends State<StructureSetupWizardScreen>
   }
 
   Widget _buildReviewCard({
+    required BuildContext context,
     required String title,
     required IconData icon,
     required Color color,
@@ -180,8 +210,8 @@ class _StructureSetupWizardScreenState extends State<StructureSetupWizardScreen>
     return AppCard(
       margin: const EdgeInsets.only(bottom: AppSpacing.m),
       padding: const EdgeInsets.all(AppSpacing.l),
-      color: const Color(0xFF071229),
-      borderColor: const Color(0xFF1A315B),
+      color: Theme.of(context).colorScheme.surfaceContainer,
+      borderColor: Theme.of(context).colorScheme.outline,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -198,19 +228,43 @@ class _StructureSetupWizardScreenState extends State<StructureSetupWizardScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Colors.white)),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
                   runSpacing: 4,
-                  children: items.map((item) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0B1B3B),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(item, style: const TextStyle(fontSize: 11, color: Color(0xFFB9C6DC))),
-                  )).toList(),
+                  children: items
+                      .map(
+                        (item) => Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            item,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
                 ),
               ],
             ),
@@ -225,19 +279,28 @@ class _StructureSetupWizardScreenState extends State<StructureSetupWizardScreen>
     );
   }
 
-  Widget _buildValidationStep(List<String> issues) {
+  Widget _buildValidationStep(BuildContext context, List<String> issues) {
     if (issues.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.verified_user_outlined, size: 80, color: Colors.blue),
             SizedBox(height: AppSpacing.xl),
-            Text('Validation Successful', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: Colors.white)),
+            Text(
+              'Validation Successful',
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 20,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
             SizedBox(height: 8),
             Text(
               'No conflicts or missing requirements found.',
-              style: TextStyle(color: Color(0xFF8190AA)),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -246,29 +309,50 @@ class _StructureSetupWizardScreenState extends State<StructureSetupWizardScreen>
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.xl),
       children: [
-        const Icon(Icons.warning_amber_outlined, size: 60, color: Colors.orange),
-        const SizedBox(height: AppSpacing.l),
-        const Text(
-          'Structure Isn\'t Ready Yet',
-          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: Colors.white),
+        const Icon(
+          Icons.warning_amber_outlined,
+          size: 60,
+          color: Colors.orange,
         ),
         const SizedBox(height: AppSpacing.l),
-        ...issues.map((issue) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.circle, size: 6, color: Color(0xFF8190AA)),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(issue, style: const TextStyle(color: Color(0xFFB9C6DC)))),
-                ],
-              ),
-            )),
+        Text(
+          'Structure Isn\'t Ready Yet',
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 20,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.l),
+        ...issues.map(
+          (issue) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.circle,
+                  size: 6,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    issue,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildActivationStep() {
+  Widget _buildActivationStep(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.l),
       child: Column(
@@ -280,28 +364,53 @@ class _StructureSetupWizardScreenState extends State<StructureSetupWizardScreen>
               color: Colors.green.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.rocket_launch_outlined, size: 60, color: Colors.green),
+            child: const Icon(
+              Icons.rocket_launch_outlined,
+              size: 60,
+              color: Colors.green,
+            ),
           ),
           const SizedBox(height: AppSpacing.xl),
-          const Text('Ready to Activate!', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 22, color: Colors.white)),
+          Text(
+            'Ready to Activate!',
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 22,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Activating will make this structure live for all modules. Future changes will be tracked.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Color(0xFF8190AA), fontSize: 15),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 15,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildBottomBar(String schoolId, List<String> issues) {
+  Widget _buildBottomBar(
+    BuildContext context,
+    String schoolId,
+    List<String> issues,
+  ) {
     final canAdvancePastValidation = issues.isEmpty;
     return Container(
-      padding: EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.m, AppSpacing.xl, AppSpacing.m + MediaQuery.paddingOf(context).bottom),
-      decoration: const BoxDecoration(
-        color: Color(0xFF071229),
-        border: Border(top: BorderSide(color: Color(0xFF1A315B))),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.m,
+        AppSpacing.xl,
+        AppSpacing.m + MediaQuery.paddingOf(context).bottom,
+      ),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(
+          top: BorderSide(color: Theme.of(context).colorScheme.outline),
+        ),
       ),
       child: Row(
         children: [
@@ -310,9 +419,13 @@ class _StructureSetupWizardScreenState extends State<StructureSetupWizardScreen>
               child: OutlinedButton(
                 onPressed: () => setState(() => _currentStep--),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: const BorderSide(color: Color(0xFF1A315B)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  foregroundColor: Theme.of(context).colorScheme.onSurface,
+                  side: BorderSide(
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: const Text('Back'),
@@ -325,7 +438,9 @@ class _StructureSetupWizardScreenState extends State<StructureSetupWizardScreen>
               onPressed: _isActivating
                   ? null
                   : () {
-                      if (_currentStep == 1 && !canAdvancePastValidation) return;
+                      if (_currentStep == 1 && !canAdvancePastValidation) {
+                        return;
+                      }
                       if (_currentStep < 2) {
                         setState(() => _currentStep++);
                       } else {
@@ -333,18 +448,26 @@ class _StructureSetupWizardScreenState extends State<StructureSetupWizardScreen>
                       }
                     },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.electricBlue,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                backgroundColor: AppColors.primary(context),
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               child: _isActivating
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Theme.of(context).colorScheme.onPrimary,
+                      ),
                     )
-                  : Text(_currentStep == 2 ? 'Activate Module' : 'Continue', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  : Text(
+                      _currentStep == 2 ? 'Activate Module' : 'Continue',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
             ),
           ),
         ],
@@ -357,7 +480,11 @@ class _StepCircle extends StatelessWidget {
   final int index;
   final String label;
   final bool isActive;
-  const _StepCircle({required this.index, required this.label, required this.isActive});
+  const _StepCircle({
+    required this.index,
+    required this.label,
+    required this.isActive,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -369,14 +496,22 @@ class _StepCircle extends StatelessWidget {
           height: 28,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isActive ? AppColors.electricBlue : const Color(0xFF020716),
-            border: Border.all(color: isActive ? AppColors.electricBlue : const Color(0xFF1A315B)),
+            color: isActive
+                ? AppColors.primary(context)
+                : Theme.of(context).colorScheme.surfaceContainer,
+            border: Border.all(
+              color: isActive
+                  ? AppColors.primary(context)
+                  : Theme.of(context).colorScheme.outline,
+            ),
           ),
           child: Center(
             child: Text(
               index.toString(),
               style: TextStyle(
-                color: isActive ? Colors.white : const Color(0xFF8190AA),
+                color: isActive
+                    ? Theme.of(context).colorScheme.onPrimary
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.bold,
                 fontSize: 12,
               ),
@@ -389,7 +524,9 @@ class _StepCircle extends StatelessWidget {
           style: TextStyle(
             fontSize: 10,
             fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-            color: isActive ? Colors.white : const Color(0xFF8190AA),
+            color: isActive
+                ? Theme.of(context).colorScheme.onSurface
+                : Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
       ],
@@ -407,7 +544,9 @@ class _StepLine extends StatelessWidget {
       child: Container(
         height: 2,
         margin: const EdgeInsets.only(bottom: 14),
-        color: isActive ? AppColors.electricBlue : const Color(0xFF1A315B),
+        color: isActive
+            ? AppColors.primary(context)
+            : Theme.of(context).colorScheme.outline,
       ),
     );
   }

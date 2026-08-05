@@ -4,9 +4,17 @@ import '../models/people_policy_model.dart';
 import '../models/student_enrolment_model.dart';
 
 abstract class RelationshipRemoteDataSource {
-  Future<List<ParentStudentRelationshipModel>> getRelationshipsForStudent(String schoolId, String studentId);
-  Future<List<ParentStudentRelationshipModel>> getRelationshipsForParent(String schoolId, String userId);
-  Future<ParentStudentRelationshipModel> createRelationship(Map<String, dynamic> data);
+  Future<List<ParentStudentRelationshipModel>> getRelationshipsForStudent(
+    String schoolId,
+    String studentId,
+  );
+  Future<List<ParentStudentRelationshipModel>> getRelationshipsForParent(
+    String schoolId,
+    String userId,
+  );
+  Future<ParentStudentRelationshipModel> createRelationship(
+    Map<String, dynamic> data,
+  );
   Future<ParentStudentRelationshipModel> getRelationshipById(String id);
   Future<void> supersedeRelationship(String id, Map<String, dynamic> data);
 
@@ -15,7 +23,10 @@ abstract class RelationshipRemoteDataSource {
 
   Future<void> createEnrolment(Map<String, dynamic> data);
   Future<void> endActiveEnrolment(String schoolId, String studentId);
-  Future<List<StudentEnrolmentModel>> getEnrolmentHistory(String schoolId, String studentId);
+  Future<List<StudentEnrolmentModel>> getEnrolmentHistory(
+    String schoolId,
+    String studentId,
+  );
 }
 
 class RelationshipRemoteDataSourceImpl implements RelationshipRemoteDataSource {
@@ -26,7 +37,8 @@ class RelationshipRemoteDataSourceImpl implements RelationshipRemoteDataSource {
   CollectionReference<Map<String, dynamic>> get _relationships =>
       firestore.collection('parent_student_relationships');
 
-  CollectionReference<Map<String, dynamic>> get _enrolments => firestore.collection('student_enrolments');
+  CollectionReference<Map<String, dynamic>> get _enrolments =>
+      firestore.collection('student_enrolments');
 
   DocumentReference<Map<String, dynamic>> _policyDoc(String schoolId) =>
       firestore.collection('people_policies').doc(schoolId);
@@ -40,7 +52,9 @@ class RelationshipRemoteDataSourceImpl implements RelationshipRemoteDataSource {
         .where('schoolId', isEqualTo: schoolId)
         .where('studentId', isEqualTo: studentId)
         .get();
-    return snapshot.docs.map((d) => ParentStudentRelationshipModel.fromMap(d.id, d.data())).toList();
+    return snapshot.docs
+        .map((d) => ParentStudentRelationshipModel.fromMap(d.id, d.data()))
+        .toList();
   }
 
   @override
@@ -52,20 +66,30 @@ class RelationshipRemoteDataSourceImpl implements RelationshipRemoteDataSource {
         .where('schoolId', isEqualTo: schoolId)
         .where('userId', isEqualTo: userId)
         .get();
-    return snapshot.docs.map((d) => ParentStudentRelationshipModel.fromMap(d.id, d.data())).toList();
+    return snapshot.docs
+        .map((d) => ParentStudentRelationshipModel.fromMap(d.id, d.data()))
+        .toList();
   }
 
   @override
-  Future<ParentStudentRelationshipModel> createRelationship(Map<String, dynamic> data) async {
+  Future<ParentStudentRelationshipModel> createRelationship(
+    Map<String, dynamic> data,
+  ) async {
     final ref = await _relationships.add(data);
     final snapshot = await ref.get();
-    return ParentStudentRelationshipModel.fromMap(snapshot.id, snapshot.data()!);
+    return ParentStudentRelationshipModel.fromMap(
+      snapshot.id,
+      snapshot.data()!,
+    );
   }
 
   @override
   Future<ParentStudentRelationshipModel> getRelationshipById(String id) async {
     final snapshot = await _relationships.doc(id).get();
-    return ParentStudentRelationshipModel.fromMap(snapshot.id, snapshot.data()!);
+    return ParentStudentRelationshipModel.fromMap(
+      snapshot.id,
+      snapshot.data()!,
+    );
   }
 
   @override
@@ -108,12 +132,17 @@ class RelationshipRemoteDataSourceImpl implements RelationshipRemoteDataSource {
   }
 
   @override
-  Future<List<StudentEnrolmentModel>> getEnrolmentHistory(String schoolId, String studentId) async {
+  Future<List<StudentEnrolmentModel>> getEnrolmentHistory(
+    String schoolId,
+    String studentId,
+  ) async {
     final snapshot = await _enrolments
         .where('schoolId', isEqualTo: schoolId)
         .where('studentId', isEqualTo: studentId)
         .get();
-    final results = snapshot.docs.map((d) => StudentEnrolmentModel.fromMap(d.id, d.data())).toList();
+    final results = snapshot.docs
+        .map((d) => StudentEnrolmentModel.fromMap(d.id, d.data()))
+        .toList();
     results.sort((a, b) => b.startDate.compareTo(a.startDate));
     return results;
   }

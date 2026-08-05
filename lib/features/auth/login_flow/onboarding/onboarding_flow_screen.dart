@@ -26,7 +26,9 @@ class OnboardingFlowScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final institutionState = context.watch<InstitutionContextCubit>().state;
-    final institutionId = context.read<InstitutionContextCubit>().currentInstitutionId ?? user.schoolId;
+    final institutionId =
+        context.read<InstitutionContextCubit>().currentInstitutionId ??
+        user.schoolId;
 
     return BlocProvider(
       create: (_) => InstitutionOnboardingCubit(
@@ -34,47 +36,64 @@ class OnboardingFlowScreen extends StatelessWidget {
         userId: user.id,
         institutionId: institutionId,
       )..load(),
-      child: BlocBuilder<InstitutionOnboardingCubit, InstitutionOnboardingProgress>(
-        builder: (context, progress) {
-          final onboardingCubit = context.read<InstitutionOnboardingCubit>();
+      child:
+          BlocBuilder<
+            InstitutionOnboardingCubit,
+            InstitutionOnboardingProgress
+          >(
+            builder: (context, progress) {
+              final onboardingCubit = context
+                  .read<InstitutionOnboardingCubit>();
 
-          switch (progress.currentStep) {
-            case OnboardingStep.identityConfirm:
-              return IdentityConfirmScreen(user: user, onConfirmed: onboardingCubit.advance);
-            case OnboardingStep.passwordChange:
-              return ForceSetPasswordScreen(user: user);
-            case OnboardingStep.contactVerify:
-              return ContactVerifyScreen(user: user, onContinue: onboardingCubit.advance);
-            case OnboardingStep.mfaStub:
-              return MfaStubScreen(
-                mfaRequired: progress.mfaRequired,
-                onContinue: onboardingCubit.advance,
-              );
-            case OnboardingStep.institutionConfirm:
-              if (institutionState is! InstitutionContextLoaded) {
-                return const Scaffold(body: Center(child: CircularProgressIndicator()));
+              switch (progress.currentStep) {
+                case OnboardingStep.identityConfirm:
+                  return IdentityConfirmScreen(
+                    user: user,
+                    onConfirmed: onboardingCubit.advance,
+                  );
+                case OnboardingStep.passwordChange:
+                  return ForceSetPasswordScreen(user: user);
+                case OnboardingStep.contactVerify:
+                  return ContactVerifyScreen(
+                    user: user,
+                    onContinue: onboardingCubit.advance,
+                  );
+                case OnboardingStep.mfaStub:
+                  return MfaStubScreen(
+                    mfaRequired: progress.mfaRequired,
+                    onContinue: onboardingCubit.advance,
+                  );
+                case OnboardingStep.institutionConfirm:
+                  if (institutionState is! InstitutionContextLoaded) {
+                    return const Scaffold(
+                      body: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  return InstitutionConfirmScreen(
+                    context: institutionState.context,
+                    onConfirmed: onboardingCubit.advance,
+                  );
+                case OnboardingStep.profileSummary:
+                  if (institutionState is! InstitutionContextLoaded) {
+                    return const Scaffold(
+                      body: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  return ProfileSummaryScreen(
+                    user: user,
+                    context: institutionState.context,
+                    onGetStarted: onboardingCubit.advance,
+                  );
+                case OnboardingStep.completed:
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    context.go('/school-splash', extra: user);
+                  });
+                  return const Scaffold(
+                    body: Center(child: CircularProgressIndicator()),
+                  );
               }
-              return InstitutionConfirmScreen(
-                context: institutionState.context,
-                onConfirmed: onboardingCubit.advance,
-              );
-            case OnboardingStep.profileSummary:
-              if (institutionState is! InstitutionContextLoaded) {
-                return const Scaffold(body: Center(child: CircularProgressIndicator()));
-              }
-              return ProfileSummaryScreen(
-                user: user,
-                context: institutionState.context,
-                onGetStarted: onboardingCubit.advance,
-              );
-            case OnboardingStep.completed:
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                context.go('/school-splash', extra: user);
-              });
-              return const Scaffold(body: Center(child: CircularProgressIndicator()));
-          }
-        },
-      ),
+            },
+          ),
     );
   }
 }

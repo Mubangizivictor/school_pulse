@@ -62,53 +62,51 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
   @override
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width > 900;
-    
+
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
-      appBar: AppBar(
-        title: const Text('Broadcast Center'),
-      ),
+      appBar: AppBar(title: const Text('Broadcast Center')),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(isWide ? 24 : 16),
-        child: isWide 
-          ? Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: Column(
-                    children: [
-                      _buildChannelSelector(),
-                      const SizedBox(height: 24),
-                      _buildComposer(),
-                      const SizedBox(height: 24),
-                      _buildRecipientSelector(),
-                    ],
+        child: isWide
+            ? Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      children: [
+                        _buildChannelSelector(),
+                        const SizedBox(height: 24),
+                        _buildComposer(),
+                        const SizedBox(height: 24),
+                        _buildRecipientSelector(),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: 24),
-                Expanded(
-                  child: Column(
-                    children: [
-                      _buildChannelStats(),
-                      const SizedBox(height: 24),
-                      _buildRecentBroadcasts(),
-                    ],
+                  const SizedBox(width: 24),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        _buildChannelStats(),
+                        const SizedBox(height: 24),
+                        _buildRecentBroadcasts(),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            )
-          : Column(
-              children: [
-                _buildChannelSelector(),
-                const SizedBox(height: 16),
-                _buildComposer(),
-                const SizedBox(height: 16),
-                _buildRecipientSelector(),
-                const SizedBox(height: 16),
-                _buildRecentBroadcasts(),
-              ],
-            ),
+                ],
+              )
+            : Column(
+                children: [
+                  _buildChannelSelector(),
+                  const SizedBox(height: 16),
+                  _buildComposer(),
+                  const SizedBox(height: 16),
+                  _buildRecipientSelector(),
+                  const SizedBox(height: 16),
+                  _buildRecentBroadcasts(),
+                ],
+              ),
       ),
     );
   }
@@ -118,7 +116,10 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Select Channels', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const Text(
+            'Select Channels',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -137,10 +138,12 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
                 isSelected: false,
                 isDisabled: true,
                 onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text(
-                    'SMS isn\'t connected to a provider yet. Ask your developer to wire up '
-                    'Twilio/Africa\'s Talking, or use Push & In-App for now.',
-                  )),
+                  const SnackBar(
+                    content: Text(
+                      'SMS isn\'t connected to a provider yet. Ask your developer to wire up '
+                      'Twilio/Africa\'s Talking, or use Push & In-App for now.',
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -165,13 +168,24 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
       return _buildSmsCreditsCard();
     }
     return AppCard(
-      color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1),
+      color: Theme.of(
+        context,
+      ).colorScheme.primaryContainer.withValues(alpha: 0.1),
       child: Column(
         children: [
           const Icon(Icons.bolt, size: 32, color: Colors.amber),
           const SizedBox(height: 12),
-          const Text('Push Delivery', style: TextStyle(fontWeight: FontWeight.bold)),
-          Text('99.9% Reliable • Instant', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          const Text(
+            'Push Delivery',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          Text(
+            '99.9% Reliable • Instant',
+            style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
         ],
       ),
     );
@@ -191,13 +205,24 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(isPush ? Icons.campaign : Icons.edit_note, color: Theme.of(context).colorScheme.primary),
+                child: Icon(
+                  isPush ? Icons.campaign : Icons.edit_note,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               ),
               const SizedBox(width: 12),
-              Text(isPush ? 'Announcement Details' : 'Compose SMS', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              Text(
+                isPush ? 'Announcement Details' : 'Compose SMS',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 20),
@@ -207,7 +232,9 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
               decoration: InputDecoration(
                 hintText: 'Headline (e.g. Urgent Notice)',
                 labelText: 'Title',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -219,7 +246,9 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
             decoration: InputDecoration(
               hintText: 'Type your message here...',
               labelText: 'Message Body',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               fillColor: Theme.of(context).colorScheme.surface,
               filled: true,
               counterText: '',
@@ -233,9 +262,18 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
               children: [
                 Text(
                   '${(_messageController.text.length / 160).ceil()} SMS Units per recipient',
-                  style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
-                Text('$charCount / 480', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                Text(
+                  '$charCount / 480',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
           ],
@@ -257,9 +295,14 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Schedule for later', style: TextStyle(fontWeight: FontWeight.w600)),
+                      const Text(
+                        'Schedule for later',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
                       Text(
-                        _isScheduled ? 'Message will be sent at selected time' : 'Message will be sent immediately',
+                        _isScheduled
+                            ? 'Message will be sent at selected time'
+                            : 'Message will be sent immediately',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
@@ -269,16 +312,20 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
                   FilledButton.tonalIcon(
                     onPressed: _selectDateTime,
                     icon: const Icon(Icons.calendar_month, size: 18),
-                    label: Text(_scheduledDateTime == null 
-                      ? 'Set Time' 
-                      : '${_scheduledDateTime!.day}/${_scheduledDateTime!.month} ${_scheduledDateTime!.hour.toString().padLeft(2, '0')}:${_scheduledDateTime!.minute.toString().padLeft(2, '0')}'),
+                    label: Text(
+                      _scheduledDateTime == null
+                          ? 'Set Time'
+                          : '${_scheduledDateTime!.day}/${_scheduledDateTime!.month} ${_scheduledDateTime!.hour.toString().padLeft(2, '0')}:${_scheduledDateTime!.minute.toString().padLeft(2, '0')}',
+                    ),
                   ),
               ],
             ),
           ),
           const SizedBox(height: 24),
           PrimaryButton(
-            onPressed: _messageController.text.trim().isEmpty ? null : _handleSend,
+            onPressed: _messageController.text.trim().isEmpty
+                ? null
+                : _handleSend,
             label: _isScheduled ? 'Schedule Broadcast' : 'Send Broadcast Now',
           ),
         ],
@@ -289,19 +336,24 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
   Future<void> _handleSend() async {
     if (_isScheduled && _scheduledDateTime == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a date and time for scheduling.')),
+        const SnackBar(
+          content: Text('Please select a date and time for scheduling.'),
+        ),
       );
       return;
     }
 
-    if (_selectedRecipients.contains('Specific Class Parents') && _selectedClasses.isEmpty) {
+    if (_selectedRecipients.contains('Specific Class Parents') &&
+        _selectedClasses.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Select at least one class to target.')),
       );
       return;
     }
 
-    final title = _titleController.text.isEmpty ? 'School Announcement' : _titleController.text;
+    final title = _titleController.text.isEmpty
+        ? 'School Announcement'
+        : _titleController.text;
     final body = _messageController.text;
     final targets = [
       ..._selectedRecipients.where((r) => r != 'Specific Class Parents'),
@@ -361,7 +413,8 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
 
       di.sl<AuditRepository>().logAction(
         title: _isScheduled ? 'Broadcast Scheduled' : 'Broadcast Sent',
-        description: '"$title" sent to ${targets.join(', ')} via ${_selectedChannels.join(' & ')}.',
+        description:
+            '"$title" sent to ${targets.join(', ')} via ${_selectedChannels.join(' & ')}.',
         iconName: 'send',
         colorHex: 'FF9C27B0',
         userId: FirebaseAuth.instance.currentUser?.uid,
@@ -371,9 +424,11 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(_isScheduled
-              ? 'Broadcast scheduled for ${_scheduledDateTime.toString()}'
-              : 'Broadcast sent successfully via ${_selectedChannels.join(" & ")}'),
+            content: Text(
+              _isScheduled
+                  ? 'Broadcast scheduled for ${_scheduledDateTime.toString()}'
+                  : 'Broadcast sent successfully via ${_selectedChannels.join(" & ")}',
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -405,12 +460,15 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
       {'id': 'Patrons (Boys)', 'icon': Icons.male},
       {'id': 'Specific Class Parents', 'icon': Icons.class_},
     ];
-    
+
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Target Audience', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const Text(
+            'Target Audience',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
           const SizedBox(height: 16),
           Wrap(
             spacing: 8,
@@ -420,13 +478,21 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
               final icon = group['icon'] as IconData;
               final isSelected = _selectedRecipients.contains(id);
               return FilterChip(
-                avatar: Icon(icon, size: 16, color: isSelected ? Colors.white : Theme.of(context).colorScheme.primary),
+                avatar: Icon(
+                  icon,
+                  size: 16,
+                  color: isSelected
+                      ? Theme.of(context).colorScheme.onPrimary
+                      : Theme.of(context).colorScheme.primary,
+                ),
                 label: Text(id),
                 selected: isSelected,
                 selectedColor: Theme.of(context).colorScheme.primary,
-                checkmarkColor: Colors.white,
+                checkmarkColor: Theme.of(context).colorScheme.onPrimary,
                 labelStyle: TextStyle(
-                  color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                  color: isSelected
+                      ? Theme.of(context).colorScheme.onPrimary
+                      : Theme.of(context).colorScheme.onSurface,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 ),
                 onSelected: (selected) {
@@ -447,16 +513,25 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
             const SizedBox(height: 16),
             Row(
               children: [
-                Icon(Icons.layers_outlined, size: 18, color: Theme.of(context).colorScheme.primary),
+                Icon(
+                  Icons.layers_outlined,
+                  size: 18,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 const SizedBox(width: 8),
-                const Text('Select Classes', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Select Classes',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ),
               ],
             ),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: ['P.1', 'P.2', 'P.3', 'P.4', 'P.5', 'P.6', 'P.7'].map((c) {
+              children: ['P.1', 'P.2', 'P.3', 'P.4', 'P.5', 'P.6', 'P.7'].map((
+                c,
+              ) {
                 return ChoiceChip(
                   label: Text(c, style: const TextStyle(fontSize: 12)),
                   selected: _selectedClasses.contains(c),
@@ -478,7 +553,9 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
 
   Widget _buildSmsCreditsCard() {
     return AppCard(
-      color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1),
+      color: Theme.of(
+        context,
+      ).colorScheme.primaryContainer.withValues(alpha: 0.1),
       child: Column(
         children: [
           Container(
@@ -487,19 +564,35 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
               color: Colors.blue.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.account_balance_wallet, size: 32, color: Colors.blue),
+            child: const Icon(
+              Icons.account_balance_wallet,
+              size: 32,
+              color: Colors.blue,
+            ),
           ),
           const SizedBox(height: 16),
-          const Text('SMS Credits Available', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+          const Text(
+            'SMS Credits Available',
+            style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+          ),
           const SizedBox(height: 4),
           StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-            stream: FirebaseFirestore.instance.collection('config').doc('system').snapshots(),
+            stream: FirebaseFirestore.instance
+                .collection('config')
+                .doc('system')
+                .snapshots(),
             builder: (context, snapshot) {
-              final credits = (snapshot.data?.data()?['smsCredits'] as int?) ?? 0;
+              final credits =
+                  (snapshot.data?.data()?['smsCredits'] as int?) ?? 0;
               return AnimatedNumberText(
                 value: credits.toDouble(),
                 suffix: ' Units',
-                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.blue, letterSpacing: -0.5),
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.blue,
+                  letterSpacing: -0.5,
+                ),
               );
             },
           ),
@@ -515,7 +608,10 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
                   'Manage the connection and credit balance from System Configuration → External Integrations.',
                 ),
                 actions: [
-                  TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close')),
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    child: const Text('Close'),
+                  ),
                   FilledButton(
                     onPressed: () {
                       Navigator.pop(dialogContext);
@@ -546,7 +642,10 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Recent Broadcasts', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                const Text(
+                  'Recent Broadcasts',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                ),
                 TextButton(
                   onPressed: () => context.go('/staff/admin/broadcast-history'),
                   child: const Text('View All', style: TextStyle(fontSize: 12)),
@@ -573,17 +672,25 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
               if (docs.isEmpty) {
                 return const Padding(
                   padding: EdgeInsets.all(24),
-                  child: Center(child: Text('No broadcasts sent yet', style: TextStyle(fontSize: 13))),
+                  child: Center(
+                    child: Text(
+                      'No broadcasts sent yet',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                  ),
                 );
               }
               return ListView.separated(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: docs.length,
-                separatorBuilder: (context, index) => const Divider(height: 1, indent: 16, endIndent: 16),
+                separatorBuilder: (context, index) =>
+                    const Divider(height: 1, indent: 16, endIndent: 16),
                 itemBuilder: (context, index) {
                   final data = docs[index].data();
-                  final targets = List<String>.from(data['targets'] as List? ?? const []);
+                  final targets = List<String>.from(
+                    data['targets'] as List? ?? const [],
+                  );
                   final to = targets.isEmpty ? 'Everyone' : targets.join(', ');
                   final msg = data['body'] as String? ?? '';
                   final status = data['status'] as String? ?? 'sent';
@@ -592,40 +699,74 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
                   final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
 
                   return ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 8,
+                    ),
                     title: Row(
                       children: [
-                        Icon(isPush ? Icons.bolt : Icons.sms, size: 14, color: Theme.of(context).colorScheme.outline),
+                        Icon(
+                          isPush ? Icons.bolt : Icons.sms,
+                          size: 14,
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             to,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
-                            color: (isFailed ? semantic.error : semantic.success).withValues(alpha: 0.1),
+                            color:
+                                (isFailed ? semantic.error : semantic.success)
+                                    .withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
                             status,
-                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: isFailed ? semantic.error : semantic.success),
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: isFailed
+                                  ? semantic.error
+                                  : semantic.success,
+                            ),
                           ),
                         ),
                       ],
                     ),
                     subtitle: Padding(
                       padding: const EdgeInsets.only(top: 4),
-                      child: Text(msg, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.outline)),
+                      child: Text(
+                        msg,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
+                      ),
                     ),
                     trailing: Text(
-                      timestamp != null ? DateFormat('MMM dd').format(timestamp) : '',
-                      style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.outline),
+                      timestamp != null
+                          ? DateFormat('MMM dd').format(timestamp)
+                          : '',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
                     ),
                   );
                 },
@@ -660,7 +801,9 @@ class _ChannelTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final iconColor = isDisabled
         ? Theme.of(context).colorScheme.outline
-        : (isSelected ? Colors.white : Theme.of(context).colorScheme.primary);
+        : (isSelected
+              ? Theme.of(context).colorScheme.onPrimary
+              : Theme.of(context).colorScheme.primary);
     return Expanded(
       child: Opacity(
         opacity: isDisabled ? 0.5 : 1.0,
@@ -671,10 +814,14 @@ class _ChannelTile extends StatelessWidget {
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surface,
+              color: isSelected
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).dividerColor.withValues(alpha: 0.1),
+                color: isSelected
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).dividerColor.withValues(alpha: 0.1),
               ),
             ),
             child: Column(
@@ -685,7 +832,9 @@ class _ChannelTile extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.onPrimary
+                        : Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
                   ),
@@ -693,7 +842,11 @@ class _ChannelTile extends StatelessWidget {
                 Text(
                   description,
                   style: TextStyle(
-                    color: isSelected ? Colors.white.withValues(alpha: 0.8) : Theme.of(context).colorScheme.onSurfaceVariant,
+                    color: isSelected
+                        ? Theme.of(
+                            context,
+                          ).colorScheme.onPrimary.withValues(alpha: 0.8)
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 10,
                   ),
                 ),

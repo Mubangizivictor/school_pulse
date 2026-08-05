@@ -27,16 +27,16 @@ class FeeStructure extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        name,
-        academicYear,
-        term,
-        items,
-        classId,
-        programId,
-        studentCategory,
-      ];
+    id,
+    schoolId,
+    name,
+    academicYear,
+    term,
+    items,
+    classId,
+    programId,
+    studentCategory,
+  ];
 }
 
 class FeeStructureItem extends Equatable {

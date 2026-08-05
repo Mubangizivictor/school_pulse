@@ -18,7 +18,8 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
@@ -78,9 +79,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppGradients.premiumDark,
-        ),
+        decoration: const BoxDecoration(gradient: AppGradients.premiumDark),
         child: Stack(
           children: [
             // Background Pulse Effect (Subtle)
@@ -95,7 +94,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
                         colors: [
-                          AppColors.electricBlue.withValues(alpha: 0.15 * (1 - _controller.value)),
+                          AppColors.electricBlue.withValues(
+                            alpha: 0.15 * (1 - _controller.value),
+                          ),
                           Colors.transparent,
                         ],
                       ),
@@ -104,7 +105,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 },
               ),
             ),
-            
+
             // Content
             Center(
               child: FadeTransition(
@@ -125,7 +126,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         height: 40,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.brightCyan),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppColors.brightCyan,
+                          ),
                         ),
                       ),
                     ],
@@ -133,7 +136,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 ),
               ),
             ),
-            
+
             // Tagline at the bottom
             Positioned(
               bottom: 64,

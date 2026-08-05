@@ -18,13 +18,18 @@ class TeacherStudentPerformanceScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black),
+          icon: Icon(
+            Icons.arrow_back,
+            color: isDark ? Colors.white : Colors.black,
+          ),
           onPressed: () => context.pop(),
         ),
         title: Text(
           'Performance',
           style: AppTypography.headlineSmall.copyWith(
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            color: isDark
+                ? AppColors.textPrimaryDark
+                : AppColors.textPrimaryLight,
           ),
         ),
       ),
@@ -34,9 +39,13 @@ class TeacherStudentPerformanceScreen extends StatelessWidget {
           children: [
             Row(
               children: [
-                Expanded(child: _DropdownSelector(label: 'Term 2', isDark: isDark)),
+                Expanded(
+                  child: _DropdownSelector(label: 'Term 2', isDark: isDark),
+                ),
                 const SizedBox(width: AppSpacing.m),
-                Expanded(child: _DropdownSelector(label: '2024', isDark: isDark)),
+                Expanded(
+                  child: _DropdownSelector(label: '2024', isDark: isDark),
+                ),
               ],
             ),
             const SizedBox(height: AppSpacing.x2l),
@@ -49,7 +58,9 @@ class TeacherStudentPerformanceScreen extends StatelessWidget {
               child: Text(
                 'Subject Performance',
                 style: AppTypography.titleMedium.copyWith(
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -60,13 +71,19 @@ class TeacherStudentPerformanceScreen extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () => context.push('/staff/students/$studentId/assessments'),
+                onPressed: () =>
+                    context.push('/staff/students/$studentId/assessments'),
                 icon: const Icon(Icons.list_alt, color: AppColors.royalBlue),
-                label: const Text('View All Assessments', style: TextStyle(color: AppColors.royalBlue)),
+                label: const Text(
+                  'View All Assessments',
+                  style: TextStyle(color: AppColors.royalBlue),
+                ),
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: AppColors.royalBlue),
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.l),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.m)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppSpacing.m),
+                  ),
                 ),
               ),
             ),
@@ -86,14 +103,33 @@ class TeacherStudentPerformanceScreen extends StatelessWidget {
           child: CircularProgressIndicator(
             value: 0.78,
             strokeWidth: 12,
-            backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.successGreen),
+            backgroundColor: isDark
+                ? AppColors.surfaceDark
+                : AppColors.surfaceLight,
+            valueColor: const AlwaysStoppedAnimation<Color>(
+              AppColors.successGreen,
+            ),
           ),
         ),
         Column(
           children: [
-            Text('78%', style: AppTypography.headlineLarge.copyWith(color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight, fontWeight: FontWeight.bold)),
-            Text('Average', style: AppTypography.labelMedium.copyWith(color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight)),
+            Text(
+              '78%',
+              style: AppTypography.headlineLarge.copyWith(
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              'Average',
+              style: AppTypography.labelMedium.copyWith(
+                color: isDark
+                    ? AppColors.textMutedDark
+                    : AppColors.textMutedLight,
+              ),
+            ),
           ],
         ),
       ],
@@ -103,11 +139,21 @@ class TeacherStudentPerformanceScreen extends StatelessWidget {
   Widget _buildStatsRow(bool isDark) {
     return Row(
       children: [
-        Expanded(child: _StatBox(label: 'Class Rank', value: '5/32', isDark: isDark)),
+        Expanded(
+          child: _StatBox(label: 'Class Rank', value: '5/32', isDark: isDark),
+        ),
         const SizedBox(width: AppSpacing.m),
-        Expanded(child: _StatBox(label: 'Total Marks', value: '780/1000', isDark: isDark)),
+        Expanded(
+          child: _StatBox(
+            label: 'Total Marks',
+            value: '780/1000',
+            isDark: isDark,
+          ),
+        ),
         const SizedBox(width: AppSpacing.m),
-        Expanded(child: _StatBox(label: 'Grade', value: 'B', isDark: isDark)),
+        Expanded(
+          child: _StatBox(label: 'Grade', value: 'B', isDark: isDark),
+        ),
       ],
     );
   }
@@ -122,12 +168,16 @@ class TeacherStudentPerformanceScreen extends StatelessWidget {
     ];
 
     return Column(
-      children: subjects.map((s) => _SubjectProgressRow(
-        name: s['name'] as String,
-        score: s['score'] as double,
-        label: s['label'] as String,
-        isDark: isDark,
-      )).toList(),
+      children: subjects
+          .map(
+            (s) => _SubjectProgressRow(
+              name: s['name'] as String,
+              score: s['score'] as double,
+              label: s['label'] as String,
+              isDark: isDark,
+            ),
+          )
+          .toList(),
     );
   }
 }
@@ -141,17 +191,32 @@ class _DropdownSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: AppSpacing.s),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.m,
+        vertical: AppSpacing.s,
+      ),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
         borderRadius: BorderRadius.circular(AppSpacing.s),
-        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight)),
-          Icon(Icons.keyboard_arrow_down, color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+          Text(
+            label,
+            style: AppTypography.bodyMedium.copyWith(
+              color: isDark
+                  ? AppColors.textPrimaryDark
+                  : AppColors.textPrimaryLight,
+            ),
+          ),
+          Icon(
+            Icons.keyboard_arrow_down,
+            color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+          ),
         ],
       ),
     );
@@ -163,7 +228,11 @@ class _StatBox extends StatelessWidget {
   final String value;
   final bool isDark;
 
-  const _StatBox({required this.label, required this.value, required this.isDark});
+  const _StatBox({
+    required this.label,
+    required this.value,
+    required this.isDark,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -172,13 +241,30 @@ class _StatBox extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
         borderRadius: BorderRadius.circular(AppSpacing.m),
-        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+        ),
       ),
       child: Column(
         children: [
-          Text(label, style: AppTypography.labelSmall.copyWith(color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight)),
+          Text(
+            label,
+            style: AppTypography.labelSmall.copyWith(
+              color: isDark
+                  ? AppColors.textMutedDark
+                  : AppColors.textMutedLight,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(value, style: AppTypography.titleMedium.copyWith(color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight, fontWeight: FontWeight.bold)),
+          Text(
+            value,
+            style: AppTypography.titleMedium.copyWith(
+              color: isDark
+                  ? AppColors.textPrimaryDark
+                  : AppColors.textPrimaryLight,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
@@ -191,7 +277,12 @@ class _SubjectProgressRow extends StatelessWidget {
   final String label;
   final bool isDark;
 
-  const _SubjectProgressRow({required this.name, required this.score, required this.label, required this.isDark});
+  const _SubjectProgressRow({
+    required this.name,
+    required this.score,
+    required this.label,
+    required this.isDark,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -203,15 +294,34 @@ class _SubjectProgressRow extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(name, style: AppTypography.bodySmall.copyWith(color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight)),
-              Text(label, style: AppTypography.bodySmall.copyWith(color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight, fontWeight: FontWeight.bold)),
+              Text(
+                name,
+                style: AppTypography.bodySmall.copyWith(
+                  color: isDark
+                      ? AppColors.textMutedDark
+                      : AppColors.textMutedLight,
+                ),
+              ),
+              Text(
+                label,
+                style: AppTypography.bodySmall.copyWith(
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 4),
           LinearProgressIndicator(
             value: score,
-            backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.royalBlue),
+            backgroundColor: isDark
+                ? AppColors.surfaceDark
+                : AppColors.surfaceLight,
+            valueColor: const AlwaysStoppedAnimation<Color>(
+              AppColors.royalBlue,
+            ),
             borderRadius: BorderRadius.circular(2),
           ),
         ],

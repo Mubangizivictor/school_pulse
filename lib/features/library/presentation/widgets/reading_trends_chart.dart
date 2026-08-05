@@ -11,7 +11,7 @@ class ReadingTrendsChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final sortedKeys = monthlyData.keys.toList()..sort();
     final spots = <FlSpot>[];
-    
+
     for (int i = 0; i < sortedKeys.length; i++) {
       spots.add(FlSpot(i.toDouble(), monthlyData[sortedKeys[i]]!.toDouble()));
     }
@@ -52,7 +52,10 @@ class ReadingTrendsChart extends StatelessWidget {
                       axisSide: meta.axisSide,
                       child: Text(
                         DateFormat('MMM').format(date),
-                        style: const TextStyle(fontSize: 10, color: Colors.grey),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey,
+                        ),
                       ),
                     );
                   }
@@ -73,8 +76,12 @@ class ReadingTrendsChart extends StatelessWidget {
                 reservedSize: 28,
               ),
             ),
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
           ),
           borderData: FlBorderData(show: false),
           lineBarsData: [
@@ -87,7 +94,9 @@ class ReadingTrendsChart extends StatelessWidget {
               dotData: const FlDotData(show: true),
               belowBarData: BarAreaData(
                 show: true,
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.1),
               ),
             ),
           ],

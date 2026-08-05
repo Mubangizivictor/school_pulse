@@ -96,12 +96,16 @@ class NotificationRemoteDataSourceImpl implements NotificationRemoteDataSource {
       query = query.where('category', isEqualTo: q.categories.first.name);
     }
     if (q.from != null) {
-      query = query.where('createdAt',
-          isGreaterThanOrEqualTo: Timestamp.fromDate(q.from!));
+      query = query.where(
+        'createdAt',
+        isGreaterThanOrEqualTo: Timestamp.fromDate(q.from!),
+      );
     }
     if (q.to != null) {
-      query =
-          query.where('createdAt', isLessThanOrEqualTo: Timestamp.fromDate(q.to!));
+      query = query.where(
+        'createdAt',
+        isLessThanOrEqualTo: Timestamp.fromDate(q.to!),
+      );
     }
 
     query = query.orderBy('createdAt', descending: true);
@@ -294,12 +298,11 @@ class NotificationRemoteDataSourceImpl implements NotificationRemoteDataSource {
   DocumentReference<Map<String, dynamic>> _preferencesDoc(
     String schoolId,
     String userId,
-  ) =>
-      firestore
-          .collection('schools')
-          .doc(schoolId)
-          .collection('notification_settings')
-          .doc(userId);
+  ) => firestore
+      .collection('schools')
+      .doc(schoolId)
+      .collection('notification_settings')
+      .doc(userId);
 
   @override
   Future<NotificationPreferences?> getPreferences({

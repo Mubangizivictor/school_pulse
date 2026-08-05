@@ -58,14 +58,14 @@ class NotificationCenterFilterChanged extends NotificationCenterEvent {
 
   @override
   List<Object?> get props => [
-        categories,
-        priorities,
-        isRead,
-        pinnedOnly,
-        includeArchived,
-        relatedStudentId,
-        reset,
-      ];
+    categories,
+    priorities,
+    isRead,
+    pinnedOnly,
+    includeArchived,
+    relatedStudentId,
+    reset,
+  ];
 }
 
 class NotificationCenterSearched extends NotificationCenterEvent {
@@ -130,7 +130,10 @@ class NotificationArchiveToggled extends NotificationCenterEvent {
   final String notificationId;
   final bool archived;
 
-  const NotificationArchiveToggled(this.notificationId, {required this.archived});
+  const NotificationArchiveToggled(
+    this.notificationId, {
+    required this.archived,
+  });
 
   @override
   List<Object?> get props => [notificationId, archived];

@@ -6,7 +6,8 @@ import '../../domain/services/nfc_credential_service.dart';
 import 'student_identity_event.dart';
 import 'student_identity_state.dart';
 
-class StudentIdentityBloc extends Bloc<StudentIdentityEvent, StudentIdentityState> {
+class StudentIdentityBloc
+    extends Bloc<StudentIdentityEvent, StudentIdentityState> {
   final StudentIdentityRepository repository;
   final NfcCredentialService nfcCredentialService;
 
@@ -20,7 +21,10 @@ class StudentIdentityBloc extends Bloc<StudentIdentityEvent, StudentIdentityStat
       await result.fold(
         (failure) async => emit(StudentIdentityError(failure.message)),
         (identity) async {
-          final cardUid = await _lookupAssignedCard(identity.uniqueSystemId, event.schoolId);
+          final cardUid = await _lookupAssignedCard(
+            identity.uniqueSystemId,
+            event.schoolId,
+          );
           emit(StudentIdentityLoaded(identity, assignedCardUid: cardUid));
         },
       );
@@ -112,7 +116,10 @@ class StudentIdentityBloc extends Bloc<StudentIdentityEvent, StudentIdentityStat
     });
   }
 
-  Future<String?> _lookupAssignedCard(String uniqueSystemId, String schoolId) async {
+  Future<String?> _lookupAssignedCard(
+    String uniqueSystemId,
+    String schoolId,
+  ) async {
     final result = await nfcCredentialService.findAssignedCardForStudent(
       uniqueSystemId: uniqueSystemId,
       schoolId: schoolId,
@@ -137,8 +144,17 @@ class StudentIdentityBloc extends Bloc<StudentIdentityEvent, StudentIdentityStat
         await identityResult.fold(
           (failure) async => emit(StudentIdentityError(failure.message)),
           (identity) async {
-            final cardUid = await _lookupAssignedCard(identity.uniqueSystemId, schoolId);
-            emit(StudentIdentityActionSuccess(successMessage, identity, assignedCardUid: cardUid));
+            final cardUid = await _lookupAssignedCard(
+              identity.uniqueSystemId,
+              schoolId,
+            );
+            emit(
+              StudentIdentityActionSuccess(
+                successMessage,
+                identity,
+                assignedCardUid: cardUid,
+              ),
+            );
           },
         );
       },

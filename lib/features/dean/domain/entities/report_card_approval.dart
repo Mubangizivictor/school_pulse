@@ -25,14 +25,14 @@ class ReportCardApproval extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        studentId,
-        studentName,
-        className,
-        averageScore,
-        term,
-        year,
-        isApproved,
-        rejectionReason,
-      ];
+    id,
+    studentId,
+    studentName,
+    className,
+    averageScore,
+    term,
+    year,
+    isApproved,
+    rejectionReason,
+  ];
 }

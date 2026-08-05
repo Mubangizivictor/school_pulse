@@ -11,20 +11,28 @@ import '../repositories/relationship_repository.dart';
 /// sponsors/foster/relative/caregiver/institutionAppointed/custom links
 /// are not counted against it, matching the spec's "standard parent
 /// portal links" wording.
-const _standardGuardianTypes = {RelationshipType.parent, RelationshipType.guardian};
+const _standardGuardianTypes = {
+  RelationshipType.parent,
+  RelationshipType.guardian,
+};
 
 class GuardianLimitExceededFailure extends Failure {
   const GuardianLimitExceededFailure(int limit)
-      : super('This student already has the maximum of $limit standard parent/guardian links.');
+    : super(
+        'This student already has the maximum of $limit standard parent/guardian links.',
+      );
 }
 
-class CreateRelationship implements UseCase<ParentStudentRelationship, CreateRelationshipParams> {
+class CreateRelationship
+    implements UseCase<ParentStudentRelationship, CreateRelationshipParams> {
   final RelationshipRepository repository;
 
   CreateRelationship(this.repository);
 
   @override
-  Future<Either<Failure, ParentStudentRelationship>> call(CreateRelationshipParams params) async {
+  Future<Either<Failure, ParentStudentRelationship>> call(
+    CreateRelationshipParams params,
+  ) async {
     if (_standardGuardianTypes.contains(params.type)) {
       PeoplePolicy? policy;
       final policyResult = await repository.getPeoplePolicy(params.schoolId);
@@ -35,15 +43,19 @@ class CreateRelationship implements UseCase<ParentStudentRelationship, CreateRel
       if (policyFailure != null) return Left(policyFailure);
 
       List<ParentStudentRelationship>? existing;
-      final existingResult = await repository.getRelationshipsForStudent(params.schoolId, params.studentId);
+      final existingResult = await repository.getRelationshipsForStudent(
+        params.schoolId,
+        params.studentId,
+      );
       final existingFailure = existingResult.fold((f) => f, (e) {
         existing = e;
         return null;
       });
       if (existingFailure != null) return Left(existingFailure);
 
-      final activeStandardCount =
-          existing!.where((r) => r.isActive && _standardGuardianTypes.contains(r.type)).length;
+      final activeStandardCount = existing!
+          .where((r) => r.isActive && _standardGuardianTypes.contains(r.type))
+          .length;
       if (activeStandardCount >= policy!.maxStandardGuardians) {
         return Left(GuardianLimitExceededFailure(policy!.maxStandardGuardians));
       }
@@ -84,6 +96,14 @@ class CreateRelationshipParams extends Equatable {
   });
 
   @override
-  List<Object?> get props =>
-      [schoolId, studentId, userId, parentCode, type, isLegalGuardian, isPrimaryGuardian, createdBy];
+  List<Object?> get props => [
+    schoolId,
+    studentId,
+    userId,
+    parentCode,
+    type,
+    isLegalGuardian,
+    isPrimaryGuardian,
+    createdBy,
+  ];
 }

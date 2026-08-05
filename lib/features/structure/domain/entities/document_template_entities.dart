@@ -7,6 +7,7 @@ import 'package:equatable/equatable.dart';
 /// ReportTemplate for report-card layout).
 class DocumentTemplateDef extends Equatable {
   final String id;
+  final String schoolId;
   final String name;
   final String templateType;
   final String description;
@@ -14,6 +15,7 @@ class DocumentTemplateDef extends Equatable {
 
   const DocumentTemplateDef({
     required this.id,
+    required this.schoolId,
     required this.name,
     this.templateType = '',
     this.description = '',
@@ -22,6 +24,7 @@ class DocumentTemplateDef extends Equatable {
 
   DocumentTemplateDef copyWith({
     String? id,
+    String? schoolId,
     String? name,
     String? templateType,
     String? description,
@@ -29,6 +32,7 @@ class DocumentTemplateDef extends Equatable {
   }) {
     return DocumentTemplateDef(
       id: id ?? this.id,
+      schoolId: schoolId ?? this.schoolId,
       name: name ?? this.name,
       templateType: templateType ?? this.templateType,
       description: description ?? this.description,
@@ -37,5 +41,12 @@ class DocumentTemplateDef extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, name, templateType, description, isActive];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    name,
+    templateType,
+    description,
+    isActive,
+  ];
 }

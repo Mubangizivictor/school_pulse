@@ -29,17 +29,17 @@ class DirectorApproval extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        requesterName,
-        department,
-        title,
-        description,
-        amount,
-        dateRequested,
-        status,
-        attachments,
-        timeline,
-      ];
+    id,
+    requesterName,
+    department,
+    title,
+    description,
+    amount,
+    dateRequested,
+    status,
+    attachments,
+    timeline,
+  ];
 }
 
 class ApprovalStep extends Equatable {

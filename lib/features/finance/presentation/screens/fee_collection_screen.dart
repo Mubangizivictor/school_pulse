@@ -35,22 +35,22 @@ class _FeeCollectionScreenState extends State<FeeCollectionScreen> {
     return BlocListener<FinanceBloc, FinanceState>(
       listener: (context, state) {
         if (state is FinanceActionSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.message)));
           // Re-load profile to show updated balance
           if (_selectedStudent != null) {
-            context.read<FinanceBloc>().add(LoadStudentFinancialProfile(
-                  studentId: _selectedStudent!.id,
-                  schoolId: _selectedStudent!.schoolId,
-                ));
+            context.read<FinanceBloc>().add(
+              LoadStudentFinancialProfile(
+                studentId: _selectedStudent!.id,
+                schoolId: _selectedStudent!.schoolId,
+              ),
+            );
           }
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Collect Fees'),
-        ),
+        appBar: AppBar(title: const Text('Collect Fees')),
         body: Column(
           children: [
             Padding(
@@ -66,7 +66,9 @@ class _FeeCollectionScreenState extends State<FeeCollectionScreen> {
               ),
             ),
             Expanded(
-              child: _selectedStudent == null ? _buildStudentSearchList() : _buildFinancialProfile(),
+              child: _selectedStudent == null
+                  ? _buildStudentSearchList()
+                  : _buildFinancialProfile(),
             ),
           ],
         ),
@@ -100,10 +102,12 @@ class _FeeCollectionScreenState extends State<FeeCollectionScreen> {
                   setState(() {
                     _selectedStudent = student;
                   });
-                  context.read<FinanceBloc>().add(LoadStudentFinancialProfile(
-                        studentId: student.id,
-                        schoolId: student.schoolId,
-                      ));
+                  context.read<FinanceBloc>().add(
+                    LoadStudentFinancialProfile(
+                      studentId: student.id,
+                      schoolId: student.schoolId,
+                    ),
+                  );
                 },
               );
             },
@@ -137,8 +141,14 @@ class _FeeCollectionScreenState extends State<FeeCollectionScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(_selectedStudent!.name, style: Theme.of(context).textTheme.titleLarge),
-                          Text(_selectedStudent!.studentCode, style: Theme.of(context).textTheme.bodyMedium),
+                          Text(
+                            _selectedStudent!.name,
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          Text(
+                            _selectedStudent!.studentCode,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
                         ],
                       ),
                     ),
@@ -156,7 +166,9 @@ class _FeeCollectionScreenState extends State<FeeCollectionScreen> {
                     child: KPICard(
                       title: 'Balance Due',
                       value: CurrencyFormatter.ugx(account.balance),
-                      color: account.balance > 0 ? semanticColors.error : semanticColors.success,
+                      color: account.balance > 0
+                          ? semanticColors.error
+                          : semanticColors.success,
                       icon: Icons.account_balance_wallet,
                     ),
                   ),
@@ -180,12 +192,17 @@ class _FeeCollectionScreenState extends State<FeeCollectionScreen> {
               const SizedBox(height: 24),
               const SectionHeader(title: 'Payment History'),
               if (state.paymentHistory.isEmpty)
-                const Center(child: Padding(
-                  padding: EdgeInsets.all(32.0),
-                  child: Text('No previous payments found'),
-                ))
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32.0),
+                    child: Text('No previous payments found'),
+                  ),
+                )
               else
-                ...state.paymentHistory.map((p) => TransactionTile(transaction: p, colors: semanticColors)),
+                ...state.paymentHistory.map(
+                  (p) =>
+                      TransactionTile(transaction: p, colors: semanticColors),
+                ),
             ],
           );
         }
@@ -203,10 +220,8 @@ class _FeeCollectionScreenState extends State<FeeCollectionScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => _PaymentForm(
-        student: _selectedStudent!,
-        account: account,
-      ),
+      builder: (context) =>
+          _PaymentForm(student: _selectedStudent!, account: account),
     );
   }
 }
@@ -240,7 +255,10 @@ class _PaymentFormState extends State<_PaymentForm> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Record Payment', style: Theme.of(context).textTheme.headlineSmall),
+          Text(
+            'Record Payment',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
           const SizedBox(height: 20),
           TextField(
             controller: _amountController,
@@ -254,10 +272,17 @@ class _PaymentFormState extends State<_PaymentForm> {
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
             initialValue: _paymentMethod,
-            decoration: const InputDecoration(labelText: 'Payment Method', border: OutlineInputBorder()),
-            items: ['Cash', 'Bank Deposit', 'Bank Transfer', 'Mobile Money', 'Cheque']
-                .map((m) => DropdownMenuItem(value: m, child: Text(m)))
-                .toList(),
+            decoration: const InputDecoration(
+              labelText: 'Payment Method',
+              border: OutlineInputBorder(),
+            ),
+            items: [
+              'Cash',
+              'Bank Deposit',
+              'Bank Transfer',
+              'Mobile Money',
+              'Cheque',
+            ].map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
             onChanged: (val) => setState(() => _paymentMethod = val!),
           ),
           const SizedBox(height: 16),
@@ -340,9 +365,9 @@ class KPICard extends StatelessWidget {
           Text(
             value,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
           ),
         ],
       ),
@@ -354,7 +379,11 @@ class TransactionTile extends StatelessWidget {
   final dynamic transaction;
   final SemanticColors colors;
 
-  const TransactionTile({super.key, required this.transaction, required this.colors});
+  const TransactionTile({
+    super.key,
+    required this.transaction,
+    required this.colors,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -372,8 +401,14 @@ class TransactionTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(transaction.receiptNumber, style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text(transaction.method, style: Theme.of(context).textTheme.labelSmall),
+                Text(
+                  transaction.receiptNumber,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  transaction.method,
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
               ],
             ),
           ),
@@ -382,21 +417,34 @@ class TransactionTile extends StatelessWidget {
             children: [
               Text(
                 CurrencyFormatter.ugx(transaction.amount),
-                style: TextStyle(fontWeight: FontWeight.bold, color: colors.success),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: colors.success,
+                ),
               ),
-              Text(DateFormatter.format(transaction.date), style: Theme.of(context).textTheme.labelSmall),
+              Text(
+                DateFormatter.format(transaction.date),
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
               IconButton(
                 icon: const Icon(Icons.print, size: 20),
                 onPressed: () {
-                  final studentName = context.read<FinanceBloc>().state is StudentFinancialProfileLoaded
-                      ? (context.read<FinanceBloc>().state as StudentFinancialProfileLoaded).account.studentId
+                  final studentName =
+                      context.read<FinanceBloc>().state
+                          is StudentFinancialProfileLoaded
+                      ? (context.read<FinanceBloc>().state
+                                as StudentFinancialProfileLoaded)
+                            .account
+                            .studentId
                       : 'Student';
                   // In a real app, we'd get the name correctly.
-                  context.read<FinanceBloc>().add(PrintReceipt(
-                        payment: transaction,
-                        studentName: studentName,
-                        className: 'Class',
-                      ));
+                  context.read<FinanceBloc>().add(
+                    PrintReceipt(
+                      payment: transaction,
+                      studentName: studentName,
+                      className: 'Class',
+                    ),
+                  );
                 },
               ),
             ],

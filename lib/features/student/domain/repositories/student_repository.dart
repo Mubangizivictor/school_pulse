@@ -20,10 +20,14 @@ abstract class StudentRepository {
     String? parentPhone,
     String? classId,
   });
+
   /// [recordedBy] is the acting staff uid, used to attribute a
   /// student_enrolments history record whenever this edit actually changes
   /// placement (classId/streamId/academicYearId).
-  Future<Either<Failure, void>> updateStudent(Student student, {required String recordedBy});
+  Future<Either<Failure, void>> updateStudent(
+    Student student, {
+    required String recordedBy,
+  });
   Future<Either<Failure, void>> updateStudentStatus(
     String studentId,
     StudentStatus status,

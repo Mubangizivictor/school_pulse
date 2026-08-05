@@ -36,7 +36,8 @@ class MessagingUserBuilder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
-      buildWhen: (previous, current) => current is AuthAuthenticated || current is AuthUnauthenticated,
+      buildWhen: (previous, current) =>
+          current is AuthAuthenticated || current is AuthUnauthenticated,
       builder: (context, state) {
         if (state is! AuthAuthenticated) {
           return const Center(child: CircularProgressIndicator());

@@ -77,12 +77,18 @@ class SystemConfig {
       secondaryColor: map['secondaryColor'],
       currentTerm: map['currentTerm'] ?? '',
       academicYear: map['academicYear'] ?? '',
-      termStart: DateTime.parse(map['termStart'] ?? DateTime.now().toIso8601String()),
-      termEnd: DateTime.parse(map['termEnd'] ?? DateTime.now().toIso8601String()),
+      termStart: DateTime.parse(
+        map['termStart'] ?? DateTime.now().toIso8601String(),
+      ),
+      termEnd: DateTime.parse(
+        map['termEnd'] ?? DateTime.now().toIso8601String(),
+      ),
       mfaEnabled: map['mfaEnabled'] ?? false,
       smsGatewayStatus: map['smsGatewayStatus'] ?? 'Disconnected',
       smsCredits: map['smsCredits'] ?? 0,
-      studentPortalConfig: StudentPortalConfig.fromMap(map['studentPortalConfig'] ?? {}),
+      studentPortalConfig: StudentPortalConfig.fromMap(
+        map['studentPortalConfig'] ?? {},
+      ),
       visitorGates: map['visitorGates'] != null
           ? List<String>.from(map['visitorGates'])
           : const ['Main Gate'],
@@ -131,4 +137,3 @@ class SystemConfig {
     );
   }
 }
-

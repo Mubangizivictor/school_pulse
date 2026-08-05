@@ -16,92 +16,79 @@ class MoreMenuScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _buildMenuSection(
-            context,
-            'Services',
-            [
-              _MenuTile(
-                icon: Icons.calendar_month_outlined,
-                title: 'School Calendar',
-                onTap: () => context.push('/parent/calendar'),
-              ),
-              _MenuTile(
-                icon: Icons.health_and_safety_outlined,
-                title: 'Health',
-                onTap: () => context.push('/parent/health'),
-              ),
-              _MenuTile(
-                icon: Icons.library_books_outlined,
-                title: 'Library',
-                onTap: () => context.push('/parent/library'),
-              ),
-              _MenuTile(
-                icon: Icons.gavel_outlined,
-                title: 'Discipline',
-                onTap: () => context.push('/parent/discipline'),
-              ),
-              _MenuTile(
-                icon: Icons.directions_bus_outlined,
-                title: 'Transport',
-                onTap: () => context.push('/parent/transport'),
-              ),
-              _MenuTile(
-                icon: Icons.bed_outlined,
-                title: 'Boarding',
-                onTap: () => context.push('/parent/boarding'),
-              ),
-              _MenuTile(
-                icon: Icons.security_outlined,
-                title: 'Security & Safety',
-                onTap: () => context.push('/parent/security'),
-              ),
-            ],
-          ),
+          _buildMenuSection(context, 'Services', [
+            _MenuTile(
+              icon: Icons.calendar_month_outlined,
+              title: 'School Calendar',
+              onTap: () => context.push('/parent/calendar'),
+            ),
+            _MenuTile(
+              icon: Icons.health_and_safety_outlined,
+              title: 'Health',
+              onTap: () => context.push('/parent/health'),
+            ),
+            _MenuTile(
+              icon: Icons.library_books_outlined,
+              title: 'Library',
+              onTap: () => context.push('/parent/library'),
+            ),
+            _MenuTile(
+              icon: Icons.gavel_outlined,
+              title: 'Discipline',
+              onTap: () => context.push('/parent/discipline'),
+            ),
+            _MenuTile(
+              icon: Icons.directions_bus_outlined,
+              title: 'Transport',
+              onTap: () => context.push('/parent/transport'),
+            ),
+            _MenuTile(
+              icon: Icons.bed_outlined,
+              title: 'Boarding',
+              onTap: () => context.push('/parent/boarding'),
+            ),
+            _MenuTile(
+              icon: Icons.security_outlined,
+              title: 'Security & Safety',
+              onTap: () => context.push('/parent/security'),
+            ),
+          ]),
           const SizedBox(height: 24),
-          _buildMenuSection(
-            context,
-            'Account',
-            [
-              _MenuTile(
-                icon: Icons.person_outline,
-                title: 'Profile',
-                onTap: () => context.push('/parent/profile'),
-              ),
-              _MenuTile(
-                icon: Icons.notifications_outlined,
-                title: 'Notifications',
-                onTap: () => context.push('/parent/notifications'),
-              ),
-              _MenuTile(
-                icon: Icons.settings_outlined,
-                title: 'Settings',
-                onTap: () => context.push('/parent/profile'),
-              ),
-            ],
-          ),
+          _buildMenuSection(context, 'Account', [
+            _MenuTile(
+              icon: Icons.person_outline,
+              title: 'Profile',
+              onTap: () => context.push('/parent/profile'),
+            ),
+            _MenuTile(
+              icon: Icons.notifications_outlined,
+              title: 'Notifications',
+              onTap: () => context.push('/parent/notifications'),
+            ),
+            _MenuTile(
+              icon: Icons.settings_outlined,
+              title: 'Settings',
+              onTap: () => context.push('/parent/profile'),
+            ),
+          ]),
           const SizedBox(height: 24),
-          _buildMenuSection(
-            context,
-            'Support',
-            [
-              _MenuTile(
-                icon: Icons.help_outline,
-                title: 'Help Center',
-                onTap: () => _showHelpDialog(context),
+          _buildMenuSection(context, 'Support', [
+            _MenuTile(
+              icon: Icons.help_outline,
+              title: 'Help Center',
+              onTap: () => _showHelpDialog(context),
+            ),
+            _MenuTile(
+              icon: Icons.info_outline,
+              title: 'About School Pulse',
+              onTap: () => showAboutDialog(
+                context: context,
+                applicationName: 'School Pulse',
+                applicationVersion: '1.0.0',
+                applicationLegalese: 'A school management platform for Uganda.',
               ),
-              _MenuTile(
-                icon: Icons.info_outline,
-                title: 'About School Pulse',
-                onTap: () => showAboutDialog(
-                  context: context,
-                  applicationName: 'School Pulse',
-                  applicationVersion: '1.0.0',
-                  applicationLegalese:
-                      'A school management platform for Uganda.',
-                ),
-              ),
-            ],
-          ),
+            ),
+          ]),
           const SizedBox(height: 32),
           SecondaryButton(
             label: 'Logout',
@@ -144,7 +131,11 @@ class MoreMenuScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMenuSection(BuildContext context, String title, List<Widget> children) {
+  Widget _buildMenuSection(
+    BuildContext context,
+    String title,
+    List<Widget> children,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -153,9 +144,9 @@ class MoreMenuScreen extends StatelessWidget {
           child: Text(
             title,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
+            ),
           ),
         ),
         AppCard(

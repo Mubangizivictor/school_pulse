@@ -40,12 +40,14 @@ class _EmergencyDetailScreenState extends State<EmergencyDetailScreen> {
     final authState = context.read<AuthBloc>().state;
     if (authState is! AuthAuthenticated) return;
     setState(() => _isResolving = true);
-    context.read<SecurityBloc>().add(ResolveEmergencyRequested(
-          authState.user.schoolId,
-          widget.emergency.id,
-          DateTime.now(),
-          _actions,
-        ));
+    context.read<SecurityBloc>().add(
+      ResolveEmergencyRequested(
+        authState.user.schoolId,
+        widget.emergency.id,
+        DateTime.now(),
+        _actions,
+      ),
+    );
   }
 
   @override
@@ -54,12 +56,17 @@ class _EmergencyDetailScreenState extends State<EmergencyDetailScreen> {
     final isActive = emergency.status == 'Active';
 
     return BlocListener<SecurityBloc, SecurityState>(
-      listenWhen: (previous, current) => !identical(previous.feedback, current.feedback) && current.feedback != null,
+      listenWhen: (previous, current) =>
+          !identical(previous.feedback, current.feedback) &&
+          current.feedback != null,
       listener: (context, state) {
         setState(() => _isResolving = false);
         final feedback = state.feedback!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(feedback.message), backgroundColor: feedback.isError ? Colors.red : null),
+          SnackBar(
+            content: Text(feedback.message),
+            backgroundColor: feedback.isError ? Colors.red : null,
+          ),
         );
         if (!feedback.isError) Navigator.pop(context);
       },
@@ -74,47 +81,72 @@ class _EmergencyDetailScreenState extends State<EmergencyDetailScreen> {
           children: [
             Chip(
               label: Text(emergency.status),
-              backgroundColor: isActive ? Colors.red.shade100 : Colors.green.shade100,
+              backgroundColor: isActive
+                  ? Colors.red.shade100
+                  : Colors.green.shade100,
             ),
             const SizedBox(height: 12),
-            Text(emergency.description.isEmpty ? 'No description provided' : emergency.description),
+            Text(
+              emergency.description.isEmpty
+                  ? 'No description provided'
+                  : emergency.description,
+            ),
             const SizedBox(height: 8),
-            Text('Started: ${emergency.startTime.toLocal().toString().split('.').first}', style: Theme.of(context).textTheme.bodySmall),
+            Text(
+              'Started: ${emergency.startTime.toLocal().toString().split('.').first}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
             if (emergency.endTime != null)
-              Text('Resolved: ${emergency.endTime!.toLocal().toString().split('.').first}', style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                'Resolved: ${emergency.endTime!.toLocal().toString().split('.').first}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             const SizedBox(height: 20),
             OutlinedButton.icon(
               onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const EmergencyRollCallPage()),
+                MaterialPageRoute(
+                  builder: (_) => const EmergencyRollCallPage(),
+                ),
               ),
               icon: const Icon(Icons.groups_outlined),
               label: const Text('Start Roll Call'),
             ),
             const SizedBox(height: 24),
-            Text('Response Actions', style: Theme.of(context).textTheme.titleSmall),
+            Text(
+              'Response Actions',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
             const SizedBox(height: 8),
-            ..._actions.map((a) => ListTile(
-                  dense: true,
-                  leading: const Icon(Icons.check_circle_outline, size: 18),
-                  title: Text(a),
-                  trailing: isActive
-                      ? IconButton(
-                          icon: const Icon(Icons.close, size: 18),
-                          onPressed: () => setState(() => _actions.remove(a)),
-                        )
-                      : null,
-                )),
+            ..._actions.map(
+              (a) => ListTile(
+                dense: true,
+                leading: const Icon(Icons.check_circle_outline, size: 18),
+                title: Text(a),
+                trailing: isActive
+                    ? IconButton(
+                        icon: const Icon(Icons.close, size: 18),
+                        onPressed: () => setState(() => _actions.remove(a)),
+                      )
+                    : null,
+              ),
+            ),
             if (isActive)
               Row(
                 children: [
                   Expanded(
                     child: TextField(
                       controller: _actionController,
-                      decoration: const InputDecoration(labelText: 'Add response action', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(
+                        labelText: 'Add response action',
+                        border: OutlineInputBorder(),
+                      ),
                       onSubmitted: (_) => _addAction(),
                     ),
                   ),
-                  IconButton(icon: const Icon(Icons.add_circle), onPressed: _addAction),
+                  IconButton(
+                    icon: const Icon(Icons.add_circle),
+                    onPressed: _addAction,
+                  ),
                 ],
               ),
             const SizedBox(height: 24),
@@ -123,7 +155,11 @@ class _EmergencyDetailScreenState extends State<EmergencyDetailScreen> {
                 onPressed: _isResolving ? null : _resolve,
                 style: FilledButton.styleFrom(backgroundColor: Colors.green),
                 child: _isResolving
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
                     : const Text('Mark Resolved'),
               ),
           ],

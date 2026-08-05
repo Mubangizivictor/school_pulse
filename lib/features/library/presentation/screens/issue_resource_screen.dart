@@ -72,9 +72,13 @@ class _IssueResourceScreenState extends State<IssueResourceScreen> {
   void _calculateDueDate() {
     if (_policies.isEmpty) return;
     try {
-      final policy = _policies.firstWhere((p) => p.borrowerType == _borrowerType);
+      final policy = _policies.firstWhere(
+        (p) => p.borrowerType == _borrowerType,
+      );
       setState(() {
-        _dueDate = DateTime.now().add(Duration(days: policy.borrowDurationDays));
+        _dueDate = DateTime.now().add(
+          Duration(days: policy.borrowDurationDays),
+        );
       });
     } catch (_) {
       // Default to 14 days if no policy found
@@ -90,7 +94,9 @@ class _IssueResourceScreenState extends State<IssueResourceScreen> {
           _calculateDueDate();
         }
         if (state is LibraryActionSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.message)));
           Navigator.pop(context);
         }
       },
@@ -103,13 +109,16 @@ class _IssueResourceScreenState extends State<IssueResourceScreen> {
             const SizedBox(height: 24),
             _buildBorrowerSection(),
             const SizedBox(height: 24),
-            if (_selectedResource != null && _selectedBorrower != null) _buildIssueDetails(),
+            if (_selectedResource != null && _selectedBorrower != null)
+              _buildIssueDetails(),
           ],
         ),
         bottomNavigationBar: Padding(
           padding: const EdgeInsets.all(16),
           child: ElevatedButton(
-            onPressed: (_selectedResource != null && _selectedBorrower != null) ? _issueResource : null,
+            onPressed: (_selectedResource != null && _selectedBorrower != null)
+                ? _issueResource
+                : null,
             style: ElevatedButton.styleFrom(
               minimumSize: const Size.fromHeight(50),
               backgroundColor: Theme.of(context).colorScheme.primary,
@@ -161,7 +170,9 @@ class _IssueResourceScreenState extends State<IssueResourceScreen> {
             child: ListTile(
               leading: const Icon(Icons.book, size: 40),
               title: Text(_selectedResource!.title),
-              subtitle: Text('Author: ${_selectedResource!.author}\nShelf: ${_selectedResource!.shelf}'),
+              subtitle: Text(
+                'Author: ${_selectedResource!.author}\nShelf: ${_selectedResource!.shelf}',
+              ),
               trailing: IconButton(
                 icon: const Icon(Icons.close),
                 onPressed: () => setState(() => _selectedResource = null),
@@ -180,8 +191,16 @@ class _IssueResourceScreenState extends State<IssueResourceScreen> {
         const SizedBox(height: 12),
         SegmentedButton<String>(
           segments: const [
-            ButtonSegment(value: 'student', label: Text('Student'), icon: Icon(Icons.person)),
-            ButtonSegment(value: 'teacher', label: Text('Teacher'), icon: Icon(Icons.school)),
+            ButtonSegment(
+              value: 'student',
+              label: Text('Student'),
+              icon: Icon(Icons.person),
+            ),
+            ButtonSegment(
+              value: 'teacher',
+              label: Text('Teacher'),
+              icon: Icon(Icons.school),
+            ),
           ],
           selected: {_borrowerType},
           onSelectionChanged: (val) {
@@ -225,19 +244,19 @@ class _IssueResourceScreenState extends State<IssueResourceScreen> {
           AppCard(
             child: ListTile(
               leading: AvatarInitials(
-                name: _borrowerType == 'student' 
-                    ? (_selectedBorrower as Student).name 
-                    : (_selectedBorrower as UserEntity).name
+                name: _borrowerType == 'student'
+                    ? (_selectedBorrower as Student).name
+                    : (_selectedBorrower as UserEntity).name,
               ),
               title: Text(
-                _borrowerType == 'student' 
-                    ? (_selectedBorrower as Student).name 
-                    : (_selectedBorrower as UserEntity).name
+                _borrowerType == 'student'
+                    ? (_selectedBorrower as Student).name
+                    : (_selectedBorrower as UserEntity).name,
               ),
               subtitle: Text(
-                _borrowerType == 'student' 
-                    ? 'Code: ${(_selectedBorrower as Student).studentCode}' 
-                    : 'Staff Code: ${(_selectedBorrower as UserEntity).staffCode ?? 'N/A'}'
+                _borrowerType == 'student'
+                    ? 'Code: ${(_selectedBorrower as Student).studentCode}'
+                    : 'Staff Code: ${(_selectedBorrower as UserEntity).staffCode ?? 'N/A'}',
               ),
               trailing: IconButton(
                 icon: const Icon(Icons.close),
@@ -260,7 +279,9 @@ class _IssueResourceScreenState extends State<IssueResourceScreen> {
             children: [
               ListTile(
                 title: const Text('Due Date'),
-                subtitle: Text(DateFormat('EEEE, MMM d, yyyy').format(_dueDate)),
+                subtitle: Text(
+                  DateFormat('EEEE, MMM d, yyyy').format(_dueDate),
+                ),
                 trailing: const Icon(Icons.calendar_month),
                 onTap: _selectDueDate,
               ),
@@ -303,9 +324,13 @@ class _IssueResourceScreenState extends State<IssueResourceScreen> {
                 decoration: InputDecoration(
                   hintText: 'Search resources...',
                   prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                onChanged: (val) => context.read<LibraryBloc>().add(SearchResourcesRequested(widget.schoolId, val)),
+                onChanged: (val) => context.read<LibraryBloc>().add(
+                  SearchResourcesRequested(widget.schoolId, val),
+                ),
               ),
             ),
             Expanded(
@@ -355,9 +380,12 @@ class _IssueResourceScreenState extends State<IssueResourceScreen> {
                   decoration: InputDecoration(
                     hintText: 'Search students...',
                     prefixIcon: const Icon(Icons.person_search),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  onChanged: (val) => context.read<StudentsBloc>().add(SearchStudents(val)),
+                  onChanged: (val) =>
+                      context.read<StudentsBloc>().add(SearchStudents(val)),
                 ),
               ),
               Expanded(
@@ -430,11 +458,11 @@ class _IssueResourceScreenState extends State<IssueResourceScreen> {
       schoolId: widget.schoolId,
       resourceId: _selectedResource!.id,
       resourceTitle: _selectedResource!.title,
-      borrowerId: _borrowerType == 'student' 
-          ? (_selectedBorrower as Student).id 
+      borrowerId: _borrowerType == 'student'
+          ? (_selectedBorrower as Student).id
           : (_selectedBorrower as UserEntity).id,
-      borrowerName: _borrowerType == 'student' 
-          ? (_selectedBorrower as Student).name 
+      borrowerName: _borrowerType == 'student'
+          ? (_selectedBorrower as Student).name
           : (_selectedBorrower as UserEntity).name,
       borrowerType: _borrowerType,
       borrowDate: DateTime.now(),
@@ -481,7 +509,9 @@ class _TeacherSearchSheetState extends State<_TeacherSearchSheet> {
               decoration: InputDecoration(
                 hintText: 'Search staff by name or code...',
                 prefixIcon: const Icon(Icons.badge_outlined),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               onChanged: (val) => setState(() => _query = val.toLowerCase()),
             ),
@@ -497,9 +527,14 @@ class _TeacherSearchSheetState extends State<_TeacherSearchSheet> {
                   return const Center(child: Text('Error loading staff'));
                 }
 
-                final filtered = snapshot.data!.where((s) =>
-                    s.name.toLowerCase().contains(_query) ||
-                    (s.staffCode?.toLowerCase().contains(_query) ?? false)).toList();
+                final filtered = snapshot.data!
+                    .where(
+                      (s) =>
+                          s.name.toLowerCase().contains(_query) ||
+                          (s.staffCode?.toLowerCase().contains(_query) ??
+                              false),
+                    )
+                    .toList();
 
                 if (filtered.isEmpty) {
                   return const EmptyState(

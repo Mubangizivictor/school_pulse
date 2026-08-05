@@ -27,7 +27,8 @@ class VisitorBadgeWidget extends StatelessWidget {
 
   DateTime get _expiry {
     final arrival = visitor.arrivalTime;
-    return visitor.expectedDepartureTime ?? DateTime(arrival.year, arrival.month, arrival.day, 23, 59);
+    return visitor.expectedDepartureTime ??
+        DateTime(arrival.year, arrival.month, arrival.day, 23, 59);
   }
 
   @override
@@ -89,7 +90,7 @@ class VisitorBadgeWidget extends StatelessWidget {
             ],
           ),
           const Divider(height: 24, thickness: 1),
-          
+
           // Visitor Info
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -137,9 +138,20 @@ class VisitorBadgeWidget extends StatelessWidget {
                     const SizedBox(height: 8),
                     _InfoRow(label: 'Host', value: visitor.host),
                     _InfoRow(label: 'Dept', value: visitor.department),
-                    _InfoRow(label: 'Date', value: DateFormat('dd MMM yyyy').format(visitor.arrivalTime)),
-                    _InfoRow(label: 'In', value: DateFormat('HH:mm').format(visitor.arrivalTime)),
-                    _InfoRow(label: 'Expires', value: DateFormat('dd MMM, HH:mm').format(_expiry)),
+                    _InfoRow(
+                      label: 'Date',
+                      value: DateFormat(
+                        'dd MMM yyyy',
+                      ).format(visitor.arrivalTime),
+                    ),
+                    _InfoRow(
+                      label: 'In',
+                      value: DateFormat('HH:mm').format(visitor.arrivalTime),
+                    ),
+                    _InfoRow(
+                      label: 'Expires',
+                      value: DateFormat('dd MMM, HH:mm').format(_expiry),
+                    ),
                     if (visitor.badgeNumber.isNotEmpty)
                       _InfoRow(label: 'Badge #', value: visitor.badgeNumber),
                   ],
@@ -147,9 +159,9 @@ class VisitorBadgeWidget extends StatelessWidget {
               ),
             ],
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // QR and Purpose
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,

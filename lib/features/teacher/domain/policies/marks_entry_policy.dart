@@ -15,20 +15,21 @@ enum MarkRejection {
 
 extension MarkRejectionMessage on MarkRejection {
   String messageFor(double maximumMark) => switch (this) {
-        MarkRejection.belowZero => 'A mark cannot be negative.',
-        MarkRejection.aboveMaximum =>
-          'A mark cannot be more than ${_trim(maximumMark)}.',
-        MarkRejection.notANumber => 'Enter a number.',
-        MarkRejection.scoreWithoutStatus =>
-          'Give this student a mark or mark them absent, exempted or missing.',
-        MarkRejection.statusWithScore =>
-          'A student marked absent or exempted cannot also have a score.',
-        MarkRejection.studentNotEnrolled =>
-          'That student is not enrolled in this subject.',
-      };
+    MarkRejection.belowZero => 'A mark cannot be negative.',
+    MarkRejection.aboveMaximum =>
+      'A mark cannot be more than ${_trim(maximumMark)}.',
+    MarkRejection.notANumber => 'Enter a number.',
+    MarkRejection.scoreWithoutStatus =>
+      'Give this student a mark or mark them absent, exempted or missing.',
+    MarkRejection.statusWithScore =>
+      'A student marked absent or exempted cannot also have a score.',
+    MarkRejection.studentNotEnrolled =>
+      'That student is not enrolled in this subject.',
+  };
 
-  static String _trim(double value) =>
-      value == value.roundToDouble() ? value.round().toString() : value.toString();
+  static String _trim(double value) => value == value.roundToDouble()
+      ? value.round().toString()
+      : value.toString();
 }
 
 /// Why a whole submission was refused.
@@ -151,8 +152,9 @@ class MarksEntryPolicy {
       refusal = SubmissionRefusal.entryNotOpenYet;
     }
 
-    final relevant =
-        entries.where((e) => enrolledStudentIds.contains(e.studentId)).toList();
+    final relevant = entries
+        .where((e) => enrolledStudentIds.contains(e.studentId))
+        .toList();
 
     var entered = 0;
     var absent = 0;

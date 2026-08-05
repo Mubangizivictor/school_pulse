@@ -35,19 +35,31 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('REPORTS DASHBOARD',
-                style: TextStyle(
-                    color: AppColors.textMuted(context),
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.2)),
-            Text('Manage Class Reports',
-                style: TextStyle(color: AppColors.textPrimary(context), fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(
+              'REPORTS DASHBOARD',
+              style: TextStyle(
+                color: AppColors.textMuted(context),
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+              ),
+            ),
+            Text(
+              'Manage Class Reports',
+              style: TextStyle(
+                color: AppColors.textPrimary(context),
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.settings_outlined, color: AppColors.textPrimary(context)),
+            icon: Icon(
+              Icons.settings_outlined,
+              color: AppColors.textPrimary(context),
+            ),
             onPressed: () {},
           ),
         ],
@@ -68,20 +80,24 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
           if (message == null) return;
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(
-              content: Text(message),
-              backgroundColor: state.successMessage != null
-                  ? AppColors.success(context)
-                  : AppColors.danger(context),
-            ));
+            ..showSnackBar(
+              SnackBar(
+                content: Text(message),
+                backgroundColor: state.successMessage != null
+                    ? AppColors.success(context)
+                    : AppColors.danger(context),
+              ),
+            );
           context.read<ClassReportsBloc>().add(
-                const ClassReportsFeedbackCleared(),
-              );
+            const ClassReportsFeedbackCleared(),
+          );
         },
         builder: (context, state) {
           if (state.isLoading) {
             return Center(
-              child: CircularProgressIndicator(color: AppColors.primary(context)),
+              child: CircularProgressIndicator(
+                color: AppColors.primary(context),
+              ),
             );
           }
 
@@ -90,7 +106,8 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
             return const EmptyState(
               icon: Icons.class_outlined,
               title: 'No class assigned',
-              message: 'You are not currently the Class Teacher for any class, '
+              message:
+                  'You are not currently the Class Teacher for any class, '
                   'so there are no reports to work on.',
             );
           }
@@ -99,16 +116,18 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
             return EmptyState(
               icon: Icons.description_outlined,
               title: 'No reports to work on',
-              message: state.errorMessage ??
+              message:
+                  state.errorMessage ??
                   'No students have been placed in your class for this term.',
             );
           }
 
           final progress = state.progress;
           final active = contextState.active!;
-          final termLabel = [active.termName, active.academicYearName]
-              .where((e) => e.isNotEmpty)
-              .join(', ');
+          final termLabel = [
+            active.termName,
+            active.academicYearName,
+          ].where((e) => e.isNotEmpty).join(', ');
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -197,8 +216,11 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
                     color: AppColors.warning(context).withValues(alpha: 0.08),
                     child: Row(
                       children: [
-                        Icon(Icons.hourglass_empty,
-                            size: 18, color: AppColors.warning(context)),
+                        Icon(
+                          Icons.hourglass_empty,
+                          size: 18,
+                          color: AppColors.warning(context),
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
@@ -221,8 +243,11 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
                     onTap: () => context.push('/staff/reports/select-students'),
                     child: Row(
                       children: [
-                        Icon(Icons.assignment_return_outlined,
-                            size: 18, color: AppColors.danger(context)),
+                        Icon(
+                          Icons.assignment_return_outlined,
+                          size: 18,
+                          color: AppColors.danger(context),
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
@@ -235,8 +260,11 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
                             ),
                           ),
                         ),
-                        Icon(Icons.chevron_right,
-                            size: 18, color: AppColors.textMuted(context)),
+                        Icon(
+                          Icons.chevron_right,
+                          size: 18,
+                          color: AppColors.textMuted(context),
+                        ),
                       ],
                     ),
                   ),
@@ -253,7 +281,10 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
                         ? entry.studentId
                         : entry.studentName,
                     status: entry.status.label,
-                    missing: state.missingFor(entry).map((s) => s.label).toList(),
+                    missing: state
+                        .missingFor(entry)
+                        .map((s) => s.label)
+                        .toList(),
                     isReturned: entry.wasReturned,
                     onTap: () => context.push('/staff/reports/select-students'),
                   ),
@@ -288,8 +319,8 @@ class _ReportEntryCard extends StatelessWidget {
     final color = isReturned
         ? AppColors.danger(context)
         : (missing.isEmpty
-            ? AppColors.success(context)
-            : AppColors.warning(context));
+              ? AppColors.success(context)
+              : AppColors.warning(context));
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -348,17 +379,30 @@ class _StatMiniCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
+        border: Border.all(
+          color: AppColors.border(context).withValues(alpha: 0.5),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, size: 16, color: color),
           const SizedBox(height: 8),
-          Text(value,
-              style: TextStyle(
-                  color: AppColors.textPrimary(context), fontSize: 18, fontWeight: FontWeight.bold)),
-          Text(label, style: TextStyle(fontSize: 10, color: AppColors.textSecondary(context))),
+          Text(
+            value,
+            style: TextStyle(
+              color: AppColors.textPrimary(context),
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: AppColors.textSecondary(context),
+            ),
+          ),
         ],
       ),
     );

@@ -41,64 +41,72 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<ResolveAccessCodeRequested>(_onResolveAccessCode);
   }
 
-  Future<void> _onAuthCheckRequested(AuthCheckRequested event, Emitter<AuthState> emit) async {
+  Future<void> _onAuthCheckRequested(
+    AuthCheckRequested event,
+    Emitter<AuthState> emit,
+  ) async {
     emit(AuthLoading());
     final result = await getCurrentUser(NoParams());
-    result.fold(
-      (failure) => emit(AuthUnauthenticated()),
-      (user) {
-        if (user != null) _syncNotifications(user);
-        emit(user != null ? AuthAuthenticated(user) : AuthUnauthenticated());
-      },
-    );
+    result.fold((failure) => emit(AuthUnauthenticated()), (user) {
+      if (user != null) _syncNotifications(user);
+      emit(user != null ? AuthAuthenticated(user) : AuthUnauthenticated());
+    });
   }
 
-  Future<void> _onLoginWithEmail(LoginWithEmailPressed event, Emitter<AuthState> emit) async {
+  Future<void> _onLoginWithEmail(
+    LoginWithEmailPressed event,
+    Emitter<AuthState> emit,
+  ) async {
     emit(AuthLoading());
-    final result = await loginWithEmail(LoginParams(email: event.email, password: event.password));
-    result.fold(
-      (failure) => emit(AuthFailureState(failure.message)),
-      (user) {
-        _syncNotifications(user);
-        emit(AuthAuthenticated(user));
-      },
+    final result = await loginWithEmail(
+      LoginParams(email: event.email, password: event.password),
     );
+    result.fold((failure) => emit(AuthFailureState(failure.message)), (user) {
+      _syncNotifications(user);
+      emit(AuthAuthenticated(user));
+    });
   }
 
-  Future<void> _onLoginParent(LoginParentPressed event, Emitter<AuthState> emit) async {
+  Future<void> _onLoginParent(
+    LoginParentPressed event,
+    Emitter<AuthState> emit,
+  ) async {
     emit(AuthLoading());
-    final result = await loginParent(LoginParentParams(
-      code: event.code,
-      phoneNumber: event.phoneNumber,
-      pin: event.pin,
-    ));
-    result.fold(
-      (failure) => emit(AuthFailureState(failure.message)),
-      (user) {
-        _syncNotifications(user);
-        emit(AuthAuthenticated(user));
-      },
+    final result = await loginParent(
+      LoginParentParams(
+        code: event.code,
+        phoneNumber: event.phoneNumber,
+        pin: event.pin,
+      ),
     );
+    result.fold((failure) => emit(AuthFailureState(failure.message)), (user) {
+      _syncNotifications(user);
+      emit(AuthAuthenticated(user));
+    });
   }
 
-  Future<void> _onCompleteParentPinSetup(CompleteParentPinSetupRequested event, Emitter<AuthState> emit) async {
+  Future<void> _onCompleteParentPinSetup(
+    CompleteParentPinSetupRequested event,
+    Emitter<AuthState> emit,
+  ) async {
     emit(AuthLoading());
-    final result = await completeParentPinSetup(CompleteParentPinSetupParams(
-      code: event.code,
-      phoneNumber: event.phoneNumber,
-      newPin: event.newPin,
-    ));
-    result.fold(
-      (failure) => emit(AuthFailureState(failure.message)),
-      (_) {
-        // Auto-login after setting PIN
-        add(LoginParentPressed(
+    final result = await completeParentPinSetup(
+      CompleteParentPinSetupParams(
+        code: event.code,
+        phoneNumber: event.phoneNumber,
+        newPin: event.newPin,
+      ),
+    );
+    result.fold((failure) => emit(AuthFailureState(failure.message)), (_) {
+      // Auto-login after setting PIN
+      add(
+        LoginParentPressed(
           code: event.code,
           phoneNumber: event.phoneNumber,
           pin: event.newPin,
-        ));
-      },
-    );
+        ),
+      );
+    });
   }
 
   Future<void> _onLogout(LogoutPressed event, Emitter<AuthState> emit) async {
@@ -108,7 +116,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthUnauthenticated());
   }
 
-  Future<void> _onResolveAccessCode(ResolveAccessCodeRequested event, Emitter<AuthState> emit) async {
+  Future<void> _onResolveAccessCode(
+    ResolveAccessCodeRequested event,
+    Emitter<AuthState> emit,
+  ) async {
     emit(AuthLoading());
     final result = await resolveParentAccessCode(event.code);
     result.fold(
@@ -118,7 +129,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   void _syncNotifications(UserEntity user) {
-    NotificationService().syncTopicsForUser(user.id, user.roles).catchError((e) {
+    NotificationService().syncTopicsForUser(user.id, user.roles).catchError((
+      e,
+    ) {
       if (kDebugMode) print('Notification sync failed: $e');
     });
 

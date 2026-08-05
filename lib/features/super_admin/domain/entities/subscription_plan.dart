@@ -29,15 +29,15 @@ class SubscriptionPlan extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        name,
-        description,
-        price,
-        billingCycle,
-        maxStudents,
-        maxStaff,
-        storageLimitGb,
-        includedFeatures,
-        isDefault,
-      ];
+    id,
+    name,
+    description,
+    price,
+    billingCycle,
+    maxStudents,
+    maxStaff,
+    storageLimitGb,
+    includedFeatures,
+    isDefault,
+  ];
 }

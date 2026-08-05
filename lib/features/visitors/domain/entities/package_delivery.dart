@@ -28,5 +28,17 @@ class PackageDelivery extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, schoolId, recipientName, recipientId, courierName, courierPhone, trackingNumber, arrivalTime, collectedTime, collectedBy, isCollected];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    recipientName,
+    recipientId,
+    courierName,
+    courierPhone,
+    trackingNumber,
+    arrivalTime,
+    collectedTime,
+    collectedBy,
+    isCollected,
+  ];
 }

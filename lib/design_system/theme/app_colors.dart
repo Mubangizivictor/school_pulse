@@ -13,7 +13,6 @@ class AppColors {
   static const Color pureWhite = Color(0xFFFFFFFF);
   static const Color white = pureWhite;
 
-
   // Accent Colors
   static const Color goldenYellow = Color(0xFFFFB400);
   static const Color brightOrange = Color(0xFFFF6A00);
@@ -41,43 +40,46 @@ class AppColors {
   static const Color disabledDark = Color(0xFF3A475E);
 
   // Semantic Tokens
-  static Color primary(BuildContext context) => 
-      Theme.of(context).brightness == Brightness.light ? royalBlue : electricBlue;
-  
-  static Color primaryStrong(BuildContext context) => 
-      Theme.of(context).brightness == Brightness.light ? deepNavy : brightCyan;
-  
-  static Color primarySoft(BuildContext context) => 
-      Theme.of(context).brightness == Brightness.light ? iceBlue : Color(0xFF0A1B3B);
+  /// Theme-aware semantic colors. These deliberately read [ColorScheme]
+  /// instead of returning the default brand constants so school branding,
+  /// light mode, and dark mode all use the same active palette.
+  static Color primary(BuildContext context) =>
+      Theme.of(context).colorScheme.primary;
 
-  static Color secondary(BuildContext context) => 
-      Theme.of(context).brightness == Brightness.light ? brightOrange : goldenYellow;
+  static Color primaryStrong(BuildContext context) =>
+      Theme.of(context).colorScheme.primary;
 
-  static Color background(BuildContext context) => 
-      Theme.of(context).brightness == Brightness.light ? bgLight : bgDark;
+  static Color primarySoft(BuildContext context) =>
+      Theme.of(context).colorScheme.primaryContainer;
+
+  static Color secondary(BuildContext context) =>
+      Theme.of(context).colorScheme.secondary;
+
+  static Color background(BuildContext context) =>
+      Theme.of(context).scaffoldBackgroundColor;
 
   static Color get backgroundDark => bgDark;
 
-  static Color surfaceContainer(BuildContext context) => 
-      Theme.of(context).brightness == Brightness.light ? Color(0xFFE8EEF7) : Color(0xFF0F1E3E);
+  static Color surfaceContainer(BuildContext context) =>
+      Theme.of(context).colorScheme.surfaceContainer;
 
-  static Color surfaceContainerHigh(BuildContext context) => 
-      Theme.of(context).brightness == Brightness.light ? Color(0xFFDEE5F0) : Color(0xFF162A50);
+  static Color surfaceContainerHigh(BuildContext context) =>
+      Theme.of(context).colorScheme.surfaceContainerHigh;
 
-  static Color surfaceElevated(BuildContext context) => 
-      Theme.of(context).brightness == Brightness.light ? surfaceLight : elevatedSurfaceDark;
+  static Color surfaceElevated(BuildContext context) =>
+      Theme.of(context).colorScheme.surface;
 
-  static Color textPrimary(BuildContext context) => 
-      Theme.of(context).brightness == Brightness.light ? textPrimaryLight : textPrimaryDark;
+  static Color textPrimary(BuildContext context) =>
+      Theme.of(context).colorScheme.onSurface;
 
-  static Color textSecondary(BuildContext context) => 
-      Theme.of(context).brightness == Brightness.light ? textSecondaryLight : textSecondaryDark;
+  static Color textSecondary(BuildContext context) =>
+      Theme.of(context).colorScheme.onSurfaceVariant;
 
-  static Color textMuted(BuildContext context) => 
-      Theme.of(context).brightness == Brightness.light ? textMutedLight : textMutedDark;
+  static Color textMuted(BuildContext context) =>
+      Theme.of(context).colorScheme.onSurfaceVariant;
 
-  static Color border(BuildContext context) => 
-      Theme.of(context).brightness == Brightness.light ? borderLight : borderDark;
+  static Color border(BuildContext context) =>
+      Theme.of(context).colorScheme.outline;
 
   static Color success(BuildContext context) => successGreen;
   static Color warning(BuildContext context) => goldenYellow;
@@ -86,13 +88,17 @@ class AppColors {
   static Color errorRed = deepOrange;
   static Color information(BuildContext context) => brightCyan;
 
-  static Color disabled(BuildContext context) => 
-      Theme.of(context).brightness == Brightness.light ? disabledLight : disabledDark;
+  static Color disabled(BuildContext context) =>
+      Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38);
 
   static Color focus(BuildContext context) => brightCyan.withValues(alpha: 0.2);
-  static Color shadow(BuildContext context) => 
-      Theme.of(context).brightness == Brightness.light ? deepNavy.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.4);
-  
-  static Color overlay(BuildContext context) => 
-      Theme.of(context).brightness == Brightness.light ? deepNavy.withValues(alpha: 0.4) : Colors.black.withValues(alpha: 0.6);
+  static Color shadow(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.light
+      ? deepNavy.withValues(alpha: 0.1)
+      : Colors.black.withValues(alpha: 0.4);
+
+  static Color overlay(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.light
+      ? deepNavy.withValues(alpha: 0.4)
+      : Colors.black.withValues(alpha: 0.6);
 }

@@ -25,7 +25,12 @@ class TransportCoordinatorLoaded extends TransportCoordinatorState {
   });
 
   @override
-  List<Object?> get props => [activeBuses, totalStudents, studentsInTransit, routes];
+  List<Object?> get props => [
+    activeBuses,
+    totalStudents,
+    studentsInTransit,
+    routes,
+  ];
 }
 
 class TransportCoordinatorError extends TransportCoordinatorState {
@@ -55,7 +60,14 @@ class BusRoute extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, name, busNumber, driver, studentCount, status];
+  List<Object?> get props => [
+    id,
+    name,
+    busNumber,
+    driver,
+    studentCount,
+    status,
+  ];
 }
 
 class TripActionSuccess extends TransportCoordinatorState {

@@ -22,23 +22,23 @@ class VisitorIsar {
   String? hostId;
   late String department;
   late String purpose;
-  
+
   @enumerated
   late VisitorCategory category;
-  
+
   String? expectedDuration;
   DateTime? expectedDepartureTime;
   String? itemsCarried;
   String? notes;
   late DateTime arrivalTime;
   DateTime? departureTime;
-  
+
   @enumerated
   late VisitorStatus status;
-  
+
   @enumerated
   late ApprovalStatus approvalStatus;
-  
+
   late String deviceId;
   String? gateId;
   String? photoLocalPath;

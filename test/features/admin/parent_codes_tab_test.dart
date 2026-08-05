@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:school_pulse/features/admin/user_management_screen.dart';
+import 'package:school_pulse/features/admin/presentation/pages/user_management_page.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
@@ -27,34 +27,48 @@ void main() {
   setUp(() {
     mockRepo = MockStudentRepository();
     di.sl.registerLazySingleton<GetAllStudents>(() => GetAllStudents(mockRepo));
-    di.sl.registerLazySingleton<GetAllAccessCodes>(() => GetAllAccessCodes(mockRepo));
-    di.sl.registerLazySingleton<CreateAccessCode>(() => CreateAccessCode(mockRepo));
+    di.sl.registerLazySingleton<GetAllAccessCodes>(
+      () => GetAllAccessCodes(mockRepo),
+    );
+    di.sl.registerLazySingleton<CreateAccessCode>(
+      () => CreateAccessCode(mockRepo),
+    );
 
     mockAuthBloc = MockAuthBloc();
-    when(() => mockAuthBloc.state).thenReturn(const AuthAuthenticated(UserEntity(
-      id: 'staff1',
-      name: 'Admin User',
-      email: 'admin@school.test',
-      schoolId: 'school1',
-      roles: [UserRole.schoolAdmin],
-    )));
+    when(() => mockAuthBloc.state).thenReturn(
+      const AuthAuthenticated(
+        UserEntity(
+          id: 'staff1',
+          name: 'Admin User',
+          email: 'admin@school.test',
+          schoolId: 'school1',
+          roles: [UserRole.schoolAdmin],
+        ),
+      ),
+    );
 
-    when(() => mockRepo.getAllStudents()).thenAnswer((_) async => Right([
-          Student(
-            id: 's1',
-            schoolId: 'school1',
-            name: 'Jane Doe',
-            studentCode: 'STU001',
-            admissionNumber: 'STU001',
-            dateOfBirth: DateTime(2015, 1, 1),
-            gender: Gender.female,
-            classId: 'P.1',
-            academicYearId: 'ay1',
-            status: StudentStatus.active,
-            level: EducationLevel.primary,
-          ),
-        ]));
-    when(() => mockRepo.getAllAccessCodes()).thenAnswer((_) async => const Right([]));
+    when(
+      () => mockRepo.getAllStudents(schoolId: any(named: 'schoolId')),
+    ).thenAnswer(
+      (_) async => Right([
+        Student(
+          id: 's1',
+          schoolId: 'school1',
+          name: 'Jane Doe',
+          studentCode: 'STU001',
+          admissionNumber: 'STU001',
+          dateOfBirth: DateTime(2015, 1, 1),
+          gender: Gender.female,
+          classId: 'P.1',
+          academicYearId: 'ay1',
+          status: StudentStatus.active,
+          level: EducationLevel.primary,
+        ),
+      ]),
+    );
+    when(
+      () => mockRepo.getAllAccessCodes(schoolId: any(named: 'schoolId')),
+    ).thenAnswer((_) async => const Right([]));
   });
 
   tearDown(() {
@@ -72,35 +86,51 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      when(() => mockRepo.createAccessCode(
-            studentIds: any(named: 'studentIds'),
-            phoneNumber: any(named: 'phoneNumber'),
-            parentName: any(named: 'parentName'),
-            schoolId: any(named: 'schoolId'),
-          )).thenAnswer((_) async => const Right('KHA1234'));
-
-      await tester.pumpWidget(MaterialApp(
-        home: BlocProvider<AuthBloc>.value(
-          value: mockAuthBloc,
-          child: const Scaffold(body: ParentCodesTab()),
+      when(
+        () => mockRepo.createAccessCode(
+          studentIds: any(named: 'studentIds'),
+          phoneNumber: any(named: 'phoneNumber'),
+          parentName: any(named: 'parentName'),
+          schoolId: any(named: 'schoolId'),
         ),
-      ));
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull, reason: 'Initial tab render should not throw/overflow');
+      ).thenAnswer((_) async => const Right('KHA1234'));
 
-      // Open the "Generate Parent Access Code" dialog.
-      await tester.tap(find.byType(FloatingActionButton));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BlocProvider<AuthBloc>.value(
+            value: mockAuthBloc,
+            child: const Scaffold(body: ParentCodesListView()),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
-      expect(find.text('Generate Parent Access Code'), findsOneWidget);
-      expect(tester.takeException(), isNull,
-          reason: 'Opening the dialog should not throw a RenderFlex overflow/unbounded-height error');
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'Initial tab render should not throw/overflow',
+      );
+
+      // Open the "Generate Access Code" dialog.
+      await tester.tap(find.byIcon(Icons.vpn_key));
+      await tester.pumpAndSettle();
+      expect(find.text('Generate Access Code'), findsOneWidget);
+      expect(
+        tester.takeException(),
+        isNull,
+        reason:
+            'Opening the dialog should not throw a RenderFlex overflow/unbounded-height error',
+      );
 
       // Fill in the required fields: phone number and at least one student.
-      final phoneField = find.widgetWithText(TextField, 'Parent Phone Number');
+      final phoneField = find.widgetWithText(TextField, 'Phone Number');
       expect(phoneField, findsOneWidget);
       await tester.enterText(phoneField, '0772123456');
       await tester.pump();
-      expect(tester.takeException(), isNull, reason: 'Typing into the phone field should not throw');
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'Typing into the phone field should not throw',
+      );
 
       await tester.tap(find.byType(CheckboxListTile).first);
       await tester.pump();
@@ -108,26 +138,23 @@ void main() {
       final generateButton = find.widgetWithText(FilledButton, 'Generate Code');
       expect(generateButton, findsOneWidget);
       final button = tester.widget<FilledButton>(generateButton);
-      expect(button.onPressed, isNotNull,
-          reason: 'Generate Code should be enabled once phone + a student are provided');
+      expect(
+        button.onPressed,
+        isNotNull,
+        reason:
+            'Generate Code should be enabled once phone + a student are provided',
+      );
 
-      // Submit and make sure the loading indicator actually resolves (the
-      // reported "keeps loading, nothing changing" symptom) instead of
-      // hanging forever.
+      // Submit and make sure it resolves to a success confirmation instead
+      // of hanging or throwing.
       await tester.tap(generateButton);
-      await tester.pump();
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      expect(tester.takeException(), isNull, reason: 'Loading spinner itself should not throw');
-
-      await tester.pump(const Duration(milliseconds: 50));
-      expect(tester.takeException(), isNull,
-          reason: 'Transition from loading spinner to success dialog should not throw');
-
-      await tester.pumpAndSettle(const Duration(seconds: 1));
-      expect(find.byType(CircularProgressIndicator), findsNothing,
-          reason: 'Loading spinner should be dismissed once CreateAccessCode resolves');
-      expect(find.text('Access Code Generated'), findsOneWidget);
-      expect(tester.takeException(), isNull, reason: 'Success dialog should not throw/overflow');
+      await tester.pumpAndSettle();
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'Submitting should not throw/overflow',
+      );
+      expect(find.textContaining('Access code generated'), findsOneWidget);
     },
   );
 }

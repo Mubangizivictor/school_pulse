@@ -21,7 +21,8 @@ class SecurityDashboardScreen extends StatefulWidget {
   const SecurityDashboardScreen({super.key});
 
   @override
-  State<SecurityDashboardScreen> createState() => _SecurityDashboardScreenState();
+  State<SecurityDashboardScreen> createState() =>
+      _SecurityDashboardScreenState();
 }
 
 class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
@@ -30,7 +31,9 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
     super.initState();
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
-      context.read<SecurityBloc>().add(LoadSecurityDashboard(authState.user.schoolId));
+      context.read<SecurityBloc>().add(
+        LoadSecurityDashboard(authState.user.schoolId),
+      );
     }
   }
 
@@ -38,7 +41,9 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) => Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -96,26 +101,44 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
                   context.push('/staff/security/reports');
                   break;
                 case 'report':
-                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReportIncidentScreen()));
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ReportIncidentScreen(),
+                    ),
+                  );
                   break;
               }
             },
             itemBuilder: (context) => const [
               PopupMenuItem(value: 'gates', child: Text('Manage Gates')),
               PopupMenuItem(value: 'pickup', child: Text('Student Pickup')),
-              PopupMenuItem(value: 'pickup-authorizations', child: Text('Pickup Authorizations')),
-              PopupMenuItem(value: 'lost-and-found', child: Text('Lost & Found')),
+              PopupMenuItem(
+                value: 'pickup-authorizations',
+                child: Text('Pickup Authorizations'),
+              ),
+              PopupMenuItem(
+                value: 'lost-and-found',
+                child: Text('Lost & Found'),
+              ),
               PopupMenuItem(value: 'patrols', child: Text('Security Patrols')),
-              PopupMenuItem(value: 'settings', child: Text('Admin Security Settings')),
+              PopupMenuItem(
+                value: 'settings',
+                child: Text('Admin Security Settings'),
+              ),
               PopupMenuItem(value: 'reports', child: Text('Reports')),
-              PopupMenuItem(value: 'report', child: Text('Report Incident to Admin')),
+              PopupMenuItem(
+                value: 'report',
+                child: Text('Report Incident to Admin'),
+              ),
             ],
           ),
           const NotificationBellButton(),
         ],
       ),
       body: BlocConsumer<SecurityBloc, SecurityState>(
-        listenWhen: (previous, current) => !identical(previous.feedback, current.feedback) && current.feedback != null,
+        listenWhen: (previous, current) =>
+            !identical(previous.feedback, current.feedback) &&
+            current.feedback != null,
         listener: (context, state) {
           final feedback = state.feedback!;
           ScaffoldMessenger.of(context).showSnackBar(
@@ -126,19 +149,24 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
           );
         },
         builder: (context, state) {
-          if (state.status == SecurityStatus.loading || state.status == SecurityStatus.initial) {
+          if (state.status == SecurityStatus.loading ||
+              state.status == SecurityStatus.initial) {
             return const _SecuritySkeleton();
           }
 
           if (state.status == SecurityStatus.error) {
-            return Center(child: Text(state.errorMessage ?? 'Something went wrong'));
+            return Center(
+              child: Text(state.errorMessage ?? 'Something went wrong'),
+            );
           }
 
           return RefreshIndicator(
             onRefresh: () async {
               final authState = context.read<AuthBloc>().state;
               if (authState is AuthAuthenticated) {
-                context.read<SecurityBloc>().add(LoadSecurityDashboard(authState.user.schoolId));
+                context.read<SecurityBloc>().add(
+                  LoadSecurityDashboard(authState.user.schoolId),
+                );
               }
             },
             child: SingleChildScrollView(
@@ -156,28 +184,42 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
                       FadeInSlide(
                         child: Text(
                           "Security Status",
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                       ),
                       const SizedBox(height: 20),
-                      
+
                       // Stats Grid
-                      _buildStatsGrid(context, state, semanticColors, screenWidth),
-                      
+                      _buildStatsGrid(
+                        context,
+                        state,
+                        semanticColors,
+                        screenWidth,
+                      ),
+
                       const SizedBox(height: 32),
-                      
+
                       if (state.activeEmergencies.isNotEmpty) ...[
                         const FadeInSlide(
                           delay: Duration(milliseconds: 250),
-                          child: SectionHeader(title: 'Active Emergencies', color: Colors.red),
+                          child: SectionHeader(
+                            title: 'Active Emergencies',
+                            color: Colors.red,
+                          ),
                         ),
                         const SizedBox(height: 12),
-                        ...state.activeEmergencies.map((emergency) => _EmergencyCard(
-                              emergency: emergency,
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => EmergencyDetailScreen(emergency: emergency)),
+                        ...state.activeEmergencies.map(
+                          (emergency) => _EmergencyCard(
+                            emergency: emergency,
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    EmergencyDetailScreen(emergency: emergency),
                               ),
-                            )),
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 32),
                       ],
 
@@ -201,7 +243,7 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
                         const SizedBox(height: 32),
                         _buildIncidentsSection(context, state),
                       ],
-                      
+
                       const SizedBox(height: 100), // Bottom padding for FAB
                     ],
                   ),
@@ -211,33 +253,38 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
           );
         },
       ),
-      floatingActionButton: isDesktop 
-        ? _buildDesktopActions(context)
-        : Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              FloatingActionButton.extended(
-                heroTag: 'emergency',
-                onPressed: () => _showEmergencyProtocol(context),
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-                icon: const Icon(Icons.emergency),
-                label: const Text("EMERGENCY"),
-              ),
-              const SizedBox(height: 12),
-              FloatingActionButton.extended(
-                heroTag: 'verify',
-                onPressed: () => _showVerificationWorkflow(context),
-                icon: const Icon(Icons.qr_code_scanner),
-                label: const Text("Verify Entry/Exit"),
-              ),
-            ],
-          ),
+      floatingActionButton: isDesktop
+          ? _buildDesktopActions(context)
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                FloatingActionButton.extended(
+                  heroTag: 'emergency',
+                  onPressed: () => _showEmergencyProtocol(context),
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  icon: const Icon(Icons.emergency),
+                  label: const Text("EMERGENCY"),
+                ),
+                const SizedBox(height: 12),
+                FloatingActionButton.extended(
+                  heroTag: 'verify',
+                  onPressed: () => _showVerificationWorkflow(context),
+                  icon: const Icon(Icons.qr_code_scanner),
+                  label: const Text("Verify Entry/Exit"),
+                ),
+              ],
+            ),
     );
   }
 
-  Widget _buildStatsGrid(BuildContext context, SecurityState state, SemanticColors semantic, double width) {
+  Widget _buildStatsGrid(
+    BuildContext context,
+    SecurityState state,
+    SemanticColors semantic,
+    double width,
+  ) {
     int crossAxisCount = width > 1200 ? 4 : (width > 600 ? 2 : 2);
     double spacing = 16.0;
 
@@ -287,9 +334,13 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
         ),
         const SizedBox(height: 12),
         if (state.studentMovements.isEmpty)
-          const AppCard(child: Center(child: Text("No recent movements recorded")))
+          const AppCard(
+            child: Center(child: Text("No recent movements recorded")),
+          )
         else
-          ...state.studentMovements.take(10).map((movement) => _MovementListTile(movement: movement)),
+          ...state.studentMovements
+              .take(10)
+              .map((movement) => _MovementListTile(movement: movement)),
       ],
     );
   }
@@ -306,12 +357,18 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
         if (state.incidents.isEmpty)
           const AppCard(child: Center(child: Text("No active incidents")))
         else
-          ...state.incidents.take(10).map((incident) => _IncidentListTile(
-                incident: incident,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => IncidentDetailScreen(incident: incident)),
+          ...state.incidents
+              .take(10)
+              .map(
+                (incident) => _IncidentListTile(
+                  incident: incident,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => IncidentDetailScreen(incident: incident),
+                    ),
+                  ),
                 ),
-              )),
+              ),
       ],
     );
   }
@@ -328,7 +385,9 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
             label: const Text("Verify Entry/Exit"),
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30),
+              ),
             ),
           ),
           const SizedBox(width: 16),
@@ -340,7 +399,9 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30),
+              ),
             ),
           ),
         ],
@@ -348,7 +409,6 @@ class _SecurityDashboardScreenState extends State<SecurityDashboardScreen> {
     );
   }
 }
-
 
 class _EmergencyCard extends StatelessWidget {
   final EmergencyEvent emergency;
@@ -362,7 +422,13 @@ class _EmergencyCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         leading: const Icon(Icons.warning, color: Colors.red),
-        title: Text(emergency.type, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+        title: Text(
+          emergency.type,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.red,
+          ),
+        ),
         subtitle: Text(emergency.description),
         trailing: const Icon(Icons.chevron_right, color: Colors.red),
         onTap: onTap,
@@ -414,7 +480,11 @@ class _IncidentListTile extends StatelessWidget {
           child: const Icon(Icons.gavel, color: Colors.orange),
         ),
         title: Text(incident.type),
-        subtitle: Text(incident.description, maxLines: 1, overflow: TextOverflow.ellipsis),
+        subtitle: Text(
+          incident.description,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
@@ -423,7 +493,11 @@ class _IncidentListTile extends StatelessWidget {
           ),
           child: Text(
             incident.status,
-            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.orange),
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: Colors.orange,
+            ),
           ),
         ),
         onTap: onTap,
@@ -452,10 +526,13 @@ class _SecuritySkeleton extends StatelessWidget {
         const SizedBox(height: 24),
         const Skeleton(width: 120, height: 20),
         const SizedBox(height: 12),
-        ...List.generate(3, (index) => const Padding(
-          padding: EdgeInsets.only(bottom: 12),
-          child: Skeleton(height: 72, borderRadius: 12),
-        )),
+        ...List.generate(
+          3,
+          (index) => const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: Skeleton(height: 72, borderRadius: 12),
+          ),
+        ),
       ],
     );
   }

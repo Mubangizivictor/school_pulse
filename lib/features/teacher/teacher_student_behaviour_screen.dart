@@ -18,13 +18,18 @@ class TeacherStudentBehaviourScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black),
+          icon: Icon(
+            Icons.arrow_back,
+            color: isDark ? Colors.white : Colors.black,
+          ),
           onPressed: () => context.pop(),
         ),
         title: Text(
           'Behaviour',
           style: AppTypography.headlineSmall.copyWith(
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            color: isDark
+                ? AppColors.textPrimaryDark
+                : AppColors.textPrimaryLight,
           ),
         ),
       ),
@@ -48,11 +53,16 @@ class TeacherStudentBehaviourScreen extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: () {},
                 icon: const Icon(Icons.add, color: Colors.white),
-                label: const Text('Add Record', style: TextStyle(color: Colors.white)),
+                label: const Text(
+                  'Add Record',
+                  style: TextStyle(color: Colors.white),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.royalBlue,
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.l),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.m)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppSpacing.m),
+                  ),
                 ),
               ),
             ),
@@ -72,9 +82,23 @@ class TeacherStudentBehaviourScreen extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Expanded(child: _TabButton(label: 'All', isSelected: true, isDark: isDark)),
-          Expanded(child: _TabButton(label: 'Positive', isSelected: false, isDark: isDark)),
-          Expanded(child: _TabButton(label: 'Negative', isSelected: false, isDark: isDark)),
+          Expanded(
+            child: _TabButton(label: 'All', isSelected: true, isDark: isDark),
+          ),
+          Expanded(
+            child: _TabButton(
+              label: 'Positive',
+              isSelected: false,
+              isDark: isDark,
+            ),
+          ),
+          Expanded(
+            child: _TabButton(
+              label: 'Negative',
+              isSelected: false,
+              isDark: isDark,
+            ),
+          ),
         ],
       ),
     );
@@ -86,21 +110,29 @@ class _TabButton extends StatelessWidget {
   final bool isSelected;
   final bool isDark;
 
-  const _TabButton({required this.label, required this.isSelected, required this.isDark});
+  const _TabButton({
+    required this.label,
+    required this.isSelected,
+    required this.isDark,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
-        color: isSelected ? (isDark ? AppColors.bgDark : Colors.white) : Colors.transparent,
+        color: isSelected
+            ? (isDark ? AppColors.bgDark : Colors.white)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(AppSpacing.s),
       ),
       child: Center(
         child: Text(
           label,
           style: AppTypography.labelMedium.copyWith(
-            color: isSelected ? AppColors.royalBlue : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+            color: isSelected
+                ? AppColors.royalBlue
+                : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
         ),
@@ -123,7 +155,9 @@ class _BehaviourTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
         borderRadius: BorderRadius.circular(AppSpacing.l),
-        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -131,11 +165,14 @@ class _BehaviourTile extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: (isNegative ? AppColors.errorRed : AppColors.successGreen).withValues(alpha: 0.1),
+              color: (isNegative ? AppColors.errorRed : AppColors.successGreen)
+                  .withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
-              isNegative ? Icons.warning_amber_rounded : Icons.check_circle_outline,
+              isNegative
+                  ? Icons.warning_amber_rounded
+                  : Icons.check_circle_outline,
               color: isNegative ? AppColors.errorRed : AppColors.successGreen,
               size: 20,
             ),
@@ -146,9 +183,13 @@ class _BehaviourTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isNegative ? 'Disrupting class' : 'Excellent class participation',
+                  isNegative
+                      ? 'Disrupting class'
+                      : 'Excellent class participation',
                   style: AppTypography.titleMedium.copyWith(
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -158,11 +199,19 @@ class _BehaviourTile extends StatelessWidget {
                   children: [
                     Text(
                       isNegative ? 'Negative' : 'Positive',
-                      style: AppTypography.labelSmall.copyWith(color: isNegative ? AppColors.errorRed : AppColors.successGreen),
+                      style: AppTypography.labelSmall.copyWith(
+                        color: isNegative
+                            ? AppColors.errorRed
+                            : AppColors.successGreen,
+                      ),
                     ),
                     Text(
                       '28 May 2024',
-                      style: AppTypography.bodySmall.copyWith(color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+                      style: AppTypography.bodySmall.copyWith(
+                        color: isDark
+                            ? AppColors.textMutedDark
+                            : AppColors.textMutedLight,
+                      ),
                     ),
                   ],
                 ),

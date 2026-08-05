@@ -11,7 +11,10 @@ class HrBloc extends Bloc<HrEvent, HrState> {
     on<GeneratePayroll>(_onGeneratePayroll);
   }
 
-  Future<void> _onLoadPayrollRecords(LoadPayrollRecords event, Emitter<HrState> emit) async {
+  Future<void> _onLoadPayrollRecords(
+    LoadPayrollRecords event,
+    Emitter<HrState> emit,
+  ) async {
     emit(HrLoading());
     try {
       final records = await repository.getPayrollRecords();
@@ -21,7 +24,10 @@ class HrBloc extends Bloc<HrEvent, HrState> {
     }
   }
 
-  Future<void> _onGeneratePayroll(GeneratePayroll event, Emitter<HrState> emit) async {
+  Future<void> _onGeneratePayroll(
+    GeneratePayroll event,
+    Emitter<HrState> emit,
+  ) async {
     try {
       await repository.generatePayroll(event.record);
       emit(PayrollGenerated());

@@ -23,19 +23,16 @@ class NotificationBadgeService {
   Timer? _debounce;
   int _lastPublished = -1;
 
-  NotificationBadgeService({
-    required this.repository,
-    required this.plugin,
-  });
+  NotificationBadgeService({required this.repository, required this.plugin});
 
   void start({required String schoolId, required String userId}) {
     _sub?.cancel();
     _sub = repository
         .watchCounts(schoolId: schoolId, recipientUserId: userId)
         .listen(
-      (counts) => _scheduleUpdate(counts.unread),
-      onError: (Object e) => _log('counts stream error', e),
-    );
+          (counts) => _scheduleUpdate(counts.unread),
+          onError: (Object e) => _log('counts stream error', e),
+        );
   }
 
   void _scheduleUpdate(int unread) {
@@ -50,8 +47,10 @@ class NotificationBadgeService {
     _lastPublished = unread;
 
     try {
-      final ios = plugin.resolvePlatformSpecificImplementation<
-          IOSFlutterLocalNotificationsPlugin>();
+      final ios = plugin
+          .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin
+          >();
       if (ios != null) {
         // iOS has no direct "set badge" call in this plugin; the badge is
         // carried by delivered notifications. Clearing every delivered

@@ -75,10 +75,14 @@ abstract class StructureLocalDataSource {
   Future<void> cacheAttendanceSessions(List<AttendanceSessionDefIsar> sessions);
 
   Future<List<AnnouncementCategoryDefIsar>> getAnnouncementCategories();
-  Future<void> cacheAnnouncementCategories(List<AnnouncementCategoryDefIsar> categories);
+  Future<void> cacheAnnouncementCategories(
+    List<AnnouncementCategoryDefIsar> categories,
+  );
 
   Future<List<NotificationCategoryDefIsar>> getNotificationCategories();
-  Future<void> cacheNotificationCategories(List<NotificationCategoryDefIsar> categories);
+  Future<void> cacheNotificationCategories(
+    List<NotificationCategoryDefIsar> categories,
+  );
 
   Future<List<MessageTemplateDefIsar>> getMessageTemplates();
   Future<void> cacheMessageTemplates(List<MessageTemplateDefIsar> templates);
@@ -192,7 +196,9 @@ class StructureLocalDataSourceImpl implements StructureLocalDataSource {
   }
 
   @override
-  Future<void> cacheDesignations(List<StaffDesignationIsar> designations) async {
+  Future<void> cacheDesignations(
+    List<StaffDesignationIsar> designations,
+  ) async {
     await isar.writeTxn(() async {
       await isar.staffDesignationIsars.clear();
       await isar.staffDesignationIsars.putAll(designations);
@@ -213,7 +219,8 @@ class StructureLocalDataSourceImpl implements StructureLocalDataSource {
   }
 
   @override
-  Future<List<CampusIsar>> getCampuses() async => isar.campusIsars.where().findAll();
+  Future<List<CampusIsar>> getCampuses() async =>
+      isar.campusIsars.where().findAll();
 
   @override
   Future<void> cacheCampuses(List<CampusIsar> campuses) async {
@@ -224,7 +231,8 @@ class StructureLocalDataSourceImpl implements StructureLocalDataSource {
   }
 
   @override
-  Future<List<HouseIsar>> getHouses() async => isar.houseIsars.where().findAll();
+  Future<List<HouseIsar>> getHouses() async =>
+      isar.houseIsars.where().findAll();
 
   @override
   Future<void> cacheHouses(List<HouseIsar> houses) async {
@@ -246,7 +254,8 @@ class StructureLocalDataSourceImpl implements StructureLocalDataSource {
   }
 
   @override
-  Future<List<FacilityIsar>> getFacilities() async => isar.facilityIsars.where().findAll();
+  Future<List<FacilityIsar>> getFacilities() async =>
+      isar.facilityIsars.where().findAll();
 
   @override
   Future<void> cacheFacilities(List<FacilityIsar> facilities) async {
@@ -257,7 +266,8 @@ class StructureLocalDataSourceImpl implements StructureLocalDataSource {
   }
 
   @override
-  Future<List<HostelIsar>> getHostels() async => isar.hostelIsars.where().findAll();
+  Future<List<HostelIsar>> getHostels() async =>
+      isar.hostelIsars.where().findAll();
 
   @override
   Future<void> cacheHostels(List<HostelIsar> hostels) async {
@@ -268,7 +278,8 @@ class StructureLocalDataSourceImpl implements StructureLocalDataSource {
   }
 
   @override
-  Future<List<HostelRoomIsar>> getHostelRooms() async => isar.hostelRoomIsars.where().findAll();
+  Future<List<HostelRoomIsar>> getHostelRooms() async =>
+      isar.hostelRoomIsars.where().findAll();
 
   @override
   Future<void> cacheHostelRooms(List<HostelRoomIsar> rooms) async {
@@ -307,7 +318,9 @@ class StructureLocalDataSourceImpl implements StructureLocalDataSource {
       isar.transportVehicleIsars.where().findAll();
 
   @override
-  Future<void> cacheTransportVehicles(List<TransportVehicleIsar> vehicles) async {
+  Future<void> cacheTransportVehicles(
+    List<TransportVehicleIsar> vehicles,
+  ) async {
     await isar.writeTxn(() async {
       await isar.transportVehicleIsars.clear();
       await isar.transportVehicleIsars.putAll(vehicles);
@@ -319,7 +332,9 @@ class StructureLocalDataSourceImpl implements StructureLocalDataSource {
       isar.structureFeeCategoryIsars.where().findAll();
 
   @override
-  Future<void> cacheFeeCategories(List<StructureFeeCategoryIsar> categories) async {
+  Future<void> cacheFeeCategories(
+    List<StructureFeeCategoryIsar> categories,
+  ) async {
     await isar.writeTxn(() async {
       await isar.structureFeeCategoryIsars.clear();
       await isar.structureFeeCategoryIsars.putAll(categories);
@@ -351,7 +366,8 @@ class StructureLocalDataSourceImpl implements StructureLocalDataSource {
   }
 
   @override
-  Future<List<GradeBandIsar>> getGradeBands() async => isar.gradeBandIsars.where().findAll();
+  Future<List<GradeBandIsar>> getGradeBands() async =>
+      isar.gradeBandIsars.where().findAll();
 
   @override
   Future<void> cacheGradeBands(List<GradeBandIsar> bands) async {
@@ -378,7 +394,9 @@ class StructureLocalDataSourceImpl implements StructureLocalDataSource {
       isar.attendanceSessionDefIsars.where().findAll();
 
   @override
-  Future<void> cacheAttendanceSessions(List<AttendanceSessionDefIsar> sessions) async {
+  Future<void> cacheAttendanceSessions(
+    List<AttendanceSessionDefIsar> sessions,
+  ) async {
     await isar.writeTxn(() async {
       await isar.attendanceSessionDefIsars.clear();
       await isar.attendanceSessionDefIsars.putAll(sessions);
@@ -390,7 +408,9 @@ class StructureLocalDataSourceImpl implements StructureLocalDataSource {
       isar.announcementCategoryDefIsars.where().findAll();
 
   @override
-  Future<void> cacheAnnouncementCategories(List<AnnouncementCategoryDefIsar> categories) async {
+  Future<void> cacheAnnouncementCategories(
+    List<AnnouncementCategoryDefIsar> categories,
+  ) async {
     await isar.writeTxn(() async {
       await isar.announcementCategoryDefIsars.clear();
       await isar.announcementCategoryDefIsars.putAll(categories);
@@ -402,7 +422,9 @@ class StructureLocalDataSourceImpl implements StructureLocalDataSource {
       isar.notificationCategoryDefIsars.where().findAll();
 
   @override
-  Future<void> cacheNotificationCategories(List<NotificationCategoryDefIsar> categories) async {
+  Future<void> cacheNotificationCategories(
+    List<NotificationCategoryDefIsar> categories,
+  ) async {
     await isar.writeTxn(() async {
       await isar.notificationCategoryDefIsars.clear();
       await isar.notificationCategoryDefIsars.putAll(categories);
@@ -414,7 +436,9 @@ class StructureLocalDataSourceImpl implements StructureLocalDataSource {
       isar.messageTemplateDefIsars.where().findAll();
 
   @override
-  Future<void> cacheMessageTemplates(List<MessageTemplateDefIsar> templates) async {
+  Future<void> cacheMessageTemplates(
+    List<MessageTemplateDefIsar> templates,
+  ) async {
     await isar.writeTxn(() async {
       await isar.messageTemplateDefIsars.clear();
       await isar.messageTemplateDefIsars.putAll(templates);
@@ -426,7 +450,9 @@ class StructureLocalDataSourceImpl implements StructureLocalDataSource {
       isar.documentTemplateDefIsars.where().findAll();
 
   @override
-  Future<void> cacheDocumentTemplates(List<DocumentTemplateDefIsar> templates) async {
+  Future<void> cacheDocumentTemplates(
+    List<DocumentTemplateDefIsar> templates,
+  ) async {
     await isar.writeTxn(() async {
       await isar.documentTemplateDefIsars.clear();
       await isar.documentTemplateDefIsars.putAll(templates);

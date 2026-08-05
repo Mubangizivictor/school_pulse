@@ -17,16 +17,23 @@ class ReligionRemoteDataSourceImpl implements ReligionRemoteDataSource {
   Future<List<ReligionActivityModel>> getUpcomingActivities() async {
     final snapshot = await firestore
         .collection('religion_activities')
-        .where('dateTime', isGreaterThanOrEqualTo: DateTime.now().toIso8601String())
+        .where(
+          'dateTime',
+          isGreaterThanOrEqualTo: DateTime.now().toIso8601String(),
+        )
         .orderBy('dateTime')
         .get();
-    return snapshot.docs.map((doc) => ReligionActivityModel.fromJson(doc.data(), doc.id)).toList();
+    return snapshot.docs
+        .map((doc) => ReligionActivityModel.fromJson(doc.data(), doc.id))
+        .toList();
   }
 
   @override
   Future<List<SpiritualGroupModel>> getSpiritualGroups() async {
     final snapshot = await firestore.collection('spiritual_groups').get();
-    return snapshot.docs.map((doc) => SpiritualGroupModel.fromJson(doc.data(), doc.id)).toList();
+    return snapshot.docs
+        .map((doc) => SpiritualGroupModel.fromJson(doc.data(), doc.id))
+        .toList();
   }
 
   @override

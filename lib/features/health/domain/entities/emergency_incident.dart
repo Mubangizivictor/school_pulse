@@ -35,19 +35,19 @@ class EmergencyIncident extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        studentId,
-        staffId,
-        dateTime,
-        incidentDetails,
-        firstAidGiven,
-        ambulanceRequired,
-        hospitalReferral,
-        parentNotified,
-        staffInvolved,
-        witnesses,
-        outcome,
-        recordedBy,
-        schoolId,
-      ];
+    id,
+    studentId,
+    staffId,
+    dateTime,
+    incidentDetails,
+    firstAidGiven,
+    ambulanceRequired,
+    hospitalReferral,
+    parentNotified,
+    staffInvolved,
+    witnesses,
+    outcome,
+    recordedBy,
+    schoolId,
+  ];
 }

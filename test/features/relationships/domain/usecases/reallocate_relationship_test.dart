@@ -7,7 +7,8 @@ import 'package:school_pulse/features/relationships/domain/entities/relationship
 import 'package:school_pulse/features/relationships/domain/repositories/relationship_repository.dart';
 import 'package:school_pulse/features/relationships/domain/usecases/reallocate_relationship.dart';
 
-class MockRelationshipRepository extends Mock implements RelationshipRepository {}
+class MockRelationshipRepository extends Mock
+    implements RelationshipRepository {}
 
 void main() {
   late ReallocateRelationship usecase;
@@ -34,58 +35,70 @@ void main() {
   });
 
   test('rejects an empty reason without touching the repository', () async {
-    final result = await usecase(const ReallocateRelationshipParams(
-      schoolId: schoolId,
-      relationshipId: relationshipId,
-      reason: '   ',
-      reallocatedBy: reallocatedBy,
-    ));
+    final result = await usecase(
+      const ReallocateRelationshipParams(
+        schoolId: schoolId,
+        relationshipId: relationshipId,
+        reason: '   ',
+        reallocatedBy: reallocatedBy,
+      ),
+    );
 
     expect(result.isLeft(), isTrue);
-    verifyNever(() => repository.reallocateRelationship(
-          schoolId: any(named: 'schoolId'),
-          relationshipId: any(named: 'relationshipId'),
-          reason: any(named: 'reason'),
-          reallocatedBy: any(named: 'reallocatedBy'),
-        ));
+    verifyNever(
+      () => repository.reallocateRelationship(
+        schoolId: any(named: 'schoolId'),
+        relationshipId: any(named: 'relationshipId'),
+        reason: any(named: 'reason'),
+        reallocatedBy: any(named: 'reallocatedBy'),
+      ),
+    );
   });
 
   test('trims the reason and delegates to the repository', () async {
-    when(() => repository.reallocateRelationship(
-          schoolId: schoolId,
-          relationshipId: relationshipId,
-          reason: 'custody change',
-          reallocatedBy: reallocatedBy,
-          newUserId: any(named: 'newUserId'),
-          newType: any(named: 'newType'),
-        )).thenAnswer((_) async => Right(replacement));
+    when(
+      () => repository.reallocateRelationship(
+        schoolId: schoolId,
+        relationshipId: relationshipId,
+        reason: 'custody change',
+        reallocatedBy: reallocatedBy,
+        newUserId: any(named: 'newUserId'),
+        newType: any(named: 'newType'),
+      ),
+    ).thenAnswer((_) async => Right(replacement));
 
-    final result = await usecase(const ReallocateRelationshipParams(
-      schoolId: schoolId,
-      relationshipId: relationshipId,
-      reason: '  custody change  ',
-      reallocatedBy: reallocatedBy,
-    ));
+    final result = await usecase(
+      const ReallocateRelationshipParams(
+        schoolId: schoolId,
+        relationshipId: relationshipId,
+        reason: '  custody change  ',
+        reallocatedBy: reallocatedBy,
+      ),
+    );
 
     expect(result, Right(replacement));
   });
 
   test('propagates a repository failure', () async {
-    when(() => repository.reallocateRelationship(
-          schoolId: schoolId,
-          relationshipId: relationshipId,
-          reason: 'custody change',
-          reallocatedBy: reallocatedBy,
-          newUserId: any(named: 'newUserId'),
-          newType: any(named: 'newType'),
-        )).thenAnswer((_) async => Left(ServerFailure('not found')));
+    when(
+      () => repository.reallocateRelationship(
+        schoolId: schoolId,
+        relationshipId: relationshipId,
+        reason: 'custody change',
+        reallocatedBy: reallocatedBy,
+        newUserId: any(named: 'newUserId'),
+        newType: any(named: 'newType'),
+      ),
+    ).thenAnswer((_) async => Left(ServerFailure('not found')));
 
-    final result = await usecase(const ReallocateRelationshipParams(
-      schoolId: schoolId,
-      relationshipId: relationshipId,
-      reason: 'custody change',
-      reallocatedBy: reallocatedBy,
-    ));
+    final result = await usecase(
+      const ReallocateRelationshipParams(
+        schoolId: schoolId,
+        relationshipId: relationshipId,
+        reason: 'custody change',
+        reallocatedBy: reallocatedBy,
+      ),
+    );
 
     expect(result, Left(ServerFailure('not found')));
   });

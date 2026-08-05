@@ -31,10 +31,10 @@ class ClassTeacherAssignability {
   });
 
   const ClassTeacherAssignability.allowed()
-      : isAllowed = true,
-        conflicting = const [],
-        overrideWouldAllow = false,
-        reason = null;
+    : isAllowed = true,
+      conflicting = const [],
+      overrideWouldAllow = false,
+      reason = null;
 }
 
 /// Everything the app is allowed to decide about Class Teacher assignments.
@@ -57,7 +57,8 @@ abstract class ClassTeacherAssignmentService {
   /// Every Class Teacher row on the profile including suspended and expired
   /// ones, so the panel can say why a class disappeared rather than just
   /// dropping it.
-  Future<Either<Failure, List<StaffRoleAssignment>>> getClassTeacherAssignments({
+  Future<Either<Failure, List<StaffRoleAssignment>>>
+  getClassTeacherAssignments({
     required String schoolId,
     required String userId,
     bool forceRefresh = false,

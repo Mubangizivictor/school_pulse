@@ -81,18 +81,27 @@ class MessageRequestsScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.mark_email_read_outlined,
-                  size: 80, color: AppColors.textMuted(context).withValues(alpha: 0.3)),
+              Icon(
+                Icons.mark_email_read_outlined,
+                size: 80,
+                color: AppColors.textMuted(context).withValues(alpha: 0.3),
+              ),
               const SizedBox(height: 16),
-              Text(spam ? 'No Spam Requests' : 'No Pending Requests',
-                  style: AppTypography.titleMedium.copyWith(color: AppColors.textMuted(context))),
+              Text(
+                spam ? 'No Spam Requests' : 'No Pending Requests',
+                style: AppTypography.titleMedium.copyWith(
+                  color: AppColors.textMuted(context),
+                ),
+              ),
               const SizedBox(height: 8),
               Text(
                 spam
                     ? 'Messages you mark as spam will appear here.'
                     : 'Chats started by people outside your usual contacts will appear here.',
                 textAlign: TextAlign.center,
-                style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context)),
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.textMuted(context),
+                ),
               ),
             ],
           ),
@@ -126,8 +135,13 @@ class MessageRequestsScreen extends StatelessWidget {
                   children: [
                     CircleAvatar(
                       radius: 24,
-                      backgroundColor: AppColors.electricBlue.withValues(alpha: 0.1),
-                      child: const Icon(Icons.person, color: AppColors.electricBlue),
+                      backgroundColor: AppColors.electricBlue.withValues(
+                        alpha: 0.1,
+                      ),
+                      child: const Icon(
+                        Icons.person,
+                        color: AppColors.electricBlue,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -137,8 +151,12 @@ class MessageRequestsScreen extends StatelessWidget {
                           Text(request.title, style: AppTypography.titleMedium),
                           const SizedBox(height: 2),
                           Text(
-                            request.hasMessages ? request.lastMessage.content : 'Wants to message you',
-                            style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context)),
+                            request.hasMessages
+                                ? request.lastMessage.content
+                                : 'Wants to message you',
+                            style: AppTypography.bodySmall.copyWith(
+                              color: AppColors.textMuted(context),
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -147,9 +165,13 @@ class MessageRequestsScreen extends StatelessWidget {
                     ),
                     Text(
                       request.hasMessages
-                          ? DateFormat('dd/MM').format(request.lastMessage.timestamp)
+                          ? DateFormat(
+                              'dd/MM',
+                            ).format(request.lastMessage.timestamp)
                           : '',
-                      style: AppTypography.labelSmall.copyWith(color: AppColors.textMuted(context)),
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.textMuted(context),
+                      ),
                     ),
                   ],
                 ),
@@ -158,11 +180,16 @@ class MessageRequestsScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () => context.messages.leaveConversation(request.id, userId),
+                        onPressed: () => context.messages.leaveConversation(
+                          request.id,
+                          userId,
+                        ),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.red,
                           side: const BorderSide(color: Colors.red),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         child: const Text('Delete'),
                       ),
@@ -171,9 +198,12 @@ class MessageRequestsScreen extends StatelessWidget {
                     if (!spam) ...[
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () => context.messages.markSpam(request.id, userId),
+                          onPressed: () =>
+                              context.messages.markSpam(request.id, userId),
                           style: OutlinedButton.styleFrom(
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           child: const Text('Spam'),
                         ),
@@ -183,7 +213,10 @@ class MessageRequestsScreen extends StatelessWidget {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () async {
-                          await context.messages.acceptRequest(request.id, userId);
+                          await context.messages.acceptRequest(
+                            request.id,
+                            userId,
+                          );
                           if (!context.mounted) return;
                           context.push('/messages/chat/${request.id}');
                         },
@@ -191,7 +224,9 @@ class MessageRequestsScreen extends StatelessWidget {
                           backgroundColor: AppColors.emeraldGreen,
                           foregroundColor: Colors.white,
                           elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         child: const Text('Accept'),
                       ),

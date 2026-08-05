@@ -44,17 +44,21 @@ class LessonRepositoryImpl implements LessonRepository {
     bool forceRefresh = false,
   }) async {
     if (!context.can(Permission.subjectLessonView)) {
-      return const Left(PermissionDeniedFailure(
-        'You do not have permission to view lessons for this subject.',
-      ));
+      return const Left(
+        PermissionDeniedFailure(
+          'You do not have permission to view lessons for this subject.',
+        ),
+      );
     }
 
     final subjectId = context.subjectId;
     final classId = context.classId;
     if (subjectId == null || classId == null) {
-      return const Left(ValidationFailure(
-        'This responsibility is not tied to a subject and class.',
-      ));
+      return const Left(
+        ValidationFailure(
+          'This responsibility is not tied to a subject and class.',
+        ),
+      );
     }
 
     try {
@@ -74,9 +78,11 @@ class LessonRepositoryImpl implements LessonRepository {
       }
 
       if (forceRefresh) {
-        return const Left(NetworkFailure(
-          'You are offline. Pull down again when you have a connection.',
-        ));
+        return const Left(
+          NetworkFailure(
+            'You are offline. Pull down again when you have a connection.',
+          ),
+        );
       }
 
       final cached = await localDataSource.getLessons(
@@ -95,7 +101,10 @@ class LessonRepositoryImpl implements LessonRepository {
   /// A class can have more than one teacher for the same subject, and the
   /// query cannot filter on "teacher or substitute" server-side without a
   /// second round trip, so the ownership filter happens here.
-  List<Lesson> _mine(List<Lesson> lessons, ActiveResponsibilityContext context) {
+  List<Lesson> _mine(
+    List<Lesson> lessons,
+    ActiveResponsibilityContext context,
+  ) {
     final mine = lessons.where((l) => l.isTaughtBy(context.staffId)).toList()
       ..sort((a, b) => a.scheduledStart.compareTo(b.scheduledStart));
     return mine;
@@ -111,7 +120,9 @@ class LessonRepositoryImpl implements LessonRepository {
     return getLessons(
       context: context,
       from: start,
-      to: start.add(const Duration(days: 1)).subtract(const Duration(seconds: 1)),
+      to: start
+          .add(const Duration(days: 1))
+          .subtract(const Duration(seconds: 1)),
       forceRefresh: forceRefresh,
     );
   }
@@ -122,9 +133,11 @@ class LessonRepositoryImpl implements LessonRepository {
     required String lessonId,
   }) async {
     if (!context.can(Permission.subjectLessonView)) {
-      return const Left(PermissionDeniedFailure(
-        'You do not have permission to view this lesson.',
-      ));
+      return const Left(
+        PermissionDeniedFailure(
+          'You do not have permission to view this lesson.',
+        ),
+      );
     }
 
     try {
@@ -154,9 +167,11 @@ class LessonRepositoryImpl implements LessonRepository {
     // screen or a replayed tap cannot get past it.
     final refusal = startPolicy.evaluate(lesson: lesson, context: context);
     if (refusal != null) {
-      return Left(refusal == LessonStartRefusal.noPermission
-          ? PermissionDeniedFailure(refusal.message)
-          : ValidationFailure(refusal.message));
+      return Left(
+        refusal == LessonStartRefusal.noPermission
+            ? PermissionDeniedFailure(refusal.message)
+            : ValidationFailure(refusal.message),
+      );
     }
 
     // Recorded from the device clock at the moment of the tap, not from
@@ -206,19 +221,21 @@ class LessonRepositoryImpl implements LessonRepository {
     required LessonCompletion completion,
   }) async {
     if (!context.can(Permission.subjectLessonComplete)) {
-      return const Left(PermissionDeniedFailure(
-        'You do not have permission to complete lessons.',
-      ));
+      return const Left(
+        PermissionDeniedFailure(
+          'You do not have permission to complete lessons.',
+        ),
+      );
     }
     if (!lesson.isTaughtBy(context.staffId)) {
-      return const Left(PermissionDeniedFailure(
-        'This lesson is assigned to another teacher.',
-      ));
+      return const Left(
+        PermissionDeniedFailure('This lesson is assigned to another teacher.'),
+      );
     }
     if (lesson.status != LessonStatus.ongoing) {
-      return const Left(ValidationFailure(
-        'Start the lesson before completing it.',
-      ));
+      return const Left(
+        ValidationFailure('Start the lesson before completing it.'),
+      );
     }
 
     final completed = lesson.copyWith(

@@ -5,6 +5,7 @@ import 'package:equatable/equatable.dart';
 /// existing operational Dormitory entities - this is master data only.
 class Hostel extends Equatable {
   final String id;
+  final String schoolId;
   final String name;
   final String gender;
   final String wardenName;
@@ -15,6 +16,7 @@ class Hostel extends Equatable {
 
   const Hostel({
     required this.id,
+    required this.schoolId,
     required this.name,
     this.gender = '',
     this.wardenName = '',
@@ -26,6 +28,7 @@ class Hostel extends Equatable {
 
   Hostel copyWith({
     String? id,
+    String? schoolId,
     String? name,
     String? gender,
     String? wardenName,
@@ -36,6 +39,7 @@ class Hostel extends Equatable {
   }) {
     return Hostel(
       id: id ?? this.id,
+      schoolId: schoolId ?? this.schoolId,
       name: name ?? this.name,
       gender: gender ?? this.gender,
       wardenName: wardenName ?? this.wardenName,
@@ -47,14 +51,24 @@ class Hostel extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [id, name, gender, wardenName, wardenContact, capacity, description, isActive];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    name,
+    gender,
+    wardenName,
+    wardenContact,
+    capacity,
+    description,
+    isActive,
+  ];
 }
 
 /// A room within a hostel (optionally grouped by block), with a bed
 /// capacity. Individual bed assignment remains operational data elsewhere.
 class HostelRoom extends Equatable {
   final String id;
+  final String schoolId;
   final String hostelId;
   final String blockName;
   final String roomNumber;
@@ -63,6 +77,7 @@ class HostelRoom extends Equatable {
 
   const HostelRoom({
     required this.id,
+    required this.schoolId,
     required this.hostelId,
     this.blockName = '',
     required this.roomNumber,
@@ -72,6 +87,7 @@ class HostelRoom extends Equatable {
 
   HostelRoom copyWith({
     String? id,
+    String? schoolId,
     String? hostelId,
     String? blockName,
     String? roomNumber,
@@ -80,6 +96,7 @@ class HostelRoom extends Equatable {
   }) {
     return HostelRoom(
       id: id ?? this.id,
+      schoolId: schoolId ?? this.schoolId,
       hostelId: hostelId ?? this.hostelId,
       blockName: blockName ?? this.blockName,
       roomNumber: roomNumber ?? this.roomNumber,
@@ -89,5 +106,13 @@ class HostelRoom extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, hostelId, blockName, roomNumber, bedCapacity, isActive];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    hostelId,
+    blockName,
+    roomNumber,
+    bedCapacity,
+    isActive,
+  ];
 }

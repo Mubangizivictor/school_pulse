@@ -121,25 +121,25 @@ class SubjectEnrollment extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        campusId,
-        studentId,
-        subjectId,
-        classId,
-        streamId,
-        academicYearId,
-        status,
-        roleAssignmentId,
-        isMandatory,
-        enrolledAt,
-        enrolledBy,
-        removedAt,
-        removedBy,
-        removalReason,
-        effectiveFrom,
-        effectiveTo,
-      ];
+    id,
+    schoolId,
+    campusId,
+    studentId,
+    subjectId,
+    classId,
+    streamId,
+    academicYearId,
+    status,
+    roleAssignmentId,
+    isMandatory,
+    enrolledAt,
+    enrolledBy,
+    removedAt,
+    removedBy,
+    removalReason,
+    effectiveFrom,
+    effectiveTo,
+  ];
 }
 
 /// A student as the Subject Teacher panel needs them: identity plus the
@@ -221,23 +221,23 @@ class SubjectStudentSummary extends Equatable {
 
   @override
   List<Object?> get props => [
-        studentId,
-        name,
-        admissionNumber,
-        photoUrl,
-        classId,
-        className,
-        streamId,
-        streamName,
-        enrollmentStatus,
-        isMandatory,
-        lessonsHeld,
-        lessonsPresent,
-        assessmentsMarked,
-        assessmentsTotal,
-        subjectAverage,
-        subjectGrade,
-      ];
+    studentId,
+    name,
+    admissionNumber,
+    photoUrl,
+    classId,
+    className,
+    streamId,
+    streamName,
+    enrollmentStatus,
+    isMandatory,
+    lessonsHeld,
+    lessonsPresent,
+    assessmentsMarked,
+    assessmentsTotal,
+    subjectAverage,
+    subjectGrade,
+  ];
 }
 
 /// A student who could be added to the subject but is not enrolled yet.
@@ -264,13 +264,13 @@ class EligibleStudent extends Equatable {
 
   @override
   List<Object?> get props => [
-        studentId,
-        name,
-        admissionNumber,
-        photoUrl,
-        classId,
-        className,
-        streamId,
-        streamName,
-      ];
+    studentId,
+    name,
+    admissionNumber,
+    photoUrl,
+    classId,
+    className,
+    streamId,
+    streamName,
+  ];
 }

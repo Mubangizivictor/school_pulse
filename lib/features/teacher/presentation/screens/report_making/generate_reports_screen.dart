@@ -91,7 +91,9 @@ class _GenerateReportsScreenState extends State<GenerateReportsScreen> {
                     child: Column(
                       children: [
                         LinearProgressIndicator(
-                          value: state.status == ReportWizardStatus.loading ? null : 1.0,
+                          value: state.status == ReportWizardStatus.loading
+                              ? null
+                              : 1.0,
                           minHeight: 12,
                           borderRadius: BorderRadius.circular(6),
                         ),
@@ -99,7 +101,12 @@ class _GenerateReportsScreenState extends State<GenerateReportsScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(statusText, style: const TextStyle(fontWeight: FontWeight.w500)),
+                            Text(
+                              statusText,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                             if (state.status == ReportWizardStatus.loading)
                               const Text('Working...')
                             else

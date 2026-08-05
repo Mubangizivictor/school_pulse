@@ -56,10 +56,10 @@ class ClassAttendanceHistoryState extends Equatable {
   int get daysRecorded => sessions.length;
 
   int _sum(AttendanceClassification classification) => sessions.fold(
-        0,
-        (total, session) =>
-            total + (session.countsBy(options)[classification] ?? 0),
-      );
+    0,
+    (total, session) =>
+        total + (session.countsBy(options)[classification] ?? 0),
+  );
 
   int get totalPresent => _sum(AttendanceClassification.present);
   int get totalAuthorisedAbsent =>
@@ -95,8 +95,13 @@ class ClassAttendanceHistoryState extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [isLoading, errorMessage, sessions, options, range];
+  List<Object?> get props => [
+    isLoading,
+    errorMessage,
+    sessions,
+    options,
+    range,
+  ];
 }
 
 class ClassAttendanceHistoryBloc
@@ -104,7 +109,7 @@ class ClassAttendanceHistoryBloc
   final ClassAttendanceRepository attendanceRepository;
 
   ClassAttendanceHistoryBloc({required this.attendanceRepository})
-      : super(const ClassAttendanceHistoryState.initial()) {
+    : super(const ClassAttendanceHistoryState.initial()) {
     on<ClassAttendanceHistoryRequested>(_onRequested);
   }
 
@@ -121,8 +126,9 @@ class ClassAttendanceHistoryBloc
       HistoryRange.term => now.subtract(const Duration(days: 120)),
     };
 
-    final options =
-        await attendanceRepository.getStatusOptions(context: event.context);
+    final options = await attendanceRepository.getStatusOptions(
+      context: event.context,
+    );
     final result = await attendanceRepository.getHistory(
       context: event.context,
       from: DateTime(from.year, from.month, from.day),
@@ -130,24 +136,25 @@ class ClassAttendanceHistoryBloc
     );
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        isLoading: false,
-        errorMessage: _messageFor(failure),
-      )),
-      (sessions) => emit(state.copyWith(
-        isLoading: false,
-        sessions: sessions,
-        options: options.getOrElse(() => AttendanceStatusResolver.defaults),
-        clearError: true,
-      )),
+      (failure) => emit(
+        state.copyWith(isLoading: false, errorMessage: _messageFor(failure)),
+      ),
+      (sessions) => emit(
+        state.copyWith(
+          isLoading: false,
+          sessions: sessions,
+          options: options.getOrElse(() => AttendanceStatusResolver.defaults),
+          clearError: true,
+        ),
+      ),
     );
   }
 
   String _messageFor(Failure failure) => switch (failure) {
-        PermissionDeniedFailure() => failure.message,
-        AssignmentInvalidFailure() => failure.message,
-        NetworkFailure() => failure.message,
-        ValidationFailure() => failure.message,
-        _ => 'Could not load attendance history. Pull down to retry.',
-      };
+    PermissionDeniedFailure() => failure.message,
+    AssignmentInvalidFailure() => failure.message,
+    NetworkFailure() => failure.message,
+    ValidationFailure() => failure.message,
+    _ => 'Could not load attendance history. Pull down to retry.',
+  };
 }

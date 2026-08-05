@@ -36,8 +36,12 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
       final authState = context.read<AuthBloc>().state;
       if (authState is AuthAuthenticated) {
         context.read<VisitorsBloc>().add(LoadVisitors(authState.user.schoolId));
-        context.read<VisitorsBloc>().add(WatchVisitorsList(authState.user.schoolId));
-        context.read<VisitorsBloc>().add(LoadPreApprovedVisitors(authState.user.schoolId));
+        context.read<VisitorsBloc>().add(
+          WatchVisitorsList(authState.user.schoolId),
+        );
+        context.read<VisitorsBloc>().add(
+          LoadPreApprovedVisitors(authState.user.schoolId),
+        );
       }
     });
   }
@@ -48,10 +52,12 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Exporting logs to Google Sheets...')),
       );
-      context.read<VisitorsBloc>().add(ExportVisitorsEvent(
-            authState.user.schoolId,
-            authState.user.schoolName ?? 'School Pulse',
-          ));
+      context.read<VisitorsBloc>().add(
+        ExportVisitorsEvent(
+          authState.user.schoolId,
+          authState.user.schoolName ?? 'School Pulse',
+        ),
+      );
     }
   }
 
@@ -63,12 +69,16 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.emergency_outlined, color: Colors.red),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EmergencyRollCallPage())),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const EmergencyRollCallPage()),
+            ),
             tooltip: 'Emergency Roll-Call',
           ),
           IconButton(
             icon: const Icon(Icons.sync),
-            onPressed: () => context.read<VisitorsBloc>().add(SyncPendingVisitors()),
+            onPressed: () =>
+                context.read<VisitorsBloc>().add(SyncPendingVisitors()),
             tooltip: 'Sync Pending',
           ),
           PopupMenuButton<String>(
@@ -76,22 +86,50 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
             onSelected: (value) {
               switch (value) {
                 case 'scheduled':
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ScheduledVisitsPage()));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ScheduledVisitsPage(),
+                    ),
+                  );
                   break;
                 case 'packages':
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const PackageDeliveryPage()));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const PackageDeliveryPage(),
+                    ),
+                  );
                   break;
                 case 'pickup':
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const StudentPickupPage()));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const StudentPickupPage(),
+                    ),
+                  );
                   break;
                 case 'parking':
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ParkingManagementPage()));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ParkingManagementPage(),
+                    ),
+                  );
                   break;
                 case 'history':
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const VisitorHistoryPage()));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const VisitorHistoryPage(),
+                    ),
+                  );
                   break;
                 case 'printer':
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const PrinterSetupPage()));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const PrinterSetupPage()),
+                  );
                   break;
                 case 'export':
                   _exportData(context);
@@ -99,13 +137,55 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
               }
             },
             itemBuilder: (context) => const [
-              PopupMenuItem(value: 'scheduled', child: ListTile(leading: Icon(Icons.calendar_today_outlined), title: Text('Scheduled Visits'))),
-              PopupMenuItem(value: 'packages', child: ListTile(leading: Icon(Icons.inventory_2_outlined), title: Text('Packages'))),
-              PopupMenuItem(value: 'pickup', child: ListTile(leading: Icon(Icons.no_accounts_outlined), title: Text('Student Pickup'))),
-              PopupMenuItem(value: 'parking', child: ListTile(leading: Icon(Icons.local_parking_outlined), title: Text('Vehicle & Parking'))),
-              PopupMenuItem(value: 'history', child: ListTile(leading: Icon(Icons.history), title: Text('Complete History'))),
-              PopupMenuItem(value: 'printer', child: ListTile(leading: Icon(Icons.print_outlined), title: Text('Printer Setup'))),
-              PopupMenuItem(value: 'export', child: ListTile(leading: Icon(Icons.file_download_outlined), title: Text('Export Logs'))),
+              PopupMenuItem(
+                value: 'scheduled',
+                child: ListTile(
+                  leading: Icon(Icons.calendar_today_outlined),
+                  title: Text('Scheduled Visits'),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'packages',
+                child: ListTile(
+                  leading: Icon(Icons.inventory_2_outlined),
+                  title: Text('Packages'),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'pickup',
+                child: ListTile(
+                  leading: Icon(Icons.no_accounts_outlined),
+                  title: Text('Student Pickup'),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'parking',
+                child: ListTile(
+                  leading: Icon(Icons.local_parking_outlined),
+                  title: Text('Vehicle & Parking'),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'history',
+                child: ListTile(
+                  leading: Icon(Icons.history),
+                  title: Text('Complete History'),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'printer',
+                child: ListTile(
+                  leading: Icon(Icons.print_outlined),
+                  title: Text('Printer Setup'),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'export',
+                child: ListTile(
+                  leading: Icon(Icons.file_download_outlined),
+                  title: Text('Export Logs'),
+                ),
+              ),
             ],
           ),
           IconButton(
@@ -119,7 +199,9 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
         listener: (context, state) {
           if (state is VisitorsExporting) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Exporting logs to Google Sheets...')),
+              const SnackBar(
+                content: Text('Exporting logs to Google Sheets...'),
+              ),
             );
           } else if (state is VisitorsExportSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -131,7 +213,10 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
             );
           } else if (state is VisitorsError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+              ),
             );
           }
         },
@@ -142,15 +227,17 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
             }
 
             if (state is VisitorsLoaded || state is VisitorsExportSuccess) {
-              final loadedState = state is VisitorsLoaded 
-                  ? state 
+              final loadedState = state is VisitorsLoaded
+                  ? state
                   : (context.read<VisitorsBloc>().state as VisitorsLoaded);
-              
+
               return RefreshIndicator(
                 onRefresh: () async {
                   final authState = context.read<AuthBloc>().state;
                   if (authState is AuthAuthenticated) {
-                    context.read<VisitorsBloc>().add(LoadVisitors(authState.user.schoolId));
+                    context.read<VisitorsBloc>().add(
+                      LoadVisitors(authState.user.schoolId),
+                    );
                   }
                 },
                 child: SingleChildScrollView(
@@ -183,7 +270,9 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
                       onPressed: () {
                         final authState = context.read<AuthBloc>().state;
                         if (authState is AuthAuthenticated) {
-                          context.read<VisitorsBloc>().add(LoadVisitors(authState.user.schoolId));
+                          context.read<VisitorsBloc>().add(
+                            LoadVisitors(authState.user.schoolId),
+                          );
                         }
                       },
                       child: const Text('Retry'),
@@ -222,7 +311,8 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
             padding: const EdgeInsets.only(bottom: 12),
             child: AlertBanner(
               title: 'Overstay Alert',
-              message: '$overstayed visitors have exceeded their expected departure time.',
+              message:
+                  '$overstayed visitors have exceeded their expected departure time.',
               color: Colors.orange,
               icon: Icons.timer_off,
             ),
@@ -274,7 +364,9 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
       onChanged: (query) {
         final authState = context.read<AuthBloc>().state;
         if (authState is AuthAuthenticated) {
-          context.read<VisitorsBloc>().add(SearchVisitorsEvent(authState.user.schoolId, query));
+          context.read<VisitorsBloc>().add(
+            SearchVisitorsEvent(authState.user.schoolId, query),
+          );
         }
       },
     );
@@ -287,7 +379,9 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
 
   Widget _buildGateFilter() {
     final configGates = context.watch<ThemeProvider>().config?.visitorGates;
-    final gates = (configGates != null && configGates.isNotEmpty) ? configGates : const ['Main Gate'];
+    final gates = (configGates != null && configGates.isNotEmpty)
+        ? configGates
+        : const ['Main Gate'];
     return SizedBox(
       height: 36,
       child: ListView(
@@ -307,7 +401,9 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
               child: ChoiceChip(
                 label: Text(gate),
                 selected: _gateFilter == gate,
-                onSelected: (_) => setState(() => _gateFilter = _gateFilter == gate ? null : gate),
+                onSelected: (_) => setState(
+                  () => _gateFilter = _gateFilter == gate ? null : gate,
+                ),
               ),
             ),
           ),
@@ -334,13 +430,21 @@ class _VisitorDashboardScreenState extends State<VisitorDashboardScreen> {
       itemBuilder: (context, index) {
         final visitor = visitors[index];
         return AppCard(
-          onTap: () => context.push('/staff/security/visitors/details/${visitor.id}', extra: visitor),
+          onTap: () => context.push(
+            '/staff/security/visitors/details/${visitor.id}',
+            extra: visitor,
+          ),
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: visitor.status == VisitorStatus.checkedIn ? Colors.green : Colors.grey,
+              backgroundColor: visitor.status == VisitorStatus.checkedIn
+                  ? Colors.green
+                  : Colors.grey,
               child: const Icon(Icons.person, color: Colors.white),
             ),
-            title: Text(visitor.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(
+              visitor.fullName,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             subtitle: Text('${visitor.purpose} • ${visitor.host}'),
             trailing: Column(
               mainAxisAlignment: MainAxisAlignment.center,

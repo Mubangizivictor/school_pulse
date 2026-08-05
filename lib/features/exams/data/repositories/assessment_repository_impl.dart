@@ -24,7 +24,9 @@ class AssessmentRepositoryImpl implements AssessmentRepository {
   });
 
   @override
-  Future<Either<Failure, List<AssessmentType>>> getAssessmentTypes(String schoolId) async {
+  Future<Either<Failure, List<AssessmentType>>> getAssessmentTypes(
+    String schoolId,
+  ) async {
     try {
       final remoteTypes = await remoteDataSource.getAssessmentTypes(schoolId);
       return Right(remoteTypes);
@@ -34,9 +36,15 @@ class AssessmentRepositoryImpl implements AssessmentRepository {
   }
 
   @override
-  Future<Either<Failure, void>> createAssessmentType(String schoolId, AssessmentType assessmentType) async {
+  Future<Either<Failure, void>> createAssessmentType(
+    String schoolId,
+    AssessmentType assessmentType,
+  ) async {
     try {
-      await remoteDataSource.createAssessmentType(schoolId, assessmentType as AssessmentTypeModel);
+      await remoteDataSource.createAssessmentType(
+        schoolId,
+        assessmentType as AssessmentTypeModel,
+      );
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -44,13 +52,17 @@ class AssessmentRepositoryImpl implements AssessmentRepository {
   }
 
   @override
-  Future<Either<Failure, void>> updateAssessmentType(AssessmentType assessmentType) async {
+  Future<Either<Failure, void>> updateAssessmentType(
+    AssessmentType assessmentType,
+  ) async {
     // Implementation...
     return const Right(null);
   }
 
   @override
-  Future<Either<Failure, List<GradingSystem>>> getGradingSystems(String schoolId) async {
+  Future<Either<Failure, List<GradingSystem>>> getGradingSystems(
+    String schoolId,
+  ) async {
     try {
       final systems = await remoteDataSource.getGradingSystems(schoolId);
       return Right(systems);
@@ -60,9 +72,13 @@ class AssessmentRepositoryImpl implements AssessmentRepository {
   }
 
   @override
-  Future<Either<Failure, void>> createGradingSystem(GradingSystem gradingSystem) async {
+  Future<Either<Failure, void>> createGradingSystem(
+    GradingSystem gradingSystem,
+  ) async {
     try {
-      await remoteDataSource.createGradingSystem(gradingSystem as GradingSystemModel);
+      await remoteDataSource.createGradingSystem(
+        gradingSystem as GradingSystemModel,
+      );
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -92,7 +108,10 @@ class AssessmentRepositoryImpl implements AssessmentRepository {
   }
 
   @override
-  Future<Either<Failure, void>> saveMarks(String schoolId, List<AssessmentMark> marks) async {
+  Future<Either<Failure, void>> saveMarks(
+    String schoolId,
+    List<AssessmentMark> marks,
+  ) async {
     try {
       final markModels = marks.map((m) => m as AssessmentMarkModel).toList();
       await remoteDataSource.saveMarks(schoolId, markModels);
@@ -108,7 +127,7 @@ class AssessmentRepositoryImpl implements AssessmentRepository {
       // In a real app, we'd get the current school ID from an Auth service
       // For now, we'll assume markIds are sufficient or we need to pass schoolId
       // Let's assume we update status to 'submitted'
-      // We need a way to know which school these belong to, 
+      // We need a way to know which school these belong to,
       // usually it's in the app state.
       return const Right(null);
     } catch (e) {
@@ -117,7 +136,10 @@ class AssessmentRepositoryImpl implements AssessmentRepository {
   }
 
   @override
-  Future<Either<Failure, void>> moderateMarks(List<String> markIds, String moderatorId) async {
+  Future<Either<Failure, void>> moderateMarks(
+    List<String> markIds,
+    String moderatorId,
+  ) async {
     try {
       // Implementation logic to call remoteDataSource.updateMarkStatus
       return const Right(null);
@@ -127,7 +149,10 @@ class AssessmentRepositoryImpl implements AssessmentRepository {
   }
 
   @override
-  Future<Either<Failure, void>> approveMarks(List<String> markIds, String approverId) async {
+  Future<Either<Failure, void>> approveMarks(
+    List<String> markIds,
+    String approverId,
+  ) async {
     try {
       // Implementation logic to call remoteDataSource.updateMarkStatus
       return const Right(null);
@@ -137,7 +162,9 @@ class AssessmentRepositoryImpl implements AssessmentRepository {
   }
 
   @override
-  Future<Either<Failure, List<ReportTemplate>>> getReportTemplates(String schoolId) async {
+  Future<Either<Failure, List<ReportTemplate>>> getReportTemplates(
+    String schoolId,
+  ) async {
     try {
       final templates = await remoteDataSource.getReportTemplates(schoolId);
       return Right(templates);
@@ -147,9 +174,13 @@ class AssessmentRepositoryImpl implements AssessmentRepository {
   }
 
   @override
-  Future<Either<Failure, void>> saveReportTemplate(ReportTemplate template) async {
+  Future<Either<Failure, void>> saveReportTemplate(
+    ReportTemplate template,
+  ) async {
     try {
-      await remoteDataSource.saveReportTemplate(template as ReportTemplateModel);
+      await remoteDataSource.saveReportTemplate(
+        template as ReportTemplateModel,
+      );
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -157,7 +188,9 @@ class AssessmentRepositoryImpl implements AssessmentRepository {
   }
 
   @override
-  Future<Either<Failure, ReportReleasePolicy>> getReleasePolicy(String schoolId) async {
+  Future<Either<Failure, ReportReleasePolicy>> getReleasePolicy(
+    String schoolId,
+  ) async {
     try {
       final policy = await remoteDataSource.getReleasePolicy(schoolId);
       return Right(policy);
@@ -167,9 +200,13 @@ class AssessmentRepositoryImpl implements AssessmentRepository {
   }
 
   @override
-  Future<Either<Failure, void>> updateReleasePolicy(ReportReleasePolicy policy) async {
+  Future<Either<Failure, void>> updateReleasePolicy(
+    ReportReleasePolicy policy,
+  ) async {
     try {
-      await remoteDataSource.updateReleasePolicy(policy as ReportReleasePolicyModel);
+      await remoteDataSource.updateReleasePolicy(
+        policy as ReportReleasePolicyModel,
+      );
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString()));

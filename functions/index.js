@@ -287,6 +287,69 @@ exports.createStaffAccount = onCall(async (request) => {
   return { uid: userRecord.uid, temporaryPassword };
 });
 
+// Resets a staff member's Firebase Auth password to a new random temporary
+// one and flips mustChangePassword, so they're prompted to set their own on
+// next login - mirrors createStaffAccount's admin-gate + temp-password
+// pattern above, since only the Admin SDK (never the client) can set
+// another user's Auth password.
+exports.adminResetStaffPassword = onCall(async (request) => {
+  const auth = request.auth;
+  if (!auth) {
+    throw new HttpsError("unauthenticated", "You must be signed in.");
+  }
+
+  const { userId } = request.data || {};
+  if (typeof userId !== "string" || !userId.trim()) {
+    throw new HttpsError("invalid-argument", "userId is required.");
+  }
+
+  const db = admin.firestore();
+
+  const callerDoc = await db.collection("users").doc(auth.uid).get();
+  const callerData = callerDoc.exists ? callerDoc.data() : {};
+  const callerRoles = Array.isArray(callerData.roles)
+    ? callerData.roles
+    : (callerData.role ? [callerData.role] : []);
+  if (!callerRoles.some((r) => ADMIN_ROLES.includes(r))) {
+    throw new HttpsError("permission-denied", "Only school administrators can reset staff passwords.");
+  }
+  const callerSchoolId = callerData.schoolId || null;
+  if (!callerSchoolId) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Your administrator account is not assigned to a school."
+    );
+  }
+
+  const targetDoc = await db.collection("users").doc(userId).get();
+  if (!targetDoc.exists) {
+    throw new HttpsError("not-found", "Staff member not found.");
+  }
+  const targetData = targetDoc.data();
+  // Tenant boundary: an admin may only reset passwords for staff in their
+  // own school, same guard shape as toggleStaffActiveStatus's Firestore rule.
+  if (targetData.schoolId !== callerSchoolId) {
+    throw new HttpsError("permission-denied", "That staff member belongs to a different school.");
+  }
+
+  const temporaryPassword = generateTemporaryPassword();
+
+  try {
+    await admin.auth().updateUser(userId, { password: temporaryPassword });
+  } catch (err) {
+    if (err.code === "auth/user-not-found") {
+      throw new HttpsError("not-found", "No Auth account found for this staff member.");
+    }
+    throw new HttpsError("internal", err.message || "Failed to reset the password.");
+  }
+
+  await db.collection("users").doc(userId).update({
+    mustChangePassword: true,
+  });
+
+  return { temporaryPassword };
+});
+
 // ============================================================================
 // School Admin provisioning
 //
@@ -1313,6 +1376,9 @@ exports.dispatchScheduledNotifications = notificationFunctions.dispatchScheduled
 exports.escalateUnacknowledgedAlerts = notificationFunctions.escalateUnacknowledgedAlerts;
 exports.purgeExpiredNotifications = notificationFunctions.purgeExpiredNotifications;
 exports.sendTestNotification = notificationFunctions.sendTestNotification;
+
+const appointmentFunctions = require('./appointments');
+exports.queueAppointmentNotifications = appointmentFunctions.queueAppointmentNotifications;
 
 // ---------------------------------------------------------------------------
 // Class Teacher panel - the three actions that must not be a client write.

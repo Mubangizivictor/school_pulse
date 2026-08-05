@@ -265,6 +265,7 @@ class DefaultNotificationTemplates {
   static List<NotificationTemplate> get asList => all.values.toList();
 
   /// Templates belonging to one category, for a picker grouped by module.
-  static List<NotificationTemplate> forCategory(NotificationCategory category) =>
-      all.values.where((t) => t.category == category).toList();
+  static List<NotificationTemplate> forCategory(
+    NotificationCategory category,
+  ) => all.values.where((t) => t.category == category).toList();
 }

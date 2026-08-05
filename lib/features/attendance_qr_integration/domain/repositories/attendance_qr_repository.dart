@@ -7,7 +7,7 @@ abstract class AttendanceQrRepository {
   Future<Either<Failure, List<QrAttendanceRecord>>> getPendingSyncRecords();
   Future<Either<Failure, void>> markAsSynced(String recordId);
   Future<Either<Failure, void>> syncWithFirebase();
-  
+
   // Google Sheets Export
   Future<Either<Failure, void>> exportToGoogleSheets({
     required String schoolId,

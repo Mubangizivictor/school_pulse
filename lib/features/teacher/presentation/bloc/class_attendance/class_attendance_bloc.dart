@@ -193,8 +193,9 @@ class ClassAttendanceState extends Equatable {
       isLoading: isLoading ?? this.isLoading,
       isSaving: isSaving ?? this.isSaving,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
-      successMessage:
-          clearSuccess ? null : (successMessage ?? this.successMessage),
+      successMessage: clearSuccess
+          ? null
+          : (successMessage ?? this.successMessage),
       context: context ?? this.context,
       session: session ?? this.session,
       students: students ?? this.students,
@@ -206,17 +207,17 @@ class ClassAttendanceState extends Equatable {
 
   @override
   List<Object?> get props => [
-        isLoading,
-        isSaving,
-        errorMessage,
-        successMessage,
-        context,
-        session,
-        students,
-        options,
-        query,
-        canRequestCorrection,
-      ];
+    isLoading,
+    isSaving,
+    errorMessage,
+    successMessage,
+    context,
+    session,
+    students,
+    options,
+    query,
+    canRequestCorrection,
+  ];
 }
 
 class ClassAttendanceBloc
@@ -245,31 +246,40 @@ class ClassAttendanceBloc
   ) async {
     emit(ClassAttendanceState(isLoading: true, context: event.context));
 
-    final roster = await studentRepository.getClassStudents(context: event.context);
-    final options = await attendanceRepository.getStatusOptions(context: event.context);
+    final roster = await studentRepository.getClassStudents(
+      context: event.context,
+    );
+    final options = await attendanceRepository.getStatusOptions(
+      context: event.context,
+    );
     final session = await attendanceRepository.resolveSession(
       context: event.context,
       date: event.date,
     );
 
     final students = roster.getOrElse(() => const []);
-    final resolvedOptions =
-        options.getOrElse(() => AttendanceStatusResolver.defaults);
+    final resolvedOptions = options.getOrElse(
+      () => AttendanceStatusResolver.defaults,
+    );
 
     session.fold(
-      (failure) => emit(state.copyWith(
-        isLoading: false,
-        students: students,
-        options: resolvedOptions,
-        errorMessage: _messageFor(failure),
-      )),
-      (resolved) => emit(state.copyWith(
-        isLoading: false,
-        students: students,
-        options: resolvedOptions,
-        session: resolved,
-        clearError: true,
-      )),
+      (failure) => emit(
+        state.copyWith(
+          isLoading: false,
+          students: students,
+          options: resolvedOptions,
+          errorMessage: _messageFor(failure),
+        ),
+      ),
+      (resolved) => emit(
+        state.copyWith(
+          isLoading: false,
+          students: students,
+          options: resolvedOptions,
+          session: resolved,
+          clearError: true,
+        ),
+      ),
     );
   }
 
@@ -281,12 +291,14 @@ class ClassAttendanceBloc
     if (session == null) return;
 
     if (!state.isEditable) {
-      emit(state.copyWith(
-        errorMessage: session.isLocked
-            ? 'This register has been closed by the academic office.'
-            : 'This register has been submitted. Use Correct to change a mark.',
-        canRequestCorrection: true,
-      ));
+      emit(
+        state.copyWith(
+          errorMessage: session.isLocked
+              ? 'This register has been closed by the academic office.'
+              : 'This register has been submitted. Use Correct to change a mark.',
+          canRequestCorrection: true,
+        ),
+      );
       return;
     }
 
@@ -301,10 +313,12 @@ class ClassAttendanceBloc
       return;
     }
 
-    emit(state.copyWith(
-      session: session.withMark(event.studentId, event.statusCode),
-      clearError: true,
-    ));
+    emit(
+      state.copyWith(
+        session: session.withMark(event.studentId, event.statusCode),
+        clearError: true,
+      ),
+    );
   }
 
   void _onAllMarked(
@@ -347,16 +361,17 @@ class ClassAttendanceBloc
     );
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        isSaving: false,
-        errorMessage: _messageFor(failure),
-      )),
-      (saved) => emit(state.copyWith(
-        isSaving: false,
-        session: saved,
-        successMessage: 'Draft saved.',
-        clearError: true,
-      )),
+      (failure) => emit(
+        state.copyWith(isSaving: false, errorMessage: _messageFor(failure)),
+      ),
+      (saved) => emit(
+        state.copyWith(
+          isSaving: false,
+          session: saved,
+          successMessage: 'Draft saved.',
+          clearError: true,
+        ),
+      ),
     );
   }
 
@@ -377,17 +392,21 @@ class ClassAttendanceBloc
     );
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        isSaving: false,
-        errorMessage: _messageFor(failure),
-        canRequestCorrection: failure is PermissionDeniedFailure,
-      )),
-      (submitted) => emit(state.copyWith(
-        isSaving: false,
-        session: submitted,
-        successMessage: 'Attendance submitted.',
-        clearError: true,
-      )),
+      (failure) => emit(
+        state.copyWith(
+          isSaving: false,
+          errorMessage: _messageFor(failure),
+          canRequestCorrection: failure is PermissionDeniedFailure,
+        ),
+      ),
+      (submitted) => emit(
+        state.copyWith(
+          isSaving: false,
+          session: submitted,
+          successMessage: 'Attendance submitted.',
+          clearError: true,
+        ),
+      ),
     );
   }
 
@@ -410,17 +429,21 @@ class ClassAttendanceBloc
     );
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        isSaving: false,
-        errorMessage: _messageFor(failure),
-        canRequestCorrection: failure is PermissionDeniedFailure,
-      )),
-      (corrected) => emit(state.copyWith(
-        isSaving: false,
-        session: corrected,
-        successMessage: 'Register corrected.',
-        clearError: true,
-      )),
+      (failure) => emit(
+        state.copyWith(
+          isSaving: false,
+          errorMessage: _messageFor(failure),
+          canRequestCorrection: failure is PermissionDeniedFailure,
+        ),
+      ),
+      (corrected) => emit(
+        state.copyWith(
+          isSaving: false,
+          session: corrected,
+          successMessage: 'Register corrected.',
+          clearError: true,
+        ),
+      ),
     );
   }
 
@@ -443,16 +466,18 @@ class ClassAttendanceBloc
     );
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        isSaving: false,
-        errorMessage: _messageFor(failure),
-      )),
-      (_) => emit(state.copyWith(
-        isSaving: false,
-        successMessage: 'Correction requested. The academic office will review it.',
-        canRequestCorrection: false,
-        clearError: true,
-      )),
+      (failure) => emit(
+        state.copyWith(isSaving: false, errorMessage: _messageFor(failure)),
+      ),
+      (_) => emit(
+        state.copyWith(
+          isSaving: false,
+          successMessage:
+              'Correction requested. The academic office will review it.',
+          canRequestCorrection: false,
+          clearError: true,
+        ),
+      ),
     );
   }
 
@@ -464,13 +489,13 @@ class ClassAttendanceBloc
   }
 
   String _messageFor(Failure failure) => switch (failure) {
-        PermissionDeniedFailure() => failure.message,
-        AssignmentInvalidFailure() => failure.message,
-        ValidationFailure() => failure.message,
-        OfflineNotAllowedFailure() => failure.message,
-        NetworkFailure() => failure.message,
-        _ => 'Could not save the register. Try again.',
-      };
+    PermissionDeniedFailure() => failure.message,
+    AssignmentInvalidFailure() => failure.message,
+    ValidationFailure() => failure.message,
+    OfflineNotAllowedFailure() => failure.message,
+    NetworkFailure() => failure.message,
+    _ => 'Could not save the register. Try again.',
+  };
 }
 
 /// Thin adapter so the BLoC can run the marking guard without importing the

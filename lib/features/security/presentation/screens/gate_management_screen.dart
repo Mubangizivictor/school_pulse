@@ -45,9 +45,13 @@ class _GateManagementScreenState extends State<GateManagementScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (sheetContext) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(sheetContext).viewInsets.bottom),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+        ),
         child: _GateFormSheet(
           existing: existing,
           schoolId: _schoolId,
@@ -70,11 +74,16 @@ class _GateManagementScreenState extends State<GateManagementScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Gate Management')),
       body: BlocConsumer<SecurityBloc, SecurityState>(
-        listenWhen: (previous, current) => !identical(previous.feedback, current.feedback) && current.feedback != null,
+        listenWhen: (previous, current) =>
+            !identical(previous.feedback, current.feedback) &&
+            current.feedback != null,
         listener: (context, state) {
           final feedback = state.feedback!;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(feedback.message), backgroundColor: feedback.isError ? Colors.red : null),
+            SnackBar(
+              content: Text(feedback.message),
+              backgroundColor: feedback.isError ? Colors.red : null,
+            ),
           );
         },
         builder: (context, state) {
@@ -82,7 +91,10 @@ class _GateManagementScreenState extends State<GateManagementScreen> {
             return const Center(
               child: Padding(
                 padding: EdgeInsets.all(24),
-                child: Text('No gates configured yet. Tap + to add your first gate.', textAlign: TextAlign.center),
+                child: Text(
+                  'No gates configured yet. Tap + to add your first gate.',
+                  textAlign: TextAlign.center,
+                ),
               ),
             );
           }
@@ -94,10 +106,14 @@ class _GateManagementScreenState extends State<GateManagementScreen> {
               return AppCard(
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
-                  leading: const CircleAvatar(child: Icon(Icons.door_front_door_outlined)),
+                  leading: const CircleAvatar(
+                    child: Icon(Icons.door_front_door_outlined),
+                  ),
                   title: Text(gate.name),
-                  subtitle: Text('${gate.type} • ${gate.location}\n'
-                      '${gate.requiredVerificationMethods.map((id) => VerificationMethod.fromId(id)?.label ?? id).join(', ')}'),
+                  subtitle: Text(
+                    '${gate.type} • ${gate.location}\n'
+                    '${gate.requiredVerificationMethods.map((id) => VerificationMethod.fromId(id)?.label ?? id).join(', ')}',
+                  ),
                   isThreeLine: true,
                   trailing: IconButton(
                     icon: const Icon(Icons.edit_outlined),
@@ -158,29 +174,43 @@ class _GateFormSheetState extends State<_GateFormSheet> {
     };
     _requiredMethods = {
       for (final id in (existing?.requiredVerificationMethods ?? []))
-        if (VerificationMethod.fromId(id) != null) VerificationMethod.fromId(id)!,
+        if (VerificationMethod.fromId(id) != null)
+          VerificationMethod.fromId(id)!,
     };
-    _openTime = _parseTime(existing?.operatingHours['open'] as String?) ?? const TimeOfDay(hour: 6, minute: 0);
-    _closeTime = _parseTime(existing?.operatingHours['close'] as String?) ?? const TimeOfDay(hour: 18, minute: 0);
+    _openTime =
+        _parseTime(existing?.operatingHours['open'] as String?) ??
+        const TimeOfDay(hour: 6, minute: 0);
+    _closeTime =
+        _parseTime(existing?.operatingHours['close'] as String?) ??
+        const TimeOfDay(hour: 18, minute: 0);
   }
 
   TimeOfDay? _parseTime(String? value) {
     if (value == null || !value.contains(':')) return null;
     final parts = value.split(':');
-    return TimeOfDay(hour: int.tryParse(parts[0]) ?? 0, minute: int.tryParse(parts[1]) ?? 0);
+    return TimeOfDay(
+      hour: int.tryParse(parts[0]) ?? 0,
+      minute: int.tryParse(parts[1]) ?? 0,
+    );
   }
 
-  String _formatTime(TimeOfDay time) => '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+  String _formatTime(TimeOfDay time) =>
+      '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
 
   void _submit() {
-    if (_nameController.text.trim().isEmpty || _locationController.text.trim().isEmpty) return;
+    if (_nameController.text.trim().isEmpty ||
+        _locationController.text.trim().isEmpty)
+      return;
     final gate = GateModel(
       id: widget.existing?.id ?? const Uuid().v4(),
       name: _nameController.text.trim(),
       type: _type,
       location: _locationController.text.trim(),
       assignedOfficerIds: _assignedOfficerIds.toList(),
-      operatingHours: {'open': _formatTime(_openTime), 'close': _formatTime(_closeTime)},
+      operatingHours: {
+        'open': _formatTime(_openTime),
+        'close': _formatTime(_closeTime),
+      },
       allowedUserRoles: _allowedRoles.map((r) => r.name).toList(),
       requiredVerificationMethods: _requiredMethods.map((m) => m.id).toList(),
       schoolId: widget.schoolId,
@@ -201,34 +231,53 @@ class _GateFormSheetState extends State<_GateFormSheet> {
           children: [
             Text(
               widget.existing == null ? 'Add Gate' : 'Edit Gate',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Gate Name', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: 'Gate Name',
+                border: OutlineInputBorder(),
+              ),
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _type,
-              decoration: const InputDecoration(labelText: 'Gate Type', border: OutlineInputBorder()),
-              items: kGateTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+              decoration: const InputDecoration(
+                labelText: 'Gate Type',
+                border: OutlineInputBorder(),
+              ),
+              items: kGateTypes
+                  .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                  .toList(),
               onChanged: (v) => setState(() => _type = v ?? _type),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _locationController,
-              decoration: const InputDecoration(labelText: 'Location', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: 'Location',
+                border: OutlineInputBorder(),
+              ),
             ),
             const SizedBox(height: 20),
-            Text('Operating Hours', style: Theme.of(context).textTheme.titleSmall),
+            Text(
+              'Operating Hours',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
             const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () async {
-                      final picked = await showTimePicker(context: context, initialTime: _openTime);
+                      final picked = await showTimePicker(
+                        context: context,
+                        initialTime: _openTime,
+                      );
                       if (picked != null) setState(() => _openTime = picked);
                     },
                     child: Text('Opens ${_formatTime(_openTime)}'),
@@ -238,7 +287,10 @@ class _GateFormSheetState extends State<_GateFormSheet> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () async {
-                      final picked = await showTimePicker(context: context, initialTime: _closeTime);
+                      final picked = await showTimePicker(
+                        context: context,
+                        initialTime: _closeTime,
+                      );
                       if (picked != null) setState(() => _closeTime = picked);
                     },
                     child: Text('Closes ${_formatTime(_closeTime)}'),
@@ -247,7 +299,10 @@ class _GateFormSheetState extends State<_GateFormSheet> {
               ],
             ),
             const SizedBox(height: 20),
-            Text('Required Verification Methods', style: Theme.of(context).textTheme.titleSmall),
+            Text(
+              'Required Verification Methods',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -268,7 +323,10 @@ class _GateFormSheetState extends State<_GateFormSheet> {
               }).toList(),
             ),
             const SizedBox(height: 20),
-            Text('Allowed User Roles', style: Theme.of(context).textTheme.titleSmall),
+            Text(
+              'Allowed User Roles',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -289,10 +347,16 @@ class _GateFormSheetState extends State<_GateFormSheet> {
               }).toList(),
             ),
             const SizedBox(height: 20),
-            Text('Assigned Security Officers', style: Theme.of(context).textTheme.titleSmall),
+            Text(
+              'Assigned Security Officers',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
             const SizedBox(height: 8),
             if (widget.staff.isEmpty)
-              const Text('No staff found for this school.', style: TextStyle(color: Colors.grey))
+              const Text(
+                'No staff found for this school.',
+                style: TextStyle(color: Colors.grey),
+              )
             else
               Wrap(
                 spacing: 8,
@@ -315,7 +379,9 @@ class _GateFormSheetState extends State<_GateFormSheet> {
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _submit,
-              child: Text(widget.existing == null ? 'Create Gate' : 'Save Changes'),
+              child: Text(
+                widget.existing == null ? 'Create Gate' : 'Save Changes',
+              ),
             ),
             const SizedBox(height: 12),
           ],

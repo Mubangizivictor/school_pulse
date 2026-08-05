@@ -46,7 +46,9 @@ class ReportPreviewScreen extends StatelessWidget {
                           className: state.selectedClassName,
                         ),
                       ),
-                      if (state.enabledSections.contains('Academic Performance')) ...[
+                      if (state.enabledSections.contains(
+                        'Academic Performance',
+                      )) ...[
                         const SizedBox(height: 16),
                         _buildPreviewSection(
                           context,
@@ -54,7 +56,9 @@ class ReportPreviewScreen extends StatelessWidget {
                           content: const _AcademicPerformanceTable(),
                         ),
                       ],
-                      if (state.enabledSections.contains('Competency Development')) ...[
+                      if (state.enabledSections.contains(
+                        'Competency Development',
+                      )) ...[
                         const SizedBox(height: 16),
                         _buildPreviewSection(
                           context,
@@ -62,8 +66,12 @@ class ReportPreviewScreen extends StatelessWidget {
                           content: const _SkillsGrid(),
                         ),
                       ],
-                      if (state.enabledSections.contains('Attendance & Punctuality') ||
-                          state.enabledSections.contains('Behaviour & Conduct')) ...[
+                      if (state.enabledSections.contains(
+                            'Attendance & Punctuality',
+                          ) ||
+                          state.enabledSections.contains(
+                            'Behaviour & Conduct',
+                          )) ...[
                         const SizedBox(height: 16),
                         _buildPreviewSection(
                           context,
@@ -71,7 +79,9 @@ class ReportPreviewScreen extends StatelessWidget {
                           content: const _AttendanceConductSummary(),
                         ),
                       ],
-                      if (state.enabledSections.contains('Teacher\'s Comment')) ...[
+                      if (state.enabledSections.contains(
+                        'Teacher\'s Comment',
+                      )) ...[
                         const SizedBox(height: 16),
                         _buildPreviewSection(
                           context,
@@ -96,7 +106,8 @@ class ReportPreviewScreen extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: PrimaryButton(
-                  label: 'Proceed to Generate (${state.selectedStudentIds.length} Students)',
+                  label:
+                      'Proceed to Generate (${state.selectedStudentIds.length} Students)',
                   onPressed: () => context.push('/staff/reports/generate'),
                 ),
               ),
@@ -107,7 +118,11 @@ class ReportPreviewScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPreviewSection(BuildContext context, {required String title, required Widget content}) {
+  Widget _buildPreviewSection(
+    BuildContext context, {
+    required String title,
+    required Widget content,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -122,10 +137,7 @@ class ReportPreviewScreen extends StatelessWidget {
             ),
           ),
         ),
-        AppCard(
-          padding: EdgeInsets.zero,
-          child: content,
-        ),
+        AppCard(padding: EdgeInsets.zero, child: content),
       ],
     );
   }
@@ -144,7 +156,11 @@ class _ReportCardPreviewHeader extends StatelessWidget {
         CircleAvatar(
           radius: 30,
           backgroundColor: AppColors.primary(context).withOpacity(0.1),
-          child: Icon(Icons.school, color: AppColors.primary(context), size: 30),
+          child: Icon(
+            Icons.school,
+            color: AppColors.primary(context),
+            size: 30,
+          ),
         ),
         const SizedBox(width: 16),
         Expanded(
@@ -359,10 +375,7 @@ class _SkillsGrid extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            name,
-            style: TextStyle(color: AppColors.textPrimary(context)),
-          ),
+          Text(name, style: TextStyle(color: AppColors.textPrimary(context))),
           Row(
             children: List.generate(
               5,

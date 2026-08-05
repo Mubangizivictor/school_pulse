@@ -64,7 +64,12 @@ class CalculationEngine {
         return range;
       }
     }
-    return const GradeRange(grade: 'F', minScore: 0, maxScore: 0, remarks: 'Ungraded');
+    return const GradeRange(
+      grade: 'F',
+      minScore: 0,
+      maxScore: 0,
+      remarks: 'Ungraded',
+    );
   }
 
   static double calculateOverallAverage(List<SubjectResult> results) {

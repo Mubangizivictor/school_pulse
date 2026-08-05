@@ -53,11 +53,32 @@ class ClassDetailsScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.l),
             Row(
               children: [
-                Expanded(child: _buildStatCard(context, '32', 'Total Students', AppColors.primary(context))),
+                Expanded(
+                  child: _buildStatCard(
+                    context,
+                    '32',
+                    'Total Students',
+                    AppColors.primary(context),
+                  ),
+                ),
                 const SizedBox(width: AppSpacing.m),
-                Expanded(child: _buildStatCard(context, '30', 'Present Today', AppColors.success(context))),
+                Expanded(
+                  child: _buildStatCard(
+                    context,
+                    '30',
+                    'Present Today',
+                    AppColors.success(context),
+                  ),
+                ),
                 const SizedBox(width: AppSpacing.m),
-                Expanded(child: _buildStatCard(context, '2', 'Absent Today', AppColors.danger(context))),
+                Expanded(
+                  child: _buildStatCard(
+                    context,
+                    '2',
+                    'Absent Today',
+                    AppColors.danger(context),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: AppSpacing.xl),
@@ -68,7 +89,11 @@ class ClassDetailsScreen extends StatelessWidget {
                   const Divider(height: AppSpacing.x3l),
                   _buildDetailRow(context, 'Room', 'Room 12'),
                   _buildDetailRow(context, 'Stream / Section', 'East'),
-                  _buildDetailRow(context, 'Subjects Taught', 'Mathematics, Social Studies'),
+                  _buildDetailRow(
+                    context,
+                    'Subjects Taught',
+                    'Mathematics, Social Studies',
+                  ),
                 ],
               ),
             ),
@@ -84,8 +109,12 @@ class ClassDetailsScreen extends StatelessWidget {
                   ),
                 ),
                 TextButton(
-                  onPressed: () => context.push('/staff/classes/$classId/timetable'),
-                  child: Text('View Timetable', style: TextStyle(color: AppColors.primary(context))),
+                  onPressed: () =>
+                      context.push('/staff/classes/$classId/timetable'),
+                  child: Text(
+                    'View Timetable',
+                    style: TextStyle(color: AppColors.primary(context)),
+                  ),
                 ),
               ],
             ),
@@ -119,28 +148,41 @@ class ClassDetailsScreen extends StatelessWidget {
               children: [
                 Text(
                   'P5 East',
-                  style: AppTypography.titleLarge.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                  style: AppTypography.titleLarge.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text(
                   'Primary Five • 2024',
-                  style: AppTypography.bodyMedium.copyWith(color: Colors.white.withValues(alpha: 0.8)),
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: Colors.white.withValues(alpha: 0.8),
+                  ),
                 ),
                 Text(
                   '32 Students • 18 Boys, 14 Girls',
-                  style: AppTypography.bodySmall.copyWith(color: Colors.white.withValues(alpha: 0.7)),
+                  style: AppTypography.bodySmall.copyWith(
+                    color: Colors.white.withValues(alpha: 0.7),
+                  ),
                 ),
               ],
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: 4),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.m,
+              vertical: 4,
+            ),
             decoration: BoxDecoration(
               color: AppColors.success(context),
               borderRadius: BorderRadius.circular(AppSpacing.s),
             ),
             child: Text(
               'Active',
-              style: AppTypography.labelSmall.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+              style: AppTypography.labelSmall.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -154,25 +196,55 @@ class ClassDetailsScreen extends StatelessWidget {
       child: Row(
         children: [
           _buildTabItem(context, 'Overview', true, () {}),
-          _buildTabItem(context, 'Students', false, () => context.push('/staff/classes/$classId/students')),
-          _buildTabItem(context, 'Attendance', false, () => context.push('/staff/classes/$classId/attendance')),
-          _buildTabItem(context, 'Performance', false, () => context.push('/staff/classes/$classId/performance')),
-          _buildTabItem(context, 'More', false, () => context.push('/staff/classes/$classId/more')),
+          _buildTabItem(
+            context,
+            'Students',
+            false,
+            () => context.push('/staff/classes/$classId/students'),
+          ),
+          _buildTabItem(
+            context,
+            'Attendance',
+            false,
+            () => context.push('/staff/classes/$classId/attendance'),
+          ),
+          _buildTabItem(
+            context,
+            'Performance',
+            false,
+            () => context.push('/staff/classes/$classId/performance'),
+          ),
+          _buildTabItem(
+            context,
+            'More',
+            false,
+            () => context.push('/staff/classes/$classId/more'),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildTabItem(BuildContext context, String label, bool isSelected, VoidCallback onTap) {
+  Widget _buildTabItem(
+    BuildContext context,
+    String label,
+    bool isSelected,
+    VoidCallback onTap,
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(right: AppSpacing.m),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.s),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.l,
+          vertical: AppSpacing.s,
+        ),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary(context) : Colors.transparent,
           borderRadius: BorderRadius.circular(AppSpacing.m),
-          border: isSelected ? null : Border.all(color: AppColors.border(context)),
+          border: isSelected
+              ? null
+              : Border.all(color: AppColors.border(context)),
         ),
         child: Text(
           label,
@@ -185,14 +257,22 @@ class ClassDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(BuildContext context, String value, String label, Color color) {
+  Widget _buildStatCard(
+    BuildContext context,
+    String value,
+    String label,
+    Color color,
+  ) {
     return PulseCard(
       padding: const EdgeInsets.all(AppSpacing.l),
       child: Column(
         children: [
           Text(
             value,
-            style: AppTypography.headlineSmall.copyWith(color: color, fontWeight: FontWeight.bold),
+            style: AppTypography.headlineSmall.copyWith(
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 4),
           Text(

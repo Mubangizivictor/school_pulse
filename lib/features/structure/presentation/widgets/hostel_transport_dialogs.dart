@@ -6,14 +6,27 @@ import 'structure_ui_kit.dart';
 
 const List<String> kHostelGenders = ['Male', 'Female', 'Mixed'];
 
-Future<void> showHostelFormDialog(BuildContext context, {Hostel? existing, required void Function(Hostel) onSave}) {
+Future<void> showHostelFormDialog(
+  BuildContext context, {
+  Hostel? existing,
+  required String schoolId,
+  required void Function(Hostel) onSave,
+}) {
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController(text: existing?.name);
-  final wardenNameController = TextEditingController(text: existing?.wardenName);
-  final wardenContactController = TextEditingController(text: existing?.wardenContact);
-  final capacityController = TextEditingController(text: existing?.capacity.toString() ?? '0');
+  final wardenNameController = TextEditingController(
+    text: existing?.wardenName,
+  );
+  final wardenContactController = TextEditingController(
+    text: existing?.wardenContact,
+  );
+  final capacityController = TextEditingController(
+    text: existing?.capacity.toString() ?? '0',
+  );
   final descController = TextEditingController(text: existing?.description);
-  String selectedGender = kHostelGenders.contains(existing?.gender) ? existing!.gender : kHostelGenders.first;
+  String selectedGender = kHostelGenders.contains(existing?.gender)
+      ? existing!.gender
+      : kHostelGenders.first;
   bool isActive = existing?.isActive ?? true;
 
   return showStructureFormSheet(
@@ -32,16 +45,23 @@ Future<void> showHostelFormDialog(BuildContext context, {Hostel? existing, requi
           DropdownButtonFormField<String>(
             initialValue: selectedGender,
             decoration: const InputDecoration(labelText: 'Gender'),
-            items: kHostelGenders.map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
-            onChanged: (v) => setState(() => selectedGender = v ?? selectedGender),
+            items: kHostelGenders
+                .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                .toList(),
+            onChanged: (v) =>
+                setState(() => selectedGender = v ?? selectedGender),
           ),
           TextFormField(
             controller: wardenNameController,
-            decoration: const InputDecoration(labelText: 'Warden Name (optional)'),
+            decoration: const InputDecoration(
+              labelText: 'Warden Name (optional)',
+            ),
           ),
           TextFormField(
             controller: wardenContactController,
-            decoration: const InputDecoration(labelText: 'Warden Contact (optional)'),
+            decoration: const InputDecoration(
+              labelText: 'Warden Contact (optional)',
+            ),
           ),
           TextFormField(
             controller: capacityController,
@@ -50,7 +70,9 @@ Future<void> showHostelFormDialog(BuildContext context, {Hostel? existing, requi
           ),
           TextFormField(
             controller: descController,
-            decoration: const InputDecoration(labelText: 'Description (optional)'),
+            decoration: const InputDecoration(
+              labelText: 'Description (optional)',
+            ),
             maxLines: 2,
           ),
           if (existing != null)
@@ -65,16 +87,19 @@ Future<void> showHostelFormDialog(BuildContext context, {Hostel? existing, requi
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(Hostel(
-        id: existing?.id ?? const Uuid().v4(),
-        name: nameController.text,
-        gender: selectedGender,
-        wardenName: wardenNameController.text,
-        wardenContact: wardenContactController.text,
-        capacity: int.tryParse(capacityController.text) ?? 0,
-        description: descController.text,
-        isActive: isActive,
-      ));
+      onSave(
+        Hostel(
+          id: existing?.id ?? const Uuid().v4(),
+          schoolId: existing?.schoolId ?? schoolId,
+          name: nameController.text,
+          gender: selectedGender,
+          wardenName: wardenNameController.text,
+          wardenContact: wardenContactController.text,
+          capacity: int.tryParse(capacityController.text) ?? 0,
+          description: descController.text,
+          isActive: isActive,
+        ),
+      );
       Navigator.pop(context);
     },
   );
@@ -84,13 +109,18 @@ Future<void> showHostelRoomFormDialog(
   BuildContext context, {
   HostelRoom? existing,
   required List<Hostel> hostels,
+  required String schoolId,
   required void Function(HostelRoom) onSave,
 }) {
   final formKey = GlobalKey<FormState>();
   final blockController = TextEditingController(text: existing?.blockName);
   final roomController = TextEditingController(text: existing?.roomNumber);
-  final bedCapacityController = TextEditingController(text: existing?.bedCapacity.toString() ?? '0');
-  String? selectedHostelId = existing?.hostelId.isNotEmpty == true ? existing!.hostelId : (hostels.isNotEmpty ? hostels.first.id : null);
+  final bedCapacityController = TextEditingController(
+    text: existing?.bedCapacity.toString() ?? '0',
+  );
+  String? selectedHostelId = existing?.hostelId.isNotEmpty == true
+      ? existing!.hostelId
+      : (hostels.isNotEmpty ? hostels.first.id : null);
   bool isActive = existing?.isActive ?? true;
 
   return showStructureFormSheet(
@@ -104,13 +134,17 @@ Future<void> showHostelRoomFormDialog(
           DropdownButtonFormField<String>(
             initialValue: selectedHostelId,
             decoration: const InputDecoration(labelText: 'Hostel'),
-            items: hostels.map((h) => DropdownMenuItem(value: h.id, child: Text(h.name))).toList(),
+            items: hostels
+                .map((h) => DropdownMenuItem(value: h.id, child: Text(h.name)))
+                .toList(),
             onChanged: (v) => setState(() => selectedHostelId = v),
             validator: (v) => v == null ? 'Select a hostel' : null,
           ),
           TextFormField(
             controller: blockController,
-            decoration: const InputDecoration(labelText: 'Block Name (optional)'),
+            decoration: const InputDecoration(
+              labelText: 'Block Name (optional)',
+            ),
           ),
           TextFormField(
             controller: roomController,
@@ -134,20 +168,28 @@ Future<void> showHostelRoomFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(HostelRoom(
-        id: existing?.id ?? const Uuid().v4(),
-        hostelId: selectedHostelId!,
-        blockName: blockController.text,
-        roomNumber: roomController.text,
-        bedCapacity: int.tryParse(bedCapacityController.text) ?? 0,
-        isActive: isActive,
-      ));
+      onSave(
+        HostelRoom(
+          id: existing?.id ?? const Uuid().v4(),
+          schoolId: existing?.schoolId ?? schoolId,
+          hostelId: selectedHostelId!,
+          blockName: blockController.text,
+          roomNumber: roomController.text,
+          bedCapacity: int.tryParse(bedCapacityController.text) ?? 0,
+          isActive: isActive,
+        ),
+      );
       Navigator.pop(context);
     },
   );
 }
 
-Future<void> showTransportRouteFormDialog(BuildContext context, {TransportRoute? existing, required void Function(TransportRoute) onSave}) {
+Future<void> showTransportRouteFormDialog(
+  BuildContext context, {
+  TransportRoute? existing,
+  required String schoolId,
+  required void Function(TransportRoute) onSave,
+}) {
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController(text: existing?.name);
   final codeController = TextEditingController(text: existing?.code);
@@ -173,7 +215,9 @@ Future<void> showTransportRouteFormDialog(BuildContext context, {TransportRoute?
           ),
           TextFormField(
             controller: descController,
-            decoration: const InputDecoration(labelText: 'Description (optional)'),
+            decoration: const InputDecoration(
+              labelText: 'Description (optional)',
+            ),
             maxLines: 2,
           ),
           if (existing != null)
@@ -188,13 +232,16 @@ Future<void> showTransportRouteFormDialog(BuildContext context, {TransportRoute?
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(TransportRoute(
-        id: existing?.id ?? const Uuid().v4(),
-        name: nameController.text,
-        code: codeController.text,
-        description: descController.text,
-        isActive: isActive,
-      ));
+      onSave(
+        TransportRoute(
+          id: existing?.id ?? const Uuid().v4(),
+          schoolId: existing?.schoolId ?? schoolId,
+          name: nameController.text,
+          code: codeController.text,
+          description: descController.text,
+          isActive: isActive,
+        ),
+      );
       Navigator.pop(context);
     },
   );
@@ -204,14 +251,21 @@ Future<void> showTransportStopFormDialog(
   BuildContext context, {
   TransportStop? existing,
   required List<TransportRoute> routes,
+  required String schoolId,
   required void Function(TransportStop) onSave,
 }) {
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController(text: existing?.name);
-  final orderController = TextEditingController(text: existing?.order.toString() ?? '0');
-  final pickupTimeController = TextEditingController(text: existing?.pickupTime);
+  final orderController = TextEditingController(
+    text: existing?.order.toString() ?? '0',
+  );
+  final pickupTimeController = TextEditingController(
+    text: existing?.pickupTime,
+  );
   final zoneController = TextEditingController(text: existing?.zone);
-  String? selectedRouteId = existing?.routeId.isNotEmpty == true ? existing!.routeId : (routes.isNotEmpty ? routes.first.id : null);
+  String? selectedRouteId = existing?.routeId.isNotEmpty == true
+      ? existing!.routeId
+      : (routes.isNotEmpty ? routes.first.id : null);
   bool isActive = existing?.isActive ?? true;
 
   return showStructureFormSheet(
@@ -225,7 +279,9 @@ Future<void> showTransportStopFormDialog(
           DropdownButtonFormField<String>(
             initialValue: selectedRouteId,
             decoration: const InputDecoration(labelText: 'Route'),
-            items: routes.map((r) => DropdownMenuItem(value: r.id, child: Text(r.name))).toList(),
+            items: routes
+                .map((r) => DropdownMenuItem(value: r.id, child: Text(r.name)))
+                .toList(),
             onChanged: (v) => setState(() => selectedRouteId = v),
             validator: (v) => v == null ? 'Select a route' : null,
           ),
@@ -241,7 +297,9 @@ Future<void> showTransportStopFormDialog(
           ),
           TextFormField(
             controller: pickupTimeController,
-            decoration: const InputDecoration(labelText: 'Pickup Time (optional, e.g. 07:00)'),
+            decoration: const InputDecoration(
+              labelText: 'Pickup Time (optional, e.g. 07:00)',
+            ),
           ),
           TextFormField(
             controller: zoneController,
@@ -259,15 +317,18 @@ Future<void> showTransportStopFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(TransportStop(
-        id: existing?.id ?? const Uuid().v4(),
-        routeId: selectedRouteId!,
-        name: nameController.text,
-        order: int.tryParse(orderController.text) ?? 0,
-        pickupTime: pickupTimeController.text,
-        zone: zoneController.text,
-        isActive: isActive,
-      ));
+      onSave(
+        TransportStop(
+          id: existing?.id ?? const Uuid().v4(),
+          schoolId: existing?.schoolId ?? schoolId,
+          routeId: selectedRouteId!,
+          name: nameController.text,
+          order: int.tryParse(orderController.text) ?? 0,
+          pickupTime: pickupTimeController.text,
+          zone: zoneController.text,
+          isActive: isActive,
+        ),
+      );
       Navigator.pop(context);
     },
   );
@@ -277,14 +338,19 @@ Future<void> showTransportVehicleFormDialog(
   BuildContext context, {
   TransportVehicle? existing,
   required List<TransportRoute> routes,
+  required String schoolId,
   required void Function(TransportVehicle) onSave,
 }) {
   final formKey = GlobalKey<FormState>();
   final busNumberController = TextEditingController(text: existing?.busNumber);
   final plateController = TextEditingController(text: existing?.plateNumber);
-  final capacityController = TextEditingController(text: existing?.capacity.toString() ?? '0');
+  final capacityController = TextEditingController(
+    text: existing?.capacity.toString() ?? '0',
+  );
   final driverController = TextEditingController(text: existing?.driverName);
-  String? selectedRouteId = existing?.routeId.isNotEmpty == true ? existing!.routeId : null;
+  String? selectedRouteId = existing?.routeId.isNotEmpty == true
+      ? existing!.routeId
+      : null;
   bool isActive = existing?.isActive ?? true;
 
   return showStructureFormSheet(
@@ -302,7 +368,9 @@ Future<void> showTransportVehicleFormDialog(
           ),
           TextFormField(
             controller: plateController,
-            decoration: const InputDecoration(labelText: 'Plate Number (optional)'),
+            decoration: const InputDecoration(
+              labelText: 'Plate Number (optional)',
+            ),
           ),
           TextFormField(
             controller: capacityController,
@@ -311,14 +379,20 @@ Future<void> showTransportVehicleFormDialog(
           ),
           TextFormField(
             controller: driverController,
-            decoration: const InputDecoration(labelText: 'Driver Name (optional)'),
+            decoration: const InputDecoration(
+              labelText: 'Driver Name (optional)',
+            ),
           ),
           DropdownButtonFormField<String>(
             initialValue: selectedRouteId,
-            decoration: const InputDecoration(labelText: 'Assigned Route (optional)'),
+            decoration: const InputDecoration(
+              labelText: 'Assigned Route (optional)',
+            ),
             items: [
               const DropdownMenuItem<String>(value: null, child: Text('None')),
-              ...routes.map((r) => DropdownMenuItem(value: r.id, child: Text(r.name))),
+              ...routes.map(
+                (r) => DropdownMenuItem(value: r.id, child: Text(r.name)),
+              ),
             ],
             onChanged: (v) => setState(() => selectedRouteId = v),
           ),
@@ -334,15 +408,18 @@ Future<void> showTransportVehicleFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(TransportVehicle(
-        id: existing?.id ?? const Uuid().v4(),
-        busNumber: busNumberController.text,
-        plateNumber: plateController.text,
-        capacity: int.tryParse(capacityController.text) ?? 0,
-        driverName: driverController.text,
-        routeId: selectedRouteId ?? '',
-        isActive: isActive,
-      ));
+      onSave(
+        TransportVehicle(
+          id: existing?.id ?? const Uuid().v4(),
+          schoolId: existing?.schoolId ?? schoolId,
+          busNumber: busNumberController.text,
+          plateNumber: plateController.text,
+          capacity: int.tryParse(capacityController.text) ?? 0,
+          driverName: driverController.text,
+          routeId: selectedRouteId ?? '',
+          isActive: isActive,
+        ),
+      );
       Navigator.pop(context);
     },
   );

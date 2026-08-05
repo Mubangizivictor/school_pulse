@@ -29,28 +29,18 @@ class AppGradients {
   static const LinearGradient success = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [
-      AppColors.brightCyan,
-      AppColors.emeraldGreen,
-    ],
+    colors: [AppColors.brightCyan, AppColors.emeraldGreen],
   );
 
   static const LinearGradient premiumDark = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [
-      AppColors.midnightNavy,
-      AppColors.deepNavy,
-      AppColors.royalBlue,
-    ],
+    colors: [AppColors.midnightNavy, AppColors.deepNavy, AppColors.royalBlue],
   );
 
   static const LinearGradient surfaceDark = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [
-      AppColors.surfaceDark,
-      AppColors.elevatedSurfaceDark,
-    ],
+    colors: [AppColors.surfaceDark, AppColors.elevatedSurfaceDark],
   );
 }

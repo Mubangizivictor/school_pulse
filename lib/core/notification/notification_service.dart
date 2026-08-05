@@ -90,7 +90,9 @@ class NotificationService {
     LocalNotificationService.onNotificationTap = _navigateToNotifications;
 
     // Tapping a system-tray notification while the app was backgrounded.
-    FirebaseMessaging.onMessageOpenedApp.listen((_) => _navigateToNotifications());
+    FirebaseMessaging.onMessageOpenedApp.listen(
+      (_) => _navigateToNotifications(),
+    );
 
     // App was cold-launched by tapping a notification (terminated state) -
     // getInitialMessage only ever returns a non-null value once per launch.
@@ -99,9 +101,9 @@ class NotificationService {
     // whole app on a permanent blank screen since initialize() is awaited
     // before runApp() in main().
     final initialMessage = await _fcm.getInitialMessage().timeout(
-          const Duration(seconds: 5),
-          onTimeout: () => null,
-        );
+      const Duration(seconds: 5),
+      onTimeout: () => null,
+    );
     if (initialMessage != null) {
       _navigateToNotifications();
     }
@@ -112,7 +114,9 @@ class NotificationService {
   /// (see syncTopicsForUser), so the presence of a Firebase Auth user is what
   /// distinguishes which notification screen applies.
   void _navigateToNotifications() {
-    final path = _auth.currentUser != null ? '/staff/notifications' : '/parent/notifications';
+    final path = _auth.currentUser != null
+        ? '/staff/notifications'
+        : '/parent/notifications';
     router.push(path);
   }
 
@@ -137,7 +141,8 @@ class NotificationService {
       if (kDebugMode) debugPrint('Testing local notification...');
       await LocalNotificationService.show(
         title: "Test Notification",
-        body: "This is a test notification from School Pulse. Time: ${DateTime.now().hour}:${DateTime.now().minute}",
+        body:
+            "This is a test notification from School Pulse. Time: ${DateTime.now().hour}:${DateTime.now().minute}",
       );
       if (kDebugMode) debugPrint('Test notification sent successfully');
     } catch (e) {
@@ -167,10 +172,10 @@ class NotificationService {
         .collection('tokens')
         .doc(token)
         .set({
-      'token': token,
-      'createdAt': FieldValue.serverTimestamp(),
-      'platform': defaultTargetPlatform.toString(),
-    });
+          'token': token,
+          'createdAt': FieldValue.serverTimestamp(),
+          'platform': defaultTargetPlatform.toString(),
+        });
   }
 
   /// Subscribes this device to the FCM topics needed to receive broadcasts
@@ -213,7 +218,8 @@ class NotificationService {
         );
         await subscribeToGroups(groups);
       } catch (e) {
-        if (kDebugMode) debugPrint('Error resolving parent groups for $uid: $e');
+        if (kDebugMode)
+          debugPrint('Error resolving parent groups for $uid: $e');
         await subscribeToGroups(const ['Parents']);
       }
     } else {
@@ -224,6 +230,7 @@ class NotificationService {
   /// Sends a broadcast notification to a specific topic
   /// In FCM, "topics" is the standard way to broadcast to groups.
   Future<void> sendBroadcast({
+    String? schoolId,
     required String title,
     required String body,
     required List<String> targetGroups,
@@ -231,10 +238,13 @@ class NotificationService {
     DateTime? scheduledAt,
   }) async {
     final timestamp = FieldValue.serverTimestamp();
-    final scheduledTimestamp = scheduledAt != null ? Timestamp.fromDate(scheduledAt) : null;
+    final scheduledTimestamp = scheduledAt != null
+        ? Timestamp.fromDate(scheduledAt)
+        : null;
 
     // 1. Create the 'alert' document in Firestore (for the in-app "Audit Log")
     await _firestore.collection('alerts').add({
+      if (schoolId != null) 'schoolId': schoolId,
       'title': title,
       'body': body,
       'targets': targetGroups,
@@ -256,10 +266,7 @@ class NotificationService {
     } else {
       // 2. Trigger FCM via broadcast_queue
       await _firestore.collection('broadcast_queue').add({
-        'notification': {
-          'title': title,
-          'body': body,
-        },
+        'notification': {'title': title, 'body': body},
         'targets': targetGroups,
         'status': scheduledAt != null ? 'scheduled' : 'pending',
         'scheduledAt': scheduledTimestamp,
@@ -298,10 +305,7 @@ class NotificationService {
       // Queue for Cloud Function
       await _firestore.collection('notification_queue').add({
         'token': token,
-        'notification': {
-          'title': title,
-          'body': body,
-        },
+        'notification': {'title': title, 'body': body},
         'data': data,
         'status': 'pending',
         'createdAt': FieldValue.serverTimestamp(),
@@ -317,6 +321,7 @@ class NotificationService {
   /// surfaces in the parent app's notification center. [sendDirectNotification]
   /// (keyed by `userId`) does NOT satisfy that query.
   Future<void> sendStudentAlert({
+    String? schoolId,
     required String studentId,
     required List<String> parentIds,
     required String title,
@@ -324,6 +329,7 @@ class NotificationService {
     Map<String, dynamic>? data,
   }) async {
     await _firestore.collection('alerts').add({
+      if (schoolId != null) 'schoolId': schoolId,
       'studentId': studentId,
       'title': title,
       'body': body,
@@ -334,7 +340,11 @@ class NotificationService {
     });
 
     for (final parentId in parentIds) {
-      final tokensSnapshot = await _firestore.collection('users').doc(parentId).collection('tokens').get();
+      final tokensSnapshot = await _firestore
+          .collection('users')
+          .doc(parentId)
+          .collection('tokens')
+          .get();
       for (final doc in tokensSnapshot.docs) {
         await _firestore.collection('notification_queue').add({
           'token': doc.id,

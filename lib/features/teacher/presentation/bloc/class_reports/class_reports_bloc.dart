@@ -84,8 +84,7 @@ class ClassReportsState extends Equatable {
 
   const ClassReportsState.initial() : this(isLoading: true);
 
-  bool get canGenerate =>
-      context?.can(Permission.classReportGenerate) ?? false;
+  bool get canGenerate => context?.can(Permission.classReportGenerate) ?? false;
 
   ReportProgress get progress => profile == null
       ? const ReportProgress()
@@ -98,8 +97,12 @@ class ClassReportsState extends Equatable {
     final p = profile;
     if (p == null) return const [];
     return entries
-        .where((e) =>
-            ClassReportPolicy.missingSections(entry: e, profile: p).isNotEmpty)
+        .where(
+          (e) => ClassReportPolicy.missingSections(
+            entry: e,
+            profile: p,
+          ).isNotEmpty,
+        )
         .toList();
   }
 
@@ -125,8 +128,9 @@ class ClassReportsState extends Equatable {
       isLoading: isLoading ?? this.isLoading,
       isSaving: isSaving ?? this.isSaving,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
-      successMessage:
-          clearSuccess ? null : (successMessage ?? this.successMessage),
+      successMessage: clearSuccess
+          ? null
+          : (successMessage ?? this.successMessage),
       context: context ?? this.context,
       profile: profile ?? this.profile,
       entries: entries ?? this.entries,
@@ -136,22 +140,22 @@ class ClassReportsState extends Equatable {
 
   @override
   List<Object?> get props => [
-        isLoading,
-        isSaving,
-        errorMessage,
-        successMessage,
-        context,
-        profile,
-        entries,
-        unapprovedSubjects,
-      ];
+    isLoading,
+    isSaving,
+    errorMessage,
+    successMessage,
+    context,
+    profile,
+    entries,
+    unapprovedSubjects,
+  ];
 }
 
 class ClassReportsBloc extends Bloc<ClassReportsEvent, ClassReportsState> {
   final ClassReportRepository reportRepository;
 
   ClassReportsBloc({required this.reportRepository})
-      : super(const ClassReportsState.initial()) {
+    : super(const ClassReportsState.initial()) {
     on<ClassReportsRequested>(_onRequested);
     on<ClassReportEntrySaved>(_onSaved);
     on<ClassReportEntrySubmitted>(_onSubmitted);
@@ -167,22 +171,27 @@ class ClassReportsBloc extends Bloc<ClassReportsEvent, ClassReportsState> {
 
     final profile = await reportRepository.getProfile(context: event.context);
     final entries = await reportRepository.getEntries(context: event.context);
-    final unapproved =
-        await reportRepository.unapprovedSubjects(context: event.context);
+    final unapproved = await reportRepository.unapprovedSubjects(
+      context: event.context,
+    );
 
     entries.fold(
-      (failure) => emit(state.copyWith(
-        isLoading: false,
-        profile: profile.getOrElse(() => const ReportProfile(id: 'default')),
-        errorMessage: _messageFor(failure),
-      )),
-      (list) => emit(state.copyWith(
-        isLoading: false,
-        profile: profile.getOrElse(() => const ReportProfile(id: 'default')),
-        entries: list,
-        unapprovedSubjects: unapproved.getOrElse(() => const []),
-        clearError: true,
-      )),
+      (failure) => emit(
+        state.copyWith(
+          isLoading: false,
+          profile: profile.getOrElse(() => const ReportProfile(id: 'default')),
+          errorMessage: _messageFor(failure),
+        ),
+      ),
+      (list) => emit(
+        state.copyWith(
+          isLoading: false,
+          profile: profile.getOrElse(() => const ReportProfile(id: 'default')),
+          entries: list,
+          unapprovedSubjects: unapproved.getOrElse(() => const []),
+          clearError: true,
+        ),
+      ),
     );
   }
 
@@ -201,15 +210,16 @@ class ClassReportsBloc extends Bloc<ClassReportsEvent, ClassReportsState> {
     );
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        isSaving: false,
-        errorMessage: _messageFor(failure),
-      )),
-      (_) => emit(state.copyWith(
-        isSaving: false,
-        successMessage: 'Saved.',
-        clearError: true,
-      )),
+      (failure) => emit(
+        state.copyWith(isSaving: false, errorMessage: _messageFor(failure)),
+      ),
+      (_) => emit(
+        state.copyWith(
+          isSaving: false,
+          successMessage: 'Saved.',
+          clearError: true,
+        ),
+      ),
     );
     add(ClassReportsRequested(context));
   }
@@ -229,15 +239,16 @@ class ClassReportsBloc extends Bloc<ClassReportsEvent, ClassReportsState> {
     );
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        isSaving: false,
-        errorMessage: _messageFor(failure),
-      )),
-      (_) => emit(state.copyWith(
-        isSaving: false,
-        successMessage: 'Report sent to the academic office.',
-        clearError: true,
-      )),
+      (failure) => emit(
+        state.copyWith(isSaving: false, errorMessage: _messageFor(failure)),
+      ),
+      (_) => emit(
+        state.copyWith(
+          isSaving: false,
+          successMessage: 'Report sent to the academic office.',
+          clearError: true,
+        ),
+      ),
     );
     add(ClassReportsRequested(context));
   }
@@ -254,8 +265,8 @@ class ClassReportsBloc extends Bloc<ClassReportsEvent, ClassReportsState> {
     final selected = event.studentIds.isEmpty
         ? state.entries
         : state.entries
-            .where((e) => event.studentIds.contains(e.studentId))
-            .toList();
+              .where((e) => event.studentIds.contains(e.studentId))
+              .toList();
 
     final result = await reportRepository.generateReports(
       context: context,
@@ -263,16 +274,18 @@ class ClassReportsBloc extends Bloc<ClassReportsEvent, ClassReportsState> {
     );
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        isSaving: false,
-        errorMessage: _messageFor(failure),
-      )),
-      (count) => emit(state.copyWith(
-        isSaving: false,
-        successMessage: '$count report${count == 1 ? '' : 's'} sent for '
-            'generation.',
-        clearError: true,
-      )),
+      (failure) => emit(
+        state.copyWith(isSaving: false, errorMessage: _messageFor(failure)),
+      ),
+      (count) => emit(
+        state.copyWith(
+          isSaving: false,
+          successMessage:
+              '$count report${count == 1 ? '' : 's'} sent for '
+              'generation.',
+          clearError: true,
+        ),
+      ),
     );
     add(ClassReportsRequested(context));
   }
@@ -285,11 +298,11 @@ class ClassReportsBloc extends Bloc<ClassReportsEvent, ClassReportsState> {
   }
 
   static String _messageFor(Failure failure) => switch (failure) {
-        PermissionDeniedFailure() => failure.message,
-        AssignmentInvalidFailure() => failure.message,
-        ValidationFailure() => failure.message,
-        OfflineNotAllowedFailure() => failure.message,
-        NetworkFailure() => failure.message,
-        _ => 'Something went wrong. Try again.',
-      };
+    PermissionDeniedFailure() => failure.message,
+    AssignmentInvalidFailure() => failure.message,
+    ValidationFailure() => failure.message,
+    OfflineNotAllowedFailure() => failure.message,
+    NetworkFailure() => failure.message,
+    _ => 'Something went wrong. Try again.',
+  };
 }

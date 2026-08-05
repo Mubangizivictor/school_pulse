@@ -43,13 +43,20 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
   void initState() {
     super.initState();
     final authState = context.read<AuthBloc>().state;
-    final schoolName = authState is AuthAuthenticated ? authState.user.schoolName : null;
+    final schoolName = authState is AuthAuthenticated
+        ? authState.user.schoolName
+        : null;
     _schoolCodeDefault = _prefixFrom(schoolName);
   }
 
   String _prefixFrom(String? schoolName) {
     if (schoolName == null || schoolName.trim().isEmpty) return 'SCH';
-    final letters = schoolName.trim().split(RegExp(r'\s+')).map((w) => w[0]).take(3).join();
+    final letters = schoolName
+        .trim()
+        .split(RegExp(r'\s+'))
+        .map((w) => w[0])
+        .take(3)
+        .join();
     return letters.toUpperCase();
   }
 
@@ -63,12 +70,16 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
     final authState = context.read<AuthBloc>().state;
     if (authState is! AuthAuthenticated) return;
     setState(() => _busy = true);
-    context.read<AdmissionBloc>().add(ReviewApplicationRequested(
-          applicationId: widget.application.id,
-          reviewerId: authState.user.id,
-          approve: approve,
-          comments: _commentsController.text.trim().isEmpty ? null : _commentsController.text.trim(),
-        ));
+    context.read<AdmissionBloc>().add(
+      ReviewApplicationRequested(
+        applicationId: widget.application.id,
+        reviewerId: authState.user.id,
+        approve: approve,
+        comments: _commentsController.text.trim().isEmpty
+            ? null
+            : _commentsController.text.trim(),
+      ),
+    );
   }
 
   // admitStudent() never touched ParentAccessCode, so a newly enrolled
@@ -92,15 +103,23 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Link Parent Access'),
-        content: Text(existing == null
-            ? 'Create a parent access code for ${application.applicantParentName} '
-                '(${application.applicantParentPhone})?'
-            : '${application.applicantParentPhone} already has a parent access code '
-                '(${existing.parentCode}) for ${existing.studentNames.join(', ')}. '
-                'Add ${application.studentName} to it?'),
+        content: Text(
+          existing == null
+              ? 'Create a parent access code for ${application.applicantParentName} '
+                    '(${application.applicantParentPhone})?'
+              : '${application.applicantParentPhone} already has a parent access code '
+                    '(${existing.parentCode}) for ${existing.studentNames.join(', ')}. '
+                    'Add ${application.studentName} to it?',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Skip')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Link')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Skip'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Link'),
+          ),
         ],
       ),
     );
@@ -119,15 +138,23 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
 
     linkResult.fold(
       (failure) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not link parent: ${failure.message}'), backgroundColor: AppColors.danger(context)),
+        SnackBar(
+          content: Text('Could not link parent: ${failure.message}'),
+          backgroundColor: AppColors.danger(context),
+        ),
       ),
       (code) => showDialog<void>(
         context: context,
         builder: (dialogContext) => AlertDialog(
           title: const Text('Parent Access Code'),
-          content: SelectableText('Give this code to the parent to sign in:\n\n$code'),
+          content: SelectableText(
+            'Give this code to the parent to sign in:\n\n$code',
+          ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Done')),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Done'),
+            ),
           ],
         ),
       ),
@@ -139,7 +166,8 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
     if (authState is! AuthAuthenticated) return;
     final schoolCode = await showDialog<String>(
       context: context,
-      builder: (dialogContext) => _EnrollDialog(initialSchoolCode: _schoolCodeDefault),
+      builder: (dialogContext) =>
+          _EnrollDialog(initialSchoolCode: _schoolCodeDefault),
     );
     if (schoolCode == null || schoolCode.trim().isEmpty || !mounted) return;
 
@@ -150,14 +178,16 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
     // billing when all three are supplied, so enrollment still succeeds
     // without them; wiring a fee-structure picker into this screen is
     // follow-up work for the billing/bursar flow.
-    context.read<AdmissionBloc>().add(EnrollStudentRequested(
-          operatorUser: authState.user,
-          applicationId: application.id,
-          schoolId: application.schoolId,
-          schoolCode: schoolCode.trim(),
-          academicYear: application.academicYearId,
-          academicYearId: application.academicYearId,
-        ));
+    context.read<AdmissionBloc>().add(
+      EnrollStudentRequested(
+        operatorUser: authState.user,
+        applicationId: application.id,
+        schoolId: application.schoolId,
+        schoolCode: schoolCode.trim(),
+        academicYear: application.academicYearId,
+        academicYearId: application.academicYearId,
+      ),
+    );
   }
 
   @override
@@ -166,21 +196,31 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
     return BlocListener<AdmissionBloc, AdmissionState>(
       listener: (context, state) async {
         if (state is AdmissionEnrollSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.message)));
           await _maybeLinkParent(context, state.studentId);
           if (context.mounted) Navigator.of(context).pop(true);
         } else if (state is AdmissionActionSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.message)));
           Navigator.of(context).pop(true);
         } else if (state is AdmissionError) {
           setState(() => _busy = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message), backgroundColor: AppColors.danger(context)),
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: AppColors.danger(context),
+            ),
           );
         } else if (state is AdmissionActionDenied) {
           setState(() => _busy = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message), backgroundColor: AppColors.danger(context)),
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: AppColors.danger(context),
+            ),
           );
         }
       },
@@ -197,15 +237,21 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
               ),
             ),
             const SizedBox(height: 16),
-            _InfoRow('Date of birth', application.dateOfBirth.toLocal().toString().split(' ').first),
+            _InfoRow(
+              'Date of birth',
+              application.dateOfBirth.toLocal().toString().split(' ').first,
+            ),
             _InfoRow('Gender', application.gender.name),
             _InfoRow('Target class', application.targetClassId),
-            if (application.targetStreamId != null) _InfoRow('Stream', application.targetStreamId!),
+            if (application.targetStreamId != null)
+              _InfoRow('Stream', application.targetStreamId!),
             _InfoRow('Academic year', application.academicYearId),
-            if (application.previousSchool != null) _InfoRow('Previous school', application.previousSchool!),
+            if (application.previousSchool != null)
+              _InfoRow('Previous school', application.previousSchool!),
             _InfoRow('Parent / guardian', application.applicantParentName),
             _InfoRow('Parent phone', application.applicantParentPhone),
-            if (application.reviewComments != null) _InfoRow('Review comments', application.reviewComments!),
+            if (application.reviewComments != null)
+              _InfoRow('Review comments', application.reviewComments!),
             const SizedBox(height: 24),
             if (application.status == AdmissionStatus.application ||
                 application.status == AdmissionStatus.review) ...[
@@ -215,9 +261,13 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
                 style: TextStyle(color: AppColors.textPrimary(context)),
                 decoration: InputDecoration(
                   labelText: 'Review comments (optional)',
-                  labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                  labelStyle: TextStyle(
+                    color: AppColors.textSecondary(context),
+                  ),
                   border: const OutlineInputBorder(),
-                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.border(context))),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.border(context)),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -266,6 +316,7 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
       ),
     );
   }
+
   Color _getStatusColor(AdmissionStatus status, BuildContext context) {
     switch (status) {
       case AdmissionStatus.approved:
@@ -313,12 +364,16 @@ class _EnrollDialogState extends State<_EnrollDialog> {
         textCapitalization: TextCapitalization.characters,
         decoration: const InputDecoration(
           labelText: 'School code prefix',
-          helperText: 'Used to build the student\'s human-readable code, e.g. "MH"',
+          helperText:
+              'Used to build the student\'s human-readable code, e.g. "MH"',
           border: OutlineInputBorder(),
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
         FilledButton(
           onPressed: () => Navigator.pop(context, _controller.text.trim()),
           child: const Text('Enroll'),
@@ -339,8 +394,19 @@ class _InfoRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 140, child: Text(label, style: TextStyle(color: AppColors.textMuted(context)))),
-          Expanded(child: Text(value, style: TextStyle(color: AppColors.textPrimary(context)))),
+          SizedBox(
+            width: 140,
+            child: Text(
+              label,
+              style: TextStyle(color: AppColors.textMuted(context)),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(color: AppColors.textPrimary(context)),
+            ),
+          ),
         ],
       ),
     );

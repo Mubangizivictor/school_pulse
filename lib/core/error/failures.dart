@@ -28,7 +28,9 @@ class NetworkFailure extends Failure {
 /// distinct from ServerFailure so a UI can show a specific "not
 /// authorized" state instead of a generic error.
 class PermissionDeniedFailure extends Failure {
-  const PermissionDeniedFailure([super.message = 'You do not have permission to perform this action']);
+  const PermissionDeniedFailure([
+    super.message = 'You do not have permission to perform this action',
+  ]);
 }
 
 /// The staff assignment the action was attempted under is no longer valid -
@@ -37,7 +39,8 @@ class PermissionDeniedFailure extends Failure {
 /// switch responsibility, not request a permission.
 class AssignmentInvalidFailure extends Failure {
   const AssignmentInvalidFailure([
-    super.message = 'This assignment is no longer active. Switch to another responsibility.',
+    super.message =
+        'This assignment is no longer active. Switch to another responsibility.',
   ]);
 }
 

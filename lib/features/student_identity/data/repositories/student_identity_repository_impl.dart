@@ -23,7 +23,9 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
   });
 
   @override
-  Future<Either<Failure, StudentIdentity>> getStudentIdentity(String studentId) async {
+  Future<Either<Failure, StudentIdentity>> getStudentIdentity(
+    String studentId,
+  ) async {
     try {
       final doc = await firestore
           .collection('student_identities')
@@ -54,19 +56,24 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
           .get();
 
       if (existing.docs.isNotEmpty) {
-        return Right(StudentIdentityModel.fromFirestore(existing.docs.first.data()));
+        return Right(
+          StudentIdentityModel.fromFirestore(existing.docs.first.data()),
+        );
       }
 
       // Callers that already generated codes (e.g. AdmissionService, which
       // must mint a studentCode before the student doc exists) pass them in
       // so the Student record and its identity stay consistent. Otherwise
       // fall back to generating them here.
-      final resolvedUniqueSystemId = uniqueSystemId ?? idGenerator.generateUniqueSystemId();
+      final resolvedUniqueSystemId =
+          uniqueSystemId ?? idGenerator.generateUniqueSystemId();
       String resolvedSchoolStudentId;
       if (schoolStudentId != null) {
         resolvedSchoolStudentId = schoolStudentId;
       } else {
-        final schoolPrefix = student.className.substring(0, min(2, student.className.length)).toUpperCase();
+        final schoolPrefix = student.className
+            .substring(0, min(2, student.className.length))
+            .toUpperCase();
         final year = DateTime.now().year;
         resolvedSchoolStudentId = '$schoolPrefix-$year-${student.studentId}';
       }
@@ -89,21 +96,29 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
   int min(int a, int b) => a < b ? a : b;
 
   @override
-  Future<Either<Failure, List<StudentIdentity>>> getSchoolIdentities(String schoolId) async {
+  Future<Either<Failure, List<StudentIdentity>>> getSchoolIdentities(
+    String schoolId,
+  ) async {
     try {
       // This assumes students have schoolId, or we join with students.
       // Based on Student model, it doesn't have schoolId, but UserEntity does.
       // Usually students are in a subcollection or have schoolId.
       // Assuming a 'student_identities' collection for now.
       final snapshot = await firestore.collection('student_identities').get();
-      return Right(snapshot.docs.map((doc) => StudentIdentityModel.fromFirestore(doc.data())).toList());
+      return Right(
+        snapshot.docs
+            .map((doc) => StudentIdentityModel.fromFirestore(doc.data()))
+            .toList(),
+      );
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, void>> cacheStudentsForOffline(List<Student> students) async {
+  Future<Either<Failure, void>> cacheStudentsForOffline(
+    List<Student> students,
+  ) async {
     try {
       await isar.writeTxn(() async {
         for (final student in students) {
@@ -112,10 +127,12 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
               .collection('student_identities')
               .where('studentId', isEqualTo: student.id)
               .get();
-          
+
           if (identityDoc.docs.isNotEmpty) {
-            final identity = StudentIdentityModel.fromFirestore(identityDoc.docs.first.data());
-            
+            final identity = StudentIdentityModel.fromFirestore(
+              identityDoc.docs.first.data(),
+            );
+
             final cache = StudentCacheIsar()
               ..studentId = student.id
               ..uniqueSystemId = identity.uniqueSystemId
@@ -124,7 +141,7 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
               ..className = student.className
               ..schoolStudentId = identity.schoolStudentId
               ..schoolId = student.schoolId;
-              
+
             await isar.studentCacheIsars.put(cache);
           }
         }
@@ -136,25 +153,32 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
   }
 
   @override
-  Future<Either<Failure, Student?>> getStudentByUniqueId(String uniqueSystemId) async {
+  Future<Either<Failure, Student?>> getStudentByUniqueId(
+    String uniqueSystemId,
+  ) async {
     try {
       // First try local cache
-      final cached = await isar.studentCacheIsars.filter().uniqueSystemIdEqualTo(uniqueSystemId).findFirst();
+      final cached = await isar.studentCacheIsars
+          .filter()
+          .uniqueSystemIdEqualTo(uniqueSystemId)
+          .findFirst();
       if (cached != null) {
-        return Right(Student(
-          id: cached.studentId,
-          schoolId: cached.schoolId,
-          name: cached.name,
-          photoUrl: cached.photoUrl,
-          studentCode: cached.schoolStudentId,
-          admissionNumber: '',
-          dateOfBirth: DateTime(2000),
-          gender: Gender.male,
-          classId: cached.className,
-          academicYearId: '',
-          status: StudentStatus.active,
-          level: EducationLevel.primary,
-        ));
+        return Right(
+          Student(
+            id: cached.studentId,
+            schoolId: cached.schoolId,
+            name: cached.name,
+            photoUrl: cached.photoUrl,
+            studentCode: cached.schoolStudentId,
+            admissionNumber: '',
+            dateOfBirth: DateTime(2000),
+            gender: Gender.male,
+            classId: cached.className,
+            academicYearId: '',
+            status: StudentStatus.active,
+            level: EducationLevel.primary,
+          ),
+        );
       }
 
       // Fallback to Firestore
@@ -168,8 +192,11 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
       }
 
       final studentId = identityDoc.docs.first.data()['studentId'];
-      final studentDoc = await firestore.collection('students').doc(studentId).get();
-      
+      final studentDoc = await firestore
+          .collection('students')
+          .doc(studentId)
+          .get();
+
       if (!studentDoc.exists) return const Right(null);
 
       return Right(StudentModel.fromMap(studentDoc.data()!, studentDoc.id));
@@ -179,7 +206,10 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
   }
 
   @override
-  Future<Either<Failure, void>> updateNfcStatus(String studentId, String nfcStatus) async {
+  Future<Either<Failure, void>> updateNfcStatus(
+    String studentId,
+    String nfcStatus,
+  ) async {
     try {
       final existing = await firestore
           .collection('student_identities')

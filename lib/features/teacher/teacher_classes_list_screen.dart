@@ -29,7 +29,10 @@ class TeacherClassesListScreen extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.add_box_outlined, color: AppColors.primary(context)),
+            icon: Icon(
+              Icons.add_box_outlined,
+              color: AppColors.primary(context),
+            ),
             onPressed: () {},
           ),
         ],
@@ -55,7 +58,10 @@ class TeacherClassesListScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppSpacing.m),
                   border: Border.all(color: AppColors.border(context)),
                 ),
-                child: Icon(Icons.filter_list, color: AppColors.textPrimary(context)),
+                child: Icon(
+                  Icons.filter_list,
+                  color: AppColors.textPrimary(context),
+                ),
               ),
             ],
           ),
@@ -123,7 +129,11 @@ class TeacherClassesListScreen extends StatelessWidget {
               color: AppColors.primary(context).withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.school, color: AppColors.primary(context), size: 32),
+            child: Icon(
+              Icons.school,
+              color: AppColors.primary(context),
+              size: 32,
+            ),
           ),
         ],
       ),
@@ -149,7 +159,11 @@ class TeacherClassesListScreen extends StatelessWidget {
                 color: AppColors.primary(context).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppSpacing.m),
               ),
-              child: Icon(Icons.groups, color: AppColors.primary(context), size: 24),
+              child: Icon(
+                Icons.groups,
+                color: AppColors.primary(context),
+                size: 24,
+              ),
             ),
             const SizedBox(width: AppSpacing.l),
             Expanded(
@@ -180,7 +194,11 @@ class TeacherClassesListScreen extends StatelessWidget {
               ),
               child: Text(
                 'Active',
-                style: AppTypography.labelSmall.copyWith(color: AppColors.success(context), fontSize: 10, fontWeight: FontWeight.bold),
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.success(context),
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const SizedBox(width: AppSpacing.s),
@@ -190,5 +208,4 @@ class TeacherClassesListScreen extends StatelessWidget {
       ),
     );
   }
-
 }

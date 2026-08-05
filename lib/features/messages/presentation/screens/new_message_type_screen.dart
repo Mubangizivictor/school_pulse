@@ -64,8 +64,10 @@ class NewMessageTypeScreen extends StatelessWidget {
               padding: const EdgeInsets.only(left: 4, bottom: AppSpacing.s),
               child: Text(
                 'FREQUENTLY CONTACTED',
-                style:
-                    AppTypography.labelSmall.copyWith(color: AppColors.textMuted(context), letterSpacing: 1.2),
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.textMuted(context),
+                  letterSpacing: 1.2,
+                ),
               ),
             ),
             FutureBuilder<List<MessageContact>>(
@@ -83,16 +85,20 @@ class NewMessageTypeScreen extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: AppSpacing.m),
                     child: Text(
                       'People you message will show up here.',
-                      style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context)),
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textMuted(context),
+                      ),
                     ),
                   );
                 }
                 return Column(
                   children: contacts
-                      .map((contact) => _ContactTile(
-                            contact: contact,
-                            onTap: () => _openChat(context, user, contact),
-                          ))
+                      .map(
+                        (contact) => _ContactTile(
+                          contact: contact,
+                          onTap: () => _openChat(context, user, contact),
+                        ),
+                      )
                       .toList(),
                 );
               },
@@ -104,9 +110,16 @@ class NewMessageTypeScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _openChat(BuildContext context, UserEntity user, MessageContact contact) async {
+  Future<void> _openChat(
+    BuildContext context,
+    UserEntity user,
+    MessageContact contact,
+  ) async {
     try {
-      final id = await context.messages.startDirectConversation(me: user, contact: contact);
+      final id = await context.messages.startDirectConversation(
+        me: user,
+        contact: contact,
+      );
       if (!context.mounted) return;
       context.push('/messages/chat/$id');
     } catch (e) {
@@ -142,7 +155,10 @@ class _TypeTile extends StatelessWidget {
       ),
       child: ListTile(
         onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: 4),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.m,
+          vertical: 4,
+        ),
         leading: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -159,9 +175,15 @@ class _TypeTile extends StatelessWidget {
         ),
         subtitle: Text(
           subtitle,
-          style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context)),
+          style: AppTypography.bodySmall.copyWith(
+            color: AppColors.textMuted(context),
+          ),
         ),
-        trailing: Icon(Icons.chevron_right, color: AppColors.textMuted(context), size: 18),
+        trailing: Icon(
+          Icons.chevron_right,
+          color: AppColors.textMuted(context),
+          size: 18,
+        ),
       ),
     );
   }
@@ -183,7 +205,9 @@ class _ContactTile extends StatelessWidget {
       contentPadding: const EdgeInsets.symmetric(vertical: 2),
       leading: CircleAvatar(
         radius: 24,
-        backgroundColor: isDark ? AppColors.surfaceContainerHigh(context) : Colors.grey[200],
+        backgroundColor: isDark
+            ? AppColors.surfaceContainerHigh(context)
+            : Colors.grey[200],
         child: Text(
           contact.initials,
           style: TextStyle(
@@ -201,7 +225,9 @@ class _ContactTile extends StatelessWidget {
       ),
       subtitle: Text(
         role.isEmpty ? contact.role : UserRoleDisplay.name(role.first),
-        style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context)),
+        style: AppTypography.bodySmall.copyWith(
+          color: AppColors.textMuted(context),
+        ),
       ),
     );
   }

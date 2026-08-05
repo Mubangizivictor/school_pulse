@@ -19,15 +19,20 @@ class AdminSecuritySettingsScreen extends StatefulWidget {
   const AdminSecuritySettingsScreen({super.key});
 
   @override
-  State<AdminSecuritySettingsScreen> createState() => _AdminSecuritySettingsScreenState();
+  State<AdminSecuritySettingsScreen> createState() =>
+      _AdminSecuritySettingsScreenState();
 }
 
-class _AdminSecuritySettingsScreenState extends State<AdminSecuritySettingsScreen> {
+class _AdminSecuritySettingsScreenState
+    extends State<AdminSecuritySettingsScreen> {
   bool _isLoading = true;
   bool _requirePhotoForPickup = true;
   bool _requireIdDocumentForPickup = false;
   bool _allowManualOverride = true;
-  Set<VerificationMethod> _defaultMethods = {VerificationMethod.qrStudentId, VerificationMethod.manualSearch};
+  Set<VerificationMethod> _defaultMethods = {
+    VerificationMethod.qrStudentId,
+    VerificationMethod.manualSearch,
+  };
   List<Map<String, String>> _emergencyContacts = [];
   List<UserEntity> _securityStaff = [];
 
@@ -36,8 +41,12 @@ class _AdminSecuritySettingsScreenState extends State<AdminSecuritySettingsScree
     return authState is AuthAuthenticated ? authState.user.schoolId : '';
   }
 
-  DocumentReference<Map<String, dynamic>> get _docRef =>
-      FirebaseFirestore.instance.collection('schools').doc(_schoolId).collection('configs').doc('securitySettings');
+  DocumentReference<Map<String, dynamic>> get _docRef => FirebaseFirestore
+      .instance
+      .collection('schools')
+      .doc(_schoolId)
+      .collection('configs')
+      .doc('securitySettings');
 
   @override
   void initState() {
@@ -55,18 +64,36 @@ class _AdminSecuritySettingsScreenState extends State<AdminSecuritySettingsScree
     setState(() {
       if (data != null) {
         _requirePhotoForPickup = data['requirePhotoForPickup'] ?? true;
-        _requireIdDocumentForPickup = data['requireIdDocumentForPickup'] ?? false;
+        _requireIdDocumentForPickup =
+            data['requireIdDocumentForPickup'] ?? false;
         _allowManualOverride = data['allowManualOverride'] ?? true;
-        final methodIds = List<String>.from(data['defaultVerificationMethods'] ?? []);
-        _defaultMethods = methodIds.map(VerificationMethod.fromId).whereType<VerificationMethod>().toSet();
-        _emergencyContacts = List<Map<String, dynamic>>.from(data['emergencyContacts'] ?? [])
-            .map((c) => {'name': '${c['name'] ?? ''}', 'phone': '${c['phone'] ?? ''}'})
-            .toList();
+        final methodIds = List<String>.from(
+          data['defaultVerificationMethods'] ?? [],
+        );
+        _defaultMethods = methodIds
+            .map(VerificationMethod.fromId)
+            .whereType<VerificationMethod>()
+            .toSet();
+        _emergencyContacts =
+            List<Map<String, dynamic>>.from(data['emergencyContacts'] ?? [])
+                .map(
+                  (c) => {
+                    'name': '${c['name'] ?? ''}',
+                    'phone': '${c['phone'] ?? ''}',
+                  },
+                )
+                .toList();
       }
       _securityStaff = staffResult.fold(
         (failure) => [],
         (members) => members
-            .where((m) => m.schoolId == _schoolId && m.roles.any((r) => NotificationGroups.securityRoles.contains(r)))
+            .where(
+              (m) =>
+                  m.schoolId == _schoolId &&
+                  m.roles.any(
+                    (r) => NotificationGroups.securityRoles.contains(r),
+                  ),
+            )
             .toList(),
       );
       _isLoading = false;
@@ -84,7 +111,9 @@ class _AdminSecuritySettingsScreenState extends State<AdminSecuritySettingsScree
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Security settings saved')));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Security settings saved')));
   }
 
   void _addContact() {
@@ -97,16 +126,30 @@ class _AdminSecuritySettingsScreenState extends State<AdminSecuritySettingsScree
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Name / Role')),
-            TextField(controller: phoneController, decoration: const InputDecoration(labelText: 'Phone')),
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: 'Name / Role'),
+            ),
+            TextField(
+              controller: phoneController,
+              decoration: const InputDecoration(labelText: 'Phone'),
+            ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             onPressed: () {
               if (nameController.text.trim().isEmpty) return;
-              setState(() => _emergencyContacts.add({'name': nameController.text.trim(), 'phone': phoneController.text.trim()}));
+              setState(
+                () => _emergencyContacts.add({
+                  'name': nameController.text.trim(),
+                  'phone': phoneController.text.trim(),
+                }),
+              );
               Navigator.pop(dialogContext);
             },
             child: const Text('Add'),
@@ -121,7 +164,9 @@ class _AdminSecuritySettingsScreenState extends State<AdminSecuritySettingsScree
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Security Settings'),
-        actions: [IconButton(icon: const Icon(Icons.save_outlined), onPressed: _save)],
+        actions: [
+          IconButton(icon: const Icon(Icons.save_outlined), onPressed: _save),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -132,24 +177,41 @@ class _AdminSecuritySettingsScreenState extends State<AdminSecuritySettingsScree
                   child: ListTile(
                     leading: const Icon(Icons.door_front_door_outlined),
                     title: const Text('Manage Gates'),
-                    subtitle: const Text('Gate names, hours, roles, verification methods'),
+                    subtitle: const Text(
+                      'Gate names, hours, roles, verification methods',
+                    ),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push('/staff/security/gates'),
                   ),
                 ),
                 const SizedBox(height: 16),
-                Text('Security Officers', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  'Security Officers',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const SizedBox(height: 8),
                 if (_securityStaff.isEmpty)
-                  const Text('No staff assigned a security role yet.', style: TextStyle(color: Colors.grey))
+                  const Text(
+                    'No staff assigned a security role yet.',
+                    style: TextStyle(color: Colors.grey),
+                  )
                 else
-                  ..._securityStaff.map((s) => ListTile(
-                        leading: const CircleAvatar(child: Icon(Icons.badge_outlined)),
-                        title: Text(s.name),
-                        subtitle: Text(s.roles.map(UserRoleDisplay.name).join(', ')),
-                      )),
+                  ..._securityStaff.map(
+                    (s) => ListTile(
+                      leading: const CircleAvatar(
+                        child: Icon(Icons.badge_outlined),
+                      ),
+                      title: Text(s.name),
+                      subtitle: Text(
+                        s.roles.map(UserRoleDisplay.name).join(', '),
+                      ),
+                    ),
+                  ),
                 const Divider(height: 32),
-                Text('Default Verification Methods', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  'Default Verification Methods',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
@@ -170,7 +232,10 @@ class _AdminSecuritySettingsScreenState extends State<AdminSecuritySettingsScree
                   }).toList(),
                 ),
                 const Divider(height: 32),
-                Text('Pickup Rules', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  'Pickup Rules',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Require photo for pickup authorization'),
@@ -179,13 +244,18 @@ class _AdminSecuritySettingsScreenState extends State<AdminSecuritySettingsScree
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Require ID document for pickup authorization'),
+                  title: const Text(
+                    'Require ID document for pickup authorization',
+                  ),
                   value: _requireIdDocumentForPickup,
-                  onChanged: (v) => setState(() => _requireIdDocumentForPickup = v),
+                  onChanged: (v) =>
+                      setState(() => _requireIdDocumentForPickup = v),
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Allow officer override when no match is found'),
+                  title: const Text(
+                    'Allow officer override when no match is found',
+                  ),
                   value: _allowManualOverride,
                   onChanged: (v) => setState(() => _allowManualOverride = v),
                 ),
@@ -193,25 +263,40 @@ class _AdminSecuritySettingsScreenState extends State<AdminSecuritySettingsScree
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Emergency Contacts', style: Theme.of(context).textTheme.titleMedium),
-                    IconButton(icon: const Icon(Icons.add_circle), onPressed: _addContact),
+                    Text(
+                      'Emergency Contacts',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add_circle),
+                      onPressed: _addContact,
+                    ),
                   ],
                 ),
                 if (_emergencyContacts.isEmpty)
-                  const Text('No emergency contacts added.', style: TextStyle(color: Colors.grey))
+                  const Text(
+                    'No emergency contacts added.',
+                    style: TextStyle(color: Colors.grey),
+                  )
                 else
-                  ..._emergencyContacts.map((c) => ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.phone_outlined),
-                        title: Text(c['name'] ?? ''),
-                        subtitle: Text(c['phone'] ?? ''),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete_outline),
-                          onPressed: () => setState(() => _emergencyContacts.remove(c)),
-                        ),
-                      )),
+                  ..._emergencyContacts.map(
+                    (c) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.phone_outlined),
+                      title: Text(c['name'] ?? ''),
+                      subtitle: Text(c['phone'] ?? ''),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed: () =>
+                            setState(() => _emergencyContacts.remove(c)),
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: 24),
-                FilledButton(onPressed: _save, child: const Text('Save Settings')),
+                FilledButton(
+                  onPressed: _save,
+                  child: const Text('Save Settings'),
+                ),
               ],
             ),
     );

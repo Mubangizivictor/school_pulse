@@ -20,8 +20,8 @@ class AuditLogModel extends AuditLog {
       action: json['action'] ?? '',
       schoolId: json['schoolId'],
       affectedUserId: json['affectedUserId'],
-      timestamp: json['timestamp'] != null 
-          ? DateTime.fromMillisecondsSinceEpoch(json['timestamp']) 
+      timestamp: json['timestamp'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(json['timestamp'])
           : DateTime.now(),
       device: json['device'] ?? '',
       reason: json['reason'],

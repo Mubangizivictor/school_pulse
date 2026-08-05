@@ -20,7 +20,7 @@ class _VisitorScannerScreenState extends State<VisitorScannerScreen> {
 
   void _onDetect(BarcodeCapture capture) async {
     if (_isProcessing) return;
-    
+
     final List<Barcode> barcodes = capture.barcodes;
     if (barcodes.isEmpty) return;
 
@@ -33,7 +33,7 @@ class _VisitorScannerScreenState extends State<VisitorScannerScreen> {
 
     try {
       final data = jsonDecode(code);
-      
+
       // Check if it's a Pre-approved Visitor QR
       if (data['type'] == 'pre_approved') {
         final String preApprovedId = data['id'];
@@ -48,7 +48,9 @@ class _VisitorScannerScreenState extends State<VisitorScannerScreen> {
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Pre-approved Visitor'),
-            content: Text('Name: $name\nHost: $host\nPurpose: $purpose\n\nProceed to check-in?'),
+            content: Text(
+              'Name: $name\nHost: $host\nPurpose: $purpose\n\nProceed to check-in?',
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
@@ -63,48 +65,59 @@ class _VisitorScannerScreenState extends State<VisitorScannerScreen> {
         );
 
         if (confirm == true && mounted) {
-           // Check Blacklist before proceeding
-           final state = context.read<VisitorsBloc>().state;
-           bool isBlacklisted = false;
-           if (state is VisitorsLoaded) {
-             isBlacklisted = state.blacklist.any((b) => 
-               (b.phone.isNotEmpty && b.phone == phone) || 
-               (b.fullName.isNotEmpty && b.fullName.toLowerCase() == name.toLowerCase()));
-           }
+          // Check Blacklist before proceeding
+          final state = context.read<VisitorsBloc>().state;
+          bool isBlacklisted = false;
+          if (state is VisitorsLoaded) {
+            isBlacklisted = state.blacklist.any(
+              (b) =>
+                  (b.phone.isNotEmpty && b.phone == phone) ||
+                  (b.fullName.isNotEmpty &&
+                      b.fullName.toLowerCase() == name.toLowerCase()),
+            );
+          }
 
-           if (isBlacklisted) {
-             if (!mounted) return;
-             final proceed = await showDialog<bool>(
-               context: context,
-               builder: (context) => AlertDialog(
-                 title: const Text('Security Alert: Blacklisted'),
-                 content: Text('Warning: $name is on the security blacklist.\n\nReason: ...\n\nDo you still wish to proceed to check-in?'),
-                 actions: [
-                   TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Abstain')),
-                   TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Proceed with Caution')),
-                 ],
-               ),
-             );
-             if (!mounted) return;
-             if (proceed != true) {
-               setState(() => _isProcessing = false);
-               return;
-             }
-           }
+          if (isBlacklisted) {
+            if (!mounted) return;
+            final proceed = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Security Alert: Blacklisted'),
+                content: Text(
+                  'Warning: $name is on the security blacklist.\n\nReason: ...\n\nDo you still wish to proceed to check-in?',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Abstain'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Proceed with Caution'),
+                  ),
+                ],
+              ),
+            );
+            if (!mounted) return;
+            if (proceed != true) {
+              setState(() => _isProcessing = false);
+              return;
+            }
+          }
 
-           final preApproved = PreApprovedVisitor(
-             id: preApprovedId,
-             fullName: name,
-             phone: phone,
-             purpose: purpose,
-             host: host,
-             schoolId: '', // Will be filled in check-in screen
-             expectedDate: DateTime.now(),
-             isUsed: false,
-           );
-           context.push('/staff/security/visitors/new', extra: preApproved);
+          final preApproved = PreApprovedVisitor(
+            id: preApprovedId,
+            fullName: name,
+            phone: phone,
+            purpose: purpose,
+            host: host,
+            schoolId: '', // Will be filled in check-in screen
+            expectedDate: DateTime.now(),
+            isUsed: false,
+          );
+          context.push('/staff/security/visitors/new', extra: preApproved);
         } else {
-           setState(() => _isProcessing = false);
+          setState(() => _isProcessing = false);
         }
         return;
       }
@@ -115,7 +128,7 @@ class _VisitorScannerScreenState extends State<VisitorScannerScreen> {
 
       // Show confirmation dialog
       if (!mounted) return;
-      
+
       final confirm = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -138,13 +151,15 @@ class _VisitorScannerScreenState extends State<VisitorScannerScreen> {
         final now = DateTime.now();
         final arrival = DateTime.parse(data['arrival']);
         final duration = _calculateDuration(arrival, now);
-        
-        context.read<VisitorsBloc>().add(CheckOutVisitorEvent(
-          visitorId: visitorId,
-          departureTime: now,
-          duration: duration,
-        ));
-        
+
+        context.read<VisitorsBloc>().add(
+          CheckOutVisitorEvent(
+            visitorId: visitorId,
+            departureTime: now,
+            duration: duration,
+          ),
+        );
+
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Visitor $name checked out successfully')),
@@ -158,9 +173,9 @@ class _VisitorScannerScreenState extends State<VisitorScannerScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid QR code')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Invalid QR code')));
       setState(() {
         _isProcessing = false;
       });
@@ -171,7 +186,7 @@ class _VisitorScannerScreenState extends State<VisitorScannerScreen> {
     final diff = end.difference(start);
     final hours = diff.inHours;
     final minutes = diff.inMinutes % 60;
-    
+
     if (hours > 0) {
       return '${hours}h ${minutes}m';
     }
@@ -181,14 +196,10 @@ class _VisitorScannerScreenState extends State<VisitorScannerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Scan Visitor QR'),
-      ),
+      appBar: AppBar(title: const Text('Scan Visitor QR')),
       body: Stack(
         children: [
-          MobileScanner(
-            onDetect: _onDetect,
-          ),
+          MobileScanner(onDetect: _onDetect),
           Center(
             child: Container(
               width: 250,
@@ -202,9 +213,7 @@ class _VisitorScannerScreenState extends State<VisitorScannerScreen> {
           if (_isProcessing)
             Container(
               color: Colors.black54,
-              child: const Center(
-                child: CircularProgressIndicator(),
-              ),
+              child: const Center(child: CircularProgressIndicator()),
             ),
           const Positioned(
             bottom: 40,

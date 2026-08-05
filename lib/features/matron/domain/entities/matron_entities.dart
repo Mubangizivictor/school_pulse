@@ -169,7 +169,8 @@ class BoardingAttendance extends Equatable {
   final String studentName;
   final String dormitoryId;
   final DateTime date;
-  final String type; // 'Morning', 'Evening', 'Weekend', 'Holiday', 'Study', 'Activity'
+  final String
+  type; // 'Morning', 'Evening', 'Weekend', 'Holiday', 'Study', 'Activity'
   final String status; // 'Present', 'Absent', 'Late', 'Leave', 'Sick'
   final String? remarks;
   final String recordedBy;
@@ -290,7 +291,8 @@ class WelfareRecord extends Equatable {
   final String schoolId;
   final String studentId;
   final String studentName;
-  final String category; // 'Concern', 'Check-in', 'Counseling Referral', 'Behaviour: Positive', 'Behaviour: Concern', ...
+  final String
+  category; // 'Concern', 'Check-in', 'Counseling Referral', 'Behaviour: Positive', 'Behaviour: Concern', ...
   final String note;
   final DateTime date;
   final String recordedBy;

@@ -7,7 +7,9 @@ abstract class RolePermissionOverrideRepository {
   /// All overrides an admin has saved for this school, keyed by role. A
   /// role with no entry has no override - callers should fall back to
   /// `RolePermissionDefaults.defaults[role]`.
-  Future<Either<Failure, Map<UserRole, RolePermissionOverride>>> getOverrides(String schoolId);
+  Future<Either<Failure, Map<UserRole, RolePermissionOverride>>> getOverrides(
+    String schoolId,
+  );
 
   Future<Either<Failure, void>> saveOverride({
     required String schoolId,

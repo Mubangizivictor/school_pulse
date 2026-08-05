@@ -12,14 +12,18 @@ class TransportCoordinatorDashboardScreen extends StatefulWidget {
   const TransportCoordinatorDashboardScreen({super.key});
 
   @override
-  State<TransportCoordinatorDashboardScreen> createState() => _TransportCoordinatorDashboardScreenState();
+  State<TransportCoordinatorDashboardScreen> createState() =>
+      _TransportCoordinatorDashboardScreenState();
 }
 
-class _TransportCoordinatorDashboardScreenState extends State<TransportCoordinatorDashboardScreen> {
+class _TransportCoordinatorDashboardScreenState
+    extends State<TransportCoordinatorDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<TransportCoordinatorBloc>().add(TransportCoordinatorDashboardRequested());
+    context.read<TransportCoordinatorBloc>().add(
+      TransportCoordinatorDashboardRequested(),
+    );
   }
 
   void _showRouteActions(BuildContext context, BusRoute route) {
@@ -42,7 +46,9 @@ class _TransportCoordinatorDashboardScreenState extends State<TransportCoordinat
                   leading: const Icon(Icons.play_arrow, color: Colors.green),
                   title: const Text('Start Trip'),
                   onTap: () {
-                    context.read<TransportCoordinatorBloc>().add(StartTripRequested(route.id));
+                    context.read<TransportCoordinatorBloc>().add(
+                      StartTripRequested(route.id),
+                    );
                     Navigator.pop(bottomSheetContext);
                   },
                 )
@@ -51,7 +57,9 @@ class _TransportCoordinatorDashboardScreenState extends State<TransportCoordinat
                   leading: const Icon(Icons.stop, color: Colors.red),
                   title: const Text('End Trip'),
                   onTap: () {
-                    context.read<TransportCoordinatorBloc>().add(EndTripRequested(route.id));
+                    context.read<TransportCoordinatorBloc>().add(
+                      EndTripRequested(route.id),
+                    );
                     Navigator.pop(bottomSheetContext);
                   },
                 ),
@@ -71,10 +79,9 @@ class _TransportCoordinatorDashboardScreenState extends State<TransportCoordinat
   }
 
   void _simulateStudentPickup(BuildContext context, String routeId) {
-    context.read<TransportCoordinatorBloc>().add(LogStudentPickupRequested(
-      routeId: routeId,
-      studentId: 'STUDENT_123',
-    ));
+    context.read<TransportCoordinatorBloc>().add(
+      LogStudentPickupRequested(routeId: routeId, studentId: 'STUDENT_123'),
+    );
   }
 
   @override
@@ -104,7 +111,10 @@ class _TransportCoordinatorDashboardScreenState extends State<TransportCoordinat
         listener: (context, state) {
           if (state is TripActionSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: semanticColors.success),
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: semanticColors.success,
+              ),
             );
           }
         },
@@ -121,7 +131,7 @@ class _TransportCoordinatorDashboardScreenState extends State<TransportCoordinat
             if (state is TransportCoordinatorLoaded) {
               return _buildDashboard(context, state, semanticColors);
             }
-            
+
             return const _TransportSkeleton();
           },
         ),
@@ -129,10 +139,16 @@ class _TransportCoordinatorDashboardScreenState extends State<TransportCoordinat
     );
   }
 
-  Widget _buildDashboard(BuildContext context, TransportCoordinatorLoaded state, SemanticColors semanticColors) {
+  Widget _buildDashboard(
+    BuildContext context,
+    TransportCoordinatorLoaded state,
+    SemanticColors semanticColors,
+  ) {
     return RefreshIndicator(
       onRefresh: () async {
-        context.read<TransportCoordinatorBloc>().add(TransportCoordinatorDashboardRequested());
+        context.read<TransportCoordinatorBloc>().add(
+          TransportCoordinatorDashboardRequested(),
+        );
       },
       child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
@@ -140,7 +156,9 @@ class _TransportCoordinatorDashboardScreenState extends State<TransportCoordinat
           FadeInSlide(
             child: Text(
               "Fleet Overview",
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           const SizedBox(height: 15),
@@ -189,15 +207,20 @@ class _TransportCoordinatorDashboardScreenState extends State<TransportCoordinat
                 child: AppCard(
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: isEnRoute 
+                      backgroundColor: isEnRoute
                           ? semanticColors.info.withValues(alpha: 0.1)
                           : semanticColors.success.withValues(alpha: 0.1),
                       child: Icon(
-                        Icons.directions_bus_filled_outlined, 
-                        color: isEnRoute ? semanticColors.info : semanticColors.success
+                        Icons.directions_bus_filled_outlined,
+                        color: isEnRoute
+                            ? semanticColors.info
+                            : semanticColors.success,
                       ),
                     ),
-                    title: Text(route.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    title: Text(
+                      route.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     subtitle: Text('${route.busNumber} • ${route.driver}'),
                     trailing: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -205,12 +228,15 @@ class _TransportCoordinatorDashboardScreenState extends State<TransportCoordinat
                       children: [
                         Text(
                           '${route.studentCount} students',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 4),
                         StatusBadge(
                           label: route.status,
-                          color: isEnRoute ? semanticColors.info : semanticColors.success,
+                          color: isEnRoute
+                              ? semanticColors.info
+                              : semanticColors.success,
                         ),
                       ],
                     ),
@@ -247,10 +273,13 @@ class _TransportSkeleton extends StatelessWidget {
         const SizedBox(height: 24),
         const Skeleton(width: 120, height: 20),
         const SizedBox(height: 12),
-        ...List.generate(3, (index) => const Padding(
-          padding: EdgeInsets.only(bottom: 12),
-          child: Skeleton(height: 80, borderRadius: 12),
-        )),
+        ...List.generate(
+          3,
+          (index) => const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: Skeleton(height: 80, borderRadius: 12),
+          ),
+        ),
       ],
     );
   }

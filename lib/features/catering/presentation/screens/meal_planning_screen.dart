@@ -87,9 +87,12 @@ class _MealPlanningScreenState extends State<MealPlanningScreen> {
         scrollDirection: Axis.horizontal,
         itemCount: 7,
         itemBuilder: (context, index) {
-          final day = _selectedDate.subtract(Duration(days: _selectedDate.weekday - 1)).add(Duration(days: index));
-          final isSelected = day.day == _selectedDate.day && day.month == _selectedDate.month;
-          
+          final day = _selectedDate
+              .subtract(Duration(days: _selectedDate.weekday - 1))
+              .add(Duration(days: index));
+          final isSelected =
+              day.day == _selectedDate.day && day.month == _selectedDate.month;
+
           return GestureDetector(
             onTap: () {
               setState(() => _selectedDate = day);
@@ -99,7 +102,9 @@ class _MealPlanningScreenState extends State<MealPlanningScreen> {
               width: 60,
               margin: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
-                color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent,
+                color: isSelected
+                    ? Theme.of(context).colorScheme.primary
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.grey.shade300),
               ),
@@ -137,7 +142,10 @@ class _MealPlanningScreenState extends State<MealPlanningScreen> {
         children: [
           const Icon(Icons.restaurant_menu, size: 64, color: Colors.grey),
           const SizedBox(height: 16),
-          const Text('No menu set for this day', style: TextStyle(color: Colors.grey)),
+          const Text(
+            'No menu set for this day',
+            style: TextStyle(color: Colors.grey),
+          ),
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () => _showAddMenuItemDialog(context),
@@ -157,7 +165,9 @@ class _MealPlanningScreenState extends State<MealPlanningScreen> {
         return AppCard(
           margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
-            title: Text(item.mealCategoryId), // Replace with actual category name
+            title: Text(
+              item.mealCategoryId,
+            ), // Replace with actual category name
             subtitle: Text(item.items.join(', ')),
             trailing: IconButton(
               icon: const Icon(Icons.edit),
@@ -171,7 +181,9 @@ class _MealPlanningScreenState extends State<MealPlanningScreen> {
 
   void _showAddMenuItemDialog(BuildContext context, {MenuItem? item}) {
     // Simplified dialog for adding/editing menu items
-    final controller = TextEditingController(text: item?.items.join(', ') ?? '');
+    final controller = TextEditingController(
+      text: item?.items.join(', ') ?? '',
+    );
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -191,11 +203,16 @@ class _MealPlanningScreenState extends State<MealPlanningScreen> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             onPressed: () {
               final newMenuItem = MenuItem(
-                id: item?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+                id:
+                    item?.id ??
+                    DateTime.now().millisecondsSinceEpoch.toString(),
                 mealCategoryId: 'Lunch', // Simplified
                 dayOfWeek: 'Monday', // Simplified
                 date: _selectedDate,

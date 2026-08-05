@@ -25,15 +25,18 @@ class _ClassPerformanceScreenState extends State<ClassPerformanceScreen> {
     super.initState();
     final active = context.read<ClassTeacherContextBloc>().state.active;
     if (active != null) {
-      context.read<ClassPerformanceBloc>().add(ClassPerformanceRequested(active));
+      context.read<ClassPerformanceBloc>().add(
+        ClassPerformanceRequested(active),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final primaryColor = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
 
     return BlocBuilder<ClassTeacherContextBloc, ClassTeacherContextState>(
       builder: (context, contextState) {
@@ -41,12 +44,14 @@ class _ClassPerformanceScreenState extends State<ClassPerformanceScreen> {
         final subtitle = active == null
             ? 'No class assigned'
             : [
-                [active.className, active.streamName]
-                    .where((e) => e != null && e.isNotEmpty)
-                    .join(' '),
-                [active.termName, active.academicYearName]
-                    .where((e) => e.isNotEmpty)
-                    .join(', '),
+                [
+                  active.className,
+                  active.streamName,
+                ].where((e) => e != null && e.isNotEmpty).join(' '),
+                [
+                  active.termName,
+                  active.academicYearName,
+                ].where((e) => e.isNotEmpty).join(', '),
               ].where((e) => e.isNotEmpty).join(' • ');
 
         return Scaffold(
@@ -63,8 +68,10 @@ class _ClassPerformanceScreenState extends State<ClassPerformanceScreen> {
               children: [
                 Text(
                   'Class Performance',
-                  style: AppTypography.titleLarge
-                      .copyWith(color: primaryColor, fontWeight: FontWeight.bold),
+                  style: AppTypography.titleLarge.copyWith(
+                    color: primaryColor,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text(
                   subtitle,
@@ -131,9 +138,11 @@ class _ClassPerformanceScreenState extends State<ClassPerformanceScreen> {
                           PulseCard(
                             child: Column(
                               children: [
-                                for (var i = 0;
-                                    i < summary.subjects.length;
-                                    i++) ...[
+                                for (
+                                  var i = 0;
+                                  i < summary.subjects.length;
+                                  i++
+                                ) ...[
                                   if (i > 0)
                                     const Divider(height: AppSpacing.x3l),
                                   _buildSubjectPerformance(
@@ -236,8 +245,10 @@ class _ClassPerformanceScreenState extends State<ClassPerformanceScreen> {
       children: [
         Text(
           value,
-          style: AppTypography.headlineSmall
-              .copyWith(color: color, fontWeight: FontWeight.bold),
+          style: AppTypography.headlineSmall.copyWith(
+            color: color,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         const SizedBox(height: 2),
         Text(
@@ -259,7 +270,8 @@ class _ClassPerformanceScreenState extends State<ClassPerformanceScreen> {
       padding: const EdgeInsets.only(bottom: AppSpacing.s),
       child: PulseCard(
         padding: const EdgeInsets.all(AppSpacing.l),
-        onTap: () => context.push('/staff/students/${flagged.student.studentId}'),
+        onTap: () =>
+            context.push('/staff/students/${flagged.student.studentId}'),
         child: Row(
           children: [
             Expanded(
@@ -304,7 +316,9 @@ class _ClassPerformanceScreenState extends State<ClassPerformanceScreen> {
             Icon(
               Icons.chevron_right,
               size: 18,
-              color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+              color: isDark
+                  ? AppColors.textMutedDark
+                  : AppColors.textMutedLight,
             ),
           ],
         ),
@@ -362,8 +376,10 @@ class _ClassPerformanceScreenState extends State<ClassPerformanceScreen> {
                 ),
                 const SizedBox(width: AppSpacing.m),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: isDark
                         ? AppColors.elevatedSurfaceDark
@@ -382,8 +398,8 @@ class _ClassPerformanceScreenState extends State<ClassPerformanceScreen> {
                     style: AppTypography.labelSmall.copyWith(
                       color: subject.isComplete
                           ? (isDark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimaryLight)
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimaryLight)
                           : AppColors.goldenYellow,
                       fontWeight: FontWeight.bold,
                     ),
@@ -398,8 +414,9 @@ class _ClassPerformanceScreenState extends State<ClassPerformanceScreen> {
           borderRadius: BorderRadius.circular(2),
           child: LinearProgressIndicator(
             value: (average ?? 0) / 100,
-            backgroundColor:
-                isDark ? AppColors.borderDark : AppColors.borderLight,
+            backgroundColor: isDark
+                ? AppColors.borderDark
+                : AppColors.borderLight,
             valueColor: AlwaysStoppedAnimation<Color>(
               // Faded while the marks are still coming in, so a partial
               // average does not read as a settled one.

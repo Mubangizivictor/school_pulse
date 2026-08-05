@@ -14,9 +14,7 @@ class TeacherWorkloadScreen extends StatelessWidget {
     return BlocProvider(
       create: (context) => sl<DeanBloc>()..add(TeacherWorkloadsRequested()),
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Teacher Workload Monitoring'),
-        ),
+        appBar: AppBar(title: const Text('Teacher Workload Monitoring')),
         body: BlocBuilder<DeanBloc, DeanState>(
           builder: (context, state) {
             if (state is TeacherWorkloadsLoaded) {
@@ -25,10 +23,10 @@ class TeacherWorkloadScreen extends StatelessWidget {
                 itemCount: state.workloads.length,
                 itemBuilder: (context, index) {
                   final workload = state.workloads[index];
-                  final completionText = workload.weeklyLessonsCount > 0 
-                    ? '${(workload.lessonsDelivered / workload.weeklyLessonsCount * 100).toStringAsFixed(0)}%'
-                    : 'N/A';
-                  
+                  final completionText = workload.weeklyLessonsCount > 0
+                      ? '${(workload.lessonsDelivered / workload.weeklyLessonsCount * 100).toStringAsFixed(0)}%'
+                      : 'N/A';
+
                   return AppCard(
                     margin: const EdgeInsets.only(bottom: 12),
                     child: Padding(
@@ -39,22 +37,39 @@ class TeacherWorkloadScreen extends StatelessWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(workload.teacherName,
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                              Text(
+                                workload.teacherName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   color: Colors.blue.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
-                                child: Text('Load: ${workload.weeklyLessonsCount} hrs/wk',
-                                    style: const TextStyle(fontSize: 12, color: Colors.blue, fontWeight: FontWeight.bold)),
+                                child: Text(
+                                  'Load: ${workload.weeklyLessonsCount} hrs/wk',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.blue,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 12),
                           LinearProgressIndicator(
-                            value: workload.weeklyLessonsCount > 0 ? workload.lessonsDelivered / workload.weeklyLessonsCount : 0,
+                            value: workload.weeklyLessonsCount > 0
+                                ? workload.lessonsDelivered /
+                                      workload.weeklyLessonsCount
+                                : 0,
                             backgroundColor: Colors.grey.shade200,
                             color: Colors.green,
                           ),
@@ -62,17 +77,34 @@ class TeacherWorkloadScreen extends StatelessWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('Lesson Completion: $completionText', style: const TextStyle(fontSize: 12)),
-                              Text('Missed: ${workload.lessonsMissed}', 
-                                style: TextStyle(fontSize: 12, color: workload.lessonsMissed > 0 ? Colors.red : Colors.grey)),
+                              Text(
+                                'Lesson Completion: $completionText',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                              Text(
+                                'Missed: ${workload.lessonsMissed}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: workload.lessonsMissed > 0
+                                      ? Colors.red
+                                      : Colors.grey,
+                                ),
+                              ),
                             ],
                           ),
                           const Divider(),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
-                              _WorkloadMetric(label: 'Assessments', value: '${workload.assessmentsCreated}'),
-                              _WorkloadMetric(label: 'Pending Marks', value: '${workload.marksPending}', color: Colors.orange),
+                              _WorkloadMetric(
+                                label: 'Assessments',
+                                value: '${workload.assessmentsCreated}',
+                              ),
+                              _WorkloadMetric(
+                                label: 'Pending Marks',
+                                value: '${workload.marksPending}',
+                                color: Colors.orange,
+                              ),
                             ],
                           ),
                         ],
@@ -104,8 +136,18 @@ class _WorkloadMetric extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: color)),
-        Text(label, style: TextStyle(fontSize: 11, color: Theme.of(context).hintColor)),
+        Text(
+          value,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(fontSize: 11, color: Theme.of(context).hintColor),
+        ),
       ],
     );
   }

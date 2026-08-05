@@ -25,16 +25,16 @@ class CompetencyRating extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        studentId,
-        className,
-        term,
-        year,
-        competency,
-        level,
-        teacherId,
-        updatedAt,
-      ];
+    id,
+    studentId,
+    className,
+    term,
+    year,
+    competency,
+    level,
+    teacherId,
+    updatedAt,
+  ];
 
   CompetencyRating copyWith({
     String? id,

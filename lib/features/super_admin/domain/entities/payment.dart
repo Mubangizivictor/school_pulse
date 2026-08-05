@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 enum PaymentStatus { pending, completed, failed, refunded }
+
 enum PaymentMethod { mobileMoney, card, bankTransfer, cash }
 
 class Transaction extends Equatable {
@@ -30,17 +31,17 @@ class Transaction extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        invoiceId,
-        amount,
-        currency,
-        status,
-        method,
-        timestamp,
-        providerReference,
-        metadata,
-      ];
+    id,
+    schoolId,
+    invoiceId,
+    amount,
+    currency,
+    status,
+    method,
+    timestamp,
+    providerReference,
+    metadata,
+  ];
 }
 
 class Invoice extends Equatable {
@@ -68,14 +69,14 @@ class Invoice extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        schoolName,
-        planId,
-        amount,
-        dueDate,
-        paidAt,
-        status,
-        billingPeriod,
-      ];
+    id,
+    schoolId,
+    schoolName,
+    planId,
+    amount,
+    dueDate,
+    paidAt,
+    status,
+    billingPeriod,
+  ];
 }

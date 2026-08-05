@@ -50,13 +50,19 @@ class StudentFeesScreen extends StatelessWidget {
                     AppCard(
                       child: Column(
                         children: [
-                          Text('Outstanding Balance', style: Theme.of(context).textTheme.bodyMedium),
+                          Text(
+                            'Outstanding Balance',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
                           const SizedBox(height: 8),
                           Text(
                             'UGX ${NumberFormat('#,###').format(totalBalance)}',
-                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            style: Theme.of(context).textTheme.headlineMedium
+                                ?.copyWith(
                                   fontWeight: FontWeight.bold,
-                                  color: totalBalance > 0 ? semanticColors.warning : semanticColors.success,
+                                  color: totalBalance > 0
+                                      ? semanticColors.warning
+                                      : semanticColors.success,
                                 ),
                           ),
                         ],
@@ -64,7 +70,9 @@ class StudentFeesScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 24),
                     const SectionHeader(title: 'Fee Breakdown'),
-                    ...feeItems.map((item) => _buildFeeItemRow(context, item, semanticColors)),
+                    ...feeItems.map(
+                      (item) => _buildFeeItemRow(context, item, semanticColors),
+                    ),
                   ],
                 );
               }
@@ -77,7 +85,11 @@ class StudentFeesScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFeeItemRow(BuildContext context, FeeItem item, SemanticColors colors) {
+  Widget _buildFeeItemRow(
+    BuildContext context,
+    FeeItem item,
+    SemanticColors colors,
+  ) {
     Color statusColor;
     String statusLabel;
 
@@ -105,15 +117,24 @@ class StudentFeesScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.category, style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text('Due: ${DateFormat('dd MMM yyyy').format(item.dueDate)}', style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  item.category,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  'Due: ${DateFormat('dd MMM yyyy').format(item.dueDate)}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ],
             ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('UGX ${NumberFormat('#,###').format(item.amount)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                'UGX ${NumberFormat('#,###').format(item.amount)}',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 4),
               StatusBadge(label: statusLabel, color: statusColor),
             ],

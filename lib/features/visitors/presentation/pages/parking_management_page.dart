@@ -23,12 +23,15 @@ class ParkingManagementPage extends StatelessWidget {
             return const Center(child: Text('Unable to load parking data'));
           }
 
-          final parked = state.activeVisitors
-              .where((v) => (v.vehicleNumber?.isNotEmpty ?? false))
-              .toList()
-            ..sort((a, b) => a.arrivalTime.compareTo(b.arrivalTime));
+          final parked =
+              state.activeVisitors
+                  .where((v) => (v.vehicleNumber?.isNotEmpty ?? false))
+                  .toList()
+                ..sort((a, b) => a.arrivalTime.compareTo(b.arrivalTime));
 
-          final occupiedSlots = parked.where((v) => v.parkingSlot?.isNotEmpty ?? false).length;
+          final occupiedSlots = parked
+              .where((v) => v.parkingSlot?.isNotEmpty ?? false)
+              .length;
 
           return Column(
             children: [
@@ -58,17 +61,27 @@ class ParkingManagementPage extends StatelessWidget {
               ),
               Expanded(
                 child: parked.isEmpty
-                    ? const Center(child: Text('No vehicles currently on campus'))
+                    ? const Center(
+                        child: Text('No vehicles currently on campus'),
+                      )
                     : ListView.separated(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         itemCount: parked.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 8),
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 8),
                         itemBuilder: (context, index) {
                           final visitor = parked[index];
                           return AppCard(
                             child: ListTile(
-                              leading: const CircleAvatar(child: Icon(Icons.directions_car)),
-                              title: Text(visitor.vehicleNumber!, style: const TextStyle(fontWeight: FontWeight.bold)),
+                              leading: const CircleAvatar(
+                                child: Icon(Icons.directions_car),
+                              ),
+                              title: Text(
+                                visitor.vehicleNumber!,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                               subtitle: Text(
                                 '${visitor.fullName} • Host: ${visitor.host}\n'
                                 'Arrived: ${DateFormat('hh:mm a').format(visitor.arrivalTime)}'
@@ -76,8 +89,15 @@ class ParkingManagementPage extends StatelessWidget {
                               ),
                               isThreeLine: true,
                               trailing: visitor.parkingSlot?.isNotEmpty ?? false
-                                  ? StatusBadge(label: visitor.parkingSlot!, color: Colors.teal, icon: Icons.local_parking)
-                                  : const StatusBadge(label: 'UNASSIGNED', color: Colors.orange),
+                                  ? StatusBadge(
+                                      label: visitor.parkingSlot!,
+                                      color: Colors.teal,
+                                      icon: Icons.local_parking,
+                                    )
+                                  : const StatusBadge(
+                                      label: 'UNASSIGNED',
+                                      color: Colors.orange,
+                                    ),
                             ),
                           );
                         },

@@ -28,92 +28,92 @@ class _TaskRemindersScreenState extends State<TaskRemindersScreen> {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          _buildSection(
-            context,
-            'Global Settings',
-            [
-              _buildSwitchTile(
-                context,
-                'Enable Reminders',
-                'Get notified before tasks are due',
-                _enableReminders,
-                (v) => setState(() => _enableReminders = v),
-              ),
-            ],
-          ),
+          _buildSection(context, 'Global Settings', [
+            _buildSwitchTile(
+              context,
+              'Enable Reminders',
+              'Get notified before tasks are due',
+              _enableReminders,
+              (v) => setState(() => _enableReminders = v),
+            ),
+          ]),
           const SizedBox(height: 24),
           if (_enableReminders) ...[
-            _buildSection(
-              context,
-              'Notification Methods',
-              [
-                _buildSwitchTile(
-                  context,
-                  'Push Notifications',
-                  'Instant alerts on your device',
-                  _pushNotifications,
-                  (v) => setState(() => _pushNotifications = v),
-                ),
-                const Divider(height: 1, indent: 16, endIndent: 16),
-                _buildSwitchTile(
-                  context,
-                  'Email Notifications',
-                  'Daily summary of tasks',
-                  _emailNotifications,
-                  (v) => setState(() => _emailNotifications = v),
-                ),
-              ],
-            ),
+            _buildSection(context, 'Notification Methods', [
+              _buildSwitchTile(
+                context,
+                'Push Notifications',
+                'Instant alerts on your device',
+                _pushNotifications,
+                (v) => setState(() => _pushNotifications = v),
+              ),
+              const Divider(height: 1, indent: 16, endIndent: 16),
+              _buildSwitchTile(
+                context,
+                'Email Notifications',
+                'Daily summary of tasks',
+                _emailNotifications,
+                (v) => setState(() => _emailNotifications = v),
+              ),
+            ]),
             const SizedBox(height: 24),
-            _buildSection(
-              context,
-              'Reminder Timing',
-              [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Remind me',
-                            style: TextStyle(
-                              color: AppColors.textPrimary(context),
-                              fontWeight: FontWeight.w600,
-                            ),
+            _buildSection(context, 'Reminder Timing', [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Remind me',
+                          style: TextStyle(
+                            color: AppColors.textPrimary(context),
+                            fontWeight: FontWeight.w600,
                           ),
-                          Text(
-                            '${_reminderMinutes.toInt()} minutes before',
-                            style: TextStyle(
-                              color: AppColors.primary(context),
-                              fontWeight: FontWeight.bold,
-                            ),
+                        ),
+                        Text(
+                          '${_reminderMinutes.toInt()} minutes before',
+                          style: TextStyle(
+                            color: AppColors.primary(context),
+                            fontWeight: FontWeight.bold,
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Slider(
-                        value: _reminderMinutes,
-                        min: 5,
-                        max: 60,
-                        divisions: 11,
-                        activeColor: AppColors.primary(context),
-                        onChanged: (v) => setState(() => _reminderMinutes = v),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('5m', style: TextStyle(color: AppColors.textMuted(context), fontSize: 12)),
-                          Text('60m', style: TextStyle(color: AppColors.textMuted(context), fontSize: 12)),
-                        ],
-                      ),
-                    ],
-                  ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Slider(
+                      value: _reminderMinutes,
+                      min: 5,
+                      max: 60,
+                      divisions: 11,
+                      activeColor: AppColors.primary(context),
+                      onChanged: (v) => setState(() => _reminderMinutes = v),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '5m',
+                          style: TextStyle(
+                            color: AppColors.textMuted(context),
+                            fontSize: 12,
+                          ),
+                        ),
+                        Text(
+                          '60m',
+                          style: TextStyle(
+                            color: AppColors.textMuted(context),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ]),
             const SizedBox(height: 32),
             PrimaryButton(
               label: 'Save Changes',
@@ -130,7 +130,11 @@ class _TaskRemindersScreenState extends State<TaskRemindersScreen> {
     );
   }
 
-  Widget _buildSection(BuildContext context, String title, List<Widget> children) {
+  Widget _buildSection(
+    BuildContext context,
+    String title,
+    List<Widget> children,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

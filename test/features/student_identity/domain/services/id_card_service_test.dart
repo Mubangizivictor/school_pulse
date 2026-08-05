@@ -21,49 +21,55 @@ void main() {
     expect(String.fromCharCodes(pdfData.take(4)), '%PDF');
   });
 
-  test('generateBatchIdCardsPdf produces one PDF covering every entry', () async {
-    final entries = List.generate(
-      3,
-      (i) => IdCardBatchEntry(
-        studentName: 'Student $i',
-        admissionNumber: 'SP-2026-000$i',
-        studentId: 'MH-2026-00000$i',
-        className: 'Primary 4',
-        stream: 'Blue',
-        uniqueSystemId: 'SP-STUDENT-$i',
-      ),
-    );
+  test(
+    'generateBatchIdCardsPdf produces one PDF covering every entry',
+    () async {
+      final entries = List.generate(
+        3,
+        (i) => IdCardBatchEntry(
+          studentName: 'Student $i',
+          admissionNumber: 'SP-2026-000$i',
+          studentId: 'MH-2026-00000$i',
+          className: 'Primary 4',
+          stream: 'Blue',
+          uniqueSystemId: 'SP-STUDENT-$i',
+        ),
+      );
 
-    final singleCard = await service.generateIdCardPdf(
-      schoolName: 'School Pulse Academy',
-      studentName: entries.first.studentName,
-      admissionNumber: entries.first.admissionNumber,
-      studentId: entries.first.studentId,
-      className: entries.first.className,
-      stream: entries.first.stream,
-      uniqueSystemId: entries.first.uniqueSystemId,
-    );
+      final singleCard = await service.generateIdCardPdf(
+        schoolName: 'School Pulse Academy',
+        studentName: entries.first.studentName,
+        admissionNumber: entries.first.admissionNumber,
+        studentId: entries.first.studentId,
+        className: entries.first.className,
+        stream: entries.first.stream,
+        uniqueSystemId: entries.first.uniqueSystemId,
+      );
 
-    final batchPdf = await service.generateBatchIdCardsPdf(
-      schoolName: 'School Pulse Academy',
-      entries: entries,
-    );
+      final batchPdf = await service.generateBatchIdCardsPdf(
+        schoolName: 'School Pulse Academy',
+        entries: entries,
+      );
 
-    expect(batchPdf, isNotEmpty);
-    expect(String.fromCharCodes(batchPdf.take(4)), '%PDF');
-    // A 3-entry batch should be substantially larger than a 1-page card -
-    // a reasonable proxy that all three pages actually got added, without
-    // needing a full PDF page-count parser in the test.
-    expect(batchPdf.length, greaterThan(singleCard.length * 2));
-  });
+      expect(batchPdf, isNotEmpty);
+      expect(String.fromCharCodes(batchPdf.take(4)), '%PDF');
+      // A 3-entry batch should be substantially larger than a 1-page card -
+      // a reasonable proxy that all three pages actually got added, without
+      // needing a full PDF page-count parser in the test.
+      expect(batchPdf.length, greaterThan(singleCard.length * 2));
+    },
+  );
 
-  test('generateBatchIdCardsPdf with an empty list still returns a valid (empty-page) PDF', () async {
-    final batchPdf = await service.generateBatchIdCardsPdf(
-      schoolName: 'School Pulse Academy',
-      entries: const [],
-    );
+  test(
+    'generateBatchIdCardsPdf with an empty list still returns a valid (empty-page) PDF',
+    () async {
+      final batchPdf = await service.generateBatchIdCardsPdf(
+        schoolName: 'School Pulse Academy',
+        entries: const [],
+      );
 
-    expect(batchPdf, isNotEmpty);
-    expect(String.fromCharCodes(batchPdf.take(4)), '%PDF');
-  });
+      expect(batchPdf, isNotEmpty);
+      expect(String.fromCharCodes(batchPdf.take(4)), '%PDF');
+    },
+  );
 }

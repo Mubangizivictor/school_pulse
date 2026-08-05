@@ -58,5 +58,12 @@ class LogCounselingSessionRequested extends DisciplineEvent {
   });
 
   @override
-  List<Object?> get props => [studentId, counselorId, reason, notes, recommendations, linkedIncidentId];
+  List<Object?> get props => [
+    studentId,
+    counselorId,
+    reason,
+    notes,
+    recommendations,
+    linkedIncidentId,
+  ];
 }

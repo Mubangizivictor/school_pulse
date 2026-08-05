@@ -1,6 +1,13 @@
 import 'package:equatable/equatable.dart';
 
-enum InterventionType { remedial, counseling, parentMeeting, teacherMeeting, targetSetting }
+enum InterventionType {
+  remedial,
+  counseling,
+  parentMeeting,
+  teacherMeeting,
+  targetSetting,
+}
+
 enum InterventionStatus { pending, inProgress, completed, cancelled }
 
 class AcademicIntervention extends Equatable {
@@ -30,15 +37,15 @@ class AcademicIntervention extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        studentId,
-        studentName,
-        reason,
-        type,
-        assignedTo,
-        startDate,
-        targetDate,
-        status,
-        outcomes,
-      ];
+    id,
+    studentId,
+    studentName,
+    reason,
+    type,
+    assignedTo,
+    startDate,
+    targetDate,
+    status,
+    outcomes,
+  ];
 }

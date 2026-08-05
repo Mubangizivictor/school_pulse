@@ -17,7 +17,7 @@ class HrRemoteDataSourceImpl implements HrRemoteDataSource {
         .collection('payroll')
         .orderBy('createdAt', descending: true)
         .get();
-    
+
     return snapshot.docs.map((doc) {
       final data = doc.data();
       return PayrollRecord(

@@ -47,22 +47,26 @@ class ClassPerformanceRepositoryImpl implements ClassPerformanceRepository {
 
     final classId = context.classId;
     if (classId == null || classId.isEmpty) {
-      return const Left(ValidationFailure(
-        'This responsibility is not tied to a class.',
-      ));
+      return const Left(
+        ValidationFailure('This responsibility is not tied to a class.'),
+      );
     }
 
     if (context.termId.isEmpty) {
-      return const Left(ValidationFailure(
-        'Your school has not opened a term yet, so there is nothing to '
-        'measure performance over.',
-      ));
+      return const Left(
+        ValidationFailure(
+          'Your school has not opened a term yet, so there is nothing to '
+          'measure performance over.',
+        ),
+      );
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(NetworkFailure(
-        'You are offline. Class performance needs a connection.',
-      ));
+      return const Left(
+        NetworkFailure(
+          'You are offline. Class performance needs a connection.',
+        ),
+      );
     }
 
     try {
@@ -83,8 +87,9 @@ class ClassPerformanceRepositoryImpl implements ClassPerformanceRepository {
       // Behaviour follow-ups are one of the reasons a student is surfaced, so
       // they come from the same source the behaviour screen shows rather than
       // being recounted here.
-      final behaviour =
-          await workRepository.getBehaviourRecords(context: context);
+      final behaviour = await workRepository.getBehaviourRecords(
+        context: context,
+      );
       final followUpsByStudent = <String, int>{};
       for (final record in behaviour.getOrElse(() => const [])) {
         if (!record.isOpenFollowUp) continue;
@@ -99,8 +104,9 @@ class ClassPerformanceRepositoryImpl implements ClassPerformanceRepository {
       final byStudent = <String, Map<String, List<double>>>{};
       final subjectNames = <String, String>{};
       for (final row in marks) {
-        subjectNames[row.subjectId] =
-            row.subjectName.isEmpty ? row.subjectId : row.subjectName;
+        subjectNames[row.subjectId] = row.subjectName.isEmpty
+            ? row.subjectId
+            : row.subjectName;
         byStudent
             .putIfAbsent(row.studentId, () => {})
             .putIfAbsent(row.subjectId, () => [])
@@ -111,8 +117,7 @@ class ClassPerformanceRepositoryImpl implements ClassPerformanceRepository {
         final subjects = byStudent[student.studentId] ?? const {};
         final percentages = <String, double>{
           for (final entry in subjects.entries)
-            entry.key:
-                entry.value.reduce((a, b) => a + b) / entry.value.length,
+            entry.key: entry.value.reduce((a, b) => a + b) / entry.value.length,
         };
 
         return StudentPerformanceSummary(
@@ -143,24 +148,31 @@ class ClassPerformanceRepositoryImpl implements ClassPerformanceRepository {
               : scores.reduce((a, b) => a + b) / scores.length,
           studentsWithMarks: scores.length,
           studentsExpected: students.length,
-          highest: scores.isEmpty ? null : scores.reduce((a, b) => a > b ? a : b),
-          lowest: scores.isEmpty ? null : scores.reduce((a, b) => a < b ? a : b),
+          highest: scores.isEmpty
+              ? null
+              : scores.reduce((a, b) => a > b ? a : b),
+          lowest: scores.isEmpty
+              ? null
+              : scores.reduce((a, b) => a < b ? a : b),
         );
-      }).toList()
-        ..sort((a, b) => a.subjectName.compareTo(b.subjectName));
+      }).toList()..sort((a, b) => a.subjectName.compareTo(b.subjectName));
 
       final resolved = thresholds ?? AttentionThresholds.defaults;
 
-      return Right(ClassPerformanceSummary(
-        students: summaries,
-        subjects: subjectSummaries,
-        needingAttention:
-            ClassPerformancePolicy.needingAttention(summaries, resolved),
-      ));
+      return Right(
+        ClassPerformanceSummary(
+          students: summaries,
+          subjects: subjectSummaries,
+          needingAttention: ClassPerformancePolicy.needingAttention(
+            summaries,
+            resolved,
+          ),
+        ),
+      );
     } catch (_) {
-      return const Left(ServerFailure(
-        'Could not load class performance. Pull down to retry.',
-      ));
+      return const Left(
+        ServerFailure('Could not load class performance. Pull down to retry.'),
+      );
     }
   }
 
@@ -191,13 +203,19 @@ class ClassPerformanceRepositoryImpl implements ClassPerformanceRepository {
       if (!session.isSubmitted) continue;
       for (final entry in session.entries) {
         if (!entry.isMarked) continue;
-        (marksByStudent[entry.studentId] ??= []).add(classifyStudentStatus(entry.statusCode));
+        (marksByStudent[entry.studentId] ??= []).add(
+          classifyStudentStatus(entry.statusCode),
+        );
       }
     }
 
     return {
       for (final studentId in marksByStudent.keys)
-        studentId: AttendanceRateCalculator.summarize(marksByStudent[studentId]!).ratePercent ?? 0,
+        studentId:
+            AttendanceRateCalculator.summarize(
+              marksByStudent[studentId]!,
+            ).ratePercent ??
+            0,
     };
   }
 }

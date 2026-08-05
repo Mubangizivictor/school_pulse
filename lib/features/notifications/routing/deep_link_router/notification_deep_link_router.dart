@@ -29,7 +29,7 @@ class NotificationDeepLinkRouter {
     required UserEntity? user,
     Set<String> grantedPermissions = const {},
     Future<bool> Function(NotificationDestinationKind kind, String? id)?
-        targetExists,
+    targetExists,
   }) async {
     // 1. Authentication. The caller stashes the notification and replays it
     //    after login rather than dropping it.

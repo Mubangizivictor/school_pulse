@@ -33,11 +33,18 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
     required String schoolId,
   }) async {
     try {
-      final existing = await localDataSource.findCredential(credentialValue, schoolId);
-      if (existing != null && existing.status == 'active' && existing.identityId != identityId) {
-        return Left(ServerFailure(
-          'This card is already assigned to another identity. Revoke or replace it first.',
-        ));
+      final existing = await localDataSource.findCredential(
+        credentialValue,
+        schoolId,
+      );
+      if (existing != null &&
+          existing.status == 'active' &&
+          existing.identityId != identityId) {
+        return Left(
+          ServerFailure(
+            'This card is already assigned to another identity. Revoke or replace it first.',
+          ),
+        );
       }
 
       // Reassigning a previously-revoked card ("reuse after secure
@@ -73,7 +80,11 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
     required String schoolId,
     required String reason,
   }) async {
-    final revokeResult = await revoke(credentialValue: oldCredentialValue, schoolId: schoolId, reason: reason);
+    final revokeResult = await revoke(
+      credentialValue: oldCredentialValue,
+      schoolId: schoolId,
+      reason: reason,
+    );
     return revokeResult.fold(
       Left.new,
       (_) => assign(
@@ -92,7 +103,10 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
     required String reason,
   }) async {
     try {
-      final existing = await localDataSource.findCredential(credentialValue, schoolId);
+      final existing = await localDataSource.findCredential(
+        credentialValue,
+        schoolId,
+      );
       if (existing != null) {
         existing.status = 'revoked';
         existing.updatedAt = DateTime.now();
@@ -120,9 +134,16 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
     required String schoolId,
   }) async {
     try {
-      final existing = await localDataSource.findCredential(credentialValue, schoolId);
+      final existing = await localDataSource.findCredential(
+        credentialValue,
+        schoolId,
+      );
       if (existing == null) {
-        return Left(ServerFailure('No prior mapping found for this card - assign it instead.'));
+        return Left(
+          ServerFailure(
+            'No prior mapping found for this card - assign it instead.',
+          ),
+        );
       }
 
       await localDataSource.deleteRevocation(credentialValue, schoolId);
@@ -145,7 +166,10 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
     required String schoolId,
   }) async {
     try {
-      final existing = await localDataSource.findCredentialByIdentity(identityId, schoolId);
+      final existing = await localDataSource.findCredentialByIdentity(
+        identityId,
+        schoolId,
+      );
       return Right(existing?.credentialValue);
     } catch (e) {
       return Left(CacheFailure(e.toString()));
@@ -161,14 +185,14 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
           .collection('credentials')
           .doc(credential.credentialValue)
           .set({
-        'credentialValue': credential.credentialValue,
-        'credentialType': credential.credentialType,
-        'identityId': credential.identityId,
-        'identityType': credential.identityType,
-        'schoolId': credential.schoolId,
-        'status': credential.status,
-        'updatedAt': credential.updatedAt.toIso8601String(),
-      });
+            'credentialValue': credential.credentialValue,
+            'credentialType': credential.credentialType,
+            'identityId': credential.identityId,
+            'identityType': credential.identityType,
+            'schoolId': credential.schoolId,
+            'status': credential.status,
+            'updatedAt': credential.updatedAt.toIso8601String(),
+          });
     } catch (_) {
       // Local write already succeeded - a later assign/revoke/reactivate
       // on this device, or another device's scan-time fallback read,
@@ -185,21 +209,29 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
           .collection('revoked_credentials')
           .doc(revocation.credentialValue)
           .set({
-        'credentialValue': revocation.credentialValue,
-        'schoolId': revocation.schoolId,
-        'revokedAt': revocation.revokedAt.toIso8601String(),
-        'reason': revocation.reason,
-      });
+            'credentialValue': revocation.credentialValue,
+            'schoolId': revocation.schoolId,
+            'revokedAt': revocation.revokedAt.toIso8601String(),
+            'reason': revocation.reason,
+          });
     } catch (_) {
       // Same as _pushCredential - local denylist already applies on this
       // device regardless.
     }
   }
 
-  Future<void> _pushRevocationDeleted(String schoolId, String credentialValue) async {
+  Future<void> _pushRevocationDeleted(
+    String schoolId,
+    String credentialValue,
+  ) async {
     if (!await networkInfo.isConnected) return;
     try {
-      await firestore.collection('schools').doc(schoolId).collection('revoked_credentials').doc(credentialValue).delete();
+      await firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('revoked_credentials')
+          .doc(credentialValue)
+          .delete();
     } catch (_) {}
   }
 }

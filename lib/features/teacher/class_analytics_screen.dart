@@ -21,7 +21,9 @@ class _ClassAnalyticsScreenState extends State<ClassAnalyticsScreen> {
     super.initState();
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
-      context.read<TeacherBloc>().add(TeacherDashboardRequested(authState.user.id));
+      context.read<TeacherBloc>().add(
+        TeacherDashboardRequested(authState.user.id),
+      );
     }
   }
 
@@ -44,13 +46,20 @@ class _ClassAnalyticsScreenState extends State<ClassAnalyticsScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (state is TeacherError) {
-            return Center(child: Text(state.message, style: TextStyle(color: AppColors.textPrimary(context))));
+            return Center(
+              child: Text(
+                state.message,
+                style: TextStyle(color: AppColors.textPrimary(context)),
+              ),
+            );
           }
           if (state is! TeacherLoaded) {
             return const SizedBox.shrink();
           }
 
-          final attendanceRate = state.totalStudents > 0 ? state.studentsToday / state.totalStudents : 0.0;
+          final attendanceRate = state.totalStudents > 0
+              ? state.studentsToday / state.totalStudents
+              : 0.0;
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -111,7 +120,9 @@ class _ClassAnalyticsScreenState extends State<ClassAnalyticsScreen> {
                       title: progress.title,
                       progress: progress.progress,
                       subtitle: progress.subtitle,
-                      color: index.isOdd ? AppColors.information(context) : AppColors.primary(context),
+                      color: index.isOdd
+                          ? AppColors.information(context)
+                          : AppColors.primary(context),
                     ),
                   );
                 }),

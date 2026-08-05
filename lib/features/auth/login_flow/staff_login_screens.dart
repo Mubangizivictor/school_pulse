@@ -35,10 +35,12 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
   }
 
   void _handleLogin() {
-    context.read<AuthBloc>().add(LoginWithEmailPressed(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-        ));
+    context.read<AuthBloc>().add(
+      LoginWithEmailPressed(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      ),
+    );
   }
 
   @override

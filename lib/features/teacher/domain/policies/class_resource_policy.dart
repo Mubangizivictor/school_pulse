@@ -16,11 +16,12 @@ class ResourceDecision {
   final String? message;
 
   const ResourceDecision.allowed()
-      : isAllowed = true,
-        refusal = null,
-        message = null;
+    : isAllowed = true,
+      refusal = null,
+      message = null;
 
-  const ResourceDecision.refused(this.refusal, this.message) : isAllowed = false;
+  const ResourceDecision.refused(this.refusal, this.message)
+    : isAllowed = false;
 }
 
 /// What may be uploaded to a class folder, and what deleting one means.

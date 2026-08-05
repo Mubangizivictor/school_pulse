@@ -24,7 +24,16 @@ class StockRequest extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, requestedBy, requestedAt, items, status, approvedBy, approvedAt, comments];
+  List<Object?> get props => [
+    id,
+    requestedBy,
+    requestedAt,
+    items,
+    status,
+    approvedBy,
+    approvedAt,
+    comments,
+  ];
 }
 
 class StockRequestItem extends Equatable {

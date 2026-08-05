@@ -31,23 +31,28 @@ void main() {
     });
 
     test('mean across subjects with approved marks only', () {
-      expect(_student(subjects: const {'maths': 80, 'english': 60}).average, 70);
+      expect(
+        _student(subjects: const {'maths': 80, 'english': 60}).average,
+        70,
+      );
     });
 
     test('a class average ignores students with nothing approved', () {
-      final summary = ClassPerformanceSummary(students: [
-        _student(id: 's1', subjects: const {'maths': 80}),
-        _student(id: 's2', subjects: const {}),
-      ]);
+      final summary = ClassPerformanceSummary(
+        students: [
+          _student(id: 's1', subjects: const {'maths': 80}),
+          _student(id: 's2', subjects: const {}),
+        ],
+      );
 
       expect(summary.classAverage, 80);
       expect(summary.studentsAwaitingMarks, 1);
     });
 
     test('a class with nothing approved has no average or pass rate', () {
-      final summary = ClassPerformanceSummary(students: [
-        _student(id: 's1', subjects: const {}),
-      ]);
+      final summary = ClassPerformanceSummary(
+        students: [_student(id: 's1', subjects: const {})],
+      );
 
       expect(summary.classAverage, isNull);
       expect(summary.passRate, isNull);

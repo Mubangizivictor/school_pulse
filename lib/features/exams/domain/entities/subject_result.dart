@@ -57,16 +57,16 @@ class SubjectResult extends Equatable {
 
   @override
   List<Object?> get props => [
-        subjectId,
-        subjectName,
-        assessmentScores,
-        totalMark,
-        percentage,
-        grade,
-        gradePoint,
-        remarks,
-        subjectPosition,
-        teacherName,
-        teacherSignatureUrl,
-      ];
+    subjectId,
+    subjectName,
+    assessmentScores,
+    totalMark,
+    percentage,
+    grade,
+    gradePoint,
+    remarks,
+    subjectPosition,
+    teacherName,
+    teacherSignatureUrl,
+  ];
 }

@@ -27,9 +27,12 @@ class GenerateReportCardParams {
   });
 }
 
-class GenerateReportCard implements UseCase<Uint8List, GenerateReportCardParams> {
+class GenerateReportCard
+    implements UseCase<Uint8List, GenerateReportCardParams> {
   @override
-  Future<Either<Failure, Uint8List>> call(GenerateReportCardParams params) async {
+  Future<Either<Failure, Uint8List>> call(
+    GenerateReportCardParams params,
+  ) async {
     try {
       final pdfData = await ReportPdfGenerator.generateReportCard(
         student: params.student,

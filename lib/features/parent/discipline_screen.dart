@@ -83,7 +83,11 @@ class _DisciplineScreenState extends State<DisciplineScreen> {
                             final incident = entry.value;
                             return FadeInSlide(
                               delay: Duration(milliseconds: index * 100),
-                              child: _buildAcademicIncidentCard(context, incident, semanticColors),
+                              child: _buildAcademicIncidentCard(
+                                context,
+                                incident,
+                                semanticColors,
+                              ),
                             );
                           }),
                           const SizedBox(height: 24),
@@ -96,7 +100,11 @@ class _DisciplineScreenState extends State<DisciplineScreen> {
                             final disciplineCase = entry.value;
                             return FadeInSlide(
                               delay: Duration(milliseconds: index * 100),
-                              child: _buildBoardingIncidentCard(context, disciplineCase, semanticColors),
+                              child: _buildBoardingIncidentCard(
+                                context,
+                                disciplineCase,
+                                semanticColors,
+                              ),
                             );
                           }),
                         ],

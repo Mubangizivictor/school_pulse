@@ -35,20 +35,20 @@ class ExpenditureRequest extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        requesterId,
-        requesterName,
-        description,
-        amount,
-        budgetCategoryId,
-        supplierId,
-        supplierName,
-        status,
-        attachmentUrls,
-        createdAt,
-        approvalHistory,
-      ];
+    id,
+    schoolId,
+    requesterId,
+    requesterName,
+    description,
+    amount,
+    budgetCategoryId,
+    supplierId,
+    supplierName,
+    status,
+    attachmentUrls,
+    createdAt,
+    approvalHistory,
+  ];
 }
 
 class ApprovalStep extends Equatable {
@@ -71,5 +71,13 @@ class ApprovalStep extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, approverId, approverName, approverRole, status, comment, updatedAt];
+  List<Object?> get props => [
+    id,
+    approverId,
+    approverName,
+    approverRole,
+    status,
+    comment,
+    updatedAt,
+  ];
 }

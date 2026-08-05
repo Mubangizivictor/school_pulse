@@ -34,7 +34,9 @@ class PulseCard extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final effectiveBorderRadius = BorderRadius.circular(borderRadius ?? AppRadius.l);
+    final effectiveBorderRadius = BorderRadius.circular(
+      borderRadius ?? AppRadius.l,
+    );
     final effectivePadding = padding ?? const EdgeInsets.all(AppSpacing.xl);
 
     return AnimatedContainer(
@@ -45,24 +47,29 @@ class PulseCard extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: effectiveBorderRadius,
-          child: Padding(
-            padding: effectivePadding,
-            child: child,
-          ),
+          child: Padding(padding: effectivePadding, child: child),
         ),
       ),
     );
   }
 
-  BoxDecoration _buildDecoration(BuildContext context, bool isDark, BorderRadius borderRadius) {
+  BoxDecoration _buildDecoration(
+    BuildContext context,
+    bool isDark,
+    BorderRadius borderRadius,
+  ) {
     switch (variant) {
       case PulseCardVariant.standard:
         return BoxDecoration(
-          color: backgroundColor ?? (isDark ? AppColors.surfaceDark : AppColors.surfaceLight),
+          color:
+              backgroundColor ??
+              (isDark ? AppColors.surfaceDark : AppColors.surfaceLight),
           borderRadius: borderRadius,
           border: hasBorder
               ? Border.all(
-                  color: borderColor ?? (isDark ? AppColors.borderDark : AppColors.borderLight),
+                  color:
+                      borderColor ??
+                      (isDark ? AppColors.borderDark : AppColors.borderLight),
                   width: 1,
                 )
               : null,
@@ -70,26 +77,44 @@ class PulseCard extends StatelessWidget {
         );
       case PulseCardVariant.elevated:
         return BoxDecoration(
-          color: backgroundColor ?? (isDark ? AppColors.elevatedSurfaceDark : AppColors.surfaceLight),
+          color:
+              backgroundColor ??
+              (isDark ? AppColors.elevatedSurfaceDark : AppColors.surfaceLight),
           borderRadius: borderRadius,
-          boxShadow: isDark ? AppShadows.card.map((s) => s.copyWith(color: Colors.black.withOpacity(0.5))).toList() : AppShadows.card,
-          border: isDark ? Border.all(color: AppColors.borderDark, width: 1) : null,
+          boxShadow: isDark
+              ? AppShadows.card
+                    .map(
+                      (s) => s.copyWith(color: Colors.black.withOpacity(0.5)),
+                    )
+                    .toList()
+              : AppShadows.card,
+          border: isDark
+              ? Border.all(color: AppColors.borderDark, width: 1)
+              : null,
         );
       case PulseCardVariant.outlined:
         return BoxDecoration(
           color: backgroundColor ?? Colors.transparent,
           borderRadius: borderRadius,
           border: Border.all(
-            color: borderColor ?? (isDark ? AppColors.borderDark : AppColors.borderLight),
+            color:
+                borderColor ??
+                (isDark ? AppColors.borderDark : AppColors.borderLight),
             width: 1.5,
           ),
         );
       case PulseCardVariant.glass:
         return BoxDecoration(
-          color: backgroundColor ?? (isDark ? Colors.white.withOpacity(0.05) : Colors.white.withOpacity(0.7)),
+          color:
+              backgroundColor ??
+              (isDark
+                  ? Colors.white.withOpacity(0.05)
+                  : Colors.white.withOpacity(0.7)),
           borderRadius: borderRadius,
           border: Border.all(
-            color: isDark ? Colors.white.withOpacity(0.1) : Colors.white.withOpacity(0.2),
+            color: isDark
+                ? Colors.white.withOpacity(0.1)
+                : Colors.white.withOpacity(0.2),
             width: 1,
           ),
         );

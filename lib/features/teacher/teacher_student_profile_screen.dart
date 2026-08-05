@@ -11,10 +11,12 @@ class TeacherStudentProfileScreen extends StatefulWidget {
   const TeacherStudentProfileScreen({super.key, required this.studentId});
 
   @override
-  State<TeacherStudentProfileScreen> createState() => _TeacherStudentProfileScreenState();
+  State<TeacherStudentProfileScreen> createState() =>
+      _TeacherStudentProfileScreenState();
 }
 
-class _TeacherStudentProfileScreenState extends State<TeacherStudentProfileScreen> {
+class _TeacherStudentProfileScreenState
+    extends State<TeacherStudentProfileScreen> {
   final Student student = Student(
     id: 'student_1',
     schoolId: 'school_1',
@@ -62,7 +64,9 @@ class _TeacherStudentProfileScreenState extends State<TeacherStudentProfileScree
                 children: [
                   const CircleAvatar(
                     radius: 50,
-                    backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=1'),
+                    backgroundImage: NetworkImage(
+                      'https://i.pravatar.cc/150?u=1',
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.l),
                   Text(
@@ -83,18 +87,29 @@ class _TeacherStudentProfileScreenState extends State<TeacherStudentProfileScree
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.m,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: AppColors.success(context).withValues(alpha: 0.1),
+                          color: AppColors.success(
+                            context,
+                          ).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(AppSpacing.s),
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.circle, size: 8, color: AppColors.success(context)),
+                            Icon(
+                              Icons.circle,
+                              size: 8,
+                              color: AppColors.success(context),
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               'Present',
-                              style: AppTypography.labelMedium.copyWith(color: AppColors.success(context)),
+                              style: AppTypography.labelMedium.copyWith(
+                                color: AppColors.success(context),
+                              ),
                             ),
                           ],
                         ),
@@ -120,12 +135,20 @@ class _TeacherStudentProfileScreenState extends State<TeacherStudentProfileScree
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () {},
-                icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
-                label: const Text('Message Parent', style: TextStyle(color: Colors.white)),
+                icon: const Icon(
+                  Icons.chat_bubble_outline,
+                  color: Colors.white,
+                ),
+                label: const Text(
+                  'Message Parent',
+                  style: TextStyle(color: Colors.white),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary(context),
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.l),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.m)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppSpacing.m),
+                  ),
                 ),
               ),
             ),
@@ -143,22 +166,26 @@ class _TeacherStudentProfileScreenState extends State<TeacherStudentProfileScree
         _ProfileTabItem(
           icon: Icons.calendar_today,
           label: 'Attendance',
-          onTap: () => context.push('/staff/students/${widget.studentId}/attendance'),
+          onTap: () =>
+              context.push('/staff/students/${widget.studentId}/attendance'),
         ),
         _ProfileTabItem(
           icon: Icons.analytics_outlined,
           label: 'Performance',
-          onTap: () => context.push('/staff/students/${widget.studentId}/performance'),
+          onTap: () =>
+              context.push('/staff/students/${widget.studentId}/performance'),
         ),
         _ProfileTabItem(
           icon: Icons.gavel,
           label: 'Behaviour',
-          onTap: () => context.push('/staff/students/${widget.studentId}/behaviour'),
+          onTap: () =>
+              context.push('/staff/students/${widget.studentId}/behaviour'),
         ),
         _ProfileTabItem(
           icon: Icons.grid_view,
           label: 'More',
-          onTap: () => context.push('/staff/students/${widget.studentId}/more-options'),
+          onTap: () =>
+              context.push('/staff/students/${widget.studentId}/more-options'),
         ),
       ],
     );
@@ -209,9 +236,13 @@ class _ProfileTabItem extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(AppSpacing.m),
             decoration: BoxDecoration(
-              color: isSelected ? AppColors.primary(context) : AppColors.surfaceElevated(context),
+              color: isSelected
+                  ? AppColors.primary(context)
+                  : AppColors.surfaceElevated(context),
               borderRadius: BorderRadius.circular(AppSpacing.m),
-              border: isSelected ? null : Border.all(color: AppColors.border(context)),
+              border: isSelected
+                  ? null
+                  : Border.all(color: AppColors.border(context)),
             ),
             child: Icon(
               icon,
@@ -223,7 +254,9 @@ class _ProfileTabItem extends StatelessWidget {
           Text(
             label,
             style: AppTypography.labelSmall.copyWith(
-              color: isSelected ? AppColors.primary(context) : AppColors.textMuted(context),
+              color: isSelected
+                  ? AppColors.primary(context)
+                  : AppColors.textMuted(context),
             ),
           ),
         ],

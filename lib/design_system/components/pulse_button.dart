@@ -14,7 +14,7 @@ enum PulseButtonVariant {
   danger,
   success,
   warning,
-  info
+  info,
 }
 
 enum PulseButtonSize { small, medium, large }
@@ -68,7 +68,9 @@ class PulseButton extends StatelessWidget {
   Widget _buildButton(BuildContext context, bool isDark) {
     final content = _buildContent(context, isDark);
 
-    if (variant == PulseButtonVariant.primary && onPressed != null && !isLoading) {
+    if (variant == PulseButtonVariant.primary &&
+        onPressed != null &&
+        !isLoading) {
       return Container(
         decoration: BoxDecoration(
           gradient: AppGradients.primary,
@@ -104,7 +106,9 @@ class PulseButton extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
       padding: EdgeInsets.symmetric(
-        horizontal: size == PulseButtonSize.small ? AppSpacing.l : AppSpacing.x3l,
+        horizontal: size == PulseButtonSize.small
+            ? AppSpacing.l
+            : AppSpacing.x3l,
       ),
     );
 
@@ -134,12 +138,16 @@ class PulseButton extends StatelessWidget {
             color: isDark ? AppColors.borderDark : AppColors.borderLight,
             width: 1.5,
           ),
-          foregroundColor: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+          foregroundColor: isDark
+              ? AppColors.textPrimaryDark
+              : AppColors.textPrimaryLight,
           shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
         ).merge(baseStyle);
       case PulseButtonVariant.ghost:
         return TextButton.styleFrom(
-          foregroundColor: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+          foregroundColor: isDark
+              ? AppColors.textSecondaryDark
+              : AppColors.textSecondaryLight,
           shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
         ).merge(baseStyle);
       case PulseButtonVariant.danger:
@@ -173,9 +181,9 @@ class PulseButton extends StatelessWidget {
         child: CircularProgressIndicator(
           strokeWidth: 2,
           valueColor: AlwaysStoppedAnimation<Color>(
-            (variant == PulseButtonVariant.primary || 
-             variant == PulseButtonVariant.danger || 
-             variant == PulseButtonVariant.success)
+            (variant == PulseButtonVariant.primary ||
+                    variant == PulseButtonVariant.danger ||
+                    variant == PulseButtonVariant.success)
                 ? AppColors.pureWhite
                 : AppColors.primary(context),
           ),
@@ -194,10 +202,7 @@ class PulseButton extends StatelessWidget {
           Icon(icon, size: _getIconSize(), color: color),
           const SizedBox(width: AppSpacing.m),
         ],
-        Text(
-          label,
-          style: textStyle.copyWith(color: color),
-        ),
+        Text(label, style: textStyle.copyWith(color: color)),
         if (trailingIcon != null) ...[
           const SizedBox(width: AppSpacing.m),
           Icon(trailingIcon, size: _getIconSize(), color: color),

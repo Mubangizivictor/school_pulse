@@ -40,9 +40,9 @@ class ClassStudentRepositoryImpl implements ClassStudentRepository {
 
     final classId = context.classId;
     if (classId == null || classId.isEmpty) {
-      return const Left(ValidationFailure(
-        'This responsibility is not tied to a class.',
-      ));
+      return const Left(
+        ValidationFailure('This responsibility is not tied to a class.'),
+      );
     }
 
     // The roster is the one thing that must survive a classroom with no
@@ -74,9 +74,9 @@ class ClassStudentRepositoryImpl implements ClassStudentRepository {
       if (cached.isNotEmpty) return Right(cached);
       // Raw Firestore text never reaches the user - it leaks collection paths
       // and internal ids.
-      return const Left(ServerFailure(
-        'Could not load your class list. Pull down to retry.',
-      ));
+      return const Left(
+        ServerFailure('Could not load your class list. Pull down to retry.'),
+      );
     }
   }
 
@@ -98,9 +98,9 @@ class ClassStudentRepositoryImpl implements ClassStudentRepository {
 
     final classId = context.classId;
     if (classId == null || classId.isEmpty) {
-      return const Left(ValidationFailure(
-        'This responsibility is not tied to a class.',
-      ));
+      return const Left(
+        ValidationFailure('This responsibility is not tied to a class.'),
+      );
     }
 
     if (!await networkInfo.isConnected) {
@@ -112,9 +112,11 @@ class ClassStudentRepositoryImpl implements ClassStudentRepository {
           cached.classId == classId) {
         return Right(cached.toEntity());
       }
-      return const Left(NetworkFailure(
-        'You are offline and this student is not saved on this device.',
-      ));
+      return const Left(
+        NetworkFailure(
+          'You are offline and this student is not saved on this device.',
+        ),
+      );
     }
 
     try {
@@ -127,9 +129,9 @@ class ClassStudentRepositoryImpl implements ClassStudentRepository {
       );
 
       if (student == null) {
-        return const Left(PermissionDeniedFailure(
-          'That student is not in your class.',
-        ));
+        return const Left(
+          PermissionDeniedFailure('That student is not in your class.'),
+        );
       }
 
       return Right(student);

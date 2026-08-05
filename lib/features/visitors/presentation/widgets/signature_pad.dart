@@ -44,7 +44,7 @@ class SignaturePadState extends State<SignaturePad> {
     }
 
     final picture = recorder.endRecording();
-    // We need to define a size for the image. 
+    // We need to define a size for the image.
     // This is a bit tricky without a fixed size, but we can use the bounding box or a standard size.
     return await picture.toImage(300, 150);
   }
@@ -73,7 +73,11 @@ class SignaturePadState extends State<SignaturePad> {
               widget.onChanged(image);
             },
             child: CustomPaint(
-              painter: SignaturePainter(points: _points, strokeColor: widget.strokeColor, strokeWidth: widget.strokeWidth),
+              painter: SignaturePainter(
+                points: _points,
+                strokeColor: widget.strokeColor,
+                strokeWidth: widget.strokeWidth,
+              ),
               size: Size.infinite,
             ),
           ),
@@ -124,5 +128,6 @@ class SignaturePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(SignaturePainter oldDelegate) => oldDelegate.points != points;
+  bool shouldRepaint(SignaturePainter oldDelegate) =>
+      oldDelegate.points != points;
 }

@@ -29,32 +29,40 @@ class LibraryEligibilityService {
   }) async {
     final allowed = await _can(Permission.libraryMemberVerify, operatorUser);
     if (!allowed) {
-      return const Left(PermissionDeniedFailure('You do not have permission to check library eligibility.'));
+      return const Left(
+        PermissionDeniedFailure(
+          'You do not have permission to check library eligibility.',
+        ),
+      );
     }
 
     final studentResult = await studentRepository.getStudentById(studentId);
-    return studentResult.fold(
-      Left.new,
-      (student) async {
-        try {
-          final analytics = await libraryRepository.getBorrowerAnalytics(schoolId, studentId);
-          final currentlyBorrowed = (analytics['currentlyBorrowed'] as int?) ?? 0;
-          final overdueCount = (analytics['overdueCount'] as int?) ?? 0;
-          final eligible = overdueCount == 0;
+    return studentResult.fold(Left.new, (student) async {
+      try {
+        final analytics = await libraryRepository.getBorrowerAnalytics(
+          schoolId,
+          studentId,
+        );
+        final currentlyBorrowed = (analytics['currentlyBorrowed'] as int?) ?? 0;
+        final overdueCount = (analytics['overdueCount'] as int?) ?? 0;
+        final eligible = overdueCount == 0;
 
-          return Right(LibraryEligibilityView(
+        return Right(
+          LibraryEligibilityView(
             studentId: student.id,
             name: student.name,
             eligible: eligible,
             currentlyBorrowed: currentlyBorrowed,
             overdueCount: overdueCount,
-            message: eligible ? 'Eligible to borrow' : 'Has $overdueCount overdue item(s) - return before borrowing',
-          ));
-        } catch (e) {
-          return Left(ServerFailure(e.toString()));
-        }
-      },
-    );
+            message: eligible
+                ? 'Eligible to borrow'
+                : 'Has $overdueCount overdue item(s) - return before borrowing',
+          ),
+        );
+      } catch (e) {
+        return Left(ServerFailure(e.toString()));
+      }
+    });
   }
 
   Future<bool> _can(String permissionId, UserEntity operatorUser) async {

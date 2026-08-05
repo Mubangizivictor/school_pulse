@@ -34,7 +34,8 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
   void initState() {
     super.initState();
     _rolePermissions = {
-      for (final entry in RolePermissionDefaults.defaults.entries) entry.key: {...entry.value},
+      for (final entry in RolePermissionDefaults.defaults.entries)
+        entry.key: {...entry.value},
     };
     _loadOverrides();
   }
@@ -42,17 +43,14 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
   Future<void> _loadOverrides() async {
     final result = await di.sl<GetRolePermissionOverrides>()(_schoolId);
     if (!mounted) return;
-    result.fold(
-      (failure) => setState(() => _isLoading = false),
-      (overrides) {
-        setState(() {
-          for (final entry in overrides.entries) {
-            _rolePermissions[entry.key] = {...entry.value.permissions};
-          }
-          _isLoading = false;
-        });
-      },
-    );
+    result.fold((failure) => setState(() => _isLoading = false), (overrides) {
+      setState(() {
+        for (final entry in overrides.entries) {
+          _rolePermissions[entry.key] = {...entry.value.permissions};
+        }
+        _isLoading = false;
+      });
+    });
   }
 
   Future<void> _save() async {
@@ -60,17 +58,22 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
     final userId = context.read<AuthBloc>().state is AuthAuthenticated
         ? (context.read<AuthBloc>().state as AuthAuthenticated).user.id
         : '';
-    final result = await di.sl<SaveRolePermissionOverride>()(SaveRolePermissionOverrideParams(
-      schoolId: _schoolId,
-      role: _selectedRole,
-      permissions: _rolePermissions[_selectedRole] ?? {},
-      updatedBy: userId,
-    ));
+    final result = await di.sl<SaveRolePermissionOverride>()(
+      SaveRolePermissionOverrideParams(
+        schoolId: _schoolId,
+        role: _selectedRole,
+        permissions: _rolePermissions[_selectedRole] ?? {},
+        updatedBy: userId,
+      ),
+    );
     if (!mounted) return;
     setState(() => _isSaving = false);
     result.fold(
       (failure) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save: ${failure.message}'), backgroundColor: AppColors.danger(context)),
+        SnackBar(
+          content: Text('Failed to save: ${failure.message}'),
+          backgroundColor: AppColors.danger(context),
+        ),
       ),
       (_) => ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -87,7 +90,10 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
     return Scaffold(
       backgroundColor: AppColors.background(context),
       appBar: AppBar(
-        title: const Text('Role Permissions', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+        title: const Text(
+          'Role Permissions',
+          style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: -0.5),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -105,9 +111,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
                       if (MediaQuery.of(context).size.width <= 800)
                         _buildRoleDropdown(),
                       _buildSearchAndFilters(),
-                      Expanded(
-                        child: _buildPermissionList(),
-                      ),
+                      Expanded(child: _buildPermissionList()),
                       _buildFooter(),
                     ],
                   ),
@@ -121,7 +125,9 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
     return Container(
       width: 280,
       decoration: BoxDecoration(
-        border: Border(right: BorderSide(color: AppColors.border(context), width: 0.5)),
+        border: Border(
+          right: BorderSide(color: AppColors.border(context), width: 0.5),
+        ),
       ),
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -134,11 +140,15 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
               UserRoleDisplay.name(role),
               style: TextStyle(
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-                color: isSelected ? AppColors.primary(context) : AppColors.textPrimary(context),
+                color: isSelected
+                    ? AppColors.primary(context)
+                    : AppColors.textPrimary(context),
               ),
             ),
             selected: isSelected,
-            selectedTileColor: AppColors.primary(context).withValues(alpha: 0.05),
+            selectedTileColor: AppColors.primary(
+              context,
+            ).withValues(alpha: 0.05),
             onTap: () => setState(() => _selectedRole = role),
           );
         },
@@ -155,7 +165,10 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
           labelText: 'Select Role to Edit',
           filled: true,
           fillColor: AppColors.surfaceContainer(context),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
         ),
         items: UserRole.values.map((role) {
           return DropdownMenuItem(
@@ -228,24 +241,37 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
               child: Column(
                 children: items.map((p) {
                   final isLast = items.last == p;
-                  final hasPermission = _rolePermissions[_selectedRole]?.contains(p) ?? false;
+                  final hasPermission =
+                      _rolePermissions[_selectedRole]?.contains(p) ?? false;
                   return Column(
                     children: [
                       CheckboxListTile(
                         title: Text(
                           _formatPermissionName(p),
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
                         ),
-                        subtitle: Text(p, style: TextStyle(fontSize: 11, color: AppColors.textMuted(context))),
+                        subtitle: Text(
+                          p,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textMuted(context),
+                          ),
+                        ),
                         value: hasPermission,
                         activeColor: AppColors.primary(context),
                         onChanged: (val) {
                           setState(() {
-                            final current = _rolePermissions[_selectedRole] ?? {};
+                            final current =
+                                _rolePermissions[_selectedRole] ?? {};
                             if (val == true) {
                               _rolePermissions[_selectedRole] = {...current, p};
                             } else {
-                              _rolePermissions[_selectedRole] = current.where((item) => item != p).toSet();
+                              _rolePermissions[_selectedRole] = current
+                                  .where((item) => item != p)
+                                  .toSet();
                             }
                           });
                         },
@@ -267,7 +293,9 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated(context),
-        border: Border(top: BorderSide(color: AppColors.border(context), width: 0.5)),
+        border: Border(
+          top: BorderSide(color: AppColors.border(context), width: 0.5),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -284,7 +312,11 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
               color: AppColors.information(context).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(Icons.info_outline, size: 20, color: AppColors.information(context)),
+            child: Icon(
+              Icons.info_outline,
+              size: 20,
+              color: AppColors.information(context),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -294,11 +326,18 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
               children: [
                 Text(
                   'Role Update Impact',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary(context)),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: AppColors.textPrimary(context),
+                  ),
                 ),
                 Text(
                   'Changes here will affect all users assigned the ${UserRoleDisplay.name(_selectedRole)} role immediately.',
-                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary(context),
+                  ),
                 ),
               ],
             ),
@@ -306,25 +345,36 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
           const SizedBox(width: 16),
           TextButton(
             onPressed: _isSaving ? null : () => Navigator.pop(context),
-            child: Text('Discard', style: TextStyle(color: AppColors.textSecondary(context))),
+            child: Text(
+              'Discard',
+              style: TextStyle(color: AppColors.textSecondary(context)),
+            ),
           ),
           const SizedBox(width: 12),
           ElevatedButton(
             onPressed: _isSaving ? null : _save,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary(context),
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               elevation: 0,
             ),
             child: _isSaving
-                ? const SizedBox(
+                ? SizedBox(
                     width: 16,
                     height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    ),
                   )
-                : const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold)),
+                : const Text(
+                    'Save Changes',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
           ),
         ],
       ),

@@ -120,7 +120,10 @@ class IdCardService {
               children: [
                 pw.Text(
                   schoolName.toUpperCase(),
-                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14),
+                  style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 14,
+                  ),
                   textAlign: pw.TextAlign.center,
                 ),
                 pw.SizedBox(height: 10),
@@ -148,7 +151,10 @@ class IdCardService {
                 pw.SizedBox(height: 10),
                 pw.Text(
                   studentName.toUpperCase(),
-                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16),
+                  style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 16,
+                  ),
                   textAlign: pw.TextAlign.center,
                 ),
                 pw.SizedBox(height: 15),
@@ -160,7 +166,10 @@ class IdCardService {
                 pw.SizedBox(height: 5),
                 pw.Text(
                   uniqueSystemId,
-                  style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+                  style: const pw.TextStyle(
+                    fontSize: 8,
+                    color: PdfColors.grey700,
+                  ),
                 ),
               ],
             ),
@@ -176,8 +185,14 @@ class IdCardService {
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
-          pw.Text(label, style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
-          pw.Text(value, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+          pw.Text(
+            label,
+            style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+          ),
+          pw.Text(
+            value,
+            style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+          ),
         ],
       ),
     );

@@ -18,10 +18,12 @@ class PickupAuthorizationsScreen extends StatefulWidget {
   const PickupAuthorizationsScreen({super.key});
 
   @override
-  State<PickupAuthorizationsScreen> createState() => _PickupAuthorizationsScreenState();
+  State<PickupAuthorizationsScreen> createState() =>
+      _PickupAuthorizationsScreenState();
 }
 
-class _PickupAuthorizationsScreenState extends State<PickupAuthorizationsScreen> {
+class _PickupAuthorizationsScreenState
+    extends State<PickupAuthorizationsScreen> {
   final _searchController = TextEditingController();
   bool _isSearching = false;
   List<Student> _results = [];
@@ -35,10 +37,15 @@ class _PickupAuthorizationsScreenState extends State<PickupAuthorizationsScreen>
   Future<void> _search(String query) async {
     if (query.trim().isEmpty) return;
     setState(() => _isSearching = true);
-    final result = await di.sl<SearchStudents>()(schoolId: _schoolId, query: query.trim());
+    final result = await di.sl<SearchStudents>()(
+      schoolId: _schoolId,
+      query: query.trim(),
+    );
     if (!mounted) return;
     result.fold(
-      (failure) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(failure.message))),
+      (failure) => ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(failure.message))),
       (students) => setState(() => _results = students),
     );
     setState(() => _isSearching = false);
@@ -75,21 +82,26 @@ class _PickupAuthorizationsScreenState extends State<PickupAuthorizationsScreen>
                   },
                 ),
                 const SizedBox(height: 24),
-                if (_isSearching) const Center(child: CircularProgressIndicator()),
+                if (_isSearching)
+                  const Center(child: CircularProgressIndicator()),
                 Expanded(
                   child: _results.isEmpty && !_isSearching
                       ? const EmptyState(
                           icon: Icons.person_search_outlined,
                           title: 'Search Students',
-                          message: 'Enter a student name or registration code to manage their authorized pickup persons.',
+                          message:
+                              'Enter a student name or registration code to manage their authorized pickup persons.',
                         )
                       : GridView.builder(
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: screenWidth > 1100 ? 3 : (isLargeScreen ? 2 : 1),
-                            mainAxisExtent: 80,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 12,
-                          ),
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: screenWidth > 1100
+                                    ? 3
+                                    : (isLargeScreen ? 2 : 1),
+                                mainAxisExtent: 80,
+                                crossAxisSpacing: 16,
+                                mainAxisSpacing: 12,
+                              ),
                           itemCount: _results.length,
                           itemBuilder: (context, index) {
                             final student = _results[index];
@@ -97,12 +109,25 @@ class _PickupAuthorizationsScreenState extends State<PickupAuthorizationsScreen>
                               padding: EdgeInsets.zero,
                               child: ListTile(
                                 leading: CircleAvatar(
-                                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                                  child: Icon(Icons.person_outline, color: Theme.of(context).colorScheme.onPrimaryContainer),
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.primaryContainer,
+                                  child: Icon(
+                                    Icons.person_outline,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onPrimaryContainer,
+                                  ),
                                 ),
-                                title: Text(student.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                title: Text(
+                                  student.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                                 subtitle: Text(student.studentCode),
-                                onTap: () => setState(() => _selectedStudent = student),
+                                onTap: () =>
+                                    setState(() => _selectedStudent = student),
                               ),
                             );
                           },
@@ -122,13 +147,19 @@ class _StudentAuthorizationsView extends StatefulWidget {
   final String schoolId;
   final VoidCallback onBack;
 
-  const _StudentAuthorizationsView({required this.student, required this.schoolId, required this.onBack});
+  const _StudentAuthorizationsView({
+    required this.student,
+    required this.schoolId,
+    required this.onBack,
+  });
 
   @override
-  State<_StudentAuthorizationsView> createState() => _StudentAuthorizationsViewState();
+  State<_StudentAuthorizationsView> createState() =>
+      _StudentAuthorizationsViewState();
 }
 
-class _StudentAuthorizationsViewState extends State<_StudentAuthorizationsView> {
+class _StudentAuthorizationsViewState
+    extends State<_StudentAuthorizationsView> {
   List<PickupAuthorization> _authorizations = [];
   bool _isLoading = true;
 
@@ -140,10 +171,15 @@ class _StudentAuthorizationsViewState extends State<_StudentAuthorizationsView> 
 
   Future<void> _load() async {
     setState(() => _isLoading = true);
-    final result = await di.sl<GetPickupAuthorizations>()(widget.schoolId, widget.student.id);
+    final result = await di.sl<GetPickupAuthorizations>()(
+      widget.schoolId,
+      widget.student.id,
+    );
     if (!mounted) return;
     result.fold(
-      (failure) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(failure.message))),
+      (failure) => ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(failure.message))),
       (authorizations) => setState(() => _authorizations = authorizations),
     );
     setState(() => _isLoading = false);
@@ -153,9 +189,13 @@ class _StudentAuthorizationsViewState extends State<_StudentAuthorizationsView> 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (sheetContext) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(sheetContext).viewInsets.bottom),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+        ),
         child: _AddAuthorizationSheet(
           student: widget.student,
           schoolId: widget.schoolId,
@@ -175,7 +215,10 @@ class _StudentAuthorizationsViewState extends State<_StudentAuthorizationsView> 
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: widget.onBack),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: widget.onBack,
+        ),
         title: Text('${widget.student.name} — Pickup List'),
       ),
       body: _isLoading
@@ -187,12 +230,15 @@ class _StudentAuthorizationsViewState extends State<_StudentAuthorizationsView> 
                     ? const EmptyState(
                         icon: Icons.badge_outlined,
                         title: 'No Authorizations',
-                        message: 'No persons have been authorized to pick up this student yet.',
+                        message:
+                            'No persons have been authorized to pick up this student yet.',
                       )
                     : GridView.builder(
                         padding: EdgeInsets.all(isLargeScreen ? 24 : 12),
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: screenWidth > 1100 ? 3 : (isLargeScreen ? 2 : 1),
+                          crossAxisCount: screenWidth > 1100
+                              ? 3
+                              : (isLargeScreen ? 2 : 1),
                           mainAxisExtent: 100,
                           crossAxisSpacing: 16,
                           mainAxisSpacing: 16,
@@ -200,24 +246,44 @@ class _StudentAuthorizationsViewState extends State<_StudentAuthorizationsView> 
                         itemCount: _authorizations.length,
                         itemBuilder: (context, index) {
                           final auth = _authorizations[index];
-                          final expired = auth.expiryDate != null && auth.expiryDate!.isBefore(DateTime.now());
+                          final expired =
+                              auth.expiryDate != null &&
+                              auth.expiryDate!.isBefore(DateTime.now());
                           return AppCard(
                             padding: EdgeInsets.zero,
                             child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              leading: CircleAvatar(
-                                backgroundImage: auth.photoUrl != null ? NetworkImage(auth.photoUrl!) : null,
-                                child: auth.photoUrl == null ? const Icon(Icons.person) : null,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
                               ),
-                              title: Text(auth.authorizedPersonName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                              leading: CircleAvatar(
+                                backgroundImage: auth.photoUrl != null
+                                    ? NetworkImage(auth.photoUrl!)
+                                    : null,
+                                child: auth.photoUrl == null
+                                    ? const Icon(Icons.person)
+                                    : null,
+                              ),
+                              title: Text(
+                                auth.authorizedPersonName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                               subtitle: Text(
                                 '${auth.relationship} • ${auth.phone}',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                               trailing: expired
-                                  ? const Icon(Icons.warning_amber_rounded, color: Colors.orange)
-                                  : const Icon(Icons.check_circle, color: Colors.green),
+                                  ? const Icon(
+                                      Icons.warning_amber_rounded,
+                                      color: Colors.orange,
+                                    )
+                                  : const Icon(
+                                      Icons.check_circle,
+                                      color: Colors.green,
+                                    ),
                             ),
                           );
                         },
@@ -238,7 +304,11 @@ class _AddAuthorizationSheet extends StatefulWidget {
   final String schoolId;
   final VoidCallback onSaved;
 
-  const _AddAuthorizationSheet({required this.student, required this.schoolId, required this.onSaved});
+  const _AddAuthorizationSheet({
+    required this.student,
+    required this.schoolId,
+    required this.onSaved,
+  });
 
   @override
   State<_AddAuthorizationSheet> createState() => _AddAuthorizationSheetState();
@@ -253,19 +323,27 @@ class _AddAuthorizationSheetState extends State<_AddAuthorizationSheet> {
   bool _isSaving = false;
 
   Future<void> _pickPhoto() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.camera, maxWidth: 800, imageQuality: 80);
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.camera,
+      maxWidth: 800,
+      imageQuality: 80,
+    );
     if (picked != null) setState(() => _photo = picked);
   }
 
   Future<String?> _uploadPhoto(String authorizationId) async {
     if (_photo == null) return null;
-    final ref = FirebaseStorage.instance.ref('pickup_authorizations/${widget.schoolId}/$authorizationId.jpg');
+    final ref = FirebaseStorage.instance.ref(
+      'pickup_authorizations/${widget.schoolId}/$authorizationId.jpg',
+    );
     await ref.putFile(File(_photo!.path));
     return ref.getDownloadURL();
   }
 
   Future<void> _save() async {
-    if (_nameController.text.trim().isEmpty || _phoneController.text.trim().isEmpty) return;
+    if (_nameController.text.trim().isEmpty ||
+        _phoneController.text.trim().isEmpty)
+      return;
     final authState = context.read<AuthBloc>().state;
 
     setState(() => _isSaving = true);
@@ -278,7 +356,9 @@ class _AddAuthorizationSheetState extends State<_AddAuthorizationSheet> {
       parentId: authState is AuthAuthenticated ? authState.user.id : '',
       authorizedPersonName: _nameController.text.trim(),
       phone: _phoneController.text.trim(),
-      relationship: _relationshipController.text.trim().isEmpty ? 'Guardian' : _relationshipController.text.trim(),
+      relationship: _relationshipController.text.trim().isEmpty
+          ? 'Guardian'
+          : _relationshipController.text.trim(),
       photoUrl: photoUrl,
       expiryDate: _expiryDate,
       schoolId: widget.schoolId,
@@ -286,13 +366,12 @@ class _AddAuthorizationSheetState extends State<_AddAuthorizationSheet> {
 
     final result = await di.sl<AddPickupAuthorization>()(authorization);
     if (!mounted) return;
-    result.fold(
-      (failure) {
-        setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(failure.message), backgroundColor: Colors.red));
-      },
-      (_) => widget.onSaved(),
-    );
+    result.fold((failure) {
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(failure.message), backgroundColor: Colors.red),
+      );
+    }, (_) => widget.onSaved());
   }
 
   @override
@@ -306,30 +385,51 @@ class _AddAuthorizationSheetState extends State<_AddAuthorizationSheet> {
         child: ListView(
           controller: scrollController,
           children: [
-            Text('Authorize Pickup Person', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+            Text(
+              'Authorize Pickup Person',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 16),
             Center(
               child: GestureDetector(
                 onTap: _pickPhoto,
                 child: CircleAvatar(
                   radius: 40,
-                  backgroundImage: _photo != null ? FileImage(File(_photo!.path)) : null,
-                  child: _photo == null ? const Icon(Icons.camera_alt, size: 28) : null,
+                  backgroundImage: _photo != null
+                      ? FileImage(File(_photo!.path))
+                      : null,
+                  child: _photo == null
+                      ? const Icon(Icons.camera_alt, size: 28)
+                      : null,
                 ),
               ),
             ),
             const SizedBox(height: 20),
-            TextField(controller: _nameController, decoration: const InputDecoration(labelText: 'Full Name', border: OutlineInputBorder())),
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: 'Full Name',
+                border: OutlineInputBorder(),
+              ),
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: _phoneController,
-              decoration: const InputDecoration(labelText: 'Phone Number', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: 'Phone Number',
+                border: OutlineInputBorder(),
+              ),
               keyboardType: TextInputType.phone,
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _relationshipController,
-              decoration: const InputDecoration(labelText: 'Relationship (e.g. Uncle, Driver, Caretaker)', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: 'Relationship (e.g. Uncle, Driver, Caretaker)',
+                border: OutlineInputBorder(),
+              ),
             ),
             const SizedBox(height: 12),
             OutlinedButton(
@@ -342,13 +442,21 @@ class _AddAuthorizationSheetState extends State<_AddAuthorizationSheet> {
                 );
                 if (picked != null) setState(() => _expiryDate = picked);
               },
-              child: Text(_expiryDate == null ? 'Set Expiry Date (optional)' : 'Expires ${_expiryDate!.toLocal().toString().split(' ').first}'),
+              child: Text(
+                _expiryDate == null
+                    ? 'Set Expiry Date (optional)'
+                    : 'Expires ${_expiryDate!.toLocal().toString().split(' ').first}',
+              ),
             ),
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _isSaving ? null : _save,
               child: _isSaving
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : const Text('Save Authorization'),
             ),
             const SizedBox(height: 12),

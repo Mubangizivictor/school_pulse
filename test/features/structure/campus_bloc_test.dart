@@ -10,11 +10,11 @@ import 'package:school_pulse/features/structure/presentation/bloc/structure_stat
 class _MockStructureRepository extends Mock implements StructureRepository {}
 
 Campus _campus({String id = 'campus-1', bool isActive = true}) => Campus(
-      id: id,
-      schoolId: 'school-1',
-      name: 'Main Campus',
-      isActive: isActive,
-    );
+  id: id,
+  schoolId: 'school-1',
+  name: 'Main Campus',
+  isActive: isActive,
+);
 
 void main() {
   late _MockStructureRepository repository;
@@ -28,38 +28,102 @@ void main() {
     // Every watchX() the bloc subscribes to on LoadStructureData needs a
     // stream, even the ones this test isn't asserting on - otherwise the
     // bloc throws on missing stub.
-    when(() => repository.watchLevels(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchAcademicYears(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchAcademicTerms(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchClasses(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchStreams(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchSubjects(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchDepartments(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchDesignations(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchStaffRoles(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchFeatureToggles(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchInstitutionProfile(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchCampuses(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchHouses(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchClubs(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchFacilities(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchHostels(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchHostelRooms(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchTransportRoutes(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchTransportStops(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchTransportVehicles(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchFeeCategories(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchAssessmentTypes(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchGradingSystems(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchGradeBands(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchTimetableConfig(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchAttendanceTypes(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchAttendanceSessions(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchAnnouncementCategories(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchNotificationCategories(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchMessageTemplates(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchDocumentTemplates(any())).thenAnswer((_) => const Stream.empty());
-    when(() => repository.watchCustomFields(any())).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchLevels(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchAcademicYears(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchAcademicTerms(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchClasses(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchStreams(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchSubjects(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchDepartments(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchDesignations(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchStaffRoles(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchFeatureToggles(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchInstitutionProfile(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchCampuses(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchHouses(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchClubs(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchFacilities(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchHostels(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchHostelRooms(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchTransportRoutes(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchTransportStops(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchTransportVehicles(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchFeeCategories(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchAssessmentTypes(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchGradingSystems(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchGradeBands(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchTimetableConfig(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchAttendanceTypes(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchAttendanceSessions(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchAnnouncementCategories(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchNotificationCategories(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchMessageTemplates(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchDocumentTemplates(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchCustomFields(any()),
+    ).thenAnswer((_) => const Stream.empty());
   });
 
   group('Campus events', () {
@@ -68,7 +132,9 @@ void main() {
       build: () => StructureBloc(repository: repository),
       act: (bloc) => bloc.add(CampusesUpdated([_campus()])),
       expect: () => [
-        isA<StructureState>().having((s) => s.campuses, 'campuses', [_campus()]),
+        isA<StructureState>().having((s) => s.campuses, 'campuses', [
+          _campus(),
+        ]),
       ],
     );
 

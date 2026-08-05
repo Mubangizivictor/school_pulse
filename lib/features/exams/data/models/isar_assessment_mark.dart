@@ -21,6 +21,6 @@ class IsarAssessmentMark {
   late DateTime updatedAt;
   String? moderatedBy;
   String? approvedBy;
-  
+
   bool isSynced = true;
 }

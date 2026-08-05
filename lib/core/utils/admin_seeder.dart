@@ -148,9 +148,30 @@ class AdminSeeder {
     });
 
     final terms = [
-      ('$currentAcademicYearId-t1', 'Term 1', 1, DateTime(2026, 2, 1), DateTime(2026, 5, 1), false),
-      (currentTermId, 'Term 2', 2, DateTime(2026, 5, 25), DateTime(2026, 8, 28), true),
-      ('$currentAcademicYearId-t3', 'Term 3', 3, DateTime(2026, 9, 21), DateTime(2026, 12, 4), false),
+      (
+        '$currentAcademicYearId-t1',
+        'Term 1',
+        1,
+        DateTime(2026, 2, 1),
+        DateTime(2026, 5, 1),
+        false,
+      ),
+      (
+        currentTermId,
+        'Term 2',
+        2,
+        DateTime(2026, 5, 25),
+        DateTime(2026, 8, 28),
+        true,
+      ),
+      (
+        '$currentAcademicYearId-t3',
+        'Term 3',
+        3,
+        DateTime(2026, 9, 21),
+        DateTime(2026, 12, 4),
+        false,
+      ),
     ];
 
     for (final (id, name, order, start, end, isCurrent) in terms) {
@@ -623,7 +644,9 @@ class AdminSeeder {
   /// case the panel exists to demonstrate - and the Class Teacher row is the
   /// only one of its kind for him, matching the default one-class rule in
   /// `ClassTeacherAssignmentService.validateAssignable`.
-  static Future<void> _seedRoleAssignments(Map<String, String> staffUids) async {
+  static Future<void> _seedRoleAssignments(
+    Map<String, String> staffUids,
+  ) async {
     final victorUid = staffUids['victor@gmail.com'];
     if (victorUid == null) {
       debugPrint('⚠️ Skipping role assignments: Victor was not seeded.');
@@ -811,27 +834,30 @@ class AdminSeeder {
           ? 'completed'
           : (now.isAfter(start) ? 'ongoing' : 'scheduled');
 
-      await school.collection('lessons').doc(
-        'p7-${_subjectSlug(subject)}-${start.toIso8601String().split('T').first}',
-      ).set({
-        'schoolId': demoSchoolId,
-        'campusId': 'main',
-        'academicYearId': currentAcademicYearId,
-        'termId': currentTermId,
-        'subjectId': _subjectSlug(subject),
-        'subjectName': subject,
-        'classId': classTeacherClassId,
-        'className': classTeacherClassId,
-        'timetableSlotId': 'slot-$hour',
-        'teacherStaffId': staffId,
-        'title': '$subject - $classTeacherClassId',
-        'scheduledStart': Timestamp.fromDate(start),
-        'scheduledEnd': Timestamp.fromDate(end),
-        'room': room,
-        'status': status,
-        'enrolledCount': 0,
-        'attendanceSubmitted': false,
-      });
+      await school
+          .collection('lessons')
+          .doc(
+            'p7-${_subjectSlug(subject)}-${start.toIso8601String().split('T').first}',
+          )
+          .set({
+            'schoolId': demoSchoolId,
+            'campusId': 'main',
+            'academicYearId': currentAcademicYearId,
+            'termId': currentTermId,
+            'subjectId': _subjectSlug(subject),
+            'subjectName': subject,
+            'classId': classTeacherClassId,
+            'className': classTeacherClassId,
+            'timetableSlotId': 'slot-$hour',
+            'teacherStaffId': staffId,
+            'title': '$subject - $classTeacherClassId',
+            'scheduledStart': Timestamp.fromDate(start),
+            'scheduledEnd': Timestamp.fromDate(end),
+            'room': room,
+            'status': status,
+            'enrolledCount': 0,
+            'attendanceSubmitted': false,
+          });
     }
   }
 
@@ -875,29 +901,32 @@ class AdminSeeder {
       }
 
       final submittedAt = DateTime(day.year, day.month, day.day, 8, 12);
-      await school.collection('class_attendance_sessions').doc(
-        // Must match `classSessionId()` in class_teacher_remote_data_source,
-        // which is what makes a re-submission collide instead of duplicating.
-        '${classTeacherClassId}_all_daily_'
-        '${day.year}-${_two(day.month)}-${_two(day.day)}',
-      ).set({
-        'schoolId': demoSchoolId,
-        'campusId': 'main',
-        'classId': classTeacherClassId,
-        'className': classTeacherClassId,
-        'streamId': null,
-        'academicYearId': currentAcademicYearId,
-        'termId': currentTermId,
-        'sessionType': 'daily',
-        'date': Timestamp.fromDate(DateTime(day.year, day.month, day.day)),
-        'status': 'submitted',
-        'counts': counts,
-        'entries': entries,
-        'submittedAt': Timestamp.fromDate(submittedAt),
-        'submittedBy': victorUid,
-        'roleAssignmentId': 'victor-class-teacher-p7',
-        'deviceId': 'seed',
-      });
+      await school
+          .collection('class_attendance_sessions')
+          .doc(
+            // Must match `classSessionId()` in class_teacher_remote_data_source,
+            // which is what makes a re-submission collide instead of duplicating.
+            '${classTeacherClassId}_all_daily_'
+            '${day.year}-${_two(day.month)}-${_two(day.day)}',
+          )
+          .set({
+            'schoolId': demoSchoolId,
+            'campusId': 'main',
+            'classId': classTeacherClassId,
+            'className': classTeacherClassId,
+            'streamId': null,
+            'academicYearId': currentAcademicYearId,
+            'termId': currentTermId,
+            'sessionType': 'daily',
+            'date': Timestamp.fromDate(DateTime(day.year, day.month, day.day)),
+            'status': 'submitted',
+            'counts': counts,
+            'entries': entries,
+            'submittedAt': Timestamp.fromDate(submittedAt),
+            'submittedBy': victorUid,
+            'roleAssignmentId': 'victor-class-teacher-p7',
+            'deviceId': 'seed',
+          });
     }
   }
 
@@ -943,7 +972,12 @@ class AdminSeeder {
   ) async {
     final now = DateTime.now();
     final records = [
-      (0, 'achievement', 'Led the class debate team to the district final', false),
+      (
+        0,
+        'achievement',
+        'Led the class debate team to the district final',
+        false,
+      ),
       (1, 'positive', 'Consistently helps classmates with revision', false),
       (2, 'concern', 'Repeated late submission of homework', true),
       (3, 'concern', 'Disruptive during the Science period', true),
@@ -951,22 +985,27 @@ class AdminSeeder {
 
     for (final (index, category, note, followUp) in records) {
       if (index >= roster.length) continue;
-      await school.collection('class_behaviour_records').doc('p7-behaviour-$index').set({
-        'schoolId': demoSchoolId,
-        'campusId': 'main',
-        'classId': classTeacherClassId,
-        'academicYearId': currentAcademicYearId,
-        'termId': currentTermId,
-        'studentId': roster[index]['id'],
-        'studentName': roster[index]['name'],
-        'category': category,
-        'note': note,
-        'followUpRequired': followUp,
-        'followUpClosed': false,
-        'recordedBy': victorUid,
-        'recordedAt': Timestamp.fromDate(now.subtract(Duration(days: index + 1))),
-        'roleAssignmentId': 'victor-class-teacher-p7',
-      });
+      await school
+          .collection('class_behaviour_records')
+          .doc('p7-behaviour-$index')
+          .set({
+            'schoolId': demoSchoolId,
+            'campusId': 'main',
+            'classId': classTeacherClassId,
+            'academicYearId': currentAcademicYearId,
+            'termId': currentTermId,
+            'studentId': roster[index]['id'],
+            'studentName': roster[index]['name'],
+            'category': category,
+            'note': note,
+            'followUpRequired': followUp,
+            'followUpClosed': false,
+            'recordedBy': victorUid,
+            'recordedAt': Timestamp.fromDate(
+              now.subtract(Duration(days: index + 1)),
+            ),
+            'roleAssignmentId': 'victor-class-teacher-p7',
+          });
     }
   }
 
@@ -985,26 +1024,28 @@ class AdminSeeder {
         _ => 'class_teacher_completed',
       };
 
-      await school.collection('class_report_entries').doc(
-        '${roster[i]['id']}_$currentTermId',
-      ).set({
-        'schoolId': demoSchoolId,
-        'campusId': 'main',
-        'classId': classTeacherClassId,
-        'academicYearId': currentAcademicYearId,
-        'termId': currentTermId,
-        'studentId': roster[i]['id'],
-        'studentName': roster[i]['name'],
-        'status': status,
-        'competenciesComplete': status == 'class_teacher_completed',
-        'conductComplete': status == 'class_teacher_completed',
-        'commentComplete': status == 'class_teacher_completed',
-        'returnReason':
-            status == 'returned' ? 'Conduct ratings incomplete.' : null,
-        'updatedBy': victorUid,
-        'updatedAt': FieldValue.serverTimestamp(),
-        'roleAssignmentId': 'victor-class-teacher-p7',
-      });
+      await school
+          .collection('class_report_entries')
+          .doc('${roster[i]['id']}_$currentTermId')
+          .set({
+            'schoolId': demoSchoolId,
+            'campusId': 'main',
+            'classId': classTeacherClassId,
+            'academicYearId': currentAcademicYearId,
+            'termId': currentTermId,
+            'studentId': roster[i]['id'],
+            'studentName': roster[i]['name'],
+            'status': status,
+            'competenciesComplete': status == 'class_teacher_completed',
+            'conductComplete': status == 'class_teacher_completed',
+            'commentComplete': status == 'class_teacher_completed',
+            'returnReason': status == 'returned'
+                ? 'Conduct ratings incomplete.'
+                : null,
+            'updatedBy': victorUid,
+            'updatedAt': FieldValue.serverTimestamp(),
+            'roleAssignmentId': 'victor-class-teacher-p7',
+          });
     }
   }
 

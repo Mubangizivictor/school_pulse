@@ -18,7 +18,12 @@ class AcademicPeriod extends Equatable {
   bool get hasTerm => termId.isNotEmpty;
 
   @override
-  List<Object?> get props => [academicYearId, academicYearName, termId, termName];
+  List<Object?> get props => [
+    academicYearId,
+    academicYearName,
+    termId,
+    termName,
+  ];
 }
 
 /// Reads the school's calendar without the Subject Teacher feature knowing
@@ -32,9 +37,9 @@ abstract class AcademicCalendarService {
   /// The year and term flagged current by the school admin. Both parts can be
   /// missing - a school that has not configured its calendar yet is a real
   /// state the dashboard has to render, not an error.
-  Future<AcademicPeriod> getCurrentPeriod();
+  Future<AcademicPeriod> getCurrentPeriod(String schoolId);
 
   /// The term containing [date] within the current year, used when working on
   /// a lesson or assessment that belongs to a term other than today's.
-  Future<AcademicPeriod> getPeriodForDate(DateTime date);
+  Future<AcademicPeriod> getPeriodForDate(String schoolId, DateTime date);
 }

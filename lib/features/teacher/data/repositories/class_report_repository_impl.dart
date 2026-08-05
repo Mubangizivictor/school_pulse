@@ -69,22 +69,24 @@ class ClassReportRepositoryImpl implements ClassReportRepository {
 
     final classId = context.classId;
     if (classId == null || classId.isEmpty) {
-      return const Left(ValidationFailure(
-        'This responsibility is not tied to a class.',
-      ));
+      return const Left(
+        ValidationFailure('This responsibility is not tied to a class.'),
+      );
     }
 
     if (context.termId.isEmpty) {
-      return const Left(ValidationFailure(
-        'Your school has not opened a term yet, so there is no report period '
-        'to work in.',
-      ));
+      return const Left(
+        ValidationFailure(
+          'Your school has not opened a term yet, so there is no report period '
+          'to work in.',
+        ),
+      );
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(NetworkFailure(
-        'You are offline. Report entry needs a connection.',
-      ));
+      return const Left(
+        NetworkFailure('You are offline. Report entry needs a connection.'),
+      );
     }
 
     try {
@@ -102,25 +104,29 @@ class ClassReportRepositoryImpl implements ClassReportRepository {
       // A blank entry per student who has none, so opening reports for the
       // first time shows the class rather than an empty list the teacher has
       // to seed by guessing.
-      return Right(students
-          .map((student) =>
-              byStudent[student.studentId] ??
-              ClassReportEntry(
-                id: '${student.studentId}_${context.termId}',
-                schoolId: context.schoolId,
-                campusId: context.campusId,
-                classId: classId,
-                streamId: context.streamId,
-                academicYearId: context.academicYearId,
-                termId: context.termId,
-                studentId: student.studentId,
-                studentName: student.name,
-              ))
-          .toList());
+      return Right(
+        students
+            .map(
+              (student) =>
+                  byStudent[student.studentId] ??
+                  ClassReportEntry(
+                    id: '${student.studentId}_${context.termId}',
+                    schoolId: context.schoolId,
+                    campusId: context.campusId,
+                    classId: classId,
+                    streamId: context.streamId,
+                    academicYearId: context.academicYearId,
+                    termId: context.termId,
+                    studentId: student.studentId,
+                    studentName: student.name,
+                  ),
+            )
+            .toList(),
+      );
     } catch (_) {
-      return const Left(ServerFailure(
-        'Could not load report entries. Pull down to retry.',
-      ));
+      return const Left(
+        ServerFailure('Could not load report entries. Pull down to retry.'),
+      );
     }
   }
 
@@ -145,9 +151,11 @@ class ClassReportRepositoryImpl implements ClassReportRepository {
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(OfflineNotAllowedFailure(
-        'Saving report entry needs an internet connection.',
-      ));
+      return const Left(
+        OfflineNotAllowedFailure(
+          'Saving report entry needs an internet connection.',
+        ),
+      );
     }
 
     // A save moves a blank entry to in-progress, so the dashboard's pending
@@ -196,18 +204,24 @@ class ClassReportRepositoryImpl implements ClassReportRepository {
     final profileResult = await getProfile(context: context);
     final profile = profileResult.getOrElse(() => _fallbackProfile);
 
-    final decision =
-        ClassReportPolicy.canSubmit(entry: entry, profile: profile);
+    final decision = ClassReportPolicy.canSubmit(
+      entry: entry,
+      profile: profile,
+    );
     if (!decision.isAllowed) {
-      return Left(decision.refusal == ReportRefusal.notEditable
-          ? PermissionDeniedFailure(decision.message!)
-          : ValidationFailure(decision.message!));
+      return Left(
+        decision.refusal == ReportRefusal.notEditable
+            ? PermissionDeniedFailure(decision.message!)
+            : ValidationFailure(decision.message!),
+      );
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(OfflineNotAllowedFailure(
-        'Submitting a report needs an internet connection.',
-      ));
+      return const Left(
+        OfflineNotAllowedFailure(
+          'Submitting a report needs an internet connection.',
+        ),
+      );
     }
 
     final submitted = entry.copyWith(
@@ -264,15 +278,18 @@ class ClassReportRepositoryImpl implements ClassReportRepository {
       final taught = <String, String>{
         for (final lesson in schedule)
           if (lesson.subjectId.isNotEmpty)
-            lesson.subjectId:
-                lesson.subjectName.isEmpty ? lesson.subjectId : lesson.subjectName,
+            lesson.subjectId: lesson.subjectName.isEmpty
+                ? lesson.subjectId
+                : lesson.subjectName,
       };
 
-      return Right(taught.entries
-          .where((e) => !approvedSubjects.contains(e.key))
-          .map((e) => e.value)
-          .toList()
-        ..sort());
+      return Right(
+        taught.entries
+            .where((e) => !approvedSubjects.contains(e.key))
+            .map((e) => e.value)
+            .toList()
+          ..sort(),
+      );
     } catch (_) {
       // Not knowing must not block the teacher; the school's completeness
       // setting still governs whether generation proceeds.
@@ -303,15 +320,19 @@ class ClassReportRepositoryImpl implements ClassReportRepository {
       hasGeneratePermission: context.can(Permission.classReportGenerate),
     );
     if (!decision.isAllowed) {
-      return Left(decision.refusal == ReportRefusal.generateNotPermitted
-          ? PermissionDeniedFailure(decision.message!)
-          : ValidationFailure(decision.message!));
+      return Left(
+        decision.refusal == ReportRefusal.generateNotPermitted
+            ? PermissionDeniedFailure(decision.message!)
+            : ValidationFailure(decision.message!),
+      );
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(OfflineNotAllowedFailure(
-        'Generating reports needs an internet connection.',
-      ));
+      return const Left(
+        OfflineNotAllowedFailure(
+          'Generating reports needs an internet connection.',
+        ),
+      );
     }
 
     try {
@@ -320,13 +341,15 @@ class ClassReportRepositoryImpl implements ClassReportRepository {
       // office's decision, which is why nothing here sets a published status.
       for (final entry in entries) {
         if (entry.status == ReportEntryStatus.classTeacherCompleted) continue;
-        await remoteDataSource.saveReportEntry(entry.copyWith(
-          status: ReportEntryStatus.classTeacherCompleted,
-          submittedAt: DateTime.now(),
-          updatedBy: context.userId,
-          updatedAt: DateTime.now(),
-          roleAssignmentId: context.roleAssignmentId,
-        ));
+        await remoteDataSource.saveReportEntry(
+          entry.copyWith(
+            status: ReportEntryStatus.classTeacherCompleted,
+            submittedAt: DateTime.now(),
+            updatedBy: context.userId,
+            updatedAt: DateTime.now(),
+            roleAssignmentId: context.roleAssignmentId,
+          ),
+        );
       }
 
       await auditService.record(
@@ -334,10 +357,7 @@ class ClassReportRepositoryImpl implements ClassReportRepository {
         action: 'report.generated',
         entityType: 'class_report_entry',
         entityId: context.classId ?? '',
-        newValue: {
-          'studentCount': entries.length,
-          'termId': context.termId,
-        },
+        newValue: {'studentCount': entries.length, 'termId': context.termId},
       );
 
       return Right(entries.length);

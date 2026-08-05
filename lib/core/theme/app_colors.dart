@@ -5,7 +5,7 @@ class AppColors {
   static const Color pulseBlue = Color(0xFF0052CC);
   static const Color pulseNavy = Color(0xFF0747A6);
   static const Color pulseAccent = Color(0xFF00B8D9);
-  
+
   // Generic background colors
   static const Color scaffoldBackground = Color(0xFFF4F5F7);
   static const Color white = Colors.white;

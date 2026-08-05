@@ -15,17 +15,18 @@ class AttendanceQrBloc extends Bloc<AttendanceQrEvent, AttendanceQrState> {
   }) : super(AttendanceQrInitial()) {
     on<ScanStudentQrEvent>((event, emit) async {
       emit(AttendanceQrLoading());
-      final result = await identityRepository.getStudentByUniqueId(event.uniqueSystemId);
-      result.fold(
-        (failure) => emit(AttendanceQrError(failure.message)),
-        (student) {
-          if (student == null) {
-            emit(const AttendanceQrError('Student not found. Invalid QR Code.'));
-          } else {
-            emit(StudentScannedSuccess(student));
-          }
-        },
+      final result = await identityRepository.getStudentByUniqueId(
+        event.uniqueSystemId,
       );
+      result.fold((failure) => emit(AttendanceQrError(failure.message)), (
+        student,
+      ) {
+        if (student == null) {
+          emit(const AttendanceQrError('Student not found. Invalid QR Code.'));
+        } else {
+          emit(StudentScannedSuccess(student));
+        }
+      });
     });
 
     on<MarkAttendanceEvent>((event, emit) async {
@@ -45,7 +46,9 @@ class AttendanceQrBloc extends Bloc<AttendanceQrEvent, AttendanceQrState> {
       final result = await attendanceRepository.saveAttendance(record);
       result.fold(
         (failure) => emit(AttendanceQrError(failure.message)),
-        (_) => emit(const AttendanceMarkedSuccess('Attendance recorded successfully.')),
+        (_) => emit(
+          const AttendanceMarkedSuccess('Attendance recorded successfully.'),
+        ),
       );
     });
 

@@ -36,73 +36,82 @@ class LibraryRepositoryImpl implements LibraryRepository {
   @override
   Stream<List<LibraryResource>> watchResources(String schoolId) {
     return Rx.merge([
-      localDataSource.getCachedResources(schoolId).asStream().map((isarList) => isarList.map((i) => i.toEntity()).toList()),
+      localDataSource
+          .getCachedResources(schoolId)
+          .asStream()
+          .map((isarList) => isarList.map((i) => i.toEntity()).toList()),
       remoteDataSource.watchResources(schoolId).doOnData((resources) {
-        localDataSource.cacheResources(resources.map((r) => LibraryResourceIsar.fromEntity(r)).toList());
+        localDataSource.cacheResources(
+          resources.map((r) => LibraryResourceIsar.fromEntity(r)).toList(),
+        );
       }),
     ]).distinct();
   }
 
   @override
   Future<void> addResource(LibraryResource resource) {
-    return remoteDataSource.addResource(LibraryResourceModel(
-      id: resource.id,
-      schoolId: resource.schoolId,
-      libraryId: resource.libraryId,
-      barcode: resource.barcode,
-      qrCode: resource.qrCode,
-      isbn: resource.isbn,
-      title: resource.title,
-      author: resource.author,
-      publisher: resource.publisher,
-      edition: resource.edition,
-      category: resource.category,
-      subject: resource.subject,
-      shelf: resource.shelf,
-      rack: resource.rack,
-      totalQuantity: resource.totalQuantity,
-      availableCopies: resource.availableCopies,
-      purchaseDate: resource.purchaseDate,
-      purchaseCost: resource.purchaseCost,
-      supplier: resource.supplier,
-      condition: resource.condition,
-      type: resource.type,
-      status: resource.status,
-      coverImageUrl: resource.coverImageUrl,
-      digitalAttachmentUrl: resource.digitalAttachmentUrl,
-      metadata: resource.metadata,
-    ));
+    return remoteDataSource.addResource(
+      LibraryResourceModel(
+        id: resource.id,
+        schoolId: resource.schoolId,
+        libraryId: resource.libraryId,
+        barcode: resource.barcode,
+        qrCode: resource.qrCode,
+        isbn: resource.isbn,
+        title: resource.title,
+        author: resource.author,
+        publisher: resource.publisher,
+        edition: resource.edition,
+        category: resource.category,
+        subject: resource.subject,
+        shelf: resource.shelf,
+        rack: resource.rack,
+        totalQuantity: resource.totalQuantity,
+        availableCopies: resource.availableCopies,
+        purchaseDate: resource.purchaseDate,
+        purchaseCost: resource.purchaseCost,
+        supplier: resource.supplier,
+        condition: resource.condition,
+        type: resource.type,
+        status: resource.status,
+        coverImageUrl: resource.coverImageUrl,
+        digitalAttachmentUrl: resource.digitalAttachmentUrl,
+        metadata: resource.metadata,
+      ),
+    );
   }
 
   @override
   Future<void> updateResource(LibraryResource resource) {
-    return remoteDataSource.updateResource(LibraryResourceModel(
-      id: resource.id,
-      schoolId: resource.schoolId,
-      libraryId: resource.libraryId,
-      barcode: resource.barcode,
-      qrCode: resource.qrCode,
-      isbn: resource.isbn,
-      title: resource.title,
-      author: resource.author,
-      publisher: resource.publisher,
-      edition: resource.edition,
-      category: resource.category,
-      subject: resource.subject,
-      shelf: resource.shelf,
-      rack: resource.rack,
-      totalQuantity: resource.totalQuantity,
-      availableCopies: resource.availableCopies,
-      purchaseDate: resource.purchaseDate,
-      purchaseCost: resource.purchaseCost,
-      supplier: resource.supplier,
-      condition: resource.condition,
-      type: resource.type,
-      status: resource.status,
-      coverImageUrl: resource.coverImageUrl,
-      digitalAttachmentUrl: resource.digitalAttachmentUrl,
-      metadata: resource.metadata,
-    ));
+    return remoteDataSource.updateResource(
+      LibraryResourceModel(
+        id: resource.id,
+        schoolId: resource.schoolId,
+        libraryId: resource.libraryId,
+        barcode: resource.barcode,
+        qrCode: resource.qrCode,
+        isbn: resource.isbn,
+        title: resource.title,
+        author: resource.author,
+        publisher: resource.publisher,
+        edition: resource.edition,
+        category: resource.category,
+        subject: resource.subject,
+        shelf: resource.shelf,
+        rack: resource.rack,
+        totalQuantity: resource.totalQuantity,
+        availableCopies: resource.availableCopies,
+        purchaseDate: resource.purchaseDate,
+        purchaseCost: resource.purchaseCost,
+        supplier: resource.supplier,
+        condition: resource.condition,
+        type: resource.type,
+        status: resource.status,
+        coverImageUrl: resource.coverImageUrl,
+        digitalAttachmentUrl: resource.digitalAttachmentUrl,
+        metadata: resource.metadata,
+      ),
+    );
   }
 
   @override
@@ -111,41 +120,59 @@ class LibraryRepositoryImpl implements LibraryRepository {
   }
 
   @override
-  Future<LibraryResource?> getResourceByBarcode(String schoolId, String barcode) {
+  Future<LibraryResource?> getResourceByBarcode(
+    String schoolId,
+    String barcode,
+  ) {
     return remoteDataSource.getResourceByBarcode(schoolId, barcode);
   }
 
   @override
-  Stream<List<LibraryBorrowing>> watchBorrowingHistory(String schoolId, {String? borrowerId}) {
+  Stream<List<LibraryBorrowing>> watchBorrowingHistory(
+    String schoolId, {
+    String? borrowerId,
+  }) {
     return Rx.merge([
-      localDataSource.getCachedBorrowings(schoolId, borrowerId: borrowerId).asStream().map((isarList) => isarList.map((i) => i.toEntity()).toList()),
-      remoteDataSource.watchBorrowingHistory(schoolId, borrowerId: borrowerId).doOnData((borrowings) {
-        localDataSource.cacheBorrowings(borrowings.map((b) => LibraryBorrowingIsar.fromEntity(b)).toList());
-      }),
+      localDataSource
+          .getCachedBorrowings(schoolId, borrowerId: borrowerId)
+          .asStream()
+          .map((isarList) => isarList.map((i) => i.toEntity()).toList()),
+      remoteDataSource
+          .watchBorrowingHistory(schoolId, borrowerId: borrowerId)
+          .doOnData((borrowings) {
+            localDataSource.cacheBorrowings(
+              borrowings
+                  .map((b) => LibraryBorrowingIsar.fromEntity(b))
+                  .toList(),
+            );
+          }),
     ]).distinct();
   }
 
   @override
   Future<void> issueResource(LibraryBorrowing borrowing) async {
-    await remoteDataSource.issueResource(LibraryBorrowingModel(
-      id: borrowing.id,
-      schoolId: borrowing.schoolId,
-      resourceId: borrowing.resourceId,
-      resourceTitle: borrowing.resourceTitle,
-      borrowerId: borrowing.borrowerId,
-      borrowerName: borrowing.borrowerName,
-      borrowerType: borrowing.borrowerType,
-      borrowDate: borrowing.borrowDate,
-      dueDate: borrowing.dueDate,
-      status: borrowing.status,
-      fineAmount: borrowing.fineAmount,
-      finePaid: borrowing.finePaid,
-      issuedBy: borrowing.issuedBy,
-    ));
+    await remoteDataSource.issueResource(
+      LibraryBorrowingModel(
+        id: borrowing.id,
+        schoolId: borrowing.schoolId,
+        resourceId: borrowing.resourceId,
+        resourceTitle: borrowing.resourceTitle,
+        borrowerId: borrowing.borrowerId,
+        borrowerName: borrowing.borrowerName,
+        borrowerType: borrowing.borrowerType,
+        borrowDate: borrowing.borrowDate,
+        dueDate: borrowing.dueDate,
+        status: borrowing.status,
+        fineAmount: borrowing.fineAmount,
+        finePaid: borrowing.finePaid,
+        issuedBy: borrowing.issuedBy,
+      ),
+    );
 
     await auditRepository.logAction(
       title: 'Resource Issued',
-      description: 'Librarian ${borrowing.issuedBy} issued "${borrowing.resourceTitle}" to ${borrowing.borrowerName}',
+      description:
+          'Librarian ${borrowing.issuedBy} issued "${borrowing.resourceTitle}" to ${borrowing.borrowerName}',
       iconName: 'book',
       colorHex: '#4CAF50',
       userId: borrowing.issuedBy,
@@ -157,15 +184,24 @@ class LibraryRepositoryImpl implements LibraryRepository {
     await NotificationService().sendDirectNotification(
       userId: borrowing.borrowerId,
       title: 'Library Reminder',
-      body: 'You have borrowed "${borrowing.resourceTitle}". It is due on ${borrowing.dueDate.toString().split(' ')[0]}.',
+      body:
+          'You have borrowed "${borrowing.resourceTitle}". It is due on ${borrowing.dueDate.toString().split(' ')[0]}.',
       data: {'type': 'library', 'borrowingId': borrowing.id},
     );
   }
 
   @override
-  Future<void> returnResource(String schoolId, String borrowingId, {ResourceCondition? condition, double? fineAmount}) async {
+  Future<void> returnResource(
+    String schoolId,
+    String borrowingId, {
+    ResourceCondition? condition,
+    double? fineAmount,
+  }) async {
     // 1. Fetch borrowing details to get borrower and resource info for integrations
-    final borrowingModel = await remoteDataSource.getBorrowingById(schoolId, borrowingId);
+    final borrowingModel = await remoteDataSource.getBorrowingById(
+      schoolId,
+      borrowingId,
+    );
     if (borrowingModel == null) return;
 
     await remoteDataSource.updateBorrowingStatus(schoolId, borrowingId, {
@@ -177,42 +213,54 @@ class LibraryRepositoryImpl implements LibraryRepository {
     // 2. Integration: Finance (Fines)
     if (fineAmount != null && fineAmount > 0) {
       final now = DateTime.now();
-      await financeRepository.recordPayment(PaymentRecord(
-        id: 'FINE_$borrowingId',
-        schoolId: schoolId,
-        studentId: borrowingModel.borrowerId,
-        academicYear: now.year.toString(),
-        term: 'N/A',
-        amount: fineAmount,
-        date: now,
-        method: 'Account Debit',
-        reference: 'LIB_FINE_$borrowingId',
-        receiptNumber: 'LIB_FINE_$borrowingId',
-        feeBreakdown: const {'Library Fine': 0},
-        recordedBy: 'System (Library)',
-        notes: 'Fine for late/damaged return of "${borrowingModel.resourceTitle}"',
-      ));
+      await financeRepository.recordPayment(
+        PaymentRecord(
+          id: 'FINE_$borrowingId',
+          schoolId: schoolId,
+          studentId: borrowingModel.borrowerId,
+          academicYear: now.year.toString(),
+          term: 'N/A',
+          amount: fineAmount,
+          date: now,
+          method: 'Account Debit',
+          reference: 'LIB_FINE_$borrowingId',
+          receiptNumber: 'LIB_FINE_$borrowingId',
+          feeBreakdown: const {'Library Fine': 0},
+          recordedBy: 'System (Library)',
+          notes:
+              'Fine for late/damaged return of "${borrowingModel.resourceTitle}"',
+        ),
+      );
     }
 
     // 3. Integration: Stores & Assets (Repairs)
-    if (condition == ResourceCondition.damaged || condition == ResourceCondition.poor) {
-      await storesAssetsRepository.requestRepair(RepairRecord(
-        id: 'REP_LIB_${borrowingModel.resourceId}_${DateTime.now().millisecondsSinceEpoch}',
-        assetId: borrowingModel.resourceId,
-        assetName: borrowingModel.resourceTitle,
-        description: 'Damaged during library borrowing (ID: $borrowingId). Condition: ${condition!.name}',
-        requestDate: DateTime.now(),
-        status: RepairStatus.pending,
-        notes: 'Priority: medium. Requested by: Librarian',
-      ));
-      
+    if (condition == ResourceCondition.damaged ||
+        condition == ResourceCondition.poor) {
+      await storesAssetsRepository.requestRepair(
+        RepairRecord(
+          id: 'REP_LIB_${borrowingModel.resourceId}_${DateTime.now().millisecondsSinceEpoch}',
+          assetId: borrowingModel.resourceId,
+          assetName: borrowingModel.resourceTitle,
+          description:
+              'Damaged during library borrowing (ID: $borrowingId). Condition: ${condition!.name}',
+          requestDate: DateTime.now(),
+          status: RepairStatus.pending,
+          notes: 'Priority: medium. Requested by: Librarian',
+        ),
+      );
+
       // Update resource status to underRepair
-      await remoteDataSource.updateResourceStatus(schoolId, borrowingModel.resourceId, ResourceStatus.underRepair.name);
+      await remoteDataSource.updateResourceStatus(
+        schoolId,
+        borrowingModel.resourceId,
+        ResourceStatus.underRepair.name,
+      );
     }
 
     await auditRepository.logAction(
       title: 'Resource Returned',
-      description: 'Resource "${borrowingModel.resourceTitle}" returned by ${borrowingModel.borrowerName}. Fine: ${fineAmount ?? 0}',
+      description:
+          'Resource "${borrowingModel.resourceTitle}" returned by ${borrowingModel.borrowerName}. Fine: ${fineAmount ?? 0}',
       iconName: 'keyboard_return',
       colorHex: '#2196F3',
       userId: 'system', // Ideally we pass the librarian ID
@@ -220,44 +268,57 @@ class LibraryRepositoryImpl implements LibraryRepository {
   }
 
   @override
-  Future<void> renewResource(String schoolId, String borrowingId, DateTime newDueDate) {
+  Future<void> renewResource(
+    String schoolId,
+    String borrowingId,
+    DateTime newDueDate,
+  ) {
     return remoteDataSource.updateBorrowingStatus(schoolId, borrowingId, {
       'dueDate': newDueDate,
     });
   }
 
   @override
-  Stream<List<LibraryReservation>> watchReservations(String schoolId, {String? borrowerId}) {
+  Stream<List<LibraryReservation>> watchReservations(
+    String schoolId, {
+    String? borrowerId,
+  }) {
     return remoteDataSource.watchReservations(schoolId, borrowerId: borrowerId);
   }
 
   @override
   Future<void> reserveResource(LibraryReservation reservation) {
-    return remoteDataSource.addReservation(LibraryReservationModel(
-      id: reservation.id,
-      schoolId: reservation.schoolId,
-      resourceId: reservation.resourceId,
-      resourceTitle: reservation.resourceTitle,
-      borrowerId: reservation.borrowerId,
-      borrowerName: reservation.borrowerName,
-      borrowerType: reservation.borrowerType,
-      reservationDate: reservation.reservationDate,
-      expiryDate: reservation.expiryDate,
-      status: reservation.status,
-      queuePosition: reservation.queuePosition,
-    ));
+    return remoteDataSource.addReservation(
+      LibraryReservationModel(
+        id: reservation.id,
+        schoolId: reservation.schoolId,
+        resourceId: reservation.resourceId,
+        resourceTitle: reservation.resourceTitle,
+        borrowerId: reservation.borrowerId,
+        borrowerName: reservation.borrowerName,
+        borrowerType: reservation.borrowerType,
+        reservationDate: reservation.reservationDate,
+        expiryDate: reservation.expiryDate,
+        status: reservation.status,
+        queuePosition: reservation.queuePosition,
+      ),
+    );
   }
 
   @override
   Future<void> cancelReservation(String schoolId, String reservationId) {
-    return remoteDataSource.updateReservationStatus(schoolId, reservationId, ReservationStatus.cancelled.name);
+    return remoteDataSource.updateReservationStatus(
+      schoolId,
+      reservationId,
+      ReservationStatus.cancelled.name,
+    );
   }
 
   @override
   Stream<List<LibraryPolicy>> watchPolicies(String schoolId) {
-    return remoteDataSource.watchPolicies(schoolId).map(
-      (models) => models.map((m) => m.toEntity()).toList(),
-    );
+    return remoteDataSource
+        .watchPolicies(schoolId)
+        .map((models) => models.map((m) => m.toEntity()).toList());
   }
 
   @override
@@ -271,7 +332,10 @@ class LibraryRepositoryImpl implements LibraryRepository {
   }
 
   @override
-  Future<Map<String, dynamic>> getBorrowerAnalytics(String schoolId, String borrowerId) async {
+  Future<Map<String, dynamic>> getBorrowerAnalytics(
+    String schoolId,
+    String borrowerId,
+  ) async {
     final borrowings = await remoteDataSource
         .watchBorrowingHistory(schoolId, borrowerId: borrowerId)
         .first;

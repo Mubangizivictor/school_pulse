@@ -16,7 +16,7 @@ class Student extends Equatable {
   final String academicYearId;
   final String? previousSchool;
   final StudentStatus status;
-  
+
   // Detailed Information
   final MedicalInfo? medicalInfo;
   final List<EmergencyContact> emergencyContacts;
@@ -76,34 +76,35 @@ class Student extends Equatable {
   }
 
   String get studentId => id;
-  String get className => classId; // Temporary alias until class objects are used everywhere
+  String get className =>
+      classId; // Temporary alias until class objects are used everywhere
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        name,
-        photoUrl,
-        studentCode,
-        admissionNumber,
-        qrReference,
-        dateOfBirth,
-        gender,
-        classId,
-        streamId,
-        academicYearId,
-        previousSchool,
-        status,
-        medicalInfo,
-        emergencyContacts,
-        parentIds,
-        documents,
-        campusId,
-        level,
-        dormLeadershipRole,
-        dormLeadershipDormId,
-        dormLeadershipDormName,
-      ];
+    id,
+    schoolId,
+    name,
+    photoUrl,
+    studentCode,
+    admissionNumber,
+    qrReference,
+    dateOfBirth,
+    gender,
+    classId,
+    streamId,
+    academicYearId,
+    previousSchool,
+    status,
+    medicalInfo,
+    emergencyContacts,
+    parentIds,
+    documents,
+    campusId,
+    level,
+    dormLeadershipRole,
+    dormLeadershipDormId,
+    dormLeadershipDormName,
+  ];
 
   Student copyWith({
     String? name,
@@ -159,7 +160,13 @@ class MedicalInfo extends Equatable {
   });
 
   @override
-  List<Object?> get props => [bloodGroup, allergies, chronicConditions, medications, disabilities];
+  List<Object?> get props => [
+    bloodGroup,
+    allergies,
+    chronicConditions,
+    medications,
+    disabilities,
+  ];
 }
 
 class EmergencyContact extends Equatable {
@@ -182,5 +189,11 @@ class EmergencyContact extends Equatable {
   });
 
   @override
-  List<Object?> get props => [name, relationship, phoneNumber, email, linkedUserId];
+  List<Object?> get props => [
+    name,
+    relationship,
+    phoneNumber,
+    email,
+    linkedUserId,
+  ];
 }

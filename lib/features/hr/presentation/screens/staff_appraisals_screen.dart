@@ -67,11 +67,23 @@ class _AppraisalTile extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                Text(status, style: const TextStyle(fontSize: 12, color: Colors.blue)),
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                Text(
+                  status,
+                  style: const TextStyle(fontSize: 12, color: Colors.blue),
+                ),
               ],
             ),
-            Text(department, style: const TextStyle(fontSize: 13, color: Colors.grey)),
+            Text(
+              department,
+              style: const TextStyle(fontSize: 13, color: Colors.grey),
+            ),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -83,7 +95,10 @@ class _AppraisalTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Text('${(score * 100).toInt()}%', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  '${(score * 100).toInt()}%',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ],
             ),
           ],

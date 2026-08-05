@@ -47,7 +47,8 @@ class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
   }) : uuid = uuid ?? const Uuid();
 
   @override
-  Future<Either<Failure, Map<String, LessonAttendanceStatus>>> getStatusesForDate({
+  Future<Either<Failure, Map<String, LessonAttendanceStatus>>>
+  getStatusesForDate({
     required ActiveResponsibilityContext context,
     required DateTime date,
   }) async {
@@ -61,9 +62,9 @@ class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
 
     final classId = context.classId;
     if (classId == null || classId.isEmpty) {
-      return const Left(ValidationFailure(
-        'This responsibility is not tied to a class.',
-      ));
+      return const Left(
+        ValidationFailure('This responsibility is not tied to a class.'),
+      );
     }
 
     if (!await networkInfo.isConnected) {
@@ -86,9 +87,9 @@ class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
           entry.key: LessonAttendanceStatus.fromId(entry.value),
       });
     } catch (_) {
-      return const Left(ServerFailure(
-        "Could not load today's register. Pull down to retry.",
-      ));
+      return const Left(
+        ServerFailure("Could not load today's register. Pull down to retry."),
+      );
     }
   }
 
@@ -97,17 +98,23 @@ class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
     required ActiveResponsibilityContext context,
   }) async {
     try {
-      final configured = await structureRepository.watchAttendanceTypes().first;
-      return Right(AttendanceStatusResolver.optionsFrom(
-        configured
-            .map((t) => (
+      final configured = await structureRepository
+          .watchAttendanceTypes(context.schoolId)
+          .first;
+      return Right(
+        AttendanceStatusResolver.optionsFrom(
+          configured
+              .map(
+                (t) => (
                   id: t.id,
                   name: t.name,
                   colorHex: t.colorHex,
                   isActive: t.isActive,
-                ))
-            .toList(),
-      ));
+                ),
+              )
+              .toList(),
+        ),
+      );
     } catch (_) {
       // A register with no buttons is worse than an opinionated one, so a
       // config read that fails still yields a usable set.
@@ -134,9 +141,9 @@ class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
 
     final classId = context.classId;
     if (classId == null || classId.isEmpty) {
-      return const Left(ValidationFailure(
-        'This responsibility is not tied to a class.',
-      ));
+      return const Left(
+        ValidationFailure('This responsibility is not tied to a class.'),
+      );
     }
 
     final canTake = ClassAttendancePolicy.canTakeFor(
@@ -144,7 +151,9 @@ class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
       now: DateTime.now(),
     );
     if (!canTake.isAllowed) {
-      return Left(ValidationFailure(canTake.message ?? 'Cannot take this register.'));
+      return Left(
+        ValidationFailure(canTake.message ?? 'Cannot take this register.'),
+      );
     }
 
     final sessionId = classSessionId(
@@ -196,14 +205,19 @@ class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
     required ActiveResponsibilityContext context,
     required ClassAttendanceSession session,
   }) async {
-    final guard = await _guard(context, Permission.classAttendanceTake, session);
+    final guard = await _guard(
+      context,
+      Permission.classAttendanceTake,
+      session,
+    );
     if (guard != null) return Left(guard);
 
     final decision = ClassAttendancePolicy.canEdit(
       session: session,
       hasEditPermission: context.can(Permission.classAttendanceEdit),
-      hasHistoricalPermission:
-          context.can(Permission.classAttendanceEditHistorical),
+      hasHistoricalPermission: context.can(
+        Permission.classAttendanceEditHistorical,
+      ),
       reason: 'draft save',
       now: DateTime.now(),
     );
@@ -219,7 +233,11 @@ class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
     await _cacheDraft(prepared);
 
     if (!await networkInfo.isConnected) {
-      await _queue(context, prepared, OfflineOperationType.classAttendanceDraft);
+      await _queue(
+        context,
+        prepared,
+        OfflineOperationType.classAttendanceDraft,
+      );
       return Right(prepared);
     }
 
@@ -234,7 +252,11 @@ class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
       );
       return Right(prepared);
     } catch (_) {
-      await _queue(context, prepared, OfflineOperationType.classAttendanceDraft);
+      await _queue(
+        context,
+        prepared,
+        OfflineOperationType.classAttendanceDraft,
+      );
       return Right(prepared);
     }
   }
@@ -268,8 +290,9 @@ class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
     final editable = ClassAttendancePolicy.canEdit(
       session: session,
       hasEditPermission: context.can(Permission.classAttendanceEdit),
-      hasHistoricalPermission:
-          context.can(Permission.classAttendanceEditHistorical),
+      hasHistoricalPermission: context.can(
+        Permission.classAttendanceEditHistorical,
+      ),
       reason: 'submission',
       now: DateTime.now(),
     );
@@ -289,7 +312,11 @@ class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
     await _cacheDraft(submitted);
 
     if (!await networkInfo.isConnected) {
-      await _queue(context, submitted, OfflineOperationType.classAttendanceSubmit);
+      await _queue(
+        context,
+        submitted,
+        OfflineOperationType.classAttendanceSubmit,
+      );
       return Right(submitted);
     }
 
@@ -301,15 +328,19 @@ class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
         entityType: 'class_attendance_session',
         entityId: submitted.id,
         newValue: {
-          'counts': submitted.countsBy(AttendanceStatusResolver.defaults).map(
-                (key, value) => MapEntry(key.name, value),
-              ),
+          'counts': submitted
+              .countsBy(AttendanceStatusResolver.defaults)
+              .map((key, value) => MapEntry(key.name, value)),
           'studentCount': rosterStudentIds.length,
         },
       );
       return Right(submitted);
     } catch (_) {
-      await _queue(context, submitted, OfflineOperationType.classAttendanceSubmit);
+      await _queue(
+        context,
+        submitted,
+        OfflineOperationType.classAttendanceSubmit,
+      );
       return Right(submitted);
     }
   }
@@ -334,8 +365,9 @@ class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
     final decision = ClassAttendancePolicy.canEdit(
       session: session,
       hasEditPermission: context.can(Permission.classAttendanceEdit),
-      hasHistoricalPermission:
-          context.can(Permission.classAttendanceEditHistorical),
+      hasHistoricalPermission: context.can(
+        Permission.classAttendanceEditHistorical,
+      ),
       reason: reason,
       now: DateTime.now(),
     );
@@ -346,9 +378,11 @@ class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
     // Correcting attendance needs a live write: a queued correction replayed
     // days later would overwrite whatever the office decided in the meantime.
     if (!await networkInfo.isConnected) {
-      return const Left(OfflineNotAllowedFailure(
-        'Correcting a submitted register needs an internet connection.',
-      ));
+      return const Left(
+        OfflineNotAllowedFailure(
+          'Correcting a submitted register needs an internet connection.',
+        ),
+      );
     }
 
     final previous = session.statusCodeFor(studentId);
@@ -384,20 +418,28 @@ class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
     required String requestedStatusCode,
     required String reason,
   }) async {
-    final guard = await _guard(context, Permission.classAttendanceView, session);
+    final guard = await _guard(
+      context,
+      Permission.classAttendanceView,
+      session,
+    );
     if (guard != null) return Left(guard);
 
     if (reason.trim().length < 5) {
-      return const Left(ValidationFailure(
-        'Give a reason for the correction request.',
-        field: 'reason',
-      ));
+      return const Left(
+        ValidationFailure(
+          'Give a reason for the correction request.',
+          field: 'reason',
+        ),
+      );
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(OfflineNotAllowedFailure(
-        'Requesting a correction needs an internet connection.',
-      ));
+      return const Left(
+        OfflineNotAllowedFailure(
+          'Requesting a correction needs an internet connection.',
+        ),
+      );
     }
 
     try {
@@ -430,7 +472,9 @@ class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
 
       return const Right(null);
     } catch (_) {
-      return const Left(ServerFailure('Could not send the correction request.'));
+      return const Left(
+        ServerFailure('Could not send the correction request.'),
+      );
     }
   }
 
@@ -450,15 +494,17 @@ class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
 
     final classId = context.classId;
     if (classId == null || classId.isEmpty) {
-      return const Left(ValidationFailure(
-        'This responsibility is not tied to a class.',
-      ));
+      return const Left(
+        ValidationFailure('This responsibility is not tied to a class.'),
+      );
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(NetworkFailure(
-        'You are offline. Attendance history needs a connection.',
-      ));
+      return const Left(
+        NetworkFailure(
+          'You are offline. Attendance history needs a connection.',
+        ),
+      );
     }
 
     try {
@@ -472,9 +518,9 @@ class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
       );
       return Right(sessions);
     } catch (_) {
-      return const Left(ServerFailure(
-        'Could not load attendance history. Pull down to retry.',
-      ));
+      return const Left(
+        ServerFailure('Could not load attendance history. Pull down to retry.'),
+      );
     }
   }
 
@@ -499,8 +545,9 @@ class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
     return switch (decision.refusal) {
       AttendanceRefusal.locked ||
       AttendanceRefusal.alreadySubmitted ||
-      AttendanceRefusal.outsideCorrectionWindow =>
-        PermissionDeniedFailure(message),
+      AttendanceRefusal.outsideCorrectionWindow => PermissionDeniedFailure(
+        message,
+      ),
       _ => ValidationFailure(message),
     };
   }
@@ -540,7 +587,8 @@ class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
     );
   }
 
-  static Map<String, dynamic> _sessionPayload(ClassAttendanceSession session) => {
+  static Map<String, dynamic> _sessionPayload(ClassAttendanceSession session) =>
+      {
         'id': session.id,
         'schoolId': session.schoolId,
         'campusId': session.campusId,
@@ -553,12 +601,14 @@ class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
         'date': session.date.toIso8601String(),
         'status': session.status.name,
         'entries': session.entries
-            .map((e) => {
-                  'studentId': e.studentId,
-                  'status': e.statusCode,
-                  'note': e.note,
-                  'markedAt': e.markedAt?.toIso8601String(),
-                })
+            .map(
+              (e) => {
+                'studentId': e.studentId,
+                'status': e.statusCode,
+                'note': e.note,
+                'markedAt': e.markedAt?.toIso8601String(),
+              },
+            )
             .toList(),
         'submittedAt': session.submittedAt?.toIso8601String(),
         'submittedBy': session.submittedBy,

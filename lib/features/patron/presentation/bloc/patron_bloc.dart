@@ -278,7 +278,12 @@ class PatronBloc extends Bloc<PatronEvent, PatronState> {
   void _onWatchAttendance(WatchAttendance event, Emitter<PatronState> emit) {
     _attendanceSubscription?.cancel();
     _attendanceSubscription = repository
-        .getAttendance(event.schoolId, event.date, event.dormitoryId, event.type)
+        .getAttendance(
+          event.schoolId,
+          event.date,
+          event.dormitoryId,
+          event.type,
+        )
         .listen((attendance) => add(_AttendanceUpdated(attendance)));
   }
 

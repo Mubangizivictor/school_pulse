@@ -19,7 +19,8 @@ class CommentBankService {
   }) {
     return allTemplates.where((t) {
       bool matchCategory = categoryId == null || t.categoryId == categoryId;
-      bool matchLevel = performanceLevel == null || t.performanceLevel == performanceLevel;
+      bool matchLevel =
+          performanceLevel == null || t.performanceLevel == performanceLevel;
       return matchCategory && matchLevel;
     }).toList();
   }

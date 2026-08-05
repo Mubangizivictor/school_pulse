@@ -43,11 +43,7 @@ class NotificationTokenManager {
     _refreshSub = messaging.onTokenRefresh.listen((token) async {
       final uid = currentUserId();
       if (uid.isEmpty) return;
-      await _publish(
-        token: token,
-        userId: uid,
-        schoolId: currentSchoolId(),
-      );
+      await _publish(token: token, userId: uid, schoolId: currentSchoolId());
     });
   }
 
@@ -130,14 +126,14 @@ class NotificationTokenManager {
           .collection('tokens')
           .doc(token)
           .set({
-        'token': token,
-        'schoolId': schoolId,
-        'platform': _platformName,
-        'updatedAt': FieldValue.serverTimestamp(),
-        // Written on first publish only, so the server can age out tokens that
-        // have not been seen for a long time.
-        'createdAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+            'token': token,
+            'schoolId': schoolId,
+            'platform': _platformName,
+            'updatedAt': FieldValue.serverTimestamp(),
+            // Written on first publish only, so the server can age out tokens that
+            // have not been seen for a long time.
+            'createdAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
 
       row.publishedAt = DateTime.now();
     } catch (e) {

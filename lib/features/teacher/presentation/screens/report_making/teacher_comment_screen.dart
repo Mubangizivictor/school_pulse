@@ -42,11 +42,13 @@ class _TeacherCommentScreenState extends State<TeacherCommentScreen> {
   void initState() {
     super.initState();
     final wizardState = context.read<ReportWizardBloc>().state;
-    context.read<TeacherBloc>().add(TeacherReportCommentsRequested(
-          className: wizardState.selectedClassName ?? widget.className,
-          term: wizardState.selectedTerm ?? widget.term,
-          year: wizardState.selectedYear ?? widget.year,
-        ));
+    context.read<TeacherBloc>().add(
+      TeacherReportCommentsRequested(
+        className: wizardState.selectedClassName ?? widget.className,
+        term: wizardState.selectedTerm ?? widget.term,
+        year: wizardState.selectedYear ?? widget.year,
+      ),
+    );
   }
 
   @override
@@ -58,21 +60,27 @@ class _TeacherCommentScreenState extends State<TeacherCommentScreen> {
   void _onSave() {
     final authState = context.read<AuthBloc>().state;
     final wizardState = context.read<ReportWizardBloc>().state;
-    
+
     if (authState is AuthAuthenticated) {
-      context.read<TeacherBloc>().add(TeacherReportCommentSaved(
-            ReportComment(
-              id: '',
-              studentId: widget.studentId ?? (wizardState.selectedStudentIds.isNotEmpty ? wizardState.selectedStudentIds.first : 'mock_student_id'),
-              className: wizardState.selectedClassName ?? widget.className,
-              term: wizardState.selectedTerm ?? widget.term,
-              year: wizardState.selectedYear ?? widget.year,
-              comment: _commentController.text,
-              recommendations: _recommendations,
-              teacherId: authState.user.id,
-              updatedAt: DateTime.now(),
-            ),
-          ));
+      context.read<TeacherBloc>().add(
+        TeacherReportCommentSaved(
+          ReportComment(
+            id: '',
+            studentId:
+                widget.studentId ??
+                (wizardState.selectedStudentIds.isNotEmpty
+                    ? wizardState.selectedStudentIds.first
+                    : 'mock_student_id'),
+            className: wizardState.selectedClassName ?? widget.className,
+            term: wizardState.selectedTerm ?? widget.term,
+            year: wizardState.selectedYear ?? widget.year,
+            comment: _commentController.text,
+            recommendations: _recommendations,
+            teacherId: authState.user.id,
+            updatedAt: DateTime.now(),
+          ),
+        ),
+      );
     }
   }
 
@@ -129,13 +137,15 @@ class _TeacherCommentScreenState extends State<TeacherCommentScreen> {
     return BlocConsumer<TeacherBloc, TeacherState>(
       listener: (context, state) {
         if (state is TeacherOperationSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.message)));
           context.push('/staff/reports/preview');
         } else if (state is TeacherReportCommentsLoaded) {
           if (widget.studentId != null) {
-            final comment = state.comments.where((c) => c.studentId == widget.studentId).firstOrNull;
+            final comment = state.comments
+                .where((c) => c.studentId == widget.studentId)
+                .firstOrNull;
             if (comment != null && _commentController.text.isEmpty) {
               _commentController.text = comment.comment;
               if (comment.recommendations.isNotEmpty) {
@@ -147,9 +157,7 @@ class _TeacherCommentScreenState extends State<TeacherCommentScreen> {
       },
       builder: (context, state) {
         return Scaffold(
-          appBar: AppBar(
-            title: const Text('Teacher\'s Comment'),
-          ),
+          appBar: AppBar(title: const Text('Teacher\'s Comment')),
           body: Column(
             children: [
               Expanded(
@@ -166,10 +174,14 @@ class _TeacherCommentScreenState extends State<TeacherCommentScreen> {
                             controller: _commentController,
                             maxLines: 6,
                             onChanged: (val) => setState(() {}),
-                            style: TextStyle(color: AppColors.textPrimary(context)),
+                            style: TextStyle(
+                              color: AppColors.textPrimary(context),
+                            ),
                             decoration: InputDecoration(
                               hintText: 'Enter student comment...',
-                              hintStyle: TextStyle(color: AppColors.textMuted(context)),
+                              hintStyle: TextStyle(
+                                color: AppColors.textMuted(context),
+                              ),
                               border: InputBorder.none,
                               enabledBorder: InputBorder.none,
                               focusedBorder: InputBorder.none,
@@ -192,15 +204,20 @@ class _TeacherCommentScreenState extends State<TeacherCommentScreen> {
                     AppCard(
                       child: Column(
                         children: [
-                          ..._recommendations.map((rec) => Column(
-                                children: [
-                                  _RecommendationItem(
-                                    text: rec,
-                                    onDelete: () => setState(() => _recommendations.remove(rec)),
+                          ..._recommendations.map(
+                            (rec) => Column(
+                              children: [
+                                _RecommendationItem(
+                                  text: rec,
+                                  onDelete: () => setState(
+                                    () => _recommendations.remove(rec),
                                   ),
-                                  if (rec != _recommendations.last) Divider(color: AppColors.border(context)),
-                                ],
-                              )),
+                                ),
+                                if (rec != _recommendations.last)
+                                  Divider(color: AppColors.border(context)),
+                              ],
+                            ),
+                          ),
                           const SizedBox(height: 12),
                           SecondaryButton(
                             label: 'Add Recommendation',

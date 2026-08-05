@@ -21,7 +21,8 @@ class EmergencyProtocolDialog extends StatefulWidget {
   const EmergencyProtocolDialog({super.key});
 
   @override
-  State<EmergencyProtocolDialog> createState() => _EmergencyProtocolDialogState();
+  State<EmergencyProtocolDialog> createState() =>
+      _EmergencyProtocolDialogState();
 }
 
 class _EmergencyProtocolDialogState extends State<EmergencyProtocolDialog> {
@@ -32,14 +33,20 @@ class _EmergencyProtocolDialogState extends State<EmergencyProtocolDialog> {
   @override
   Widget build(BuildContext context) {
     return BlocListener<SecurityBloc, SecurityState>(
-      listenWhen: (previous, current) => !identical(previous.feedback, current.feedback) && current.feedback != null,
+      listenWhen: (previous, current) =>
+          !identical(previous.feedback, current.feedback) &&
+          current.feedback != null,
       listener: (context, state) {
         final feedback = state.feedback!;
         if (_isSubmitting) {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(feedback.isError ? feedback.message : 'EMERGENCY ALERT ACTIVATED'),
+              content: Text(
+                feedback.isError
+                    ? feedback.message
+                    : 'EMERGENCY ALERT ACTIVATED',
+              ),
               backgroundColor: feedback.isError ? Colors.red : Colors.red,
               behavior: SnackBarBehavior.floating,
             ),
@@ -49,9 +56,16 @@ class _EmergencyProtocolDialogState extends State<EmergencyProtocolDialog> {
       child: AlertDialog(
         title: Row(
           children: [
-            const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+            const Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.red,
+              size: 28,
+            ),
             const SizedBox(width: 8),
-            const Text('Trigger Emergency', style: TextStyle(color: Colors.red)),
+            const Text(
+              'Trigger Emergency',
+              style: TextStyle(color: Colors.red),
+            ),
           ],
         ),
         content: SingleChildScrollView(
@@ -97,7 +111,14 @@ class _EmergencyProtocolDialogState extends State<EmergencyProtocolDialog> {
             onPressed: _isSubmitting ? null : _triggerEmergency,
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             child: _isSubmitting
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
                 : const Text('ACTIVATE ALERT'),
           ),
         ],

@@ -52,7 +52,10 @@ class _GatekeeperPickupScreenState extends State<GatekeeperPickupScreen> {
     final result = await di.sl<ResolveParentAccessCode>()(code.trim());
     if (!mounted) return;
     result.fold(
-      (failure) => _showSnack('Code not recognized. Ask the parent to check it.', isError: true),
+      (failure) => _showSnack(
+        'Code not recognized. Ask the parent to check it.',
+        isError: true,
+      ),
       (accessCode) => setState(() => _resolved = accessCode),
     );
     setState(() => _isSearching = false);
@@ -60,7 +63,10 @@ class _GatekeeperPickupScreenState extends State<GatekeeperPickupScreen> {
 
   void _showSnack(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: isError ? Colors.red : null),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : null,
+      ),
     );
   }
 
@@ -71,14 +77,20 @@ class _GatekeeperPickupScreenState extends State<GatekeeperPickupScreen> {
     if (visitorsState is! VisitorsLoaded) return false;
     final phone = code.phoneNumber ?? '';
     final name = code.parentName ?? '';
-    return visitorsState.blacklist.any((b) =>
-        (phone.isNotEmpty && b.phone == phone) || (name.isNotEmpty && b.fullName.toLowerCase() == name.toLowerCase()));
+    return visitorsState.blacklist.any(
+      (b) =>
+          (phone.isNotEmpty && b.phone == phone) ||
+          (name.isNotEmpty && b.fullName.toLowerCase() == name.toLowerCase()),
+    );
   }
 
   Future<void> _confirmRelease() async {
     final authState = context.read<AuthBloc>().state;
     final code = _resolved;
-    if (authState is! AuthAuthenticated || code == null || _selectedChildIndex == null) return;
+    if (authState is! AuthAuthenticated ||
+        code == null ||
+        _selectedChildIndex == null)
+      return;
     setState(() => _isSubmitting = true);
     final deviceId = await DeviceIdService().getDeviceId();
     if (!mounted) return;
@@ -116,14 +128,20 @@ class _GatekeeperPickupScreenState extends State<GatekeeperPickupScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Pickup')),
       body: BlocListener<SecurityBloc, SecurityState>(
-        listenWhen: (p, c) => !identical(p.feedback, c.feedback) && c.feedback != null,
+        listenWhen: (p, c) =>
+            !identical(p.feedback, c.feedback) && c.feedback != null,
         listener: (context, state) {
           final feedback = state.feedback!;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(feedback.message), backgroundColor: feedback.isError ? Colors.red : Colors.green),
+            SnackBar(
+              content: Text(feedback.message),
+              backgroundColor: feedback.isError ? Colors.red : Colors.green,
+            ),
           );
         },
-        child: _resolved == null ? _buildCodeEntry(context) : _buildChildSelect(context),
+        child: _resolved == null
+            ? _buildCodeEntry(context)
+            : _buildChildSelect(context),
       ),
     );
   }
@@ -134,7 +152,10 @@ class _GatekeeperPickupScreenState extends State<GatekeeperPickupScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Enter the parent\'s pickup code', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Enter the parent\'s pickup code',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 16),
           TextField(
             controller: _codeController,
@@ -143,7 +164,10 @@ class _GatekeeperPickupScreenState extends State<GatekeeperPickupScreen> {
             decoration: InputDecoration(
               hintText: 'e.g. PU-4821',
               prefixIcon: const Icon(Icons.family_restroom),
-              suffixIcon: IconButton(icon: const Icon(Icons.arrow_forward), onPressed: () => _resolveCode(_codeController.text)),
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.arrow_forward),
+                onPressed: () => _resolveCode(_codeController.text),
+              ),
             ),
             onSubmitted: _resolveCode,
           ),
@@ -164,16 +188,27 @@ class _GatekeeperPickupScreenState extends State<GatekeeperPickupScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.block, size: 72, color: Theme.of(context).colorScheme.error),
+            Icon(
+              Icons.block,
+              size: 72,
+              color: Theme.of(context).colorScheme.error,
+            ),
             const SizedBox(height: 16),
-            const Text('Pickup not authorized', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+            const Text(
+              'Pickup not authorized',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 8),
             const Text(
               'This person is on the security blacklist. Do not release the child. Call a supervisor.',
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
-            TextButton(onPressed: () => setState(() => _resolved = null), child: const Text('Back')),
+            TextButton(
+              onPressed: () => setState(() => _resolved = null),
+              child: const Text('Back'),
+            ),
           ],
         ),
       );
@@ -184,27 +219,52 @@ class _GatekeeperPickupScreenState extends State<GatekeeperPickupScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(code.parentName ?? 'Parent', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          Text(code.phoneNumber ?? '', style: Theme.of(context).textTheme.bodyMedium),
+          Text(
+            code.parentName ?? 'Parent',
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          Text(
+            code.phoneNumber ?? '',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
           const SizedBox(height: 16),
-          const Text('Which child is being picked up?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          const Text(
+            'Which child is being picked up?',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 12),
           Expanded(
             child: ListView.separated(
               itemCount: code.studentIds.length,
               separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
-                final name = code.studentNames.length > index ? code.studentNames[index] : 'Student';
+                final name = code.studentNames.length > index
+                    ? code.studentNames[index]
+                    : 'Student';
                 final selected = _selectedChildIndex == index;
                 return AppCard(
                   onTap: () => setState(() => _selectedChildIndex = index),
-                  borderColor: selected ? Theme.of(context).colorScheme.primary : null,
+                  borderColor: selected
+                      ? Theme.of(context).colorScheme.primary
+                      : null,
                   child: Row(
                     children: [
                       AvatarInitials(name: name, size: 44),
                       const SizedBox(width: 14),
-                      Expanded(child: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
-                      if (selected) Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary),
+                      Expanded(
+                        child: Text(
+                          name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      if (selected)
+                        Icon(
+                          Icons.check_circle,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                     ],
                   ),
                 );

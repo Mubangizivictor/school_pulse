@@ -25,7 +25,9 @@ class PurchaseOrderModel extends PurchaseOrder {
       orderNumber: data['orderNumber'] ?? '',
       supplierId: data['supplierId'] ?? '',
       supplierName: data['supplierName'] ?? '',
-      items: (data['items'] as List).map((i) => OrderItemModel.fromMap(i)).toList(),
+      items: (data['items'] as List)
+          .map((i) => OrderItemModel.fromMap(i))
+          .toList(),
       totalAmount: (data['totalAmount'] as num).toDouble(),
       status: PurchaseOrderStatus.values.firstWhere(
         (e) => e.name == data['status'],
@@ -88,11 +90,7 @@ class OrderItemModel extends OrderItem {
   }
 
   Map<String, dynamic> toMap() {
-    return {
-      'itemName': itemName,
-      'quantity': quantity,
-      'unitPrice': unitPrice,
-    };
+    return {'itemName': itemName, 'quantity': quantity, 'unitPrice': unitPrice};
   }
 
   factory OrderItemModel.fromEntity(OrderItem item) {

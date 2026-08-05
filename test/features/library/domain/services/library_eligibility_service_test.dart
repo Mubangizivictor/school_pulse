@@ -57,26 +57,47 @@ void main() {
       libraryRepository: libraryRepository,
     );
 
-    when(() => studentRepository.getStudentById(studentId)).thenAnswer((_) async => Right(student));
+    when(
+      () => studentRepository.getStudentById(studentId),
+    ).thenAnswer((_) async => Right(student));
   });
 
   test('denies when the operator lacks libraryMemberVerify', () async {
-    when(() => permissionEvaluator.can(Permission.libraryMemberVerify, operatorUser))
-        .thenAnswer((_) async => const Right(false));
+    when(
+      () =>
+          permissionEvaluator.can(Permission.libraryMemberVerify, operatorUser),
+    ).thenAnswer((_) async => const Right(false));
 
-    final result = await service.getEligibility(studentId: studentId, schoolId: schoolId, operatorUser: operatorUser);
+    final result = await service.getEligibility(
+      studentId: studentId,
+      schoolId: schoolId,
+      operatorUser: operatorUser,
+    );
 
     expect(result.fold((f) => f, (r) => null), isA<PermissionDeniedFailure>());
     verifyNever(() => libraryRepository.getBorrowerAnalytics(any(), any()));
   });
 
   test('is eligible when there are no overdue items', () async {
-    when(() => permissionEvaluator.can(Permission.libraryMemberVerify, operatorUser))
-        .thenAnswer((_) async => const Right(true));
-    when(() => libraryRepository.getBorrowerAnalytics(schoolId, studentId))
-        .thenAnswer((_) async => {'totalBorrowed': 5, 'currentlyBorrowed': 2, 'overdueCount': 0});
+    when(
+      () =>
+          permissionEvaluator.can(Permission.libraryMemberVerify, operatorUser),
+    ).thenAnswer((_) async => const Right(true));
+    when(
+      () => libraryRepository.getBorrowerAnalytics(schoolId, studentId),
+    ).thenAnswer(
+      (_) async => {
+        'totalBorrowed': 5,
+        'currentlyBorrowed': 2,
+        'overdueCount': 0,
+      },
+    );
 
-    final result = await service.getEligibility(studentId: studentId, schoolId: schoolId, operatorUser: operatorUser);
+    final result = await service.getEligibility(
+      studentId: studentId,
+      schoolId: schoolId,
+      operatorUser: operatorUser,
+    );
 
     final view = result.getOrElse(() => throw StateError('expected Right'));
     expect(view.eligible, true);
@@ -84,12 +105,25 @@ void main() {
   });
 
   test('is not eligible when there are overdue items', () async {
-    when(() => permissionEvaluator.can(Permission.libraryMemberVerify, operatorUser))
-        .thenAnswer((_) async => const Right(true));
-    when(() => libraryRepository.getBorrowerAnalytics(schoolId, studentId))
-        .thenAnswer((_) async => {'totalBorrowed': 5, 'currentlyBorrowed': 3, 'overdueCount': 1});
+    when(
+      () =>
+          permissionEvaluator.can(Permission.libraryMemberVerify, operatorUser),
+    ).thenAnswer((_) async => const Right(true));
+    when(
+      () => libraryRepository.getBorrowerAnalytics(schoolId, studentId),
+    ).thenAnswer(
+      (_) async => {
+        'totalBorrowed': 5,
+        'currentlyBorrowed': 3,
+        'overdueCount': 1,
+      },
+    );
 
-    final result = await service.getEligibility(studentId: studentId, schoolId: schoolId, operatorUser: operatorUser);
+    final result = await service.getEligibility(
+      studentId: studentId,
+      schoolId: schoolId,
+      operatorUser: operatorUser,
+    );
 
     final view = result.getOrElse(() => throw StateError('expected Right'));
     expect(view.eligible, false);

@@ -16,7 +16,11 @@ class SchoolActivityLogs extends StatelessWidget {
         ),
         title: const Text(
           'School Activity Logs',
-          style: TextStyle(color: Color(0xFF1E293B), fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Color(0xFF1E293B),
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         actions: [
           IconButton(
@@ -24,7 +28,10 @@ class SchoolActivityLogs extends StatelessWidget {
             onPressed: () {},
           ),
           IconButton(
-            icon: const Icon(Icons.file_download_outlined, color: Color(0xFF64748B)),
+            icon: const Icon(
+              Icons.file_download_outlined,
+              color: Color(0xFF64748B),
+            ),
             onPressed: () {},
           ),
         ],
@@ -93,7 +100,9 @@ class SchoolActivityLogs extends StatelessWidget {
       decoration: BoxDecoration(
         color: isSelected ? const Color(0xFF6366F1) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isSelected ? const Color(0xFF6366F1) : const Color(0xFFE2E8F0)),
+        border: Border.all(
+          color: isSelected ? const Color(0xFF6366F1) : const Color(0xFFE2E8F0),
+        ),
       ),
       child: Text(
         label,
@@ -109,10 +118,10 @@ class SchoolActivityLogs extends StatelessWidget {
   Widget _buildLogEntry(int index) {
     final types = ['SECURITY', 'SUBSCRIPTION', 'USER_MGMT', 'SYSTEM'];
     final type = types[index % types.length];
-    
+
     Color typeColor;
     IconData typeIcon;
-    
+
     switch (type) {
       case 'SECURITY':
         typeColor = const Color(0xFFEF4444);
@@ -159,14 +168,21 @@ class SchoolActivityLogs extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: typeColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         type,
-                        style: TextStyle(color: typeColor, fontSize: 10, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: typeColor,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     const Text(
@@ -178,7 +194,11 @@ class SchoolActivityLogs extends StatelessWidget {
                 const SizedBox(height: 8),
                 const Text(
                   'Admin login detected from new IP',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E293B),
+                  ),
                 ),
                 const SizedBox(height: 4),
                 const Text(
@@ -190,12 +210,18 @@ class SchoolActivityLogs extends StatelessWidget {
                   children: [
                     const CircleAvatar(
                       radius: 8,
-                      backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=admin'),
+                      backgroundImage: NetworkImage(
+                        'https://i.pravatar.cc/150?u=admin',
+                      ),
                     ),
                     const SizedBox(width: 8),
                     const Text(
                       'John Paul',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF64748B),
+                      ),
                     ),
                     const Spacer(),
                     const Text(

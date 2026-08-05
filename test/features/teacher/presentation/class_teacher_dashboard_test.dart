@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:provider/provider.dart';
 import 'package:school_pulse/core/theme_provider.dart';
+import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
@@ -20,7 +21,8 @@ import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_co
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_state.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_dashboard/class_teacher_dashboard_bloc.dart';
 
-class _MockAuthBloc extends MockBloc<AuthEvent, AuthState> implements AuthBloc {}
+class _MockAuthBloc extends MockBloc<AuthEvent, AuthState>
+    implements AuthBloc {}
 
 class _MockContextBloc
     extends MockBloc<ClassTeacherContextEvent, ClassTeacherContextState>
@@ -102,7 +104,8 @@ void main() {
   Future<void> pump(
     WidgetTester tester, {
     required ClassTeacherContextState contextState,
-    ClassTeacherDashboardState dashboardState = const ClassTeacherDashboardState(),
+    ClassTeacherDashboardState dashboardState =
+        const ClassTeacherDashboardState(),
   }) async {
     when(() => contextBloc.state).thenReturn(contextState);
     when(() => dashboardBloc.state).thenReturn(dashboardState);
@@ -124,9 +127,13 @@ void main() {
             BlocProvider<ClassTeacherDashboardBloc>.value(value: dashboardBloc),
           ],
           child: MaterialApp.router(
+            theme: AppTheme.light(),
             routerConfig: GoRouter(
               routes: [
-                GoRoute(path: '/', builder: (_, _) => const TeacherDashboardScreen()),
+                GoRoute(
+                  path: '/',
+                  builder: (_, _) => const TeacherDashboardScreen(),
+                ),
               ],
             ),
           ),
@@ -137,8 +144,9 @@ void main() {
   }
 
   group('class identity', () {
-    testWidgets('names the assigned class rather than a placeholder',
-        (tester) async {
+    testWidgets('names the assigned class rather than a placeholder', (
+      tester,
+    ) async {
       await pump(
         tester,
         contextState: ClassTeacherContextState(
@@ -158,7 +166,9 @@ void main() {
   });
 
   group('figures', () {
-    testWidgets('shows the roster count from the class summary', (tester) async {
+    testWidgets('shows the roster count from the class summary', (
+      tester,
+    ) async {
       await pump(
         tester,
         contextState: ClassTeacherContextState(active: _activeContext),
@@ -180,8 +190,9 @@ void main() {
       expect(find.text('93.8%'), findsOneWidget);
     });
 
-    testWidgets('says the register is not taken rather than showing 0%',
-        (tester) async {
+    testWidgets('says the register is not taken rather than showing 0%', (
+      tester,
+    ) async {
       // A class with nobody marked and a class with nobody present are
       // different facts; the tile must not present the first as the second.
       await pump(
@@ -198,8 +209,9 @@ void main() {
   });
 
   group("today's schedule", () {
-    testWidgets('lists the class timetable, not a hardcoded pair of lessons',
-        (tester) async {
+    testWidgets('lists the class timetable, not a hardcoded pair of lessons', (
+      tester,
+    ) async {
       await pump(
         tester,
         contextState: ClassTeacherContextState(active: _activeContext),
@@ -229,8 +241,9 @@ void main() {
       expect(find.text('English Literature'), findsNothing);
     });
 
-    testWidgets('explains an empty timetable instead of showing a blank card',
-        (tester) async {
+    testWidgets('explains an empty timetable instead of showing a blank card', (
+      tester,
+    ) async {
       await pump(
         tester,
         contextState: ClassTeacherContextState(active: _activeContext),
@@ -280,7 +293,10 @@ void main() {
         ),
       );
 
-      expect(find.text('Nothing has happened in your class yet.'), findsOneWidget);
+      expect(
+        find.text('Nothing has happened in your class yet.'),
+        findsOneWidget,
+      );
     });
   });
 
@@ -313,8 +329,9 @@ void main() {
       expect(find.textContaining('administrator'), findsOneWidget);
     });
 
-    testWidgets('distinguishes a suspended assignment from a missing one',
-        (tester) async {
+    testWidgets('distinguishes a suspended assignment from a missing one', (
+      tester,
+    ) async {
       await pump(
         tester,
         contextState: const ClassTeacherContextState(
@@ -325,20 +342,23 @@ void main() {
       expect(find.text('Class responsibility suspended'), findsOneWidget);
     });
 
-    testWidgets('says which academic year is missing rather than showing nothing',
-        (tester) async {
-      await pump(
-        tester,
-        contextState: const ClassTeacherContextState(
-          unavailableReason: ClassContextUnavailableReason.noAcademicYear,
-        ),
-      );
+    testWidgets(
+      'says which academic year is missing rather than showing nothing',
+      (tester) async {
+        await pump(
+          tester,
+          contextState: const ClassTeacherContextState(
+            unavailableReason: ClassContextUnavailableReason.noAcademicYear,
+          ),
+        );
 
-      expect(find.text('No academic year set'), findsOneWidget);
-    });
+        expect(find.text('No academic year set'), findsOneWidget);
+      },
+    );
 
-    testWidgets('offers a retry when the class could not be loaded',
-        (tester) async {
+    testWidgets('offers a retry when the class could not be loaded', (
+      tester,
+    ) async {
       await pump(
         tester,
         contextState: const ClassTeacherContextState(

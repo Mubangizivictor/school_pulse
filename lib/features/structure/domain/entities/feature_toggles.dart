@@ -78,20 +78,20 @@ class FeatureToggles extends Equatable {
 
   @override
   List<Object?> get props => [
-        transport,
-        hostel,
-        library,
-        medical,
-        visitors,
-        inventory,
-        payroll,
-        procurement,
-        alumni,
-        communication,
-        boarding,
-        qrAttendance,
-        digitalIds,
-        parentPortal,
-        studentPortal,
-      ];
+    transport,
+    hostel,
+    library,
+    medical,
+    visitors,
+    inventory,
+    payroll,
+    procurement,
+    alumni,
+    communication,
+    boarding,
+    qrAttendance,
+    digitalIds,
+    parentPortal,
+    studentPortal,
+  ];
 }

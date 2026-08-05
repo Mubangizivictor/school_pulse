@@ -50,7 +50,8 @@ class _GatekeeperStaffScreenState extends State<GatekeeperStaffScreen> {
           _results = members.where((m) {
             if (m.schoolId != _schoolId) return false;
             if (q.isEmpty) return true;
-            return m.name.toLowerCase().contains(q) || (m.staffCode ?? '').toLowerCase().contains(q);
+            return m.name.toLowerCase().contains(q) ||
+                (m.staffCode ?? '').toLowerCase().contains(q);
           }).toList();
         });
       },
@@ -60,7 +61,10 @@ class _GatekeeperStaffScreenState extends State<GatekeeperStaffScreen> {
 
   void _showSnack(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: isError ? Colors.red : null),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : null,
+      ),
     );
   }
 
@@ -89,14 +93,20 @@ class _GatekeeperStaffScreenState extends State<GatekeeperStaffScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Staff')),
       body: BlocListener<SecurityBloc, SecurityState>(
-        listenWhen: (p, c) => !identical(p.feedback, c.feedback) && c.feedback != null,
+        listenWhen: (p, c) =>
+            !identical(p.feedback, c.feedback) && c.feedback != null,
         listener: (context, state) {
           final feedback = state.feedback!;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(feedback.message), backgroundColor: feedback.isError ? Colors.red : Colors.green),
+            SnackBar(
+              content: Text(feedback.message),
+              backgroundColor: feedback.isError ? Colors.red : Colors.green,
+            ),
           );
         },
-        child: _selected == null ? _buildSearch(context) : _buildConfirm(context),
+        child: _selected == null
+            ? _buildSearch(context)
+            : _buildConfirm(context),
       ),
     );
   }
@@ -107,12 +117,18 @@ class _GatekeeperStaffScreenState extends State<GatekeeperStaffScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Search by name or staff code', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          const Text(
+            'Search by name or staff code',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 12),
           TextField(
             autofocus: true,
             style: const TextStyle(fontSize: 18),
-            decoration: const InputDecoration(hintText: 'e.g. Mr. Okello', prefixIcon: Icon(Icons.search)),
+            decoration: const InputDecoration(
+              hintText: 'e.g. Mr. Okello',
+              prefixIcon: Icon(Icons.search),
+            ),
             onChanged: _search,
           ),
           const SizedBox(height: 16),
@@ -133,8 +149,17 @@ class _GatekeeperStaffScreenState extends State<GatekeeperStaffScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(staff.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                            Text(staff.staffCode ?? staff.email, style: Theme.of(context).textTheme.bodySmall),
+                            Text(
+                              staff.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Text(
+                              staff.staffCode ?? staff.email,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
                           ],
                         ),
                       ),
@@ -153,7 +178,10 @@ class _GatekeeperStaffScreenState extends State<GatekeeperStaffScreen> {
   Widget _buildConfirm(BuildContext context) {
     final staff = _selected!;
     final securityState = context.watch<SecurityBloc>().state;
-    final suggestedDirection = suggestStaffDirection(securityState.staffMovements, staff.id);
+    final suggestedDirection = suggestStaffDirection(
+      securityState.staffMovements,
+      staff.id,
+    );
 
     return Padding(
       padding: const EdgeInsets.all(20),
@@ -162,11 +190,20 @@ class _GatekeeperStaffScreenState extends State<GatekeeperStaffScreen> {
         children: [
           AvatarInitials(name: staff.name, size: 96),
           const SizedBox(height: 16),
-          Text(staff.name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-          Text(staff.staffCode ?? staff.email, style: Theme.of(context).textTheme.bodyMedium),
+          Text(
+            staff.name,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          Text(
+            staff.staffCode ?? staff.email,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
           const SizedBox(height: 12),
           StatusBadge(
-            label: suggestedDirection == 'In' ? 'Suggested: Enter' : 'Suggested: Leave',
+            label: suggestedDirection == 'In'
+                ? 'Suggested: Enter'
+                : 'Suggested: Leave',
             color: suggestedDirection == 'In' ? Colors.green : Colors.blueGrey,
             icon: suggestedDirection == 'In' ? Icons.login : Icons.logout,
           ),
@@ -188,7 +225,9 @@ class _GatekeeperStaffScreenState extends State<GatekeeperStaffScreen> {
           ),
           const SizedBox(height: 12),
           TextButton(
-            onPressed: _isSubmitting ? null : () => setState(() => _selected = null),
+            onPressed: _isSubmitting
+                ? null
+                : () => setState(() => _selected = null),
             child: const Text('Not this person — search again'),
           ),
         ],

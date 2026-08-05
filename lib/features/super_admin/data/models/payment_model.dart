@@ -72,7 +72,9 @@ class InvoiceModel extends Invoice {
       planId: json['planId'] ?? '',
       amount: (json['amount'] ?? 0).toDouble(),
       dueDate: DateTime.fromMillisecondsSinceEpoch(json['dueDate']),
-      paidAt: json['paidAt'] != null ? DateTime.fromMillisecondsSinceEpoch(json['paidAt']) : null,
+      paidAt: json['paidAt'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(json['paidAt'])
+          : null,
       status: PaymentStatus.values.firstWhere(
         (e) => e.toString().split('.').last == json['status'],
         orElse: () => PaymentStatus.pending,

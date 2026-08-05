@@ -22,9 +22,7 @@ class NotificationsScreen extends StatelessWidget {
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
 
     return Scaffold(
-      appBar: StudentAppBar(
-        title: 'Notifications',
-      ),
+      appBar: StudentAppBar(title: 'Notifications'),
       body: BlocBuilder<StudentsBloc, StudentsState>(
         builder: (context, studentsState) {
           if (studentsState is! StudentsLoaded) {
@@ -39,10 +37,13 @@ class NotificationsScreen extends StatelessWidget {
                   'Parents',
                   ...studentsState.students.map((s) => 'Class:${s.className}'),
                 }.toList();
-                context.read<NotificationsBloc>().add(FetchAlerts(ids, groups: groups));
+                context.read<NotificationsBloc>().add(
+                  FetchAlerts(ids, groups: groups),
+                );
               }
 
-              if (notificationsState is NotificationsLoading || notificationsState is NotificationsInitial) {
+              if (notificationsState is NotificationsLoading ||
+                  notificationsState is NotificationsInitial) {
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: 6,
@@ -60,13 +61,18 @@ class NotificationsScreen extends StatelessWidget {
                   message: notificationsState.message,
                   ctaLabel: 'Retry',
                   onCtaPressed: () {
-                    final ids =
-                        studentsState.students.map((s) => s.id).toList();
+                    final ids = studentsState.students
+                        .map((s) => s.id)
+                        .toList();
                     final groups = {
                       'Parents',
-                      ...studentsState.students.map((s) => 'Class:${s.className}'),
+                      ...studentsState.students.map(
+                        (s) => 'Class:${s.className}',
+                      ),
                     }.toList();
-                    context.read<NotificationsBloc>().add(FetchAlerts(ids, groups: groups));
+                    context.read<NotificationsBloc>().add(
+                      FetchAlerts(ids, groups: groups),
+                    );
                   },
                 );
               }
@@ -78,7 +84,8 @@ class NotificationsScreen extends StatelessWidget {
                   child: EmptyState(
                     icon: Icons.notifications_none,
                     title: 'No new notifications',
-                    message: 'We\'ll notify you when there\'s something important.',
+                    message:
+                        'We\'ll notify you when there\'s something important.',
                   ),
                 );
               }
@@ -99,12 +106,17 @@ class NotificationsScreen extends StatelessWidget {
                         color: Colors.red,
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: const Icon(Icons.delete_outline, color: Colors.white),
+                      child: const Icon(
+                        Icons.delete_outline,
+                        color: Colors.white,
+                      ),
                     ),
                     onDismissed: (direction) {
                       final authState = context.read<AuthBloc>().state;
                       if (authState is AuthAuthenticated) {
-                        context.read<NotificationsBloc>().add(DismissAlert(alert.id, authState.user.id));
+                        context.read<NotificationsBloc>().add(
+                          DismissAlert(alert.id, authState.user.id),
+                        );
                       }
                     },
                     child: FadeInSlide(
@@ -118,12 +130,18 @@ class NotificationsScreen extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: _getAlertColor(alert.severity, semanticColors).withValues(alpha: 0.1),
+                                color: _getAlertColor(
+                                  alert.severity,
+                                  semanticColors,
+                                ).withValues(alpha: 0.1),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
                                 _getAlertIcon(alert.severity),
-                                color: _getAlertColor(alert.severity, semanticColors),
+                                color: _getAlertColor(
+                                  alert.severity,
+                                  semanticColors,
+                                ),
                                 size: 20,
                               ),
                             ),
@@ -139,20 +157,26 @@ class NotificationsScreen extends StatelessWidget {
                                           alert.title,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(fontWeight: FontWeight.bold),
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
                                         DateFormatter.relative(alert.timestamp),
-                                        style: Theme.of(context).textTheme.labelSmall,
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.labelSmall,
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     alert.message,
-                                    style: Theme.of(context).textTheme.bodySmall,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
                                   ),
                                 ],
                               ),

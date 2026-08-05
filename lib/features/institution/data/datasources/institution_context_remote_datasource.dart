@@ -30,11 +30,11 @@ class InstitutionContextRemoteDataSourceImpl
         .doc(institutionId)
         .snapshots(includeMetadataChanges: true)
         .map((doc) {
-      final school = SchoolModel.fromJson(doc.data() ?? {});
-      return InstitutionContext.fromSchool(
-        school,
-        isOfflineCached: doc.metadata.isFromCache,
-      );
-    });
+          final school = SchoolModel.fromJson(doc.data() ?? {});
+          return InstitutionContext.fromSchool(
+            school,
+            isOfflineCached: doc.metadata.isFromCache,
+          );
+        });
   }
 }

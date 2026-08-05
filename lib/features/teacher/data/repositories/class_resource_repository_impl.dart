@@ -34,7 +34,10 @@ class ClassResourceRepositoryImpl implements ClassResourceRepository {
   }) : uuid = uuid ?? const Uuid();
 
   CollectionReference<Map<String, dynamic>> _resources(String schoolId) =>
-      firestore.collection('schools').doc(schoolId).collection('class_resources');
+      firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('class_resources');
 
   @override
   Future<Either<Failure, List<ClassResource>>> getResources({
@@ -49,15 +52,15 @@ class ClassResourceRepositoryImpl implements ClassResourceRepository {
 
     final classId = context.classId;
     if (classId == null || classId.isEmpty) {
-      return const Left(ValidationFailure(
-        'This responsibility is not tied to a class.',
-      ));
+      return const Left(
+        ValidationFailure('This responsibility is not tied to a class.'),
+      );
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(NetworkFailure(
-        'You are offline. Resources need a connection.',
-      ));
+      return const Left(
+        NetworkFailure('You are offline. Resources need a connection.'),
+      );
     }
 
     try {
@@ -75,9 +78,9 @@ class ClassResourceRepositoryImpl implements ClassResourceRepository {
       // (folderId == null) does not need a separate index.
       return Right(all.where((r) => r.folderId == folderId).toList());
     } catch (_) {
-      return const Left(ServerFailure(
-        'Could not load resources. Pull down to retry.',
-      ));
+      return const Left(
+        ServerFailure('Could not load resources. Pull down to retry.'),
+      );
     }
   }
 
@@ -86,9 +89,9 @@ class ClassResourceRepositoryImpl implements ClassResourceRepository {
     required ActiveResponsibilityContext context,
   }) async {
     try {
-      final snapshot = await _resources(context.schoolId)
-          .where('classId', isEqualTo: context.classId)
-          .get();
+      final snapshot = await _resources(
+        context.schoolId,
+      ).where('classId', isEqualTo: context.classId).get();
 
       var used = 0;
       var files = 0;
@@ -107,11 +110,9 @@ class ClassResourceRepositoryImpl implements ClassResourceRepository {
           .get();
       final quota = (configDoc.data()?['quotaBytes'] as num?)?.toInt() ?? 0;
 
-      return Right(StorageUsage(
-        usedBytes: used,
-        quotaBytes: quota,
-        fileCount: files,
-      ));
+      return Right(
+        StorageUsage(usedBytes: used, quotaBytes: quota, fileCount: files),
+      );
     } catch (_) {
       return const Right(StorageUsage());
     }
@@ -147,9 +148,9 @@ class ClassResourceRepositoryImpl implements ClassResourceRepository {
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(OfflineNotAllowedFailure(
-        'Uploading needs an internet connection.',
-      ));
+      return const Left(
+        OfflineNotAllowedFailure('Uploading needs an internet connection.'),
+      );
     }
 
     final id = uuid.v4();
@@ -223,9 +224,9 @@ class ClassResourceRepositoryImpl implements ClassResourceRepository {
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(OfflineNotAllowedFailure(
-        'Adding a link needs an internet connection.',
-      ));
+      return const Left(
+        OfflineNotAllowedFailure('Adding a link needs an internet connection.'),
+      );
     }
 
     final resource = ClassResource(
@@ -317,9 +318,9 @@ class ClassResourceRepositoryImpl implements ClassResourceRepository {
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(OfflineNotAllowedFailure(
-        'Sharing needs an internet connection.',
-      ));
+      return const Left(
+        OfflineNotAllowedFailure('Sharing needs an internet connection.'),
+      );
     }
 
     final shared = resource.copyWith(audience: audience);
@@ -355,9 +356,11 @@ class ClassResourceRepositoryImpl implements ClassResourceRepository {
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(OfflineNotAllowedFailure(
-        'Removing a resource needs an internet connection.',
-      ));
+      return const Left(
+        OfflineNotAllowedFailure(
+          'Removing a resource needs an internet connection.',
+        ),
+      );
     }
 
     try {
@@ -444,7 +447,8 @@ class ClassResourceRepositoryImpl implements ClassResourceRepository {
       sourceResourceId: data['sourceResourceId'] as String?,
       availableOffline: data['availableOffline'] as bool? ?? false,
       uploadedByUserId: data['uploadedByUserId'] as String? ?? '',
-      uploadedAt: (data['uploadedAt'] as Timestamp?)?.toDate() ?? DateTime(1970),
+      uploadedAt:
+          (data['uploadedAt'] as Timestamp?)?.toDate() ?? DateTime(1970),
       roleAssignmentId: data['roleAssignmentId'] as String? ?? '',
       downloadCount: (data['downloadCount'] as num?)?.toInt() ?? 0,
     );

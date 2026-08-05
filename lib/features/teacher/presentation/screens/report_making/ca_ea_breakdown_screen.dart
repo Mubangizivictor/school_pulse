@@ -8,9 +8,7 @@ class CaEaBreakdownScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('CA/EA Breakdown'),
-      ),
+      appBar: AppBar(title: const Text('CA/EA Breakdown')),
       body: Column(
         children: [
           Expanded(
@@ -85,7 +83,9 @@ class CaEaBreakdownScreen extends StatelessWidget {
                 const SizedBox(height: 32),
                 AppCard(
                   color: AppColors.success(context).withValues(alpha: 0.1),
-                  borderColor: AppColors.success(context).withValues(alpha: 0.3),
+                  borderColor: AppColors.success(
+                    context,
+                  ).withValues(alpha: 0.3),
                   child: Text(
                     'This will contribute 40% (up to 40 points) to the final score.',
                     style: TextStyle(
@@ -133,7 +133,10 @@ class _BreakdownCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(title, style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+          Text(
+            title,
+            style: TextStyle(color: color, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           Text(
             score,

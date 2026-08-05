@@ -33,10 +33,9 @@ class NotificationCenterGroupedScreen extends StatelessWidget {
 
     return BlocProvider(
       create: (_) => di.sl<NotificationCenterBloc>()
-        ..add(NotificationCenterStarted(
-          schoolId: user.schoolId,
-          userId: user.id,
-        )),
+        ..add(
+          NotificationCenterStarted(schoolId: user.schoolId, userId: user.id),
+        ),
       child: const _GroupedCenterView(),
     );
   }
@@ -85,7 +84,10 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
               icon: const Icon(Icons.arrow_back, color: Colors.white),
               onPressed: () => context.pop(),
             ),
-            title: const Text('Notification Center', style: TextStyle(color: Colors.white)),
+            title: const Text(
+              'Notification Center',
+              style: TextStyle(color: Colors.white),
+            ),
             actions: [
               IconButton(
                 icon: const Icon(Icons.search, color: Colors.white),
@@ -94,9 +96,9 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
             ],
           ),
           body: RefreshIndicator(
-            onRefresh: () async => context
-                .read<NotificationCenterBloc>()
-                .add(const NotificationCenterRefreshed()),
+            onRefresh: () async => context.read<NotificationCenterBloc>().add(
+              const NotificationCenterRefreshed(),
+            ),
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(16),
@@ -110,7 +112,10 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
                     children: [
                       const Text(
                         'Today',
-                        style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       TextButton(
                         onPressed: state.unreadCount == 0
@@ -133,7 +138,9 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 48),
                       child: Center(
-                        child: CircularProgressIndicator(color: Color(0xFF6366F1)),
+                        child: CircularProgressIndicator(
+                          color: Color(0xFF6366F1),
+                        ),
                       ),
                     )
                   else if (grouped.isEmpty)
@@ -150,29 +157,35 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
                     // Only sections that actually have notifications are drawn,
                     // so the screen does not show a wall of empty headers.
                     ..._sections
-                        .where((category) =>
-                            (_selectedCategory == null ||
-                                _selectedCategory == category) &&
-                            (grouped[category]?.isNotEmpty ?? false))
+                        .where(
+                          (category) =>
+                              (_selectedCategory == null ||
+                                  _selectedCategory == category) &&
+                              (grouped[category]?.isNotEmpty ?? false),
+                        )
                         .expand((category) {
-                      final config = NotificationCategoryCatalog.of(category);
-                      final items = grouped[category]!;
-                      final unread = items
-                          .where((n) => n.status == NotificationStatus.unread)
-                          .length;
-                      return [
-                        _buildGroupedSection(
-                          context,
-                          category,
-                          config.displayName,
-                          config.color,
-                          config.icon,
-                          unread,
-                          items,
-                        ),
-                        const SizedBox(height: 12),
-                      ];
-                    }),
+                          final config = NotificationCategoryCatalog.of(
+                            category,
+                          );
+                          final items = grouped[category]!;
+                          final unread = items
+                              .where(
+                                (n) => n.status == NotificationStatus.unread,
+                              )
+                              .length;
+                          return [
+                            _buildGroupedSection(
+                              context,
+                              category,
+                              config.displayName,
+                              config.color,
+                              config.icon,
+                              unread,
+                              items,
+                            ),
+                            const SizedBox(height: 12),
+                          ];
+                        }),
                 ],
               ),
             ),
@@ -184,12 +197,12 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
 
   void _markAllRead(BuildContext context) {
     context.read<NotificationCenterBloc>().add(
-          NotificationAllMarkedRead(
-            // Respects the active filter: "mark all read" inside a category
-            // view should not silently clear the rest of the centre.
-            categories: _selectedCategory == null ? const {} : {_selectedCategory!},
-          ),
-        );
+      NotificationAllMarkedRead(
+        // Respects the active filter: "mark all read" inside a category
+        // view should not silently clear the rest of the centre.
+        categories: _selectedCategory == null ? const {} : {_selectedCategory!},
+      ),
+    );
   }
 
   Widget _buildCategoryGrid(NotificationCenterState state) {
@@ -233,9 +246,11 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
 
         final config = NotificationCategoryCatalog.of(category);
         final unread = state.items
-            .where((n) =>
-                n.category == category &&
-                n.status == NotificationStatus.unread)
+            .where(
+              (n) =>
+                  n.category == category &&
+                  n.status == NotificationStatus.unread,
+            )
             .length;
 
         return _buildCategoryItem(
@@ -245,15 +260,21 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
           isSelected: isSelected,
           // A zero badge is noise; omit it rather than drawing "0".
           count: unread == 0 ? null : unread,
-          onTap: () => setState(
-            () => _selectedCategory = isSelected ? null : category,
-          ),
+          onTap: () =>
+              setState(() => _selectedCategory = isSelected ? null : category),
         );
       },
     );
   }
 
-  Widget _buildCategoryItem(String label, IconData icon, Color color, {bool isSelected = false, int? count, VoidCallback? onTap}) {
+  Widget _buildCategoryItem(
+    String label,
+    IconData icon,
+    Color color, {
+    bool isSelected = false,
+    int? count,
+    VoidCallback? onTap,
+  }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -265,11 +286,19 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: isSelected ? color.withOpacity(0.2) : Colors.white.withOpacity(0.05),
+                  color: isSelected
+                      ? color.withOpacity(0.2)
+                      : Colors.white.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(12),
-                  border: isSelected ? Border.all(color: color, width: 2) : null,
+                  border: isSelected
+                      ? Border.all(color: color, width: 2)
+                      : null,
                 ),
-                child: Icon(icon, color: isSelected ? color : Colors.white70, size: 24),
+                child: Icon(
+                  icon,
+                  color: isSelected ? color : Colors.white70,
+                  size: 24,
+                ),
               ),
               if (count != null)
                 Positioned(
@@ -283,7 +312,11 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
                     ),
                     child: Text(
                       count.toString(),
-                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -324,7 +357,8 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
       child: Column(
         children: [
           InkWell(
-            onTap: () => setState(() => _expandedSections[category] = !isExpanded),
+            onTap: () =>
+                setState(() => _expandedSections[category] = !isExpanded),
             borderRadius: BorderRadius.circular(12),
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -334,20 +368,34 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
                   const SizedBox(width: 8),
                   Text(
                     title,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white12,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Text(count.toString(), style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                    child: Text(
+                      count.toString(),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Icon(
-                    isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    isExpanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
                     color: Colors.white60,
                   ),
                 ],
@@ -363,7 +411,11 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
     );
   }
 
-  Widget _buildSimpleTile(BuildContext context, NotificationItem item, Color iconColor) {
+  Widget _buildSimpleTile(
+    BuildContext context,
+    NotificationItem item,
+    Color iconColor,
+  ) {
     return InkWell(
       onTap: () {
         // Pass the notification so the details screen paints immediately;
@@ -395,12 +447,18 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
                       Expanded(
                         child: Text(
                           item.title,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                       Text(
                         DateFormat('h:mm a').format(item.timestamp),
-                        style: const TextStyle(color: Colors.white60, fontSize: 12),
+                        style: const TextStyle(
+                          color: Colors.white60,
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
@@ -414,14 +472,20 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
                   if (item.priority == NotificationPriority.high) ...[
                     const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFE11D48).withOpacity(0.2),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: const Text(
                         'High',
-                        style: TextStyle(color: Color(0xFFE11D48), fontSize: 10),
+                        style: TextStyle(
+                          color: Color(0xFFE11D48),
+                          fontSize: 10,
+                        ),
                       ),
                     ),
                   ],

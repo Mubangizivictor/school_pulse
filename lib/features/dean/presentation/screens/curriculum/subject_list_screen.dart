@@ -11,9 +11,7 @@ class SubjectListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('${curriculum.name} - Subjects'),
-      ),
+      appBar: AppBar(title: Text('${curriculum.name} - Subjects')),
       body: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: curriculum.subjects.length,
@@ -25,7 +23,8 @@ class SubjectListScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => SyllabusCoverageScreen(subject: subject),
+                  builder: (context) =>
+                      SyllabusCoverageScreen(subject: subject),
                 ),
               );
             },
@@ -41,11 +40,17 @@ class SubjectListScreen extends StatelessWidget {
                         children: [
                           Text(
                             subject.name,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
                           Text(
                             subject.code,
-                            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
@@ -57,7 +62,10 @@ class SubjectListScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     'Dept: ${subject.department}',
-                    style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
                 ],
                 const SizedBox(height: 12),
@@ -76,7 +84,10 @@ class SubjectListScreen extends StatelessWidget {
                     ),
                     Text(
                       '${subject.currentCoverage.toStringAsFixed(1)}% Covered',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -113,8 +124,16 @@ class _CoverageIndicator extends StatelessWidget {
         border: Border.all(color: color),
       ),
       child: Text(
-        coverage >= 80 ? 'On Track' : coverage >= 50 ? 'Progressing' : 'Behind',
-        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+        coverage >= 80
+            ? 'On Track'
+            : coverage >= 50
+            ? 'Progressing'
+            : 'Behind',
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }

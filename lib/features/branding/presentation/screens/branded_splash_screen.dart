@@ -15,7 +15,8 @@ class BrandedSplashScreen extends StatefulWidget {
   State<BrandedSplashScreen> createState() => _BrandedSplashScreenState();
 }
 
-class _BrandedSplashScreenState extends State<BrandedSplashScreen> with SingleTickerProviderStateMixin {
+class _BrandedSplashScreenState extends State<BrandedSplashScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
@@ -28,9 +29,10 @@ class _BrandedSplashScreenState extends State<BrandedSplashScreen> with SingleTi
       duration: const Duration(seconds: 2),
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.9, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 0.9,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
     _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
 
     _controller.forward();
@@ -41,9 +43,11 @@ class _BrandedSplashScreenState extends State<BrandedSplashScreen> with SingleTi
     await Future.delayed(const Duration(seconds: 3));
     if (!mounted) return;
     final authState = context.read<AuthBloc>().state;
-    context.go(authState is AuthAuthenticated
-        ? UserRoleRouting.dashboardPath(authState.user.role)
-        : '/welcome');
+    context.go(
+      authState is AuthAuthenticated
+          ? UserRoleRouting.dashboardPath(authState.user.role)
+          : '/welcome',
+    );
   }
 
   @override
@@ -57,7 +61,8 @@ class _BrandedSplashScreenState extends State<BrandedSplashScreen> with SingleTi
     return BlocBuilder<BrandingBloc, BrandingState>(
       builder: (context, state) {
         final branding = (state is BrandingLoaded) ? state.branding : null;
-        final primaryColor = AppColors.fromHex(branding?.primaryColor) ?? AppColors.pulseBlue;
+        final primaryColor =
+            AppColors.fromHex(branding?.primaryColor) ?? AppColors.pulseBlue;
 
         return Scaffold(
           body: Container(
@@ -66,10 +71,7 @@ class _BrandedSplashScreenState extends State<BrandedSplashScreen> with SingleTi
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  primaryColor,
-                  primaryColor.withValues(alpha: 0.8),
-                ],
+                colors: [primaryColor, primaryColor.withValues(alpha: 0.8)],
               ),
             ),
             child: FadeTransition(

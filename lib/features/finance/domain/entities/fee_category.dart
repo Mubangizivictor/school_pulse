@@ -18,5 +18,12 @@ class FeeCategory extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, schoolId, name, description, isMandatory, priority];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    name,
+    description,
+    isMandatory,
+    priority,
+  ];
 }

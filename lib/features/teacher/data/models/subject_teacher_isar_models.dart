@@ -491,11 +491,13 @@ class LessonAttendanceIsar {
       ..staffId = e.staffId
       ..roleAssignmentId = e.roleAssignmentId
       ..entries = e.entries
-          .map((entry) => LessonAttendanceEntryIsar()
-            ..studentId = entry.studentId
-            ..status = entry.status.name
-            ..note = entry.note
-            ..markedAt = entry.markedAt)
+          .map(
+            (entry) => LessonAttendanceEntryIsar()
+              ..studentId = entry.studentId
+              ..status = entry.status.name
+              ..note = entry.note
+              ..markedAt = entry.markedAt,
+          )
           .toList()
       ..status = e.status.name
       ..submittedAt = e.submittedAt
@@ -517,12 +519,14 @@ class LessonAttendanceIsar {
       staffId: staffId,
       roleAssignmentId: roleAssignmentId,
       entries: entries
-          .map((entry) => LessonAttendanceEntry(
-                studentId: entry.studentId ?? '',
-                status: LessonAttendanceStatus.fromId(entry.status),
-                note: entry.note,
-                markedAt: entry.markedAt,
-              ))
+          .map(
+            (entry) => LessonAttendanceEntry(
+              studentId: entry.studentId ?? '',
+              status: LessonAttendanceStatus.fromId(entry.status),
+              note: entry.note,
+              markedAt: entry.markedAt,
+            ),
+          )
           .toList(),
       status: AttendanceRegisterStatus.fromId(status),
       submittedAt: submittedAt,

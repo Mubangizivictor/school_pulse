@@ -104,15 +104,21 @@ void main() {
   group('links', () {
     test('need a name', () {
       expect(
-        ClassResourcePolicy.canAddLink(name: 'x', url: 'https://example.org')
-            .refusal,
+        ClassResourcePolicy.canAddLink(
+          name: 'x',
+          url: 'https://example.org',
+        ).refusal,
         ResourceRefusal.nameRequired,
       );
     });
 
     test('must be http or https', () {
       // A link is the obvious way round an upload guard.
-      for (final url in ['file:///etc/passwd', 'javascript:alert(1)', 'not a url']) {
+      for (final url in [
+        'file:///etc/passwd',
+        'javascript:alert(1)',
+        'not a url',
+      ]) {
         expect(
           ClassResourcePolicy.canAddLink(name: 'Reference', url: url).refusal,
           ResourceRefusal.invalidLink,

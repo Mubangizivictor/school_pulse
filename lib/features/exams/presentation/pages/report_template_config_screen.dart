@@ -5,10 +5,12 @@ class ReportTemplateConfigScreen extends StatefulWidget {
   const ReportTemplateConfigScreen({super.key, required this.schoolId});
 
   @override
-  State<ReportTemplateConfigScreen> createState() => _ReportTemplateConfigScreenState();
+  State<ReportTemplateConfigScreen> createState() =>
+      _ReportTemplateConfigScreenState();
 }
 
-class _ReportTemplateConfigScreenState extends State<ReportTemplateConfigScreen> {
+class _ReportTemplateConfigScreenState
+    extends State<ReportTemplateConfigScreen> {
   String _tableLayout = 'traditional';
   bool _showRanking = false;
   bool _showSubjectPosition = false;
@@ -19,7 +21,10 @@ class _ReportTemplateConfigScreenState extends State<ReportTemplateConfigScreen>
       appBar: AppBar(
         title: const Text('Report Template Designer'),
         actions: [
-          TextButton(onPressed: () {}, child: const Text('SAVE', style: TextStyle(color: Colors.white))),
+          TextButton(
+            onPressed: () {},
+            child: const Text('SAVE', style: TextStyle(color: Colors.white)),
+          ),
         ],
       ),
       body: Row(
@@ -32,14 +37,25 @@ class _ReportTemplateConfigScreenState extends State<ReportTemplateConfigScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Layout Settings', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                  const Text(
+                    'Layout Settings',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                  ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
                     initialValue: _tableLayout,
-                    decoration: const InputDecoration(labelText: 'Table Layout'),
+                    decoration: const InputDecoration(
+                      labelText: 'Table Layout',
+                    ),
                     items: const [
-                      DropdownMenuItem(value: 'traditional', child: Text('Traditional (Marks & Grades)')),
-                      DropdownMenuItem(value: 'competency', child: Text('Competency (Lower Secondary)')),
+                      DropdownMenuItem(
+                        value: 'traditional',
+                        child: Text('Traditional (Marks & Grades)'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'competency',
+                        child: Text('Competency (Lower Secondary)'),
+                      ),
                     ],
                     onChanged: (v) => setState(() => _tableLayout = v!),
                   ),
@@ -55,7 +71,10 @@ class _ReportTemplateConfigScreenState extends State<ReportTemplateConfigScreen>
                     onChanged: (v) => setState(() => _showSubjectPosition = v),
                   ),
                   const Divider(),
-                  const Text('Branding', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const Text(
+                    'Branding',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
                   const SizedBox(height: 12),
                   ListTile(
                     title: const Text('School Logo'),
@@ -64,7 +83,9 @@ class _ReportTemplateConfigScreenState extends State<ReportTemplateConfigScreen>
                   ),
                   ListTile(
                     title: const Text('Custom Header Text'),
-                    subtitle: const Text('Edit official school title and address'),
+                    subtitle: const Text(
+                      'Edit official school title and address',
+                    ),
                     trailing: const Icon(Icons.edit),
                     onTap: () {},
                   ),
@@ -84,8 +105,17 @@ class _ReportTemplateConfigScreenState extends State<ReportTemplateConfigScreen>
                   padding: const EdgeInsets.all(24.0),
                   child: Column(
                     children: [
-                      const Text('SCHOOL NAME & LOGO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
-                      const Text('OFFICIAL REPORT CARD', style: TextStyle(decoration: TextDecoration.underline)),
+                      const Text(
+                        'SCHOOL NAME & LOGO',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                        ),
+                      ),
+                      const Text(
+                        'OFFICIAL REPORT CARD',
+                        style: TextStyle(decoration: TextDecoration.underline),
+                      ),
                       const SizedBox(height: 20),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -101,25 +131,78 @@ class _ReportTemplateConfigScreenState extends State<ReportTemplateConfigScreen>
                           TableRow(
                             decoration: BoxDecoration(color: Colors.grey[300]),
                             children: [
-                              const Padding(padding: EdgeInsets.all(8), child: Text('Subject', style: TextStyle(fontWeight: FontWeight.bold))),
+                              const Padding(
+                                padding: EdgeInsets.all(8),
+                                child: Text(
+                                  'Subject',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
                               if (_tableLayout == 'traditional') ...[
-                                const Padding(padding: EdgeInsets.all(8), child: Text('Score', style: TextStyle(fontWeight: FontWeight.bold))),
-                                const Padding(padding: EdgeInsets.all(8), child: Text('Grade', style: TextStyle(fontWeight: FontWeight.bold))),
+                                const Padding(
+                                  padding: EdgeInsets.all(8),
+                                  child: Text(
+                                    'Score',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                const Padding(
+                                  padding: EdgeInsets.all(8),
+                                  child: Text(
+                                    'Grade',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
                               ] else ...[
-                                const Padding(padding: EdgeInsets.all(8), child: Text('Competency', style: TextStyle(fontWeight: FontWeight.bold))),
-                                const Padding(padding: EdgeInsets.all(8), child: Text('Score (1-3)', style: TextStyle(fontWeight: FontWeight.bold))),
+                                const Padding(
+                                  padding: EdgeInsets.all(8),
+                                  child: Text(
+                                    'Competency',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                const Padding(
+                                  padding: EdgeInsets.all(8),
+                                  child: Text(
+                                    'Score (1-3)',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
                               ],
                             ],
                           ),
                           TableRow(
                             children: [
-                              const Padding(padding: EdgeInsets.all(8), child: Text('Mathematics')),
+                              const Padding(
+                                padding: EdgeInsets.all(8),
+                                child: Text('Mathematics'),
+                              ),
                               if (_tableLayout == 'traditional') ...[
-                                const Padding(padding: EdgeInsets.all(8), child: Text('85%')),
-                                const Padding(padding: EdgeInsets.all(8), child: Text('D1')),
+                                const Padding(
+                                  padding: EdgeInsets.all(8),
+                                  child: Text('85%'),
+                                ),
+                                const Padding(
+                                  padding: EdgeInsets.all(8),
+                                  child: Text('D1'),
+                                ),
                               ] else ...[
-                                const Padding(padding: EdgeInsets.all(8), child: Text('High')),
-                                const Padding(padding: EdgeInsets.all(8), child: Text('2.8')),
+                                const Padding(
+                                  padding: EdgeInsets.all(8),
+                                  child: Text('High'),
+                                ),
+                                const Padding(
+                                  padding: EdgeInsets.all(8),
+                                  child: Text('2.8'),
+                                ),
                               ],
                             ],
                           ),
@@ -127,7 +210,10 @@ class _ReportTemplateConfigScreenState extends State<ReportTemplateConfigScreen>
                       ),
                       const Spacer(),
                       const Divider(),
-                      const Text('QR AUTHENTICITY CODE', style: TextStyle(fontSize: 10)),
+                      const Text(
+                        'QR AUTHENTICITY CODE',
+                        style: TextStyle(fontSize: 10),
+                      ),
                     ],
                   ),
                 ),

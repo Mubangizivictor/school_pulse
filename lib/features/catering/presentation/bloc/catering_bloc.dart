@@ -23,7 +23,10 @@ class CateringBloc extends Bloc<CateringEvent, CateringState> {
     on<LoadFinancialReport>(_onLoadFinancialReport);
   }
 
-  Future<void> _onLoadDashboard(LoadCateringDashboard event, Emitter<CateringState> emit) async {
+  Future<void> _onLoadDashboard(
+    LoadCateringDashboard event,
+    Emitter<CateringState> emit,
+  ) async {
     emit(CateringLoading());
     final result = await repository.getCateringDashboardData();
     result.fold(
@@ -32,7 +35,10 @@ class CateringBloc extends Bloc<CateringEvent, CateringState> {
     );
   }
 
-  Future<void> _onLoadMealCategories(LoadMealCategories event, Emitter<CateringState> emit) async {
+  Future<void> _onLoadMealCategories(
+    LoadMealCategories event,
+    Emitter<CateringState> emit,
+  ) async {
     emit(CateringLoading());
     final result = await repository.getMealCategories();
     result.fold(
@@ -41,18 +47,21 @@ class CateringBloc extends Bloc<CateringEvent, CateringState> {
     );
   }
 
-  Future<void> _onSaveMealCategory(SaveMealCategoryEvent event, Emitter<CateringState> emit) async {
+  Future<void> _onSaveMealCategory(
+    SaveMealCategoryEvent event,
+    Emitter<CateringState> emit,
+  ) async {
     final result = await repository.saveMealCategory(event.category);
-    result.fold(
-      (failure) => emit(CateringError(failure.message)),
-      (_) {
-        emit(const CateringSuccess('Meal category saved successfully'));
-        add(LoadMealCategories());
-      },
-    );
+    result.fold((failure) => emit(CateringError(failure.message)), (_) {
+      emit(const CateringSuccess('Meal category saved successfully'));
+      add(LoadMealCategories());
+    });
   }
 
-  Future<void> _onLoadWeeklyMenu(LoadWeeklyMenu event, Emitter<CateringState> emit) async {
+  Future<void> _onLoadWeeklyMenu(
+    LoadWeeklyMenu event,
+    Emitter<CateringState> emit,
+  ) async {
     emit(CateringLoading());
     final result = await repository.getWeeklyMenu(event.date);
     result.fold(
@@ -61,7 +70,10 @@ class CateringBloc extends Bloc<CateringEvent, CateringState> {
     );
   }
 
-  Future<void> _onSaveMenuItem(SaveMenuItemEvent event, Emitter<CateringState> emit) async {
+  Future<void> _onSaveMenuItem(
+    SaveMenuItemEvent event,
+    Emitter<CateringState> emit,
+  ) async {
     final result = await repository.saveMenuItem(event.menuItem);
     result.fold(
       (failure) => emit(CateringError(failure.message)),
@@ -69,16 +81,24 @@ class CateringBloc extends Bloc<CateringEvent, CateringState> {
     );
   }
 
-  Future<void> _onVerifyStudentMeal(VerifyStudentMeal event, Emitter<CateringState> emit) async {
+  Future<void> _onVerifyStudentMeal(
+    VerifyStudentMeal event,
+    Emitter<CateringState> emit,
+  ) async {
     emit(CateringLoading());
-    final result = await repository.verifyStudentMealEligibility(event.studentId);
+    final result = await repository.verifyStudentMealEligibility(
+      event.studentId,
+    );
     result.fold(
       (failure) => emit(CateringError(failure.message)),
       (data) => emit(MealEligibilityVerified(data)),
     );
   }
 
-  Future<void> _onRecordMealServed(RecordMealServedEvent event, Emitter<CateringState> emit) async {
+  Future<void> _onRecordMealServed(
+    RecordMealServedEvent event,
+    Emitter<CateringState> emit,
+  ) async {
     final result = await repository.recordMealServed(event.record);
     result.fold(
       (failure) => emit(CateringError(failure.message)),
@@ -86,7 +106,10 @@ class CateringBloc extends Bloc<CateringEvent, CateringState> {
     );
   }
 
-  Future<void> _onLoadInventory(LoadInventoryEvent event, Emitter<CateringState> emit) async {
+  Future<void> _onLoadInventory(
+    LoadInventoryEvent event,
+    Emitter<CateringState> emit,
+  ) async {
     emit(CateringLoading());
     final result = await repository.getInventory();
     result.fold(
@@ -95,7 +118,10 @@ class CateringBloc extends Bloc<CateringEvent, CateringState> {
     );
   }
 
-  Future<void> _onCreateStockRequest(CreateStockRequestEvent event, Emitter<CateringState> emit) async {
+  Future<void> _onCreateStockRequest(
+    CreateStockRequestEvent event,
+    Emitter<CateringState> emit,
+  ) async {
     final result = await repository.createStockRequest(event.request);
     result.fold(
       (failure) => emit(CateringError(failure.message)),
@@ -103,7 +129,10 @@ class CateringBloc extends Bloc<CateringEvent, CateringState> {
     );
   }
 
-  Future<void> _onLoadStockRequests(LoadStockRequests event, Emitter<CateringState> emit) async {
+  Future<void> _onLoadStockRequests(
+    LoadStockRequests event,
+    Emitter<CateringState> emit,
+  ) async {
     emit(CateringLoading());
     final result = await repository.getStockRequests();
     result.fold(
@@ -112,16 +141,25 @@ class CateringBloc extends Bloc<CateringEvent, CateringState> {
     );
   }
 
-  Future<void> _onLoadMealAttendanceReport(LoadMealAttendanceReport event, Emitter<CateringState> emit) async {
+  Future<void> _onLoadMealAttendanceReport(
+    LoadMealAttendanceReport event,
+    Emitter<CateringState> emit,
+  ) async {
     emit(CateringLoading());
-    final result = await repository.getMealAttendanceReport(event.start, event.end);
+    final result = await repository.getMealAttendanceReport(
+      event.start,
+      event.end,
+    );
     result.fold(
       (failure) => emit(CateringError(failure.message)),
       (records) => emit(MealAttendanceReportLoaded(records)),
     );
   }
 
-  Future<void> _onLoadWastageRecords(LoadWastageRecords event, Emitter<CateringState> emit) async {
+  Future<void> _onLoadWastageRecords(
+    LoadWastageRecords event,
+    Emitter<CateringState> emit,
+  ) async {
     emit(CateringLoading());
     final result = await repository.getWastageRecords(event.start, event.end);
     result.fold(
@@ -130,20 +168,31 @@ class CateringBloc extends Bloc<CateringEvent, CateringState> {
     );
   }
 
-  Future<void> _onSaveWastageRecord(SaveWastageRecordEvent event, Emitter<CateringState> emit) async {
+  Future<void> _onSaveWastageRecord(
+    SaveWastageRecordEvent event,
+    Emitter<CateringState> emit,
+  ) async {
     final result = await repository.saveWastageRecord(event.record);
-    result.fold(
-      (failure) => emit(CateringError(failure.message)),
-      (_) {
-        emit(const CateringSuccess('Wastage record saved successfully'));
-        add(LoadWastageRecords(DateTime.now().subtract(const Duration(days: 7)), DateTime.now()));
-      },
-    );
+    result.fold((failure) => emit(CateringError(failure.message)), (_) {
+      emit(const CateringSuccess('Wastage record saved successfully'));
+      add(
+        LoadWastageRecords(
+          DateTime.now().subtract(const Duration(days: 7)),
+          DateTime.now(),
+        ),
+      );
+    });
   }
 
-  Future<void> _onLoadFinancialReport(LoadFinancialReport event, Emitter<CateringState> emit) async {
+  Future<void> _onLoadFinancialReport(
+    LoadFinancialReport event,
+    Emitter<CateringState> emit,
+  ) async {
     emit(CateringLoading());
-    final result = await repository.getCateringFinancialReport(event.start, event.end);
+    final result = await repository.getCateringFinancialReport(
+      event.start,
+      event.end,
+    );
     result.fold(
       (failure) => emit(CateringError(failure.message)),
       (report) => emit(FinancialReportLoaded(report)),

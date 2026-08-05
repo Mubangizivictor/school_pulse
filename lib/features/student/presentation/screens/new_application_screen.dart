@@ -56,22 +56,26 @@ class _NewApplicationViewState extends State<_NewApplicationView> {
   @override
   void initState() {
     super.initState();
-    _classesSub = _structureRepository.watchClasses(widget.schoolId).listen((classes) {
+    _classesSub = _structureRepository.watchClasses(widget.schoolId).listen((
+      classes,
+    ) {
       setState(() => _classes = classes);
     });
-    _yearsSub = _structureRepository.watchAcademicYears(widget.schoolId).listen((years) {
-      setState(() {
-        _academicYears = years;
-        if (_selectedYear == null) {
-          for (final year in years) {
-            if (year.isCurrent) {
-              _selectedYear = year;
-              break;
+    _yearsSub = _structureRepository.watchAcademicYears(widget.schoolId).listen(
+      (years) {
+        setState(() {
+          _academicYears = years;
+          if (_selectedYear == null) {
+            for (final year in years) {
+              if (year.isCurrent) {
+                _selectedYear = year;
+                break;
+              }
             }
           }
-        }
-      });
-    });
+        });
+      },
+    );
   }
 
   @override
@@ -98,14 +102,19 @@ class _NewApplicationViewState extends State<_NewApplicationView> {
 
   void _submit() {
     final formValid = _formKey.currentState?.validate() ?? false;
-    if (!formValid || _dateOfBirth == null || _selectedClass == null || _selectedYear == null) {
+    if (!formValid ||
+        _dateOfBirth == null ||
+        _selectedClass == null ||
+        _selectedYear == null) {
       if (_dateOfBirth == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please select a date of birth')),
         );
       } else if (_selectedClass == null || _selectedYear == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select a class and academic year')),
+          const SnackBar(
+            content: Text('Please select a class and academic year'),
+          ),
         );
       }
       return;
@@ -119,8 +128,9 @@ class _NewApplicationViewState extends State<_NewApplicationView> {
       gender: _gender,
       targetClassId: _selectedClass!.id,
       academicYearId: _selectedYear!.id,
-      previousSchool:
-          _previousSchoolController.text.trim().isEmpty ? null : _previousSchoolController.text.trim(),
+      previousSchool: _previousSchoolController.text.trim().isEmpty
+          ? null
+          : _previousSchoolController.text.trim(),
       applicantParentName: _parentNameController.text.trim(),
       applicantParentPhone: _parentPhoneController.text.trim(),
       status: AdmissionStatus.application,
@@ -129,7 +139,10 @@ class _NewApplicationViewState extends State<_NewApplicationView> {
     context.read<AdmissionBloc>().add(CheckDuplicatesRequested(application));
   }
 
-  Future<void> _confirmDuplicates(BuildContext context, DuplicatesFound state) async {
+  Future<void> _confirmDuplicates(
+    BuildContext context,
+    DuplicatesFound state,
+  ) async {
     if (!context.mounted) return;
     final proceed = await showDialog<bool>(
       context: context,
@@ -141,13 +154,21 @@ class _NewApplicationViewState extends State<_NewApplicationView> {
           'on record. Submit anyway?',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Submit Anyway')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Submit Anyway'),
+          ),
         ],
       ),
     );
     if (proceed == true && context.mounted) {
-      context.read<AdmissionBloc>().add(SubmitApplicationRequested(state.pendingApplication));
+      context.read<AdmissionBloc>().add(
+        SubmitApplicationRequested(state.pendingApplication),
+      );
     } else {
       setState(() => _busy = false);
     }
@@ -160,12 +181,17 @@ class _NewApplicationViewState extends State<_NewApplicationView> {
         if (state is DuplicatesFound) {
           await _confirmDuplicates(context, state);
         } else if (state is AdmissionActionSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.message)));
           Navigator.of(context).pop(true);
         } else if (state is AdmissionError) {
           setState(() => _busy = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message), backgroundColor: AppColors.danger(context)),
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: AppColors.danger(context),
+            ),
           );
         }
       },
@@ -181,12 +207,22 @@ class _NewApplicationViewState extends State<_NewApplicationView> {
                 style: TextStyle(color: AppColors.textPrimary(context)),
                 decoration: InputDecoration(
                   labelText: 'Student full name',
-                  labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                  labelStyle: TextStyle(
+                    color: AppColors.textSecondary(context),
+                  ),
                   border: const OutlineInputBorder(),
-                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.border(context))),
-                  focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.primary(context), width: 2)),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.border(context)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(
+                      color: AppColors.primary(context),
+                      width: 2,
+                    ),
+                  ),
                 ),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Required' : null,
               ),
               const SizedBox(height: 12),
               ListTile(
@@ -195,9 +231,16 @@ class _NewApplicationViewState extends State<_NewApplicationView> {
                   _dateOfBirth == null
                       ? 'Select date of birth'
                       : 'Date of birth: ${DateFormat('dd MMM yyyy').format(_dateOfBirth!)}',
-                  style: TextStyle(color: _dateOfBirth == null ? AppColors.textSecondary(context) : AppColors.textPrimary(context)),
+                  style: TextStyle(
+                    color: _dateOfBirth == null
+                        ? AppColors.textSecondary(context)
+                        : AppColors.textPrimary(context),
+                  ),
                 ),
-                trailing: Icon(Icons.calendar_today_outlined, color: AppColors.textSecondary(context)),
+                trailing: Icon(
+                  Icons.calendar_today_outlined,
+                  color: AppColors.textSecondary(context),
+                ),
                 onTap: _pickDateOfBirth,
               ),
               const SizedBox(height: 12),
@@ -206,11 +249,17 @@ class _NewApplicationViewState extends State<_NewApplicationView> {
                 style: TextStyle(color: AppColors.textPrimary(context)),
                 decoration: InputDecoration(
                   labelText: 'Gender',
-                  labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                  labelStyle: TextStyle(
+                    color: AppColors.textSecondary(context),
+                  ),
                   border: const OutlineInputBorder(),
-                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.border(context))),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.border(context)),
+                  ),
                 ),
-                items: Gender.values.map((g) => DropdownMenuItem(value: g, child: Text(g.name))).toList(),
+                items: Gender.values
+                    .map((g) => DropdownMenuItem(value: g, child: Text(g.name)))
+                    .toList(),
                 onChanged: (v) => setState(() => _gender = v ?? _gender),
               ),
               const SizedBox(height: 12),
@@ -219,16 +268,23 @@ class _NewApplicationViewState extends State<_NewApplicationView> {
                 style: TextStyle(color: AppColors.textPrimary(context)),
                 decoration: InputDecoration(
                   labelText: 'Target class',
-                  labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                  labelStyle: TextStyle(
+                    color: AppColors.textSecondary(context),
+                  ),
                   border: const OutlineInputBorder(),
-                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.border(context))),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.border(context)),
+                  ),
                 ),
                 items: _classes
                     .map((c) => DropdownMenuItem(value: c, child: Text(c.name)))
                     .toList(),
                 onChanged: (v) => setState(() => _selectedClass = v),
                 validator: (v) => v == null ? 'Required' : null,
-                hint: Text(_classes.isEmpty ? 'Loading classes…' : 'Select class', style: TextStyle(color: AppColors.textSecondary(context))),
+                hint: Text(
+                  _classes.isEmpty ? 'Loading classes…' : 'Select class',
+                  style: TextStyle(color: AppColors.textSecondary(context)),
+                ),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<AcademicYear>(
@@ -236,16 +292,25 @@ class _NewApplicationViewState extends State<_NewApplicationView> {
                 style: TextStyle(color: AppColors.textPrimary(context)),
                 decoration: InputDecoration(
                   labelText: 'Academic year',
-                  labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                  labelStyle: TextStyle(
+                    color: AppColors.textSecondary(context),
+                  ),
                   border: const OutlineInputBorder(),
-                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.border(context))),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.border(context)),
+                  ),
                 ),
                 items: _academicYears
                     .map((y) => DropdownMenuItem(value: y, child: Text(y.name)))
                     .toList(),
                 onChanged: (v) => setState(() => _selectedYear = v),
                 validator: (v) => v == null ? 'Required' : null,
-                hint: Text(_academicYears.isEmpty ? 'Loading academic years…' : 'Select year', style: TextStyle(color: AppColors.textSecondary(context))),
+                hint: Text(
+                  _academicYears.isEmpty
+                      ? 'Loading academic years…'
+                      : 'Select year',
+                  style: TextStyle(color: AppColors.textSecondary(context)),
+                ),
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -253,26 +318,41 @@ class _NewApplicationViewState extends State<_NewApplicationView> {
                 style: TextStyle(color: AppColors.textPrimary(context)),
                 decoration: InputDecoration(
                   labelText: 'Previous school (optional)',
-                  labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                  labelStyle: TextStyle(
+                    color: AppColors.textSecondary(context),
+                  ),
                   border: const OutlineInputBorder(),
-                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.border(context))),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.border(context)),
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
               Divider(color: AppColors.border(context)),
               const SizedBox(height: 8),
-              Text('Parent / Guardian', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.primary(context), fontWeight: FontWeight.bold)),
+              Text(
+                'Parent / Guardian',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppColors.primary(context),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _parentNameController,
                 style: TextStyle(color: AppColors.textPrimary(context)),
                 decoration: InputDecoration(
                   labelText: 'Parent / guardian name',
-                  labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                  labelStyle: TextStyle(
+                    color: AppColors.textSecondary(context),
+                  ),
                   border: const OutlineInputBorder(),
-                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.border(context))),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.border(context)),
+                  ),
                 ),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Required' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -281,11 +361,16 @@ class _NewApplicationViewState extends State<_NewApplicationView> {
                 style: TextStyle(color: AppColors.textPrimary(context)),
                 decoration: InputDecoration(
                   labelText: 'Parent / guardian phone',
-                  labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                  labelStyle: TextStyle(
+                    color: AppColors.textSecondary(context),
+                  ),
                   border: const OutlineInputBorder(),
-                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.border(context))),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.border(context)),
+                  ),
                 ),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Required' : null,
               ),
               const SizedBox(height: 24),
               FilledButton(
@@ -296,7 +381,14 @@ class _NewApplicationViewState extends State<_NewApplicationView> {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: _busy
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
                     : const Text('Submit Application'),
               ),
             ],

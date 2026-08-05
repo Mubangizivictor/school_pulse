@@ -36,7 +36,9 @@ class _QRScannerViewState extends State<_QRScannerView> {
   @override
   void initState() {
     super.initState();
-    _controller = MobileScannerController(detectionSpeed: DetectionSpeed.noDuplicates);
+    _controller = MobileScannerController(
+      detectionSpeed: DetectionSpeed.noDuplicates,
+    );
   }
 
   @override
@@ -59,9 +61,11 @@ class _QRScannerViewState extends State<_QRScannerView> {
     return BlocListener<AttendanceQrBloc, AttendanceQrState>(
       listener: (context, state) {
         if (state is StudentScannedSuccess) {
-          context.push('/staff/attendance/qr-success', extra: state.student).then((_) {
-            if (mounted) setState(() => _isScanning = true);
-          });
+          context
+              .push('/staff/attendance/qr-success', extra: state.student)
+              .then((_) {
+                if (mounted) setState(() => _isScanning = true);
+              });
         } else if (state is AttendanceQrError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(state.message), backgroundColor: Colors.red),
@@ -70,113 +74,124 @@ class _QRScannerViewState extends State<_QRScannerView> {
         }
       },
       child: Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          MobileScanner(
-            controller: _controller,
-            onDetect: _onDetect,
-          ),
+        backgroundColor: Colors.black,
+        body: Stack(
+          children: [
+            MobileScanner(controller: _controller, onDetect: _onDetect),
 
-          // Overlay
-          SafeArea(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: AppSpacing.s),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
-                        onPressed: () => context.pop(),
-                      ),
-                      Text(
-                        'QR Scanner',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.5,
+            // Overlay
+            SafeArea(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.m,
+                      vertical: AppSpacing.s,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          onPressed: () => context.pop(),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.flashlight_on, color: Colors.white, size: 24),
-                        onPressed: () => _controller.toggleTorch(),
-                      ),
-                    ],
+                        Text(
+                          'QR Scanner',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.flashlight_on,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                          onPressed: () => _controller.toggleTorch(),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const Spacer(),
-                FadeInSlide(
-                  child: Column(
-                    children: [
-                      const Text(
-                        'Scan Student QR Code',
-                        style: TextStyle(
-                          color: Colors.white, 
-                          fontSize: 22, 
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.5,
+                  const Spacer(),
+                  FadeInSlide(
+                    child: Column(
+                      children: [
+                        const Text(
+                          'Scan Student QR Code',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Position the QR code within the frame',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.7), 
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
+                        const SizedBox(height: 8),
+                        Text(
+                          'Position the QR code within the frame',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.7),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 40),
-                      Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          // QR Frame with corners
-                          _ScannerFrame(),
-                          // Scanning Line
-                          const _ScanningLine(),
-                        ],
-                      ),
-                    ],
+                        const SizedBox(height: 40),
+                        Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // QR Frame with corners
+                            _ScannerFrame(),
+                            // Scanning Line
+                            const _ScanningLine(),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const Spacer(),
-                Padding(
-                  padding: const EdgeInsets.all(AppSpacing.xl),
-                  child: FadeInSlide(
-                    direction: FadeInDirection.bt,
-                    delay: const Duration(milliseconds: 400),
-                    child: AppCard(
-                      color: Colors.white.withValues(alpha: 0.1),
-                      showBorder: false,
-                      showShadow: false,
-                      padding: const EdgeInsets.all(AppSpacing.m),
-                      child: Row(
-                        children: [
-                          Icon(Icons.info_outline, color: Colors.white.withValues(alpha: 0.7)),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Make sure there is enough light for a faster scan',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.7), 
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
+                  const Spacer(),
+                  Padding(
+                    padding: const EdgeInsets.all(AppSpacing.xl),
+                    child: FadeInSlide(
+                      direction: FadeInDirection.bt,
+                      delay: const Duration(milliseconds: 400),
+                      child: AppCard(
+                        color: Colors.white.withValues(alpha: 0.1),
+                        showBorder: false,
+                        showShadow: false,
+                        padding: const EdgeInsets.all(AppSpacing.m),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              color: Colors.white.withValues(alpha: 0.7),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Make sure there is enough light for a faster scan',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.7),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.l),
-              ],
+                  const SizedBox(height: AppSpacing.l),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
@@ -205,7 +220,13 @@ class _FrameCorner extends StatelessWidget {
   final double? top, bottom, left, right;
   final double angle;
 
-  const _FrameCorner({this.top, this.bottom, this.left, this.right, required this.angle});
+  const _FrameCorner({
+    this.top,
+    this.bottom,
+    this.left,
+    this.right,
+    required this.angle,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -238,7 +259,8 @@ class _ScanningLine extends StatefulWidget {
   State<_ScanningLine> createState() => _ScanningLineState();
 }
 
-class _ScanningLineState extends State<_ScanningLine> with SingleTickerProviderStateMixin {
+class _ScanningLineState extends State<_ScanningLine>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override

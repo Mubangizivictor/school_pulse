@@ -110,14 +110,12 @@ class ClassWorkState extends Equatable {
 
   const ClassWorkState.initial() : this(isLoading: true);
 
-  bool get canPublish =>
-      context?.can(Permission.classHomeworkPublish) ?? false;
+  bool get canPublish => context?.can(Permission.classHomeworkPublish) ?? false;
 
   /// Work still open, with the due date applied - what the list leads with.
-  List<ClassHomework> get openHomework => homework
-      .where((h) => h.effectiveStatus().isOpen)
-      .toList()
-    ..sort((a, b) => a.dueDate.compareTo(b.dueDate));
+  List<ClassHomework> get openHomework =>
+      homework.where((h) => h.effectiveStatus().isOpen).toList()
+        ..sort((a, b) => a.dueDate.compareTo(b.dueDate));
 
   List<ClassHomework> get draftHomework =>
       homework.where((h) => h.isDraft).toList();
@@ -134,7 +132,9 @@ class ClassWorkState extends Equatable {
       .length;
 
   int get concernCount => behaviourRecords
-      .where((r) => categoryFor(r.categoryCode)?.valence == BehaviourValence.concern)
+      .where(
+        (r) => categoryFor(r.categoryCode)?.valence == BehaviourValence.concern,
+      )
       .length;
 
   int get openFollowUps =>
@@ -157,8 +157,9 @@ class ClassWorkState extends Equatable {
       isLoading: isLoading ?? this.isLoading,
       isSaving: isSaving ?? this.isSaving,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
-      successMessage:
-          clearSuccess ? null : (successMessage ?? this.successMessage),
+      successMessage: clearSuccess
+          ? null
+          : (successMessage ?? this.successMessage),
       context: context ?? this.context,
       homework: homework ?? this.homework,
       behaviourRecords: behaviourRecords ?? this.behaviourRecords,
@@ -169,26 +170,24 @@ class ClassWorkState extends Equatable {
 
   @override
   List<Object?> get props => [
-        isLoading,
-        isSaving,
-        errorMessage,
-        successMessage,
-        context,
-        homework,
-        behaviourRecords,
-        categories,
-        students,
-      ];
+    isLoading,
+    isSaving,
+    errorMessage,
+    successMessage,
+    context,
+    homework,
+    behaviourRecords,
+    categories,
+    students,
+  ];
 }
 
 class ClassWorkBloc extends Bloc<ClassWorkEvent, ClassWorkState> {
   final ClassWorkRepository workRepository;
   final ClassStudentRepository studentRepository;
 
-  ClassWorkBloc({
-    required this.workRepository,
-    required this.studentRepository,
-  }) : super(const ClassWorkState.initial()) {
+  ClassWorkBloc({required this.workRepository, required this.studentRepository})
+    : super(const ClassWorkState.initial()) {
     on<ClassWorkRequested>(_onRequested);
     on<ClassHomeworkSaved>(_onHomeworkSaved);
     on<ClassHomeworkPublished>(_onHomeworkPublished);
@@ -205,12 +204,15 @@ class ClassWorkBloc extends Bloc<ClassWorkEvent, ClassWorkState> {
     emit(ClassWorkState(isLoading: true, context: event.context));
 
     final homework = await workRepository.getHomework(context: event.context);
-    final categories =
-        await workRepository.getBehaviourCategories(context: event.context);
-    final records =
-        await workRepository.getBehaviourRecords(context: event.context);
-    final roster =
-        await studentRepository.getClassStudents(context: event.context);
+    final categories = await workRepository.getBehaviourCategories(
+      context: event.context,
+    );
+    final records = await workRepository.getBehaviourRecords(
+      context: event.context,
+    );
+    final roster = await studentRepository.getClassStudents(
+      context: event.context,
+    );
 
     // A failure in one list must not blank the others that loaded.
     final error = [homework, records]
@@ -218,15 +220,19 @@ class ClassWorkBloc extends Bloc<ClassWorkEvent, ClassWorkState> {
         .whereType<String>()
         .firstOrNull;
 
-    emit(state.copyWith(
-      isLoading: false,
-      homework: homework.getOrElse(() => const []),
-      behaviourRecords: records.getOrElse(() => const []),
-      categories: categories.getOrElse(() => BehaviourCategoryResolver.defaults),
-      students: roster.getOrElse(() => const []),
-      errorMessage: error,
-      clearError: error == null,
-    ));
+    emit(
+      state.copyWith(
+        isLoading: false,
+        homework: homework.getOrElse(() => const []),
+        behaviourRecords: records.getOrElse(() => const []),
+        categories: categories.getOrElse(
+          () => BehaviourCategoryResolver.defaults,
+        ),
+        students: roster.getOrElse(() => const []),
+        errorMessage: error,
+        clearError: error == null,
+      ),
+    );
   }
 
   Future<void> _onHomeworkSaved(
@@ -244,17 +250,18 @@ class ClassWorkBloc extends Bloc<ClassWorkEvent, ClassWorkState> {
     );
 
     await saved.fold(
-      (failure) async => emit(state.copyWith(
-        isSaving: false,
-        errorMessage: _messageFor(failure),
-      )),
+      (failure) async => emit(
+        state.copyWith(isSaving: false, errorMessage: _messageFor(failure)),
+      ),
       (homework) async {
         if (!event.publish) {
-          emit(state.copyWith(
-            isSaving: false,
-            successMessage: 'Draft saved.',
-            clearError: true,
-          ));
+          emit(
+            state.copyWith(
+              isSaving: false,
+              successMessage: 'Draft saved.',
+              clearError: true,
+            ),
+          );
           add(ClassWorkRequested(context));
           return;
         }
@@ -264,17 +271,22 @@ class ClassWorkBloc extends Bloc<ClassWorkEvent, ClassWorkState> {
           homework: homework,
         );
         published.fold(
-          (failure) => emit(state.copyWith(
-            isSaving: false,
-            // The draft did save - say so, so the teacher does not retype it.
-            errorMessage: 'Saved as a draft, but not published: '
-                '${_messageFor(failure)}',
-          )),
-          (_) => emit(state.copyWith(
-            isSaving: false,
-            successMessage: 'Assignment published to your class.',
-            clearError: true,
-          )),
+          (failure) => emit(
+            state.copyWith(
+              isSaving: false,
+              // The draft did save - say so, so the teacher does not retype it.
+              errorMessage:
+                  'Saved as a draft, but not published: '
+                  '${_messageFor(failure)}',
+            ),
+          ),
+          (_) => emit(
+            state.copyWith(
+              isSaving: false,
+              successMessage: 'Assignment published to your class.',
+              clearError: true,
+            ),
+          ),
         );
         add(ClassWorkRequested(context));
       },
@@ -296,15 +308,16 @@ class ClassWorkBloc extends Bloc<ClassWorkEvent, ClassWorkState> {
     );
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        isSaving: false,
-        errorMessage: _messageFor(failure),
-      )),
-      (_) => emit(state.copyWith(
-        isSaving: false,
-        successMessage: 'Assignment published to your class.',
-        clearError: true,
-      )),
+      (failure) => emit(
+        state.copyWith(isSaving: false, errorMessage: _messageFor(failure)),
+      ),
+      (_) => emit(
+        state.copyWith(
+          isSaving: false,
+          successMessage: 'Assignment published to your class.',
+          clearError: true,
+        ),
+      ),
     );
     add(ClassWorkRequested(context));
   }
@@ -325,15 +338,16 @@ class ClassWorkBloc extends Bloc<ClassWorkEvent, ClassWorkState> {
     );
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        isSaving: false,
-        errorMessage: _messageFor(failure),
-      )),
-      (_) => emit(state.copyWith(
-        isSaving: false,
-        successMessage: 'Assignment cancelled.',
-        clearError: true,
-      )),
+      (failure) => emit(
+        state.copyWith(isSaving: false, errorMessage: _messageFor(failure)),
+      ),
+      (_) => emit(
+        state.copyWith(
+          isSaving: false,
+          successMessage: 'Assignment cancelled.',
+          clearError: true,
+        ),
+      ),
     );
     add(ClassWorkRequested(context));
   }
@@ -354,15 +368,16 @@ class ClassWorkBloc extends Bloc<ClassWorkEvent, ClassWorkState> {
     );
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        isSaving: false,
-        errorMessage: _messageFor(failure),
-      )),
-      (_) => emit(state.copyWith(
-        isSaving: false,
-        successMessage: 'Record saved.',
-        clearError: true,
-      )),
+      (failure) => emit(
+        state.copyWith(isSaving: false, errorMessage: _messageFor(failure)),
+      ),
+      (_) => emit(
+        state.copyWith(
+          isSaving: false,
+          successMessage: 'Record saved.',
+          clearError: true,
+        ),
+      ),
     );
     add(ClassWorkRequested(context));
   }
@@ -385,15 +400,16 @@ class ClassWorkBloc extends Bloc<ClassWorkEvent, ClassWorkState> {
     );
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        isSaving: false,
-        errorMessage: _messageFor(failure),
-      )),
-      (_) => emit(state.copyWith(
-        isSaving: false,
-        successMessage: 'Follow-up closed.',
-        clearError: true,
-      )),
+      (failure) => emit(
+        state.copyWith(isSaving: false, errorMessage: _messageFor(failure)),
+      ),
+      (_) => emit(
+        state.copyWith(
+          isSaving: false,
+          successMessage: 'Follow-up closed.',
+          clearError: true,
+        ),
+      ),
     );
     add(ClassWorkRequested(context));
   }
@@ -406,11 +422,11 @@ class ClassWorkBloc extends Bloc<ClassWorkEvent, ClassWorkState> {
   }
 
   static String _messageFor(Failure failure) => switch (failure) {
-        PermissionDeniedFailure() => failure.message,
-        AssignmentInvalidFailure() => failure.message,
-        ValidationFailure() => failure.message,
-        OfflineNotAllowedFailure() => failure.message,
-        NetworkFailure() => failure.message,
-        _ => 'Something went wrong. Try again.',
-      };
+    PermissionDeniedFailure() => failure.message,
+    AssignmentInvalidFailure() => failure.message,
+    ValidationFailure() => failure.message,
+    OfflineNotAllowedFailure() => failure.message,
+    NetworkFailure() => failure.message,
+    _ => 'Something went wrong. Try again.',
+  };
 }

@@ -25,16 +25,16 @@ class ReportComment extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        studentId,
-        className,
-        term,
-        year,
-        comment,
-        recommendations,
-        teacherId,
-        updatedAt,
-      ];
+    id,
+    studentId,
+    className,
+    term,
+    year,
+    comment,
+    recommendations,
+    teacherId,
+    updatedAt,
+  ];
 
   ReportComment copyWith({
     String? id,

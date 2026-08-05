@@ -10,8 +10,10 @@ import '../entities/report_comment.dart';
 import '../entities/competency_rating.dart';
 
 abstract class TeacherRepository {
-  Future<Either<Failure, List<TeacherStudent>>> getStudentsByClass(String className);
-  
+  Future<Either<Failure, List<TeacherStudent>>> getStudentsByClass(
+    String className,
+  );
+
   Future<Either<Failure, void>> submitAttendance({
     required String schoolId,
     required String className,
@@ -28,9 +30,13 @@ abstract class TeacherRepository {
     required Map<String, double> marks,
   });
 
-  Future<Either<Failure, List<AttendanceHistoryRecord>>> getAttendanceHistory(String teacherId);
+  Future<Either<Failure, List<AttendanceHistoryRecord>>> getAttendanceHistory(
+    String teacherId,
+  );
 
-  Future<Either<Failure, TeacherDashboardStats>> getTeacherDashboardStats(String teacherId);
+  Future<Either<Failure, TeacherDashboardStats>> getTeacherDashboardStats(
+    String teacherId,
+  );
 
   // Homework
   Future<Either<Failure, List<Homework>>> getHomework(String teacherId);

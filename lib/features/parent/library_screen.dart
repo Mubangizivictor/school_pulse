@@ -30,11 +30,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
   void _fetchData() {
     final studentState = context.read<SelectedStudentBloc>().state;
     final authState = context.read<AuthBloc>().state;
-    if (studentState is SelectedStudentLoaded && authState is AuthAuthenticated) {
-      context.read<LibraryBloc>().add(WatchBorrowingHistory(
-            authState.user.schoolId,
-            borrowerId: studentState.student.id,
-          ));
+    if (studentState is SelectedStudentLoaded &&
+        authState is AuthAuthenticated) {
+      context.read<LibraryBloc>().add(
+        WatchBorrowingHistory(
+          authState.user.schoolId,
+          borrowerId: studentState.student.id,
+        ),
+      );
     }
   }
 
@@ -45,11 +48,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
       body: BlocListener<SelectedStudentBloc, SelectedStudentState>(
         listener: (context, state) {
           final authState = context.read<AuthBloc>().state;
-          if (state is SelectedStudentLoaded && authState is AuthAuthenticated) {
-            context.read<LibraryBloc>().add(WatchBorrowingHistory(
-                  authState.user.schoolId,
-                  borrowerId: state.student.id,
-                ));
+          if (state is SelectedStudentLoaded &&
+              authState is AuthAuthenticated) {
+            context.read<LibraryBloc>().add(
+              WatchBorrowingHistory(
+                authState.user.schoolId,
+                borrowerId: state.student.id,
+              ),
+            );
           }
         },
         child: BlocBuilder<LibraryBloc, LibraryState>(
@@ -66,8 +72,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
               );
             } else if (state is LibraryHistoryLoaded) {
               final borrowings = state.history;
-              final currentBorrowings = borrowings.where((b) => b.status == BorrowingStatus.active || b.status == BorrowingStatus.overdue).toList();
-              final historyBorrowings = borrowings.where((b) => b.status == BorrowingStatus.returned).toList();
+              final currentBorrowings = borrowings
+                  .where(
+                    (b) =>
+                        b.status == BorrowingStatus.active ||
+                        b.status == BorrowingStatus.overdue,
+                  )
+                  .toList();
+              final historyBorrowings = borrowings
+                  .where((b) => b.status == BorrowingStatus.returned)
+                  .toList();
 
               return ListView(
                 padding: const EdgeInsets.all(16),
@@ -135,7 +149,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Widget _buildBorrowingCard(BuildContext context, LibraryBorrowing borrowing) {
-    final isOverdue = borrowing.status == BorrowingStatus.overdue || (borrowing.status == BorrowingStatus.active && borrowing.dueDate.isBefore(DateTime.now()));
+    final isOverdue =
+        borrowing.status == BorrowingStatus.overdue ||
+        (borrowing.status == BorrowingStatus.active &&
+            borrowing.dueDate.isBefore(DateTime.now()));
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
 
     return AppCard(
@@ -147,22 +164,33 @@ class _LibraryScreenState extends State<LibraryScreen> {
               color: Theme.of(context).colorScheme.secondaryContainer,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(Icons.menu_book, color: Theme.of(context).colorScheme.onSecondaryContainer),
+            child: Icon(
+              Icons.menu_book,
+              color: Theme.of(context).colorScheme.onSecondaryContainer,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(borrowing.resourceTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text('Borrowed: ${DateFormatter.format(borrowing.borrowDate)}', style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  borrowing.resourceTitle,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  'Borrowed: ${DateFormatter.format(borrowing.borrowDate)}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
                 const SizedBox(height: 4),
                 Text(
-                  borrowing.status == BorrowingStatus.returned ? 'Returned' : 'Due: ${DateFormatter.format(borrowing.dueDate)}',
+                  borrowing.status == BorrowingStatus.returned
+                      ? 'Returned'
+                      : 'Due: ${DateFormatter.format(borrowing.dueDate)}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: isOverdue ? semanticColors.error : null,
-                        fontWeight: isOverdue ? FontWeight.bold : null,
-                      ),
+                    color: isOverdue ? semanticColors.error : null,
+                    fontWeight: isOverdue ? FontWeight.bold : null,
+                  ),
                 ),
               ],
             ),

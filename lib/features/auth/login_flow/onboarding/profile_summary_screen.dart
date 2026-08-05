@@ -26,8 +26,14 @@ class ProfileSummaryScreen extends StatelessWidget {
       child: Column(
         children: [
           OnboardingSummaryRow(label: 'Name', value: user.name),
-          OnboardingSummaryRow(label: 'Role', value: UserRoleDisplay.name(user.role)),
-          OnboardingSummaryRow(label: 'Institution', value: context.displayLabel),
+          OnboardingSummaryRow(
+            label: 'Role',
+            value: UserRoleDisplay.name(user.role),
+          ),
+          OnboardingSummaryRow(
+            label: 'Institution',
+            value: context.displayLabel,
+          ),
           if (context.divisions.isNotEmpty)
             OnboardingSummaryRow(
               label: 'Divisions',

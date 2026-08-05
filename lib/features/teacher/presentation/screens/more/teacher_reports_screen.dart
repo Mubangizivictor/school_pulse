@@ -9,9 +9,7 @@ class TeacherReportsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        title: const Text('Reports'),
-      ),
+      appBar: AppBar(title: const Text('Reports')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -93,7 +91,13 @@ class _ReportCategoryTile extends StatelessWidget {
           child: Icon(icon, color: iconColor, size: 24),
         ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(subtitle, style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(
+            fontSize: 12,
+            color: AppColors.textSecondary(context),
+          ),
+        ),
         trailing: const Icon(Icons.chevron_right_rounded),
         onTap: onTap,
       ),

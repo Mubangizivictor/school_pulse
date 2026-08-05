@@ -33,18 +33,18 @@ class ClassObservation extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        teacherId,
-        teacherName,
-        subjectId,
-        subjectName,
-        classId,
-        className,
-        observerId,
-        date,
-        strengths,
-        areasForImprovement,
-        recommendations,
-        followUpDate,
-      ];
+    id,
+    teacherId,
+    teacherName,
+    subjectId,
+    subjectName,
+    classId,
+    className,
+    observerId,
+    date,
+    strengths,
+    areasForImprovement,
+    recommendations,
+    followUpDate,
+  ];
 }

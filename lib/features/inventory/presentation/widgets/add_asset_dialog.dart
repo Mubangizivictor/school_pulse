@@ -43,28 +43,39 @@ class _AddAssetDialogState extends State<AddAssetDialog> {
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: 'Asset Name'),
-                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Required' : null,
               ),
               TextFormField(
                 controller: _categoryController,
                 decoration: const InputDecoration(labelText: 'Category'),
-                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Required' : null,
               ),
               TextFormField(
                 controller: _assetNumberController,
-                decoration: const InputDecoration(labelText: 'Asset Number / Tag'),
-                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                decoration: const InputDecoration(
+                  labelText: 'Asset Number / Tag',
+                ),
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Required' : null,
               ),
               TextFormField(
                 controller: _purchasePriceController,
                 decoration: const InputDecoration(labelText: 'Purchase Price'),
                 keyboardType: TextInputType.number,
-                validator: (value) => value == null || double.tryParse(value) == null ? 'Invalid' : null,
+                validator: (value) =>
+                    value == null || double.tryParse(value) == null
+                    ? 'Invalid'
+                    : null,
               ),
               TextFormField(
                 controller: _conditionController,
-                decoration: const InputDecoration(labelText: 'Condition (e.g., New, Good)'),
-                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                decoration: const InputDecoration(
+                  labelText: 'Condition (e.g., New, Good)',
+                ),
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Required' : null,
               ),
             ],
           ),
@@ -75,10 +86,7 @@ class _AddAssetDialogState extends State<AddAssetDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
-        ElevatedButton(
-          onPressed: _submit,
-          child: const Text('Add'),
-        ),
+        ElevatedButton(onPressed: _submit, child: const Text('Add')),
       ],
     );
   }

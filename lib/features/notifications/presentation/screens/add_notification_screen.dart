@@ -173,36 +173,33 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
     setState(() => _sending = true);
 
     final result = await di.sl<NotificationSendService>().send(
-          sender: user,
-          audience: audience,
-          category: category,
-          type: type,
-          title: _titleController.text,
-          body: _messageController.text,
-          priority: priority,
-          sourceModule: 'announcements',
-          scheduledAt: _scheduledAt,
-        );
+      sender: user,
+      audience: audience,
+      category: category,
+      type: type,
+      title: _titleController.text,
+      body: _messageController.text,
+      priority: priority,
+      sourceModule: 'announcements',
+      scheduledAt: _scheduledAt,
+    );
 
     if (!mounted) return;
     setState(() => _sending = false);
 
-    result.fold(
-      (failure) => _toast(failure.userMessage),
-      (_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              _scheduledAt == null
-                  ? 'Notification queued for delivery'
-                  : 'Notification scheduled',
-            ),
-            backgroundColor: Colors.green,
+    result.fold((failure) => _toast(failure.userMessage), (_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _scheduledAt == null
+                ? 'Notification queued for delivery'
+                : 'Notification scheduled',
           ),
-        );
-        context.pop();
-      },
-    );
+          backgroundColor: Colors.green,
+        ),
+      );
+      context.pop();
+    });
   }
 
   Future<bool?> _confirmSend(
@@ -221,7 +218,7 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
         content: Text(
           isEmergency
               ? 'This will reach ${audience.description} immediately, '
-                  'overriding quiet hours and notification mutes.'
+                    'overriding quiet hours and notification mutes.'
               : 'This will be delivered to ${audience.description}.',
           style: const TextStyle(color: Colors.white70),
         ),
@@ -275,7 +272,9 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
   }
 
   void _toast(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   /// Lets the sender pick which classes' parents receive this.
@@ -476,8 +475,9 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFE11D48)
-                                        .withValues(alpha: 0.2),
+                                    color: const Color(
+                                      0xFFE11D48,
+                                    ).withValues(alpha: 0.2),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
@@ -529,7 +529,10 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
         actions: [
           TextButton(
             onPressed: _sending ? null : _showPreview,
-            child: const Text('Preview', style: TextStyle(color: Color(0xFF6366F1))),
+            child: const Text(
+              'Preview',
+              style: TextStyle(color: Color(0xFF6366F1)),
+            ),
           ),
         ],
       ),
@@ -562,7 +565,10 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
               currentLength: _messageLength,
             ),
             const SizedBox(height: 20),
-            const Text('Add Image (Optional)', style: TextStyle(color: Colors.white60, fontSize: 12)),
+            const Text(
+              'Add Image (Optional)',
+              style: TextStyle(color: Colors.white60, fontSize: 12),
+            ),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -573,7 +579,9 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
                     color: Colors.white12,
                     borderRadius: BorderRadius.circular(8),
                     image: const DecorationImage(
-                      image: NetworkImage('https://images.unsplash.com/photo-1577891729319-86adcd962860?q=80&w=2069&auto=format&fit=crop'),
+                      image: NetworkImage(
+                        'https://images.unsplash.com/photo-1577891729319-86adcd962860?q=80&w=2069&auto=format&fit=crop',
+                      ),
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -584,8 +592,15 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
                         right: 4,
                         child: Container(
                           padding: const EdgeInsets.all(2),
-                          decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                          child: const Icon(Icons.close, color: Colors.white, size: 14),
+                          decoration: const BoxDecoration(
+                            color: Colors.black54,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 14,
+                          ),
                         ),
                       ),
                     ],
@@ -596,14 +611,23 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
                   width: 120,
                   height: 80,
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.white12, style: BorderStyle.solid),
+                    border: Border.all(
+                      color: Colors.white12,
+                      style: BorderStyle.solid,
+                    ),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.add_photo_alternate_outlined, color: Colors.white60),
-                      Text('Add Image', style: TextStyle(color: Colors.white60, fontSize: 10)),
+                      Icon(
+                        Icons.add_photo_alternate_outlined,
+                        color: Colors.white60,
+                      ),
+                      Text(
+                        'Add Image',
+                        style: TextStyle(color: Colors.white60, fontSize: 10),
+                      ),
                     ],
                   ),
                 ),
@@ -613,7 +637,12 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
             _buildDropdownField(
               'Send To',
               _selectedAudience,
-              ['All Students & Staff', 'Parents Only', 'Teachers Only', 'Specific Class'],
+              [
+                'All Students & Staff',
+                'Parents Only',
+                'Teachers Only',
+                'Specific Class',
+              ],
               (val) => setState(() => _selectedAudience = val!),
             ),
             // Only shown when it applies, so the form does not grow a row that
@@ -668,7 +697,10 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
               onTap: _sending ? null : _pickSchedule,
               borderRadius: BorderRadius.circular(12),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF1E293B),
                   borderRadius: BorderRadius.circular(12),
@@ -677,7 +709,10 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
                   children: [
                     const Icon(Icons.schedule, color: Colors.white60, size: 20),
                     const SizedBox(width: 12),
-                    const Text('Delivery', style: TextStyle(color: Colors.white)),
+                    const Text(
+                      'Delivery',
+                      style: TextStyle(color: Colors.white),
+                    ),
                     const Spacer(),
                     Text(
                       _scheduledAt == null
@@ -687,7 +722,11 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
                     ),
                     if (_scheduledAt != null)
                       IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white38, size: 18),
+                        icon: const Icon(
+                          Icons.close,
+                          color: Colors.white38,
+                          size: 18,
+                        ),
                         onPressed: () => setState(() => _scheduledAt = null),
                       )
                     else
@@ -705,14 +744,16 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6366F1),
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: Text(
                   _sending
                       ? 'Sending...'
                       : _scheduledAt == null
-                          ? 'Send Notification'
-                          : 'Schedule Notification',
+                      ? 'Send Notification'
+                      : 'Schedule Notification',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
@@ -723,11 +764,19 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
     );
   }
 
-  Widget _buildDropdownField(String label, String value, List<String> items, ValueChanged<String?> onChanged) {
+  Widget _buildDropdownField(
+    String label,
+    String value,
+    List<String> items,
+    ValueChanged<String?> onChanged,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Colors.white60, fontSize: 12)),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white60, fontSize: 12),
+        ),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -741,11 +790,17 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
               value: value,
               isExpanded: true,
               dropdownColor: const Color(0xFF1E293B),
-              icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white60),
+              icon: const Icon(
+                Icons.keyboard_arrow_down,
+                color: Colors.white60,
+              ),
               items: items.map((String item) {
                 return DropdownMenuItem<String>(
                   value: item,
-                  child: Text(item, style: const TextStyle(color: Colors.white)),
+                  child: Text(
+                    item,
+                    style: const TextStyle(color: Colors.white),
+                  ),
                 );
               }).toList(),
               onChanged: onChanged,
@@ -756,16 +811,29 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
     );
   }
 
-  Widget _buildTextField(String label, String hint, {required TextEditingController controller, int maxLines = 1, int? maxLength, int currentLength = 0}) {
+  Widget _buildTextField(
+    String label,
+    String hint, {
+    required TextEditingController controller,
+    int maxLines = 1,
+    int? maxLength,
+    int currentLength = 0,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: const TextStyle(color: Colors.white60, fontSize: 12)),
+            Text(
+              label,
+              style: const TextStyle(color: Colors.white60, fontSize: 12),
+            ),
             if (maxLength != null)
-              Text('$currentLength/$maxLength', style: const TextStyle(color: Colors.white30, fontSize: 10)),
+              Text(
+                '$currentLength/$maxLength',
+                style: const TextStyle(color: Colors.white30, fontSize: 10),
+              ),
           ],
         ),
         const SizedBox(height: 8),
@@ -778,7 +846,10 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
             hintStyle: const TextStyle(color: Colors.white24),
             filled: true,
             fillColor: Colors.white12,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide.none,
+            ),
           ),
         ),
       ],

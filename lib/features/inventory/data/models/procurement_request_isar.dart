@@ -22,7 +22,10 @@ class ProcurementRequestIsar {
 
   ProcurementRequestIsar();
 
-  factory ProcurementRequestIsar.fromEntity(ProcurementRequest entity, {bool isSynced = true}) {
+  factory ProcurementRequestIsar.fromEntity(
+    ProcurementRequest entity, {
+    bool isSynced = true,
+  }) {
     return ProcurementRequestIsar()
       ..requestId = entity.id
       ..requesterId = entity.requesterId

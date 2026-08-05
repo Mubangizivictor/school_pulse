@@ -29,9 +29,9 @@ class ClassTaskRepositoryImpl implements ClassTaskRepository {
     required ActiveResponsibilityContext context,
   }) async {
     if (!await networkInfo.isConnected) {
-      return const Left(NetworkFailure(
-        'You are offline. Your task list needs a connection.',
-      ));
+      return const Left(
+        NetworkFailure('You are offline. Your task list needs a connection.'),
+      );
     }
 
     try {
@@ -44,9 +44,9 @@ class ClassTaskRepositoryImpl implements ClassTaskRepository {
       );
       return Right(tasks);
     } catch (_) {
-      return const Left(ServerFailure(
-        'Could not load your tasks. Pull down to retry.',
-      ));
+      return const Left(
+        ServerFailure('Could not load your tasks. Pull down to retry.'),
+      );
     }
   }
 
@@ -67,17 +67,19 @@ class ClassTaskRepositoryImpl implements ClassTaskRepository {
 
     final isNew = task.id.isEmpty;
     if (!isNew) {
-      final ownership =
-          ClassTaskPolicy.canEdit(task: task, userId: context.userId);
+      final ownership = ClassTaskPolicy.canEdit(
+        task: task,
+        userId: context.userId,
+      );
       if (!ownership.isAllowed) {
         return Left(PermissionDeniedFailure(ownership.message!));
       }
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(OfflineNotAllowedFailure(
-        'Saving a task needs an internet connection.',
-      ));
+      return const Left(
+        OfflineNotAllowedFailure('Saving a task needs an internet connection.'),
+      );
     }
 
     final prepared = isNew
@@ -127,16 +129,20 @@ class ClassTaskRepositoryImpl implements ClassTaskRepository {
     required ActiveResponsibilityContext context,
     required ClassTask task,
   }) async {
-    final ownership =
-        ClassTaskPolicy.canEdit(task: task, userId: context.userId);
+    final ownership = ClassTaskPolicy.canEdit(
+      task: task,
+      userId: context.userId,
+    );
     if (!ownership.isAllowed) {
       return Left(PermissionDeniedFailure(ownership.message!));
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(OfflineNotAllowedFailure(
-        'Completing a task needs an internet connection.',
-      ));
+      return const Left(
+        OfflineNotAllowedFailure(
+          'Completing a task needs an internet connection.',
+        ),
+      );
     }
 
     final completed = task.copyWith(
@@ -169,15 +175,17 @@ class ClassTaskRepositoryImpl implements ClassTaskRepository {
     // Deletion is the owner's alone - a collaborator may work a task but not
     // remove it from somebody else's list.
     if (task.ownerUserId != context.userId) {
-      return const Left(PermissionDeniedFailure(
-        'Only the owner can delete this task.',
-      ));
+      return const Left(
+        PermissionDeniedFailure('Only the owner can delete this task.'),
+      );
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(OfflineNotAllowedFailure(
-        'Deleting a task needs an internet connection.',
-      ));
+      return const Left(
+        OfflineNotAllowedFailure(
+          'Deleting a task needs an internet connection.',
+        ),
+      );
     }
 
     try {

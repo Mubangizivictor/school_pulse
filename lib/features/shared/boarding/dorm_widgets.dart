@@ -186,8 +186,8 @@ class DormitoryCard extends StatelessWidget {
     final barColor = ratio >= 1.0
         ? semanticColors.error
         : ratio >= 0.85
-            ? Colors.orange
-            : semanticColors.success;
+        ? Colors.orange
+        : semanticColors.success;
 
     return AppCard(
       margin: const EdgeInsets.only(bottom: AppSpacing.l),
@@ -210,10 +210,7 @@ class DormitoryCard extends StatelessWidget {
                   ),
                 ),
               ),
-              StatusBadge(
-                label: '$occupantCount/$capacity',
-                color: barColor,
-              ),
+              StatusBadge(label: '$occupantCount/$capacity', color: barColor),
             ],
           ),
           const SizedBox(height: AppSpacing.l),
@@ -305,11 +302,7 @@ class _LeadershipRow extends StatelessWidget {
   final String label;
   final String? value;
 
-  const _LeadershipRow({
-    required this.icon,
-    required this.label,
-    this.value,
-  });
+  const _LeadershipRow({required this.icon, required this.label, this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -793,20 +786,20 @@ enum DormFilter { all, available, nearlyFull, full, unassignedLeadership }
 
 extension DormFilterLabel on DormFilter {
   String get label => switch (this) {
-        DormFilter.all => 'All dormitories',
-        DormFilter.available => 'Has free beds',
-        DormFilter.nearlyFull => 'Nearly full (85%+)',
-        DormFilter.full => 'Full',
-        DormFilter.unassignedLeadership => 'Leadership not assigned',
-      };
+    DormFilter.all => 'All dormitories',
+    DormFilter.available => 'Has free beds',
+    DormFilter.nearlyFull => 'Nearly full (85%+)',
+    DormFilter.full => 'Full',
+    DormFilter.unassignedLeadership => 'Leadership not assigned',
+  };
 
   IconData get icon => switch (this) {
-        DormFilter.all => Icons.apps_outlined,
-        DormFilter.available => Icons.event_available_outlined,
-        DormFilter.nearlyFull => Icons.trending_up,
-        DormFilter.full => Icons.block_outlined,
-        DormFilter.unassignedLeadership => Icons.person_off_outlined,
-      };
+    DormFilter.all => Icons.apps_outlined,
+    DormFilter.available => Icons.event_available_outlined,
+    DormFilter.nearlyFull => Icons.trending_up,
+    DormFilter.full => Icons.block_outlined,
+    DormFilter.unassignedLeadership => Icons.person_off_outlined,
+  };
 }
 
 /// Bottom sheet for choosing which dormitories the list shows.
@@ -857,8 +850,9 @@ class DormFilterSheet extends StatelessWidget {
               title: Text(
                 filter.label,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight:
-                      filter == selected ? FontWeight.w700 : FontWeight.w400,
+                  fontWeight: filter == selected
+                      ? FontWeight.w700
+                      : FontWeight.w400,
                   color: filter == selected
                       ? theme.colorScheme.primary
                       : theme.colorScheme.onSurface,

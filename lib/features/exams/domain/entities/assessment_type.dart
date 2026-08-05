@@ -10,8 +10,8 @@ class AssessmentType extends Equatable {
   final String academicTerm;
   final String academicYear;
   final String? subjectId; // Optional if generic for all subjects
-  final String? classId;   // Optional if generic for all classes
-  final String status;     // e.g., 'active', 'archived'
+  final String? classId; // Optional if generic for all classes
+  final String status; // e.g., 'active', 'archived'
 
   const AssessmentType({
     required this.id,
@@ -29,16 +29,16 @@ class AssessmentType extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        name,
-        code,
-        weight,
-        maxMark,
-        passingMark,
-        academicTerm,
-        academicYear,
-        subjectId,
-        classId,
-        status,
-      ];
+    id,
+    name,
+    code,
+    weight,
+    maxMark,
+    passingMark,
+    academicTerm,
+    academicYear,
+    subjectId,
+    classId,
+    status,
+  ];
 }

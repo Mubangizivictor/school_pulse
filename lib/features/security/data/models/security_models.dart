@@ -25,7 +25,9 @@ class GateModel extends Gate {
       assignedOfficerIds: List<String>.from(data['assignedOfficerIds'] ?? []),
       operatingHours: data['operatingHours'] ?? {},
       allowedUserRoles: List<String>.from(data['allowedUserRoles'] ?? []),
-      requiredVerificationMethods: List<String>.from(data['requiredVerificationMethods'] ?? []),
+      requiredVerificationMethods: List<String>.from(
+        data['requiredVerificationMethods'] ?? [],
+      ),
       schoolId: data['schoolId'] ?? '',
       cameraId: data['cameraId'],
     );
@@ -212,7 +214,9 @@ class EmergencyEventModel extends EmergencyEvent {
       id: doc.id,
       type: data['type'] ?? '',
       startTime: (data['startTime'] as Timestamp).toDate(),
-      endTime: data['endTime'] != null ? (data['endTime'] as Timestamp).toDate() : null,
+      endTime: data['endTime'] != null
+          ? (data['endTime'] as Timestamp).toDate()
+          : null,
       description: data['description'] ?? '',
       responseActions: List<String>.from(data['responseActions'] ?? []),
       involvedPersonIds: List<String>.from(data['involvedPersonIds'] ?? []),
@@ -341,7 +345,9 @@ class PickupAuthorizationModel extends PickupAuthorization {
       relationship: data['relationship'] ?? '',
       photoUrl: data['photoUrl'],
       idDocumentUrl: data['idDocumentUrl'],
-      expiryDate: data['expiryDate'] != null ? (data['expiryDate'] as Timestamp).toDate() : null,
+      expiryDate: data['expiryDate'] != null
+          ? (data['expiryDate'] as Timestamp).toDate()
+          : null,
       schoolId: data['schoolId'] ?? '',
     );
   }

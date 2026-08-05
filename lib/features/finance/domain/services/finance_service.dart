@@ -15,29 +15,29 @@ class FinanceService {
     required String schoolId,
     required String serviceType, // e.g., "EXAM", "MEAL", "TRIP"
   }) async {
-    final accountResult = await repository.getStudentFinancialAccount(studentId, schoolId);
-
-    return accountResult.fold(
-      (failure) => Left(failure),
-      (account) {
-        // Eligibility logic can be customized per school
-        // For now, simple logic:
-        // EXAM: Balance must be below 10% of total billed
-        // MEAL: Balance must be zero or negative (overpaid)
-        
-        if (serviceType == 'EXAM') {
-          final maxAllowedBalance = account.totalBilled * 0.1;
-          return Right(account.balance <= maxAllowedBalance);
-        }
-        
-        if (serviceType == 'MEAL') {
-          return Right(account.isFullyPaid);
-        }
-
-        // Default: requires full payment
-        return Right(account.isFullyPaid);
-      },
+    final accountResult = await repository.getStudentFinancialAccount(
+      studentId,
+      schoolId,
     );
+
+    return accountResult.fold((failure) => Left(failure), (account) {
+      // Eligibility logic can be customized per school
+      // For now, simple logic:
+      // EXAM: Balance must be below 10% of total billed
+      // MEAL: Balance must be zero or negative (overpaid)
+
+      if (serviceType == 'EXAM') {
+        final maxAllowedBalance = account.totalBilled * 0.1;
+        return Right(account.balance <= maxAllowedBalance);
+      }
+
+      if (serviceType == 'MEAL') {
+        return Right(account.isFullyPaid);
+      }
+
+      // Default: requires full payment
+      return Right(account.isFullyPaid);
+    });
   }
 
   /// Verifies a receipt by its ID and school ID.
@@ -46,18 +46,15 @@ class FinanceService {
     required String schoolId,
   }) async {
     final paymentsResult = await repository.getSchoolPayments(schoolId);
-    
-    return paymentsResult.fold(
-      (failure) => Left(failure),
-      (payments) {
-        try {
-          final payment = payments.firstWhere((p) => p.id == paymentId);
-          return Right(payment);
-        } catch (e) {
-          return Left(ServerFailure('Receipt not found.'));
-        }
-      },
-    );
+
+    return paymentsResult.fold((failure) => Left(failure), (payments) {
+      try {
+        final payment = payments.firstWhere((p) => p.id == paymentId);
+        return Right(payment);
+      } catch (e) {
+        return Left(ServerFailure('Receipt not found.'));
+      }
+    });
   }
 
   /// Initializes a new financial account for a student upon enrollment.

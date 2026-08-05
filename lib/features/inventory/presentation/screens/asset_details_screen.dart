@@ -53,13 +53,25 @@ class AssetDetailsScreen extends StatelessWidget {
             _buildInfoRow('Serial Number', asset.serialNumber ?? 'N/A'),
             const Divider(height: 32),
             _buildSectionTitle('Purchase Information'),
-            _buildInfoRow('Purchase Date', DateFormatter.format(asset.purchaseDate)),
-            _buildInfoRow('Purchase Price', 'UGX ${asset.purchasePrice.toStringAsFixed(0)}'),
+            _buildInfoRow(
+              'Purchase Date',
+              DateFormatter.format(asset.purchaseDate),
+            ),
+            _buildInfoRow(
+              'Purchase Price',
+              'UGX ${asset.purchasePrice.toStringAsFixed(0)}',
+            ),
             if (asset.warrantyExpiry != null)
-              _buildInfoRow('Warranty Expiry', DateFormatter.format(asset.warrantyExpiry!)),
+              _buildInfoRow(
+                'Warranty Expiry',
+                DateFormatter.format(asset.warrantyExpiry!),
+              ),
             const Divider(height: 32),
             _buildSectionTitle('Assignment'),
-            _buildInfoRow('Department', asset.assignedDepartment ?? 'Unassigned'),
+            _buildInfoRow(
+              'Department',
+              asset.assignedDepartment ?? 'Unassigned',
+            ),
             _buildInfoRow('Staff', asset.assignedStaffId ?? 'Unassigned'),
             _buildInfoRow('Room', asset.assignedRoom ?? 'Unassigned'),
             const SizedBox(height: 24),
@@ -83,7 +95,8 @@ class AssetDetailsScreen extends StatelessWidget {
                     onPressed: () {
                       showDialog(
                         context: context,
-                        builder: (context) => ScheduleMaintenanceDialog(asset: asset),
+                        builder: (context) =>
+                            ScheduleMaintenanceDialog(asset: asset),
                       );
                     },
                     icon: const Icon(Icons.calendar_today),

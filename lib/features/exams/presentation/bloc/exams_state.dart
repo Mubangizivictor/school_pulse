@@ -25,7 +25,12 @@ class ExamsLoaded extends ExamsState {
   });
 
   @override
-  List<Object?> get props => [totalStudents, pendingResults, completionRate, upcomingExams];
+  List<Object?> get props => [
+    totalStudents,
+    pendingResults,
+    completionRate,
+    upcomingExams,
+  ];
 }
 
 class ExamsError extends ExamsState {

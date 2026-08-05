@@ -4,7 +4,10 @@ import 'package:school_pulse/features/institution/domain/entities/institution_co
 import 'package:school_pulse/features/institution/domain/guards/institution_access_guard.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/school.dart';
 
-UserEntity _user({required List<UserRole> roles, String schoolId = 'school-1'}) {
+UserEntity _user({
+  required List<UserRole> roles,
+  String schoolId = 'school-1',
+}) {
   return UserEntity(
     id: 'u1',
     name: 'Test User',
@@ -32,7 +35,10 @@ InstitutionContext _context({
 void main() {
   group('canAccessInstitution', () {
     test('superAdmin can access any institution regardless of status', () {
-      final user = _user(roles: [UserRole.superAdmin], schoolId: 'other-school');
+      final user = _user(
+        roles: [UserRole.superAdmin],
+        schoolId: 'other-school',
+      );
       final context = _context(status: SchoolStatus.suspended);
       expect(canAccessInstitution(user, context), isTrue);
     });
@@ -51,24 +57,36 @@ void main() {
 
     test('non-superAdmin is denied when institution is suspended', () {
       final user = _user(roles: [UserRole.schoolAdmin], schoolId: 'school-1');
-      final context = _context(institutionId: 'school-1', status: SchoolStatus.suspended);
+      final context = _context(
+        institutionId: 'school-1',
+        status: SchoolStatus.suspended,
+      );
       expect(canAccessInstitution(user, context), isFalse);
     });
 
     test('non-superAdmin is denied when institution is archived', () {
       final user = _user(roles: [UserRole.schoolAdmin], schoolId: 'school-1');
-      final context = _context(institutionId: 'school-1', status: SchoolStatus.archived);
+      final context = _context(
+        institutionId: 'school-1',
+        status: SchoolStatus.archived,
+      );
       expect(canAccessInstitution(user, context), isFalse);
     });
   });
 
   group('isInstitutionAdministrator', () {
     test('true for schoolAdmin', () {
-      expect(isInstitutionAdministrator(_user(roles: [UserRole.schoolAdmin])), isTrue);
+      expect(
+        isInstitutionAdministrator(_user(roles: [UserRole.schoolAdmin])),
+        isTrue,
+      );
     });
 
     test('false for a non-admin role', () {
-      expect(isInstitutionAdministrator(_user(roles: [UserRole.parent])), isFalse);
+      expect(
+        isInstitutionAdministrator(_user(roles: [UserRole.parent])),
+        isFalse,
+      );
     });
   });
 

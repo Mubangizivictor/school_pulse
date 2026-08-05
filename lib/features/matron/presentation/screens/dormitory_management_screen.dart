@@ -16,7 +16,8 @@ class DormitoryManagementScreen extends StatefulWidget {
   const DormitoryManagementScreen({super.key});
 
   @override
-  State<DormitoryManagementScreen> createState() => _DormitoryManagementScreenState();
+  State<DormitoryManagementScreen> createState() =>
+      _DormitoryManagementScreenState();
 }
 
 class _DormitoryManagementScreenState extends State<DormitoryManagementScreen> {
@@ -54,14 +55,20 @@ class _DormitoryManagementScreenState extends State<DormitoryManagementScreen> {
       body: BlocConsumer<MatronBloc, MatronState>(
         listener: (context, state) {
           if (state is MatronActionSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
           } else if (state is MatronError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: semanticColors.error),
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: semanticColors.error,
+              ),
             );
           }
         },
-        buildWhen: (previous, current) => current is DormitoriesLoaded || current is MatronLoading,
+        buildWhen: (previous, current) =>
+            current is DormitoriesLoaded || current is MatronLoading,
         builder: (context, state) {
           if (state is! DormitoriesLoaded) {
             return const Center(child: CircularProgressIndicator());
@@ -85,7 +92,10 @@ class _DormitoryManagementScreenState extends State<DormitoryManagementScreen> {
           }).toList();
 
           final totalCapacity = all.fold<int>(0, (sum, d) => sum + d.capacity);
-          final totalOccupancy = all.fold<int>(0, (sum, d) => sum + d.occupantCount);
+          final totalOccupancy = all.fold<int>(
+            0,
+            (sum, d) => sum + d.occupantCount,
+          );
 
           return ListView(
             padding: const EdgeInsets.all(AppSpacing.xl),
@@ -137,7 +147,8 @@ class _DormitoryManagementScreenState extends State<DormitoryManagementScreen> {
                   Expanded(
                     child: DormStatTile(
                       label: 'Availability',
-                      value: '${(totalCapacity - totalOccupancy).clamp(0, totalCapacity)}',
+                      value:
+                          '${(totalCapacity - totalOccupancy).clamp(0, totalCapacity)}',
                       icon: Icons.event_available_outlined,
                       color: semanticColors.success,
                     ),
@@ -151,8 +162,7 @@ class _DormitoryManagementScreenState extends State<DormitoryManagementScreen> {
                     Chip(
                       label: Text(_filter.label),
                       avatar: Icon(_filter.icon, size: 16),
-                      onDeleted: () =>
-                          setState(() => _filter = DormFilter.all),
+                      onDeleted: () => setState(() => _filter = DormFilter.all),
                     ),
                   ],
                 ),
@@ -177,7 +187,8 @@ class _DormitoryManagementScreenState extends State<DormitoryManagementScreen> {
                     roomLeaderName: dorm.roomLeaderName,
                     dormPrefectName: dorm.dormPrefectName,
                     accent: Theme.of(context).colorScheme.primary,
-                    onBeds: () => context.push('/staff/matron/dorms/beds', extra: dorm),
+                    onBeds: () =>
+                        context.push('/staff/matron/dorms/beds', extra: dorm),
                     onStudents: () => _showAllocationSheet(context, dorm),
                     onLeadership: () => _showLeadershipSheet(context, dorm),
                     onMore: () => _showDormMenu(context, dorm, semanticColors),
@@ -219,10 +230,7 @@ class _DormitoryManagementScreenState extends State<DormitoryManagementScreen> {
               title: const Text('Set Dorm Leadership'),
               onTap: () {
                 Navigator.pop(sheetContext);
-                context.push(
-                  '/staff/matron/dorms/leadership',
-                  extra: dorm,
-                );
+                context.push('/staff/matron/dorms/leadership', extra: dorm);
               },
             ),
             ListTile(
@@ -235,7 +243,10 @@ class _DormitoryManagementScreenState extends State<DormitoryManagementScreen> {
             ),
             ListTile(
               leading: Icon(Icons.delete_outline, color: semanticColors.error),
-              title: Text('Delete', style: TextStyle(color: semanticColors.error)),
+              title: Text(
+                'Delete',
+                style: TextStyle(color: semanticColors.error),
+              ),
               onTap: () async {
                 Navigator.pop(sheetContext);
                 final confirmed = await confirmActionDialog(
@@ -294,25 +305,33 @@ class _DormitoryManagementScreenState extends State<DormitoryManagementScreen> {
     if (result == null) return;
 
     if (dorm == null) {
-      bloc.add(AddDormitoryEvent(Dormitory(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: result.name,
-        capacity: result.capacity,
-        occupantCount: 0,
-        location: result.location,
-      )));
+      bloc.add(
+        AddDormitoryEvent(
+          Dormitory(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            name: result.name,
+            capacity: result.capacity,
+            occupantCount: 0,
+            location: result.location,
+          ),
+        ),
+      );
     } else {
-      bloc.add(UpdateDormitoryEvent(Dormitory(
-        id: dorm.id,
-        name: result.name,
-        capacity: result.capacity,
-        occupantCount: dorm.occupantCount,
-        roomLeaderId: dorm.roomLeaderId,
-        roomLeaderName: dorm.roomLeaderName,
-        dormPrefectId: dorm.dormPrefectId,
-        dormPrefectName: dorm.dormPrefectName,
-        location: result.location,
-      )));
+      bloc.add(
+        UpdateDormitoryEvent(
+          Dormitory(
+            id: dorm.id,
+            name: result.name,
+            capacity: result.capacity,
+            occupantCount: dorm.occupantCount,
+            roomLeaderId: dorm.roomLeaderId,
+            roomLeaderName: dorm.roomLeaderName,
+            dormPrefectId: dorm.dormPrefectId,
+            dormPrefectName: dorm.dormPrefectName,
+            location: result.location,
+          ),
+        ),
+      );
     }
   }
 }
@@ -332,7 +351,9 @@ class _LeadershipSheetState extends State<_LeadershipSheet> {
   @override
   void initState() {
     super.initState();
-    context.read<MatronBloc>().add(WatchBoardingStudents(dormitoryId: widget.dorm.id));
+    context.read<MatronBloc>().add(
+      WatchBoardingStudents(dormitoryId: widget.dorm.id),
+    );
   }
 
   @override
@@ -347,12 +368,19 @@ class _LeadershipSheetState extends State<_LeadershipSheet> {
       child: BlocBuilder<MatronBloc, MatronState>(
         buildWhen: (previous, current) => current is BoardingStudentsLoaded,
         builder: (context, state) {
-          final students = state is BoardingStudentsLoaded ? state.students : <BoardingStudent>[];
+          final students = state is BoardingStudentsLoaded
+              ? state.students
+              : <BoardingStudent>[];
           return Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Dorm Leadership', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+              Text(
+                'Dorm Leadership',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 16),
               SearchablePickerField<BoardingStudent>(
                 label: 'Room Leader',
@@ -365,7 +393,9 @@ class _LeadershipSheetState extends State<_LeadershipSheet> {
               const SizedBox(height: 16),
               SearchablePickerField<BoardingStudent>(
                 label: 'Dorm Prefect',
-                value: students.where((s) => s.id == _dormPrefectId).firstOrNull,
+                value: students
+                    .where((s) => s.id == _dormPrefectId)
+                    .firstOrNull,
                 items: students,
                 labelBuilder: (s) => s.name,
                 subtitleBuilder: (s) => s.studentClass,
@@ -376,11 +406,13 @@ class _LeadershipSheetState extends State<_LeadershipSheet> {
                 width: double.infinity,
                 child: FilledButton(
                   onPressed: () {
-                    context.read<MatronBloc>().add(SetDormLeadershipEvent(
-                          widget.dorm.id,
-                          roomLeaderId: _roomLeaderId,
-                          dormPrefectId: _dormPrefectId,
-                        ));
+                    context.read<MatronBloc>().add(
+                      SetDormLeadershipEvent(
+                        widget.dorm.id,
+                        roomLeaderId: _roomLeaderId,
+                        dormPrefectId: _dormPrefectId,
+                      ),
+                    );
                     Navigator.pop(context);
                   },
                   child: const Text('Save'),
@@ -428,16 +460,25 @@ class _AllocationSheetState extends State<_AllocationSheet> {
           }
         },
         builder: (context, state) {
-          final students = state is UnallocatedStudentsLoaded ? state.students : <BoardingStudent>[];
+          final students = state is UnallocatedStudentsLoaded
+              ? state.students
+              : <BoardingStudent>[];
           return Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Allocate to ${widget.dorm.name}', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+              Text(
+                'Allocate to ${widget.dorm.name}',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 24),
               SearchablePickerField<BoardingStudent>(
                 label: 'Select Student',
-                value: students.where((s) => s.id == _selectedStudentId).firstOrNull,
+                value: students
+                    .where((s) => s.id == _selectedStudentId)
+                    .firstOrNull,
                 items: students,
                 labelBuilder: (s) => s.name,
                 subtitleBuilder: (s) => s.studentClass,
@@ -447,7 +488,10 @@ class _AllocationSheetState extends State<_AllocationSheet> {
               const SizedBox(height: 16),
               TextField(
                 controller: _bedController,
-                decoration: const InputDecoration(labelText: 'Bed Number (Optional)', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                  labelText: 'Bed Number (Optional)',
+                  border: OutlineInputBorder(),
+                ),
               ),
               const SizedBox(height: 24),
               SizedBox(
@@ -455,11 +499,15 @@ class _AllocationSheetState extends State<_AllocationSheet> {
                 child: FilledButton(
                   onPressed: _selectedStudentId != null
                       ? () {
-                          context.read<MatronBloc>().add(AllocateStudentEvent(
-                                _selectedStudentId!,
-                                widget.dorm.id,
-                                _bedController.text.isEmpty ? null : _bedController.text,
-                              ));
+                          context.read<MatronBloc>().add(
+                            AllocateStudentEvent(
+                              _selectedStudentId!,
+                              widget.dorm.id,
+                              _bedController.text.isEmpty
+                                  ? null
+                                  : _bedController.text,
+                            ),
+                          );
                         }
                       : null,
                   child: const Text('Confirm Allocation'),

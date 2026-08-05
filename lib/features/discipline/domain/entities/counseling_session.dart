@@ -22,6 +22,14 @@ class CounselingSession extends Equatable {
   });
 
   @override
-  List<Object?> get props =>
-      [id, studentId, counselorId, date, reason, notes, recommendations, linkedIncidentId];
+  List<Object?> get props => [
+    id,
+    studentId,
+    counselorId,
+    date,
+    reason,
+    notes,
+    recommendations,
+    linkedIncidentId,
+  ];
 }

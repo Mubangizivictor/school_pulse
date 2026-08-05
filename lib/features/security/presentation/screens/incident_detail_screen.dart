@@ -33,24 +33,31 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
     final authState = context.read<AuthBloc>().state;
     if (authState is! AuthAuthenticated) return;
     setState(() => _isSaving = true);
-    context.read<SecurityBloc>().add(UpdateIncidentStatusRequested(
-          authState.user.schoolId,
-          widget.incident.id,
-          _status,
-          _resolutionController.text.trim(),
-        ));
+    context.read<SecurityBloc>().add(
+      UpdateIncidentStatusRequested(
+        authState.user.schoolId,
+        widget.incident.id,
+        _status,
+        _resolutionController.text.trim(),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final incident = widget.incident;
     return BlocListener<SecurityBloc, SecurityState>(
-      listenWhen: (previous, current) => !identical(previous.feedback, current.feedback) && current.feedback != null,
+      listenWhen: (previous, current) =>
+          !identical(previous.feedback, current.feedback) &&
+          current.feedback != null,
       listener: (context, state) {
         setState(() => _isSaving = false);
         final feedback = state.feedback!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(feedback.message), backgroundColor: feedback.isError ? Colors.red : null),
+          SnackBar(
+            content: Text(feedback.message),
+            backgroundColor: feedback.isError ? Colors.red : null,
+          ),
         );
         if (!feedback.isError) Navigator.pop(context);
       },
@@ -61,10 +68,19 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
           children: [
             Text(incident.description, style: const TextStyle(fontSize: 16)),
             const SizedBox(height: 12),
-            _InfoRow(icon: Icons.location_on_outlined, label: incident.location),
-            _InfoRow(icon: Icons.access_time, label: incident.timestamp.toLocal().toString().split('.').first),
+            _InfoRow(
+              icon: Icons.location_on_outlined,
+              label: incident.location,
+            ),
+            _InfoRow(
+              icon: Icons.access_time,
+              label: incident.timestamp.toLocal().toString().split('.').first,
+            ),
             if (incident.involvedPersonIds.isNotEmpty)
-              _InfoRow(icon: Icons.people_outline, label: incident.involvedPersonIds.join(', ')),
+              _InfoRow(
+                icon: Icons.people_outline,
+                label: incident.involvedPersonIds.join(', '),
+              ),
             if (incident.photoUrls.isNotEmpty) ...[
               const SizedBox(height: 16),
               SizedBox(
@@ -75,7 +91,12 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
                   separatorBuilder: (_, __) => const SizedBox(width: 8),
                   itemBuilder: (context, index) => ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.network(incident.photoUrls[index], width: 90, height: 90, fit: BoxFit.cover),
+                    child: Image.network(
+                      incident.photoUrls[index],
+                      width: 90,
+                      height: 90,
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
               ),
@@ -83,21 +104,33 @@ class _IncidentDetailScreenState extends State<IncidentDetailScreen> {
             const SizedBox(height: 24),
             DropdownButtonFormField<String>(
               initialValue: _status,
-              decoration: const InputDecoration(labelText: 'Status', border: OutlineInputBorder()),
-              items: kIncidentStatuses.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+              decoration: const InputDecoration(
+                labelText: 'Status',
+                border: OutlineInputBorder(),
+              ),
+              items: kIncidentStatuses
+                  .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                  .toList(),
               onChanged: (v) => setState(() => _status = v ?? _status),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _resolutionController,
               maxLines: 4,
-              decoration: const InputDecoration(labelText: 'Officer Report / Resolution', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: 'Officer Report / Resolution',
+                border: OutlineInputBorder(),
+              ),
             ),
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _isSaving ? null : _save,
               child: _isSaving
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : const Text('Save Update'),
             ),
           ],

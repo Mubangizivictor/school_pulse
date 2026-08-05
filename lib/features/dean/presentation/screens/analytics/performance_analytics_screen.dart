@@ -13,7 +13,9 @@ class PerformanceAnalyticsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => sl<DeanBloc>()..add(const PerformanceAnalyticsRequested(type: 'school')),
+      create: (context) =>
+          sl<DeanBloc>()
+            ..add(const PerformanceAnalyticsRequested(type: 'school')),
       child: Scaffold(
         appBar: AppBar(title: const Text('Academic Performance')),
         body: BlocBuilder<DeanBloc, DeanState>(
@@ -24,13 +26,22 @@ class PerformanceAnalyticsScreen extends StatelessWidget {
               return ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  _buildGradeDistribution(context, state.analytics['gradeDistribution'] ?? {}),
+                  _buildGradeDistribution(
+                    context,
+                    state.analytics['gradeDistribution'] ?? {},
+                  ),
                   const SizedBox(height: 24),
-                  _buildSubjectPerformance(context, state.analytics['subjectPassRates'] ?? []),
+                  _buildSubjectPerformance(
+                    context,
+                    state.analytics['subjectPassRates'] ?? [],
+                  ),
                   const SizedBox(height: 24),
                   const SectionHeader(title: 'Top Performing Students'),
                   const SizedBox(height: 12),
-                  _buildTopStudents(context, state.analytics['topStudents'] ?? []),
+                  _buildTopStudents(
+                    context,
+                    state.analytics['topStudents'] ?? [],
+                  ),
                 ],
               );
             } else if (state is DeanError) {
@@ -43,14 +54,20 @@ class PerformanceAnalyticsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildGradeDistribution(BuildContext context, Map<String, dynamic> data) {
+  Widget _buildGradeDistribution(
+    BuildContext context,
+    Map<String, dynamic> data,
+  ) {
     final grades = ['D1', 'D2', 'C3', 'C4', 'C5', 'C6', 'P7', 'P8', 'F9'];
     return AppCard(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Grade Distribution', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text(
+            'Grade Distribution',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 24),
           SizedBox(
             height: 200,
@@ -65,17 +82,27 @@ class PerformanceAnalyticsScreen extends StatelessWidget {
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (value, meta) {
-                        if (value.toInt() >= grades.length) return const SizedBox.shrink();
+                        if (value.toInt() >= grades.length)
+                          return const SizedBox.shrink();
                         return SideTitleWidget(
                           axisSide: meta.axisSide,
-                          child: Text(grades[value.toInt()], style: const TextStyle(fontSize: 10)),
+                          child: Text(
+                            grades[value.toInt()],
+                            style: const TextStyle(fontSize: 10),
+                          ),
                         );
                       },
                     ),
                   ),
-                  leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  leftTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                 ),
                 gridData: const FlGridData(show: false),
                 borderData: FlBorderData(show: false),
@@ -113,19 +140,27 @@ class PerformanceAnalyticsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSubjectPerformance(BuildContext context, List<dynamic> subjects) {
+  Widget _buildSubjectPerformance(
+    BuildContext context,
+    List<dynamic> subjects,
+  ) {
     return AppCard(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Subject Pass Rates', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text(
+            'Subject Pass Rates',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 20),
-          ...subjects.map((s) => _SubjectRow(
-                subject: s['subject'] ?? '',
-                rate: (s['rate'] ?? 0).toDouble(),
-                color: (s['rate'] ?? 0) > 0.8 ? Colors.green : Colors.orange,
-              )),
+          ...subjects.map(
+            (s) => _SubjectRow(
+              subject: s['subject'] ?? '',
+              rate: (s['rate'] ?? 0).toDouble(),
+              color: (s['rate'] ?? 0) > 0.8 ? Colors.green : Colors.orange,
+            ),
+          ),
         ],
       ),
     );
@@ -141,11 +176,23 @@ class PerformanceAnalyticsScreen extends StatelessWidget {
           child: ListTile(
             leading: CircleAvatar(
               backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-              child: Text('${idx + 1}', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
+              child: Text(
+                '${idx + 1}',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
-            title: Text(s['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(
+              s['name'] ?? '',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             subtitle: Text(s['class'] ?? ''),
-            trailing: Text('${(s['score'] * 100).toInt()}%', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            trailing: Text(
+              '${(s['score'] * 100).toInt()}%',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
           ),
         );
       }).toList(),
@@ -158,7 +205,11 @@ class _SubjectRow extends StatelessWidget {
   final double rate;
   final Color color;
 
-  const _SubjectRow({required this.subject, required this.rate, required this.color});
+  const _SubjectRow({
+    required this.subject,
+    required this.rate,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -170,7 +221,10 @@ class _SubjectRow extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(subject, style: const TextStyle(fontSize: 13)),
-              Text('${(rate * 100).toInt()}%', style: TextStyle(fontWeight: FontWeight.bold, color: color)),
+              Text(
+                '${(rate * 100).toInt()}%',
+                style: TextStyle(fontWeight: FontWeight.bold, color: color),
+              ),
             ],
           ),
           const SizedBox(height: 4),

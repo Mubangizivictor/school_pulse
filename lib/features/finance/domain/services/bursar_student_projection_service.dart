@@ -23,19 +23,28 @@ class BursarStudentProjectionService {
     required String schoolId,
     required UserEntity operatorUser,
   }) async {
-    final allowed = await _can(Permission.financeStudentBalanceRead, operatorUser);
+    final allowed = await _can(
+      Permission.financeStudentBalanceRead,
+      operatorUser,
+    );
     if (!allowed) {
-      return const Left(PermissionDeniedFailure('You do not have permission to view student financial records.'));
+      return const Left(
+        PermissionDeniedFailure(
+          'You do not have permission to view student financial records.',
+        ),
+      );
     }
 
     final studentResult = await studentRepository.getStudentById(studentId);
-    return studentResult.fold(
-      Left.new,
-      (student) async {
-        final accountResult = await financeRepository.getStudentFinancialAccount(studentId, schoolId);
-        return accountResult.fold(
-          Left.new,
-          (account) => Right(BursarStudentView(
+    return studentResult.fold(Left.new, (student) async {
+      final accountResult = await financeRepository.getStudentFinancialAccount(
+        studentId,
+        schoolId,
+      );
+      return accountResult.fold(
+        Left.new,
+        (account) => Right(
+          BursarStudentView(
             studentId: student.id,
             name: student.name,
             classId: student.classId,
@@ -43,10 +52,10 @@ class BursarStudentProjectionService {
             totalPaid: account.totalPaid,
             balance: account.balance,
             isFullyPaid: account.isFullyPaid,
-          )),
-        );
-      },
-    );
+          ),
+        ),
+      );
+    });
   }
 
   Future<bool> _can(String permissionId, UserEntity operatorUser) async {

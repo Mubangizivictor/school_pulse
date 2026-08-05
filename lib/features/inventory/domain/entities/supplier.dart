@@ -26,5 +26,16 @@ class Supplier extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, schoolId, name, category, contactPerson, email, phone, address, rating, createdAt];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    name,
+    category,
+    contactPerson,
+    email,
+    phone,
+    address,
+    rating,
+    createdAt,
+  ];
 }

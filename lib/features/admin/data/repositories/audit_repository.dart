@@ -10,12 +10,15 @@ class AuditRepository {
         .orderBy('timestamp', descending: true)
         .limit(limit)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => AuditLog.fromMap(doc.data(), doc.id))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => AuditLog.fromMap(doc.data(), doc.id))
+              .toList(),
+        );
   }
 
   Future<void> logAction({
+    String? schoolId,
     required String title,
     required String description,
     required String iconName,
@@ -23,6 +26,7 @@ class AuditRepository {
     String? userId,
   }) async {
     await _firestore.collection('audit_logs').add({
+      if (schoolId != null) 'schoolId': schoolId,
       'title': title,
       'description': description,
       'iconName': iconName,

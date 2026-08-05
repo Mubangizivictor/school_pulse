@@ -206,10 +206,22 @@ class AuthTrustStrip extends StatelessWidget {
   const AuthTrustStrip({super.key, required this.accent});
 
   static const _items = [
-    (icon: Icons.verified_user_outlined, label: 'Secure', desc: 'Your data is\nprotected'),
-    (icon: Icons.cloud_sync_outlined, label: 'Sync', desc: 'Works online\n& offline'),
+    (
+      icon: Icons.verified_user_outlined,
+      label: 'Secure',
+      desc: 'Your data is\nprotected',
+    ),
+    (
+      icon: Icons.cloud_sync_outlined,
+      label: 'Sync',
+      desc: 'Works online\n& offline',
+    ),
     (icon: Icons.speed_outlined, label: 'Fast', desc: 'Built for\nperformance'),
-    (icon: Icons.headset_mic_outlined, label: 'Support', desc: 'We are here\nto help'),
+    (
+      icon: Icons.headset_mic_outlined,
+      label: 'Support',
+      desc: 'We are here\nto help',
+    ),
   ];
 
   @override
@@ -249,7 +261,9 @@ class AuthTrustStrip extends StatelessWidget {
                       _items[i].desc,
                       textAlign: TextAlign.center,
                       style: AppTypography.labelSmall.copyWith(
-                        color: AppColors.textSecondaryDark.withValues(alpha: 0.7),
+                        color: AppColors.textSecondaryDark.withValues(
+                          alpha: 0.7,
+                        ),
                         fontSize: 9,
                         height: 1.3,
                       ),
@@ -480,8 +494,12 @@ class AuthPortalScaffold extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-          onPressed: () => context.canPop() ? context.pop() : context.go('/welcome'),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white,
+          ),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/welcome'),
         ),
       ),
       body: SafeArea(

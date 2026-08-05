@@ -7,7 +7,11 @@ import '../models/audit_log_model.dart';
 abstract class SuperAdminRemoteDataSource {
   Future<List<SchoolModel>> getAllSchools();
   Stream<List<SchoolModel>> watchSchools();
-  Future<void> createSchool(SchoolModel school, String adminEmail, String adminPassword);
+  Future<void> createSchool(
+    SchoolModel school,
+    String adminEmail,
+    String adminPassword,
+  );
   Future<void> updateSchool(SchoolModel school);
   Future<List<SubscriptionPlanModel>> getSubscriptionPlans();
   Future<void> logAction(AuditLogModel log);
@@ -19,38 +23,49 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
   final FirebaseFirestore firestore;
   final FirebaseAuth auth;
 
-  SuperAdminRemoteDataSourceImpl({
-    required this.firestore,
-    required this.auth,
-  });
+  SuperAdminRemoteDataSourceImpl({required this.firestore, required this.auth});
 
   @override
   Future<List<AuditLogModel>> getAuditLogs({String? schoolId}) async {
-    Query query = firestore.collection('super_admin_audit_logs').orderBy('timestamp', descending: true);
-    
+    Query query = firestore
+        .collection('super_admin_audit_logs')
+        .orderBy('timestamp', descending: true);
+
     if (schoolId != null) {
       query = query.where('schoolId', isEqualTo: schoolId);
     }
 
     final snapshot = await query.limit(100).get();
-    return snapshot.docs.map((doc) => AuditLogModel.fromJson(doc.data() as Map<String, dynamic>)).toList();
+    return snapshot.docs
+        .map(
+          (doc) => AuditLogModel.fromJson(doc.data() as Map<String, dynamic>),
+        )
+        .toList();
   }
 
   @override
   Future<List<SchoolModel>> getAllSchools() async {
     final snapshot = await firestore.collection('schools').get();
-    return snapshot.docs.map((doc) => SchoolModel.fromJson(doc.data())).toList();
+    return snapshot.docs
+        .map((doc) => SchoolModel.fromJson(doc.data()))
+        .toList();
   }
 
   @override
   Stream<List<SchoolModel>> watchSchools() {
     return firestore.collection('schools').snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) => SchoolModel.fromJson(doc.data())).toList();
+      return snapshot.docs
+          .map((doc) => SchoolModel.fromJson(doc.data()))
+          .toList();
     });
   }
 
   @override
-  Future<void> createSchool(SchoolModel school, String adminEmail, String adminPassword) async {
+  Future<void> createSchool(
+    SchoolModel school,
+    String adminEmail,
+    String adminPassword,
+  ) async {
     // schools/{id} is the sole institution tenant source of truth as of
     // Phase 1 (classification/divisions/displayLabel live on this doc). The
     // legacy tenants/{tenantId} doc is deprecated in place - no new writes
@@ -76,13 +91,18 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
 
   @override
   Future<void> updateSchool(SchoolModel school) async {
-    await firestore.collection('schools').doc(school.id).update(school.toJson());
+    await firestore
+        .collection('schools')
+        .doc(school.id)
+        .update(school.toJson());
   }
 
   @override
   Future<List<SubscriptionPlanModel>> getSubscriptionPlans() async {
     final snapshot = await firestore.collection('subscription_plans').get();
-    return snapshot.docs.map((doc) => SubscriptionPlanModel.fromJson(doc.data())).toList();
+    return snapshot.docs
+        .map((doc) => SubscriptionPlanModel.fromJson(doc.data()))
+        .toList();
   }
 
   @override
@@ -93,12 +113,12 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
   @override
   Future<Map<String, dynamic>> getPlatformStats() async {
     final schools = await firestore.collection('schools').get();
-    
+
     // In a real app, these would be aggregated or retrieved from a summary document
     // For now, we calculate them from the schools collection
     int totalStudents = 0;
     int totalStaff = 0;
-    
+
     // This is a bit expensive for a real production app without aggregation
     for (var doc in schools.docs) {
       final schoolData = doc.data();
@@ -108,7 +128,9 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
 
     return {
       'totalSchools': schools.size,
-      'activeSchools': schools.docs.where((d) => d.data()['status'] == 'active').length,
+      'activeSchools': schools.docs
+          .where((d) => d.data()['status'] == 'active')
+          .length,
       'totalStudents': totalStudents,
       'totalStaff': totalStaff,
     };

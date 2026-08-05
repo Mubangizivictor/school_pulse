@@ -30,18 +30,19 @@ class _BiometricSettingsPageState extends State<BiometricSettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Biometric Settings'),
-      ),
+      appBar: AppBar(title: const Text('Biometric Settings')),
       body: BlocConsumer<BiometricsBloc, BiometricsState>(
         listener: (context, state) {
           if (state is BiometricOperationSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
           } else if (state is BiometricOperationFailure) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+              ),
             );
           }
         },
@@ -67,7 +68,8 @@ class _BiometricSettingsPageState extends State<BiometricSettingsPage> {
           title: const Text('Enable Biometrics'),
           subtitle: const Text('Global switch for biometric features'),
           value: settings.enableBiometrics,
-          onChanged: (val) => _updateSettings(settings.copyWith(enableBiometrics: val)),
+          onChanged: (val) =>
+              _updateSettings(settings.copyWith(enableBiometrics: val)),
         ),
         const Divider(),
         _buildSectionTitle('Features'),
@@ -75,35 +77,45 @@ class _BiometricSettingsPageState extends State<BiometricSettingsPage> {
           title: const Text('Student Attendance'),
           value: settings.enableStudentAttendance,
           onChanged: settings.enableBiometrics
-              ? (val) => _updateSettings(settings.copyWith(enableStudentAttendance: val))
+              ? (val) => _updateSettings(
+                  settings.copyWith(enableStudentAttendance: val),
+                )
               : null,
         ),
         SwitchListTile(
           title: const Text('Staff Attendance'),
           value: settings.enableStaffAttendance,
           onChanged: settings.enableBiometrics
-              ? (val) => _updateSettings(settings.copyWith(enableStaffAttendance: val))
+              ? (val) => _updateSettings(
+                  settings.copyWith(enableStaffAttendance: val),
+                )
               : null,
         ),
         SwitchListTile(
           title: const Text('Gate Verification'),
           value: settings.enableGateVerification,
           onChanged: settings.enableBiometrics
-              ? (val) => _updateSettings(settings.copyWith(enableGateVerification: val))
+              ? (val) => _updateSettings(
+                  settings.copyWith(enableGateVerification: val),
+                )
               : null,
         ),
         SwitchListTile(
           title: const Text('Library Verification'),
           value: settings.enableLibraryVerification,
           onChanged: settings.enableBiometrics
-              ? (val) => _updateSettings(settings.copyWith(enableLibraryVerification: val))
+              ? (val) => _updateSettings(
+                  settings.copyWith(enableLibraryVerification: val),
+                )
               : null,
         ),
         SwitchListTile(
           title: const Text('Exam Verification'),
           value: settings.enableExamVerification,
           onChanged: settings.enableBiometrics
-              ? (val) => _updateSettings(settings.copyWith(enableExamVerification: val))
+              ? (val) => _updateSettings(
+                  settings.copyWith(enableExamVerification: val),
+                )
               : null,
         ),
         const Divider(),
@@ -113,7 +125,8 @@ class _BiometricSettingsPageState extends State<BiometricSettingsPage> {
           subtitle: const Text('Allow using QR code if fingerprint fails'),
           value: settings.allowQrFallback,
           onChanged: settings.enableBiometrics
-              ? (val) => _updateSettings(settings.copyWith(allowQrFallback: val))
+              ? (val) =>
+                    _updateSettings(settings.copyWith(allowQrFallback: val))
               : null,
         ),
         SwitchListTile(
@@ -121,7 +134,9 @@ class _BiometricSettingsPageState extends State<BiometricSettingsPage> {
           subtitle: const Text('Fingerprint + QR Code required'),
           value: settings.requireFingerprintAndQr,
           onChanged: settings.enableBiometrics
-              ? (val) => _updateSettings(settings.copyWith(requireFingerprintAndQr: val))
+              ? (val) => _updateSettings(
+                  settings.copyWith(requireFingerprintAndQr: val),
+                )
               : null,
         ),
         SwitchListTile(
@@ -129,7 +144,9 @@ class _BiometricSettingsPageState extends State<BiometricSettingsPage> {
           subtitle: const Text('Allow matching fingerprints without internet'),
           value: settings.offlineVerificationEnabled,
           onChanged: settings.enableBiometrics
-              ? (val) => _updateSettings(settings.copyWith(offlineVerificationEnabled: val))
+              ? (val) => _updateSettings(
+                  settings.copyWith(offlineVerificationEnabled: val),
+                )
               : null,
         ),
       ],
@@ -142,14 +159,16 @@ class _BiometricSettingsPageState extends State<BiometricSettingsPage> {
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: Theme.of(context).primaryColor,
-              fontWeight: FontWeight.bold,
-            ),
+          color: Theme.of(context).primaryColor,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
 
   void _updateSettings(BiometricSettings newSettings) {
-    context.read<BiometricsBloc>().add(UpdateBiometricSettingsEvent(schoolId, newSettings));
+    context.read<BiometricsBloc>().add(
+      UpdateBiometricSettingsEvent(schoolId, newSettings),
+    );
   }
 }

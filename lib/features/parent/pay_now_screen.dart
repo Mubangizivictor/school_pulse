@@ -58,14 +58,14 @@ class _PayNowScreenState extends State<PayNowScreen> {
                   child: AppCard(
                     child: Column(
                       children: [
-                        Text('Outstanding Balance',
-                            style: Theme.of(context).textTheme.bodyMedium),
+                        Text(
+                          'Outstanding Balance',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
                         const SizedBox(height: 8),
                         Text(
                           CurrencyFormatter.format(balance),
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineMedium
+                          style: Theme.of(context).textTheme.headlineMedium
                               ?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: balance > 0
@@ -150,8 +150,10 @@ class _PayNowScreenState extends State<PayNowScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 4),
                 Text(message, style: Theme.of(context).textTheme.bodySmall),
               ],

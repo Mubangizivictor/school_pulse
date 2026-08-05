@@ -14,7 +14,10 @@ class LibraryPolicyModel extends LibraryPolicy {
     super.canReserve = true,
   });
 
-  factory LibraryPolicyModel.fromFirestore(Map<String, dynamic> json, String id) {
+  factory LibraryPolicyModel.fromFirestore(
+    Map<String, dynamic> json,
+    String id,
+  ) {
     return LibraryPolicyModel(
       id: id,
       schoolId: json['schoolId'] ?? '',
@@ -24,7 +27,8 @@ class LibraryPolicyModel extends LibraryPolicy {
       renewalLimit: json['renewalLimit'] ?? 0,
       gracePeriodDays: json['gracePeriodDays'] ?? 0,
       finePerDay: (json['finePerDay'] ?? 0).toDouble(),
-      lostBookChargeMultiplier: (json['lostBookChargeMultiplier'] ?? 1.0).toDouble(),
+      lostBookChargeMultiplier: (json['lostBookChargeMultiplier'] ?? 1.0)
+          .toDouble(),
       canReserve: json['canReserve'] ?? true,
     );
   }

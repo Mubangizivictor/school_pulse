@@ -20,7 +20,8 @@ class AuditLogsScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => context.read<SuperAdminBloc>().add(const LoadAuditLogsEvent()),
+            onPressed: () =>
+                context.read<SuperAdminBloc>().add(const LoadAuditLogsEvent()),
           ),
           IconButton(
             icon: const Icon(Icons.filter_list),
@@ -40,7 +41,8 @@ class AuditLogsScreen extends StatelessWidget {
       ),
       body: BlocBuilder<SuperAdminBloc, SuperAdminState>(
         builder: (context, state) {
-          if (state.status == SuperAdminStatus.loading && state.auditLogs.isEmpty) {
+          if (state.status == SuperAdminStatus.loading &&
+              state.auditLogs.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
 
@@ -61,14 +63,23 @@ class AuditLogsScreen extends StatelessWidget {
                   backgroundColor: theme.colorScheme.surfaceContainerHigh,
                   child: Icon(Icons.history, color: theme.colorScheme.primary),
                 ),
-                title: Text(log.action, style: const TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(
+                  log.action,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 4),
                     Text('By ${log.ownerId} • ${log.device}'),
                     if (log.reason != null)
-                      Text('Reason: ${log.reason}', style: TextStyle(color: theme.colorScheme.error, fontSize: 12)),
+                      Text(
+                        'Reason: ${log.reason}',
+                        style: TextStyle(
+                          color: theme.colorScheme.error,
+                          fontSize: 12,
+                        ),
+                      ),
                   ],
                 ),
                 trailing: Text(

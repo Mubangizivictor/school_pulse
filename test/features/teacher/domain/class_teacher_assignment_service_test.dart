@@ -9,9 +9,11 @@ import 'package:school_pulse/features/teacher/domain/entities/staff_role_assignm
 import 'package:school_pulse/features/teacher/domain/repositories/staff_assignment_repository.dart';
 import 'package:school_pulse/features/teacher/domain/services/active_responsibility_service.dart';
 
-class _MockAssignmentRepository extends Mock implements StaffAssignmentRepository {}
+class _MockAssignmentRepository extends Mock
+    implements StaffAssignmentRepository {}
 
-class _MockResponsibilityService extends Mock implements ActiveResponsibilityService {}
+class _MockResponsibilityService extends Mock
+    implements ActiveResponsibilityService {}
 
 StaffRoleAssignment _classRow({
   String id = 'ct1',
@@ -119,20 +121,24 @@ void main() {
   });
 
   void stubAssignments(List<StaffRoleAssignment> rows) {
-    when(() => repository.getAssignments(
-          schoolId: any(named: 'schoolId'),
-          userId: any(named: 'userId'),
-          forceRefresh: any(named: 'forceRefresh'),
-        )).thenAnswer((_) async => Right(rows));
+    when(
+      () => repository.getAssignments(
+        schoolId: any(named: 'schoolId'),
+        userId: any(named: 'userId'),
+        forceRefresh: any(named: 'forceRefresh'),
+      ),
+    ).thenAnswer((_) async => Right(rows));
   }
 
   void stubValidAssignments(List<StaffRoleAssignment> rows) {
-    when(() => repository.getValidAssignments(
-          schoolId: any(named: 'schoolId'),
-          userId: any(named: 'userId'),
-          academicYearId: any(named: 'academicYearId'),
-          forceRefresh: any(named: 'forceRefresh'),
-        )).thenAnswer((_) async => Right(rows));
+    when(
+      () => repository.getValidAssignments(
+        schoolId: any(named: 'schoolId'),
+        userId: any(named: 'userId'),
+        academicYearId: any(named: 'academicYearId'),
+        forceRefresh: any(named: 'forceRefresh'),
+      ),
+    ).thenAnswer((_) async => Right(rows));
   }
 
   Future<dynamic> validate({
@@ -165,15 +171,20 @@ void main() {
       expect(result.getOrElse(() => throw 'unexpected').isAllowed, isTrue);
     });
 
-    test('a second class in the same year and campus is refused by default', () async {
-      stubAssignments([_classRow()]);
+    test(
+      'a second class in the same year and campus is refused by default',
+      () async {
+        stubAssignments([_classRow()]);
 
-      final assignability = (await validate()).getOrElse(() => throw 'unexpected');
+        final assignability = (await validate()).getOrElse(
+          () => throw 'unexpected',
+        );
 
-      expect(assignability.isAllowed, isFalse);
-      expect(assignability.overrideWouldAllow, isTrue);
-      expect(assignability.conflicting.single.id, 'ct1');
-    });
+        expect(assignability.isAllowed, isFalse);
+        expect(assignability.overrideWouldAllow, isTrue);
+        expect(assignability.conflicting.single.id, 'ct1');
+      },
+    );
 
     test('subject assignments never count towards the limit', () async {
       // Six subjects across four classes plus no class row at all: the rule
@@ -185,7 +196,9 @@ void main() {
         _subjectRow(id: 's4', classId: 'p7', subjectId: 'ict'),
       ]);
 
-      final assignability = (await validate()).getOrElse(() => throw 'unexpected');
+      final assignability = (await validate()).getOrElse(
+        () => throw 'unexpected',
+      );
 
       expect(assignability.isAllowed, isTrue);
     });
@@ -193,7 +206,9 @@ void main() {
     test('a class in a different academic year does not conflict', () async {
       stubAssignments([_classRow(academicYearId: '2025')]);
 
-      final assignability = (await validate()).getOrElse(() => throw 'unexpected');
+      final assignability = (await validate()).getOrElse(
+        () => throw 'unexpected',
+      );
 
       expect(assignability.isAllowed, isTrue);
     });
@@ -201,7 +216,9 @@ void main() {
     test('a class on a different campus does not conflict', () async {
       stubAssignments([_classRow(campusId: 'annex')]);
 
-      final assignability = (await validate()).getOrElse(() => throw 'unexpected');
+      final assignability = (await validate()).getOrElse(
+        () => throw 'unexpected',
+      );
 
       expect(assignability.isAllowed, isTrue);
     });
@@ -209,7 +226,9 @@ void main() {
     test('a suspended class row does not hold the slot', () async {
       stubAssignments([_classRow(status: AssignmentStatus.suspended)]);
 
-      final assignability = (await validate()).getOrElse(() => throw 'unexpected');
+      final assignability = (await validate()).getOrElse(
+        () => throw 'unexpected',
+      );
 
       expect(assignability.isAllowed, isTrue);
     });
@@ -217,8 +236,9 @@ void main() {
     test('editing the same assignment does not conflict with itself', () async {
       stubAssignments([_classRow(id: 'ct1')]);
 
-      final assignability =
-          (await validate(excludeAssignmentId: 'ct1')).getOrElse(() => throw 'unexpected');
+      final assignability = (await validate(
+        excludeAssignmentId: 'ct1',
+      )).getOrElse(() => throw 'unexpected');
 
       expect(assignability.isAllowed, isTrue);
     });
@@ -237,17 +257,20 @@ void main() {
   });
 
   group('multi-class override', () {
-    test('is refused when the assigning admin lacks the override permission', () async {
-      stubAssignments([_classRow()]);
+    test(
+      'is refused when the assigning admin lacks the override permission',
+      () async {
+        stubAssignments([_classRow()]);
 
-      final assignability = (await validate(
-        overrideRequested: true,
-        overrideReason: 'Covering a long-term vacancy in P6 West.',
-      )).getOrElse(() => throw 'unexpected');
+        final assignability = (await validate(
+          overrideRequested: true,
+          overrideReason: 'Covering a long-term vacancy in P6 West.',
+        )).getOrElse(() => throw 'unexpected');
 
-      expect(assignability.isAllowed, isFalse);
-      expect(assignability.reason, contains('override permission'));
-    });
+        expect(assignability.isAllowed, isFalse);
+        expect(assignability.reason, contains('override permission'));
+      },
+    );
 
     test('is refused without a substantive reason', () async {
       stubAssignments([_classRow()]);
@@ -290,7 +313,10 @@ void main() {
 
     test('ignores a class row that is past its end date', () async {
       stubValidAssignments([
-        _classRow(endDate: DateTime(2026, 1, 2), startDate: DateTime(2026, 1, 1)),
+        _classRow(
+          endDate: DateTime(2026, 1, 2),
+          startDate: DateTime(2026, 1, 1),
+        ),
       ]);
 
       final result = await service.resolveActiveAssignment(
@@ -301,24 +327,30 @@ void main() {
       expect(result.getOrElse(() => throw 'unexpected'), isNull);
     });
 
-    test('prefers the most recently assigned class when a school allows two', () async {
-      stubValidAssignments([
-        _classRow(id: 'old', assignedAt: DateTime(2026, 1, 1)),
-        _classRow(id: 'new', assignedAt: DateTime(2026, 5, 1)),
-      ]);
+    test(
+      'prefers the most recently assigned class when a school allows two',
+      () async {
+        stubValidAssignments([
+          _classRow(id: 'old', assignedAt: DateTime(2026, 1, 1)),
+          _classRow(id: 'new', assignedAt: DateTime(2026, 5, 1)),
+        ]);
 
-      final result = await service.resolveActiveAssignment(
-        schoolId: 'school1',
-        userId: 'user1',
-      );
+        final result = await service.resolveActiveAssignment(
+          schoolId: 'school1',
+          userId: 'user1',
+        );
 
-      expect(result.getOrElse(() => throw 'unexpected')?.id, 'new');
-    });
+        expect(result.getOrElse(() => throw 'unexpected')?.id, 'new');
+      },
+    );
   });
 
   group('authorize', () {
     test('refuses when no responsibility is active', () {
-      final result = service.authorize(null, permission: Permission.classStudentsView);
+      final result = service.authorize(
+        null,
+        permission: Permission.classStudentsView,
+      );
 
       expect(result.isLeft(), isTrue);
       result.fold(
@@ -345,21 +377,24 @@ void main() {
       expect(result.isLeft(), isTrue);
     });
 
-    test('refuses a class the teacher was not given, even with the permission', () {
-      // The scope check is the point: holding `class.students.view` says
-      // nothing about *which* class it may be spent on.
-      final result = service.authorize(
-        _context(),
-        permission: Permission.classStudentsView,
-        classId: 'p6',
-      );
+    test(
+      'refuses a class the teacher was not given, even with the permission',
+      () {
+        // The scope check is the point: holding `class.students.view` says
+        // nothing about *which* class it may be spent on.
+        final result = service.authorize(
+          _context(),
+          permission: Permission.classStudentsView,
+          classId: 'p6',
+        );
 
-      expect(result.isLeft(), isTrue);
-      result.fold(
-        (failure) => expect(failure, isA<PermissionDeniedFailure>()),
-        (_) => fail('expected a permission failure'),
-      );
-    });
+        expect(result.isLeft(), isTrue);
+        result.fold(
+          (failure) => expect(failure, isA<PermissionDeniedFailure>()),
+          (_) => fail('expected a permission failure'),
+        );
+      },
+    );
 
     test('refuses another stream of the same class', () {
       final result = service.authorize(
@@ -393,31 +428,39 @@ void main() {
   });
 
   group('authorizeFresh', () {
-    test('refuses when revalidation fails, without consulting the stale context', () async {
-      when(() => responsibilityService.revalidate())
-          .thenAnswer((_) async => const Left(AssignmentInvalidFailure()));
+    test(
+      'refuses when revalidation fails, without consulting the stale context',
+      () async {
+        when(
+          () => responsibilityService.revalidate(),
+        ).thenAnswer((_) async => const Left(AssignmentInvalidFailure()));
 
-      final result = await service.authorizeFresh(
-        permission: Permission.classAttendanceTake,
-      );
+        final result = await service.authorizeFresh(
+          permission: Permission.classAttendanceTake,
+        );
 
-      expect(result.isLeft(), isTrue);
-    });
+        expect(result.isLeft(), isTrue);
+      },
+    );
 
-    test('re-applies the scope check against the freshly read context', () async {
-      // An admin narrowed the scope while the screen was open: the server now
-      // says P5 East only, and the write aimed at P6 must not land.
-      when(() => responsibilityService.revalidate())
-          .thenAnswer((_) async => Right(_context(
-                permissions: const {Permission.classAttendanceTake},
-              )));
+    test(
+      're-applies the scope check against the freshly read context',
+      () async {
+        // An admin narrowed the scope while the screen was open: the server now
+        // says P5 East only, and the write aimed at P6 must not land.
+        when(() => responsibilityService.revalidate()).thenAnswer(
+          (_) async => Right(
+            _context(permissions: const {Permission.classAttendanceTake}),
+          ),
+        );
 
-      final result = await service.authorizeFresh(
-        permission: Permission.classAttendanceTake,
-        classId: 'p6',
-      );
+        final result = await service.authorizeFresh(
+          permission: Permission.classAttendanceTake,
+          classId: 'p6',
+        );
 
-      expect(result.isLeft(), isTrue);
-    });
+        expect(result.isLeft(), isTrue);
+      },
+    );
   });
 }

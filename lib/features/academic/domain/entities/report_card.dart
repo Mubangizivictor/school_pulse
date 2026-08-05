@@ -1,10 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-enum ReportCardStatus {
-  pending,
-  deanSigned,
-  fullySigned,
-}
+enum ReportCardStatus { pending, deanSigned, fullySigned }
 
 class ReportCard extends Equatable {
   final String id;
@@ -41,21 +37,21 @@ class ReportCard extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        studentId,
-        studentName,
-        className,
-        term,
-        year,
-        status,
-        deanId,
-        deanSignedAt,
-        headTeacherId,
-        headTeacherSignedAt,
-        classTeacherComment,
-        averageScore,
-        isLockedForFees,
-      ];
+    id,
+    studentId,
+    studentName,
+    className,
+    term,
+    year,
+    status,
+    deanId,
+    deanSignedAt,
+    headTeacherId,
+    headTeacherSignedAt,
+    classTeacherComment,
+    averageScore,
+    isLockedForFees,
+  ];
 
   ReportCard copyWith({
     ReportCardStatus? status,

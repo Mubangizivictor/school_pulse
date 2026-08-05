@@ -41,9 +41,13 @@ void main() {
     blocTest<InstitutionContextCubit, InstitutionContextState>(
       'emits Loading then Loaded for an active institution',
       build: () {
-        when(() => repository.watchContext('school-1'))
-            .thenAnswer((_) => Stream.value(_context()));
-        return InstitutionContextCubit(repository: repository, preferences: preferences);
+        when(
+          () => repository.watchContext('school-1'),
+        ).thenAnswer((_) => Stream.value(_context()));
+        return InstitutionContextCubit(
+          repository: repository,
+          preferences: preferences,
+        );
       },
       act: (cubit) => cubit.loadInstitution('school-1'),
       expect: () => [
@@ -58,7 +62,10 @@ void main() {
         when(() => repository.watchContext('school-1')).thenAnswer(
           (_) => Stream.value(_context(status: SchoolStatus.suspended)),
         );
-        return InstitutionContextCubit(repository: repository, preferences: preferences);
+        return InstitutionContextCubit(
+          repository: repository,
+          preferences: preferences,
+        );
       },
       act: (cubit) => cubit.loadInstitution('school-1'),
       expect: () => [
@@ -73,7 +80,10 @@ void main() {
         when(() => repository.watchContext('school-1')).thenAnswer(
           (_) => Stream.value(_context(status: SchoolStatus.archived)),
         );
-        return InstitutionContextCubit(repository: repository, preferences: preferences);
+        return InstitutionContextCubit(
+          repository: repository,
+          preferences: preferences,
+        );
       },
       act: (cubit) => cubit.loadInstitution('school-1'),
       expect: () => [
@@ -85,9 +95,13 @@ void main() {
     blocTest<InstitutionContextCubit, InstitutionContextState>(
       'emits Error when the context stream errors',
       build: () {
-        when(() => repository.watchContext('school-1'))
-            .thenAnswer((_) => Stream.error('network down'));
-        return InstitutionContextCubit(repository: repository, preferences: preferences);
+        when(
+          () => repository.watchContext('school-1'),
+        ).thenAnswer((_) => Stream.error('network down'));
+        return InstitutionContextCubit(
+          repository: repository,
+          preferences: preferences,
+        );
       },
       act: (cubit) => cubit.loadInstitution('school-1'),
       expect: () => [
@@ -96,60 +110,98 @@ void main() {
       ],
     );
 
-    test('offline-cached context surfaces isOfflineCached on the loaded context', () async {
-      when(() => repository.watchContext('school-1'))
-          .thenAnswer((_) => Stream.value(_context(isOfflineCached: true)));
-      final cubit = InstitutionContextCubit(repository: repository, preferences: preferences);
+    test(
+      'offline-cached context surfaces isOfflineCached on the loaded context',
+      () async {
+        when(
+          () => repository.watchContext('school-1'),
+        ).thenAnswer((_) => Stream.value(_context(isOfflineCached: true)));
+        final cubit = InstitutionContextCubit(
+          repository: repository,
+          preferences: preferences,
+        );
 
-      await cubit.loadInstitution('school-1');
-      await Future<void>.delayed(Duration.zero);
+        await cubit.loadInstitution('school-1');
+        await Future<void>.delayed(Duration.zero);
 
-      final state = cubit.state;
-      expect(state, isA<InstitutionContextLoaded>());
-      expect((state as InstitutionContextLoaded).context.isOfflineCached, isTrue);
-    });
+        final state = cubit.state;
+        expect(state, isA<InstitutionContextLoaded>());
+        expect(
+          (state as InstitutionContextLoaded).context.isOfflineCached,
+          isTrue,
+        );
+      },
+    );
 
-    test('loadInstitution persists the selection for session restoration', () async {
-      when(() => repository.watchContext('school-1'))
-          .thenAnswer((_) => Stream.value(_context()));
-      final cubit = InstitutionContextCubit(repository: repository, preferences: preferences);
+    test(
+      'loadInstitution persists the selection for session restoration',
+      () async {
+        when(
+          () => repository.watchContext('school-1'),
+        ).thenAnswer((_) => Stream.value(_context()));
+        final cubit = InstitutionContextCubit(
+          repository: repository,
+          preferences: preferences,
+        );
 
-      await cubit.loadInstitution('school-1');
+        await cubit.loadInstitution('school-1');
 
-      expect(
-        preferences.getString('institution_context.current_institution_id'),
-        'school-1',
-      );
-      expect(cubit.currentInstitutionId, 'school-1');
-    });
+        expect(
+          preferences.getString('institution_context.current_institution_id'),
+          'school-1',
+        );
+        expect(cubit.currentInstitutionId, 'school-1');
+      },
+    );
 
-    test('restore falls back to home institution when nothing was previously selected', () async {
-      when(() => repository.watchContext('home-school'))
-          .thenAnswer((_) => Stream.value(_context(institutionId: 'home-school')));
-      final cubit = InstitutionContextCubit(repository: repository, preferences: preferences);
+    test(
+      'restore falls back to home institution when nothing was previously selected',
+      () async {
+        when(() => repository.watchContext('home-school')).thenAnswer(
+          (_) => Stream.value(_context(institutionId: 'home-school')),
+        );
+        final cubit = InstitutionContextCubit(
+          repository: repository,
+          preferences: preferences,
+        );
 
-      await cubit.restore('home-school');
+        await cubit.restore('home-school');
 
-      expect(cubit.currentInstitutionId, 'home-school');
-    });
+        expect(cubit.currentInstitutionId, 'home-school');
+      },
+    );
 
-    test('restore prefers a previously switched-to institution over home', () async {
-      await preferences.setString('institution_context.current_institution_id', 'other-school');
-      when(() => repository.watchContext('other-school'))
-          .thenAnswer((_) => Stream.value(_context(institutionId: 'other-school')));
-      final cubit = InstitutionContextCubit(repository: repository, preferences: preferences);
+    test(
+      'restore prefers a previously switched-to institution over home',
+      () async {
+        await preferences.setString(
+          'institution_context.current_institution_id',
+          'other-school',
+        );
+        when(() => repository.watchContext('other-school')).thenAnswer(
+          (_) => Stream.value(_context(institutionId: 'other-school')),
+        );
+        final cubit = InstitutionContextCubit(
+          repository: repository,
+          preferences: preferences,
+        );
 
-      await cubit.restore('home-school');
+        await cubit.restore('home-school');
 
-      expect(cubit.currentInstitutionId, 'other-school');
-    });
+        expect(cubit.currentInstitutionId, 'other-school');
+      },
+    );
 
     blocTest<InstitutionContextCubit, InstitutionContextState>(
       'clear resets to Initial and drops the persisted institution',
       build: () {
-        when(() => repository.watchContext('school-1'))
-            .thenAnswer((_) => Stream.value(_context()));
-        return InstitutionContextCubit(repository: repository, preferences: preferences);
+        when(
+          () => repository.watchContext('school-1'),
+        ).thenAnswer((_) => Stream.value(_context()));
+        return InstitutionContextCubit(
+          repository: repository,
+          preferences: preferences,
+        );
       },
       act: (cubit) async {
         await cubit.loadInstitution('school-1');

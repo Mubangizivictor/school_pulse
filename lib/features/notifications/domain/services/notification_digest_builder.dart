@@ -116,7 +116,8 @@ class NotificationDigestBuilder {
       }
       if (notification.isArchived) continue;
 
-      final isUrgent = notification.priority == NotificationPriority.urgent ||
+      final isUrgent =
+          notification.priority == NotificationPriority.urgent ||
           notification.requiresAcknowledgment ||
           NotificationCategoryCatalog.of(notification.category).isMandatory;
 

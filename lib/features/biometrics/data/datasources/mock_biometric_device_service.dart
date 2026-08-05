@@ -13,7 +13,8 @@ class MockBiometricDeviceService implements BiometricDeviceService {
   String get providerName => 'Mock Biometric Scanner';
 
   @override
-  Stream<List<BiometricDevice>> get discoveredDevices => _deviceController.stream;
+  Stream<List<BiometricDevice>> get discoveredDevices =>
+      _deviceController.stream;
 
   @override
   Future<void> initialize() async {
@@ -52,7 +53,7 @@ class MockBiometricDeviceService implements BiometricDeviceService {
   @override
   Future<String?> captureTemplate() async {
     if (!_isConnected) throw Exception('Device not connected');
-    
+
     // Simulate multi-step capture
     await Future.delayed(const Duration(seconds: 1));
     // Step 1: Capture
@@ -60,7 +61,7 @@ class MockBiometricDeviceService implements BiometricDeviceService {
     // Step 2: Capture
     await Future.delayed(const Duration(seconds: 1));
     // Step 3: Capture
-    
+
     // Return a dummy encrypted template
     return 'encrypted_template_${DateTime.now().millisecondsSinceEpoch}';
   }

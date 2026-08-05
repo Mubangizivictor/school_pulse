@@ -11,7 +11,10 @@ class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl({required this.remoteDataSource});
 
   @override
-  Future<Either<Failure, UserEntity>> loginWithEmail(String email, String password) async {
+  Future<Either<Failure, UserEntity>> loginWithEmail(
+    String email,
+    String password,
+  ) async {
     try {
       final userModel = await remoteDataSource.loginWithEmail(email, password);
       return Right(userModel);
@@ -43,7 +46,11 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, void>> completeParentPinSetup(String code, String phoneNumber, String newPin) async {
+  Future<Either<Failure, void>> completeParentPinSetup(
+    String code,
+    String phoneNumber,
+    String newPin,
+  ) async {
     try {
       await remoteDataSource.completeParentPinSetup(code, phoneNumber, newPin);
       return const Right(null);
@@ -105,7 +112,9 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, void>> completePasswordReset(String newPassword) async {
+  Future<Either<Failure, void>> completePasswordReset(
+    String newPassword,
+  ) async {
     try {
       await remoteDataSource.completePasswordReset(newPassword);
       return const Right(null);
@@ -117,7 +126,9 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, List<UserEntity>>> getStaffMembers(String schoolId) async {
+  Future<Either<Failure, List<UserEntity>>> getStaffMembers(
+    String schoolId,
+  ) async {
     try {
       final staff = await remoteDataSource.getStaffMembers(schoolId);
       return Right(staff);
@@ -127,9 +138,17 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, void>> toggleStaffActiveStatus(String userId, bool isActive, {String? reason}) async {
+  Future<Either<Failure, void>> toggleStaffActiveStatus(
+    String userId,
+    bool isActive, {
+    String? reason,
+  }) async {
     try {
-      await remoteDataSource.toggleStaffActiveStatus(userId, isActive, reason: reason);
+      await remoteDataSource.toggleStaffActiveStatus(
+        userId,
+        isActive,
+        reason: reason,
+      );
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -151,6 +170,55 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       await remoteDataSource.deleteStaffMember(userId);
       return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, String>> adminResetStaffPassword(String userId) async {
+    try {
+      final password = await remoteDataSource.adminResetStaffPassword(userId);
+      return Right(password);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
+    try {
+      await remoteDataSource.changePassword(currentPassword, newPassword);
+      return const Right(null);
+    } on AuthFailure catch (e) {
+      return Left(e);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> updateProfile(UserEntity user) async {
+    try {
+      await remoteDataSource.updateProfile(UserModel.fromEntity(user));
+      return const Right(null);
+    } on AuthFailure catch (e) {
+      return Left(e);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> updateMfaEnabled(bool enabled) async {
+    try {
+      await remoteDataSource.updateMfaEnabled(enabled);
+      return const Right(null);
+    } on AuthFailure catch (e) {
+      return Left(e);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }

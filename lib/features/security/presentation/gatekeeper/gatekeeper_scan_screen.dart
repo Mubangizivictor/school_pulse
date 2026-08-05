@@ -59,10 +59,8 @@ class _GatekeeperScanScreenState extends State<GatekeeperScanScreen> {
   Future<void> _openScanner() async {
     await Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
-        builder: (_) => QrScannerScreen(
-          mode: ScannerMode.security,
-          onScan: _handleScan,
-        ),
+        builder: (_) =>
+            QrScannerScreen(mode: ScannerMode.security, onScan: _handleScan),
       ),
     );
   }
@@ -91,7 +89,10 @@ class _GatekeeperScanScreenState extends State<GatekeeperScanScreen> {
       return;
     }
 
-    if (data != null && data['id'] != null && data['name'] != null && data['arrival'] != null) {
+    if (data != null &&
+        data['id'] != null &&
+        data['name'] != null &&
+        data['arrival'] != null) {
       setState(() {
         _kind = _ScanResultKind.visitorCheckout;
         _visitorId = data!['id'] as String;
@@ -122,7 +123,10 @@ class _GatekeeperScanScreenState extends State<GatekeeperScanScreen> {
       MaterialPageRoute(
         builder: (_) => VerificationScanScreen(
           context: verificationContext,
-          initialCredential: QrScanCredential(rawPayload: rawPayload, scannedAt: DateTime.now()),
+          initialCredential: QrScanCredential(
+            rawPayload: rawPayload,
+            scannedAt: DateTime.now(),
+          ),
         ),
       ),
     );
@@ -132,20 +136,26 @@ class _GatekeeperScanScreenState extends State<GatekeeperScanScreen> {
   bool _isBlacklisted(String? phone, String? name) {
     final visitorsState = context.read<VisitorsBloc>().state;
     if (visitorsState is! VisitorsLoaded) return false;
-    return visitorsState.blacklist.any((b) =>
-        (phone != null && phone.isNotEmpty && b.phone == phone) ||
-        (name != null && name.isNotEmpty && b.fullName.toLowerCase() == name.toLowerCase()));
+    return visitorsState.blacklist.any(
+      (b) =>
+          (phone != null && phone.isNotEmpty && b.phone == phone) ||
+          (name != null &&
+              name.isNotEmpty &&
+              b.fullName.toLowerCase() == name.toLowerCase()),
+    );
   }
 
   void _confirmVisitorCheckout() {
     if (_visitorId == null || _visitorArrival == null) return;
     setState(() => _isSubmitting = true);
     final now = DateTime.now();
-    context.read<VisitorsBloc>().add(CheckOutVisitorEvent(
-          visitorId: _visitorId!,
-          departureTime: now,
-          duration: formatVisitDuration(_visitorArrival!, now),
-        ));
+    context.read<VisitorsBloc>().add(
+      CheckOutVisitorEvent(
+        visitorId: _visitorId!,
+        departureTime: now,
+        duration: formatVisitDuration(_visitorArrival!, now),
+      ),
+    );
     Navigator.of(context).pop();
   }
 
@@ -167,7 +177,9 @@ class _GatekeeperScanScreenState extends State<GatekeeperScanScreen> {
       deviceId: '',
       gateId: widget.gate.id,
     );
-    context.read<VisitorsBloc>().add(CheckInNewVisitor(visitor, preApprovedId: _preApprovedId));
+    context.read<VisitorsBloc>().add(
+      CheckInNewVisitor(visitor, preApprovedId: _preApprovedId),
+    );
     Navigator.of(context).pop();
   }
 
@@ -176,8 +188,12 @@ class _GatekeeperScanScreenState extends State<GatekeeperScanScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Scan')),
       body: switch (_kind) {
-        _ScanResultKind.none => const Center(child: CircularProgressIndicator()),
-        _ScanResultKind.visitorCheckout => _buildVisitorCheckoutConfirm(context),
+        _ScanResultKind.none => const Center(
+          child: CircularProgressIndicator(),
+        ),
+        _ScanResultKind.visitorCheckout => _buildVisitorCheckoutConfirm(
+          context,
+        ),
         _ScanResultKind.visitorPreApproved => _buildPreApprovedConfirm(context),
       },
     );
@@ -192,9 +208,16 @@ class _GatekeeperScanScreenState extends State<GatekeeperScanScreen> {
         children: [
           AvatarInitials(name: name, size: 96),
           const SizedBox(height: 16),
-          Text(name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+          Text(
+            name,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
           if (_visitorArrival != null)
-            Text('Arrived ${formatVisitDuration(_visitorArrival!, DateTime.now())} ago', style: Theme.of(context).textTheme.bodyMedium),
+            Text(
+              'Arrived ${formatVisitDuration(_visitorArrival!, DateTime.now())} ago',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
           const SizedBox(height: 32),
           GatekeeperPrimaryButton(
             label: 'CHECK OUT',
@@ -219,14 +242,27 @@ class _GatekeeperScanScreenState extends State<GatekeeperScanScreen> {
         children: [
           AvatarInitials(name: name, size: 96),
           const SizedBox(height: 16),
-          Text(name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-          if (_preApprovedHost != null) Text('Visiting: $_preApprovedHost', style: Theme.of(context).textTheme.bodyMedium),
-          if (_preApprovedPurpose != null) Text(_preApprovedPurpose!, style: Theme.of(context).textTheme.bodySmall),
+          Text(
+            name,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          if (_preApprovedHost != null)
+            Text(
+              'Visiting: $_preApprovedHost',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          if (_preApprovedPurpose != null)
+            Text(
+              _preApprovedPurpose!,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           const SizedBox(height: 16),
           if (blacklisted)
             AlertBanner(
               title: 'Security Alert',
-              message: 'This person is on the security blacklist. Call a supervisor before allowing entry.',
+              message:
+                  'This person is on the security blacklist. Call a supervisor before allowing entry.',
               color: Colors.red,
               icon: Icons.warning_amber_rounded,
             ),
@@ -234,7 +270,9 @@ class _GatekeeperScanScreenState extends State<GatekeeperScanScreen> {
           GatekeeperPrimaryButton(
             label: blacklisted ? 'BLOCKED — CALL SUPERVISOR' : 'CHECK IN',
             icon: blacklisted ? Icons.block : Icons.login,
-            tone: blacklisted ? GatekeeperButtonTone.danger : GatekeeperButtonTone.success,
+            tone: blacklisted
+                ? GatekeeperButtonTone.danger
+                : GatekeeperButtonTone.success,
             isLoading: _isSubmitting,
             onPressed: blacklisted ? null : _confirmPreApprovedCheckIn,
           ),

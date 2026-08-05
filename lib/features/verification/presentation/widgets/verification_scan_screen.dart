@@ -29,9 +29,9 @@ class VerificationScanScreen extends StatefulWidget {
     this.initialCredential,
     this.liveKind,
   }) : assert(
-          (initialCredential == null) != (liveKind == null),
-          'Supply exactly one of initialCredential or liveKind',
-        );
+         (initialCredential == null) != (liveKind == null),
+         'Supply exactly one of initialCredential or liveKind',
+       );
 
   @override
   State<VerificationScanScreen> createState() => _VerificationScanScreenState();
@@ -48,11 +48,18 @@ class _VerificationScanScreenState extends State<VerificationScanScreen> {
 
     final initial = widget.initialCredential;
     if (initial != null) {
-      _sessionBloc.add(VerificationCredentialCaptured(credential: initial, context: widget.context));
+      _sessionBloc.add(
+        VerificationCredentialCaptured(
+          credential: initial,
+          context: widget.context,
+        ),
+      );
     } else {
       final scanBloc = di.sl<CredentialScanBloc>();
       _scanBloc = scanBloc;
-      scanBloc.add(StartCredentialScan(kind: widget.liveKind!, context: widget.context));
+      scanBloc.add(
+        StartCredentialScan(kind: widget.liveKind!, context: widget.context),
+      );
       scanBloc.stream.listen((state) {
         if (state.lastCredential == null) return;
         // Stop the reader immediately - on Android, `nfc_manager`'s reader
@@ -61,10 +68,12 @@ class _VerificationScanScreenState extends State<VerificationScanScreen> {
         // the operator is still looking at the first decision would
         // silently overwrite it mid-confirmation.
         scanBloc.add(const StopCredentialScan());
-        _sessionBloc.add(VerificationCredentialCaptured(
-          credential: state.lastCredential!,
-          context: widget.context,
-        ));
+        _sessionBloc.add(
+          VerificationCredentialCaptured(
+            credential: state.lastCredential!,
+            context: widget.context,
+          ),
+        );
       });
     }
   }
@@ -84,30 +93,31 @@ class _VerificationScanScreenState extends State<VerificationScanScreen> {
         body: SafeArea(
           child: BlocBuilder<VerificationSessionBloc, VerificationSessionState>(
             builder: (context, state) => switch (state) {
-              VerificationIdle() || VerificationResolving() => const _StatusView(
-                  color: Colors.blue,
-                  icon: Icons.sensors,
-                  title: 'Scanning…',
-                  message: 'Present a card, code, or scan a QR to continue.',
-                ),
-              VerificationDecided(:final decision) => _DecidedView(decision: decision),
+              VerificationIdle() ||
+              VerificationResolving() => const _StatusView(
+                color: Colors.blue,
+                icon: Icons.sensors,
+                title: 'Scanning…',
+                message: 'Present a card, code, or scan a QR to continue.',
+              ),
+              VerificationDecided(:final decision) => _DecidedView(
+                decision: decision,
+              ),
               VerificationRecording() => const _StatusView(
-                  color: Colors.green,
-                  icon: Icons.check_circle_outline,
-                  title: 'Recording…',
-                  message: '',
-                ),
-              VerificationRecorded(:final decision, :final direction) => _RecordedView(
-                  decision: decision,
-                  direction: direction,
-                ),
+                color: Colors.green,
+                icon: Icons.check_circle_outline,
+                title: 'Recording…',
+                message: '',
+              ),
+              VerificationRecorded(:final decision, :final direction) =>
+                _RecordedView(decision: decision, direction: direction),
               VerificationSessionError(:final message) => _StatusView(
-                  color: Colors.red,
-                  icon: Icons.error_outline,
-                  title: 'Something went wrong',
-                  message: message,
-                  showDone: true,
-                ),
+                color: Colors.red,
+                icon: Icons.error_outline,
+                title: 'Something went wrong',
+                message: message,
+                showDone: true,
+              ),
             },
           ),
         ),
@@ -124,11 +134,18 @@ class _DecidedView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isAllowed = decision.outcome == VerificationOutcome.allowed;
-    final isWarning = decision.outcome == VerificationOutcome.alreadyRecorded ||
+    final isWarning =
+        decision.outcome == VerificationOutcome.alreadyRecorded ||
         decision.outcome == VerificationOutcome.requiresOverride;
-    final color = isAllowed ? Colors.green : (isWarning ? Colors.orange : Colors.red);
-    final icon = isAllowed ? Icons.check_circle : (isWarning ? Icons.warning_amber_rounded : Icons.cancel);
-    final title = isAllowed ? 'VERIFIED' : (isWarning ? 'ALREADY RECORDED' : 'DENIED');
+    final color = isAllowed
+        ? Colors.green
+        : (isWarning ? Colors.orange : Colors.red);
+    final icon = isAllowed
+        ? Icons.check_circle
+        : (isWarning ? Icons.warning_amber_rounded : Icons.cancel);
+    final title = isAllowed
+        ? 'VERIFIED'
+        : (isWarning ? 'ALREADY RECORDED' : 'DENIED');
 
     return _ResultScaffold(
       color: color,
@@ -137,17 +154,22 @@ class _DecidedView extends StatelessWidget {
       subtitle: _identityLabel(decision.identity),
       message: decision.message,
       footer: isAllowed
-          ? _DirectionConfirmButtons(suggestedDirection: decision.suggestedDirection)
+          ? _DirectionConfirmButtons(
+              suggestedDirection: decision.suggestedDirection,
+            )
           : const _DoneButton(),
     );
   }
 
   String _identityLabel(ResolvedIdentity identity) => switch (identity) {
-        StudentResolvedIdentity(:final name, :final studentCode) => '$name • $studentCode',
-        StaffResolvedIdentity(:final name, :final staffCode) => '$name • ${staffCode ?? 'Staff'}',
-        ParentPickupResolvedIdentity(:final childName) => '$childName (via parent code)',
-        UnresolvedResolvedIdentity() => 'Unknown',
-      };
+    StudentResolvedIdentity(:final name, :final studentCode) =>
+      '$name • $studentCode',
+    StaffResolvedIdentity(:final name, :final staffCode) =>
+      '$name • ${staffCode ?? 'Staff'}',
+    ParentPickupResolvedIdentity(:final childName) =>
+      '$childName (via parent code)',
+    UnresolvedResolvedIdentity() => 'Unknown',
+  };
 }
 
 class _RecordedView extends StatelessWidget {
@@ -180,18 +202,28 @@ class _DirectionConfirmButtons extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         FilledButton.icon(
-          onPressed: () =>
-              context.read<VerificationSessionBloc>().add(const VerificationDirectionConfirmed('In')),
+          onPressed: () => context.read<VerificationSessionBloc>().add(
+            const VerificationDirectionConfirmed('In'),
+          ),
           icon: const Icon(Icons.login),
-          label: Text(suggestedDirection == 'In' ? 'Confirm In (suggested)' : 'Confirm In'),
+          label: Text(
+            suggestedDirection == 'In'
+                ? 'Confirm In (suggested)'
+                : 'Confirm In',
+          ),
         ),
         const SizedBox(width: 12),
         FilledButton.icon(
-          onPressed: () =>
-              context.read<VerificationSessionBloc>().add(const VerificationDirectionConfirmed('Out')),
+          onPressed: () => context.read<VerificationSessionBloc>().add(
+            const VerificationDirectionConfirmed('Out'),
+          ),
           style: FilledButton.styleFrom(backgroundColor: Colors.blueGrey),
           icon: const Icon(Icons.logout),
-          label: Text(suggestedDirection == 'Out' ? 'Confirm Out (suggested)' : 'Confirm Out'),
+          label: Text(
+            suggestedDirection == 'Out'
+                ? 'Confirm Out (suggested)'
+                : 'Confirm Out',
+          ),
         ),
       ],
     );
@@ -240,16 +272,28 @@ class _ResultScaffold extends StatelessWidget {
           const SizedBox(height: 24),
           Text(
             title,
-            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
+            style: const TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
             textAlign: TextAlign.center,
           ),
           if (subtitle.isNotEmpty) ...[
             const SizedBox(height: 12),
-            Text(subtitle, style: const TextStyle(fontSize: 20, color: Colors.white), textAlign: TextAlign.center),
+            Text(
+              subtitle,
+              style: const TextStyle(fontSize: 20, color: Colors.white),
+              textAlign: TextAlign.center,
+            ),
           ],
           if (message.isNotEmpty) ...[
             const SizedBox(height: 8),
-            Text(message, style: const TextStyle(fontSize: 16, color: Colors.white70), textAlign: TextAlign.center),
+            Text(
+              message,
+              style: const TextStyle(fontSize: 16, color: Colors.white70),
+              textAlign: TextAlign.center,
+            ),
           ],
           const SizedBox(height: 32),
           footer,

@@ -99,20 +99,22 @@ class StaffAssignmentRepositoryImpl implements StaffAssignmentRepository {
           return false;
         }
         return true;
-      }).toList()
-        ..sort(_byResponsibilityOrder);
+      }).toList()..sort(_byResponsibilityOrder);
     });
   }
 
   /// Subject assignments first (the panel's primary job), then class
   /// teaching, then everything else; alphabetical inside each group so the
   /// switcher order is stable between launches.
-  static int _byResponsibilityOrder(StaffRoleAssignment a, StaffRoleAssignment b) {
+  static int _byResponsibilityOrder(
+    StaffRoleAssignment a,
+    StaffRoleAssignment b,
+  ) {
     int rank(StaffResponsibilityType t) => switch (t) {
-          StaffResponsibilityType.subjectTeacher => 0,
-          StaffResponsibilityType.classTeacher => 1,
-          _ => 2,
-        };
+      StaffResponsibilityType.subjectTeacher => 0,
+      StaffResponsibilityType.classTeacher => 1,
+      _ => 2,
+    };
     final byRank = rank(a.roleType).compareTo(rank(b.roleType));
     if (byRank != 0) return byRank;
     return a.displayLabel.toLowerCase().compareTo(b.displayLabel.toLowerCase());
@@ -126,12 +128,12 @@ class StaffAssignmentRepositoryImpl implements StaffAssignmentRepository {
     return remoteDataSource
         .watchAssignmentsForUser(schoolId: schoolId, userId: userId)
         .asyncMap((assignments) async {
-      await localDataSource.clearAssignments(schoolId: schoolId);
-      await localDataSource.cacheAssignments(
-        assignments.map(StaffRoleAssignmentIsar.fromEntity).toList(),
-      );
-      return assignments..sort(_byResponsibilityOrder);
-    });
+          await localDataSource.clearAssignments(schoolId: schoolId);
+          await localDataSource.cacheAssignments(
+            assignments.map(StaffRoleAssignmentIsar.fromEntity).toList(),
+          );
+          return assignments..sort(_byResponsibilityOrder);
+        });
   }
 
   @override
@@ -153,11 +155,14 @@ class StaffAssignmentRepositoryImpl implements StaffAssignmentRepository {
           .where((a) => a.id == assignmentId)
           .firstOrNull;
       if (match == null) {
-        return const Left(AssignmentInvalidFailure(
-          'This responsibility is not available offline.',
-        ));
+        return const Left(
+          AssignmentInvalidFailure(
+            'This responsibility is not available offline.',
+          ),
+        );
       }
-      if (!match.isCurrentlyValid()) return const Left(AssignmentInvalidFailure());
+      if (!match.isCurrentlyValid())
+        return const Left(AssignmentInvalidFailure());
       return Right(match);
     }
 
@@ -167,24 +172,28 @@ class StaffAssignmentRepositoryImpl implements StaffAssignmentRepository {
         assignmentId: assignmentId,
       );
       if (assignment == null) {
-        return const Left(AssignmentInvalidFailure(
-          'This responsibility has been removed.',
-        ));
+        return const Left(
+          AssignmentInvalidFailure('This responsibility has been removed.'),
+        );
       }
       // Ownership is re-checked server-side too, but catching it here gives a
       // clear message instead of a rules rejection.
       if (assignment.userId != userId) {
-        return const Left(PermissionDeniedFailure(
-          'This responsibility belongs to another staff member.',
-        ));
+        return const Left(
+          PermissionDeniedFailure(
+            'This responsibility belongs to another staff member.',
+          ),
+        );
       }
       if (!assignment.isCurrentlyValid()) {
-        return Left(AssignmentInvalidFailure(switch (assignment.status) {
-          AssignmentStatus.suspended =>
-            'This responsibility has been suspended by the school admin.',
-          AssignmentStatus.removed => 'This responsibility has been removed.',
-          _ => 'This responsibility is outside its active dates.',
-        }));
+        return Left(
+          AssignmentInvalidFailure(switch (assignment.status) {
+            AssignmentStatus.suspended =>
+              'This responsibility has been suspended by the school admin.',
+            AssignmentStatus.removed => 'This responsibility has been removed.',
+            _ => 'This responsibility is outside its active dates.',
+          }),
+        );
       }
       return Right(assignment);
     } catch (e) {
@@ -193,9 +202,14 @@ class StaffAssignmentRepositoryImpl implements StaffAssignmentRepository {
   }
 
   @override
-  Future<Either<Failure, void>> persistSelectedAssignment(String assignmentId) async {
+  Future<Either<Failure, void>> persistSelectedAssignment(
+    String assignmentId,
+  ) async {
     try {
-      await preferences.setString(_selectedAssignmentKey(currentUserId()), assignmentId);
+      await preferences.setString(
+        _selectedAssignmentKey(currentUserId()),
+        assignmentId,
+      );
       return const Right(null);
     } catch (e) {
       return Left(CacheFailure(e.toString()));
@@ -205,7 +219,9 @@ class StaffAssignmentRepositoryImpl implements StaffAssignmentRepository {
   @override
   Future<Either<Failure, String?>> getPersistedAssignmentId() async {
     try {
-      return Right(preferences.getString(_selectedAssignmentKey(currentUserId())));
+      return Right(
+        preferences.getString(_selectedAssignmentKey(currentUserId())),
+      );
     } catch (e) {
       return Left(CacheFailure(e.toString()));
     }

@@ -73,10 +73,16 @@ class AcademicRemoteDataSourceImpl implements AcademicRemoteDataSource {
         .where('studentId', isEqualTo: studentId);
 
     if (startDate != null) {
-      query = query.where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate));
+      query = query.where(
+        'date',
+        isGreaterThanOrEqualTo: Timestamp.fromDate(startDate),
+      );
     }
     if (endDate != null) {
-      query = query.where('date', isLessThanOrEqualTo: Timestamp.fromDate(endDate));
+      query = query.where(
+        'date',
+        isLessThanOrEqualTo: Timestamp.fromDate(endDate),
+      );
     }
 
     final snapshot = await query.get();
@@ -112,7 +118,9 @@ class AcademicRemoteDataSourceImpl implements AcademicRemoteDataSource {
     }
 
     final snapshot = await query.get();
-    return snapshot.docs.map((doc) => ReportCardModel.fromFirestore(doc)).toList();
+    return snapshot.docs
+        .map((doc) => ReportCardModel.fromFirestore(doc))
+        .toList();
   }
 
   @override
@@ -163,7 +171,8 @@ class AcademicRemoteDataSourceImpl implements AcademicRemoteDataSource {
       await NotificationService().sendDirectNotification(
         userId: parentUid,
         title: 'Report Card Ready',
-        body: "Your child's report card has been approved and is ready to view.",
+        body:
+            "Your child's report card has been approved and is ready to view.",
       );
     } catch (e) {
       if (kDebugMode) print('Error notifying parent of report card: $e');

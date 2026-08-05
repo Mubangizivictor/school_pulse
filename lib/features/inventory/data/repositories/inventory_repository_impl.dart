@@ -55,9 +55,17 @@ class InventoryRepositoryImpl implements InventoryRepository {
   }
 
   @override
-  Future<Either<Failure, void>> issueItem({required String itemId, required int quantity, required String note}) async {
+  Future<Either<Failure, void>> issueItem({
+    required String itemId,
+    required int quantity,
+    required String note,
+  }) async {
     try {
-      await remoteDataSource.issueItem(itemId: itemId, quantity: quantity, note: note);
+      await remoteDataSource.issueItem(
+        itemId: itemId,
+        quantity: quantity,
+        note: note,
+      );
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure());

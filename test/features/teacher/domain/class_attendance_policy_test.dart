@@ -114,21 +114,24 @@ void main() {
       expect(decision.refusal, AttendanceRefusal.reasonRequired);
     });
 
-    test('is allowed inside the correction window with permission and reason', () {
-      expect(
-        ClassAttendancePolicy.canEdit(
-          session: _session(
-            status: ClassAttendanceSessionStatus.submitted,
-            submittedAt: _now.subtract(const Duration(hours: 2)),
-          ),
-          hasEditPermission: true,
-          hasHistoricalPermission: false,
-          reason: 'Marked the wrong student',
-          now: _now,
-        ).isAllowed,
-        isTrue,
-      );
-    });
+    test(
+      'is allowed inside the correction window with permission and reason',
+      () {
+        expect(
+          ClassAttendancePolicy.canEdit(
+            session: _session(
+              status: ClassAttendanceSessionStatus.submitted,
+              submittedAt: _now.subtract(const Duration(hours: 2)),
+            ),
+            hasEditPermission: true,
+            hasHistoricalPermission: false,
+            reason: 'Marked the wrong student',
+            now: _now,
+          ).isAllowed,
+          isTrue,
+        );
+      },
+    );
 
     test('past the window it becomes the academic office\'s call', () {
       final decision = ClassAttendancePolicy.canEdit(
@@ -191,10 +194,9 @@ void main() {
 
     test('names a single unmarked student in the singular', () {
       final decision = ClassAttendancePolicy.canSubmit(
-        session: _session(entries: [
-          _entry('s1', 'present'),
-          _entry('s2', 'absent'),
-        ]),
+        session: _session(
+          entries: [_entry('s1', 'present'), _entry('s2', 'absent')],
+        ),
         rosterStudentIds: roster,
       );
 
@@ -204,11 +206,13 @@ void main() {
     test('is allowed once every student carries a mark', () {
       expect(
         ClassAttendancePolicy.canSubmit(
-          session: _session(entries: [
-            _entry('s1', 'present'),
-            _entry('s2', 'absent'),
-            _entry('s3', 'late'),
-          ]),
+          session: _session(
+            entries: [
+              _entry('s1', 'present'),
+              _entry('s2', 'absent'),
+              _entry('s3', 'late'),
+            ],
+          ),
           rosterStudentIds: roster,
         ).isAllowed,
         isTrue,
@@ -306,11 +310,13 @@ void main() {
 
   group('session totals', () {
     test('count by classification, ignoring unmarked students', () {
-      final session = _session(entries: [
-        _entry('s1', 'present'),
-        _entry('s2', 'late'),
-        _entry('s3', 'medical'),
-      ]);
+      final session = _session(
+        entries: [
+          _entry('s1', 'present'),
+          _entry('s2', 'late'),
+          _entry('s3', 'medical'),
+        ],
+      );
 
       final counts = session.countsBy(AttendanceStatusResolver.defaults);
 

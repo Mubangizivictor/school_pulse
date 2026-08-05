@@ -18,7 +18,8 @@ class ReportCardScreen extends StatefulWidget {
   State<ReportCardScreen> createState() => _ReportCardScreenState();
 }
 
-class _ReportCardScreenState extends State<ReportCardScreen> with SingleTickerProviderStateMixin {
+class _ReportCardScreenState extends State<ReportCardScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late List<String> _termOptions;
   String? _selectedTerm;
@@ -70,22 +71,18 @@ class _ReportCardScreenState extends State<ReportCardScreen> with SingleTickerPr
     if (termParts != null && termParts.length >= 3) {
       final term = '${termParts[0]} ${termParts[1]}';
       final year = termParts[2];
-      
+
       context.read<AcademicBloc>().add(
-            GetReportCardRequested(
-              studentId: studentId,
-              term: term,
-              year: year,
-            ),
-          );
-      
+        GetReportCardRequested(studentId: studentId, term: term, year: year),
+      );
+
       context.read<AcademicBloc>().add(
-            GetAcademicRecordsRequested(
-              studentId: studentId,
-              term: term,
-              year: year,
-            ),
-          );
+        GetAcademicRecordsRequested(
+          studentId: studentId,
+          term: term,
+          year: year,
+        ),
+      );
     }
   }
 
@@ -128,7 +125,8 @@ class _ReportCardScreenState extends State<ReportCardScreen> with SingleTickerPr
               return EmptyState(
                 icon: Icons.assignment_late,
                 title: 'Report not ready',
-                message: 'This report is currently being processed or awaiting final signatures.',
+                message:
+                    'This report is currently being processed or awaiting final signatures.',
                 ctaLabel: 'Refresh',
                 onCtaPressed: _loadRecords,
               );
@@ -138,8 +136,8 @@ class _ReportCardScreenState extends State<ReportCardScreen> with SingleTickerPr
             // Let's assume we want to show the academic records if the report card is present.
             return _buildReportContent(context, state.reportCard!);
           } else if (state is AcademicLoaded) {
-             // Fallback or handle combined state
-             return const Center(child: CircularProgressIndicator());
+            // Fallback or handle combined state
+            return const Center(child: CircularProgressIndicator());
           }
           return const SizedBox.shrink();
         },
@@ -155,12 +153,15 @@ class _ReportCardScreenState extends State<ReportCardScreen> with SingleTickerPr
         children: [
           _buildTermSelector(),
           const SizedBox(height: 20),
-          if (reportCard.isLockedForFees) _buildFeesWarning() else ...[
+          if (reportCard.isLockedForFees)
+            _buildFeesWarning()
+          else ...[
             _buildSummaryHeader(context, reportCard.averageScore),
             const SizedBox(height: 24),
             _buildSubjectPerformanceList(context),
             const SizedBox(height: 24),
-            if (reportCard.classTeacherComment != null) _buildTeacherRemarks(reportCard.classTeacherComment!),
+            if (reportCard.classTeacherComment != null)
+              _buildTeacherRemarks(reportCard.classTeacherComment!),
           ],
         ],
       ),
@@ -202,14 +203,18 @@ class _ReportCardScreenState extends State<ReportCardScreen> with SingleTickerPr
       children: [
         Text(
           'Subject Performance',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         BlocBuilder<AcademicBloc, AcademicState>(
           builder: (context, state) {
             if (state is AcademicLoaded) {
               if (state.academicRecords.isEmpty) {
-                return const Center(child: Text('No subject records found for this term.'));
+                return const Center(
+                  child: Text('No subject records found for this term.'),
+                );
               }
               return ListView.separated(
                 shrinkWrap: true,
@@ -220,7 +225,10 @@ class _ReportCardScreenState extends State<ReportCardScreen> with SingleTickerPr
                   final record = state.academicRecords[index];
                   return AppCard(
                     child: ListTile(
-                      title: Text(record.subject, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      title: Text(
+                        record.subject,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       trailing: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.end,
@@ -260,7 +268,9 @@ class _ReportCardScreenState extends State<ReportCardScreen> with SingleTickerPr
       children: [
         Text(
           'Teacher\'s Remarks',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         AppCard(

@@ -49,8 +49,13 @@ class BehaviourCategory extends Equatable {
       valence == BehaviourValence.achievement;
 
   @override
-  List<Object?> get props =>
-      [code, label, valence, colorHex, defaultsToFollowUp];
+  List<Object?> get props => [
+    code,
+    label,
+    valence,
+    colorHex,
+    defaultsToFollowUp,
+  ];
 }
 
 /// Resolves the school's configured behaviour categories, with a default set
@@ -254,27 +259,27 @@ class ClassBehaviourRecord extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        campusId,
-        classId,
-        streamId,
-        academicYearId,
-        termId,
-        studentId,
-        studentName,
-        categoryCode,
-        note,
-        recommendation,
-        followUpRequired,
-        followUpClosed,
-        followUpNote,
-        disciplineCaseId,
-        disciplineStatus,
-        recordedBy,
-        recordedAt,
-        updatedBy,
-        updatedAt,
-        roleAssignmentId,
-      ];
+    id,
+    schoolId,
+    campusId,
+    classId,
+    streamId,
+    academicYearId,
+    termId,
+    studentId,
+    studentName,
+    categoryCode,
+    note,
+    recommendation,
+    followUpRequired,
+    followUpClosed,
+    followUpNote,
+    disciplineCaseId,
+    disciplineStatus,
+    recordedBy,
+    recordedAt,
+    updatedBy,
+    updatedAt,
+    roleAssignmentId,
+  ];
 }

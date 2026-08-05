@@ -38,32 +38,22 @@ class TeacherStudentMoreOptionsScreen extends StatelessWidget {
             icon: Icons.contact_phone_outlined,
             label: 'Contact Information',
           ),
-          _OptionTile(
-            icon: Icons.description_outlined,
-            label: 'Documents',
-          ),
-          _OptionTile(
-            icon: Icons.people_outline,
-            label: 'Sibling Information',
-          ),
+          _OptionTile(icon: Icons.description_outlined, label: 'Documents'),
+          _OptionTile(icon: Icons.people_outline, label: 'Sibling Information'),
           _OptionTile(
             icon: Icons.exit_to_app_outlined,
             label: 'Leave Applications',
-            onTap: () => context.push('/staff/students/$studentId/leave-applications'),
+            onTap: () =>
+                context.push('/staff/students/$studentId/leave-applications'),
           ),
-          _OptionTile(
-            icon: Icons.note_alt_outlined,
-            label: 'Notes',
-          ),
+          _OptionTile(icon: Icons.note_alt_outlined, label: 'Notes'),
           _OptionTile(
             icon: Icons.chat_bubble_outline,
             label: 'Communications',
-            onTap: () => context.push('/staff/students/$studentId/communications'),
+            onTap: () =>
+                context.push('/staff/students/$studentId/communications'),
           ),
-          _OptionTile(
-            icon: Icons.history_outlined,
-            label: 'Timeline',
-          ),
+          _OptionTile(icon: Icons.history_outlined, label: 'Timeline'),
         ],
       ),
     );
@@ -95,7 +85,10 @@ class _OptionTile extends StatelessWidget {
             color: AppColors.textPrimary(context),
           ),
         ),
-        trailing: Icon(Icons.chevron_right, color: AppColors.textMuted(context)),
+        trailing: Icon(
+          Icons.chevron_right,
+          color: AppColors.textMuted(context),
+        ),
       ),
     );
   }

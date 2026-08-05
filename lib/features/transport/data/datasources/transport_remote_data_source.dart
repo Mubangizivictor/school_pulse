@@ -23,11 +23,11 @@ class TransportRemoteDataSourceImpl implements TransportRemoteDataSource {
         .where('studentId', isEqualTo: studentId)
         .limit(1)
         .get();
-    
+
     if (snapshot.docs.isEmpty) {
       throw Exception('Transport info not found');
     }
-    
+
     return TransportInfoModel.fromFirestore(snapshot.docs.first);
   }
 
@@ -49,20 +49,26 @@ class TransportRemoteDataSourceImpl implements TransportRemoteDataSource {
 
   @override
   Future<Map<String, dynamic>> getTransportStats() async {
-    final doc = await firestore.collection('stats').doc('transport_summary').get();
+    final doc = await firestore
+        .collection('stats')
+        .doc('transport_summary')
+        .get();
     return doc.data() ?? {};
   }
 
   @override
   Future<void> startTrip(String routeId) async {
-    final routeDoc = await firestore.collection('bus_routes').doc(routeId).get();
+    final routeDoc = await firestore
+        .collection('bus_routes')
+        .doc(routeId)
+        .get();
     final routeName = routeDoc.data()?['name'] ?? 'Your bus route';
 
     await firestore.collection('bus_routes').doc(routeId).update({
       'status': 'In Transit',
       'lastTripStart': FieldValue.serverTimestamp(),
     });
-    
+
     // Create a trip record for logs
     await firestore.collection('trips').add({
       'routeId': routeId,
@@ -90,12 +96,13 @@ class TransportRemoteDataSourceImpl implements TransportRemoteDataSource {
       'status': 'Stationary',
       'lastTripEnd': FieldValue.serverTimestamp(),
     });
-    
-    final ongoingTrips = await firestore.collection('trips')
+
+    final ongoingTrips = await firestore
+        .collection('trips')
         .where('routeId', isEqualTo: routeId)
         .where('status', isEqualTo: 'Ongoing')
         .get();
-        
+
     for (var doc in ongoingTrips.docs) {
       await doc.reference.update({
         'status': 'Completed',
@@ -113,7 +120,10 @@ class TransportRemoteDataSourceImpl implements TransportRemoteDataSource {
     });
 
     // Notify the specific parent
-    final studentDoc = await firestore.collection('students').doc(studentId).get();
+    final studentDoc = await firestore
+        .collection('students')
+        .doc(studentId)
+        .get();
     final parentId = studentDoc.data()?['parentId'];
     final studentName = studentDoc.data()?['name'] ?? 'Your child';
 
@@ -126,7 +136,7 @@ class TransportRemoteDataSourceImpl implements TransportRemoteDataSource {
         'read': false,
         'type': 'transport',
       });
-      
+
       // Also queue for actual push notification if tokens exist
       final tokensSnapshot = await firestore
           .collection('users')

@@ -39,7 +39,9 @@ class _BatchIdCardScreenState extends State<BatchIdCardScreen> {
   @override
   void initState() {
     super.initState();
-    _classesSub = _structureRepository.watchClasses().listen((classes) {
+    final schoolId =
+        (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
+    _classesSub = _structureRepository.watchClasses(schoolId).listen((classes) {
       setState(() => _classes = classes);
     });
   }
@@ -69,7 +71,9 @@ class _BatchIdCardScreenState extends State<BatchIdCardScreen> {
     result.fold(
       (failure) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(failure.message)));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(failure.message)));
         }
       },
       (students) {
@@ -86,22 +90,29 @@ class _BatchIdCardScreenState extends State<BatchIdCardScreen> {
     if (_selectedStudentIds.isEmpty) return;
     setState(() => _printing = true);
 
-    final schoolName = context.read<ThemeProvider>().config?.schoolName ?? 'School Pulse Academy';
+    final schoolName =
+        context.read<ThemeProvider>().config?.schoolName ??
+        'School Pulse Academy';
     final entries = <IdCardBatchEntry>[];
     var skipped = 0;
 
-    for (final student in _students.where((s) => _selectedStudentIds.contains(s.id))) {
-      final identityResult = await _studentIdentityRepository.getStudentIdentity(student.id);
+    for (final student in _students.where(
+      (s) => _selectedStudentIds.contains(s.id),
+    )) {
+      final identityResult = await _studentIdentityRepository
+          .getStudentIdentity(student.id);
       identityResult.fold(
         (_) => skipped++,
-        (identity) => entries.add(IdCardBatchEntry(
-          studentName: student.name,
-          admissionNumber: student.studentId,
-          studentId: identity.uniqueSystemId,
-          className: student.className,
-          stream: '',
-          uniqueSystemId: identity.uniqueSystemId,
-        )),
+        (identity) => entries.add(
+          IdCardBatchEntry(
+            studentName: student.name,
+            admissionNumber: student.studentId,
+            studentId: identity.uniqueSystemId,
+            className: student.className,
+            stream: '',
+            uniqueSystemId: identity.uniqueSystemId,
+          ),
+        ),
       );
     }
 
@@ -109,23 +120,36 @@ class _BatchIdCardScreenState extends State<BatchIdCardScreen> {
       setState(() => _printing = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('None of the selected students have a generated ID card yet')),
+          const SnackBar(
+            content: Text(
+              'None of the selected students have a generated ID card yet',
+            ),
+          ),
         );
       }
       return;
     }
 
     try {
-      final pdfData = await _idCardService.generateBatchIdCardsPdf(schoolName: schoolName, entries: entries);
+      final pdfData = await _idCardService.generateBatchIdCardsPdf(
+        schoolName: schoolName,
+        entries: entries,
+      );
       await _idCardService.printIdCard(pdfData);
       if (mounted && skipped > 0) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Printed ${entries.length} card(s). Skipped $skipped without a generated identity.')),
+          SnackBar(
+            content: Text(
+              'Printed ${entries.length} card(s). Skipped $skipped without a generated identity.',
+            ),
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to print batch: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to print batch: $e')));
       }
     } finally {
       if (mounted) setState(() => _printing = false);
@@ -142,15 +166,25 @@ class _BatchIdCardScreenState extends State<BatchIdCardScreen> {
             padding: const EdgeInsets.all(16),
             child: DropdownButtonFormField<SchoolClass>(
               initialValue: _selectedClass,
-              decoration: const InputDecoration(labelText: 'Class', border: OutlineInputBorder()),
-              items: _classes.map((c) => DropdownMenuItem(value: c, child: Text(c.name))).toList(),
+              decoration: const InputDecoration(
+                labelText: 'Class',
+                border: OutlineInputBorder(),
+              ),
+              items: _classes
+                  .map((c) => DropdownMenuItem(value: c, child: Text(c.name)))
+                  .toList(),
               onChanged: _onClassSelected,
-              hint: _classes.isEmpty ? const Text('Loading classes…') : const Text('Select a class'),
+              hint: _classes.isEmpty
+                  ? const Text('Loading classes…')
+                  : const Text('Select a class'),
             ),
           ),
-          if (_loadingStudents) const Expanded(child: Center(child: CircularProgressIndicator())),
+          if (_loadingStudents)
+            const Expanded(child: Center(child: CircularProgressIndicator())),
           if (!_loadingStudents && _selectedClass != null && _students.isEmpty)
-            const Expanded(child: Center(child: Text('No students in this class'))),
+            const Expanded(
+              child: Center(child: Text('No students in this class')),
+            ),
           if (!_loadingStudents && _students.isNotEmpty)
             Expanded(
               child: ListView.builder(
@@ -181,7 +215,11 @@ class _BatchIdCardScreenState extends State<BatchIdCardScreen> {
           : FloatingActionButton.extended(
               onPressed: _printing ? null : _printBatch,
               icon: _printing
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : const Icon(Icons.print),
               label: Text('Print ${_selectedStudentIds.length} Card(s)'),
             ),

@@ -16,10 +16,7 @@ class NotificationMapper {
   /// Firestore collection holding per-recipient notification documents.
   static const collection = 'notifications';
 
-  static NotificationItem fromFirestore(
-    String id,
-    Map<String, dynamic> data,
-  ) {
+  static NotificationItem fromFirestore(String id, Map<String, dynamic> data) {
     final type = _enumFromName(
       NotificationType.values,
       data['type'] as String?,
@@ -58,15 +55,18 @@ class NotificationMapper {
       title: (data['title'] as String?)?.trim().isNotEmpty == true
           ? data['title'] as String
           : 'School Pulse',
-      description: data['shortBody'] as String? ?? data['body'] as String? ?? '',
+      description:
+          data['shortBody'] as String? ?? data['body'] as String? ?? '',
       longMessage: data['fullBody'] as String?,
-      senderName: data['senderNameSnapshot'] as String? ??
+      senderName:
+          data['senderNameSnapshot'] as String? ??
           (senderKind == NotificationSourceKind.human
               ? 'School Pulse'
               : 'Automated System'),
       senderRole: data['senderRoleSnapshot'] as String? ?? 'School Pulse',
       senderAvatar: data['senderPhotoUrl'] as String?,
-      timestamp: _dateFrom(data['createdAt']) ??
+      timestamp:
+          _dateFrom(data['createdAt']) ??
           _dateFrom(data['sentAt']) ??
           DateTime.now(),
       category: category,
@@ -94,7 +94,8 @@ class NotificationMapper {
       ),
       sender: NotificationSender(
         senderId: data['senderId'] as String?,
-        nameSnapshot: data['senderNameSnapshot'] as String? ??
+        nameSnapshot:
+            data['senderNameSnapshot'] as String? ??
             (senderKind == NotificationSourceKind.human
                 ? 'School Pulse'
                 : 'Automated System'),
@@ -124,7 +125,8 @@ class NotificationMapper {
       readAt: readAt,
       acknowledgedAt: _dateFrom(data['acknowledgedAt']),
       expiresAt: _dateFrom(data['expiresAt']),
-      requiresAcknowledgment: data['requiresAcknowledgment'] as bool? ??
+      requiresAcknowledgment:
+          data['requiresAcknowledgment'] as bool? ??
           config.requiresAcknowledgment,
       isArchived: isArchived,
       pushDeliveryStatus: _enumFromName(
@@ -167,14 +169,16 @@ class NotificationMapper {
       if (item.sourceModule != null) 'sourceModule': item.sourceModule,
       if (sender.triggerReason != null) 'triggerReason': sender.triggerReason,
       if (item.sourceEntityId != null) 'sourceEntityId': item.sourceEntityId,
-      if (item.relatedStudentId != null) 'relatedStudentId': item.relatedStudentId,
+      if (item.relatedStudentId != null)
+        'relatedStudentId': item.relatedStudentId,
       if (item.relatedStudentName != null)
         'relatedStudentName': item.relatedStudentName,
       if (item.relatedParentId != null) 'relatedParentId': item.relatedParentId,
       if (item.relatedStaffId != null) 'relatedStaffId': item.relatedStaffId,
       if (item.relatedConversationId != null)
         'relatedConversationId': item.relatedConversationId,
-      if (item.relatedClassName != null) 'relatedClassName': item.relatedClassName,
+      if (item.relatedClassName != null)
+        'relatedClassName': item.relatedClassName,
       if (item.bannerImageUrl != null) 'imageUrl': item.bannerImageUrl,
       if (item.thumbnailUrl != null) 'thumbnailUrl': item.thumbnailUrl,
       if (item.deepLinkRoute != null) 'deepLinkRoute': item.deepLinkRoute,
@@ -195,7 +199,8 @@ class NotificationMapper {
           : Timestamp.fromDate(item.sentAt!),
       if (item.scheduledAt != null)
         'scheduledAt': Timestamp.fromDate(item.scheduledAt!),
-      if (item.expiresAt != null) 'expiresAt': Timestamp.fromDate(item.expiresAt!),
+      if (item.expiresAt != null)
+        'expiresAt': Timestamp.fromDate(item.expiresAt!),
       if (item.metadata.isNotEmpty) 'metadata': item.metadata,
     };
   }
@@ -287,11 +292,11 @@ class NotificationMapper {
   }
 
   static Map<String, dynamic> _attachmentToMap(NotificationAttachment a) => {
-        'name': a.name,
-        'type': a.type,
-        'size': a.size,
-        'url': a.url,
-      };
+    'name': a.name,
+    'type': a.type,
+    'size': a.size,
+    'url': a.url,
+  };
 
   static List<NotificationAction> _actionsFrom(dynamic value) {
     if (value is! List) return const [];
@@ -308,13 +313,13 @@ class NotificationMapper {
   }
 
   static Map<String, dynamic> _actionToMap(NotificationAction a) => {
-        'id': a.id,
-        'label': a.label,
-        if (a.deepLinkRoute != null) 'deepLinkRoute': a.deepLinkRoute,
-        if (a.deepLinkParameters.isNotEmpty)
-          'deepLinkParameters': a.deepLinkParameters,
-        if (a.requiredPermission != null)
-          'requiredPermission': a.requiredPermission,
-        if (a.isAcknowledgement) 'isAcknowledgement': true,
-      };
+    'id': a.id,
+    'label': a.label,
+    if (a.deepLinkRoute != null) 'deepLinkRoute': a.deepLinkRoute,
+    if (a.deepLinkParameters.isNotEmpty)
+      'deepLinkParameters': a.deepLinkParameters,
+    if (a.requiredPermission != null)
+      'requiredPermission': a.requiredPermission,
+    if (a.isAcknowledgement) 'isAcknowledgement': true,
+  };
 }

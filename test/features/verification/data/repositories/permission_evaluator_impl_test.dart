@@ -10,9 +10,11 @@ import 'package:school_pulse/features/verification/data/datasources/verification
 import 'package:school_pulse/features/verification/data/models/verification_isar_models.dart';
 import 'package:school_pulse/features/verification/data/repositories/permission_evaluator_impl.dart';
 
-class MockVerificationLocalDataSource extends Mock implements VerificationLocalDataSource {}
+class MockVerificationLocalDataSource extends Mock
+    implements VerificationLocalDataSource {}
 
-class MockRolePermissionOverrideRepository extends Mock implements RolePermissionOverrideRepository {}
+class MockRolePermissionOverrideRepository extends Mock
+    implements RolePermissionOverrideRepository {}
 
 void main() {
   late PermissionEvaluatorImpl evaluator;
@@ -43,7 +45,10 @@ void main() {
     roles: [UserRole.subjectTeacher],
   );
 
-  Gate buildGate({List<String> assignedOfficerIds = const [], List<String> allowedUserRoles = const []}) {
+  Gate buildGate({
+    List<String> assignedOfficerIds = const [],
+    List<String> allowedUserRoles = const [],
+  }) {
     return Gate(
       id: 'gate-1',
       name: 'Main Gate',
@@ -68,116 +73,198 @@ void main() {
       localDataSource: localDataSource,
       overrideRepository: overrideRepository,
     );
-    when(() => localDataSource.getPermissionSnapshot(any())).thenAnswer((_) async => null);
-    when(() => localDataSource.savePermissionSnapshot(any())).thenAnswer((_) async {});
-    when(() => overrideRepository.getOverrides(any()))
-        .thenAnswer((_) async => const Right(<UserRole, RolePermissionOverride>{}));
+    when(
+      () => localDataSource.getPermissionSnapshot(any()),
+    ).thenAnswer((_) async => null);
+    when(
+      () => localDataSource.savePermissionSnapshot(any()),
+    ).thenAnswer((_) async {});
+    when(() => overrideRepository.getOverrides(any())).thenAnswer(
+      (_) async => const Right(<UserRole, RolePermissionOverride>{}),
+    );
   });
 
   group('role-level permission', () {
     test('grants a gatekeeper security.identity.verify by default', () async {
-      final result = await evaluator.can(Permission.securityIdentityVerify, gatekeeper);
+      final result = await evaluator.can(
+        Permission.securityIdentityVerify,
+        gatekeeper,
+      );
       expect(result.getOrElse(() => false), isTrue);
     });
 
-    test('denies an ordinary subject teacher (no security permissions by default)', () async {
-      final result = await evaluator.can(Permission.securityIdentityVerify, ordinaryTeacher);
-      expect(result.getOrElse(() => true), isFalse);
-    });
+    test(
+      'denies an ordinary subject teacher (no security permissions by default)',
+      () async {
+        final result = await evaluator.can(
+          Permission.securityIdentityVerify,
+          ordinaryTeacher,
+        );
+        expect(result.getOrElse(() => true), isFalse);
+      },
+    );
 
-    test('denies a permission the role does not have even if others are granted', () async {
-      final result = await evaluator.can(Permission.verificationDeviceManage, gatekeeper);
-      expect(result.getOrElse(() => true), isFalse);
-    });
+    test(
+      'denies a permission the role does not have even if others are granted',
+      () async {
+        final result = await evaluator.can(
+          Permission.verificationDeviceManage,
+          gatekeeper,
+        );
+        expect(result.getOrElse(() => true), isFalse);
+      },
+    );
   });
 
   group('gate resource scoping', () {
-    test('denies a gatekeeper not in assignedOfficerIds when the gate restricts officers', () async {
-      final gate = buildGate(assignedOfficerIds: ['someone-else']);
-      final result = await evaluator.can(Permission.securityIdentityVerify, gatekeeper, gate: gate);
-      expect(result.getOrElse(() => true), isFalse);
-    });
+    test(
+      'denies a gatekeeper not in assignedOfficerIds when the gate restricts officers',
+      () async {
+        final gate = buildGate(assignedOfficerIds: ['someone-else']);
+        final result = await evaluator.can(
+          Permission.securityIdentityVerify,
+          gatekeeper,
+          gate: gate,
+        );
+        expect(result.getOrElse(() => true), isFalse);
+      },
+    );
 
     test('allows a gatekeeper who IS in assignedOfficerIds', () async {
       final gate = buildGate(assignedOfficerIds: [gatekeeper.id]);
-      final result = await evaluator.can(Permission.securityIdentityVerify, gatekeeper, gate: gate);
+      final result = await evaluator.can(
+        Permission.securityIdentityVerify,
+        gatekeeper,
+        gate: gate,
+      );
       expect(result.getOrElse(() => false), isTrue);
     });
 
-    test('an empty assignedOfficerIds list does not restrict anyone (matches today\'s unenforced default)', () async {
-      final gate = buildGate();
-      final result = await evaluator.can(Permission.securityIdentityVerify, gatekeeper, gate: gate);
-      expect(result.getOrElse(() => false), isTrue);
-    });
+    test(
+      'an empty assignedOfficerIds list does not restrict anyone (matches today\'s unenforced default)',
+      () async {
+        final gate = buildGate();
+        final result = await evaluator.can(
+          Permission.securityIdentityVerify,
+          gatekeeper,
+          gate: gate,
+        );
+        expect(result.getOrElse(() => false), isTrue);
+      },
+    );
 
     test('securityOverride bypasses gate officer/role scoping', () async {
       final gate = buildGate(assignedOfficerIds: ['someone-else']);
-      final result = await evaluator.can(Permission.securityIdentityVerify, securityHead, gate: gate);
+      final result = await evaluator.can(
+        Permission.securityIdentityVerify,
+        securityHead,
+        gate: gate,
+      );
       expect(result.getOrElse(() => false), isTrue);
     });
 
-    test('denies when gate restricts by role and operator holds none of them', () async {
-      final gate = buildGate(allowedUserRoles: ['securityHead']);
-      final result = await evaluator.can(Permission.securityIdentityVerify, gatekeeper, gate: gate);
-      expect(result.getOrElse(() => true), isFalse);
-    });
+    test(
+      'denies when gate restricts by role and operator holds none of them',
+      () async {
+        final gate = buildGate(allowedUserRoles: ['securityHead']);
+        final result = await evaluator.can(
+          Permission.securityIdentityVerify,
+          gatekeeper,
+          gate: gate,
+        );
+        expect(result.getOrElse(() => true), isFalse);
+      },
+    );
   });
 
   group('permission cache', () {
-    test('uses a fresh cached snapshot instead of recomputing from role defaults', () async {
-      when(() => localDataSource.getPermissionSnapshot(ordinaryTeacher.id)).thenAnswer(
-        (_) async => OperatorPermissionSnapshotIsar()
-          ..operatorId = ordinaryTeacher.id
-          ..schoolId = ordinaryTeacher.schoolId
-          ..permissionIds = [Permission.securityIdentityVerify]
-          ..version = 2
-          ..expiresAt = DateTime.now().add(const Duration(hours: 1)),
-      );
+    test(
+      'uses a fresh cached snapshot instead of recomputing from role defaults',
+      () async {
+        when(
+          () => localDataSource.getPermissionSnapshot(ordinaryTeacher.id),
+        ).thenAnswer(
+          (_) async => OperatorPermissionSnapshotIsar()
+            ..operatorId = ordinaryTeacher.id
+            ..schoolId = ordinaryTeacher.schoolId
+            ..permissionIds = [Permission.securityIdentityVerify]
+            ..version = 2
+            ..expiresAt = DateTime.now().add(const Duration(hours: 1)),
+        );
 
-      final result = await evaluator.can(Permission.securityIdentityVerify, ordinaryTeacher);
-      expect(result.getOrElse(() => false), isTrue);
-      verifyNever(() => localDataSource.savePermissionSnapshot(any()));
-    });
+        final result = await evaluator.can(
+          Permission.securityIdentityVerify,
+          ordinaryTeacher,
+        );
+        expect(result.getOrElse(() => false), isTrue);
+        verifyNever(() => localDataSource.savePermissionSnapshot(any()));
+      },
+    );
 
-    test('falls back to role defaults (fail-open) when the cached snapshot has expired', () async {
-      when(() => localDataSource.getPermissionSnapshot(gatekeeper.id)).thenAnswer(
-        (_) async => OperatorPermissionSnapshotIsar()
-          ..operatorId = gatekeeper.id
-          ..schoolId = gatekeeper.schoolId
-          ..permissionIds = <String>[]
-          ..version = 1
-          ..expiresAt = DateTime.now().subtract(const Duration(hours: 1)),
-      );
+    test(
+      'falls back to role defaults (fail-open) when the cached snapshot has expired',
+      () async {
+        when(
+          () => localDataSource.getPermissionSnapshot(gatekeeper.id),
+        ).thenAnswer(
+          (_) async => OperatorPermissionSnapshotIsar()
+            ..operatorId = gatekeeper.id
+            ..schoolId = gatekeeper.schoolId
+            ..permissionIds = <String>[]
+            ..version = 1
+            ..expiresAt = DateTime.now().subtract(const Duration(hours: 1)),
+        );
 
-      final result = await evaluator.can(Permission.securityIdentityVerify, gatekeeper);
-      expect(result.getOrElse(() => false), isTrue);
-      verify(() => localDataSource.savePermissionSnapshot(any())).called(1);
-    });
+        final result = await evaluator.can(
+          Permission.securityIdentityVerify,
+          gatekeeper,
+        );
+        expect(result.getOrElse(() => false), isTrue);
+        verify(() => localDataSource.savePermissionSnapshot(any())).called(1);
+      },
+    );
   });
 
   group('role permission overrides', () {
-    test('an override present for the role replaces its defaults entirely', () async {
-      when(() => overrideRepository.getOverrides(ordinaryTeacher.schoolId)).thenAnswer(
-        (_) async => Right({
-          UserRole.subjectTeacher: RolePermissionOverride(
-            role: UserRole.subjectTeacher,
-            permissions: {Permission.securityIdentityVerify},
-            updatedBy: 'adminA',
-            updatedAt: DateTime.now(),
-          ),
-        }),
-      );
+    test(
+      'an override present for the role replaces its defaults entirely',
+      () async {
+        when(
+          () => overrideRepository.getOverrides(ordinaryTeacher.schoolId),
+        ).thenAnswer(
+          (_) async => Right({
+            UserRole.subjectTeacher: RolePermissionOverride(
+              role: UserRole.subjectTeacher,
+              permissions: {Permission.securityIdentityVerify},
+              updatedBy: 'adminA',
+              updatedAt: DateTime.now(),
+            ),
+          }),
+        );
 
-      final result = await evaluator.can(Permission.securityIdentityVerify, ordinaryTeacher);
-      expect(result.getOrElse(() => false), isTrue);
-    });
+        final result = await evaluator.can(
+          Permission.securityIdentityVerify,
+          ordinaryTeacher,
+        );
+        expect(result.getOrElse(() => false), isTrue);
+      },
+    );
 
-    test('no override for the role falls back to RolePermissionDefaults unchanged', () async {
-      when(() => overrideRepository.getOverrides(gatekeeper.schoolId))
-          .thenAnswer((_) async => const Right(<UserRole, RolePermissionOverride>{}));
+    test(
+      'no override for the role falls back to RolePermissionDefaults unchanged',
+      () async {
+        when(
+          () => overrideRepository.getOverrides(gatekeeper.schoolId),
+        ).thenAnswer(
+          (_) async => const Right(<UserRole, RolePermissionOverride>{}),
+        );
 
-      final result = await evaluator.can(Permission.securityIdentityVerify, gatekeeper);
-      expect(result.getOrElse(() => false), isTrue);
-    });
+        final result = await evaluator.can(
+          Permission.securityIdentityVerify,
+          gatekeeper,
+        );
+        expect(result.getOrElse(() => false), isTrue);
+      },
+    );
   });
 }

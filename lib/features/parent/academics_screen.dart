@@ -20,7 +20,8 @@ class AcademicsScreen extends StatefulWidget {
   State<AcademicsScreen> createState() => _AcademicsScreenState();
 }
 
-class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProviderStateMixin {
+class _AcademicsScreenState extends State<AcademicsScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
 
@@ -33,7 +34,7 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
     );
     _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
-    
+
     _loadData();
   }
 
@@ -42,7 +43,7 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
     if (authState is AuthAuthenticated) {
       final selectedStudentState = context.read<SelectedStudentBloc>().state;
       String? studentId;
-      
+
       if (selectedStudentState is SelectedStudentLoaded) {
         studentId = selectedStudentState.student.id;
       } else {
@@ -51,8 +52,12 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
       }
 
       if (studentId != null) {
-        context.read<AcademicBloc>().add(GetAcademicRecordsRequested(studentId: studentId));
-        context.read<AcademicBloc>().add(GetAttendanceRecordsRequested(studentId: studentId));
+        context.read<AcademicBloc>().add(
+          GetAcademicRecordsRequested(studentId: studentId),
+        );
+        context.read<AcademicBloc>().add(
+          GetAttendanceRecordsRequested(studentId: studentId),
+        );
       }
     }
   }
@@ -79,10 +84,13 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
                 const SizedBox(height: 24),
                 const Skeleton(height: 24, width: 150),
                 const SizedBox(height: 12),
-                ...List.generate(4, (index) => const Padding(
-                  padding: EdgeInsets.only(bottom: 8),
-                  child: Skeleton(height: 60),
-                )),
+                ...List.generate(
+                  4,
+                  (index) => const Padding(
+                    padding: EdgeInsets.only(bottom: 8),
+                    child: Skeleton(height: 60),
+                  ),
+                ),
               ],
             );
           } else if (state is AcademicError) {
@@ -97,13 +105,18 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
             final records = state.academicRecords;
             final attendance = state.attendanceRecords;
 
-            final avgScore = records.isEmpty ? 0.0 : records.map((r) => r.score).reduce((a, b) => a + b) / records.length;
+            final avgScore = records.isEmpty
+                ? 0.0
+                : records.map((r) => r.score).reduce((a, b) => a + b) /
+                      records.length;
             // Strictly "present" only, matching parent/home_screen.dart's
             // reading of the same records (late counts as an absence here).
             final attendanceSummary = AttendanceRateCalculator.summarize(
-              attendance.map((r) => r.status == StudentStatus.present
-                  ? MarkClassification.present
-                  : MarkClassification.unauthorisedAbsent),
+              attendance.map(
+                (r) => r.status == StudentStatus.present
+                    ? MarkClassification.present
+                    : MarkClassification.unauthorisedAbsent,
+              ),
             );
             final attendanceRate = attendanceSummary.ratePercent ?? 0.0;
 
@@ -128,9 +141,7 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
                   ],
                   FadeInSlide(
                     delay: const Duration(milliseconds: 300),
-                    child: SectionHeader(
-                      title: 'Subject Marks',
-                    ),
+                    child: SectionHeader(title: 'Subject Marks'),
                   ),
                   ...records.asMap().entries.map((entry) {
                     final index = entry.key;
@@ -145,7 +156,8 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
                     child: SectionHeader(
                       title: 'Attendance History',
                       actionLabel: 'Full History',
-                      onActionPressed: () => context.push('/parent/academics/attendance'),
+                      onActionPressed: () =>
+                          context.push('/parent/academics/attendance'),
                     ),
                   ),
                   FadeInSlide(
@@ -162,14 +174,24 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
     );
   }
 
-  Widget _buildSummaryCard(BuildContext context, double avg, double attendance) {
+  Widget _buildSummaryCard(
+    BuildContext context,
+    double avg,
+    double attendance,
+  ) {
     return AppCard(
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildStat('Average', avg, context, suffix: '%', decimalPlaces: 1),
+              _buildStat(
+                'Average',
+                avg,
+                context,
+                suffix: '%',
+                decimalPlaces: 1,
+              ),
               _buildStat('Attendance', attendance, context, suffix: '%'),
             ],
           ),
@@ -179,7 +201,8 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
               Expanded(
                 child: SecondaryButton(
                   label: 'Report Card',
-                  onPressed: () => context.push('/parent/academics/report-card'),
+                  onPressed: () =>
+                      context.push('/parent/academics/report-card'),
                   icon: Icons.assignment_outlined,
                 ),
               ),
@@ -198,7 +221,14 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
     );
   }
 
-  Widget _buildStat(String label, double value, BuildContext context, {String suffix = '', String prefix = '', int decimalPlaces = 0}) {
+  Widget _buildStat(
+    String label,
+    double value,
+    BuildContext context, {
+    String suffix = '',
+    String prefix = '',
+    int decimalPlaces = 0,
+  }) {
     return Column(
       children: [
         AnimatedNumberText(
@@ -207,9 +237,9 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
           suffix: suffix,
           decimalPlaces: decimalPlaces,
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.primary(context),
-              ),
+            fontWeight: FontWeight.bold,
+            color: AppColors.primary(context),
+          ),
         ),
         Text(label, style: Theme.of(context).textTheme.bodySmall),
       ],
@@ -226,8 +256,14 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(record.subject, style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text(record.grade, style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  record.subject,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  record.grade,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ],
             ),
           ),
@@ -236,7 +272,10 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
               AnimatedNumberText(
                 value: record.score,
                 suffix: '%',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
               ),
               const SizedBox(width: 8),
               Icon(
@@ -253,7 +292,10 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
     );
   }
 
-  Widget _buildAttendanceMiniMap(BuildContext context, List<AttendanceRecord> records) {
+  Widget _buildAttendanceMiniMap(
+    BuildContext context,
+    List<AttendanceRecord> records,
+  ) {
     // Show last 14 days
     return AppCard(
       child: Wrap(
@@ -262,9 +304,15 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
         children: records.take(14).map((r) {
           Color color;
           switch (r.status) {
-            case StudentStatus.present: color = AppColors.success(context); break;
-            case StudentStatus.absent: color = AppColors.danger(context); break;
-            case StudentStatus.late: color = AppColors.warning(context); break;
+            case StudentStatus.present:
+              color = AppColors.success(context);
+              break;
+            case StudentStatus.absent:
+              color = AppColors.danger(context);
+              break;
+            case StudentStatus.late:
+              color = AppColors.warning(context);
+              break;
           }
           return Container(
             width: 24,
@@ -274,7 +322,9 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
               borderRadius: BorderRadius.circular(4),
               border: Border.all(color: color),
             ),
-            child: Center(child: Icon(_getStatusIcon(r.status), size: 12, color: color)),
+            child: Center(
+              child: Icon(_getStatusIcon(r.status), size: 12, color: color),
+            ),
           );
         }).toList(),
       ),
@@ -283,9 +333,12 @@ class _AcademicsScreenState extends State<AcademicsScreen> with SingleTickerProv
 
   IconData _getStatusIcon(StudentStatus status) {
     switch (status) {
-      case StudentStatus.present: return Icons.check;
-      case StudentStatus.absent: return Icons.close;
-      case StudentStatus.late: return Icons.access_time;
+      case StudentStatus.present:
+        return Icons.check;
+      case StudentStatus.absent:
+        return Icons.close;
+      case StudentStatus.late:
+        return Icons.access_time;
     }
   }
 }

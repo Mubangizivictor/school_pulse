@@ -27,7 +27,8 @@ class BroadcastHistoryScreen extends StatelessWidget {
             return const EmptyState(
               icon: Icons.error_outline_rounded,
               title: 'Couldn\'t load broadcast history',
-              message: 'Something went wrong on our end. Pull to refresh or check back shortly.',
+              message:
+                  'Something went wrong on our end. Pull to refresh or check back shortly.',
             );
           }
           final docs = snapshot.data?.docs ?? const [];
@@ -35,7 +36,8 @@ class BroadcastHistoryScreen extends StatelessWidget {
             return const EmptyState(
               icon: Icons.campaign_outlined,
               title: 'No broadcasts sent yet',
-              message: 'Announcements you send from Broadcast Center will show up here.',
+              message:
+                  'Announcements you send from Broadcast Center will show up here.',
             );
           }
           final semantic = Theme.of(context).extension<SemanticColors>()!;
@@ -49,7 +51,9 @@ class BroadcastHistoryScreen extends StatelessWidget {
               final body = data['body'] as String? ?? '';
               final type = data['type'] as String? ?? 'Push';
               final status = data['status'] as String? ?? 'sent';
-              final targets = List<String>.from(data['targets'] as List? ?? const []);
+              final targets = List<String>.from(
+                data['targets'] as List? ?? const [],
+              );
               final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
               final statusColor = switch (status) {
                 'failed' => semantic.error,
@@ -64,29 +68,55 @@ class BroadcastHistoryScreen extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Icon(type == 'SMS' ? Icons.sms : Icons.campaign, size: 16, color: Theme.of(context).colorScheme.outline),
+                        Icon(
+                          type == 'SMS' ? Icons.sms : Icons.campaign,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          child: Text(
+                            title,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                         StatusBadge(label: status, color: statusColor),
                       ],
                     ),
                     const SizedBox(height: 6),
-                    Text(body, style: Theme.of(context).textTheme.bodySmall, maxLines: 3, overflow: TextOverflow.ellipsis),
+                    Text(
+                      body,
+                      style: Theme.of(context).textTheme.bodySmall,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
                         Expanded(
                           child: Text(
                             targets.join(', '),
-                            style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.outline),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         if (timestamp != null)
-                          Text(DateFormat('MMM dd, hh:mm a').format(timestamp), style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.outline)),
+                          Text(
+                            DateFormat('MMM dd, hh:mm a').format(timestamp),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                          ),
                       ],
                     ),
                   ],

@@ -6,23 +6,27 @@ import 'package:school_pulse/features/finance/domain/entities/payment_record.dar
 import 'package:school_pulse/features/library/domain/entities/library_resource.dart';
 import 'package:school_pulse/features/visitors/domain/entities/visitor.dart';
 
-/// Abstract interface for Printer Services to allow swapping between different 
+/// Abstract interface for Printer Services to allow swapping between different
 /// SDKs (Zebra, Brother, Sunmi, etc.) or network printers.
 abstract class PrinterService {
   Future<bool> isConnected();
   Future<List<PrinterDevice>> discoverPrinters();
   Future<bool> connect(PrinterDevice device);
   Future<bool> disconnect();
-  
+
   /// Prints a visitor badge using raw data or a generated image
   Future<bool> printVisitorBadge(Visitor visitor, {Uint8List? badgeImage});
-  
+
   /// Prints a fee payment receipt
-  Future<bool> printFeeReceipt(PaymentRecord payment, String studentName, String className);
+  Future<bool> printFeeReceipt(
+    PaymentRecord payment,
+    String studentName,
+    String className,
+  );
 
   /// Prints a QR label for a library resource
   Future<bool> printLibraryLabel(LibraryResource resource);
-  
+
   /// Generic print command for testing or small receipts
   Future<bool> printText(String text);
 }
@@ -56,12 +60,16 @@ class ThermalPrinterService implements PrinterService {
   Future<List<PrinterDevice>> discoverPrinters() async {
     try {
       List<BluetoothDevice> devices = await bluetooth.getBondedDevices();
-      return devices.map((d) => PrinterDevice(
-        name: d.name ?? 'Unknown Device',
-        address: d.address ?? '',
-        type: PrinterType.bluetooth,
-        originalDevice: d,
-      )).toList();
+      return devices
+          .map(
+            (d) => PrinterDevice(
+              name: d.name ?? 'Unknown Device',
+              address: d.address ?? '',
+              type: PrinterType.bluetooth,
+              originalDevice: d,
+            ),
+          )
+          .toList();
     } catch (e) {
       debugPrint('Error discovering printers: $e');
       return [];
@@ -94,7 +102,10 @@ class ThermalPrinterService implements PrinterService {
   }
 
   @override
-  Future<bool> printVisitorBadge(Visitor visitor, {Uint8List? badgeImage}) async {
+  Future<bool> printVisitorBadge(
+    Visitor visitor, {
+    Uint8List? badgeImage,
+  }) async {
     bool? connected = await bluetooth.isConnected;
     if (connected != true) return false;
 
@@ -103,30 +114,45 @@ class ThermalPrinterService implements PrinterService {
       bluetooth.printNewLine();
       bluetooth.printCustom("VISITOR PASS", 3, 1); // Size 3, Center
       bluetooth.printCustom("--------------------------------", 1, 1);
-      
+
       // Visitor Name
       bluetooth.printCustom(visitor.fullName.toUpperCase(), 2, 1);
       bluetooth.printNewLine();
-      
+
       // Badge Details
-      bluetooth.printLeftRight("Category:", visitor.category.name.toUpperCase(), 1);
+      bluetooth.printLeftRight(
+        "Category:",
+        visitor.category.name.toUpperCase(),
+        1,
+      );
       bluetooth.printLeftRight("Phone:", visitor.phone, 1);
       if (visitor.company != null) {
         bluetooth.printLeftRight("Company:", visitor.company!, 1);
       }
-      
+
       bluetooth.printCustom("--------------------------------", 1, 1);
-      
+
       // Host and Department
       bluetooth.printLeftRight("Visiting:", visitor.host, 1);
       bluetooth.printLeftRight("Dept:", visitor.department, 1);
-      
+
       // Time In
       final timeFormatter = DateFormat('dd MMM yyyy, HH:mm');
-      bluetooth.printLeftRight("In:", timeFormatter.format(visitor.arrivalTime), 1);
+      bluetooth.printLeftRight(
+        "In:",
+        timeFormatter.format(visitor.arrivalTime),
+        1,
+      );
 
-      final expiry = visitor.expectedDepartureTime ??
-          DateTime(visitor.arrivalTime.year, visitor.arrivalTime.month, visitor.arrivalTime.day, 23, 59);
+      final expiry =
+          visitor.expectedDepartureTime ??
+          DateTime(
+            visitor.arrivalTime.year,
+            visitor.arrivalTime.month,
+            visitor.arrivalTime.day,
+            23,
+            59,
+          );
       bluetooth.printLeftRight("Expires:", timeFormatter.format(expiry), 1);
 
       if (visitor.gateId != null) {
@@ -150,17 +176,17 @@ class ThermalPrinterService implements PrinterService {
 
       bluetooth.printNewLine();
       bluetooth.printCustom("VALID UNTIL EXPIRY ABOVE", 1, 1);
-      
+
       // QR Code (Visitor ID for checkout)
       bluetooth.printQRcode(visitor.id, 200, 200, 1);
-      
+
       bluetooth.printNewLine();
       bluetooth.printNewLine();
       bluetooth.printNewLine();
-      
+
       // Cut paper (if supported)
       bluetooth.paperCut();
-      
+
       return true;
     } catch (e) {
       debugPrint('Error printing badge: $e');
@@ -169,12 +195,19 @@ class ThermalPrinterService implements PrinterService {
   }
 
   @override
-  Future<bool> printFeeReceipt(PaymentRecord payment, String studentName, String className) async {
+  Future<bool> printFeeReceipt(
+    PaymentRecord payment,
+    String studentName,
+    String className,
+  ) async {
     bool? connected = await bluetooth.isConnected;
     if (connected != true) return false;
 
     try {
-      final currencyFormatter = NumberFormat.currency(symbol: 'UGX ', decimalDigits: 0);
+      final currencyFormatter = NumberFormat.currency(
+        symbol: 'UGX ',
+        decimalDigits: 0,
+      );
       final dateFormatter = DateFormat('dd MMM yyyy, HH:mm');
 
       bluetooth.printNewLine();
@@ -188,14 +221,18 @@ class ThermalPrinterService implements PrinterService {
       bluetooth.printCustom("STUDENT DETAILS", 1, 1);
       bluetooth.printCustom(studentName.toUpperCase(), 2, 1);
       bluetooth.printCustom("Class: $className", 1, 1);
-      bluetooth.printCustom("Term: ${payment.term} - ${payment.academicYear}", 1, 1);
+      bluetooth.printCustom(
+        "Term: ${payment.term} - ${payment.academicYear}",
+        1,
+        1,
+      );
       bluetooth.printNewLine();
 
       bluetooth.printCustom("PAYMENT SUMMARY", 1, 1);
       payment.feeBreakdown.forEach((category, amount) {
         bluetooth.printLeftRight(category, currencyFormatter.format(amount), 1);
       });
-      
+
       bluetooth.printCustom("--------------------------------", 1, 1);
       bluetooth.printCustom("TOTAL PAID", 1, 1);
       bluetooth.printCustom(currencyFormatter.format(payment.amount), 3, 1);
@@ -212,20 +249,20 @@ class ThermalPrinterService implements PrinterService {
 
       bluetooth.printNewLine();
       bluetooth.printCustom("Scan to verify receipt", 1, 1);
-      
+
       // QR Code for verification (contains payment ID and school ID for lookup)
       final qrData = 'PAY|${payment.schoolId}|${payment.id}';
       bluetooth.printQRcode(qrData, 200, 200, 1);
 
       bluetooth.printNewLine();
       bluetooth.printCustom("Thank you for your payment!", 1, 1);
-      
+
       bluetooth.printNewLine();
       bluetooth.printNewLine();
       bluetooth.printNewLine();
-      
+
       bluetooth.paperCut();
-      
+
       return true;
     } catch (e) {
       debugPrint('Error printing receipt: $e');
@@ -243,16 +280,20 @@ class ThermalPrinterService implements PrinterService {
       bluetooth.printCustom(resource.title.toUpperCase(), 2, 1);
       bluetooth.printCustom("Author: ${resource.author}", 1, 1);
       bluetooth.printCustom("Category: ${resource.category}", 1, 1);
-      bluetooth.printCustom("Shelf: ${resource.shelf} | Rack: ${resource.rack}", 1, 1);
-      
+      bluetooth.printCustom(
+        "Shelf: ${resource.shelf} | Rack: ${resource.rack}",
+        1,
+        1,
+      );
+
       bluetooth.printNewLine();
       bluetooth.printQRcode(resource.qrCode, 200, 200, 1);
       bluetooth.printCustom(resource.barcode, 1, 1);
-      
+
       bluetooth.printNewLine();
       bluetooth.printNewLine();
       bluetooth.paperCut();
-      
+
       return true;
     } catch (e) {
       debugPrint('Error printing library label: $e');
@@ -264,7 +305,7 @@ class ThermalPrinterService implements PrinterService {
   Future<bool> printText(String text) async {
     bool? connected = await bluetooth.isConnected;
     if (connected != true) return false;
-    
+
     try {
       bluetooth.printCustom(text, 1, 0);
       bluetooth.printNewLine();

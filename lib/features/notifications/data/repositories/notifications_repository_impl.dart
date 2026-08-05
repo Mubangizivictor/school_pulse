@@ -15,7 +15,10 @@ class NotificationsRepositoryImpl implements NotificationsRepository {
     List<String> groups = const [],
   }) async {
     try {
-      final alerts = await remoteDataSource.getAlerts(studentIds, groups: groups);
+      final alerts = await remoteDataSource.getAlerts(
+        studentIds,
+        groups: groups,
+      );
       return Right(alerts);
     } catch (e) {
       return Left(ServerFailure());
@@ -23,7 +26,10 @@ class NotificationsRepositoryImpl implements NotificationsRepository {
   }
 
   @override
-  Future<Either<Failure, void>> markAlertRead(String alertId, String uid) async {
+  Future<Either<Failure, void>> markAlertRead(
+    String alertId,
+    String uid,
+  ) async {
     try {
       await remoteDataSource.markAlertRead(alertId, uid);
       return const Right(null);

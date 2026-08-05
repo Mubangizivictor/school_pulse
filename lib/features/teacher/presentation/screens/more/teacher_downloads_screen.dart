@@ -9,7 +9,8 @@ class TeacherDownloadsScreen extends StatefulWidget {
   State<TeacherDownloadsScreen> createState() => _TeacherDownloadsScreenState();
 }
 
-class _TeacherDownloadsScreenState extends State<TeacherDownloadsScreen> with SingleTickerProviderStateMixin {
+class _TeacherDownloadsScreenState extends State<TeacherDownloadsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -159,13 +160,19 @@ class _DownloadItem extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   subtitle,
-                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary(context),
+                  ),
                 ),
               ],
             ),

@@ -29,7 +29,8 @@ class StaffAlert {
       id: doc.id,
       title: data['title'] as String? ?? 'Notification',
       body: data['body'] as String? ?? '',
-      type: data['type'] as String? ??
+      type:
+          data['type'] as String? ??
           (data['userId'] != null ? 'Direct' : 'Push'),
       targets: List<String>.from(data['targets'] as List? ?? const []),
       userId: data['userId'] as String?,

@@ -12,7 +12,10 @@ class MarksHistoryScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text('Marks History', style: TextStyle(color: AppColors.textPrimary(context))),
+        title: Text(
+          'Marks History',
+          style: TextStyle(color: AppColors.textPrimary(context)),
+        ),
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
           onPressed: () => context.pop(),
@@ -28,7 +31,9 @@ class MarksHistoryScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.surfaceElevated(context),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.border(context).withValues(alpha: 0.5)),
+              border: Border.all(
+                color: AppColors.border(context).withValues(alpha: 0.5),
+              ),
             ),
             child: Row(
               children: [
@@ -38,7 +43,11 @@ class MarksHistoryScreen extends StatelessWidget {
                     color: AppColors.primary(context).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(Icons.history, color: AppColors.primary(context), size: 20),
+                  child: Icon(
+                    Icons.history,
+                    color: AppColors.primary(context),
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -46,13 +55,20 @@ class MarksHistoryScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        index % 2 == 0 ? 'Mid Term Assessment' : 'Weekly Quiz ${10 - index}',
+                        index % 2 == 0
+                            ? 'Mid Term Assessment'
+                            : 'Weekly Quiz ${10 - index}',
                         style: TextStyle(
-                            color: AppColors.textPrimary(context), fontWeight: FontWeight.bold),
+                          color: AppColors.textPrimary(context),
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       Text(
                         'Mathematics • 24 Oct 2024',
-                        style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12),
+                        style: TextStyle(
+                          color: AppColors.textSecondary(context),
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
@@ -60,15 +76,28 @@ class MarksHistoryScreen extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text('45/45',
-                        style: TextStyle(
-                            color: AppColors.success(context), fontWeight: FontWeight.bold)),
-                    Text('Students',
-                        style: TextStyle(color: AppColors.textMuted(context), fontSize: 10)),
+                    Text(
+                      '45/45',
+                      style: TextStyle(
+                        color: AppColors.success(context),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'Students',
+                      style: TextStyle(
+                        color: AppColors.textMuted(context),
+                        fontSize: 10,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(width: 8),
-                Icon(Icons.chevron_right, color: AppColors.textMuted(context), size: 16),
+                Icon(
+                  Icons.chevron_right,
+                  color: AppColors.textMuted(context),
+                  size: 16,
+                ),
               ],
             ),
           );
@@ -77,4 +106,3 @@ class MarksHistoryScreen extends StatelessWidget {
     );
   }
 }
-

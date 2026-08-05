@@ -44,10 +44,13 @@ class _IssueStockDialogState extends State<IssueStockDialog> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _quantityController,
-                decoration: const InputDecoration(labelText: 'Quantity to Issue'),
+                decoration: const InputDecoration(
+                  labelText: 'Quantity to Issue',
+                ),
                 keyboardType: TextInputType.number,
                 validator: (value) {
-                  if (value == null || int.tryParse(value) == null) return 'Invalid';
+                  if (value == null || int.tryParse(value) == null)
+                    return 'Invalid';
                   final qty = int.parse(value);
                   if (qty <= 0) return 'Must be > 0';
                   if (qty > widget.item.quantity) return 'Insufficient stock';
@@ -56,29 +59,36 @@ class _IssueStockDialogState extends State<IssueStockDialog> {
               ),
               TextFormField(
                 controller: _issuedToController,
-                decoration: const InputDecoration(labelText: 'Issued To (Staff/Student)'),
-                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                decoration: const InputDecoration(
+                  labelText: 'Issued To (Staff/Student)',
+                ),
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Required' : null,
               ),
               TextFormField(
                 controller: _departmentController,
                 decoration: const InputDecoration(labelText: 'Department'),
-                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Required' : null,
               ),
               TextFormField(
                 controller: _purposeController,
-                decoration: const InputDecoration(labelText: 'Purpose/Description'),
-                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                decoration: const InputDecoration(
+                  labelText: 'Purpose/Description',
+                ),
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Required' : null,
               ),
             ],
           ),
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        ElevatedButton(
-          onPressed: _submit,
-          child: const Text('Issue Stock'),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
         ),
+        ElevatedButton(onPressed: _submit, child: const Text('Issue Stock')),
       ],
     );
   }

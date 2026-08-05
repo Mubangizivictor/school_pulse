@@ -13,19 +13,23 @@ class ReportApprovalScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => sl<DeanBloc>()..add(PendingReportApprovalsRequested()),
+      create: (context) =>
+          sl<DeanBloc>()..add(PendingReportApprovalsRequested()),
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Report Card Approvals'),
           actions: [
             BlocBuilder<DeanBloc, DeanState>(
               builder: (context, state) {
-                if (state is PendingReportApprovalsLoaded && state.approvals.isNotEmpty) {
+                if (state is PendingReportApprovalsLoaded &&
+                    state.approvals.isNotEmpty) {
                   return IconButton(
                     icon: const Icon(Icons.check_circle_outline),
                     onPressed: () {
                       final ids = state.approvals.map((a) => a.id).toList();
-                      context.read<DeanBloc>().add(ApproveReportCardsRequested(ids));
+                      context.read<DeanBloc>().add(
+                        ApproveReportCardsRequested(ids),
+                      );
                     },
                     tooltip: 'Approve All',
                   );
@@ -38,9 +42,9 @@ class ReportApprovalScreen extends StatelessWidget {
         body: BlocListener<DeanBloc, DeanState>(
           listener: (context, state) {
             if (state is DeanOperationSuccess) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.message)),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(state.message)));
               context.read<DeanBloc>().add(PendingReportApprovalsRequested());
             }
           },
@@ -50,7 +54,9 @@ class ReportApprovalScreen extends StatelessWidget {
                 return const Center(child: CircularProgressIndicator());
               } else if (state is PendingReportApprovalsLoaded) {
                 if (state.approvals.isEmpty) {
-                  return const Center(child: Text('No report cards pending approval.'));
+                  return const Center(
+                    child: Text('No report cards pending approval.'),
+                  );
                 }
                 return _buildReportList(context, state.approvals);
               } else if (state is DeanError) {
@@ -64,7 +70,10 @@ class ReportApprovalScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildReportList(BuildContext context, List<ReportCardApproval> reports) {
+  Widget _buildReportList(
+    BuildContext context,
+    List<ReportCardApproval> reports,
+  ) {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: reports.length,
@@ -73,8 +82,13 @@ class ReportApprovalScreen extends StatelessWidget {
         return AppCard(
           margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
-            title: Text(report.studentName, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text('${report.className} • Avg: ${report.averageScore.toStringAsFixed(1)}%'),
+            title: Text(
+              report.studentName,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Text(
+              '${report.className} • Avg: ${report.averageScore.toStringAsFixed(1)}%',
+            ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -85,7 +99,9 @@ class ReportApprovalScreen extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.check, color: Colors.green),
                   onPressed: () {
-                    context.read<DeanBloc>().add(ApproveReportCardsRequested([report.id]));
+                    context.read<DeanBloc>().add(
+                      ApproveReportCardsRequested([report.id]),
+                    );
                   },
                 ),
               ],
@@ -110,10 +126,15 @@ class ReportApprovalScreen extends StatelessWidget {
           decoration: const InputDecoration(labelText: 'Reason for rejection'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () {
-              context.read<DeanBloc>().add(RejectReportCardsRequested([reportId], reasonController.text));
+              context.read<DeanBloc>().add(
+                RejectReportCardsRequested([reportId], reasonController.text),
+              );
               Navigator.pop(dialogContext);
             },
             child: const Text('Reject', style: TextStyle(color: Colors.red)),

@@ -70,36 +70,38 @@ class _PayrollScreenState extends State<PayrollScreen> {
     double totalPAYE = _records.fold(0, (sum, item) => sum + item.paye);
     double totalNSSF = _records.fold(0, (sum, item) => sum + item.nssf);
 
-    return LayoutBuilder(builder: (context, constraints) {
-      final isWide = constraints.maxWidth > 600;
-      return Wrap(
-        spacing: 16,
-        runSpacing: 16,
-        children: [
-          _SummaryCard(
-            title: 'Total Net Pay',
-            value: CurrencyFormatter.ugx(totalNet),
-            icon: Icons.payments,
-            color: Colors.blue,
-            width: isWide ? 250 : constraints.maxWidth,
-          ),
-          _SummaryCard(
-            title: 'Total PAYE',
-            value: CurrencyFormatter.ugx(totalPAYE),
-            icon: Icons.account_balance,
-            color: Colors.orange,
-            width: isWide ? 250 : constraints.maxWidth,
-          ),
-          _SummaryCard(
-            title: 'Total NSSF (5%)',
-            value: CurrencyFormatter.ugx(totalNSSF),
-            icon: Icons.savings,
-            color: Colors.green,
-            width: isWide ? 250 : constraints.maxWidth,
-          ),
-        ],
-      );
-    });
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth > 600;
+        return Wrap(
+          spacing: 16,
+          runSpacing: 16,
+          children: [
+            _SummaryCard(
+              title: 'Total Net Pay',
+              value: CurrencyFormatter.ugx(totalNet),
+              icon: Icons.payments,
+              color: Colors.blue,
+              width: isWide ? 250 : constraints.maxWidth,
+            ),
+            _SummaryCard(
+              title: 'Total PAYE',
+              value: CurrencyFormatter.ugx(totalPAYE),
+              icon: Icons.account_balance,
+              color: Colors.orange,
+              width: isWide ? 250 : constraints.maxWidth,
+            ),
+            _SummaryCard(
+              title: 'Total NSSF (5%)',
+              value: CurrencyFormatter.ugx(totalNSSF),
+              icon: Icons.savings,
+              color: Colors.green,
+              width: isWide ? 250 : constraints.maxWidth,
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Widget _buildPayrollTable() {
@@ -119,23 +121,29 @@ class _PayrollScreenState extends State<PayrollScreen> {
             DataColumn(label: Text('Actions')),
           ],
           rows: _records.map((record) {
-            return DataRow(cells: [
-              DataCell(Text(record.staffName)),
-              DataCell(Text(CurrencyFormatter.ugx(record.basicSalary))),
-              DataCell(Text(CurrencyFormatter.ugx(record.allowances))),
-              DataCell(Text(CurrencyFormatter.ugx(record.paye))),
-              DataCell(Text(CurrencyFormatter.ugx(record.nssf))),
-              DataCell(Text(CurrencyFormatter.ugx(record.otherDeductions))),
-              DataCell(Text(
-                CurrencyFormatter.ugx(record.netSalary),
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              )),
-              DataCell(IconButton(
-                icon: const Icon(Icons.receipt_long),
-                onPressed: () {},
-                tooltip: 'Payslip',
-              )),
-            ]);
+            return DataRow(
+              cells: [
+                DataCell(Text(record.staffName)),
+                DataCell(Text(CurrencyFormatter.ugx(record.basicSalary))),
+                DataCell(Text(CurrencyFormatter.ugx(record.allowances))),
+                DataCell(Text(CurrencyFormatter.ugx(record.paye))),
+                DataCell(Text(CurrencyFormatter.ugx(record.nssf))),
+                DataCell(Text(CurrencyFormatter.ugx(record.otherDeductions))),
+                DataCell(
+                  Text(
+                    CurrencyFormatter.ugx(record.netSalary),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                DataCell(
+                  IconButton(
+                    icon: const Icon(Icons.receipt_long),
+                    onPressed: () {},
+                    tooltip: 'Payslip',
+                  ),
+                ),
+              ],
+            );
           }).toList(),
         ),
       ),
@@ -166,7 +174,9 @@ class _SummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -175,11 +185,20 @@ class _SummaryCard extends StatelessWidget {
             children: [
               Icon(icon, color: color, size: 20),
               const SizedBox(width: 8),
-              Text(title, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.outline)),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
-          Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
         ],
       ),
     );

@@ -158,13 +158,29 @@ import 'package:school_pulse/features/admin/data/repositories/visitor_repository
 import 'package:school_pulse/features/admin/presentation/bloc/admin_dashboard_bloc.dart';
 
 // Calendar
-import 'package:school_pulse/features/calendar/domain/repositories/calendar_repository.dart';
-import 'package:school_pulse/features/calendar/data/repositories/calendar_repository_impl.dart';
-import 'package:school_pulse/features/calendar/data/datasources/calendar_remote_data_source.dart';
-import 'package:school_pulse/features/calendar/domain/usecases/add_event.dart';
-import 'package:school_pulse/features/calendar/domain/usecases/delete_event.dart';
-import 'package:school_pulse/features/calendar/domain/usecases/get_upcoming_events.dart';
-import 'package:school_pulse/features/calendar/presentation/bloc/calendar_bloc.dart';
+import 'package:school_pulse/features/school_calendar/domain/repositories/school_calendar_repository.dart';
+import 'package:school_pulse/features/school_calendar/data/repositories/school_calendar_repository_impl.dart';
+import 'package:school_pulse/features/school_calendar/data/datasources/school_calendar_remote_data_source.dart';
+import 'package:school_pulse/features/school_calendar/presentation/bloc/school_calendar_bloc.dart';
+
+// Announcements
+import 'package:school_pulse/features/announcements/domain/repositories/announcement_repository.dart';
+import 'package:school_pulse/features/announcements/data/repositories/announcement_repository_impl.dart';
+import 'package:school_pulse/features/announcements/data/datasources/announcement_remote_data_source.dart';
+import 'package:school_pulse/features/announcements/presentation/bloc/announcement_bloc.dart';
+
+// School Directory
+import 'package:school_pulse/features/school_directory/domain/repositories/school_directory_repository.dart';
+import 'package:school_pulse/features/school_directory/data/repositories/school_directory_repository_impl.dart';
+import 'package:school_pulse/features/school_directory/data/datasources/school_directory_remote_data_source.dart';
+import 'package:school_pulse/features/school_directory/presentation/bloc/school_directory_bloc.dart';
+import 'package:school_pulse/features/attendance_hub/presentation/bloc/attendance_bloc.dart';
+import 'package:school_pulse/features/attendance_hub/domain/repositories/attendance_repository.dart';
+import 'package:school_pulse/features/attendance_hub/data/repositories/attendance_repository_impl.dart';
+import 'package:school_pulse/features/attendance_hub/data/datasources/attendance_remote_data_source.dart';
+import 'package:school_pulse/features/attendance_hub/domain/repositories/sheets_integration_repository.dart';
+import 'package:school_pulse/features/attendance_hub/data/repositories/sheets_integration_repository_impl.dart';
+import 'package:school_pulse/features/attendance_hub/data/datasources/sheets_integration_remote_data_source.dart';
 
 // Catering
 import 'package:school_pulse/features/catering/domain/repositories/catering_repository.dart';
@@ -374,6 +390,7 @@ import 'package:school_pulse/features/student/domain/usecases/manage_parent_acce
 
 // Admin - Staff Accounts (part of Auth feature)
 import 'package:school_pulse/features/auth/domain/usecases/create_staff_account.dart';
+import 'package:school_pulse/features/auth/domain/usecases/admin_reset_staff_password.dart';
 import 'package:school_pulse/features/auth/domain/usecases/delete_staff_member.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
 import 'package:school_pulse/features/auth/domain/usecases/set_new_password.dart';
@@ -392,6 +409,8 @@ import 'package:school_pulse/features/structure/data/datasources/structure_remot
 import 'package:school_pulse/features/structure/data/datasources/structure_local_data_source.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/structure_bloc.dart';
 import 'package:school_pulse/features/structure/data/models/structure_isar_models.dart';
+import 'package:school_pulse/features/structure/domain/services/structure_configuration_service.dart';
+import 'package:school_pulse/features/structure/data/services/structure_configuration_service_impl.dart';
 
 // Finance - additional usecases
 import 'package:school_pulse/features/finance/domain/usecases/get_all_fees.dart';
@@ -702,7 +721,11 @@ Future<void> init() async {
   sl.registerLazySingleton(() => VisitorIdCardService());
 
   sl.registerLazySingleton<StudentIdentityRepository>(
-    () => StudentIdentityRepositoryImpl(firestore: sl(), isar: sl(), idGenerator: sl()),
+    () => StudentIdentityRepositoryImpl(
+      firestore: sl(),
+      isar: sl(),
+      idGenerator: sl(),
+    ),
   );
 
   // Was built correctly (offline-first Isar queue, real StudentIdentity
@@ -712,7 +735,8 @@ Future<void> init() async {
     () => AttendanceQrRepositoryImpl(firestore: sl(), isar: sl()),
   );
   sl.registerFactory(
-    () => AttendanceQrBloc(attendanceRepository: sl(), identityRepository: sl()),
+    () =>
+        AttendanceQrBloc(attendanceRepository: sl(), identityRepository: sl()),
   );
 
   // Was never registered even though StudentIdCardScreen already read it
@@ -765,8 +789,6 @@ Future<void> init() async {
       studentRepository: sl(),
       visitorRepository: sl(),
       firestore: sl(),
-      financeRepository: sl(),
-      adminAttendanceRepository: sl(),
     ),
   );
 
@@ -777,25 +799,63 @@ Future<void> init() async {
   sl.registerLazySingleton(() => AuditRepository());
   sl.registerLazySingleton(() => admin_visitor.VisitorRepository());
 
-  // Features - Calendar
+  // Features - School Calendar
   sl.registerFactory(
-    () => CalendarBloc(
-      getUpcomingEvents: sl(),
-      addEvent: sl(),
-      deleteEvent: sl(),
+    () => SchoolCalendarBloc(repository: sl(), permissionEvaluator: sl()),
+  );
+
+  sl.registerLazySingleton<SchoolCalendarRepository>(
+    () => SchoolCalendarRepositoryImpl(remoteDataSource: sl()),
+  );
+
+  sl.registerLazySingleton<SchoolCalendarRemoteDataSource>(
+    () => SchoolCalendarRemoteDataSourceImpl(firestore: sl()),
+  );
+
+  // Features - Announcements
+  sl.registerLazySingleton<AnnouncementRemoteDataSource>(
+    () => AnnouncementRemoteDataSourceImpl(firestore: sl()),
+  );
+  sl.registerLazySingleton<AnnouncementRepository>(
+    () => AnnouncementRepositoryImpl(remoteDataSource: sl()),
+  );
+  sl.registerFactory(
+    () => AnnouncementBloc(repository: sl(), permissionEvaluator: sl()),
+  );
+
+  // Features - School Directory
+  sl.registerLazySingleton<SchoolDirectoryRemoteDataSource>(
+    () => SchoolDirectoryRemoteDataSourceImpl(firestore: sl()),
+  );
+  sl.registerLazySingleton<SchoolDirectoryRepository>(
+    () => SchoolDirectoryRepositoryImpl(remoteDataSource: sl()),
+  );
+  sl.registerFactory(() => SchoolDirectoryBloc(repository: sl()));
+
+  // Features - Attendance Hub
+  sl.registerFactory(
+    () => AttendanceBloc(repository: sl(), permissionEvaluator: sl()),
+  );
+
+  sl.registerLazySingleton<AttendanceRepository>(
+    () => AttendanceRepositoryImpl(
+      remoteDataSource: sl(),
+      structureRepository: sl(),
+      getStudentsByClass: sl(),
+      getStaffMembers: sl(),
     ),
   );
 
-  sl.registerLazySingleton(() => GetUpcomingEvents(sl()));
-  sl.registerLazySingleton(() => AddEvent(sl()));
-  sl.registerLazySingleton(() => DeleteEvent(sl()));
-
-  sl.registerLazySingleton<CalendarRepository>(
-    () => CalendarRepositoryImpl(remoteDataSource: sl()),
+  sl.registerLazySingleton<AttendanceRemoteDataSource>(
+    () => AttendanceRemoteDataSourceImpl(firestore: sl()),
   );
 
-  sl.registerLazySingleton<CalendarRemoteDataSource>(
-    () => CalendarRemoteDataSourceImpl(firestore: sl()),
+  sl.registerLazySingleton<SheetsIntegrationRepository>(
+    () => SheetsIntegrationRepositoryImpl(remoteDataSource: sl()),
+  );
+
+  sl.registerLazySingleton<SheetsIntegrationRemoteDataSource>(
+    () => SheetsIntegrationRemoteDataSourceImpl(firestore: sl()),
   );
 
   // Features - Catering
@@ -1110,9 +1170,7 @@ Future<void> init() async {
   // exposes nothing better. Erring toward not downloading would leave images
   // permanently blank for users who are always on mobile data.
   sl.registerLazySingleton(
-    () => NotificationImageCache(
-      isOnWifi: () => sl<NetworkInfo>().isConnected,
-    ),
+    () => NotificationImageCache(isOnWifi: () => sl<NetworkInfo>().isConnected),
   );
 
   sl.registerLazySingleton(
@@ -1348,10 +1406,8 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton(
-    () => ClassStudentsBloc(
-      studentRepository: sl(),
-      attendanceRepository: sl(),
-    ),
+    () =>
+        ClassStudentsBloc(studentRepository: sl(), attendanceRepository: sl()),
   );
 
   sl.registerLazySingleton(
@@ -1366,10 +1422,7 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton(
-    () => ClassWorkBloc(
-      workRepository: sl(),
-      studentRepository: sl(),
-    ),
+    () => ClassWorkBloc(workRepository: sl(), studentRepository: sl()),
   );
 
   sl.registerLazySingleton<ClassWorkRepository>(
@@ -1410,9 +1463,7 @@ Future<void> init() async {
     ),
   );
 
-  sl.registerLazySingleton(
-    () => ClassReportsBloc(reportRepository: sl()),
-  );
+  sl.registerLazySingleton(() => ClassReportsBloc(reportRepository: sl()));
 
   sl.registerLazySingleton<ClassReportRepository>(
     () => ClassReportRepositoryImpl(
@@ -1424,9 +1475,7 @@ Future<void> init() async {
     ),
   );
 
-  sl.registerLazySingleton(
-    () => ClassTasksBloc(taskRepository: sl()),
-  );
+  sl.registerLazySingleton(() => ClassTasksBloc(taskRepository: sl()));
 
   sl.registerLazySingleton<ClassTaskRepository>(
     () => ClassTaskRepositoryImpl(
@@ -1632,6 +1681,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => CreateStaffAccount(sl()));
   sl.registerLazySingleton(() => ToggleStaffStatus(sl()));
   sl.registerLazySingleton(() => DeleteStaffMember(sl()));
+  sl.registerLazySingleton(() => AdminResetStaffPassword(sl()));
   sl.registerLazySingleton(() => UpdateStaffMember(sl()));
   sl.registerLazySingleton(() => SetNewPassword(sl()));
 
@@ -1679,6 +1729,10 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton(() => StructureDependencyService(firestore: sl()));
+
+  sl.registerLazySingleton<StructureConfigurationService>(
+    () => StructureConfigurationServiceImpl(repository: sl()),
+  );
 
   // Finance - additional usecases (FinanceRepository already registered above)
   sl.registerLazySingleton(() => GetAllFees(sl()));
@@ -1729,7 +1783,9 @@ Future<void> init() async {
   // usecase was resolved. Fixed here since `IdentityResolverImpl` (Phase 1
   // verification engine) is the first thing that forces `VerifyFingerprint`
   // to actually resolve.
-  sl.registerLazySingleton<BiometricDeviceService>(() => MockBiometricDeviceService());
+  sl.registerLazySingleton<BiometricDeviceService>(
+    () => MockBiometricDeviceService(),
+  );
 
   // Features - Verification (shared verification engine, Phase 1: Security/Gate)
   sl.registerFactory(
@@ -1744,11 +1800,14 @@ Future<void> init() async {
   );
 
   sl.registerFactory(
-    () => CredentialScanBloc(adapters: {
-      ScanCredentialKind.qr: sl<QrCredentialReaderAdapter>(),
-      ScanCredentialKind.nfc: sl<NfcCredentialReaderAdapter>(),
-      ScanCredentialKind.fingerprint: sl<FingerprintCredentialReaderAdapter>(),
-    }),
+    () => CredentialScanBloc(
+      adapters: {
+        ScanCredentialKind.qr: sl<QrCredentialReaderAdapter>(),
+        ScanCredentialKind.nfc: sl<NfcCredentialReaderAdapter>(),
+        ScanCredentialKind.fingerprint:
+            sl<FingerprintCredentialReaderAdapter>(),
+      },
+    ),
   );
 
   sl.registerLazySingleton<IdentityResolver>(
@@ -1763,31 +1822,55 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<PermissionEvaluator>(
-    () => PermissionEvaluatorImpl(localDataSource: sl(), overrideRepository: sl()),
+    () => PermissionEvaluatorImpl(
+      localDataSource: sl(),
+      overrideRepository: sl(),
+    ),
   );
 
   sl.registerLazySingleton(
-    () => EffectiveAccessResolver(permissionEvaluator: sl(), responsibilityService: sl()),
+    () => EffectiveAccessResolver(
+      permissionEvaluator: sl(),
+      responsibilityService: sl(),
+    ),
   );
 
   sl.registerLazySingleton<VerificationPolicyEvaluator>(
-    () => GateVerificationPolicy(permissionEvaluator: sl(), securityRepository: sl()),
+    () => GateVerificationPolicy(
+      permissionEvaluator: sl(),
+      securityRepository: sl(),
+    ),
   );
 
   sl.registerLazySingleton<VerificationEventRecorder>(
-    () => VerificationEventRecorderImpl(localDataSource: sl(), firestore: sl(), networkInfo: sl()),
+    () => VerificationEventRecorderImpl(
+      localDataSource: sl(),
+      firestore: sl(),
+      networkInfo: sl(),
+    ),
   );
 
-  sl.registerLazySingleton<VerificationFeedbackService>(() => HapticVerificationFeedbackService());
+  sl.registerLazySingleton<VerificationFeedbackService>(
+    () => HapticVerificationFeedbackService(),
+  );
 
-  sl.registerLazySingleton<VerificationLocalDataSource>(() => VerificationLocalDataSourceImpl(sl()));
+  sl.registerLazySingleton<VerificationLocalDataSource>(
+    () => VerificationLocalDataSourceImpl(sl()),
+  );
 
   sl.registerLazySingleton<NfcCredentialRepository>(
-    () => NfcCredentialRepositoryImpl(localDataSource: sl(), firestore: sl(), networkInfo: sl()),
+    () => NfcCredentialRepositoryImpl(
+      localDataSource: sl(),
+      firestore: sl(),
+      networkInfo: sl(),
+    ),
   );
 
   sl.registerLazySingleton(
-    () => NfcCredentialService(nfcCredentialRepository: sl(), studentIdentityRepository: sl()),
+    () => NfcCredentialService(
+      nfcCredentialRepository: sl(),
+      studentIdentityRepository: sl(),
+    ),
   );
 
   sl.registerLazySingleton(() => QrCredentialReaderAdapter());

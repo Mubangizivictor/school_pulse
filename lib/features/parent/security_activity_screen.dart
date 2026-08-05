@@ -40,18 +40,26 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
   void _load() {
     final studentState = context.read<SelectedStudentBloc>().state;
     final authState = context.read<AuthBloc>().state;
-    if (studentState is! SelectedStudentLoaded || authState is! AuthAuthenticated) return;
+    if (studentState is! SelectedStudentLoaded ||
+        authState is! AuthAuthenticated)
+      return;
 
     final studentId = studentState.student.id;
     context.read<SecurityBloc>().add(
-          WatchStudentMovementsRequested(authState.user.schoolId, studentId: studentId),
-        );
+      WatchStudentMovementsRequested(
+        authState.user.schoolId,
+        studentId: studentId,
+      ),
+    );
     _loadExtras(authState.user.schoolId, studentId);
   }
 
   Future<void> _loadExtras(String schoolId, String studentId) async {
     setState(() => _isLoadingExtras = true);
-    final authorizationsResult = await di.sl<GetPickupAuthorizations>()(schoolId, studentId);
+    final authorizationsResult = await di.sl<GetPickupAuthorizations>()(
+      schoolId,
+      studentId,
+    );
     final alertsResult = await di.sl<GetAlerts>()([studentId]);
     if (!mounted) return;
     setState(() {
@@ -81,7 +89,9 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
                   );
                 }
                 return Column(
-                  children: state.studentMovements.map((m) => _MovementTile(movement: m)).toList(),
+                  children: state.studentMovements
+                      .map((m) => _MovementTile(movement: m))
+                      .toList(),
                 );
               },
             ),
@@ -93,20 +103,28 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
             else if (_authorizations.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 12),
-                child: Text('No one else is authorized to pick up this child yet.'),
+                child: Text(
+                  'No one else is authorized to pick up this child yet.',
+                ),
               )
             else
-              ..._authorizations.map((a) => AppCard(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundImage: a.photoUrl != null ? NetworkImage(a.photoUrl!) : null,
-                        child: a.photoUrl == null ? const Icon(Icons.person_outline) : null,
-                      ),
-                      title: Text(a.authorizedPersonName),
-                      subtitle: Text('${a.relationship} • ${a.phone}'),
+              ..._authorizations.map(
+                (a) => AppCard(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundImage: a.photoUrl != null
+                          ? NetworkImage(a.photoUrl!)
+                          : null,
+                      child: a.photoUrl == null
+                          ? const Icon(Icons.person_outline)
+                          : null,
                     ),
-                  )),
+                    title: Text(a.authorizedPersonName),
+                    subtitle: Text('${a.relationship} • ${a.phone}'),
+                  ),
+                ),
+              ),
             const SizedBox(height: 24),
             const SectionHeader(title: 'Security Alerts'),
             const SizedBox(height: 8),
@@ -118,18 +136,20 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
                 child: Text('No security alerts for this child.'),
               )
             else
-              ..._alerts.map((alert) => AppCard(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: ListTile(
-                      leading: const Icon(Icons.notifications_active_outlined),
-                      title: Text(alert.title),
-                      subtitle: Text(alert.message),
-                      trailing: Text(
-                        '${alert.timestamp.hour.toString().padLeft(2, '0')}:${alert.timestamp.minute.toString().padLeft(2, '0')}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
+              ..._alerts.map(
+                (alert) => AppCard(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    leading: const Icon(Icons.notifications_active_outlined),
+                    title: Text(alert.title),
+                    subtitle: Text(alert.message),
+                    trailing: Text(
+                      '${alert.timestamp.hour.toString().padLeft(2, '0')}:${alert.timestamp.minute.toString().padLeft(2, '0')}',
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
-                  )),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -149,10 +169,15 @@ class _MovementTile extends StatelessWidget {
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: isIn ? Colors.green.shade50 : Colors.blue.shade50,
-          child: Icon(isIn ? Icons.login : Icons.logout, color: isIn ? Colors.green : Colors.blue),
+          child: Icon(
+            isIn ? Icons.login : Icons.logout,
+            color: isIn ? Colors.green : Colors.blue,
+          ),
         ),
         title: Text(movement.movementType),
-        subtitle: Text(movement.timestamp.toLocal().toString().split('.').first),
+        subtitle: Text(
+          movement.timestamp.toLocal().toString().split('.').first,
+        ),
       ),
     );
   }

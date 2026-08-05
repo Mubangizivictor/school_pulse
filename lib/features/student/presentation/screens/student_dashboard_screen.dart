@@ -47,14 +47,18 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   }
 
   void _fetchStudentData(String studentId) {
-    context.read<AcademicBloc>().add(GetAcademicRecordsRequested(studentId: studentId));
-    context.read<AcademicBloc>().add(GetAttendanceRecordsRequested(studentId: studentId));
-    
+    context.read<AcademicBloc>().add(
+      GetAcademicRecordsRequested(studentId: studentId),
+    );
+    context.read<AcademicBloc>().add(
+      GetAttendanceRecordsRequested(studentId: studentId),
+    );
+
     final systemConfig = context.read<ThemeProvider>().config;
     if (systemConfig?.studentPortalConfig.allowSchoolFeeVisibility ?? false) {
       context.read<FinanceBloc>().add(FetchFees(studentId));
     }
-    
+
     context.read<NotificationsBloc>().add(FetchAlerts([studentId]));
   }
 
@@ -71,7 +75,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
-        if (authState is! AuthAuthenticated) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        if (authState is! AuthAuthenticated)
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
 
         return BlocConsumer<StudentsBloc, StudentsState>(
           listener: (context, state) {
@@ -82,12 +89,17 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             }
           },
           builder: (context, studentsState) {
-            if (studentsState is StudentsLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+            if (studentsState is StudentsLoading)
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
 
             return BlocBuilder<SelectedStudentBloc, SelectedStudentState>(
               builder: (context, selectedState) {
                 if (selectedState is! SelectedStudentLoaded) {
-                  return const Scaffold(body: Center(child: Text('Loading profile...')));
+                  return const Scaffold(
+                    body: Center(child: Text('Loading profile...')),
+                  );
                 }
 
                 final student = selectedState.student;
@@ -119,10 +131,16 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       children: [
                         _buildWelcomeHeader(context, student),
                         const SizedBox(height: 24),
-                        _buildQuickActions(context, config?.studentPortalConfig),
+                        _buildQuickActions(
+                          context,
+                          config?.studentPortalConfig,
+                        ),
                         const SizedBox(height: 24),
                         _buildAcademicSummary(context),
-                        if (config?.studentPortalConfig.allowSchoolFeeVisibility ?? false) ...[
+                        if (config
+                                ?.studentPortalConfig
+                                .allowSchoolFeeVisibility ??
+                            false) ...[
                           const SizedBox(height: 24),
                           _buildFeeSummary(context),
                         ],
@@ -149,15 +167,15 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         Text(
           'Welcome back,',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: AppColors.textSecondary(context),
-              ),
+            color: AppColors.textSecondary(context),
+          ),
         ),
         Text(
           student.name,
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary(context),
-              ),
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary(context),
+          ),
         ),
         const SizedBox(height: 4),
         Row(
@@ -246,7 +264,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         double attendanceRate = 0;
         if (state is AcademicLoaded && state.attendanceRecords.isNotEmpty) {
           final summary = AttendanceRateCalculator.summarize(
-            state.attendanceRecords.map((r) => classifyStudentStatus(r.status.name)),
+            state.attendanceRecords.map(
+              (r) => classifyStudentStatus(r.status.name),
+            ),
           );
           attendanceRate = summary.ratePercent ?? 0;
         }
@@ -257,9 +277,19 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             children: [
               Row(
                 children: [
-                  Icon(Icons.analytics_outlined, size: 20, color: AppColors.primary(context)),
+                  Icon(
+                    Icons.analytics_outlined,
+                    size: 20,
+                    color: AppColors.primary(context),
+                  ),
                   const SizedBox(width: 8),
-                  Text('Academic Overview', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary(context))),
+                  Text(
+                    'Academic Overview',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary(context),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -270,7 +300,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       context,
                       'Attendance',
                       '${attendanceRate.toStringAsFixed(1)}%',
-                      attendanceRate >= 90 ? AppColors.success(context) : AppColors.warning(context),
+                      attendanceRate >= 90
+                          ? AppColors.success(context)
+                          : AppColors.warning(context),
                     ),
                   ),
                   VerticalDivider(color: AppColors.border(context)),
@@ -296,10 +328,14 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       builder: (context, state) {
         double balance = 0;
         if (state is FinanceLoaded) {
-          balance = state.fees.where((f) => f.status != FeeStatus.paid).fold(0.0, (sum, f) => sum + f.amount);
+          balance = state.fees
+              .where((f) => f.status != FeeStatus.paid)
+              .fold(0.0, (sum, f) => sum + f.amount);
         }
 
-        final statusColor = balance > 0 ? AppColors.warning(context) : AppColors.success(context);
+        final statusColor = balance > 0
+            ? AppColors.warning(context)
+            : AppColors.success(context);
 
         return AppCard(
           color: statusColor.withValues(alpha: 0.1),
@@ -311,9 +347,17 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Fee Balance', style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
                     Text(
-                      balance > 0 ? 'UGX ${NumberFormat('#,###').format(balance)}' : 'Fully Paid',
+                      'Fee Balance',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary(context),
+                      ),
+                    ),
+                    Text(
+                      balance > 0
+                          ? 'UGX ${NumberFormat('#,###').format(balance)}'
+                          : 'Fully Paid',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
@@ -326,7 +370,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               if (balance > 0)
                 TextButton(
                   onPressed: () => context.push('/student/fees'),
-                  child: Text('View Details', style: TextStyle(color: AppColors.primary(context))),
+                  child: Text(
+                    'View Details',
+                    style: TextStyle(color: AppColors.primary(context)),
+                  ),
                 ),
             ],
           ),
@@ -350,25 +397,41 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         }
 
         return Column(
-          children: state.alerts.take(3).map((alert) => Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: AlertBanner(
-              title: alert.title,
-              message: alert.message,
-              color: _getAlertColor(alert.severity, context),
-              icon: _getAlertIcon(alert.severity),
-              onDismiss: () {}, // Students probably can't dismiss global announcements here
-            ),
-          )).toList(),
+          children: state.alerts
+              .take(3)
+              .map(
+                (alert) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: AlertBanner(
+                    title: alert.title,
+                    message: alert.message,
+                    color: _getAlertColor(alert.severity, context),
+                    icon: _getAlertIcon(alert.severity),
+                    onDismiss:
+                        () {}, // Students probably can't dismiss global announcements here
+                  ),
+                ),
+              )
+              .toList(),
         );
       },
     );
   }
 
-  Widget _buildSummaryItem(BuildContext context, String label, String value, Color color) {
+  Widget _buildSummaryItem(
+    BuildContext context,
+    String label,
+    String value,
+    Color color,
+  ) {
     return Column(
       children: [
-        Text(label, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted(context))),
+        Text(
+          label,
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppColors.textMuted(context)),
+        ),
         const SizedBox(height: 4),
         Text(
           value,
@@ -384,19 +447,27 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
   Color _getAlertColor(AlertSeverity severity, BuildContext context) {
     switch (severity) {
-      case AlertSeverity.error: return AppColors.danger(context);
-      case AlertSeverity.warning: return AppColors.warning(context);
-      case AlertSeverity.success: return AppColors.success(context);
-      case AlertSeverity.info: return AppColors.information(context);
+      case AlertSeverity.error:
+        return AppColors.danger(context);
+      case AlertSeverity.warning:
+        return AppColors.warning(context);
+      case AlertSeverity.success:
+        return AppColors.success(context);
+      case AlertSeverity.info:
+        return AppColors.information(context);
     }
   }
 
   IconData _getAlertIcon(AlertSeverity severity) {
     switch (severity) {
-      case AlertSeverity.error: return Icons.error_outline;
-      case AlertSeverity.warning: return Icons.warning_amber_rounded;
-      case AlertSeverity.success: return Icons.check_circle_outline;
-      case AlertSeverity.info: return Icons.info_outline;
+      case AlertSeverity.error:
+        return Icons.error_outline;
+      case AlertSeverity.warning:
+        return Icons.warning_amber_rounded;
+      case AlertSeverity.success:
+        return Icons.check_circle_outline;
+      case AlertSeverity.info:
+        return Icons.info_outline;
     }
   }
 }

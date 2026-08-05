@@ -37,7 +37,9 @@ void main() {
   test('submitRawPayload is a no-op before start() has been called', () async {
     final adapter = QrCredentialReaderAdapter();
     final emitted = <String>[];
-    adapter.credentials.listen((c) => emitted.add((c as QrScanCredential).rawPayload));
+    adapter.credentials.listen(
+      (c) => emitted.add((c as QrScanCredential).rawPayload),
+    );
 
     adapter.submitRawPayload('SP-0001');
     await Future.delayed(Duration.zero);
@@ -46,24 +48,31 @@ void main() {
     adapter.dispose();
   });
 
-  test('emits a QrScanCredential for each payload submitted while active', () async {
-    final adapter = QrCredentialReaderAdapter();
-    final emitted = <String>[];
-    adapter.credentials.listen((c) => emitted.add((c as QrScanCredential).rawPayload));
+  test(
+    'emits a QrScanCredential for each payload submitted while active',
+    () async {
+      final adapter = QrCredentialReaderAdapter();
+      final emitted = <String>[];
+      adapter.credentials.listen(
+        (c) => emitted.add((c as QrScanCredential).rawPayload),
+      );
 
-    await adapter.start(context);
-    adapter.submitRawPayload('SP-0001');
-    adapter.submitRawPayload('SP-0002');
-    await Future.delayed(Duration.zero);
+      await adapter.start(context);
+      adapter.submitRawPayload('SP-0001');
+      adapter.submitRawPayload('SP-0002');
+      await Future.delayed(Duration.zero);
 
-    expect(emitted, ['SP-0001', 'SP-0002']);
-    adapter.dispose();
-  });
+      expect(emitted, ['SP-0001', 'SP-0002']);
+      adapter.dispose();
+    },
+  );
 
   test('stops emitting once stop() has been called', () async {
     final adapter = QrCredentialReaderAdapter();
     final emitted = <String>[];
-    adapter.credentials.listen((c) => emitted.add((c as QrScanCredential).rawPayload));
+    adapter.credentials.listen(
+      (c) => emitted.add((c as QrScanCredential).rawPayload),
+    );
 
     await adapter.start(context);
     await adapter.stop();
@@ -74,9 +83,12 @@ void main() {
     adapter.dispose();
   });
 
-  test('isAvailable is always true (camera capture handled by the shell UI, not this adapter)', () async {
-    final adapter = QrCredentialReaderAdapter();
-    expect(await adapter.isAvailable(), isTrue);
-    adapter.dispose();
-  });
+  test(
+    'isAvailable is always true (camera capture handled by the shell UI, not this adapter)',
+    () async {
+      final adapter = QrCredentialReaderAdapter();
+      expect(await adapter.isAvailable(), isTrue);
+      adapter.dispose();
+    },
+  );
 }

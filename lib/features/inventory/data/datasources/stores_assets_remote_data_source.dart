@@ -33,12 +33,19 @@ abstract class StoresAssetsRemoteDataSource {
   Future<void> addSupplier(SupplierModel supplier);
   Future<List<PurchaseOrderModel>> getPurchaseOrders();
   Future<void> createPurchaseOrder(PurchaseOrderModel order);
-  Future<void> updatePurchaseOrderStatus(String orderId, PurchaseOrderStatus status);
+  Future<void> updatePurchaseOrderStatus(
+    String orderId,
+    PurchaseOrderStatus status,
+  );
 
   // Procurement Requests
   Future<List<ProcurementRequestModel>> getProcurementRequests();
   Future<void> createProcurementRequest(ProcurementRequestModel request);
-  Future<void> updateProcurementRequestStatus(String requestId, ProcurementStatus status, {String? directorNote});
+  Future<void> updateProcurementRequestStatus(
+    String requestId,
+    ProcurementStatus status, {
+    String? directorNote,
+  });
 
   // Repairs & Maintenance
   Future<List<RepairRecordModel>> getRepairRecords();
@@ -54,8 +61,13 @@ class StoresAssetsRemoteDataSourceImpl implements StoresAssetsRemoteDataSource {
 
   @override
   Future<List<InventoryItemModel>> getInventoryItems() async {
-    final snapshot = await firestore.collection('inventory_items').orderBy('name').get();
-    return snapshot.docs.map((doc) => InventoryItemModel.fromFirestore(doc)).toList();
+    final snapshot = await firestore
+        .collection('inventory_items')
+        .orderBy('name')
+        .get();
+    return snapshot.docs
+        .map((doc) => InventoryItemModel.fromFirestore(doc))
+        .toList();
   }
 
   @override
@@ -65,26 +77,38 @@ class StoresAssetsRemoteDataSourceImpl implements StoresAssetsRemoteDataSource {
         .orderBy('date', descending: true)
         .limit(50)
         .get();
-    return snapshot.docs.map((doc) => StockMovementModel.fromFirestore(doc)).toList();
+    return snapshot.docs
+        .map((doc) => StockMovementModel.fromFirestore(doc))
+        .toList();
   }
 
   @override
   Future<void> addInventoryItem(InventoryItemModel item) async {
-    await firestore.collection('inventory_items').doc(item.id.isEmpty ? null : item.id).set(item.toFirestore());
+    await firestore
+        .collection('inventory_items')
+        .doc(item.id.isEmpty ? null : item.id)
+        .set(item.toFirestore());
   }
 
   @override
   Future<void> updateInventoryItem(InventoryItemModel item) async {
-    await firestore.collection('inventory_items').doc(item.id).update(item.toFirestore());
+    await firestore
+        .collection('inventory_items')
+        .doc(item.id)
+        .update(item.toFirestore());
   }
 
   @override
   Future<void> adjustStock(StockAdjustment adjustment) async {
     final batch = firestore.batch();
-    final itemRef = firestore.collection('inventory_items').doc(adjustment.itemId);
-    
-    batch.update(itemRef, {'quantity': FieldValue.increment(adjustment.quantityAdjusted)});
-    
+    final itemRef = firestore
+        .collection('inventory_items')
+        .doc(adjustment.itemId);
+
+    batch.update(itemRef, {
+      'quantity': FieldValue.increment(adjustment.quantityAdjusted),
+    });
+
     final movementRef = firestore.collection('inventory_movements').doc();
     batch.set(movementRef, {
       'itemId': adjustment.itemId,
@@ -96,7 +120,7 @@ class StoresAssetsRemoteDataSourceImpl implements StoresAssetsRemoteDataSource {
       'reason': adjustment.reason.name,
       'adjustedBy': adjustment.adjustedBy,
     });
-    
+
     await batch.commit();
   }
 
@@ -104,9 +128,9 @@ class StoresAssetsRemoteDataSourceImpl implements StoresAssetsRemoteDataSource {
   Future<void> issueStock(StockIssue issue) async {
     final batch = firestore.batch();
     final itemRef = firestore.collection('inventory_items').doc(issue.itemId);
-    
+
     batch.update(itemRef, {'quantity': FieldValue.increment(-issue.quantity)});
-    
+
     final movementRef = firestore.collection('inventory_movements').doc();
     batch.set(movementRef, {
       'itemId': issue.itemId,
@@ -119,7 +143,7 @@ class StoresAssetsRemoteDataSourceImpl implements StoresAssetsRemoteDataSource {
       'department': issue.department,
       'approvedBy': issue.approvedBy,
     });
-    
+
     await batch.commit();
   }
 
@@ -132,12 +156,18 @@ class StoresAssetsRemoteDataSourceImpl implements StoresAssetsRemoteDataSource {
 
   @override
   Future<void> addAsset(AssetModel asset) async {
-    await firestore.collection('assets').doc(asset.id.isEmpty ? null : asset.id).set(asset.toFirestore());
+    await firestore
+        .collection('assets')
+        .doc(asset.id.isEmpty ? null : asset.id)
+        .set(asset.toFirestore());
   }
 
   @override
   Future<void> updateAsset(AssetModel asset) async {
-    await firestore.collection('assets').doc(asset.id).update(asset.toFirestore());
+    await firestore
+        .collection('assets')
+        .doc(asset.id)
+        .update(asset.toFirestore());
   }
 
   @override
@@ -152,70 +182,121 @@ class StoresAssetsRemoteDataSourceImpl implements StoresAssetsRemoteDataSource {
   // Procurement Implementation
   @override
   Future<List<SupplierModel>> getSuppliers() async {
-    final snapshot = await firestore.collection('suppliers').orderBy('name').get();
-    return snapshot.docs.map((doc) => SupplierModel.fromFirestore(doc)).toList();
+    final snapshot = await firestore
+        .collection('suppliers')
+        .orderBy('name')
+        .get();
+    return snapshot.docs
+        .map((doc) => SupplierModel.fromFirestore(doc))
+        .toList();
   }
-  
+
   @override
   Future<void> addSupplier(SupplierModel supplier) async {
-    await firestore.collection('suppliers').doc(supplier.id.isEmpty ? null : supplier.id).set(supplier.toFirestore());
+    await firestore
+        .collection('suppliers')
+        .doc(supplier.id.isEmpty ? null : supplier.id)
+        .set(supplier.toFirestore());
   }
 
   @override
   Future<List<PurchaseOrderModel>> getPurchaseOrders() async {
-    final snapshot = await firestore.collection('purchase_orders').orderBy('date', descending: true).get();
-    return snapshot.docs.map((doc) => PurchaseOrderModel.fromFirestore(doc)).toList();
+    final snapshot = await firestore
+        .collection('purchase_orders')
+        .orderBy('date', descending: true)
+        .get();
+    return snapshot.docs
+        .map((doc) => PurchaseOrderModel.fromFirestore(doc))
+        .toList();
   }
 
   @override
   Future<void> createPurchaseOrder(PurchaseOrderModel order) async {
-    await firestore.collection('purchase_orders').doc(order.id.isEmpty ? null : order.id).set(order.toFirestore());
+    await firestore
+        .collection('purchase_orders')
+        .doc(order.id.isEmpty ? null : order.id)
+        .set(order.toFirestore());
   }
 
   @override
-  Future<void> updatePurchaseOrderStatus(String orderId, PurchaseOrderStatus status) async {
-    await firestore.collection('purchase_orders').doc(orderId).update({'status': status.name});
+  Future<void> updatePurchaseOrderStatus(
+    String orderId,
+    PurchaseOrderStatus status,
+  ) async {
+    await firestore.collection('purchase_orders').doc(orderId).update({
+      'status': status.name,
+    });
   }
 
   @override
   Future<List<ProcurementRequestModel>> getProcurementRequests() async {
-    final snapshot = await firestore.collection('procurement_requests').orderBy('date', descending: true).get();
-    return snapshot.docs.map((doc) => ProcurementRequestModel.fromFirestore(doc)).toList();
+    final snapshot = await firestore
+        .collection('procurement_requests')
+        .orderBy('date', descending: true)
+        .get();
+    return snapshot.docs
+        .map((doc) => ProcurementRequestModel.fromFirestore(doc))
+        .toList();
   }
 
   @override
   Future<void> createProcurementRequest(ProcurementRequestModel request) async {
-    await firestore.collection('procurement_requests').doc(request.id.isEmpty ? null : request.id).set(request.toFirestore());
+    await firestore
+        .collection('procurement_requests')
+        .doc(request.id.isEmpty ? null : request.id)
+        .set(request.toFirestore());
   }
 
   @override
-  Future<void> updateProcurementRequestStatus(String requestId, ProcurementStatus status, {String? directorNote}) async {
+  Future<void> updateProcurementRequestStatus(
+    String requestId,
+    ProcurementStatus status, {
+    String? directorNote,
+  }) async {
     final data = {'status': status.name};
     if (directorNote != null) data['directorNote'] = directorNote;
-    await firestore.collection('procurement_requests').doc(requestId).update(data);
+    await firestore
+        .collection('procurement_requests')
+        .doc(requestId)
+        .update(data);
   }
 
   // Repairs & Maintenance Implementation
   @override
   Future<List<RepairRecordModel>> getRepairRecords() async {
-    final snapshot = await firestore.collection('repair_records').orderBy('requestDate', descending: true).get();
-    return snapshot.docs.map((doc) => RepairRecordModel.fromFirestore(doc)).toList();
+    final snapshot = await firestore
+        .collection('repair_records')
+        .orderBy('requestDate', descending: true)
+        .get();
+    return snapshot.docs
+        .map((doc) => RepairRecordModel.fromFirestore(doc))
+        .toList();
   }
 
   @override
   Future<void> requestRepair(RepairRecordModel repair) async {
-    await firestore.collection('repair_records').doc(repair.id.isEmpty ? null : repair.id).set(repair.toFirestore());
+    await firestore
+        .collection('repair_records')
+        .doc(repair.id.isEmpty ? null : repair.id)
+        .set(repair.toFirestore());
   }
 
   @override
   Future<List<MaintenanceRecordModel>> getMaintenanceSchedule() async {
-    final snapshot = await firestore.collection('maintenance_records').orderBy('scheduledDate').get();
-    return snapshot.docs.map((doc) => MaintenanceRecordModel.fromFirestore(doc)).toList();
+    final snapshot = await firestore
+        .collection('maintenance_records')
+        .orderBy('scheduledDate')
+        .get();
+    return snapshot.docs
+        .map((doc) => MaintenanceRecordModel.fromFirestore(doc))
+        .toList();
   }
 
   @override
   Future<void> scheduleMaintenance(MaintenanceRecordModel maintenance) async {
-    await firestore.collection('maintenance_records').doc(maintenance.id.isEmpty ? null : maintenance.id).set(maintenance.toFirestore());
+    await firestore
+        .collection('maintenance_records')
+        .doc(maintenance.id.isEmpty ? null : maintenance.id)
+        .set(maintenance.toFirestore());
   }
 }
-

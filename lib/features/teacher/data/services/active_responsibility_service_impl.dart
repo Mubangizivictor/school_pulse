@@ -15,7 +15,8 @@ class ActiveResponsibilityServiceImpl implements ActiveResponsibilityService {
   final AcademicCalendarService calendarService;
 
   ActiveResponsibilityContext? _current;
-  final _controller = StreamController<ActiveResponsibilityContext?>.broadcast();
+  final _controller =
+      StreamController<ActiveResponsibilityContext?>.broadcast();
 
   ActiveResponsibilityServiceImpl({
     required this.assignmentRepository,
@@ -34,7 +35,7 @@ class ActiveResponsibilityServiceImpl implements ActiveResponsibilityService {
     required String userId,
     bool forceRefresh = false,
   }) async {
-    final period = await calendarService.getCurrentPeriod();
+    final period = await calendarService.getCurrentPeriod(schoolId);
 
     // Scope to the current academic year only when the school has one set.
     // A school mid-way through configuring its calendar still gets a working
@@ -46,39 +47,40 @@ class ActiveResponsibilityServiceImpl implements ActiveResponsibilityService {
       forceRefresh: forceRefresh,
     );
 
-    return assignmentsResult.fold<Future<Either<Failure, ResponsibilityResolution>>>(
-      (failure) async => Left(failure),
-      (available) async {
-        if (available.isEmpty) {
-          _setCurrent(null);
-          return const Right(ResponsibilityResolution());
-        }
+    return assignmentsResult.fold<
+      Future<Either<Failure, ResponsibilityResolution>>
+    >((failure) async => Left(failure), (available) async {
+      if (available.isEmpty) {
+        _setCurrent(null);
+        return const Right(ResponsibilityResolution());
+      }
 
-        final persistedResult = await assignmentRepository.getPersistedAssignmentId();
-        final persistedId = persistedResult.getOrElse(() => null);
+      final persistedResult = await assignmentRepository
+          .getPersistedAssignmentId();
+      final persistedId = persistedResult.getOrElse(() => null);
 
-        final restored =
-            available.where((a) => a.id == persistedId).firstOrNull;
+      final restored = available.where((a) => a.id == persistedId).firstOrNull;
 
-        // Falling back is the normal path after an admin ends an assignment,
-        // so it is a switch with an explanation rather than an error.
-        final chosen = restored ?? available.first;
-        final switchReason = (persistedId != null && restored == null)
-            ? 'Your previous responsibility is no longer available. '
+      // Falling back is the normal path after an admin ends an assignment,
+      // so it is a switch with an explanation rather than an error.
+      final chosen = restored ?? available.first;
+      final switchReason = (persistedId != null && restored == null)
+          ? 'Your previous responsibility is no longer available. '
                 'Switched to ${chosen.displayLabel}.'
-            : null;
+          : null;
 
-        final context = _buildContext(chosen, period);
-        _setCurrent(context);
-        await assignmentRepository.persistSelectedAssignment(chosen.id);
+      final context = _buildContext(chosen, period);
+      _setCurrent(context);
+      await assignmentRepository.persistSelectedAssignment(chosen.id);
 
-        return Right(ResponsibilityResolution(
+      return Right(
+        ResponsibilityResolution(
           available: available,
           active: context,
           switchReason: switchReason,
-        ));
-      },
-    );
+        ),
+      );
+    });
   }
 
   @override
@@ -99,7 +101,7 @@ class ActiveResponsibilityServiceImpl implements ActiveResponsibilityService {
     return verified.fold<Future<Either<Failure, ActiveResponsibilityContext>>>(
       (failure) async => Left(failure),
       (assignment) async {
-        final period = await calendarService.getCurrentPeriod();
+        final period = await calendarService.getCurrentPeriod(schoolId);
         final context = _buildContext(assignment, period);
         _setCurrent(context);
         await assignmentRepository.persistSelectedAssignment(assignment.id);
@@ -126,11 +128,13 @@ class ActiveResponsibilityServiceImpl implements ActiveResponsibilityService {
         // The assignment stopped granting access while the screen was open.
         // The context is downgraded rather than dropped so the screen can
         // show a permission message with the right subject still named.
-        _setCurrent(active.copyWith(assignmentStatus: AssignmentStatus.suspended));
+        _setCurrent(
+          active.copyWith(assignmentStatus: AssignmentStatus.suspended),
+        );
         return Left(failure);
       },
       (assignment) async {
-        final period = await calendarService.getCurrentPeriod();
+        final period = await calendarService.getCurrentPeriod(active.schoolId);
         // Permissions are re-read here as well: an admin may have narrowed
         // the scope without ending the assignment.
         final context = _buildContext(assignment, period);

@@ -30,8 +30,8 @@ class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
     final studentState = context.read<SelectedStudentBloc>().state;
     if (studentState is SelectedStudentLoaded) {
       context.read<AcademicBloc>().add(
-            GetAttendanceRecordsRequested(studentId: studentState.student.id),
-          );
+        GetAttendanceRecordsRequested(studentId: studentState.student.id),
+      );
     }
   }
 
@@ -53,11 +53,19 @@ class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
             );
           } else if (state is AcademicLoaded) {
             final records = state.attendanceRecords;
-            final semanticColors = Theme.of(context).extension<SemanticColors>()!;
+            final semanticColors = Theme.of(
+              context,
+            ).extension<SemanticColors>()!;
 
-            final presentCount = records.where((r) => r.status == StudentStatus.present).length;
-            final absentCount = records.where((r) => r.status == StudentStatus.absent).length;
-            final lateCount = records.where((r) => r.status == StudentStatus.late).length;
+            final presentCount = records
+                .where((r) => r.status == StudentStatus.present)
+                .length;
+            final absentCount = records
+                .where((r) => r.status == StudentStatus.absent)
+                .length;
+            final lateCount = records
+                .where((r) => r.status == StudentStatus.late)
+                .length;
 
             return ListView(
               padding: const EdgeInsets.all(16),
@@ -67,9 +75,24 @@ class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _buildSummaryStat(context, 'Present', presentCount.toString(), semanticColors.success),
-                        _buildSummaryStat(context, 'Absent', absentCount.toString(), semanticColors.error),
-                        _buildSummaryStat(context, 'Late', lateCount.toString(), semanticColors.warning),
+                        _buildSummaryStat(
+                          context,
+                          'Present',
+                          presentCount.toString(),
+                          semanticColors.success,
+                        ),
+                        _buildSummaryStat(
+                          context,
+                          'Absent',
+                          absentCount.toString(),
+                          semanticColors.error,
+                        ),
+                        _buildSummaryStat(
+                          context,
+                          'Late',
+                          lateCount.toString(),
+                          semanticColors.warning,
+                        ),
                       ],
                     ),
                   ),
@@ -86,7 +109,11 @@ class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
                     delay: Duration(milliseconds: 200 + (index * 50)),
                     child: Padding(
                       padding: const EdgeInsets.only(bottom: 8),
-                      child: _buildAttendanceRow(context, record, semanticColors),
+                      child: _buildAttendanceRow(
+                        context,
+                        record,
+                        semanticColors,
+                      ),
                     ),
                   );
                 }),
@@ -99,16 +126,31 @@ class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
     );
   }
 
-  Widget _buildSummaryStat(BuildContext context, String label, String value, Color color) {
+  Widget _buildSummaryStat(
+    BuildContext context,
+    String label,
+    String value,
+    Color color,
+  ) {
     return Column(
       children: [
-        Text(value, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: color)),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
         Text(label, style: Theme.of(context).textTheme.bodySmall),
       ],
     );
   }
 
-  Widget _buildAttendanceRow(BuildContext context, AttendanceRecord record, SemanticColors colors) {
+  Widget _buildAttendanceRow(
+    BuildContext context,
+    AttendanceRecord record,
+    SemanticColors colors,
+  ) {
     Color statusColor;
     String statusLabel;
     IconData statusIcon;
@@ -132,7 +174,8 @@ class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
     }
 
     return AppCard(
-      onTap: () => _showAttendanceDetail(context, record, statusColor, statusLabel),
+      onTap: () =>
+          _showAttendanceDetail(context, record, statusColor, statusLabel),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
@@ -154,7 +197,10 @@ class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 if (record.note.isNotEmpty)
-                  Text(record.note, style: Theme.of(context).textTheme.bodySmall),
+                  Text(
+                    record.note,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
               ],
             ),
           ),
@@ -164,26 +210,48 @@ class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
     );
   }
 
-  void _showAttendanceDetail(BuildContext context, AttendanceRecord record, Color color, String label) {
+  void _showAttendanceDetail(
+    BuildContext context,
+    AttendanceRecord record,
+    Color color,
+    String label,
+  ) {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) => Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Attendance Detail', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+            Text(
+              'Attendance Detail',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 16),
-            Text(DateFormat('MMMM dd, yyyy').format(record.date), style: Theme.of(context).textTheme.bodyLarge),
+            Text(
+              DateFormat('MMMM dd, yyyy').format(record.date),
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
             const SizedBox(height: 8),
             StatusBadge(label: label, color: color, icon: Icons.info_outline),
             const SizedBox(height: 16),
             const Text('Note:', style: TextStyle(fontWeight: FontWeight.bold)),
-            Text(record.note.isEmpty ? 'No additional notes provided.' : record.note),
+            Text(
+              record.note.isEmpty
+                  ? 'No additional notes provided.'
+                  : record.note,
+            ),
             const SizedBox(height: 24),
-            PrimaryButton(label: 'Close', onPressed: () => Navigator.pop(context)),
+            PrimaryButton(
+              label: 'Close',
+              onPressed: () => Navigator.pop(context),
+            ),
           ],
         ),
       ),

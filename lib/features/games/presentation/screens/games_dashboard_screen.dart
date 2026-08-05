@@ -31,16 +31,14 @@ class _GamesDashboardScreenState extends State<GamesDashboardScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Games & Sports'),
-        actions: [
-          const NotificationBellButton(),
-        ],
+        actions: [const NotificationBellButton()],
       ),
       body: BlocConsumer<GamesBloc, GamesState>(
         listener: (context, state) {
           if (state is ActionSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
           }
         },
         builder: (context, state) {
@@ -58,15 +56,18 @@ class _GamesDashboardScreenState extends State<GamesDashboardScreen> {
                 context.read<GamesBloc>().add(GamesDashboardRequested());
               },
               child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 15,
+                ),
                 children: [
                   FadeInSlide(
                     child: Text(
                       'Inter-House Standings',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: -0.5,
-                          ),
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.5,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 15),
@@ -74,7 +75,9 @@ class _GamesDashboardScreenState extends State<GamesDashboardScreen> {
                   const SizedBox(height: 24),
                   const SectionHeader(title: 'Upcoming Competitions'),
                   const SizedBox(height: 12),
-                  ...state.competitions.map((comp) => _CompetitionCard(competition: comp)),
+                  ...state.competitions.map(
+                    (comp) => _CompetitionCard(competition: comp),
+                  ),
                   const SizedBox(height: 24),
                   _QuickActions(),
                 ],
@@ -121,7 +124,10 @@ class _HousePointsGrid extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              Text(house.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                house.name,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 4),
               Text(
                 '${house.totalPoints} pts',
@@ -154,16 +160,23 @@ class _CompetitionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
-    
+
     return AppCard(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         leading: const CircleAvatar(child: Icon(Icons.emoji_events_outlined)),
-        title: Text(competition.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text('${competition.venue} • ${competition.date.toString().split(' ')[0]}'),
+        title: Text(
+          competition.title,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(
+          '${competition.venue} • ${competition.date.toString().split(' ')[0]}',
+        ),
         trailing: StatusBadge(
           label: competition.status,
-          color: competition.status == 'Ongoing' ? semanticColors.info : semanticColors.success,
+          color: competition.status == 'Ongoing'
+              ? semanticColors.info
+              : semanticColors.success,
         ),
       ),
     );
@@ -179,14 +192,18 @@ class _QuickActions extends StatelessWidget {
           onPressed: () {},
           icon: const Icon(Icons.add),
           label: const Text('New Competition'),
-          style: FilledButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
+          style: FilledButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+          ),
         ),
         const SizedBox(height: 12),
         OutlinedButton.icon(
           onPressed: () {},
           icon: const Icon(Icons.edit),
           label: const Text('Update Scores'),
-          style: OutlinedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+          ),
         ),
       ],
     );
@@ -209,15 +226,21 @@ class _GamesSkeleton extends StatelessWidget {
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
           childAspectRatio: 1.3,
-          children: List.generate(4, (index) => const Skeleton(borderRadius: 12)),
+          children: List.generate(
+            4,
+            (index) => const Skeleton(borderRadius: 12),
+          ),
         ),
         const SizedBox(height: 24),
         const Skeleton(width: 150, height: 20),
         const SizedBox(height: 12),
-        ...List.generate(3, (index) => const Padding(
-          padding: EdgeInsets.only(bottom: 12),
-          child: Skeleton(height: 80, borderRadius: 12),
-        )),
+        ...List.generate(
+          3,
+          (index) => const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: Skeleton(height: 80, borderRadius: 12),
+          ),
+        ),
       ],
     );
   }

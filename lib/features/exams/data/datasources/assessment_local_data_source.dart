@@ -31,9 +31,12 @@ class AssessmentLocalDataSourceImpl implements AssessmentLocalDataSource {
     String? studentId,
   }) async {
     var query = isar.isarAssessmentMarks.where();
-    
+
     if (assessmentTypeId != null) {
-      return await query.filter().assessmentTypeIdEqualTo(assessmentTypeId).findAll();
+      return await query
+          .filter()
+          .assessmentTypeIdEqualTo(assessmentTypeId)
+          .findAll();
     }
     if (subjectId != null) {
       return await query.filter().subjectIdEqualTo(subjectId).findAll();
@@ -41,20 +44,26 @@ class AssessmentLocalDataSourceImpl implements AssessmentLocalDataSource {
     if (studentId != null) {
       return await query.filter().studentIdEqualTo(studentId).findAll();
     }
-    
+
     return await query.findAll();
   }
 
   @override
   Future<List<IsarAssessmentMark>> getUnsyncedMarks() async {
-    return await isar.isarAssessmentMarks.filter().isSyncedEqualTo(false).findAll();
+    return await isar.isarAssessmentMarks
+        .filter()
+        .isSyncedEqualTo(false)
+        .findAll();
   }
 
   @override
   Future<void> markAsSynced(List<String> remoteIds) async {
     await isar.writeTxn(() async {
       for (var id in remoteIds) {
-        final mark = await isar.isarAssessmentMarks.filter().remoteIdEqualTo(id).findFirst();
+        final mark = await isar.isarAssessmentMarks
+            .filter()
+            .remoteIdEqualTo(id)
+            .findFirst();
         if (mark != null) {
           mark.isSynced = true;
           await isar.isarAssessmentMarks.put(mark);

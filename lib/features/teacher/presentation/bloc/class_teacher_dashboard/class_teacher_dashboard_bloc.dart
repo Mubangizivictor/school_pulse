@@ -59,10 +59,9 @@ class ClassTeacherDashboardState extends Equatable {
 
   /// Null until the register exists, so the tile shows a dash rather than
   /// claiming a full house.
-  int? get presentToday =>
-      summary != null && summary!.attendance.hasSession
-          ? summary!.attendance.presentCount
-          : null;
+  int? get presentToday => summary != null && summary!.attendance.hasSession
+      ? summary!.attendance.presentCount
+      : null;
 
   int? get absentToday => summary != null && summary!.attendance.hasSession
       ? summary!.attendance.absentCount
@@ -110,7 +109,12 @@ class ClassTeacherDashboardState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [isLoading, errorMessage, roleAssignmentId, summary];
+  List<Object?> get props => [
+    isLoading,
+    errorMessage,
+    roleAssignmentId,
+    summary,
+  ];
 }
 
 class ClassTeacherDashboardBloc
@@ -118,7 +122,7 @@ class ClassTeacherDashboardBloc
   final ClassDashboardRepository dashboardRepository;
 
   ClassTeacherDashboardBloc({required this.dashboardRepository})
-      : super(const ClassTeacherDashboardState.initial()) {
+    : super(const ClassTeacherDashboardState.initial()) {
     on<ClassDashboardRequested>(_onRequested);
   }
 
@@ -129,10 +133,12 @@ class ClassTeacherDashboardBloc
     // Start from a clean state rather than copyWith: carrying the previous
     // assignment's numbers across a switch would briefly show P5 East's
     // roster under P6 West.
-    emit(ClassTeacherDashboardState(
-      isLoading: true,
-      roleAssignmentId: event.context.roleAssignmentId,
-    ));
+    emit(
+      ClassTeacherDashboardState(
+        isLoading: true,
+        roleAssignmentId: event.context.roleAssignmentId,
+      ),
+    );
 
     final result = await dashboardRepository.getDashboard(
       context: event.context,
@@ -143,23 +149,20 @@ class ClassTeacherDashboardBloc
     if (state.roleAssignmentId != event.context.roleAssignmentId) return;
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        isLoading: false,
-        errorMessage: _messageFor(failure),
-      )),
-      (summary) => emit(state.copyWith(
-        isLoading: false,
-        summary: summary,
-        clearError: true,
-      )),
+      (failure) => emit(
+        state.copyWith(isLoading: false, errorMessage: _messageFor(failure)),
+      ),
+      (summary) => emit(
+        state.copyWith(isLoading: false, summary: summary, clearError: true),
+      ),
     );
   }
 
   String _messageFor(Failure failure) => switch (failure) {
-        PermissionDeniedFailure() => failure.message,
-        AssignmentInvalidFailure() => failure.message,
-        NetworkFailure() => failure.message,
-        ValidationFailure() => failure.message,
-        _ => 'Could not load your class. Pull down to retry.',
-      };
+    PermissionDeniedFailure() => failure.message,
+    AssignmentInvalidFailure() => failure.message,
+    NetworkFailure() => failure.message,
+    ValidationFailure() => failure.message,
+    _ => 'Could not load your class. Pull down to retry.',
+  };
 }

@@ -4,13 +4,16 @@ import '../../../../core/error/failures.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../repositories/teacher_repository.dart';
 
-class GetAttendanceHistory implements UseCase<List<AttendanceHistoryRecord>, String> {
+class GetAttendanceHistory
+    implements UseCase<List<AttendanceHistoryRecord>, String> {
   final TeacherRepository repository;
 
   GetAttendanceHistory(this.repository);
 
   @override
-  Future<Either<Failure, List<AttendanceHistoryRecord>>> call(String params) async {
+  Future<Either<Failure, List<AttendanceHistoryRecord>>> call(
+    String params,
+  ) async {
     return await repository.getAttendanceHistory(params);
   }
 }
@@ -31,5 +34,11 @@ class AttendanceHistoryRecord extends Equatable {
   });
 
   @override
-  List<Object?> get props => [className, date, presentCount, totalCount, status];
+  List<Object?> get props => [
+    className,
+    date,
+    presentCount,
+    totalCount,
+    status,
+  ];
 }

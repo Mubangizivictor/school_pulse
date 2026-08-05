@@ -10,7 +10,9 @@ class TransportRepositoryImpl implements TransportRepository {
   TransportRepositoryImpl({required this.remoteDataSource});
 
   @override
-  Future<Either<Failure, TransportInfo>> getTransportInfo(String studentId) async {
+  Future<Either<Failure, TransportInfo>> getTransportInfo(
+    String studentId,
+  ) async {
     try {
       final info = await remoteDataSource.getTransportInfo(studentId);
       return Right(info);

@@ -34,16 +34,20 @@ class MarksRepositoryImpl implements MarksRepository {
     bool forceRefresh = false,
   }) async {
     if (!context.can(Permission.subjectMarksView)) {
-      return const Left(PermissionDeniedFailure(
-        'You do not have permission to view marks for this subject.',
-      ));
+      return const Left(
+        PermissionDeniedFailure(
+          'You do not have permission to view marks for this subject.',
+        ),
+      );
     }
     final subjectId = context.subjectId;
     final classId = context.classId;
     if (subjectId == null || classId == null) {
-      return const Left(ValidationFailure(
-        'This responsibility is not tied to a subject and class.',
-      ));
+      return const Left(
+        ValidationFailure(
+          'This responsibility is not tied to a subject and class.',
+        ),
+      );
     }
 
     try {
@@ -56,9 +60,11 @@ class MarksRepositoryImpl implements MarksRepository {
       );
       // Drafts belong to whoever is still preparing them, not to the teacher
       // entering marks.
-      return Right(assessments
-          .where((a) => a.status != AssessmentAvailability.draft)
-          .toList());
+      return Right(
+        assessments
+            .where((a) => a.status != AssessmentAvailability.draft)
+            .toList(),
+      );
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -93,9 +99,11 @@ class MarksRepositoryImpl implements MarksRepository {
     required List<StudentMarkEntry> entries,
   }) async {
     if (!context.can(Permission.subjectMarksEnter)) {
-      return const Left(PermissionDeniedFailure(
-        'You do not have permission to enter marks for this subject.',
-      ));
+      return const Left(
+        PermissionDeniedFailure(
+          'You do not have permission to enter marks for this subject.',
+        ),
+      );
     }
     final scopeFailure = _checkScope(context, assessment);
     if (scopeFailure != null) return Left(scopeFailure);
@@ -103,13 +111,17 @@ class MarksRepositoryImpl implements MarksRepository {
     // Individually invalid rows are rejected even in a draft: storing 300/40
     // and discovering it at submission time wastes the teacher's evening.
     for (final entry in entries) {
-      final rejection =
-          policy.validateEntry(entry: entry, component: component);
+      final rejection = policy.validateEntry(
+        entry: entry,
+        component: component,
+      );
       if (rejection != null) {
-        return Left(ValidationFailure(
-          rejection.messageFor(component.maximumMark),
-          field: entry.studentId,
-        ));
+        return Left(
+          ValidationFailure(
+            rejection.messageFor(component.maximumMark),
+            field: entry.studentId,
+          ),
+        );
       }
     }
 
@@ -144,21 +156,24 @@ class MarksRepositoryImpl implements MarksRepository {
     required AssessmentComponent component,
     required List<StudentMarkEntry> entries,
   }) async {
-    final students =
-        await studentRepository.getSubjectStudents(context: context);
+    final students = await studentRepository.getSubjectStudents(
+      context: context,
+    );
 
     return students.fold(
       Left.new,
-      (list) => Right(policy.review(
-        context: context,
-        assessment: assessment,
-        component: component,
-        entries: entries,
-        // The enrolled set comes from the repository, not from the entry
-        // list, so a student the teacher never scrolled to still counts as
-        // pending rather than silently vanishing.
-        enrolledStudentIds: list.map((s) => s.studentId).toSet(),
-      )),
+      (list) => Right(
+        policy.review(
+          context: context,
+          assessment: assessment,
+          component: component,
+          entries: entries,
+          // The enrolled set comes from the repository, not from the entry
+          // list, so a student the teacher never scrolled to still counts as
+          // pending rather than silently vanishing.
+          enrolledStudentIds: list.map((s) => s.studentId).toSet(),
+        ),
+      ),
     );
   }
 
@@ -173,9 +188,11 @@ class MarksRepositoryImpl implements MarksRepository {
       // Submission hands marks to the academic office. Replaying that from a
       // device that has been offline for a week, against an assessment that
       // may since have been approved, is not safe.
-      return const Left(OfflineNotAllowedFailure(
-        'Submitting marks needs an internet connection.',
-      ));
+      return const Left(
+        OfflineNotAllowedFailure(
+          'Submitting marks needs an internet connection.',
+        ),
+      );
     }
 
     final reviewResult = await review(
@@ -234,33 +251,42 @@ class MarksRepositoryImpl implements MarksRepository {
     required String reason,
   }) async {
     if (!policy.canEdit(context: context, status: assessment.status)) {
-      return Left(PermissionDeniedFailure(
-        assessment.status == AssessmentAvailability.approved ||
-                assessment.status == AssessmentAvailability.published
-            // Approved marks feed report cards; the route back is a
-            // correction request, not an edit.
-            ? 'These marks have been approved. Ask the academic office for a correction.'
-            : 'You do not have permission to change submitted marks.',
-      ));
+      return Left(
+        PermissionDeniedFailure(
+          assessment.status == AssessmentAvailability.approved ||
+                  assessment.status == AssessmentAvailability.published
+              // Approved marks feed report cards; the route back is a
+              // correction request, not an edit.
+              ? 'These marks have been approved. Ask the academic office for a correction.'
+              : 'You do not have permission to change submitted marks.',
+        ),
+      );
     }
-    if (policy.requiresReasonToEdit(assessment.status) && reason.trim().isEmpty) {
-      return const Left(ValidationFailure(
-        'Give a reason for changing this mark.',
-        field: 'reason',
-      ));
+    if (policy.requiresReasonToEdit(assessment.status) &&
+        reason.trim().isEmpty) {
+      return const Left(
+        ValidationFailure(
+          'Give a reason for changing this mark.',
+          field: 'reason',
+        ),
+      );
     }
 
     final rejection = policy.validateEntry(entry: entry, component: component);
     if (rejection != null) {
-      return Left(ValidationFailure(
-        rejection.messageFor(component.maximumMark),
-        field: entry.studentId,
-      ));
+      return Left(
+        ValidationFailure(
+          rejection.messageFor(component.maximumMark),
+          field: entry.studentId,
+        ),
+      );
     }
     if (!await networkInfo.isConnected) {
-      return const Left(OfflineNotAllowedFailure(
-        'Changing a submitted mark needs an internet connection.',
-      ));
+      return const Left(
+        OfflineNotAllowedFailure(
+          'Changing a submitted mark needs an internet connection.',
+        ),
+      );
     }
 
     try {
@@ -269,8 +295,9 @@ class MarksRepositoryImpl implements MarksRepository {
         assessmentId: assessment.id,
         componentId: component.id,
       );
-      final previous =
-          existing.where((e) => e.studentId == entry.studentId).firstOrNull;
+      final previous = existing
+          .where((e) => e.studentId == entry.studentId)
+          .firstOrNull;
 
       await remoteDataSource.saveMarks(
         schoolId: context.schoolId,
@@ -306,29 +333,29 @@ class MarksRepositoryImpl implements MarksRepository {
   Failure _refusalFailure(MarksSubmissionReport report) {
     return switch (report.refusal!) {
       SubmissionRefusal.noPermission => const PermissionDeniedFailure(
-          'You do not have permission to submit marks.',
-        ),
+        'You do not have permission to submit marks.',
+      ),
       SubmissionRefusal.outsideScope => const PermissionDeniedFailure(
-          'This assessment is outside your current responsibility.',
-        ),
+        'This assessment is outside your current responsibility.',
+      ),
       SubmissionRefusal.assessmentLocked => const ValidationFailure(
-          'These marks have been approved and can no longer be submitted.',
-        ),
+        'These marks have been approved and can no longer be submitted.',
+      ),
       SubmissionRefusal.assessmentNotOpen => const ValidationFailure(
-          'This assessment is not open for marks entry.',
-        ),
+        'This assessment is not open for marks entry.',
+      ),
       SubmissionRefusal.entryNotOpenYet => const ValidationFailure(
-          'Marks entry has not opened for this assessment yet.',
-        ),
+        'Marks entry has not opened for this assessment yet.',
+      ),
       SubmissionRefusal.missingMarks => ValidationFailure(
-          '${report.pending} student(s) still have no mark.',
-        ),
+        '${report.pending} student(s) still have no mark.',
+      ),
       SubmissionRefusal.invalidMarks => ValidationFailure(
-          '${report.invalid} mark(s) are outside the allowed range.',
-        ),
+        '${report.invalid} mark(s) are outside the allowed range.',
+      ),
       SubmissionRefusal.noStudents => const ValidationFailure(
-          'No students are enrolled in this subject for this class.',
-        ),
+        'No students are enrolled in this subject for this class.',
+      ),
     };
   }
 

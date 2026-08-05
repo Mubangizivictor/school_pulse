@@ -6,7 +6,11 @@ class AllergyInfo {
   final String reaction;
   final String severity; // High, Medium, Low
 
-  AllergyInfo({required this.allergen, required this.reaction, required this.severity});
+  AllergyInfo({
+    required this.allergen,
+    required this.reaction,
+    required this.severity,
+  });
 }
 
 class AllergyList extends StatelessWidget {
@@ -26,7 +30,12 @@ class AllergyList extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Allergies & Sensitivities', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                Text(
+                  'Allergies & Sensitivities',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 if (onAdd != null)
                   IconButton(
                     icon: const Icon(Icons.add_alert_outlined, size: 20),
@@ -38,7 +47,10 @@ class AllergyList extends StatelessWidget {
           if (allergies.isEmpty)
             const Padding(
               padding: EdgeInsets.only(bottom: 16, left: 16),
-              child: Text('No allergies reported.', style: TextStyle(fontStyle: FontStyle.italic)),
+              child: Text(
+                'No allergies reported.',
+                style: TextStyle(fontStyle: FontStyle.italic),
+              ),
             )
           else
             Padding(
@@ -46,7 +58,9 @@ class AllergyList extends StatelessWidget {
               child: Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: allergies.map((a) => _AllergyChip(allergy: a)).toList(),
+                children: allergies
+                    .map((a) => _AllergyChip(allergy: a))
+                    .toList(),
               ),
             ),
         ],
@@ -61,8 +75,12 @@ class _AllergyChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = allergy.severity.toLowerCase() == 'high' ? Colors.red : (allergy.severity.toLowerCase() == 'medium' ? Colors.orange : Colors.blue);
-    
+    final color = allergy.severity.toLowerCase() == 'high'
+        ? Colors.red
+        : (allergy.severity.toLowerCase() == 'medium'
+              ? Colors.orange
+              : Colors.blue);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -77,7 +95,11 @@ class _AllergyChip extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             '${allergy.allergen}: ${allergy.reaction}',
-            style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12),
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
           ),
         ],
       ),

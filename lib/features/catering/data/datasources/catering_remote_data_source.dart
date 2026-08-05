@@ -16,14 +16,23 @@ abstract class CateringRemoteDataSource {
   Future<List<FoodItemModel>> getInventory();
   Future<void> createStockRequest(Map<String, dynamic> requestData);
   Future<List<Map<String, dynamic>>> getStockRequests();
-  Future<List<MealRecordModel>> getMealAttendanceReport(DateTime start, DateTime end);
-  
+  Future<List<MealRecordModel>> getMealAttendanceReport(
+    DateTime start,
+    DateTime end,
+  );
+
   // Wastage
-  Future<List<WastageRecordModel>> getWastageRecords(DateTime start, DateTime end);
+  Future<List<WastageRecordModel>> getWastageRecords(
+    DateTime start,
+    DateTime end,
+  );
   Future<void> saveWastageRecord(WastageRecordModel record);
 
   // Financial
-  Future<Map<String, dynamic>> getCateringFinancialReport(DateTime start, DateTime end);
+  Future<Map<String, dynamic>> getCateringFinancialReport(
+    DateTime start,
+    DateTime end,
+  );
 }
 
 class CateringRemoteDataSourceImpl implements CateringRemoteDataSource {
@@ -34,54 +43,79 @@ class CateringRemoteDataSourceImpl implements CateringRemoteDataSource {
   @override
   Future<Map<String, dynamic>> getCateringDashboardData() async {
     // In a real app, these would be aggregated from multiple collections or a dedicated summary doc
-    final summaryDoc = await firestore.collection('catering_summary').doc('current').get();
-    return summaryDoc.data() ?? {
-      'expectedStudents': 0,
-      'boardersCount': 0,
-      'dayScholarsCount': 0,
-      'mealsServedToday': 0,
-      'lowStockAlerts': 0,
-      'pendingRequests': 0,
-    };
+    final summaryDoc = await firestore
+        .collection('catering_summary')
+        .doc('current')
+        .get();
+    return summaryDoc.data() ??
+        {
+          'expectedStudents': 0,
+          'boardersCount': 0,
+          'dayScholarsCount': 0,
+          'mealsServedToday': 0,
+          'lowStockAlerts': 0,
+          'pendingRequests': 0,
+        };
   }
 
   @override
   Future<List<MealCategoryModel>> getMealCategories() async {
     final snapshot = await firestore.collection('meal_categories').get();
-    return snapshot.docs.map((doc) => MealCategoryModel.fromJson(doc.data())).toList();
+    return snapshot.docs
+        .map((doc) => MealCategoryModel.fromJson(doc.data()))
+        .toList();
   }
 
   @override
   Future<void> saveMealCategory(MealCategoryModel category) async {
-    await firestore.collection('meal_categories').doc(category.id).set(category.toJson());
+    await firestore
+        .collection('meal_categories')
+        .doc(category.id)
+        .set(category.toJson());
   }
 
   @override
   Future<List<MenuItemModel>> getWeeklyMenu(DateTime date) async {
     // Simplified: fetch menu for the whole week
     final snapshot = await firestore.collection('menu_items').get();
-    return snapshot.docs.map((doc) => MenuItemModel.fromJson(doc.data())).toList();
+    return snapshot.docs
+        .map((doc) => MenuItemModel.fromJson(doc.data()))
+        .toList();
   }
 
   @override
   Future<void> saveMenuItem(MenuItemModel menuItem) async {
-    await firestore.collection('menu_items').doc(menuItem.id).set(menuItem.toJson());
+    await firestore
+        .collection('menu_items')
+        .doc(menuItem.id)
+        .set(menuItem.toJson());
   }
 
   @override
-  Future<Map<String, dynamic>> verifyStudentMealEligibility(String studentId) async {
+  Future<Map<String, dynamic>> verifyStudentMealEligibility(
+    String studentId,
+  ) async {
     // This involves checking the finance/bursar collection for payment status
-    final financeDoc = await firestore.collection('finance').doc(studentId).get();
-    final studentDoc = await firestore.collection('students').doc(studentId).get();
-    
+    final financeDoc = await firestore
+        .collection('finance')
+        .doc(studentId)
+        .get();
+    final studentDoc = await firestore
+        .collection('students')
+        .doc(studentId)
+        .get();
+
     if (!studentDoc.exists) throw Exception('Student not found');
-    
+
     final studentData = studentDoc.data()!;
     final financeData = financeDoc.data() ?? {};
-    
+
     // Logic for eligibility based on payment
-    double percentagePaid = (financeData['paidAmount'] ?? 0) / (financeData['totalCateringFees'] ?? 1) * 100;
-    
+    double percentagePaid =
+        (financeData['paidAmount'] ?? 0) /
+        (financeData['totalCateringFees'] ?? 1) *
+        100;
+
     String status = 'Not Cleared';
     if (percentagePaid >= 100) {
       status = 'Cleared';
@@ -106,8 +140,13 @@ class CateringRemoteDataSourceImpl implements CateringRemoteDataSource {
 
   @override
   Future<List<FoodItemModel>> getInventory() async {
-    final snapshot = await firestore.collection('inventory').where('type', isEqualTo: 'food').get();
-    return snapshot.docs.map((doc) => FoodItemModel.fromJson(doc.data())).toList();
+    final snapshot = await firestore
+        .collection('inventory')
+        .where('type', isEqualTo: 'food')
+        .get();
+    return snapshot.docs
+        .map((doc) => FoodItemModel.fromJson(doc.data()))
+        .toList();
   }
 
   @override
@@ -117,35 +156,56 @@ class CateringRemoteDataSourceImpl implements CateringRemoteDataSource {
 
   @override
   Future<List<Map<String, dynamic>>> getStockRequests() async {
-    final snapshot = await firestore.collection('stock_requests').orderBy('requestedAt', descending: true).get();
+    final snapshot = await firestore
+        .collection('stock_requests')
+        .orderBy('requestedAt', descending: true)
+        .get();
     return snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
   }
 
   @override
-  Future<List<MealRecordModel>> getMealAttendanceReport(DateTime start, DateTime end) async {
-    final snapshot = await firestore.collection('meal_records')
+  Future<List<MealRecordModel>> getMealAttendanceReport(
+    DateTime start,
+    DateTime end,
+  ) async {
+    final snapshot = await firestore
+        .collection('meal_records')
         .where('servedAt', isGreaterThanOrEqualTo: start)
         .where('servedAt', isLessThanOrEqualTo: end)
         .get();
-    return snapshot.docs.map((doc) => MealRecordModel.fromJson(doc.data())).toList();
+    return snapshot.docs
+        .map((doc) => MealRecordModel.fromJson(doc.data()))
+        .toList();
   }
 
   @override
-  Future<List<WastageRecordModel>> getWastageRecords(DateTime start, DateTime end) async {
-    final snapshot = await firestore.collection('wastage_records')
+  Future<List<WastageRecordModel>> getWastageRecords(
+    DateTime start,
+    DateTime end,
+  ) async {
+    final snapshot = await firestore
+        .collection('wastage_records')
         .where('date', isGreaterThanOrEqualTo: start)
         .where('date', isLessThanOrEqualTo: end)
         .get();
-    return snapshot.docs.map((doc) => WastageRecordModel.fromJson(doc.data())).toList();
+    return snapshot.docs
+        .map((doc) => WastageRecordModel.fromJson(doc.data()))
+        .toList();
   }
 
   @override
   Future<void> saveWastageRecord(WastageRecordModel record) async {
-    await firestore.collection('wastage_records').doc(record.id).set(record.toJson());
+    await firestore
+        .collection('wastage_records')
+        .doc(record.id)
+        .set(record.toJson());
   }
 
   @override
-  Future<Map<String, dynamic>> getCateringFinancialReport(DateTime start, DateTime end) async {
+  Future<Map<String, dynamic>> getCateringFinancialReport(
+    DateTime start,
+    DateTime end,
+  ) async {
     // Aggregated financial data from meal categories, inventory, and wastage
     return {
       'totalRevenue': 1500000.0,

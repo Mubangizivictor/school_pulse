@@ -33,19 +33,19 @@ class AssessmentModeration extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        assessmentId,
-        title,
-        className,
-        subjectName,
-        teacherName,
-        submissionCount,
-        totalStudents,
-        averageScore,
-        status,
-        rejectionReason,
-        createdAt,
-      ];
+    id,
+    assessmentId,
+    title,
+    className,
+    subjectName,
+    teacherName,
+    submissionCount,
+    totalStudents,
+    averageScore,
+    status,
+    rejectionReason,
+    createdAt,
+  ];
 
   AssessmentModeration copyWith({
     ModerationStatus? status,

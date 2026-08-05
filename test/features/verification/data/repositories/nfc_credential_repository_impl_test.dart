@@ -7,7 +7,8 @@ import 'package:school_pulse/features/verification/data/datasources/verification
 import 'package:school_pulse/features/verification/data/models/verification_isar_models.dart';
 import 'package:school_pulse/features/verification/data/repositories/nfc_credential_repository_impl.dart';
 
-class MockVerificationLocalDataSource extends Mock implements VerificationLocalDataSource {}
+class MockVerificationLocalDataSource extends Mock
+    implements VerificationLocalDataSource {}
 
 class MockNetworkInfo extends Mock implements NetworkInfo {}
 
@@ -42,128 +43,178 @@ void main() {
 
     when(() => localDataSource.cacheCredential(any())).thenAnswer((_) async {});
     when(() => localDataSource.saveRevocation(any())).thenAnswer((_) async {});
-    when(() => localDataSource.deleteRevocation(any(), any())).thenAnswer((_) async {});
+    when(
+      () => localDataSource.deleteRevocation(any(), any()),
+    ).thenAnswer((_) async {});
   });
 
   group('assign', () {
-    test('creates a new active mapping and clears any denylist entry when the card is unassigned', () async {
-      when(() => localDataSource.findCredential(cardUid, schoolId)).thenAnswer((_) async => null);
+    test(
+      'creates a new active mapping and clears any denylist entry when the card is unassigned',
+      () async {
+        when(
+          () => localDataSource.findCredential(cardUid, schoolId),
+        ).thenAnswer((_) async => null);
 
-      final result = await repository.assign(
-        credentialValue: cardUid,
-        identityId: 'SP-STUDENT-1',
-        identityType: 'student',
-        schoolId: schoolId,
-      );
+        final result = await repository.assign(
+          credentialValue: cardUid,
+          identityId: 'SP-STUDENT-1',
+          identityType: 'student',
+          schoolId: schoolId,
+        );
 
-      expect(result.isRight(), true);
-      verify(() => localDataSource.deleteRevocation(cardUid, schoolId)).called(1);
-      final captured = verify(() => localDataSource.cacheCredential(captureAny())).captured;
-      final saved = captured.single as CachedCredentialIsar;
-      expect(saved.credentialValue, cardUid);
-      expect(saved.credentialType, 'nfc');
-      expect(saved.identityId, 'SP-STUDENT-1');
-      expect(saved.identityType, 'student');
-      expect(saved.status, 'active');
-    });
+        expect(result.isRight(), true);
+        verify(
+          () => localDataSource.deleteRevocation(cardUid, schoolId),
+        ).called(1);
+        final captured = verify(
+          () => localDataSource.cacheCredential(captureAny()),
+        ).captured;
+        final saved = captured.single as CachedCredentialIsar;
+        expect(saved.credentialValue, cardUid);
+        expect(saved.credentialType, 'nfc');
+        expect(saved.identityId, 'SP-STUDENT-1');
+        expect(saved.identityType, 'student');
+        expect(saved.status, 'active');
+      },
+    );
 
-    test('is idempotent when the card is already actively assigned to the same identity', () async {
-      final existing = CachedCredentialIsar()
-        ..credentialValue = cardUid
-        ..credentialType = 'nfc'
-        ..identityId = 'SP-STUDENT-1'
-        ..identityType = 'student'
-        ..schoolId = schoolId
-        ..status = 'active'
-        ..updatedAt = DateTime(2026);
-      when(() => localDataSource.findCredential(cardUid, schoolId)).thenAnswer((_) async => existing);
+    test(
+      'is idempotent when the card is already actively assigned to the same identity',
+      () async {
+        final existing = CachedCredentialIsar()
+          ..credentialValue = cardUid
+          ..credentialType = 'nfc'
+          ..identityId = 'SP-STUDENT-1'
+          ..identityType = 'student'
+          ..schoolId = schoolId
+          ..status = 'active'
+          ..updatedAt = DateTime(2026);
+        when(
+          () => localDataSource.findCredential(cardUid, schoolId),
+        ).thenAnswer((_) async => existing);
 
-      final result = await repository.assign(
-        credentialValue: cardUid,
-        identityId: 'SP-STUDENT-1',
-        identityType: 'student',
-        schoolId: schoolId,
-      );
+        final result = await repository.assign(
+          credentialValue: cardUid,
+          identityId: 'SP-STUDENT-1',
+          identityType: 'student',
+          schoolId: schoolId,
+        );
 
-      expect(result.isRight(), true);
-      verify(() => localDataSource.cacheCredential(any())).called(1);
-    });
+        expect(result.isRight(), true);
+        verify(() => localDataSource.cacheCredential(any())).called(1);
+      },
+    );
 
-    test('fails without writing anything when the card is actively assigned to a different identity', () async {
-      final existing = CachedCredentialIsar()
-        ..credentialValue = cardUid
-        ..credentialType = 'nfc'
-        ..identityId = 'SP-STUDENT-OTHER'
-        ..identityType = 'student'
-        ..schoolId = schoolId
-        ..status = 'active'
-        ..updatedAt = DateTime(2026);
-      when(() => localDataSource.findCredential(cardUid, schoolId)).thenAnswer((_) async => existing);
+    test(
+      'fails without writing anything when the card is actively assigned to a different identity',
+      () async {
+        final existing = CachedCredentialIsar()
+          ..credentialValue = cardUid
+          ..credentialType = 'nfc'
+          ..identityId = 'SP-STUDENT-OTHER'
+          ..identityType = 'student'
+          ..schoolId = schoolId
+          ..status = 'active'
+          ..updatedAt = DateTime(2026);
+        when(
+          () => localDataSource.findCredential(cardUid, schoolId),
+        ).thenAnswer((_) async => existing);
 
-      final result = await repository.assign(
-        credentialValue: cardUid,
-        identityId: 'SP-STUDENT-1',
-        identityType: 'student',
-        schoolId: schoolId,
-      );
+        final result = await repository.assign(
+          credentialValue: cardUid,
+          identityId: 'SP-STUDENT-1',
+          identityType: 'student',
+          schoolId: schoolId,
+        );
 
-      expect(result.isLeft(), true);
-      verifyNever(() => localDataSource.cacheCredential(any()));
-      verifyNever(() => localDataSource.deleteRevocation(any(), any()));
-    });
+        expect(result.isLeft(), true);
+        verifyNever(() => localDataSource.cacheCredential(any()));
+        verifyNever(() => localDataSource.deleteRevocation(any(), any()));
+      },
+    );
 
-    test('reuse: reassigns a previously-revoked card to a new identity and clears the denylist', () async {
-      final existing = CachedCredentialIsar()
-        ..credentialValue = cardUid
-        ..credentialType = 'nfc'
-        ..identityId = 'SP-STUDENT-OLD'
-        ..identityType = 'student'
-        ..schoolId = schoolId
-        ..status = 'revoked'
-        ..updatedAt = DateTime(2026);
-      when(() => localDataSource.findCredential(cardUid, schoolId)).thenAnswer((_) async => existing);
+    test(
+      'reuse: reassigns a previously-revoked card to a new identity and clears the denylist',
+      () async {
+        final existing = CachedCredentialIsar()
+          ..credentialValue = cardUid
+          ..credentialType = 'nfc'
+          ..identityId = 'SP-STUDENT-OLD'
+          ..identityType = 'student'
+          ..schoolId = schoolId
+          ..status = 'revoked'
+          ..updatedAt = DateTime(2026);
+        when(
+          () => localDataSource.findCredential(cardUid, schoolId),
+        ).thenAnswer((_) async => existing);
 
-      final result = await repository.assign(
-        credentialValue: cardUid,
-        identityId: 'SP-STUDENT-NEW',
-        identityType: 'student',
-        schoolId: schoolId,
-      );
+        final result = await repository.assign(
+          credentialValue: cardUid,
+          identityId: 'SP-STUDENT-NEW',
+          identityType: 'student',
+          schoolId: schoolId,
+        );
 
-      expect(result.isRight(), true);
-      verify(() => localDataSource.deleteRevocation(cardUid, schoolId)).called(1);
-      final captured = verify(() => localDataSource.cacheCredential(captureAny())).captured;
-      expect((captured.single as CachedCredentialIsar).identityId, 'SP-STUDENT-NEW');
-    });
+        expect(result.isRight(), true);
+        verify(
+          () => localDataSource.deleteRevocation(cardUid, schoolId),
+        ).called(1);
+        final captured = verify(
+          () => localDataSource.cacheCredential(captureAny()),
+        ).captured;
+        expect(
+          (captured.single as CachedCredentialIsar).identityId,
+          'SP-STUDENT-NEW',
+        );
+      },
+    );
   });
 
   group('revoke', () {
-    test('marks the cached mapping revoked and adds a denylist entry', () async {
-      final existing = CachedCredentialIsar()
-        ..credentialValue = cardUid
-        ..credentialType = 'nfc'
-        ..identityId = 'SP-STUDENT-1'
-        ..identityType = 'student'
-        ..schoolId = schoolId
-        ..status = 'active'
-        ..updatedAt = DateTime(2026);
-      when(() => localDataSource.findCredential(cardUid, schoolId)).thenAnswer((_) async => existing);
+    test(
+      'marks the cached mapping revoked and adds a denylist entry',
+      () async {
+        final existing = CachedCredentialIsar()
+          ..credentialValue = cardUid
+          ..credentialType = 'nfc'
+          ..identityId = 'SP-STUDENT-1'
+          ..identityType = 'student'
+          ..schoolId = schoolId
+          ..status = 'active'
+          ..updatedAt = DateTime(2026);
+        when(
+          () => localDataSource.findCredential(cardUid, schoolId),
+        ).thenAnswer((_) async => existing);
 
-      final result = await repository.revoke(credentialValue: cardUid, schoolId: schoolId, reason: 'lost');
+        final result = await repository.revoke(
+          credentialValue: cardUid,
+          schoolId: schoolId,
+          reason: 'lost',
+        );
 
-      expect(result.isRight(), true);
-      expect(existing.status, 'revoked');
-      verify(() => localDataSource.cacheCredential(existing)).called(1);
-      final captured = verify(() => localDataSource.saveRevocation(captureAny())).captured;
-      final revocation = captured.single as RevokedCredentialIsar;
-      expect(revocation.credentialValue, cardUid);
-      expect(revocation.reason, 'lost');
-    });
+        expect(result.isRight(), true);
+        expect(existing.status, 'revoked');
+        verify(() => localDataSource.cacheCredential(existing)).called(1);
+        final captured = verify(
+          () => localDataSource.saveRevocation(captureAny()),
+        ).captured;
+        final revocation = captured.single as RevokedCredentialIsar;
+        expect(revocation.credentialValue, cardUid);
+        expect(revocation.reason, 'lost');
+      },
+    );
 
     test('still denylists a card with no prior cached mapping', () async {
-      when(() => localDataSource.findCredential(cardUid, schoolId)).thenAnswer((_) async => null);
+      when(
+        () => localDataSource.findCredential(cardUid, schoolId),
+      ).thenAnswer((_) async => null);
 
-      final result = await repository.revoke(credentialValue: cardUid, schoolId: schoolId, reason: 'stolen');
+      final result = await repository.revoke(
+        credentialValue: cardUid,
+        schoolId: schoolId,
+        reason: 'stolen',
+      );
 
       expect(result.isRight(), true);
       verifyNever(() => localDataSource.cacheCredential(any()));
@@ -172,29 +223,44 @@ void main() {
   });
 
   group('reactivate', () {
-    test('clears the denylist entry and restores the cached mapping to active', () async {
-      final existing = CachedCredentialIsar()
-        ..credentialValue = cardUid
-        ..credentialType = 'nfc'
-        ..identityId = 'SP-STUDENT-1'
-        ..identityType = 'student'
-        ..schoolId = schoolId
-        ..status = 'revoked'
-        ..updatedAt = DateTime(2026);
-      when(() => localDataSource.findCredential(cardUid, schoolId)).thenAnswer((_) async => existing);
+    test(
+      'clears the denylist entry and restores the cached mapping to active',
+      () async {
+        final existing = CachedCredentialIsar()
+          ..credentialValue = cardUid
+          ..credentialType = 'nfc'
+          ..identityId = 'SP-STUDENT-1'
+          ..identityType = 'student'
+          ..schoolId = schoolId
+          ..status = 'revoked'
+          ..updatedAt = DateTime(2026);
+        when(
+          () => localDataSource.findCredential(cardUid, schoolId),
+        ).thenAnswer((_) async => existing);
 
-      final result = await repository.reactivate(credentialValue: cardUid, schoolId: schoolId);
+        final result = await repository.reactivate(
+          credentialValue: cardUid,
+          schoolId: schoolId,
+        );
 
-      expect(result.isRight(), true);
-      expect(existing.status, 'active');
-      verify(() => localDataSource.deleteRevocation(cardUid, schoolId)).called(1);
-      verify(() => localDataSource.cacheCredential(existing)).called(1);
-    });
+        expect(result.isRight(), true);
+        expect(existing.status, 'active');
+        verify(
+          () => localDataSource.deleteRevocation(cardUid, schoolId),
+        ).called(1);
+        verify(() => localDataSource.cacheCredential(existing)).called(1);
+      },
+    );
 
     test('fails when there is no prior mapping to reactivate', () async {
-      when(() => localDataSource.findCredential(cardUid, schoolId)).thenAnswer((_) async => null);
+      when(
+        () => localDataSource.findCredential(cardUid, schoolId),
+      ).thenAnswer((_) async => null);
 
-      final result = await repository.reactivate(credentialValue: cardUid, schoolId: schoolId);
+      final result = await repository.reactivate(
+        credentialValue: cardUid,
+        schoolId: schoolId,
+      );
 
       expect(result.isLeft(), true);
       verifyNever(() => localDataSource.deleteRevocation(any(), any()));
@@ -203,62 +269,99 @@ void main() {
   });
 
   group('replace', () {
-    test('revokes the old card and assigns the new one to the same identity', () async {
-      when(() => localDataSource.findCredential('OLD', schoolId)).thenAnswer((_) async => CachedCredentialIsar()
-        ..credentialValue = 'OLD'
-        ..credentialType = 'nfc'
-        ..identityId = 'SP-STUDENT-1'
-        ..identityType = 'student'
-        ..schoolId = schoolId
-        ..status = 'active'
-        ..updatedAt = DateTime(2026));
-      when(() => localDataSource.findCredential('NEW', schoolId)).thenAnswer((_) async => null);
+    test(
+      'revokes the old card and assigns the new one to the same identity',
+      () async {
+        when(() => localDataSource.findCredential('OLD', schoolId)).thenAnswer(
+          (_) async => CachedCredentialIsar()
+            ..credentialValue = 'OLD'
+            ..credentialType = 'nfc'
+            ..identityId = 'SP-STUDENT-1'
+            ..identityType = 'student'
+            ..schoolId = schoolId
+            ..status = 'active'
+            ..updatedAt = DateTime(2026),
+        );
+        when(
+          () => localDataSource.findCredential('NEW', schoolId),
+        ).thenAnswer((_) async => null);
 
-      final result = await repository.replace(
-        oldCredentialValue: 'OLD',
-        newCredentialValue: 'NEW',
-        identityId: 'SP-STUDENT-1',
-        identityType: 'student',
-        schoolId: schoolId,
-        reason: 'damaged',
-      );
+        final result = await repository.replace(
+          oldCredentialValue: 'OLD',
+          newCredentialValue: 'NEW',
+          identityId: 'SP-STUDENT-1',
+          identityType: 'student',
+          schoolId: schoolId,
+          reason: 'damaged',
+        );
 
-      expect(result.isRight(), true);
-      verify(() => localDataSource.saveRevocation(any())).called(1);
-      // cacheCredential is called twice here: once by revoke() re-saving
-      // OLD as revoked, once by assign() saving NEW as active.
-      final captured = verify(() => localDataSource.cacheCredential(captureAny())).captured;
-      final saved = captured.cast<CachedCredentialIsar>();
-      expect(saved.map((c) => c.credentialValue), containsAll(['OLD', 'NEW']));
-      expect(saved.firstWhere((c) => c.credentialValue == 'NEW').status, 'active');
-    });
+        expect(result.isRight(), true);
+        verify(() => localDataSource.saveRevocation(any())).called(1);
+        // cacheCredential is called twice here: once by revoke() re-saving
+        // OLD as revoked, once by assign() saving NEW as active.
+        final captured = verify(
+          () => localDataSource.cacheCredential(captureAny()),
+        ).captured;
+        final saved = captured.cast<CachedCredentialIsar>();
+        expect(
+          saved.map((c) => c.credentialValue),
+          containsAll(['OLD', 'NEW']),
+        );
+        expect(
+          saved.firstWhere((c) => c.credentialValue == 'NEW').status,
+          'active',
+        );
+      },
+    );
   });
 
   group('findAssignedCredential', () {
-    test('returns the credentialValue of the most recent mapping for an identity', () async {
-      when(() => localDataSource.findCredentialByIdentity('SP-STUDENT-1', schoolId)).thenAnswer(
-        (_) async => CachedCredentialIsar()
-          ..credentialValue = cardUid
-          ..credentialType = 'nfc'
-          ..identityId = 'SP-STUDENT-1'
-          ..identityType = 'student'
-          ..schoolId = schoolId
-          ..status = 'revoked'
-          ..updatedAt = DateTime(2026),
-      );
+    test(
+      'returns the credentialValue of the most recent mapping for an identity',
+      () async {
+        when(
+          () => localDataSource.findCredentialByIdentity(
+            'SP-STUDENT-1',
+            schoolId,
+          ),
+        ).thenAnswer(
+          (_) async => CachedCredentialIsar()
+            ..credentialValue = cardUid
+            ..credentialType = 'nfc'
+            ..identityId = 'SP-STUDENT-1'
+            ..identityType = 'student'
+            ..schoolId = schoolId
+            ..status = 'revoked'
+            ..updatedAt = DateTime(2026),
+        );
 
-      final result = await repository.findAssignedCredential(identityId: 'SP-STUDENT-1', schoolId: schoolId);
+        final result = await repository.findAssignedCredential(
+          identityId: 'SP-STUDENT-1',
+          schoolId: schoolId,
+        );
 
-      expect(result, Right(cardUid));
-    });
+        expect(result, Right(cardUid));
+      },
+    );
 
-    test('returns null when the identity has never had a card assigned', () async {
-      when(() => localDataSource.findCredentialByIdentity('SP-STUDENT-1', schoolId)).thenAnswer((_) async => null);
+    test(
+      'returns null when the identity has never had a card assigned',
+      () async {
+        when(
+          () => localDataSource.findCredentialByIdentity(
+            'SP-STUDENT-1',
+            schoolId,
+          ),
+        ).thenAnswer((_) async => null);
 
-      final result = await repository.findAssignedCredential(identityId: 'SP-STUDENT-1', schoolId: schoolId);
+        final result = await repository.findAssignedCredential(
+          identityId: 'SP-STUDENT-1',
+          schoolId: schoolId,
+        );
 
-      expect(result, const Right<Object, String?>(null));
-    });
+        expect(result, const Right<Object, String?>(null));
+      },
+    );
   });
 
   group('cross-device sync (Firestore push)', () {
@@ -266,85 +369,123 @@ void main() {
       when(() => networkInfo.isConnected).thenAnswer((_) async => true);
     });
 
-    test('assign pushes the active mapping to schools/{schoolId}/credentials', () async {
-      when(() => localDataSource.findCredential(cardUid, schoolId)).thenAnswer((_) async => null);
+    test(
+      'assign pushes the active mapping to schools/{schoolId}/credentials',
+      () async {
+        when(
+          () => localDataSource.findCredential(cardUid, schoolId),
+        ).thenAnswer((_) async => null);
 
-      await repository.assign(
-        credentialValue: cardUid,
-        identityId: 'SP-STUDENT-1',
-        identityType: 'student',
-        schoolId: schoolId,
-      );
+        await repository.assign(
+          credentialValue: cardUid,
+          identityId: 'SP-STUDENT-1',
+          identityType: 'student',
+          schoolId: schoolId,
+        );
 
-      final doc =
-          await firestore.collection('schools').doc(schoolId).collection('credentials').doc(cardUid).get();
-      expect(doc.exists, true);
-      expect(doc.data()!['identityId'], 'SP-STUDENT-1');
-      expect(doc.data()!['status'], 'active');
-    });
+        final doc = await firestore
+            .collection('schools')
+            .doc(schoolId)
+            .collection('credentials')
+            .doc(cardUid)
+            .get();
+        expect(doc.exists, true);
+        expect(doc.data()!['identityId'], 'SP-STUDENT-1');
+        expect(doc.data()!['status'], 'active');
+      },
+    );
 
-    test('revoke pushes a denylist entry to schools/{schoolId}/revoked_credentials', () async {
-      when(() => localDataSource.findCredential(cardUid, schoolId)).thenAnswer((_) async => null);
+    test(
+      'revoke pushes a denylist entry to schools/{schoolId}/revoked_credentials',
+      () async {
+        when(
+          () => localDataSource.findCredential(cardUid, schoolId),
+        ).thenAnswer((_) async => null);
 
-      await repository.revoke(credentialValue: cardUid, schoolId: schoolId, reason: 'lost');
+        await repository.revoke(
+          credentialValue: cardUid,
+          schoolId: schoolId,
+          reason: 'lost',
+        );
 
-      final doc = await firestore
-          .collection('schools')
-          .doc(schoolId)
-          .collection('revoked_credentials')
-          .doc(cardUid)
-          .get();
-      expect(doc.exists, true);
-      expect(doc.data()!['reason'], 'lost');
-    });
+        final doc = await firestore
+            .collection('schools')
+            .doc(schoolId)
+            .collection('revoked_credentials')
+            .doc(cardUid)
+            .get();
+        expect(doc.exists, true);
+        expect(doc.data()!['reason'], 'lost');
+      },
+    );
 
-    test('reassigning a previously-revoked card removes it from the remote denylist too', () async {
-      await firestore
-          .collection('schools')
-          .doc(schoolId)
-          .collection('revoked_credentials')
-          .doc(cardUid)
-          .set({'credentialValue': cardUid, 'schoolId': schoolId, 'reason': 'lost'});
-      when(() => localDataSource.findCredential(cardUid, schoolId)).thenAnswer((_) async => CachedCredentialIsar()
-        ..credentialValue = cardUid
-        ..credentialType = 'nfc'
-        ..identityId = 'SP-STUDENT-OLD'
-        ..identityType = 'student'
-        ..schoolId = schoolId
-        ..status = 'revoked'
-        ..updatedAt = DateTime(2026));
+    test(
+      'reassigning a previously-revoked card removes it from the remote denylist too',
+      () async {
+        await firestore
+            .collection('schools')
+            .doc(schoolId)
+            .collection('revoked_credentials')
+            .doc(cardUid)
+            .set({
+              'credentialValue': cardUid,
+              'schoolId': schoolId,
+              'reason': 'lost',
+            });
+        when(
+          () => localDataSource.findCredential(cardUid, schoolId),
+        ).thenAnswer(
+          (_) async => CachedCredentialIsar()
+            ..credentialValue = cardUid
+            ..credentialType = 'nfc'
+            ..identityId = 'SP-STUDENT-OLD'
+            ..identityType = 'student'
+            ..schoolId = schoolId
+            ..status = 'revoked'
+            ..updatedAt = DateTime(2026),
+        );
 
-      await repository.assign(
-        credentialValue: cardUid,
-        identityId: 'SP-STUDENT-NEW',
-        identityType: 'student',
-        schoolId: schoolId,
-      );
+        await repository.assign(
+          credentialValue: cardUid,
+          identityId: 'SP-STUDENT-NEW',
+          identityType: 'student',
+          schoolId: schoolId,
+        );
 
-      final doc = await firestore
-          .collection('schools')
-          .doc(schoolId)
-          .collection('revoked_credentials')
-          .doc(cardUid)
-          .get();
-      expect(doc.exists, false);
-    });
+        final doc = await firestore
+            .collection('schools')
+            .doc(schoolId)
+            .collection('revoked_credentials')
+            .doc(cardUid)
+            .get();
+        expect(doc.exists, false);
+      },
+    );
 
-    test('does not push anything when offline - the local write still succeeds', () async {
-      when(() => networkInfo.isConnected).thenAnswer((_) async => false);
-      when(() => localDataSource.findCredential(cardUid, schoolId)).thenAnswer((_) async => null);
+    test(
+      'does not push anything when offline - the local write still succeeds',
+      () async {
+        when(() => networkInfo.isConnected).thenAnswer((_) async => false);
+        when(
+          () => localDataSource.findCredential(cardUid, schoolId),
+        ).thenAnswer((_) async => null);
 
-      final result = await repository.assign(
-        credentialValue: cardUid,
-        identityId: 'SP-STUDENT-1',
-        identityType: 'student',
-        schoolId: schoolId,
-      );
+        final result = await repository.assign(
+          credentialValue: cardUid,
+          identityId: 'SP-STUDENT-1',
+          identityType: 'student',
+          schoolId: schoolId,
+        );
 
-      expect(result.isRight(), true);
-      final doc =
-          await firestore.collection('schools').doc(schoolId).collection('credentials').doc(cardUid).get();
-      expect(doc.exists, false);
-    });
+        expect(result.isRight(), true);
+        final doc = await firestore
+            .collection('schools')
+            .doc(schoolId)
+            .collection('credentials')
+            .doc(cardUid)
+            .get();
+        expect(doc.exists, false);
+      },
+    );
   });
 }

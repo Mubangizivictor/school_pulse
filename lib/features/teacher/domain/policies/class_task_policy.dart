@@ -15,9 +15,9 @@ class TaskDecision {
   final String? message;
 
   const TaskDecision.allowed()
-      : isAllowed = true,
-        refusal = null,
-        message = null;
+    : isAllowed = true,
+      refusal = null,
+      message = null;
 
   const TaskDecision.refused(this.refusal, this.message) : isAllowed = false;
 }
@@ -110,8 +110,9 @@ class ClassTaskPolicy {
 
     return switch (recurrence.frequency) {
       'daily' => days,
-      'weekly' => (days / 7).ceil() *
-          (recurrence.weekdays.isEmpty ? 1 : recurrence.weekdays.length),
+      'weekly' =>
+        (days / 7).ceil() *
+            (recurrence.weekdays.isEmpty ? 1 : recurrence.weekdays.length),
       'monthly' => (days / 30).ceil(),
       _ => 1,
     };

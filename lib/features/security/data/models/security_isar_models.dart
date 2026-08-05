@@ -44,7 +44,9 @@ class GateIsar {
     Map<String, dynamic> operatingHours = const {};
     if (operatingHoursJson.isNotEmpty) {
       try {
-        operatingHours = Map<String, dynamic>.from(jsonDecode(operatingHoursJson));
+        operatingHours = Map<String, dynamic>.from(
+          jsonDecode(operatingHoursJson),
+        );
       } catch (_) {
         operatingHours = const {};
       }
@@ -87,7 +89,10 @@ class SecurityIncidentIsar {
 
   SecurityIncidentIsar();
 
-  factory SecurityIncidentIsar.fromEntity(SecurityIncident entity, {bool isSynced = true}) {
+  factory SecurityIncidentIsar.fromEntity(
+    SecurityIncident entity, {
+    bool isSynced = true,
+  }) {
     return SecurityIncidentIsar()
       ..incidentId = entity.id
       ..type = entity.type
@@ -148,7 +153,10 @@ class StudentMovementIsar {
 
   StudentMovementIsar();
 
-  factory StudentMovementIsar.fromEntity(StudentMovement entity, {bool isSynced = true}) {
+  factory StudentMovementIsar.fromEntity(
+    StudentMovement entity, {
+    bool isSynced = true,
+  }) {
     return StudentMovementIsar()
       ..movementId = entity.id
       ..studentId = entity.studentId
@@ -162,7 +170,9 @@ class StudentMovementIsar {
       ..officerId = entity.officerId
       ..deviceId = entity.deviceId
       ..schoolId = entity.schoolId
-      ..pickupDetailsJson = entity.pickupDetails != null ? jsonEncode(entity.pickupDetails) : null
+      ..pickupDetailsJson = entity.pickupDetails != null
+          ? jsonEncode(entity.pickupDetails)
+          : null
       ..isSynced = isSynced;
   }
 
@@ -170,7 +180,9 @@ class StudentMovementIsar {
     Map<String, dynamic>? pickupDetails;
     if (pickupDetailsJson != null && pickupDetailsJson!.isNotEmpty) {
       try {
-        pickupDetails = Map<String, dynamic>.from(jsonDecode(pickupDetailsJson!));
+        pickupDetails = Map<String, dynamic>.from(
+          jsonDecode(pickupDetailsJson!),
+        );
       } catch (_) {
         pickupDetails = null;
       }
@@ -215,7 +227,10 @@ class StaffMovementIsar {
 
   StaffMovementIsar();
 
-  factory StaffMovementIsar.fromEntity(StaffMovement entity, {bool isSynced = true}) {
+  factory StaffMovementIsar.fromEntity(
+    StaffMovement entity, {
+    bool isSynced = true,
+  }) {
     return StaffMovementIsar()
       ..movementId = entity.id
       ..staffId = entity.staffId
@@ -265,7 +280,10 @@ class EmergencyEventIsar {
 
   EmergencyEventIsar();
 
-  factory EmergencyEventIsar.fromEntity(EmergencyEvent entity, {bool isSynced = true}) {
+  factory EmergencyEventIsar.fromEntity(
+    EmergencyEvent entity, {
+    bool isSynced = true,
+  }) {
     return EmergencyEventIsar()
       ..eventId = entity.id
       ..type = entity.type
@@ -314,7 +332,10 @@ class SecurityPatrolIsar {
 
   SecurityPatrolIsar();
 
-  factory SecurityPatrolIsar.fromEntity(SecurityPatrol entity, {bool isSynced = true}) {
+  factory SecurityPatrolIsar.fromEntity(
+    SecurityPatrol entity, {
+    bool isSynced = true,
+  }) {
     return SecurityPatrolIsar()
       ..patrolId = entity.id
       ..officerId = entity.officerId
@@ -363,7 +384,10 @@ class LostAndFoundItemIsar {
 
   LostAndFoundItemIsar();
 
-  factory LostAndFoundItemIsar.fromEntity(LostAndFoundItem entity, {bool isSynced = true}) {
+  factory LostAndFoundItemIsar.fromEntity(
+    LostAndFoundItem entity, {
+    bool isSynced = true,
+  }) {
     return LostAndFoundItemIsar()
       ..itemId = entity.id
       ..description = entity.description
@@ -372,7 +396,9 @@ class LostAndFoundItemIsar {
       ..photoUrl = entity.photoUrl
       ..foundByPersonId = entity.foundByPersonId
       ..isClaimed = entity.isClaimed
-      ..claimDetailsJson = entity.claimDetails != null ? jsonEncode(entity.claimDetails) : null
+      ..claimDetailsJson = entity.claimDetails != null
+          ? jsonEncode(entity.claimDetails)
+          : null
       ..schoolId = entity.schoolId
       ..isSynced = isSynced;
   }
@@ -422,7 +448,10 @@ class PickupAuthorizationIsar {
 
   PickupAuthorizationIsar();
 
-  factory PickupAuthorizationIsar.fromEntity(PickupAuthorization entity, {bool isSynced = true}) {
+  factory PickupAuthorizationIsar.fromEntity(
+    PickupAuthorization entity, {
+    bool isSynced = true,
+  }) {
     return PickupAuthorizationIsar()
       ..authorizationId = entity.id
       ..studentId = entity.studentId

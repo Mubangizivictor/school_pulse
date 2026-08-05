@@ -43,79 +43,108 @@ class IdentityResolverImpl implements IdentityResolver {
     return switch (credential) {
       QrScanCredential(:final rawPayload) => _resolveStudentCode(rawPayload),
       ManualCodeScanCredential(:final code) => _resolveManualCode(code),
-      StaffLookupScanCredential(:final staffId) => _resolveStaffId(staffId, context),
+      StaffLookupScanCredential(:final staffId) => _resolveStaffId(
+        staffId,
+        context,
+      ),
       NfcScanCredential(:final cardUid) => _resolveNfc(cardUid, context),
-      ParentCodeScanCredential(:final code, :final preSelectedChildId, :final preSelectedChildName) =>
+      ParentCodeScanCredential(
+        :final code,
+        :final preSelectedChildId,
+        :final preSelectedChildName,
+      ) =>
         _resolveParentCode(code, preSelectedChildId, preSelectedChildName),
       FingerprintScanCredential() => _resolveFingerprint(credential, context),
     };
   }
 
-  Future<Either<Failure, ResolvedIdentity>> _resolveStudentCode(String code) async {
+  Future<Either<Failure, ResolvedIdentity>> _resolveStudentCode(
+    String code,
+  ) async {
     final result = await studentIdentityRepository.getStudentByUniqueId(code);
     return result.fold(
       Left.new,
-      (student) => Right(student == null
-          ? const UnresolvedResolvedIdentity(reason: 'unknown_credential')
-          : StudentResolvedIdentity(
-              id: student.id,
-              name: student.name,
-              studentCode: student.studentCode,
-              classId: student.classId,
-              photoUrl: student.photoUrl,
-            )),
+      (student) => Right(
+        student == null
+            ? const UnresolvedResolvedIdentity(reason: 'unknown_credential')
+            : StudentResolvedIdentity(
+                id: student.id,
+                name: student.name,
+                studentCode: student.studentCode,
+                classId: student.classId,
+                photoUrl: student.photoUrl,
+              ),
+      ),
     );
   }
 
-  Future<Either<Failure, ResolvedIdentity>> _resolveManualCode(String code) async {
+  Future<Either<Failure, ResolvedIdentity>> _resolveManualCode(
+    String code,
+  ) async {
     // A manual code may be a student code, or (rarely) a staff code typed
     // in by hand - try student first since it's the overwhelmingly common
     // case for this method in the gate workflow.
     final studentResult = await _resolveStudentCode(code);
     if (studentResult.isLeft()) return studentResult;
 
-    final resolved = studentResult.getOrElse(() => const UnresolvedResolvedIdentity(reason: 'unknown_credential'));
+    final resolved = studentResult.getOrElse(
+      () => const UnresolvedResolvedIdentity(reason: 'unknown_credential'),
+    );
     if (resolved is StudentResolvedIdentity) return Right(resolved);
 
     final staffResult = await getStaffMembers(NoParams());
-    return staffResult.fold(
-      Left.new,
-      (staff) {
-        final match = staff.where((s) => s.staffCode == code).toList();
-        if (match.isEmpty) return const Right(UnresolvedResolvedIdentity(reason: 'unknown_credential'));
-        return Right(StaffResolvedIdentity(
+    return staffResult.fold(Left.new, (staff) {
+      final match = staff.where((s) => s.staffCode == code).toList();
+      if (match.isEmpty)
+        return const Right(
+          UnresolvedResolvedIdentity(reason: 'unknown_credential'),
+        );
+      return Right(
+        StaffResolvedIdentity(
           id: match.first.id,
           name: match.first.name,
           staffCode: match.first.staffCode,
           roles: match.first.roles,
-        ));
-      },
-    );
+        ),
+      );
+    });
   }
 
-  Future<Either<Failure, ResolvedIdentity>> _resolveStaffId(String staffId, VerificationContext context) async {
+  Future<Either<Failure, ResolvedIdentity>> _resolveStaffId(
+    String staffId,
+    VerificationContext context,
+  ) async {
     final result = await getStaffMembers(NoParams());
-    return result.fold(
-      Left.new,
-      (staff) {
-        final match = staff.where((s) => s.id == staffId && s.schoolId == context.gate.schoolId).toList();
-        if (match.isEmpty) return const Right(UnresolvedResolvedIdentity(reason: 'unknown_credential'));
-        return Right(StaffResolvedIdentity(
+    return result.fold(Left.new, (staff) {
+      final match = staff
+          .where((s) => s.id == staffId && s.schoolId == context.gate.schoolId)
+          .toList();
+      if (match.isEmpty)
+        return const Right(
+          UnresolvedResolvedIdentity(reason: 'unknown_credential'),
+        );
+      return Right(
+        StaffResolvedIdentity(
           id: match.first.id,
           name: match.first.name,
           staffCode: match.first.staffCode,
           roles: match.first.roles,
-        ));
-      },
-    );
+        ),
+      );
+    });
   }
 
-  Future<Either<Failure, ResolvedIdentity>> _resolveNfc(String cardUid, VerificationContext context) async {
+  Future<Either<Failure, ResolvedIdentity>> _resolveNfc(
+    String cardUid,
+    VerificationContext context,
+  ) async {
     final schoolId = context.gate.schoolId;
 
     final revoked = await localDataSource.findRevocation(cardUid, schoolId);
     if (revoked != null) {
-      return const Right(UnresolvedResolvedIdentity(reason: 'revoked_credential'));
+      return const Right(
+        UnresolvedResolvedIdentity(reason: 'revoked_credential'),
+      );
     }
 
     var cached = await localDataSource.findCredential(cardUid, schoolId);
@@ -129,13 +158,17 @@ class IdentityResolverImpl implements IdentityResolver {
     if (cached == null) {
       final remote = await _fetchRemoteCredentialState(cardUid, schoolId);
       if (remote.isRevoked) {
-        return const Right(UnresolvedResolvedIdentity(reason: 'revoked_credential'));
+        return const Right(
+          UnresolvedResolvedIdentity(reason: 'revoked_credential'),
+        );
       }
       cached = remote.credential;
     }
 
     if (cached == null || cached.status != 'active') {
-      return const Right(UnresolvedResolvedIdentity(reason: 'unknown_credential'));
+      return const Right(
+        UnresolvedResolvedIdentity(reason: 'unknown_credential'),
+      );
     }
 
     if (cached.identityType == 'student') {
@@ -144,27 +177,35 @@ class IdentityResolverImpl implements IdentityResolver {
     return _resolveStaffId(cached.identityId, context);
   }
 
-  Future<({CachedCredentialIsar? credential, bool isRevoked})> _fetchRemoteCredentialState(
-    String cardUid,
-    String schoolId,
-  ) async {
+  Future<({CachedCredentialIsar? credential, bool isRevoked})>
+  _fetchRemoteCredentialState(String cardUid, String schoolId) async {
     try {
-      final revokedDoc =
-          await firestore.collection('schools').doc(schoolId).collection('revoked_credentials').doc(cardUid).get();
+      final revokedDoc = await firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('revoked_credentials')
+          .doc(cardUid)
+          .get();
       if (revokedDoc.exists) {
         final data = revokedDoc.data()!;
         await localDataSource.saveRevocation(
           RevokedCredentialIsar()
             ..credentialValue = cardUid
             ..schoolId = schoolId
-            ..revokedAt = DateTime.tryParse(data['revokedAt'] as String? ?? '') ?? DateTime.now()
+            ..revokedAt =
+                DateTime.tryParse(data['revokedAt'] as String? ?? '') ??
+                DateTime.now()
             ..reason = data['reason'] as String? ?? 'revoked',
         );
         return (credential: null, isRevoked: true);
       }
 
-      final credentialDoc =
-          await firestore.collection('schools').doc(schoolId).collection('credentials').doc(cardUid).get();
+      final credentialDoc = await firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('credentials')
+          .doc(cardUid)
+          .get();
       if (!credentialDoc.exists) return (credential: null, isRevoked: false);
 
       final data = credentialDoc.data()!;
@@ -175,7 +216,9 @@ class IdentityResolverImpl implements IdentityResolver {
         ..identityType = data['identityType'] as String
         ..schoolId = schoolId
         ..status = data['status'] as String? ?? 'active'
-        ..updatedAt = DateTime.tryParse(data['updatedAt'] as String? ?? '') ?? DateTime.now();
+        ..updatedAt =
+            DateTime.tryParse(data['updatedAt'] as String? ?? '') ??
+            DateTime.now();
 
       await localDataSource.cacheCredential(credential);
       return (credential: credential, isRevoked: false);
@@ -192,38 +235,45 @@ class IdentityResolverImpl implements IdentityResolver {
     String? preSelectedChildName,
   ) async {
     final result = await resolveParentAccessCode(code);
-    return result.fold(
-      Left.new,
-      (accessCode) {
-        if (!accessCode.isActive) {
-          return const Right(UnresolvedResolvedIdentity(reason: 'revoked_credential'));
-        }
+    return result.fold(Left.new, (accessCode) {
+      if (!accessCode.isActive) {
+        return const Right(
+          UnresolvedResolvedIdentity(reason: 'revoked_credential'),
+        );
+      }
 
-        if (preSelectedChildId != null) {
-          return Right(ParentPickupResolvedIdentity(
+      if (preSelectedChildId != null) {
+        return Right(
+          ParentPickupResolvedIdentity(
             parentCode: accessCode.parentCode,
             childId: preSelectedChildId,
             childName: preSelectedChildName ?? 'Student',
             parentName: accessCode.parentName,
             phoneNumber: accessCode.phoneNumber,
-          ));
-        }
+          ),
+        );
+      }
 
-        if (accessCode.studentIds.length != 1) {
-          // Multiple linked children and none pre-selected - the calling
-          // screen falls back to its existing child-picker UI rather than
-          // the engine guessing.
-          return const Right(UnresolvedResolvedIdentity(reason: 'multiple_children'));
-        }
-        return Right(ParentPickupResolvedIdentity(
+      if (accessCode.studentIds.length != 1) {
+        // Multiple linked children and none pre-selected - the calling
+        // screen falls back to its existing child-picker UI rather than
+        // the engine guessing.
+        return const Right(
+          UnresolvedResolvedIdentity(reason: 'multiple_children'),
+        );
+      }
+      return Right(
+        ParentPickupResolvedIdentity(
           parentCode: accessCode.parentCode,
           childId: accessCode.studentIds.first,
-          childName: accessCode.studentNames.isNotEmpty ? accessCode.studentNames.first : 'Student',
+          childName: accessCode.studentNames.isNotEmpty
+              ? accessCode.studentNames.first
+              : 'Student',
           parentName: accessCode.parentName,
           phoneNumber: accessCode.phoneNumber,
-        ));
-      },
-    );
+        ),
+      );
+    });
   }
 
   Future<Either<Failure, ResolvedIdentity>> _resolveFingerprint(
@@ -237,7 +287,9 @@ class IdentityResolverImpl implements IdentityResolver {
       operatorId: context.operatorUser.id,
     );
     if (!isMatch) {
-      return const Right(UnresolvedResolvedIdentity(reason: 'fingerprint_mismatch'));
+      return const Right(
+        UnresolvedResolvedIdentity(reason: 'fingerprint_mismatch'),
+      );
     }
     return credential.claimedIdentityType == 'student'
         ? _resolveStudentCode(credential.claimedIdentityId)

@@ -37,8 +37,6 @@ import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_da
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_dashboard/subject_teacher_dashboard_bloc.dart';
 import 'package:school_pulse/features/director/presentation/bloc/director_bloc.dart';
-import 'package:school_pulse/features/calendar/presentation/bloc/calendar_bloc.dart';
-import 'package:school_pulse/features/calendar/presentation/bloc/calendar_event.dart';
 import 'package:school_pulse/features/inventory/presentation/bloc/inventory_bloc.dart';
 import 'package:school_pulse/features/inventory/presentation/bloc/inventory_event.dart';
 import 'package:school_pulse/features/inventory/presentation/bloc/stores_assets_bloc.dart';
@@ -66,7 +64,7 @@ import 'package:school_pulse/features/branding/presentation/screens/branding_ini
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -111,142 +109,61 @@ class SchoolPulseApp extends StatelessWidget {
         BlocProvider(
           create: (_) => di.sl<AuthBloc>()..add(AuthCheckRequested()),
         ),
-        BlocProvider(
-          create: (_) => di.sl<InstitutionContextCubit>(),
-        ),
+        BlocProvider(create: (_) => di.sl<InstitutionContextCubit>()),
         BlocProvider(
           create: (_) => di.sl<BrandingBloc>()..add(InitializeBranding()),
         ),
-        BlocProvider(
-          create: (_) => di.sl<AcademicBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<FinanceBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<HealthBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<TransportBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<LibraryBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<DisciplineBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => SelectedStudentBloc(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<StudentsBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<NotificationsBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<CalendarBloc>()..add(LoadCalendarEvents()),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<TeacherBloc>(),
-        ),
+        BlocProvider(create: (_) => di.sl<AcademicBloc>()),
+        BlocProvider(create: (_) => di.sl<FinanceBloc>()),
+        BlocProvider(create: (_) => di.sl<HealthBloc>()),
+        BlocProvider(create: (_) => di.sl<TransportBloc>()),
+        BlocProvider(create: (_) => di.sl<LibraryBloc>()),
+        BlocProvider(create: (_) => di.sl<DisciplineBloc>()),
+        BlocProvider(create: (_) => SelectedStudentBloc()),
+        BlocProvider(create: (_) => di.sl<StudentsBloc>()),
+        BlocProvider(create: (_) => di.sl<NotificationsBloc>()),
+        BlocProvider(create: (_) => di.sl<TeacherBloc>()),
         // Provided app-wide, not per-screen: the Subject Teacher tabs are
         // separate routes, and each has to read the same active
         // responsibility as the others.
-        BlocProvider(
-          create: (_) => di.sl<SubjectTeacherContextBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<SubjectTeacherDashboardBloc>(),
-        ),
+        BlocProvider(create: (_) => di.sl<SubjectTeacherContextBloc>()),
+        BlocProvider(create: (_) => di.sl<SubjectTeacherDashboardBloc>()),
         // Same reasoning for the Class Teacher panel: Home, Students,
         // Reports, Tasks and More are separate routes that must all read the
         // same active class.
-        BlocProvider(
-          create: (_) => di.sl<ClassTeacherContextBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<ClassTeacherDashboardBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<ClassStudentsBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<ClassAttendanceBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<ClassAttendanceHistoryBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<ClassWorkBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<ClassAnnouncementsBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<ClassPerformanceBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<ClassReportsBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<ClassTasksBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<DirectorBloc>(),
-        ),
+        BlocProvider(create: (_) => di.sl<ClassTeacherContextBloc>()),
+        BlocProvider(create: (_) => di.sl<ClassTeacherDashboardBloc>()),
+        BlocProvider(create: (_) => di.sl<ClassStudentsBloc>()),
+        BlocProvider(create: (_) => di.sl<ClassAttendanceBloc>()),
+        BlocProvider(create: (_) => di.sl<ClassAttendanceHistoryBloc>()),
+        BlocProvider(create: (_) => di.sl<ClassWorkBloc>()),
+        BlocProvider(create: (_) => di.sl<ClassAnnouncementsBloc>()),
+        BlocProvider(create: (_) => di.sl<ClassPerformanceBloc>()),
+        BlocProvider(create: (_) => di.sl<ClassReportsBloc>()),
+        BlocProvider(create: (_) => di.sl<ClassTasksBloc>()),
+        BlocProvider(create: (_) => di.sl<DirectorBloc>()),
         BlocProvider(
           create: (_) => di.sl<InventoryBloc>()..add(LoadInventory()),
         ),
-        BlocProvider(
-          create: (_) => di.sl<StoresAssetsBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<StructureBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<SecurityBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<DeanBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<ReligionBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<ExamsBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<CateringBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<GamesBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<MatronBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<PatronBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<HrBloc>(),
-        ),
+        BlocProvider(create: (_) => di.sl<StoresAssetsBloc>()),
+        BlocProvider(create: (_) => di.sl<StructureBloc>()),
+        BlocProvider(create: (_) => di.sl<SecurityBloc>()),
+        BlocProvider(create: (_) => di.sl<DeanBloc>()),
+        BlocProvider(create: (_) => di.sl<ReligionBloc>()),
+        BlocProvider(create: (_) => di.sl<ExamsBloc>()),
+        BlocProvider(create: (_) => di.sl<CateringBloc>()),
+        BlocProvider(create: (_) => di.sl<GamesBloc>()),
+        BlocProvider(create: (_) => di.sl<MatronBloc>()),
+        BlocProvider(create: (_) => di.sl<PatronBloc>()),
+        BlocProvider(create: (_) => di.sl<HrBloc>()),
         BlocProvider(
           create: (_) => di.sl<SystemConfigBloc>()..add(WatchSystemConfig()),
         ),
-        BlocProvider(
-          create: (_) => di.sl<VisitorsBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<BiometricsBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => di.sl<SuperAdminBloc>(),
-        ),
+        BlocProvider(create: (_) => di.sl<VisitorsBloc>()),
+        BlocProvider(create: (_) => di.sl<BiometricsBloc>()),
+        BlocProvider(create: (_) => di.sl<SuperAdminBloc>()),
       ],
-      child: const BrandingInitializer(
-        child: SchoolPulseAppView(),
-      ),
+      child: const BrandingInitializer(child: SchoolPulseAppView()),
     );
   }
 }
@@ -275,13 +192,17 @@ class SchoolPulseAppView extends StatelessWidget {
               di.sl<NotificationCoordinator>().onSignedIn(state.user);
 
               // Load structure data once authenticated.
-              context.read<StructureBloc>().add(LoadStructureData(state.user.schoolId));
+              context.read<StructureBloc>().add(
+                LoadStructureData(state.user.schoolId),
+              );
 
               // Institution Context Engine: restore the last-active tenant
               // (for multi-institution users) or fall back to home schoolId.
               // superAdmin has no tenant to scope to - it operates platform-wide.
               if (state.user.role != UserRole.superAdmin) {
-                context.read<InstitutionContextCubit>().restore(state.user.schoolId);
+                context.read<InstitutionContextCubit>().restore(
+                  state.user.schoolId,
+                );
               }
             } else if (state is AuthUnauthenticated) {
               // Revoking the token is what actually stops delivery; clearing

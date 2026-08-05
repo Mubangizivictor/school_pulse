@@ -64,8 +64,12 @@ class ClassPerformanceState extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [isLoading, errorMessage, roleAssignmentId, summary];
+  List<Object?> get props => [
+    isLoading,
+    errorMessage,
+    roleAssignmentId,
+    summary,
+  ];
 }
 
 class ClassPerformanceBloc
@@ -73,7 +77,7 @@ class ClassPerformanceBloc
   final ClassPerformanceRepository performanceRepository;
 
   ClassPerformanceBloc({required this.performanceRepository})
-      : super(const ClassPerformanceState.initial()) {
+    : super(const ClassPerformanceState.initial()) {
     on<ClassPerformanceRequested>(_onRequested);
   }
 
@@ -81,35 +85,35 @@ class ClassPerformanceBloc
     ClassPerformanceRequested event,
     Emitter<ClassPerformanceState> emit,
   ) async {
-    emit(ClassPerformanceState(
-      isLoading: true,
-      roleAssignmentId: event.context.roleAssignmentId,
-    ));
+    emit(
+      ClassPerformanceState(
+        isLoading: true,
+        roleAssignmentId: event.context.roleAssignmentId,
+      ),
+    );
 
-    final result =
-        await performanceRepository.getPerformance(context: event.context);
+    final result = await performanceRepository.getPerformance(
+      context: event.context,
+    );
 
     // The teacher may have switched class while this was in flight.
     if (state.roleAssignmentId != event.context.roleAssignmentId) return;
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        isLoading: false,
-        errorMessage: _messageFor(failure),
-      )),
-      (summary) => emit(state.copyWith(
-        isLoading: false,
-        summary: summary,
-        clearError: true,
-      )),
+      (failure) => emit(
+        state.copyWith(isLoading: false, errorMessage: _messageFor(failure)),
+      ),
+      (summary) => emit(
+        state.copyWith(isLoading: false, summary: summary, clearError: true),
+      ),
     );
   }
 
   String _messageFor(Failure failure) => switch (failure) {
-        PermissionDeniedFailure() => failure.message,
-        AssignmentInvalidFailure() => failure.message,
-        ValidationFailure() => failure.message,
-        NetworkFailure() => failure.message,
-        _ => 'Could not load class performance. Pull down to retry.',
-      };
+    PermissionDeniedFailure() => failure.message,
+    AssignmentInvalidFailure() => failure.message,
+    ValidationFailure() => failure.message,
+    NetworkFailure() => failure.message,
+    _ => 'Could not load class performance. Pull down to retry.',
+  };
 }

@@ -17,7 +17,8 @@ class FeeConfigurationScreen extends StatefulWidget {
   State<FeeConfigurationScreen> createState() => _FeeConfigurationScreenState();
 }
 
-class _FeeConfigurationScreenState extends State<FeeConfigurationScreen> with SingleTickerProviderStateMixin {
+class _FeeConfigurationScreenState extends State<FeeConfigurationScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -30,8 +31,12 @@ class _FeeConfigurationScreenState extends State<FeeConfigurationScreen> with Si
   void _loadData() {
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
-      context.read<FinanceBloc>().add(LoadFeeCategories(authState.user.schoolId));
-      context.read<FinanceBloc>().add(LoadFeeStructures(authState.user.schoolId));
+      context.read<FinanceBloc>().add(
+        LoadFeeCategories(authState.user.schoolId),
+      );
+      context.read<FinanceBloc>().add(
+        LoadFeeStructures(authState.user.schoolId),
+      );
     }
   }
 
@@ -40,7 +45,9 @@ class _FeeConfigurationScreenState extends State<FeeConfigurationScreen> with Si
     return BlocListener<FinanceBloc, FinanceState>(
       listener: (context, state) {
         if (state is FinanceActionSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.message)));
           _loadData();
         }
       },
@@ -57,10 +64,7 @@ class _FeeConfigurationScreenState extends State<FeeConfigurationScreen> with Si
         ),
         body: TabBarView(
           controller: _tabController,
-          children: [
-            _FeeCategoriesList(),
-            _FeeStructuresList(),
-          ],
+          children: [_FeeCategoriesList(), _FeeStructuresList()],
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () => _showAddDialog(context),
@@ -93,7 +97,9 @@ class _FeeConfigurationScreenState extends State<FeeConfigurationScreen> with Si
             children: [
               TextField(
                 controller: nameController,
-                decoration: const InputDecoration(labelText: 'Category Name (e.g. Tuition)'),
+                decoration: const InputDecoration(
+                  labelText: 'Category Name (e.g. Tuition)',
+                ),
               ),
               TextField(
                 controller: descController,
@@ -107,17 +113,25 @@ class _FeeConfigurationScreenState extends State<FeeConfigurationScreen> with Si
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
             ElevatedButton(
               onPressed: () {
-                final authState = context.read<AuthBloc>().state as AuthAuthenticated;
-                context.read<FinanceBloc>().add(SaveSchoolFeeCategory(FeeCategory(
+                final authState =
+                    context.read<AuthBloc>().state as AuthAuthenticated;
+                context.read<FinanceBloc>().add(
+                  SaveSchoolFeeCategory(
+                    FeeCategory(
                       id: '',
                       schoolId: authState.user.schoolId,
                       name: nameController.text,
                       description: descController.text,
                       isMandatory: isMandatory,
-                    )));
+                    ),
+                  ),
+                );
                 Navigator.pop(dialogContext);
               },
               child: const Text('Save'),
@@ -152,14 +166,24 @@ class _FeeConfigurationScreenState extends State<FeeConfigurationScreen> with Si
               child: ListView(
                 shrinkWrap: true,
                 children: [
-                  TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Structure Name')),
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Structure Name',
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
                         child: DropdownButtonFormField<String>(
                           initialValue: term,
-                          items: ['Term 1', 'Term 2', 'Term 3'].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                          items: ['Term 1', 'Term 2', 'Term 3']
+                              .map(
+                                (t) =>
+                                    DropdownMenuItem(value: t, child: Text(t)),
+                              )
+                              .toList(),
                           onChanged: (v) => setState(() => term = v!),
                           decoration: const InputDecoration(labelText: 'Term'),
                         ),
@@ -168,25 +192,41 @@ class _FeeConfigurationScreenState extends State<FeeConfigurationScreen> with Si
                       Expanded(
                         child: DropdownButtonFormField<String>(
                           initialValue: category,
-                          items: ['Day', 'Boarding', 'International'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                          items: ['Day', 'Boarding', 'International']
+                              .map(
+                                (c) =>
+                                    DropdownMenuItem(value: c, child: Text(c)),
+                              )
+                              .toList(),
                           onChanged: (v) => setState(() => category = v!),
-                          decoration: const InputDecoration(labelText: 'Student Category'),
+                          decoration: const InputDecoration(
+                            labelText: 'Student Category',
+                          ),
                         ),
                       ),
                     ],
                   ),
                   const Divider(height: 32),
-                  const Text('Fee Items', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ...items.map((item) => ListTile(
-                        title: Text(item.categoryName),
-                        trailing: Text(CurrencyFormatter.ugx(item.amount)),
-                        contentPadding: EdgeInsets.zero,
-                        dense: true,
-                      )),
+                  const Text(
+                    'Fee Items',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  ...items.map(
+                    (item) => ListTile(
+                      title: Text(item.categoryName),
+                      trailing: Text(CurrencyFormatter.ugx(item.amount)),
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                    ),
+                  ),
                   TextButton.icon(
-                    onPressed: () => _showAddItemDialog(context, availableCategories, (newItem) {
-                      setState(() => items.add(newItem));
-                    }),
+                    onPressed: () => _showAddItemDialog(
+                      context,
+                      availableCategories,
+                      (newItem) {
+                        setState(() => items.add(newItem));
+                      },
+                    ),
                     icon: const Icon(Icons.add),
                     label: const Text('Add Item'),
                   ),
@@ -194,11 +234,17 @@ class _FeeConfigurationScreenState extends State<FeeConfigurationScreen> with Si
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
               ElevatedButton(
                 onPressed: () {
-                  final authState = context.read<AuthBloc>().state as AuthAuthenticated;
-                  context.read<FinanceBloc>().add(SaveSchoolFeeStructure(FeeStructure(
+                  final authState =
+                      context.read<AuthBloc>().state as AuthAuthenticated;
+                  context.read<FinanceBloc>().add(
+                    SaveSchoolFeeStructure(
+                      FeeStructure(
                         id: '',
                         schoolId: authState.user.schoolId,
                         name: nameController.text,
@@ -206,7 +252,9 @@ class _FeeConfigurationScreenState extends State<FeeConfigurationScreen> with Si
                         term: term,
                         items: items,
                         studentCategory: category,
-                      )));
+                      ),
+                    ),
+                  );
                   Navigator.pop(dialogContext);
                 },
                 child: const Text('Save'),
@@ -218,7 +266,11 @@ class _FeeConfigurationScreenState extends State<FeeConfigurationScreen> with Si
     );
   }
 
-  void _showAddItemDialog(BuildContext context, List<FeeCategory> categories, Function(FeeStructureItem) onAdd) {
+  void _showAddItemDialog(
+    BuildContext context,
+    List<FeeCategory> categories,
+    Function(FeeStructureItem) onAdd,
+  ) {
     FeeCategory? selectedCategory;
     final amountController = TextEditingController();
 
@@ -230,7 +282,9 @@ class _FeeConfigurationScreenState extends State<FeeConfigurationScreen> with Si
           mainAxisSize: MainAxisSize.min,
           children: [
             DropdownButtonFormField<FeeCategory>(
-              items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c.name))).toList(),
+              items: categories
+                  .map((c) => DropdownMenuItem(value: c, child: Text(c.name)))
+                  .toList(),
               onChanged: (v) => selectedCategory = v,
               decoration: const InputDecoration(labelText: 'Category'),
             ),
@@ -242,15 +296,21 @@ class _FeeConfigurationScreenState extends State<FeeConfigurationScreen> with Si
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () {
-              if (selectedCategory != null && amountController.text.isNotEmpty) {
-                onAdd(FeeStructureItem(
-                  categoryId: selectedCategory!.id,
-                  categoryName: selectedCategory!.name,
-                  amount: double.tryParse(amountController.text) ?? 0,
-                ));
+              if (selectedCategory != null &&
+                  amountController.text.isNotEmpty) {
+                onAdd(
+                  FeeStructureItem(
+                    categoryId: selectedCategory!.id,
+                    categoryName: selectedCategory!.name,
+                    amount: double.tryParse(amountController.text) ?? 0,
+                  ),
+                );
                 Navigator.pop(context);
               }
             },
@@ -267,9 +327,11 @@ class _FeeCategoriesList extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<FinanceBloc, FinanceState>(
       builder: (context, state) {
-        if (state is FinanceLoading) return const Center(child: CircularProgressIndicator());
+        if (state is FinanceLoading)
+          return const Center(child: CircularProgressIndicator());
         if (state is FeeConfigurationLoaded) {
-          if (state.categories.isEmpty) return const Center(child: Text('No categories defined.'));
+          if (state.categories.isEmpty)
+            return const Center(child: Text('No categories defined.'));
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: state.categories.length,
@@ -278,10 +340,19 @@ class _FeeCategoriesList extends StatelessWidget {
               return AppCard(
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
-                  title: Text(cat.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  title: Text(
+                    cat.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   subtitle: Text(cat.description ?? 'No description'),
                   trailing: cat.isMandatory
-                      ? const Chip(label: Text('Mandatory', style: TextStyle(fontSize: 10)), backgroundColor: Colors.red)
+                      ? const Chip(
+                          label: Text(
+                            'Mandatory',
+                            style: TextStyle(fontSize: 10),
+                          ),
+                          backgroundColor: Colors.red,
+                        )
                       : null,
                 ),
               );
@@ -299,9 +370,11 @@ class _FeeStructuresList extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<FinanceBloc, FinanceState>(
       builder: (context, state) {
-        if (state is FinanceLoading) return const Center(child: CircularProgressIndicator());
+        if (state is FinanceLoading)
+          return const Center(child: CircularProgressIndicator());
         if (state is FeeConfigurationLoaded) {
-          if (state.structures.isEmpty) return const Center(child: Text('No structures defined.'));
+          if (state.structures.isEmpty)
+            return const Center(child: Text('No structures defined.'));
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: state.structures.length,
@@ -310,16 +383,28 @@ class _FeeStructuresList extends StatelessWidget {
               return AppCard(
                 margin: const EdgeInsets.only(bottom: 12),
                 child: ExpansionTile(
-                  title: Text(struct.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text('${struct.studentCategory} • ${struct.term} ${struct.academicYear}'),
-                  trailing: Text(CurrencyFormatter.ugx(struct.totalAmount),
-                      style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
+                  title: Text(
+                    struct.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    '${struct.studentCategory} • ${struct.term} ${struct.academicYear}',
+                  ),
+                  trailing: Text(
+                    CurrencyFormatter.ugx(struct.totalAmount),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                  ),
                   children: struct.items
-                      .map((item) => ListTile(
-                            dense: true,
-                            title: Text(item.categoryName),
-                            trailing: Text(CurrencyFormatter.ugx(item.amount)),
-                          ))
+                      .map(
+                        (item) => ListTile(
+                          dense: true,
+                          title: Text(item.categoryName),
+                          trailing: Text(CurrencyFormatter.ugx(item.amount)),
+                        ),
+                      )
                       .toList(),
                 ),
               );

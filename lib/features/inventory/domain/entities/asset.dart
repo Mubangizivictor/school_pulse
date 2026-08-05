@@ -1,6 +1,13 @@
 import 'package:equatable/equatable.dart';
 
-enum AssetStatus { active, underRepair, maintenanceDue, disposed, lost, writtenOff }
+enum AssetStatus {
+  active,
+  underRepair,
+  maintenanceDue,
+  disposed,
+  lost,
+  writtenOff,
+}
 
 class Asset extends Equatable {
   final String id;
@@ -55,28 +62,28 @@ class Asset extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        assetNumber,
-        qrCode,
-        name,
-        category,
-        brand,
-        model,
-        serialNumber,
-        purchaseDate,
-        purchasePrice,
-        supplierId,
-        warrantyExpiry,
-        assignedDepartment,
-        assignedStaffId,
-        assignedRoom,
-        condition,
-        status,
-        photoUrl,
-        documentUrls,
-        notes,
-        createdAt,
-        updatedAt,
-      ];
+    id,
+    schoolId,
+    assetNumber,
+    qrCode,
+    name,
+    category,
+    brand,
+    model,
+    serialNumber,
+    purchaseDate,
+    purchasePrice,
+    supplierId,
+    warrantyExpiry,
+    assignedDepartment,
+    assignedStaffId,
+    assignedRoom,
+    condition,
+    status,
+    photoUrl,
+    documentUrls,
+    notes,
+    createdAt,
+    updatedAt,
+  ];
 }

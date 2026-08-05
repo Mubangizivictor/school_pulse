@@ -12,7 +12,8 @@ import 'package:school_pulse/features/verification/presentation/bloc/credential_
 import 'package:school_pulse/features/verification/presentation/bloc/credential_scan_event.dart';
 import 'package:school_pulse/features/verification/presentation/bloc/credential_scan_state.dart';
 
-class MockCredentialReaderAdapter extends Mock implements CredentialReaderAdapter {}
+class MockCredentialReaderAdapter extends Mock
+    implements CredentialReaderAdapter {}
 
 void main() {
   late MockCredentialReaderAdapter nfcAdapter;
@@ -71,13 +72,24 @@ void main() {
 
   blocTest<CredentialScanBloc, CredentialScanState>(
     'starts the matching adapter and marks isScanning true',
-    build: () => CredentialScanBloc(adapters: {
-      ScanCredentialKind.nfc: nfcAdapter,
-      ScanCredentialKind.qr: qrAdapter,
-    }),
-    act: (bloc) => bloc.add(StartCredentialScan(kind: ScanCredentialKind.nfc, context: verificationContext)),
+    build: () => CredentialScanBloc(
+      adapters: {
+        ScanCredentialKind.nfc: nfcAdapter,
+        ScanCredentialKind.qr: qrAdapter,
+      },
+    ),
+    act: (bloc) => bloc.add(
+      StartCredentialScan(
+        kind: ScanCredentialKind.nfc,
+        context: verificationContext,
+      ),
+    ),
     expect: () => [
-      isA<CredentialScanState>().having((s) => s.isScanning, 'isScanning', true),
+      isA<CredentialScanState>().having(
+        (s) => s.isScanning,
+        'isScanning',
+        true,
+      ),
     ],
     verify: (_) {
       verify(() => nfcAdapter.start(verificationContext)).called(1);
@@ -87,32 +99,50 @@ void main() {
 
   blocTest<CredentialScanBloc, CredentialScanState>(
     'forwards a credential emitted by the active adapter into state.lastCredential',
-    build: () => CredentialScanBloc(adapters: {ScanCredentialKind.nfc: nfcAdapter}),
+    build: () =>
+        CredentialScanBloc(adapters: {ScanCredentialKind.nfc: nfcAdapter}),
     act: (bloc) async {
-      bloc.add(StartCredentialScan(kind: ScanCredentialKind.nfc, context: verificationContext));
+      bloc.add(
+        StartCredentialScan(
+          kind: ScanCredentialKind.nfc,
+          context: verificationContext,
+        ),
+      );
       await Future.delayed(Duration.zero);
-      nfcController.add(NfcScanCredential(cardUid: 'UID123', scannedAt: DateTime.now()));
+      nfcController.add(
+        NfcScanCredential(cardUid: 'UID123', scannedAt: DateTime.now()),
+      );
     },
     skip: 1,
     expect: () => [
-      isA<CredentialScanState>().having((s) => s.lastCredential, 'lastCredential', isA<NfcScanCredential>()),
+      isA<CredentialScanState>().having(
+        (s) => s.lastCredential,
+        'lastCredential',
+        isA<NfcScanCredential>(),
+      ),
     ],
   );
 
   blocTest<CredentialScanBloc, CredentialScanState>(
     'stopping fully resets state - isScanning, activeKind, and lastCredential all clear',
-    build: () => CredentialScanBloc(adapters: {ScanCredentialKind.nfc: nfcAdapter}),
+    build: () =>
+        CredentialScanBloc(adapters: {ScanCredentialKind.nfc: nfcAdapter}),
     act: (bloc) async {
-      bloc.add(StartCredentialScan(kind: ScanCredentialKind.nfc, context: verificationContext));
+      bloc.add(
+        StartCredentialScan(
+          kind: ScanCredentialKind.nfc,
+          context: verificationContext,
+        ),
+      );
       await Future.delayed(Duration.zero);
-      nfcController.add(NfcScanCredential(cardUid: 'UID123', scannedAt: DateTime.now()));
+      nfcController.add(
+        NfcScanCredential(cardUid: 'UID123', scannedAt: DateTime.now()),
+      );
       await Future.delayed(Duration.zero);
       bloc.add(const StopCredentialScan());
     },
     skip: 2,
-    expect: () => [
-      const CredentialScanState.initial(),
-    ],
+    expect: () => [const CredentialScanState.initial()],
     verify: (_) {
       verify(() => nfcAdapter.stop()).called(1);
     },

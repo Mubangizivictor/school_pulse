@@ -18,7 +18,9 @@ class LessonPlansRemoteDataSourceImpl implements LessonPlansRemoteDataSource {
         .where('teacherId', isEqualTo: teacherId)
         .orderBy('date', descending: true)
         .get();
-    return snapshot.docs.map((doc) => LessonPlanModel.fromFirestore(doc)).toList();
+    return snapshot.docs
+        .map((doc) => LessonPlanModel.fromFirestore(doc))
+        .toList();
   }
 
   @override

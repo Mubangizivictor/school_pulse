@@ -24,6 +24,15 @@ class Appointment extends Equatable {
   final DateTime scheduledStart;
   final DateTime scheduledEnd;
   final String reason;
+  final String? location;
+  final String? campus;
+  final String? notes;
+  final String priority;
+  final String recurrence;
+  final List<int> reminderMinutes;
+  final List<String> attachmentUrls;
+  final String? visitorId;
+  final bool requiresApproval;
   final String? attachmentUrl;
   final AppointmentStatus status;
   final DateTime createdAt;
@@ -53,6 +62,15 @@ class Appointment extends Equatable {
     required this.scheduledStart,
     required this.scheduledEnd,
     required this.reason,
+    this.location,
+    this.campus,
+    this.notes,
+    this.priority = 'normal',
+    this.recurrence = 'doesNotRepeat',
+    this.reminderMinutes = const [15],
+    this.attachmentUrls = const [],
+    this.visitorId,
+    this.requiresApproval = false,
     this.attachmentUrl,
     this.status = AppointmentStatus.pending,
     required this.createdAt,
@@ -85,6 +103,15 @@ class Appointment extends Equatable {
     DateTime? scheduledStart,
     DateTime? scheduledEnd,
     String? reason,
+    String? location,
+    String? campus,
+    String? notes,
+    String? priority,
+    String? recurrence,
+    List<int>? reminderMinutes,
+    List<String>? attachmentUrls,
+    String? visitorId,
+    bool? requiresApproval,
     String? attachmentUrl,
     AppointmentStatus? status,
     DateTime? createdAt,
@@ -114,6 +141,15 @@ class Appointment extends Equatable {
       scheduledStart: scheduledStart ?? this.scheduledStart,
       scheduledEnd: scheduledEnd ?? this.scheduledEnd,
       reason: reason ?? this.reason,
+      location: location ?? this.location,
+      campus: campus ?? this.campus,
+      notes: notes ?? this.notes,
+      priority: priority ?? this.priority,
+      recurrence: recurrence ?? this.recurrence,
+      reminderMinutes: reminderMinutes ?? this.reminderMinutes,
+      attachmentUrls: attachmentUrls ?? this.attachmentUrls,
+      visitorId: visitorId ?? this.visitorId,
+      requiresApproval: requiresApproval ?? this.requiresApproval,
       attachmentUrl: attachmentUrl ?? this.attachmentUrl,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
@@ -130,32 +166,41 @@ class Appointment extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        appointmentTypeId,
-        appointmentTypeName,
-        department,
-        category,
-        requesterId,
-        requesterName,
-        requesterRole,
-        studentId,
-        studentName,
-        staffId,
-        staffName,
-        scheduledStart,
-        scheduledEnd,
-        reason,
-        attachmentUrl,
-        status,
-        createdAt,
-        updatedAt,
-        respondedBy,
-        responseNote,
-        proposedStart,
-        checkInTime,
-        checkInBy,
-        checkInPhotoUrl,
-        checkOutTime,
-      ];
+    id,
+    schoolId,
+    appointmentTypeId,
+    appointmentTypeName,
+    department,
+    category,
+    requesterId,
+    requesterName,
+    requesterRole,
+    studentId,
+    studentName,
+    staffId,
+    staffName,
+    scheduledStart,
+    scheduledEnd,
+    reason,
+    location,
+    campus,
+    notes,
+    priority,
+    recurrence,
+    reminderMinutes,
+    attachmentUrls,
+    visitorId,
+    requiresApproval,
+    attachmentUrl,
+    status,
+    createdAt,
+    updatedAt,
+    respondedBy,
+    responseNote,
+    proposedStart,
+    checkInTime,
+    checkInBy,
+    checkInPhotoUrl,
+    checkOutTime,
+  ];
 }

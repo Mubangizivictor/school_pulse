@@ -9,16 +9,34 @@ abstract class LibraryRepository {
   Future<void> addResource(LibraryResource resource);
   Future<void> updateResource(LibraryResource resource);
   Future<void> deleteResource(String schoolId, String resourceId);
-  Future<LibraryResource?> getResourceByBarcode(String schoolId, String barcode);
+  Future<LibraryResource?> getResourceByBarcode(
+    String schoolId,
+    String barcode,
+  );
 
   // Borrowing
-  Stream<List<LibraryBorrowing>> watchBorrowingHistory(String schoolId, {String? borrowerId});
+  Stream<List<LibraryBorrowing>> watchBorrowingHistory(
+    String schoolId, {
+    String? borrowerId,
+  });
   Future<void> issueResource(LibraryBorrowing borrowing);
-  Future<void> returnResource(String schoolId, String borrowingId, {ResourceCondition? condition, double? fineAmount});
-  Future<void> renewResource(String schoolId, String borrowingId, DateTime newDueDate);
+  Future<void> returnResource(
+    String schoolId,
+    String borrowingId, {
+    ResourceCondition? condition,
+    double? fineAmount,
+  });
+  Future<void> renewResource(
+    String schoolId,
+    String borrowingId,
+    DateTime newDueDate,
+  );
 
   // Reservations
-  Stream<List<LibraryReservation>> watchReservations(String schoolId, {String? borrowerId});
+  Stream<List<LibraryReservation>> watchReservations(
+    String schoolId, {
+    String? borrowerId,
+  });
   Future<void> reserveResource(LibraryReservation reservation);
   Future<void> cancelReservation(String schoolId, String reservationId);
 
@@ -28,5 +46,8 @@ abstract class LibraryRepository {
 
   // Analytics
   Future<Map<String, dynamic>> getLibraryStats(String schoolId);
-  Future<Map<String, dynamic>> getBorrowerAnalytics(String schoolId, String borrowerId);
+  Future<Map<String, dynamic>> getBorrowerAnalytics(
+    String schoolId,
+    String borrowerId,
+  );
 }

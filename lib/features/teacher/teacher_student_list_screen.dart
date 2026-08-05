@@ -15,7 +15,8 @@ class TeacherStudentListScreen extends StatefulWidget {
   const TeacherStudentListScreen({super.key});
 
   @override
-  State<TeacherStudentListScreen> createState() => _TeacherStudentListScreenState();
+  State<TeacherStudentListScreen> createState() =>
+      _TeacherStudentListScreenState();
 }
 
 class _TeacherStudentListScreenState extends State<TeacherStudentListScreen>
@@ -35,9 +36,9 @@ class _TeacherStudentListScreenState extends State<TeacherStudentListScreen>
     _tabController = TabController(length: _tabFilters.length, vsync: this);
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) return;
-      context
-          .read<ClassStudentsBloc>()
-          .add(ClassStudentsFiltered(_tabFilters[_tabController.index]));
+      context.read<ClassStudentsBloc>().add(
+        ClassStudentsFiltered(_tabFilters[_tabController.index]),
+      );
     });
     _load();
   }
@@ -45,9 +46,9 @@ class _TeacherStudentListScreenState extends State<TeacherStudentListScreen>
   void _load({bool forceRefresh = false}) {
     final active = context.read<ClassTeacherContextBloc>().state.active;
     if (active == null) return;
-    context
-        .read<ClassStudentsBloc>()
-        .add(ClassStudentsRequested(active, forceRefresh: forceRefresh));
+    context.read<ClassStudentsBloc>().add(
+      ClassStudentsRequested(active, forceRefresh: forceRefresh),
+    );
   }
 
   @override
@@ -71,10 +72,7 @@ class _TeacherStudentListScreenState extends State<TeacherStudentListScreen>
           ),
         ),
         leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: AppColors.textPrimary(context),
-          ),
+          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
           onPressed: () => context.pop(),
         ),
       ),
@@ -84,7 +82,8 @@ class _TeacherStudentListScreenState extends State<TeacherStudentListScreen>
             return EmptyState(
               icon: Icons.class_outlined,
               title: 'No class assigned',
-              message: 'You are not currently the Class Teacher for any class, '
+              message:
+                  'You are not currently the Class Teacher for any class, '
                   'so there is no class list to show.',
             );
           }
@@ -94,7 +93,9 @@ class _TeacherStudentListScreenState extends State<TeacherStudentListScreen>
               return Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl,
+                    ),
                     child: Row(
                       children: [
                         Expanded(
@@ -125,8 +126,9 @@ class _TeacherStudentListScreenState extends State<TeacherStudentListScreen>
                                   color: AppColors.textMuted(context),
                                 ),
                                 border: InputBorder.none,
-                                contentPadding:
-                                    const EdgeInsets.symmetric(vertical: 12),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
                               ),
                             ),
                           ),
@@ -165,8 +167,9 @@ class _TeacherStudentListScreenState extends State<TeacherStudentListScreen>
                     indicatorColor: AppColors.primary(context),
                     labelColor: AppColors.primary(context),
                     unselectedLabelColor: AppColors.textMuted(context),
-                    labelStyle:
-                        AppTypography.labelLarge.copyWith(fontWeight: FontWeight.bold),
+                    labelStyle: AppTypography.labelLarge.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                     unselectedLabelStyle: AppTypography.labelLarge,
                     dividerColor: Colors.transparent,
                     tabs: [
@@ -214,7 +217,8 @@ class _TeacherStudentListScreenState extends State<TeacherStudentListScreen>
       return EmptyState(
         icon: Icons.people_outline,
         title: 'No students yet',
-        message: 'No students have been placed in your class for this academic '
+        message:
+            'No students have been placed in your class for this academic '
             'year. Admissions adds them.',
       );
     }
@@ -224,7 +228,8 @@ class _TeacherStudentListScreenState extends State<TeacherStudentListScreen>
       return EmptyState(
         icon: Icons.search_off,
         title: 'No matching students',
-        message: 'No student in your class matches the current search and '
+        message:
+            'No student in your class matches the current search and '
             'filters.',
       );
     }
@@ -248,15 +253,19 @@ class _TeacherStudentListScreenState extends State<TeacherStudentListScreen>
 
   /// The filters the school actually records for this class - a school that
   /// does not capture boarding status is not offered a boarding filter.
-  Future<void> _openFilters(BuildContext context, ClassStudentsState state) async {
+  Future<void> _openFilters(
+    BuildContext context,
+    ClassStudentsState state,
+  ) async {
     final bloc = context.read<ClassStudentsBloc>();
-    final genders = state.students
-        .map((s) => s.gender)
-        .whereType<String>()
-        .where((g) => g.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
+    final genders =
+        state.students
+            .map((s) => s.gender)
+            .whereType<String>()
+            .where((g) => g.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
     final residencies = state.students
         .map((s) => s.residency)
         .where((r) => r != ResidencyType.unknown)
@@ -311,10 +320,12 @@ class _TeacherStudentListScreenState extends State<TeacherStudentListScreen>
                           label: Text(gender),
                           selected: state.genderFilter == gender,
                           onSelected: (selected) {
-                            bloc.add(ClassStudentsRefined(
-                              gender: selected ? gender : null,
-                              clearGender: !selected,
-                            ));
+                            bloc.add(
+                              ClassStudentsRefined(
+                                gender: selected ? gender : null,
+                                clearGender: !selected,
+                              ),
+                            );
                             Navigator.of(sheetContext).pop();
                           },
                         ),
@@ -335,15 +346,19 @@ class _TeacherStudentListScreenState extends State<TeacherStudentListScreen>
                     children: [
                       for (final residency in residencies)
                         FilterChip(
-                          label: Text(residency == ResidencyType.boarding
-                              ? 'Boarding'
-                              : 'Day'),
+                          label: Text(
+                            residency == ResidencyType.boarding
+                                ? 'Boarding'
+                                : 'Day',
+                          ),
                           selected: state.residencyFilter == residency,
                           onSelected: (selected) {
-                            bloc.add(ClassStudentsRefined(
-                              residency: selected ? residency : null,
-                              clearResidency: !selected,
-                            ));
+                            bloc.add(
+                              ClassStudentsRefined(
+                                residency: selected ? residency : null,
+                                clearResidency: !selected,
+                              ),
+                            );
                             Navigator.of(sheetContext).pop();
                           },
                         ),
@@ -354,10 +369,12 @@ class _TeacherStudentListScreenState extends State<TeacherStudentListScreen>
                   const SizedBox(height: AppSpacing.l),
                   TextButton(
                     onPressed: () {
-                      bloc.add(const ClassStudentsRefined(
-                        clearGender: true,
-                        clearResidency: true,
-                      ));
+                      bloc.add(
+                        const ClassStudentsRefined(
+                          clearGender: true,
+                          clearResidency: true,
+                        ),
+                      );
                       Navigator.of(sheetContext).pop();
                     },
                     child: const Text('Clear filters'),
@@ -393,15 +410,15 @@ class _StudentListTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surfaceElevated(context),
           borderRadius: BorderRadius.circular(AppSpacing.l),
-          border: Border.all(
-            color: AppColors.border(context),
-          ),
+          border: Border.all(color: AppColors.border(context)),
         ),
         child: Row(
           children: [
             CircleAvatar(
               radius: 24,
-              backgroundColor: AppColors.primary(context).withValues(alpha: 0.1),
+              backgroundColor: AppColors.primary(
+                context,
+              ).withValues(alpha: 0.1),
               backgroundImage: (student.photoUrl?.isNotEmpty ?? false)
                   ? NetworkImage(student.photoUrl!)
                   : null,
@@ -409,8 +426,9 @@ class _StudentListTile extends StatelessWidget {
                   ? null
                   : Text(
                       student.initials,
-                      style: AppTypography.headlineSmall
-                          .copyWith(color: AppColors.primary(context)),
+                      style: AppTypography.headlineSmall.copyWith(
+                        color: AppColors.primary(context),
+                      ),
                     ),
             ),
             const SizedBox(width: AppSpacing.l),
@@ -456,7 +474,10 @@ class _StudentListTile extends StatelessWidget {
   /// Unmarked is muted rather than red: nobody has said this student is
   /// absent, and colouring it as an absence would put a claim on the row that
   /// no teacher made.
-  static Color _statusColor(BuildContext context, LessonAttendanceStatus status) {
+  static Color _statusColor(
+    BuildContext context,
+    LessonAttendanceStatus status,
+  ) {
     if (status == LessonAttendanceStatus.notMarked) {
       return AppColors.textMuted(context);
     }

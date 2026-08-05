@@ -37,7 +37,8 @@ class ReportingEngine {
     workbook.dispose();
 
     final String path = (await getApplicationSupportDirectory()).path;
-    final String fileName = '$path/Inventory_Report_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+    final String fileName =
+        '$path/Inventory_Report_${DateTime.now().millisecondsSinceEpoch}.xlsx';
     final File file = File(fileName);
     await file.writeAsBytes(bytes, flush: true);
     await OpenFilex.open(fileName);
@@ -71,7 +72,8 @@ class ReportingEngine {
     workbook.dispose();
 
     final String path = (await getApplicationSupportDirectory()).path;
-    final String fileName = '$path/Assets_Report_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+    final String fileName =
+        '$path/Assets_Report_${DateTime.now().millisecondsSinceEpoch}.xlsx';
     final File file = File(fileName);
     await file.writeAsBytes(bytes, flush: true);
     await OpenFilex.open(fileName);
@@ -90,29 +92,46 @@ class ReportingEngine {
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('PURCHASE ORDER', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
+                  pw.Text(
+                    'PURCHASE ORDER',
+                    style: pw.TextStyle(
+                      fontSize: 24,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
                   pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.end,
                     children: [
                       pw.Text('Order #: ${order.orderNumber}'),
-                      pw.Text('Date: ${order.date.day}/${order.date.month}/${order.date.year}'),
+                      pw.Text(
+                        'Date: ${order.date.day}/${order.date.month}/${order.date.year}',
+                      ),
                     ],
                   ),
                 ],
               ),
               pw.SizedBox(height: 32),
-              pw.Text('Supplier: ${order.supplierName}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+              pw.Text(
+                'Supplier: ${order.supplierName}',
+                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              ),
               pw.SizedBox(height: 24),
               pw.TableHelper.fromTextArray(
                 headers: ['Item', 'Quantity', 'Unit Price', 'Total'],
-                data: order.items.map((item) => [
-                  item.itemName,
-                  item.quantity.toString(),
-                  item.unitPrice.toStringAsFixed(0),
-                  item.totalPrice.toStringAsFixed(0),
-                ]).toList(),
+                data: order.items
+                    .map(
+                      (item) => [
+                        item.itemName,
+                        item.quantity.toString(),
+                        item.unitPrice.toStringAsFixed(0),
+                        item.totalPrice.toStringAsFixed(0),
+                      ],
+                    )
+                    .toList(),
                 headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
+                headerDecoration: const pw.BoxDecoration(
+                  color: PdfColors.grey300,
+                ),
                 cellHeight: 30,
                 cellAlignments: {
                   0: pw.Alignment.centerLeft,
@@ -125,8 +144,17 @@ class ReportingEngine {
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.end,
                 children: [
-                  pw.Text('Total Amount: ', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                  pw.Text('UGX ${order.totalAmount.toStringAsFixed(0)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 18)),
+                  pw.Text(
+                    'Total Amount: ',
+                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                  ),
+                  pw.Text(
+                    'UGX ${order.totalAmount.toStringAsFixed(0)}',
+                    style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
                 ],
               ),
               pw.SizedBox(height: 48),
@@ -135,13 +163,23 @@ class ReportingEngine {
                 children: [
                   pw.Column(
                     children: [
-                      pw.Container(width: 150, decoration: const pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide()))),
+                      pw.Container(
+                        width: 150,
+                        decoration: const pw.BoxDecoration(
+                          border: pw.Border(bottom: pw.BorderSide()),
+                        ),
+                      ),
                       pw.Text('Prepared By'),
                     ],
                   ),
                   pw.Column(
                     children: [
-                      pw.Container(width: 150, decoration: const pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide()))),
+                      pw.Container(
+                        width: 150,
+                        decoration: const pw.BoxDecoration(
+                          border: pw.Border(bottom: pw.BorderSide()),
+                        ),
+                      ),
                       pw.Text('Authorized Signature'),
                     ],
                   ),
@@ -153,19 +191,32 @@ class ReportingEngine {
       ),
     );
 
-    await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdf.save(),
+    );
   }
 
   /// Covers both "Gate Reports" (daily entry/exit, gate usage, late
   /// arrivals) and "Student Movement Reports" (early departures, pickup
   /// history, boarding movement) from the same underlying data - the caller
   /// filters/date-ranges the list before passing it in.
-  static Future<void> exportStudentMovementsToExcel(List<StudentMovement> movements) async {
+  static Future<void> exportStudentMovementsToExcel(
+    List<StudentMovement> movements,
+  ) async {
     final Workbook workbook = Workbook();
     final Worksheet sheet = workbook.worksheets[0];
     sheet.name = 'Student Movements';
 
-    const headers = ['Student', 'Class', 'Date/Time', 'Gate', 'Direction', 'Type', 'Verification Method', 'Officer'];
+    const headers = [
+      'Student',
+      'Class',
+      'Date/Time',
+      'Gate',
+      'Direction',
+      'Type',
+      'Verification Method',
+      'Officer',
+    ];
     for (var i = 0; i < headers.length; i++) {
       sheet.getRangeByIndex(1, i + 1).setText(headers[i]);
     }
@@ -186,12 +237,22 @@ class ReportingEngine {
     await _saveAndOpenExcel(workbook, 'Student_Movements_Report');
   }
 
-  static Future<void> exportSecurityIncidentsToExcel(List<SecurityIncident> incidents) async {
+  static Future<void> exportSecurityIncidentsToExcel(
+    List<SecurityIncident> incidents,
+  ) async {
     final Workbook workbook = Workbook();
     final Worksheet sheet = workbook.worksheets[0];
     sheet.name = 'Security Incidents';
 
-    const headers = ['Type', 'Description', 'Date/Time', 'Location', 'Status', 'Reported By', 'Resolution'];
+    const headers = [
+      'Type',
+      'Description',
+      'Date/Time',
+      'Location',
+      'Status',
+      'Reported By',
+      'Resolution',
+    ];
     for (var i = 0; i < headers.length; i++) {
       sheet.getRangeByIndex(1, i + 1).setText(headers[i]);
     }
@@ -201,7 +262,9 @@ class ReportingEngine {
       final row = i + 2;
       sheet.getRangeByIndex(row, 1).setText(incident.type);
       sheet.getRangeByIndex(row, 2).setText(incident.description);
-      sheet.getRangeByIndex(row, 3).setText(incident.timestamp.toLocal().toString());
+      sheet
+          .getRangeByIndex(row, 3)
+          .setText(incident.timestamp.toLocal().toString());
       sheet.getRangeByIndex(row, 4).setText(incident.location);
       sheet.getRangeByIndex(row, 5).setText(incident.status);
       sheet.getRangeByIndex(row, 6).setText(incident.reportedByOfficerId);
@@ -211,12 +274,20 @@ class ReportingEngine {
     await _saveAndOpenExcel(workbook, 'Security_Incidents_Report');
   }
 
-  static Future<void> exportPatrolLogToExcel(List<SecurityPatrol> patrols) async {
+  static Future<void> exportPatrolLogToExcel(
+    List<SecurityPatrol> patrols,
+  ) async {
     final Workbook workbook = Workbook();
     final Worksheet sheet = workbook.worksheets[0];
     sheet.name = 'Security Patrols';
 
-    const headers = ['Location', 'Date/Time', 'Officer', 'Observations', 'Issues Found'];
+    const headers = [
+      'Location',
+      'Date/Time',
+      'Officer',
+      'Observations',
+      'Issues Found',
+    ];
     for (var i = 0; i < headers.length; i++) {
       sheet.getRangeByIndex(1, i + 1).setText(headers[i]);
     }
@@ -225,7 +296,9 @@ class ReportingEngine {
       final patrol = patrols[i];
       final row = i + 2;
       sheet.getRangeByIndex(row, 1).setText(patrol.location);
-      sheet.getRangeByIndex(row, 2).setText(patrol.timestamp.toLocal().toString());
+      sheet
+          .getRangeByIndex(row, 2)
+          .setText(patrol.timestamp.toLocal().toString());
       sheet.getRangeByIndex(row, 3).setText(patrol.officerId);
       sheet.getRangeByIndex(row, 4).setText(patrol.observations);
       sheet.getRangeByIndex(row, 5).setText(patrol.issuesFound.join('; '));
@@ -234,12 +307,20 @@ class ReportingEngine {
     await _saveAndOpenExcel(workbook, 'Security_Patrols_Report');
   }
 
-  static Future<void> exportLostAndFoundToExcel(List<LostAndFoundItem> items) async {
+  static Future<void> exportLostAndFoundToExcel(
+    List<LostAndFoundItem> items,
+  ) async {
     final Workbook workbook = Workbook();
     final Worksheet sheet = workbook.worksheets[0];
     sheet.name = 'Lost and Found';
 
-    const headers = ['Description', 'Location Found', 'Date Found', 'Status', 'Found By'];
+    const headers = [
+      'Description',
+      'Location Found',
+      'Date Found',
+      'Status',
+      'Found By',
+    ];
     for (var i = 0; i < headers.length; i++) {
       sheet.getRangeByIndex(1, i + 1).setText(headers[i]);
     }
@@ -249,20 +330,28 @@ class ReportingEngine {
       final row = i + 2;
       sheet.getRangeByIndex(row, 1).setText(item.description);
       sheet.getRangeByIndex(row, 2).setText(item.locationFound);
-      sheet.getRangeByIndex(row, 3).setText(item.dateFound.toLocal().toString());
-      sheet.getRangeByIndex(row, 4).setText(item.isClaimed ? 'Claimed' : 'Unclaimed');
+      sheet
+          .getRangeByIndex(row, 3)
+          .setText(item.dateFound.toLocal().toString());
+      sheet
+          .getRangeByIndex(row, 4)
+          .setText(item.isClaimed ? 'Claimed' : 'Unclaimed');
       sheet.getRangeByIndex(row, 5).setText(item.foundByPersonId);
     }
 
     await _saveAndOpenExcel(workbook, 'Lost_And_Found_Report');
   }
 
-  static Future<void> _saveAndOpenExcel(Workbook workbook, String baseName) async {
+  static Future<void> _saveAndOpenExcel(
+    Workbook workbook,
+    String baseName,
+  ) async {
     final List<int> bytes = workbook.saveAsStream();
     workbook.dispose();
 
     final String path = (await getApplicationSupportDirectory()).path;
-    final String fileName = '$path/${baseName}_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+    final String fileName =
+        '$path/${baseName}_${DateTime.now().millisecondsSinceEpoch}.xlsx';
     final File file = File(fileName);
     await file.writeAsBytes(bytes, flush: true);
     await OpenFilex.open(fileName);

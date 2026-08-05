@@ -35,12 +35,12 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     final authState = context.read<AuthBloc>().state;
     if (authState is! AuthAuthenticated) return;
     context.read<ClassTeacherContextBloc>().add(
-          ClassContextRequested(
-            schoolId: authState.user.schoolId,
-            userId: authState.user.id,
-            forceRefresh: forceRefresh,
-          ),
-        );
+      ClassContextRequested(
+        schoolId: authState.user.schoolId,
+        userId: authState.user.id,
+        forceRefresh: forceRefresh,
+      ),
+    );
   }
 
   @override
@@ -52,25 +52,26 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       backgroundColor: AppColors.background(context),
       body: BlocConsumer<ClassTeacherContextBloc, ClassTeacherContextState>(
         listenWhen: (previous, current) =>
-            previous.active?.roleAssignmentId != current.active?.roleAssignmentId ||
+            previous.active?.roleAssignmentId !=
+                current.active?.roleAssignmentId ||
             previous.notice != current.notice,
         listener: (context, contextState) {
           final active = contextState.active;
           if (active != null) {
             // Every responsibility change reloads the figures, so the previous
             // class's numbers never linger under the new one.
-            context
-                .read<ClassTeacherDashboardBloc>()
-                .add(ClassDashboardRequested(active));
+            context.read<ClassTeacherDashboardBloc>().add(
+              ClassDashboardRequested(active),
+            );
           }
           final notice = contextState.notice;
           if (notice != null) {
             ScaffoldMessenger.of(context)
               ..hideCurrentSnackBar()
               ..showSnackBar(SnackBar(content: Text(notice)));
-            context
-                .read<ClassTeacherContextBloc>()
-                .add(const ClassContextNoticeCleared());
+            context.read<ClassTeacherContextBloc>().add(
+              const ClassContextNoticeCleared(),
+            );
           }
         },
         builder: (context, contextState) {
@@ -85,7 +86,10 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
           final active = contextState.active;
           if (active == null) return const _TeacherDashboardSkeleton();
 
-          return BlocBuilder<ClassTeacherDashboardBloc, ClassTeacherDashboardState>(
+          return BlocBuilder<
+            ClassTeacherDashboardBloc,
+            ClassTeacherDashboardState
+          >(
             builder: (context, state) {
               if (state.isLoading && !state.hasSummary) {
                 return const _TeacherDashboardSkeleton();
@@ -106,9 +110,9 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
               return RefreshIndicator(
                 onRefresh: () async {
                   _requestContext(forceRefresh: true);
-                  context
-                      .read<ClassTeacherDashboardBloc>()
-                      .add(ClassDashboardRequested(active, forceRefresh: true));
+                  context.read<ClassTeacherDashboardBloc>().add(
+                    ClassDashboardRequested(active, forceRefresh: true),
+                  );
                 },
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(
@@ -185,9 +189,10 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
   String _roleLabel(ClassTeacherContextState state, String? schoolName) {
     final active = state.active;
     if (active == null) return 'Class Teacher';
-    final placement = [active.className, active.streamName]
-        .where((e) => e != null && e.isNotEmpty)
-        .join(' ');
+    final placement = [
+      active.className,
+      active.streamName,
+    ].where((e) => e != null && e.isNotEmpty).join(' ');
     final where = schoolName ?? '';
     return [
       placement.isEmpty ? 'Class Teacher' : placement,
@@ -204,33 +209,33 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
   ) {
     final (icon, title, message) = switch (state.unavailableReason!) {
       ClassContextUnavailableReason.noClassAssignment => (
-          Icons.class_outlined,
-          'No class assigned',
-          'You are not currently the Class Teacher for any class. Your school '
-              'administrator assigns this.',
-        ),
+        Icons.class_outlined,
+        'No class assigned',
+        'You are not currently the Class Teacher for any class. Your school '
+            'administrator assigns this.',
+      ),
       ClassContextUnavailableReason.assignmentSuspended => (
-          Icons.pause_circle_outline,
-          'Class responsibility suspended',
-          'Your Class Teacher assignment has been suspended. Contact your '
-              'school administrator.',
-        ),
+        Icons.pause_circle_outline,
+        'Class responsibility suspended',
+        'Your Class Teacher assignment has been suspended. Contact your '
+            'school administrator.',
+      ),
       ClassContextUnavailableReason.assignmentExpired => (
-          Icons.event_busy_outlined,
-          'Class responsibility ended',
-          'Your Class Teacher assignment has reached its end date.',
-        ),
+        Icons.event_busy_outlined,
+        'Class responsibility ended',
+        'Your Class Teacher assignment has reached its end date.',
+      ),
       ClassContextUnavailableReason.noAcademicYear => (
-          Icons.calendar_today_outlined,
-          'No academic year set',
-          'Your school has not opened an academic year yet. Class work becomes '
-              'available once it does.',
-        ),
+        Icons.calendar_today_outlined,
+        'No academic year set',
+        'Your school has not opened an academic year yet. Class work becomes '
+            'available once it does.',
+      ),
       ClassContextUnavailableReason.loadFailed => (
-          Icons.cloud_off,
-          'Could not load your class',
-          state.errorMessage ?? 'Pull down to retry.',
-        ),
+        Icons.cloud_off,
+        'Could not load your class',
+        state.errorMessage ?? 'Pull down to retry.',
+      ),
     };
 
     return EmptyState(
@@ -317,7 +322,10 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     );
   }
 
-  Widget _buildSchedule(BuildContext context, ClassTeacherDashboardState state) {
+  Widget _buildSchedule(
+    BuildContext context,
+    ClassTeacherDashboardState state,
+  ) {
     final schedule = state.todaysSchedule;
 
     return Column(
@@ -368,9 +376,10 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
   static String _lessonSubtitle(Lesson lesson) {
     final room = lesson.room;
     if (room != null && room.isNotEmpty) return room;
-    return [lesson.className, lesson.streamName]
-        .where((e) => e != null && e.isNotEmpty)
-        .join(' ');
+    return [
+      lesson.className,
+      lesson.streamName,
+    ].where((e) => e != null && e.isNotEmpty).join(' ');
   }
 
   static Color _statusColor(BuildContext context, LessonStatus status) =>
@@ -378,11 +387,9 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
         LessonStatus.ongoing => AppColors.success(context),
         LessonStatus.completed => AppColors.textMuted(context),
         LessonStatus.cancelled ||
-        LessonStatus.missed =>
-          AppColors.danger(context),
+        LessonStatus.missed => AppColors.danger(context),
         LessonStatus.substituted ||
-        LessonStatus.rescheduled =>
-          AppColors.warning(context),
+        LessonStatus.rescheduled => AppColors.warning(context),
         _ => AppColors.primary(context),
       };
 
@@ -476,10 +483,7 @@ class _ActivityCard extends StatelessWidget {
               ],
             ),
           ),
-          Icon(
-            Icons.chevron_right,
-            color: AppColors.textMuted(context),
-          ),
+          Icon(Icons.chevron_right, color: AppColors.textMuted(context)),
         ],
       ),
     );
@@ -592,10 +596,7 @@ class _ScheduleItem extends StatelessWidget {
             ],
           ),
         ),
-        StatusBadge(
-          label: status,
-          color: statusColor,
-        ),
+        StatusBadge(label: status, color: statusColor),
       ],
     );
   }
@@ -627,7 +628,10 @@ class _TeacherDashboardSkeleton extends StatelessWidget {
           mainAxisSpacing: AppSpacing.l,
           crossAxisSpacing: AppSpacing.l,
           childAspectRatio: 1.35,
-          children: List.generate(6, (index) => const Skeleton(borderRadius: 12)),
+          children: List.generate(
+            6,
+            (index) => const Skeleton(borderRadius: 12),
+          ),
         ),
         const SizedBox(height: AppSpacing.x3l),
         const Skeleton(width: 150, height: 20),

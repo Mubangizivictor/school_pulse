@@ -115,16 +115,22 @@ class _FilterChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surface,
+        color: isSelected
+            ? Theme.of(context).colorScheme.primary
+            : Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).dividerColor,
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).dividerColor,
         ),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
+          color: isSelected
+              ? Colors.white
+              : Theme.of(context).colorScheme.onSurface,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           fontSize: 13,
         ),
@@ -176,7 +182,10 @@ class _ResourceItem extends StatelessWidget {
                 ),
                 Text(
                   subtitle,
-                  style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).hintColor,
+                  ),
                 ),
               ],
             ),

@@ -25,14 +25,14 @@ class AuditLog extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        ownerId,
-        action,
-        schoolId,
-        affectedUserId,
-        timestamp,
-        device,
-        reason,
-        metadata,
-      ];
+    id,
+    ownerId,
+    action,
+    schoolId,
+    affectedUserId,
+    timestamp,
+    device,
+    reason,
+    metadata,
+  ];
 }

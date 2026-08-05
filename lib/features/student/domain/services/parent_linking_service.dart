@@ -29,14 +29,11 @@ class ParentLinkingService {
     required String phoneNumber,
   }) async {
     final result = await repository.getAllAccessCodes(schoolId: schoolId);
-    return result.fold(
-      Left.new,
-      (codes) {
-        final normalized = phoneNumber.trim();
-        final matches = codes.where((c) => c.phoneNumber?.trim() == normalized);
-        return Right(matches.isEmpty ? null : matches.first);
-      },
-    );
+    return result.fold(Left.new, (codes) {
+      final normalized = phoneNumber.trim();
+      final matches = codes.where((c) => c.phoneNumber?.trim() == normalized);
+      return Right(matches.isEmpty ? null : matches.first);
+    });
   }
 
   /// Returns the parent access code (new or the existing sibling code the
@@ -50,58 +47,60 @@ class ParentLinkingService {
     required String createdBy,
     String? parentName,
   }) async {
-    final existingResult = await findExistingCodeForPhone(schoolId: schoolId, phoneNumber: phoneNumber);
+    final existingResult = await findExistingCodeForPhone(
+      schoolId: schoolId,
+      phoneNumber: phoneNumber,
+    );
 
-    return existingResult.fold(
-      (failure) async => Left(failure),
-      (existing) async {
-        if (existing == null) {
-          final codeResult = await repository.createAccessCode(
-            studentIds: [studentId],
-            schoolId: schoolId,
-            phoneNumber: phoneNumber,
-            parentName: parentName,
-          );
-          return codeResult.fold(Left.new, (code) async {
-            await _recordRelationship(
-              schoolId: schoolId,
-              studentId: studentId,
-              parentCode: code,
-              createdBy: createdBy,
-            );
-            return Right(code);
-          });
-        }
-
-        if (existing.studentIds.contains(studentId)) {
-          return Right(existing.parentCode);
-        }
-
-        final updated = ParentAccessCode(
-          id: existing.id,
-          parentCode: existing.parentCode,
-          schoolId: existing.schoolId,
-          studentIds: [...existing.studentIds, studentId],
-          studentNames: [...existing.studentNames, studentName],
-          parentName: existing.parentName ?? parentName,
-          phoneNumber: existing.phoneNumber,
-          pin: existing.pin,
-          mustChangePin: existing.mustChangePin,
-          isActive: existing.isActive,
-          deactivationReason: existing.deactivationReason,
+    return existingResult.fold((failure) async => Left(failure), (
+      existing,
+    ) async {
+      if (existing == null) {
+        final codeResult = await repository.createAccessCode(
+          studentIds: [studentId],
+          schoolId: schoolId,
+          phoneNumber: phoneNumber,
+          parentName: parentName,
         );
-        final updateResult = await repository.updateAccessCode(updated);
-        return updateResult.fold(Left.new, (_) async {
+        return codeResult.fold(Left.new, (code) async {
           await _recordRelationship(
             schoolId: schoolId,
             studentId: studentId,
-            parentCode: existing.parentCode,
+            parentCode: code,
             createdBy: createdBy,
           );
-          return Right(existing.parentCode);
+          return Right(code);
         });
-      },
-    );
+      }
+
+      if (existing.studentIds.contains(studentId)) {
+        return Right(existing.parentCode);
+      }
+
+      final updated = ParentAccessCode(
+        id: existing.id,
+        parentCode: existing.parentCode,
+        schoolId: existing.schoolId,
+        studentIds: [...existing.studentIds, studentId],
+        studentNames: [...existing.studentNames, studentName],
+        parentName: existing.parentName ?? parentName,
+        phoneNumber: existing.phoneNumber,
+        pin: existing.pin,
+        mustChangePin: existing.mustChangePin,
+        isActive: existing.isActive,
+        deactivationReason: existing.deactivationReason,
+      );
+      final updateResult = await repository.updateAccessCode(updated);
+      return updateResult.fold(Left.new, (_) async {
+        await _recordRelationship(
+          schoolId: schoolId,
+          studentId: studentId,
+          parentCode: existing.parentCode,
+          createdBy: createdBy,
+        );
+        return Right(existing.parentCode);
+      });
+    });
   }
 
   /// Best-effort: a relationship-write failure here must not undo the
@@ -114,12 +113,14 @@ class ParentLinkingService {
     required String parentCode,
     required String createdBy,
   }) async {
-    await createRelationship(CreateRelationshipParams(
-      schoolId: schoolId,
-      studentId: studentId,
-      parentCode: parentCode,
-      type: RelationshipType.parent,
-      createdBy: createdBy,
-    ));
+    await createRelationship(
+      CreateRelationshipParams(
+        schoolId: schoolId,
+        studentId: studentId,
+        parentCode: parentCode,
+        type: RelationshipType.parent,
+        createdBy: createdBy,
+      ),
+    );
   }
 }

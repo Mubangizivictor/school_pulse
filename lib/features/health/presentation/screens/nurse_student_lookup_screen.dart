@@ -18,7 +18,8 @@ class NurseStudentLookupScreen extends StatefulWidget {
   const NurseStudentLookupScreen({super.key});
 
   @override
-  State<NurseStudentLookupScreen> createState() => _NurseStudentLookupScreenState();
+  State<NurseStudentLookupScreen> createState() =>
+      _NurseStudentLookupScreenState();
 }
 
 class _NurseStudentLookupScreenState extends State<NurseStudentLookupScreen> {
@@ -52,7 +53,10 @@ class _NurseStudentLookupScreenState extends State<NurseStudentLookupScreen> {
       _error = null;
     });
 
-    final result = await _studentRepository.searchStudents(schoolId: authState.user.schoolId, query: query);
+    final result = await _studentRepository.searchStudents(
+      schoolId: authState.user.schoolId,
+      query: query,
+    );
     result.fold(
       (failure) => setState(() => _error = failure.message),
       (students) => setState(() => _results = students),
@@ -108,7 +112,11 @@ class _NurseStudentLookupScreenState extends State<NurseStudentLookupScreen> {
                 FilledButton(
                   onPressed: _searching ? null : _search,
                   child: _searching
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Text('Search'),
                 ),
               ],
@@ -117,7 +125,11 @@ class _NurseStudentLookupScreenState extends State<NurseStudentLookupScreen> {
             if (_selectedStudent == null) ...[
               Expanded(
                 child: _results.isEmpty
-                    ? const Center(child: Text('Search for a student to view their health record'))
+                    ? const Center(
+                        child: Text(
+                          'Search for a student to view their health record',
+                        ),
+                      )
                     : ListView.builder(
                         itemCount: _results.length,
                         itemBuilder: (context, index) {
@@ -139,13 +151,17 @@ class _NurseStudentLookupScreenState extends State<NurseStudentLookupScreen> {
                 icon: const Icon(Icons.arrow_back),
                 label: const Text('Back to results'),
               ),
-              if (_loadingView) const Center(child: CircularProgressIndicator()),
+              if (_loadingView)
+                const Center(child: CircularProgressIndicator()),
               if (_error != null)
                 Card(
                   color: Colors.red.shade50,
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Text(_error!, style: const TextStyle(color: Colors.red)),
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
                   ),
                 ),
               if (_view != null) Expanded(child: _NurseViewCard(view: _view!)),
@@ -172,8 +188,12 @@ class _NurseViewCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 32,
-                backgroundImage: view.photoUrl != null ? NetworkImage(view.photoUrl!) : null,
-                child: view.photoUrl == null ? const Icon(Icons.person, size: 32) : null,
+                backgroundImage: view.photoUrl != null
+                    ? NetworkImage(view.photoUrl!)
+                    : null,
+                child: view.photoUrl == null
+                    ? const Icon(Icons.person, size: 32)
+                    : null,
               ),
               const SizedBox(height: 12),
               Text(view.name, style: Theme.of(context).textTheme.titleLarge),
@@ -186,14 +206,30 @@ class _NurseViewCard extends StatelessWidget {
                   style: TextStyle(color: Colors.grey),
                 )
               else ...[
-                _InfoRow('Allergies', (view.allergies ?? []).join(', ').isEmpty ? 'None recorded' : view.allergies!.join(', ')),
-                _InfoRow('Chronic conditions',
-                    (view.chronicIllnesses ?? []).join(', ').isEmpty ? 'None recorded' : view.chronicIllnesses!.join(', ')),
-                _InfoRow('Current medications',
-                    (view.currentMedications ?? []).join(', ').isEmpty ? 'None recorded' : view.currentMedications!.join(', ')),
+                _InfoRow(
+                  'Allergies',
+                  (view.allergies ?? []).join(', ').isEmpty
+                      ? 'None recorded'
+                      : view.allergies!.join(', '),
+                ),
+                _InfoRow(
+                  'Chronic conditions',
+                  (view.chronicIllnesses ?? []).join(', ').isEmpty
+                      ? 'None recorded'
+                      : view.chronicIllnesses!.join(', '),
+                ),
+                _InfoRow(
+                  'Current medications',
+                  (view.currentMedications ?? []).join(', ').isEmpty
+                      ? 'None recorded'
+                      : view.currentMedications!.join(', '),
+                ),
                 _InfoRow('Emergency contact', view.emergencyContactName ?? '—'),
                 _InfoRow('Emergency phone', view.emergencyContactPhone ?? '—'),
-                _InfoRow('Recent clinic visits', '${view.recentClinicVisitCount ?? 0}'),
+                _InfoRow(
+                  'Recent clinic visits',
+                  '${view.recentClinicVisitCount ?? 0}',
+                ),
               ],
             ],
           ),
@@ -215,7 +251,10 @@ class _InfoRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 160, child: Text(label, style: const TextStyle(color: Colors.grey))),
+          SizedBox(
+            width: 160,
+            child: Text(label, style: const TextStyle(color: Colors.grey)),
+          ),
           Expanded(child: Text(value)),
         ],
       ),

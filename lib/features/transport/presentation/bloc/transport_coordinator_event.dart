@@ -7,7 +7,8 @@ abstract class TransportCoordinatorEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class TransportCoordinatorDashboardRequested extends TransportCoordinatorEvent {}
+class TransportCoordinatorDashboardRequested
+    extends TransportCoordinatorEvent {}
 
 class StartTripRequested extends TransportCoordinatorEvent {
   final String routeId;
@@ -29,7 +30,10 @@ class LogStudentPickupRequested extends TransportCoordinatorEvent {
   final String routeId;
   final String studentId;
 
-  const LogStudentPickupRequested({required this.routeId, required this.studentId});
+  const LogStudentPickupRequested({
+    required this.routeId,
+    required this.studentId,
+  });
 
   @override
   List<Object?> get props => [routeId, studentId];

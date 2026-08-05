@@ -35,10 +35,12 @@ class DisciplineDashboardScreen extends StatefulWidget {
   const DisciplineDashboardScreen({super.key});
 
   @override
-  State<DisciplineDashboardScreen> createState() => _DisciplineDashboardScreenState();
+  State<DisciplineDashboardScreen> createState() =>
+      _DisciplineDashboardScreenState();
 }
 
-class _DisciplineDashboardScreenState extends State<DisciplineDashboardScreen> with SingleTickerProviderStateMixin {
+class _DisciplineDashboardScreenState extends State<DisciplineDashboardScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   List<Student> _students = [];
   Map<String, String> _classTeacherByClassName = {};
@@ -60,7 +62,8 @@ class _DisciplineDashboardScreenState extends State<DisciplineDashboardScreen> w
       final staff = staffResult.getOrElse(() => const []);
       _classTeacherByClassName = {
         for (final member in staff)
-          if (member.role == UserRole.classTeacher && (member.assignedClass ?? '').isNotEmpty)
+          if (member.role == UserRole.classTeacher &&
+              (member.assignedClass ?? '').isNotEmpty)
             member.assignedClass!: member.name,
       };
     });
@@ -148,7 +151,11 @@ class _DisciplineDashboardScreenState extends State<DisciplineDashboardScreen> w
                   classTeacherFor: _classTeacherFor,
                   onStartCounseling: (studentId, incidentId) {
                     _tabController.index = 1;
-                    _showLogCounselingDialog(context, initialStudentId: studentId, linkedIncidentId: incidentId);
+                    _showLogCounselingDialog(
+                      context,
+                      initialStudentId: studentId,
+                      linkedIncidentId: incidentId,
+                    );
                   },
                 ),
                 _CounselingTab(state: state, studentName: _studentName),
@@ -170,17 +177,29 @@ class _DisciplineDashboardScreenState extends State<DisciplineDashboardScreen> w
     showDialog(
       context: context,
       builder: (dialogContext) => FutureBuilder<List<Student>>(
-        future: di.sl<GetAllStudents>()().then((r) => r.getOrElse(() => const [])),
+        future: di.sl<GetAllStudents>()().then(
+          (r) => r.getOrElse(() => const []),
+        ),
         builder: (dialogContext, snapshot) {
           final students = snapshot.data ?? const <Student>[];
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const AlertDialog(content: SizedBox(height: 80, child: Center(child: CircularProgressIndicator())));
+            return const AlertDialog(
+              content: SizedBox(
+                height: 80,
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            );
           }
           if (students.isEmpty) {
             return AlertDialog(
               title: const Text('Log Incident'),
               content: const Text('No students found.'),
-              actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close'))],
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Close'),
+                ),
+              ],
             );
           }
           String selectedStudentId = students.first.id;
@@ -195,51 +214,77 @@ class _DisciplineDashboardScreenState extends State<DisciplineDashboardScreen> w
                   children: [
                     SearchablePickerField<Student>(
                       label: 'Student',
-                      value: students.firstWhere((s) => s.id == selectedStudentId),
+                      value: students.firstWhere(
+                        (s) => s.id == selectedStudentId,
+                      ),
                       items: students,
                       labelBuilder: (s) => s.name,
                       subtitleBuilder: (s) => s.className,
-                      onChanged: (s) => setDialogState(() => selectedStudentId = s.id),
+                      onChanged: (s) =>
+                          setDialogState(() => selectedStudentId = s.id),
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<Severity>(
                       initialValue: severity,
                       decoration: const InputDecoration(labelText: 'Severity'),
                       items: Severity.values
-                          .map((s) => DropdownMenuItem(value: s, child: Text(s.name.toUpperCase())))
+                          .map(
+                            (s) => DropdownMenuItem(
+                              value: s,
+                              child: Text(s.name.toUpperCase()),
+                            ),
+                          )
                           .toList(),
-                      onChanged: (value) => setDialogState(() => severity = value ?? severity),
+                      onChanged: (value) =>
+                          setDialogState(() => severity = value ?? severity),
                     ),
                     const SizedBox(height: 16),
                     TextField(
                       controller: descriptionController,
                       maxLines: 3,
-                      decoration: const InputDecoration(labelText: 'Description', alignLabelWithHint: true, border: OutlineInputBorder()),
+                      decoration: const InputDecoration(
+                        labelText: 'Description',
+                        alignLabelWithHint: true,
+                        border: OutlineInputBorder(),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String?>(
                       initialValue: selectedPunishment,
-                      decoration: const InputDecoration(labelText: 'Punishment (optional - can decide later)'),
+                      decoration: const InputDecoration(
+                        labelText: 'Punishment (optional - can decide later)',
+                      ),
                       items: [
-                        const DropdownMenuItem(value: null, child: Text('Not yet decided')),
-                        ...kDisciplinaryActions.map((a) => DropdownMenuItem(value: a, child: Text(a))),
+                        const DropdownMenuItem(
+                          value: null,
+                          child: Text('Not yet decided'),
+                        ),
+                        ...kDisciplinaryActions.map(
+                          (a) => DropdownMenuItem(value: a, child: Text(a)),
+                        ),
                       ],
-                      onChanged: (value) => setDialogState(() => selectedPunishment = value),
+                      onChanged: (value) =>
+                          setDialogState(() => selectedPunishment = value),
                     ),
                   ],
                 ),
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel'),
+                ),
                 FilledButton(
                   onPressed: () {
                     if (descriptionController.text.trim().isEmpty) return;
-                    bloc.add(LogIncidentRequested(
-                      studentId: selectedStudentId,
-                      description: descriptionController.text.trim(),
-                      severity: severity,
-                      punishment: selectedPunishment ?? '',
-                    ));
+                    bloc.add(
+                      LogIncidentRequested(
+                        studentId: selectedStudentId,
+                        description: descriptionController.text.trim(),
+                        severity: severity,
+                        punishment: selectedPunishment ?? '',
+                      ),
+                    );
                     Navigator.pop(dialogContext);
                   },
                   child: const Text('Log Incident'),
@@ -252,7 +297,11 @@ class _DisciplineDashboardScreenState extends State<DisciplineDashboardScreen> w
     );
   }
 
-  void _showLogCounselingDialog(BuildContext context, {String? initialStudentId, String? linkedIncidentId}) {
+  void _showLogCounselingDialog(
+    BuildContext context, {
+    String? initialStudentId,
+    String? linkedIncidentId,
+  }) {
     final bloc = context.read<DisciplineBloc>();
     final authState = context.read<AuthBloc>().state;
     final counselorId = authState is AuthAuthenticated ? authState.user.id : '';
@@ -263,69 +312,105 @@ class _DisciplineDashboardScreenState extends State<DisciplineDashboardScreen> w
     showDialog(
       context: context,
       builder: (dialogContext) => FutureBuilder<List<Student>>(
-        future: di.sl<GetAllStudents>()().then((r) => r.getOrElse(() => const [])),
+        future: di.sl<GetAllStudents>()().then(
+          (r) => r.getOrElse(() => const []),
+        ),
         builder: (dialogContext, snapshot) {
           final students = snapshot.data ?? const <Student>[];
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const AlertDialog(content: SizedBox(height: 80, child: Center(child: CircularProgressIndicator())));
+            return const AlertDialog(
+              content: SizedBox(
+                height: 80,
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            );
           }
           if (students.isEmpty) {
             return AlertDialog(
               title: const Text('Log Counseling'),
               content: const Text('No students found.'),
-              actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close'))],
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Close'),
+                ),
+              ],
             );
           }
           String selectedStudentId =
-              students.any((s) => s.id == initialStudentId) ? initialStudentId! : students.first.id;
+              students.any((s) => s.id == initialStudentId)
+              ? initialStudentId!
+              : students.first.id;
 
           return StatefulBuilder(
             builder: (dialogContext, setDialogState) => AlertDialog(
-              title: Text(linkedIncidentId != null ? 'Log Counseling Session (from incident)' : 'Log Counseling Session'),
+              title: Text(
+                linkedIncidentId != null
+                    ? 'Log Counseling Session (from incident)'
+                    : 'Log Counseling Session',
+              ),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     SearchablePickerField<Student>(
                       label: 'Student',
-                      value: students.firstWhere((s) => s.id == selectedStudentId),
+                      value: students.firstWhere(
+                        (s) => s.id == selectedStudentId,
+                      ),
                       items: students,
                       labelBuilder: (s) => s.name,
                       subtitleBuilder: (s) => s.className,
-                      onChanged: (s) => setDialogState(() => selectedStudentId = s.id),
+                      onChanged: (s) =>
+                          setDialogState(() => selectedStudentId = s.id),
                     ),
                     const SizedBox(height: 16),
                     TextField(
                       controller: reasonController,
-                      decoration: const InputDecoration(labelText: 'Reason for Counseling', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(
+                        labelText: 'Reason for Counseling',
+                        border: OutlineInputBorder(),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     TextField(
                       controller: notesController,
                       maxLines: 3,
-                      decoration: const InputDecoration(labelText: 'Session Notes', alignLabelWithHint: true, border: OutlineInputBorder()),
+                      decoration: const InputDecoration(
+                        labelText: 'Session Notes',
+                        alignLabelWithHint: true,
+                        border: OutlineInputBorder(),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     TextField(
                       controller: recommendationsController,
-                      decoration: const InputDecoration(labelText: 'Recommendations', border: OutlineInputBorder()),
+                      decoration: const InputDecoration(
+                        labelText: 'Recommendations',
+                        border: OutlineInputBorder(),
+                      ),
                     ),
                   ],
                 ),
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel'),
+                ),
                 FilledButton(
                   onPressed: () {
                     if (reasonController.text.trim().isEmpty) return;
-                    bloc.add(LogCounselingSessionRequested(
-                      studentId: selectedStudentId,
-                      counselorId: counselorId,
-                      reason: reasonController.text.trim(),
-                      notes: notesController.text.trim(),
-                      recommendations: recommendationsController.text.trim(),
-                      linkedIncidentId: linkedIncidentId,
-                    ));
+                    bloc.add(
+                      LogCounselingSessionRequested(
+                        studentId: selectedStudentId,
+                        counselorId: counselorId,
+                        reason: reasonController.text.trim(),
+                        notes: notesController.text.trim(),
+                        recommendations: recommendationsController.text.trim(),
+                        linkedIncidentId: linkedIncidentId,
+                      ),
+                    );
                     Navigator.pop(dialogContext);
                   },
                   child: const Text('Log Session'),
@@ -377,7 +462,10 @@ class _IncidentsTab extends StatelessWidget {
               Expanded(
                 child: DashboardStatCard(
                   title: 'Pending Review',
-                  value: state.incidents.where((i) => i.resolution.isEmpty).length.toDouble(),
+                  value: state.incidents
+                      .where((i) => i.resolution.isEmpty)
+                      .length
+                      .toDouble(),
                   icon: Icons.pending_actions_outlined,
                   color: semanticColors.warning,
                 ),
@@ -405,17 +493,27 @@ class _IncidentsTab extends StatelessWidget {
                   child: AppCard(
                     child: ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: _getSeverityColor(incident.severity, semanticColors).withValues(alpha: 0.1),
+                        backgroundColor: _getSeverityColor(
+                          incident.severity,
+                          semanticColors,
+                        ).withValues(alpha: 0.1),
                         child: Icon(
                           Icons.warning_amber_rounded,
-                          color: _getSeverityColor(incident.severity, semanticColors),
+                          color: _getSeverityColor(
+                            incident.severity,
+                            semanticColors,
+                          ),
                         ),
                       ),
                       title: Text(studentName(incident.studentId)),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(incident.description, maxLines: 2, overflow: TextOverflow.ellipsis),
+                          Text(
+                            incident.description,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                           const SizedBox(height: 4),
                           Text(
                             DateFormat('MMM d, yyyy').format(incident.date),
@@ -446,33 +544,51 @@ class _IncidentsTab extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(DateFormat('MMM d, yyyy').format(incident.date), style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                DateFormat('MMM d, yyyy').format(incident.date),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
               if (teacher != null) ...[
                 const SizedBox(height: 4),
-                Text('Class Teacher: $teacher', style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  'Class Teacher: $teacher',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ],
               const SizedBox(height: 12),
               Text(incident.description),
               if (incident.punishment.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                Text('Punishment', style: Theme.of(context).textTheme.labelMedium),
+                Text(
+                  'Punishment',
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
                 Text(incident.punishment),
               ],
               if (incident.resolution.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                Text('Resolution', style: Theme.of(context).textTheme.labelMedium),
+                Text(
+                  'Resolution',
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
                 Text(incident.resolution),
               ],
               if (incident.counselingNotes.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                Text('Counseling Notes', style: Theme.of(context).textTheme.labelMedium),
+                Text(
+                  'Counseling Notes',
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
                 Text(incident.counselingNotes),
               ],
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
           FilledButton.icon(
             icon: const Icon(Icons.psychology_outlined, size: 18),
             label: const Text('Start Counseling'),
@@ -488,10 +604,14 @@ class _IncidentsTab extends StatelessWidget {
 
   Color _getSeverityColor(Severity severity, SemanticColors semanticColors) {
     switch (severity) {
-      case Severity.info: return semanticColors.info;
-      case Severity.success: return semanticColors.success;
-      case Severity.warning: return semanticColors.warning;
-      case Severity.error: return semanticColors.error;
+      case Severity.info:
+        return semanticColors.info;
+      case Severity.success:
+        return semanticColors.success;
+      case Severity.warning:
+        return semanticColors.warning;
+      case Severity.error:
+        return semanticColors.error;
     }
   }
 }
@@ -538,7 +658,11 @@ class _CounselingTab extends StatelessWidget {
                   child: AppCard(
                     child: ListTile(
                       leading: CircleAvatar(
-                        child: Icon(session.linkedIncidentId != null ? Icons.link : Icons.person_outline),
+                        child: Icon(
+                          session.linkedIncidentId != null
+                              ? Icons.link
+                              : Icons.person_outline,
+                        ),
                       ),
                       title: Text('Reason: ${session.reason}'),
                       subtitle: Column(
@@ -572,12 +696,17 @@ class _CounselingTab extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(DateFormat('MMM d, yyyy').format(session.date), style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                DateFormat('MMM d, yyyy').format(session.date),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
               if (session.linkedIncidentId != null) ...[
                 const SizedBox(height: 4),
                 Text(
                   'Linked to a discipline incident',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
                 ),
               ],
               const SizedBox(height: 12),
@@ -587,13 +716,19 @@ class _CounselingTab extends StatelessWidget {
               Text('Notes:', style: Theme.of(context).textTheme.labelMedium),
               Text(session.notes),
               const SizedBox(height: 12),
-              Text('Recommendations:', style: Theme.of(context).textTheme.labelMedium),
+              Text(
+                'Recommendations:',
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
               Text(session.recommendations),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
         ],
       ),
     );

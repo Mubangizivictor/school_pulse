@@ -3,54 +3,71 @@ import 'package:equatable/equatable.dart';
 /// An announcement category (e.g. "Academic", "Sports", "Emergency").
 class AnnouncementCategoryDef extends Equatable {
   final String id;
+  final String schoolId;
   final String name;
   final bool isActive;
 
   const AnnouncementCategoryDef({
     required this.id,
+    required this.schoolId,
     required this.name,
     this.isActive = true,
   });
 
-  AnnouncementCategoryDef copyWith({String? id, String? name, bool? isActive}) {
+  AnnouncementCategoryDef copyWith({
+    String? id,
+    String? schoolId,
+    String? name,
+    bool? isActive,
+  }) {
     return AnnouncementCategoryDef(
       id: id ?? this.id,
+      schoolId: schoolId ?? this.schoolId,
       name: name ?? this.name,
       isActive: isActive ?? this.isActive,
     );
   }
 
   @override
-  List<Object?> get props => [id, name, isActive];
+  List<Object?> get props => [id, schoolId, name, isActive];
 }
 
 /// A notification category (e.g. "Fee Reminder", "Homework").
 class NotificationCategoryDef extends Equatable {
   final String id;
+  final String schoolId;
   final String name;
   final bool isActive;
 
   const NotificationCategoryDef({
     required this.id,
+    required this.schoolId,
     required this.name,
     this.isActive = true,
   });
 
-  NotificationCategoryDef copyWith({String? id, String? name, bool? isActive}) {
+  NotificationCategoryDef copyWith({
+    String? id,
+    String? schoolId,
+    String? name,
+    bool? isActive,
+  }) {
     return NotificationCategoryDef(
       id: id ?? this.id,
+      schoolId: schoolId ?? this.schoolId,
       name: name ?? this.name,
       isActive: isActive ?? this.isActive,
     );
   }
 
   @override
-  List<Object?> get props => [id, name, isActive];
+  List<Object?> get props => [id, schoolId, name, isActive];
 }
 
 /// A reusable message template for a channel (email/sms/push/message).
 class MessageTemplateDef extends Equatable {
   final String id;
+  final String schoolId;
   final String name;
   final String channel;
   final String subject;
@@ -59,6 +76,7 @@ class MessageTemplateDef extends Equatable {
 
   const MessageTemplateDef({
     required this.id,
+    required this.schoolId,
     required this.name,
     this.channel = 'sms',
     this.subject = '',
@@ -68,6 +86,7 @@ class MessageTemplateDef extends Equatable {
 
   MessageTemplateDef copyWith({
     String? id,
+    String? schoolId,
     String? name,
     String? channel,
     String? subject,
@@ -76,6 +95,7 @@ class MessageTemplateDef extends Equatable {
   }) {
     return MessageTemplateDef(
       id: id ?? this.id,
+      schoolId: schoolId ?? this.schoolId,
       name: name ?? this.name,
       channel: channel ?? this.channel,
       subject: subject ?? this.subject,
@@ -85,5 +105,13 @@ class MessageTemplateDef extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, name, channel, subject, body, isActive];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    name,
+    channel,
+    subject,
+    body,
+    isActive,
+  ];
 }

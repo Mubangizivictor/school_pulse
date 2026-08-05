@@ -15,8 +15,16 @@ class ReportSectionsScreen extends StatefulWidget {
 
 class _ReportSectionsScreenState extends State<ReportSectionsScreen> {
   final List<Map<String, dynamic>> sections = [
-    {'title': 'Academic Performance', 'subtitle': '(Subjects & Scores)', 'enabled': true},
-    {'title': 'Competency Development', 'subtitle': '(Competency Ratings)', 'enabled': true},
+    {
+      'title': 'Academic Performance',
+      'subtitle': '(Subjects & Scores)',
+      'enabled': true,
+    },
+    {
+      'title': 'Competency Development',
+      'subtitle': '(Competency Ratings)',
+      'enabled': true,
+    },
     {'title': 'Attendance & Punctuality', 'enabled': true},
     {'title': 'Behaviour & Conduct', 'enabled': true},
     {'title': 'Teacher\'s Comment', 'enabled': true},
@@ -26,9 +34,7 @@ class _ReportSectionsScreenState extends State<ReportSectionsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Report Sections'),
-      ),
+      appBar: AppBar(title: const Text('Report Sections')),
       body: Column(
         children: [
           Expanded(
@@ -40,36 +46,43 @@ class _ReportSectionsScreenState extends State<ReportSectionsScreen> {
                   style: TextStyle(color: AppColors.textSecondary(context)),
                 ),
                 const SizedBox(height: 16),
-                ...sections.map((section) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: AppCard(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        child: CheckboxListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(
-                            section['title'],
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary(context),
-                            ),
-                          ),
-                          subtitle: section['subtitle'] != null
-                              ? Text(
-                                  section['subtitle'],
-                                  style: TextStyle(color: AppColors.textSecondary(context)),
-                                )
-                              : null,
-                          value: section['enabled'],
-                          onChanged: (val) {
-                            setState(() {
-                              section['enabled'] = val;
-                            });
-                          },
-                          activeColor: AppColors.primary(context),
-                          checkColor: AppColors.white,
-                        ),
+                ...sections.map(
+                  (section) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: AppCard(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
                       ),
-                    )),
+                      child: CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          section['title'],
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary(context),
+                          ),
+                        ),
+                        subtitle: section['subtitle'] != null
+                            ? Text(
+                                section['subtitle'],
+                                style: TextStyle(
+                                  color: AppColors.textSecondary(context),
+                                ),
+                              )
+                            : null,
+                        value: section['enabled'],
+                        onChanged: (val) {
+                          setState(() {
+                            section['enabled'] = val;
+                          });
+                        },
+                        activeColor: AppColors.primary(context),
+                        checkColor: AppColors.white,
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -82,7 +95,9 @@ class _ReportSectionsScreenState extends State<ReportSectionsScreen> {
                     .where((s) => s['enabled'] == true)
                     .map((s) => s['title'] as String)
                     .toList();
-                context.read<ReportWizardBloc>().add(ReportWizardSectionsUpdated(enabledTitles));
+                context.read<ReportWizardBloc>().add(
+                  ReportWizardSectionsUpdated(enabledTitles),
+                );
                 context.push('/staff/reports/select-students');
               },
             ),

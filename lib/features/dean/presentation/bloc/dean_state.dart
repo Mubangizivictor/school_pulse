@@ -11,7 +11,7 @@ import '../../domain/entities/report_card_approval.dart';
 
 abstract class DeanState extends Equatable {
   const DeanState();
-  
+
   @override
   List<Object?> get props => [];
 }

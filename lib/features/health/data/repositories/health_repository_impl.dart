@@ -126,6 +126,7 @@ class HealthRepositoryImpl implements HealthRepository {
                 medicationId: e.medicationId,
                 medicationName: e.medicationName,
                 dosage: e.dosage,
+                quantity: e.quantity,
                 timeAdministered: e.timeAdministered,
                 administeredBy: e.administeredBy,
                 notes: e.notes,

@@ -31,16 +31,16 @@ class LibraryReservation extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        resourceId,
-        resourceTitle,
-        borrowerId,
-        borrowerName,
-        borrowerType,
-        reservationDate,
-        expiryDate,
-        status,
-        queuePosition,
-      ];
+    id,
+    schoolId,
+    resourceId,
+    resourceTitle,
+    borrowerId,
+    borrowerName,
+    borrowerType,
+    reservationDate,
+    expiryDate,
+    status,
+    queuePosition,
+  ];
 }

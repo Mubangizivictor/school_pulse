@@ -51,8 +51,14 @@ class HRDashboardScreen extends StatelessWidget {
       title: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Human Resources', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 24)),
-          Text('Staff Management & Recruitment', style: TextStyle(fontSize: 12)),
+          Text(
+            'Human Resources',
+            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 24),
+          ),
+          Text(
+            'Staff Management & Recruitment',
+            style: TextStyle(fontSize: 12),
+          ),
         ],
       ),
       actions: [
@@ -77,41 +83,99 @@ class HRDashboardScreen extends StatelessWidget {
   }
 
   Widget _buildStatsRow(BuildContext context, bool isDesktop) {
-    return LayoutBuilder(builder: (context, constraints) {
-      if (isDesktop) {
-        return Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (isDesktop) {
+          return Row(
+            children: [
+              Expanded(
+                child: DashboardStatCard(
+                  title: 'Total Staff',
+                  value: 84,
+                  icon: Icons.people,
+                  color: Colors.blue,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: DashboardStatCard(
+                  title: 'Recruits',
+                  value: 12,
+                  icon: Icons.person_add,
+                  color: Colors.green,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: DashboardStatCard(
+                  title: 'Leave',
+                  value: 5,
+                  icon: Icons.time_to_leave,
+                  color: Colors.orange,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: DashboardStatCard(
+                  title: 'Appraisals',
+                  value: 8,
+                  icon: Icons.assessment,
+                  color: Colors.purple,
+                ),
+              ),
+            ],
+          );
+        }
+
+        return Column(
           children: [
-            Expanded(child: DashboardStatCard(title: 'Total Staff', value: 84, icon: Icons.people, color: Colors.blue)),
-            const SizedBox(width: 12),
-            Expanded(child: DashboardStatCard(title: 'Recruits', value: 12, icon: Icons.person_add, color: Colors.green)),
-            const SizedBox(width: 12),
-            Expanded(child: DashboardStatCard(title: 'Leave', value: 5, icon: Icons.time_to_leave, color: Colors.orange)),
-            const SizedBox(width: 12),
-            Expanded(child: DashboardStatCard(title: 'Appraisals', value: 8, icon: Icons.assessment, color: Colors.purple)),
+            Row(
+              children: [
+                Expanded(
+                  child: DashboardStatCard(
+                    title: 'Total Staff',
+                    value: 84,
+                    icon: Icons.people,
+                    color: Colors.blue,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: DashboardStatCard(
+                    title: 'Recruits',
+                    value: 12,
+                    icon: Icons.person_add,
+                    color: Colors.green,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: DashboardStatCard(
+                    title: 'Leave',
+                    value: 5,
+                    icon: Icons.time_to_leave,
+                    color: Colors.orange,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: DashboardStatCard(
+                    title: 'Appraisals',
+                    value: 8,
+                    icon: Icons.assessment,
+                    color: Colors.purple,
+                  ),
+                ),
+              ],
+            ),
           ],
         );
-      }
-
-      return Column(
-        children: [
-          Row(
-            children: [
-              Expanded(child: DashboardStatCard(title: 'Total Staff', value: 84, icon: Icons.people, color: Colors.blue)),
-              const SizedBox(width: 12),
-              Expanded(child: DashboardStatCard(title: 'Recruits', value: 12, icon: Icons.person_add, color: Colors.green)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(child: DashboardStatCard(title: 'Leave', value: 5, icon: Icons.time_to_leave, color: Colors.orange)),
-              const SizedBox(width: 12),
-              Expanded(child: DashboardStatCard(title: 'Appraisals', value: 8, icon: Icons.assessment, color: Colors.purple)),
-            ],
-          ),
-        ],
-      );
-    });
+      },
+    );
   }
 
   Widget _buildMainGrid(BuildContext context, bool isDesktop) {
@@ -144,7 +208,9 @@ class HRDashboardScreen extends StatelessWidget {
           color: Colors.orange,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const LeaveManagementScreen()),
+            MaterialPageRoute(
+              builder: (context) => const LeaveManagementScreen(),
+            ),
           ),
         ),
         _MenuTile(
@@ -154,7 +220,9 @@ class HRDashboardScreen extends StatelessWidget {
           color: Colors.purple,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const StaffAppraisalsScreen()),
+            MaterialPageRoute(
+              builder: (context) => const StaffAppraisalsScreen(),
+            ),
           ),
         ),
         _MenuTile(
@@ -164,7 +232,9 @@ class HRDashboardScreen extends StatelessWidget {
           color: Colors.green,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const PayrollManagementScreen()),
+            MaterialPageRoute(
+              builder: (context) => const PayrollManagementScreen(),
+            ),
           ),
         ),
         _MenuTile(
@@ -193,7 +263,6 @@ class HRDashboardScreen extends StatelessWidget {
   }
 }
 
-
 class _MenuTile extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -201,7 +270,13 @@ class _MenuTile extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
 
-  const _MenuTile({required this.icon, required this.label, required this.subtitle, required this.color, required this.onTap});
+  const _MenuTile({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -213,16 +288,26 @@ class _MenuTile extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
             child: Icon(icon, color: color, size: 28),
           ),
           const SizedBox(height: 12),
-          Text(label, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
           const SizedBox(height: 4),
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.outline),
+            style: TextStyle(
+              fontSize: 11,
+              color: Theme.of(context).colorScheme.outline,
+            ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),

@@ -12,7 +12,10 @@ class VerificationCredentialCaptured extends VerificationSessionEvent {
   final ScanCredential credential;
   final VerificationContext context;
 
-  const VerificationCredentialCaptured({required this.credential, required this.context});
+  const VerificationCredentialCaptured({
+    required this.credential,
+    required this.context,
+  });
 
   @override
   List<Object?> get props => [credential, context];

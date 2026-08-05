@@ -8,8 +8,11 @@ import '../../domain/entities/report_release_policy.dart';
 
 abstract class AssessmentRemoteDataSource {
   Future<List<AssessmentTypeModel>> getAssessmentTypes(String schoolId);
-  Future<void> createAssessmentType(String schoolId, AssessmentTypeModel assessmentType);
-  
+  Future<void> createAssessmentType(
+    String schoolId,
+    AssessmentTypeModel assessmentType,
+  );
+
   Future<List<GradingSystemModel>> getGradingSystems(String schoolId);
   Future<void> createGradingSystem(GradingSystemModel gradingSystem);
 
@@ -21,7 +24,12 @@ abstract class AssessmentRemoteDataSource {
     String? studentId,
   });
   Future<void> saveMarks(String schoolId, List<AssessmentMarkModel> marks);
-  Future<void> updateMarkStatus(String schoolId, List<String> markIds, String status, {String? userId});
+  Future<void> updateMarkStatus(
+    String schoolId,
+    List<String> markIds,
+    String status, {
+    String? userId,
+  });
 
   Future<List<ReportTemplateModel>> getReportTemplates(String schoolId);
   Future<void> saveReportTemplate(ReportTemplateModel template);
@@ -48,7 +56,10 @@ class AssessmentRemoteDataSourceImpl implements AssessmentRemoteDataSource {
   }
 
   @override
-  Future<void> createAssessmentType(String schoolId, AssessmentTypeModel assessmentType) async {
+  Future<void> createAssessmentType(
+    String schoolId,
+    AssessmentTypeModel assessmentType,
+  ) async {
     await firestore
         .collection('schools')
         .doc(schoolId)
@@ -70,33 +81,57 @@ class AssessmentRemoteDataSourceImpl implements AssessmentRemoteDataSource {
         .doc(schoolId)
         .collection('assessment_marks');
 
-    if (assessmentTypeId != null) query = query.where('assessmentTypeId', isEqualTo: assessmentTypeId);
-    if (subjectId != null) query = query.where('subjectId', isEqualTo: subjectId);
-    if (studentId != null) query = query.where('studentId', isEqualTo: studentId);
+    if (assessmentTypeId != null)
+      query = query.where('assessmentTypeId', isEqualTo: assessmentTypeId);
+    if (subjectId != null)
+      query = query.where('subjectId', isEqualTo: subjectId);
+    if (studentId != null)
+      query = query.where('studentId', isEqualTo: studentId);
 
     final snapshot = await query.get();
     return snapshot.docs
-        .map((doc) => AssessmentMarkModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+        .map(
+          (doc) => AssessmentMarkModel.fromMap(
+            doc.data() as Map<String, dynamic>,
+            doc.id,
+          ),
+        )
         .toList();
   }
 
   @override
-  Future<void> saveMarks(String schoolId, List<AssessmentMarkModel> marks) async {
+  Future<void> saveMarks(
+    String schoolId,
+    List<AssessmentMarkModel> marks,
+  ) async {
     final batch = firestore.batch();
-    final collection = firestore.collection('schools').doc(schoolId).collection('assessment_marks');
-    
+    final collection = firestore
+        .collection('schools')
+        .doc(schoolId)
+        .collection('assessment_marks');
+
     for (var mark in marks) {
-      final docRef = mark.id.isEmpty ? collection.doc() : collection.doc(mark.id);
+      final docRef = mark.id.isEmpty
+          ? collection.doc()
+          : collection.doc(mark.id);
       batch.set(docRef, mark.toMap());
     }
     await batch.commit();
   }
 
   @override
-  Future<void> updateMarkStatus(String schoolId, List<String> markIds, String status, {String? userId}) async {
+  Future<void> updateMarkStatus(
+    String schoolId,
+    List<String> markIds,
+    String status, {
+    String? userId,
+  }) async {
     final batch = firestore.batch();
-    final collection = firestore.collection('schools').doc(schoolId).collection('assessment_marks');
-    
+    final collection = firestore
+        .collection('schools')
+        .doc(schoolId)
+        .collection('assessment_marks');
+
     for (var id in markIds) {
       final data = <String, dynamic>{
         'status': status,
@@ -104,7 +139,7 @@ class AssessmentRemoteDataSourceImpl implements AssessmentRemoteDataSource {
       };
       if (status == 'moderated') data['moderatedBy'] = userId;
       if (status == 'approved') data['approvedBy'] = userId;
-      
+
       batch.update(collection.doc(id), data);
     }
     await batch.commit();
@@ -140,7 +175,7 @@ class AssessmentRemoteDataSourceImpl implements AssessmentRemoteDataSource {
         .collection('configs')
         .doc('report_release_policy')
         .get();
-    
+
     if (!doc.exists) {
       return ReportReleasePolicyModel(
         id: 'default',

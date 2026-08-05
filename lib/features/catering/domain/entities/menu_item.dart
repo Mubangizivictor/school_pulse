@@ -18,5 +18,12 @@ class MenuItem extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, mealCategoryId, dayOfWeek, date, items, description];
+  List<Object?> get props => [
+    id,
+    mealCategoryId,
+    dayOfWeek,
+    date,
+    items,
+    description,
+  ];
 }

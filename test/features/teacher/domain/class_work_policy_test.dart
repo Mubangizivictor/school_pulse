@@ -158,8 +158,9 @@ void main() {
 
     test('a draft is never re-derived from the clock', () {
       expect(
-        _homework(dueDate: _now.subtract(const Duration(days: 5)))
-            .effectiveStatus(asOf: _now),
+        _homework(
+          dueDate: _now.subtract(const Duration(days: 5)),
+        ).effectiveStatus(asOf: _now),
         ClassHomeworkStatus.draft,
       );
     });

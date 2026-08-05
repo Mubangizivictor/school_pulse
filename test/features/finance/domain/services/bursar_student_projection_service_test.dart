@@ -69,40 +69,62 @@ void main() {
       financeRepository: financeRepository,
     );
 
-    when(() => studentRepository.getStudentById(studentId)).thenAnswer((_) async => Right(student));
-    when(() => financeRepository.getStudentFinancialAccount(studentId, schoolId))
-        .thenAnswer((_) async => const Right(account));
+    when(
+      () => studentRepository.getStudentById(studentId),
+    ).thenAnswer((_) async => Right(student));
+    when(
+      () => financeRepository.getStudentFinancialAccount(studentId, schoolId),
+    ).thenAnswer((_) async => const Right(account));
   });
 
-  test('denies without exposing any financial data when the operator lacks financeStudentBalanceRead', () async {
-    when(() => permissionEvaluator.can(Permission.financeStudentBalanceRead, operatorUser))
-        .thenAnswer((_) async => const Right(false));
+  test(
+    'denies without exposing any financial data when the operator lacks financeStudentBalanceRead',
+    () async {
+      when(
+        () => permissionEvaluator.can(
+          Permission.financeStudentBalanceRead,
+          operatorUser,
+        ),
+      ).thenAnswer((_) async => const Right(false));
 
-    final result = await service.getStudentView(
-      studentId: studentId,
-      schoolId: schoolId,
-      operatorUser: operatorUser,
-    );
+      final result = await service.getStudentView(
+        studentId: studentId,
+        schoolId: schoolId,
+        operatorUser: operatorUser,
+      );
 
-    expect(result.fold((f) => f, (r) => null), isA<PermissionDeniedFailure>());
-    verifyNever(() => financeRepository.getStudentFinancialAccount(any(), any()));
-  });
+      expect(
+        result.fold((f) => f, (r) => null),
+        isA<PermissionDeniedFailure>(),
+      );
+      verifyNever(
+        () => financeRepository.getStudentFinancialAccount(any(), any()),
+      );
+    },
+  );
 
-  test('returns balance/isFullyPaid computed from the financial account when allowed', () async {
-    when(() => permissionEvaluator.can(Permission.financeStudentBalanceRead, operatorUser))
-        .thenAnswer((_) async => const Right(true));
+  test(
+    'returns balance/isFullyPaid computed from the financial account when allowed',
+    () async {
+      when(
+        () => permissionEvaluator.can(
+          Permission.financeStudentBalanceRead,
+          operatorUser,
+        ),
+      ).thenAnswer((_) async => const Right(true));
 
-    final result = await service.getStudentView(
-      studentId: studentId,
-      schoolId: schoolId,
-      operatorUser: operatorUser,
-    );
+      final result = await service.getStudentView(
+        studentId: studentId,
+        schoolId: schoolId,
+        operatorUser: operatorUser,
+      );
 
-    final view = result.getOrElse(() => throw StateError('expected Right'));
-    expect(view.name, 'Jane Doe');
-    expect(view.totalBilled, 500);
-    expect(view.totalPaid, 300);
-    expect(view.balance, 200);
-    expect(view.isFullyPaid, false);
-  });
+      final view = result.getOrElse(() => throw StateError('expected Right'));
+      expect(view.name, 'Jane Doe');
+      expect(view.totalBilled, 500);
+      expect(view.totalPaid, 300);
+      expect(view.balance, 200);
+      expect(view.isFullyPaid, false);
+    },
+  );
 }

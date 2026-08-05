@@ -10,9 +10,7 @@ class RecentActivityScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        title: const Text('Recent Activity'),
-      ),
+      appBar: AppBar(title: const Text('Recent Activity')),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.xl),
         children: const [
@@ -55,10 +53,7 @@ class RecentActivityScreen extends StatelessWidget {
       ),
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
-        child: PrimaryButton(
-          label: 'View All Activity',
-          onPressed: () {},
-        ),
+        child: PrimaryButton(label: 'View All Activity', onPressed: () {}),
       ),
     );
   }
@@ -101,11 +96,17 @@ class _ActivityItem extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
                 ),
                 Text(
                   subtitle,
-                  style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.primary),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
               ],
             ),

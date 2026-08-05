@@ -114,7 +114,7 @@ class Step11ReviewConfirm extends StatelessWidget {
                       .map(
                         (r) => StatusBadge(
                           label: UserRoleDisplay.name(r),
-                          color: AppColors.electricBlue,
+                          color: AppColors.primary(context),
                         ),
                       )
                       .toList(),
@@ -157,8 +157,9 @@ class Step11ReviewConfirm extends StatelessWidget {
   ) async {
     final result = await controller.submit();
     if (!context.mounted) return;
-    if (result.isLeft())
+    if (result.isLeft()) {
       return; // error already surfaced via controller.submitError
+    }
 
     await controller.logAudit();
     if (controller.draft.documents.isNotEmpty && controller.resultUid != null) {

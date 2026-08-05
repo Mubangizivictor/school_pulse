@@ -19,7 +19,8 @@ class FeesScreen extends StatefulWidget {
   State<FeesScreen> createState() => _FeesScreenState();
 }
 
-class _FeesScreenState extends State<FeesScreen> with SingleTickerProviderStateMixin {
+class _FeesScreenState extends State<FeesScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
 
@@ -32,7 +33,7 @@ class _FeesScreenState extends State<FeesScreen> with SingleTickerProviderStateM
     );
     _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
-    
+
     _fetchData();
   }
 
@@ -71,10 +72,13 @@ class _FeesScreenState extends State<FeesScreen> with SingleTickerProviderStateM
                   const SizedBox(height: 24),
                   const Skeleton(height: 24, width: 150),
                   const SizedBox(height: 12),
-                  ...List.generate(3, (index) => const Padding(
-                    padding: EdgeInsets.only(bottom: 8),
-                    child: Skeleton(height: 70),
-                  )),
+                  ...List.generate(
+                    3,
+                    (index) => const Padding(
+                      padding: EdgeInsets.only(bottom: 8),
+                      child: Skeleton(height: 70),
+                    ),
+                  ),
                 ],
               );
             } else if (state is FinanceError) {
@@ -91,7 +95,9 @@ class _FeesScreenState extends State<FeesScreen> with SingleTickerProviderStateM
                   .where((item) => item.status != FeeStatus.paid)
                   .fold(0.0, (sum, item) => sum + item.amount);
 
-              final hasOverdue = feeItems.any((item) => item.status == FeeStatus.overdue);
+              final hasOverdue = feeItems.any(
+                (item) => item.status == FeeStatus.overdue,
+              );
 
               return FadeTransition(
                 opacity: _fadeAnimation,
@@ -103,14 +109,20 @@ class _FeesScreenState extends State<FeesScreen> with SingleTickerProviderStateM
                       child: AppCard(
                         child: Column(
                           children: [
-                            Text('Current Balance', style: Theme.of(context).textTheme.bodyMedium),
+                            Text(
+                              'Current Balance',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
                             const SizedBox(height: 8),
                             AnimatedNumberText(
                               value: totalBalance,
                               prefix: 'UGX ',
-                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              style: Theme.of(context).textTheme.headlineMedium
+                                  ?.copyWith(
                                     fontWeight: FontWeight.bold,
-                                    color: hasOverdue ? semanticColors.error : semanticColors.warning,
+                                    color: hasOverdue
+                                        ? semanticColors.error
+                                        : semanticColors.warning,
                                   ),
                             ),
                             const SizedBox(height: 24),
@@ -133,7 +145,8 @@ class _FeesScreenState extends State<FeesScreen> with SingleTickerProviderStateM
                       child: SectionHeader(
                         title: 'Fee Breakdown',
                         actionLabel: 'History',
-                        onActionPressed: () => context.push('/parent/fees/history'),
+                        onActionPressed: () =>
+                            context.push('/parent/fees/history'),
                       ),
                     ),
                     ...feeItems.asMap().entries.map((entry) {
@@ -155,7 +168,11 @@ class _FeesScreenState extends State<FeesScreen> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildFeeItemRow(BuildContext context, FeeItem item, SemanticColors colors) {
+  Widget _buildFeeItemRow(
+    BuildContext context,
+    FeeItem item,
+    SemanticColors colors,
+  ) {
     Color statusColor;
     String statusLabel;
 
@@ -183,15 +200,24 @@ class _FeesScreenState extends State<FeesScreen> with SingleTickerProviderStateM
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.category, style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text('Due: ${DateFormatter.format(item.dueDate)}', style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  item.category,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  'Due: ${DateFormatter.format(item.dueDate)}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ],
             ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(CurrencyFormatter.format(item.amount), style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                CurrencyFormatter.format(item.amount),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 4),
               StatusBadge(label: statusLabel, color: statusColor),
             ],

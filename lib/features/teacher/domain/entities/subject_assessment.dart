@@ -33,16 +33,16 @@ enum AssessmentAvailability {
 
 extension AssessmentAvailabilityDisplay on AssessmentAvailability {
   String get label => switch (this) {
-        AssessmentAvailability.draft => 'Draft',
-        AssessmentAvailability.open => 'Open',
-        AssessmentAvailability.inProgress => 'In progress',
-        AssessmentAvailability.submitted => 'Submitted',
-        AssessmentAvailability.returned => 'Returned for correction',
-        AssessmentAvailability.approved => 'Approved',
-        AssessmentAvailability.locked => 'Locked',
-        AssessmentAvailability.published => 'Published',
-        AssessmentAvailability.archived => 'Archived',
-      };
+    AssessmentAvailability.draft => 'Draft',
+    AssessmentAvailability.open => 'Open',
+    AssessmentAvailability.inProgress => 'In progress',
+    AssessmentAvailability.submitted => 'Submitted',
+    AssessmentAvailability.returned => 'Returned for correction',
+    AssessmentAvailability.approved => 'Approved',
+    AssessmentAvailability.locked => 'Locked',
+    AssessmentAvailability.published => 'Published',
+    AssessmentAvailability.archived => 'Archived',
+  };
 }
 
 /// One markable part of an assessment - Section A, Coursework, Practical.
@@ -71,20 +71,19 @@ class AssessmentComponent extends Equatable {
     this.deadline,
   });
 
-  bool get isOverdue =>
-      deadline != null && DateTime.now().isAfter(deadline!);
+  bool get isOverdue => deadline != null && DateTime.now().isAfter(deadline!);
 
   @override
   List<Object?> get props => [
-        id,
-        assessmentId,
-        name,
-        maximumMark,
-        weight,
-        isRequired,
-        entryStatus,
-        deadline,
-      ];
+    id,
+    assessmentId,
+    name,
+    maximumMark,
+    weight,
+    isRequired,
+    entryStatus,
+    deadline,
+  ];
 }
 
 /// An assessment as the Subject Teacher panel sees it: scoped to one subject
@@ -162,27 +161,27 @@ class SubjectAssessment extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        campusId,
-        academicYearId,
-        termId,
-        subjectId,
-        classId,
-        streamId,
-        assessmentTypeId,
-        assessmentTypeName,
-        title,
-        maximumMark,
-        passMark,
-        gradingSystemId,
-        status,
-        assessmentDate,
-        entryOpensAt,
-        submissionDeadline,
-        components,
-        requiresApproval,
-      ];
+    id,
+    schoolId,
+    campusId,
+    academicYearId,
+    termId,
+    subjectId,
+    classId,
+    streamId,
+    assessmentTypeId,
+    assessmentTypeName,
+    title,
+    maximumMark,
+    passMark,
+    gradingSystemId,
+    status,
+    assessmentDate,
+    entryOpensAt,
+    submissionDeadline,
+    components,
+    requiresApproval,
+  ];
 }
 
 /// Why a student has no numeric mark.
@@ -216,13 +215,13 @@ enum MarkEntryStatus {
 
 extension MarkEntryStatusDisplay on MarkEntryStatus {
   String get label => switch (this) {
-        MarkEntryStatus.notEntered => 'Not entered',
-        MarkEntryStatus.scored => 'Scored',
-        MarkEntryStatus.absent => 'Absent',
-        MarkEntryStatus.exempted => 'Exempted',
-        MarkEntryStatus.missing => 'Missing',
-        MarkEntryStatus.notAssessed => 'Not assessed',
-      };
+    MarkEntryStatus.notEntered => 'Not entered',
+    MarkEntryStatus.scored => 'Scored',
+    MarkEntryStatus.absent => 'Absent',
+    MarkEntryStatus.exempted => 'Exempted',
+    MarkEntryStatus.missing => 'Missing',
+    MarkEntryStatus.notAssessed => 'Not assessed',
+  };
 }
 
 /// One student's mark for one component.
@@ -269,6 +268,12 @@ class StudentMarkEntry extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [studentId, componentId, score, status, remark, enteredAt];
+  List<Object?> get props => [
+    studentId,
+    componentId,
+    score,
+    status,
+    remark,
+    enteredAt,
+  ];
 }

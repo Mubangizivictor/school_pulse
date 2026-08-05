@@ -42,7 +42,10 @@ class InventoryItemIsar {
     );
   }
 
-  factory InventoryItemIsar.fromEntity(InventoryItem entity, {bool isSynced = true}) {
+  factory InventoryItemIsar.fromEntity(
+    InventoryItem entity, {
+    bool isSynced = true,
+  }) {
     return InventoryItemIsar()
       ..itemId = entity.id
       ..schoolId = entity.schoolId

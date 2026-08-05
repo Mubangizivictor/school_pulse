@@ -20,7 +20,7 @@ class AcademicCalendarServiceImpl implements AcademicCalendarService {
   AcademicCalendarServiceImpl({required this.structureRepository});
 
   @override
-  Future<AcademicPeriod> getCurrentPeriod() async {
+  Future<AcademicPeriod> getCurrentPeriod(String schoolId) async {
     final cached = _cached;
     final cachedAt = _cachedAt;
     if (cached != null &&
@@ -29,11 +29,11 @@ class AcademicCalendarServiceImpl implements AcademicCalendarService {
       return cached;
     }
 
-    final years = await structureRepository.watchAcademicYears().first;
+    final years = await structureRepository.watchAcademicYears(schoolId).first;
     final year = _currentYear(years);
     if (year == null) return const AcademicPeriod(academicYearId: '');
 
-    final terms = await structureRepository.watchAcademicTerms().first;
+    final terms = await structureRepository.watchAcademicTerms(schoolId).first;
     final term = _currentTerm(terms, year.id);
 
     final period = AcademicPeriod(
@@ -48,23 +48,31 @@ class AcademicCalendarServiceImpl implements AcademicCalendarService {
   }
 
   @override
-  Future<AcademicPeriod> getPeriodForDate(DateTime date) async {
-    final years = await structureRepository.watchAcademicYears().first;
-    final year = years
-            .where((y) =>
-                !y.isArchived &&
-                !date.isBefore(y.startDate) &&
-                !date.isAfter(y.endDate))
+  Future<AcademicPeriod> getPeriodForDate(
+    String schoolId,
+    DateTime date,
+  ) async {
+    final years = await structureRepository.watchAcademicYears(schoolId).first;
+    final year =
+        years
+            .where(
+              (y) =>
+                  !y.isArchived &&
+                  !date.isBefore(y.startDate) &&
+                  !date.isAfter(y.endDate),
+            )
             .firstOrNull ??
         _currentYear(years);
     if (year == null) return const AcademicPeriod(academicYearId: '');
 
-    final terms = await structureRepository.watchAcademicTerms().first;
+    final terms = await structureRepository.watchAcademicTerms(schoolId).first;
     final term = terms
-        .where((t) =>
-            t.academicYearId == year.id &&
-            !date.isBefore(t.startDate) &&
-            !date.isAfter(t.endDate))
+        .where(
+          (t) =>
+              t.academicYearId == year.id &&
+              !date.isBefore(t.startDate) &&
+              !date.isAfter(t.endDate),
+        )
         .firstOrNull;
 
     return AcademicPeriod(
@@ -78,13 +86,19 @@ class AcademicCalendarServiceImpl implements AcademicCalendarService {
   /// The admin's `isCurrent` flag wins. If nobody has set it, fall back to
   /// the year whose date range contains today rather than showing nothing.
   AcademicYear? _currentYear(List<AcademicYear> years) {
-    final flagged = years.where((y) => y.isCurrent && !y.isArchived).firstOrNull;
+    final flagged = years
+        .where((y) => y.isCurrent && !y.isArchived)
+        .firstOrNull;
     if (flagged != null) return flagged;
 
     final now = DateTime.now();
     return years
-        .where((y) =>
-            !y.isArchived && !now.isBefore(y.startDate) && !now.isAfter(y.endDate))
+        .where(
+          (y) =>
+              !y.isArchived &&
+              !now.isBefore(y.startDate) &&
+              !now.isAfter(y.endDate),
+        )
         .firstOrNull;
   }
 

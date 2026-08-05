@@ -44,7 +44,9 @@ class VisitorRepositoryImpl implements VisitorRepository {
         try {
           await remoteDataSource.syncVisitor(_visitorToMap(visitor));
           final updatedVisitor = visitor.copyWith(isSynced: true);
-          await localDataSource.saveVisitor(VisitorIsar.fromEntity(updatedVisitor));
+          await localDataSource.saveVisitor(
+            VisitorIsar.fromEntity(updatedVisitor),
+          );
           return Right(updatedVisitor);
         } catch (e) {
           // If remote sync fails, we still return Right because it's saved locally
@@ -59,17 +61,20 @@ class VisitorRepositoryImpl implements VisitorRepository {
 
   @override
   Future<Either<Failure, Visitor>> checkOutVisitor(
-      String visitorId, DateTime departureTime, String duration) async {
+    String visitorId,
+    DateTime departureTime,
+    String duration,
+  ) async {
     try {
       final visitorIsar = await localDataSource.getVisitorById(visitorId);
       if (visitorIsar == null) return Left(CacheFailure());
 
       final updatedEntity = visitorIsar.toEntity().copyWith(
-            departureTime: departureTime,
-            expectedDuration: duration,
-            status: VisitorStatus.checkedOut,
-            isSynced: false,
-          );
+        departureTime: departureTime,
+        expectedDuration: duration,
+        status: VisitorStatus.checkedOut,
+        isSynced: false,
+      );
 
       await localDataSource.saveVisitor(VisitorIsar.fromEntity(updatedEntity));
 
@@ -77,7 +82,9 @@ class VisitorRepositoryImpl implements VisitorRepository {
         try {
           await remoteDataSource.syncVisitor(_visitorToMap(updatedEntity));
           final syncedEntity = updatedEntity.copyWith(isSynced: true);
-          await localDataSource.saveVisitor(VisitorIsar.fromEntity(syncedEntity));
+          await localDataSource.saveVisitor(
+            VisitorIsar.fromEntity(syncedEntity),
+          );
           return Right(syncedEntity);
         } catch (e) {
           return Right(updatedEntity);
@@ -100,14 +107,20 @@ class VisitorRepositoryImpl implements VisitorRepository {
   }
 
   @override
-  Future<Either<Failure, List<Visitor>>> searchVisitors(String schoolId, String query) async {
+  Future<Either<Failure, List<Visitor>>> searchVisitors(
+    String schoolId,
+    String query,
+  ) async {
     try {
       final visitors = await localDataSource.getVisitors(schoolId);
       final filtered = visitors
-          .where((v) =>
-              v.fullName.toLowerCase().contains(query.toLowerCase()) ||
-              v.phone.contains(query) ||
-              (v.company?.toLowerCase().contains(query.toLowerCase()) ?? false))
+          .where(
+            (v) =>
+                v.fullName.toLowerCase().contains(query.toLowerCase()) ||
+                v.phone.contains(query) ||
+                (v.company?.toLowerCase().contains(query.toLowerCase()) ??
+                    false),
+          )
           .map((e) => e.toEntity())
           .toList();
       return Right(filtered);
@@ -117,7 +130,9 @@ class VisitorRepositoryImpl implements VisitorRepository {
   }
 
   @override
-  Future<Either<Failure, List<VisitorBlacklist>>> getBlacklist(String schoolId) async {
+  Future<Either<Failure, List<VisitorBlacklist>>> getBlacklist(
+    String schoolId,
+  ) async {
     try {
       if (await networkInfo.isConnected) {
         final remoteData = await remoteDataSource.getBlacklist(schoolId);
@@ -143,7 +158,9 @@ class VisitorRepositoryImpl implements VisitorRepository {
   }
 
   @override
-  Future<Either<Failure, void>> addToBlacklist(VisitorBlacklist blacklist) async {
+  Future<Either<Failure, void>> addToBlacklist(
+    VisitorBlacklist blacklist,
+  ) async {
     try {
       final blacklistIsar = VisitorBlacklistIsar()
         ..blacklistId = blacklist.id
@@ -176,10 +193,14 @@ class VisitorRepositoryImpl implements VisitorRepository {
   }
 
   @override
-  Future<Either<Failure, List<PreApprovedVisitor>>> getPreApprovedVisitors(String schoolId) async {
+  Future<Either<Failure, List<PreApprovedVisitor>>> getPreApprovedVisitors(
+    String schoolId,
+  ) async {
     try {
       if (await networkInfo.isConnected) {
-        final remoteData = await remoteDataSource.getPreApprovedVisitors(schoolId);
+        final remoteData = await remoteDataSource.getPreApprovedVisitors(
+          schoolId,
+        );
         final preApprovedIsar = remoteData.map((data) {
           final p = PreApprovedVisitorIsar()
             ..preApprovedId = data['id']
@@ -202,7 +223,9 @@ class VisitorRepositoryImpl implements VisitorRepository {
   }
 
   @override
-  Future<Either<Failure, void>> markPreApprovedAsUsed(String preApprovedId) async {
+  Future<Either<Failure, void>> markPreApprovedAsUsed(
+    String preApprovedId,
+  ) async {
     try {
       await localDataSource.markPreApprovedAsUsed(preApprovedId);
       if (await networkInfo.isConnected) {
@@ -224,7 +247,7 @@ class VisitorRepositoryImpl implements VisitorRepository {
         remoteDataSource: remoteDataSource,
         storage: storage,
       );
-      
+
       await worker.syncPendingRecords();
       return const Right(null);
     } catch (e) {
@@ -234,13 +257,15 @@ class VisitorRepositoryImpl implements VisitorRepository {
 
   @override
   Stream<List<Visitor>> watchVisitors(String schoolId) {
-    return localDataSource.watchVisitors(schoolId).map(
-      (list) => list.map((e) => e.toEntity()).toList(),
-    );
+    return localDataSource
+        .watchVisitors(schoolId)
+        .map((list) => list.map((e) => e.toEntity()).toList());
   }
 
   @override
-  Future<Either<Failure, List<Visitor>>> getActiveVisitors(String schoolId) async {
+  Future<Either<Failure, List<Visitor>>> getActiveVisitors(
+    String schoolId,
+  ) async {
     try {
       final visitors = await localDataSource.getActiveVisitors(schoolId);
       return Right(visitors.map((e) => e.toEntity()).toList());
@@ -250,7 +275,9 @@ class VisitorRepositoryImpl implements VisitorRepository {
   }
 
   @override
-  Future<Either<Failure, List<Visitor>>> getOverstayedVisitors(String schoolId) async {
+  Future<Either<Failure, List<Visitor>>> getOverstayedVisitors(
+    String schoolId,
+  ) async {
     try {
       final visitors = await localDataSource.getOverstayedVisitors(schoolId);
       return Right(visitors.map((e) => e.toEntity()).toList());
@@ -260,7 +287,9 @@ class VisitorRepositoryImpl implements VisitorRepository {
   }
 
   @override
-  Future<Either<Failure, List<ScheduledVisit>>> getScheduledVisits(String schoolId) async {
+  Future<Either<Failure, List<ScheduledVisit>>> getScheduledVisits(
+    String schoolId,
+  ) async {
     try {
       if (await networkInfo.isConnected) {
         final remoteData = await remoteDataSource.getScheduledVisits(schoolId);
@@ -292,7 +321,9 @@ class VisitorRepositoryImpl implements VisitorRepository {
     try {
       await localDataSource.markScheduledVisitApproved(visitId);
       if (await networkInfo.isConnected) {
-        await remoteDataSource.updateScheduledVisit(visitId, {'isApproved': true});
+        await remoteDataSource.updateScheduledVisit(visitId, {
+          'isApproved': true,
+        });
       }
       return const Right(null);
     } catch (e) {
@@ -305,7 +336,9 @@ class VisitorRepositoryImpl implements VisitorRepository {
     try {
       await localDataSource.markScheduledVisitRejected(visitId);
       if (await networkInfo.isConnected) {
-        await remoteDataSource.updateScheduledVisit(visitId, {'isRejected': true});
+        await remoteDataSource.updateScheduledVisit(visitId, {
+          'isRejected': true,
+        });
       }
       return const Right(null);
     } catch (e) {
@@ -318,7 +351,9 @@ class VisitorRepositoryImpl implements VisitorRepository {
     try {
       await localDataSource.markScheduledVisitCheckedIn(visitId);
       if (await networkInfo.isConnected) {
-        await remoteDataSource.updateScheduledVisit(visitId, {'isCheckedIn': true});
+        await remoteDataSource.updateScheduledVisit(visitId, {
+          'isCheckedIn': true,
+        });
       }
       return const Right(null);
     } catch (e) {
@@ -327,7 +362,9 @@ class VisitorRepositoryImpl implements VisitorRepository {
   }
 
   @override
-  Future<Either<Failure, void>> logPackageDelivery(PackageDelivery delivery) async {
+  Future<Either<Failure, void>> logPackageDelivery(
+    PackageDelivery delivery,
+  ) async {
     try {
       final isar = PackageDeliveryIsar.fromEntity(delivery);
       await localDataSource.savePackageDelivery(isar);
@@ -351,10 +388,14 @@ class VisitorRepositoryImpl implements VisitorRepository {
   }
 
   @override
-  Future<Either<Failure, List<PackageDelivery>>> getPackageDeliveries(String schoolId) async {
+  Future<Either<Failure, List<PackageDelivery>>> getPackageDeliveries(
+    String schoolId,
+  ) async {
     try {
       if (await networkInfo.isConnected) {
-        final remoteData = await remoteDataSource.getPackageDeliveries(schoolId);
+        final remoteData = await remoteDataSource.getPackageDeliveries(
+          schoolId,
+        );
         for (var data in remoteData) {
           final isar = PackageDeliveryIsar()
             ..packageId = data['id']
@@ -365,7 +406,9 @@ class VisitorRepositoryImpl implements VisitorRepository {
             ..courierPhone = data['courierPhone']
             ..trackingNumber = data['trackingNumber']
             ..arrivalTime = (data['arrivalTime'] as dynamic).toDate()
-            ..collectedTime = data['collectedTime'] != null ? (data['collectedTime'] as dynamic).toDate() : null
+            ..collectedTime = data['collectedTime'] != null
+                ? (data['collectedTime'] as dynamic).toDate()
+                : null
             ..collectedBy = data['collectedBy']
             ..isCollected = data['isCollected'];
           await localDataSource.savePackageDelivery(isar);
@@ -379,7 +422,10 @@ class VisitorRepositoryImpl implements VisitorRepository {
   }
 
   @override
-  Future<Either<Failure, void>> markPackageAsCollected(String packageId, String collectedBy) async {
+  Future<Either<Failure, void>> markPackageAsCollected(
+    String packageId,
+    String collectedBy,
+  ) async {
     try {
       if (await networkInfo.isConnected) {
         await remoteDataSource.syncPackageDelivery({
@@ -401,12 +447,13 @@ class VisitorRepositoryImpl implements VisitorRepository {
       final visitorIsar = await localDataSource.getVisitorById(visitorId);
       if (visitorIsar == null) return Left(CacheFailure());
 
-      final newBadgeNumber = 'BDG-${const Uuid().v4().substring(0, 8).toUpperCase()}';
+      final newBadgeNumber =
+          'BDG-${const Uuid().v4().substring(0, 8).toUpperCase()}';
       final updated = visitorIsar.toEntity().copyWith(
-            badgeNumber: newBadgeNumber,
-            badgeReplacementCount: visitorIsar.toEntity().badgeReplacementCount + 1,
-            isSynced: false,
-          );
+        badgeNumber: newBadgeNumber,
+        badgeReplacementCount: visitorIsar.toEntity().badgeReplacementCount + 1,
+        isSynced: false,
+      );
 
       await localDataSource.saveVisitor(VisitorIsar.fromEntity(updated));
 
@@ -427,19 +474,19 @@ class VisitorRepositoryImpl implements VisitorRepository {
   }
 
   @override
-  Future<Either<Failure, void>> exportToSheets(String schoolId, String schoolName) async {
+  Future<Either<Failure, void>> exportToSheets(
+    String schoolId,
+    String schoolName,
+  ) async {
     try {
       final visitorsResult = await getVisitors(schoolId);
-      return visitorsResult.fold(
-        (failure) => Left(failure),
-        (visitors) async {
-          return await googleSheetsService.exportVisitors(
-            schoolId: schoolId,
-            schoolName: schoolName,
-            visitors: visitors,
-          );
-        },
-      );
+      return visitorsResult.fold((failure) => Left(failure), (visitors) async {
+        return await googleSheetsService.exportVisitors(
+          schoolId: schoolId,
+          schoolName: schoolName,
+          visitors: visitors,
+        );
+      });
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }

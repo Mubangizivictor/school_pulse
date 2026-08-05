@@ -23,7 +23,8 @@ class DeanRepositoryImpl implements DeanRepository {
   });
 
   @override
-  Future<Either<Failure, AcademicDashboardStats>> getAcademicDashboardStats() async {
+  Future<Either<Failure, AcademicDashboardStats>>
+  getAcademicDashboardStats() async {
     return _callRemote(() => remoteDataSource.getDeanDashboardStats());
   }
 
@@ -43,8 +44,13 @@ class DeanRepositoryImpl implements DeanRepository {
   }
 
   @override
-  Future<Either<Failure, void>> updateSubjectAllocation(String subjectId, List<String> teacherIds) async {
-    return _callRemote(() => remoteDataSource.updateSubjectAllocation(subjectId, teacherIds));
+  Future<Either<Failure, void>> updateSubjectAllocation(
+    String subjectId,
+    List<String> teacherIds,
+  ) async {
+    return _callRemote(
+      () => remoteDataSource.updateSubjectAllocation(subjectId, teacherIds),
+    );
   }
 
   @override
@@ -53,8 +59,12 @@ class DeanRepositoryImpl implements DeanRepository {
   }
 
   @override
-  Future<Either<Failure, TeacherWorkload>> getTeacherWorkloadDetail(String teacherId) async {
-    return _callRemote(() => remoteDataSource.getTeacherWorkloadDetail(teacherId));
+  Future<Either<Failure, TeacherWorkload>> getTeacherWorkloadDetail(
+    String teacherId,
+  ) async {
+    return _callRemote(
+      () => remoteDataSource.getTeacherWorkloadDetail(teacherId),
+    );
   }
 
   @override
@@ -65,13 +75,15 @@ class DeanRepositoryImpl implements DeanRepository {
     String? classId,
     LessonStatus? status,
   }) async {
-    return _callRemote(() => remoteDataSource.getLessonRecords(
-          startDate: startDate,
-          endDate: endDate,
-          teacherId: teacherId,
-          classId: classId,
-          status: status,
-        ));
+    return _callRemote(
+      () => remoteDataSource.getLessonRecords(
+        startDate: startDate,
+        endDate: endDate,
+        teacherId: teacherId,
+        classId: classId,
+        status: status,
+      ),
+    );
   }
 
   @override
@@ -81,41 +93,65 @@ class DeanRepositoryImpl implements DeanRepository {
     DateTime? startDate,
     DateTime? endDate,
   }) async {
-    return _callRemote(() => remoteDataSource.getHomeworkRecords(
-          classId: classId,
-          teacherId: teacherId,
-          startDate: startDate,
-          endDate: endDate,
-        ));
+    return _callRemote(
+      () => remoteDataSource.getHomeworkRecords(
+        classId: classId,
+        teacherId: teacherId,
+        startDate: startDate,
+        endDate: endDate,
+      ),
+    );
   }
 
   @override
-  Future<Either<Failure, void>> approveAssessmentMarks(String assessmentId) async {
-    return _callRemote(() => remoteDataSource.approveAssessmentMarks(assessmentId));
+  Future<Either<Failure, void>> approveAssessmentMarks(
+    String assessmentId,
+  ) async {
+    return _callRemote(
+      () => remoteDataSource.approveAssessmentMarks(assessmentId),
+    );
   }
 
   @override
-  Future<Either<Failure, void>> rejectAssessmentMarks(String assessmentId, String reason) async {
-    return _callRemote(() => remoteDataSource.rejectAssessmentMarks(assessmentId, reason));
+  Future<Either<Failure, void>> rejectAssessmentMarks(
+    String assessmentId,
+    String reason,
+  ) async {
+    return _callRemote(
+      () => remoteDataSource.rejectAssessmentMarks(assessmentId, reason),
+    );
   }
 
   @override
-  Future<Either<Failure, List<AssessmentModeration>>> getPendingModerationAssessments() async {
-    return _callRemote(() => remoteDataSource.getPendingModerationAssessments());
+  Future<Either<Failure, List<AssessmentModeration>>>
+  getPendingModerationAssessments() async {
+    return _callRemote(
+      () => remoteDataSource.getPendingModerationAssessments(),
+    );
   }
 
   @override
-  Future<Either<Failure, void>> approveReportCards(List<String> reportCardIds) async {
-    return _callRemote(() => remoteDataSource.approveReportCards(reportCardIds));
+  Future<Either<Failure, void>> approveReportCards(
+    List<String> reportCardIds,
+  ) async {
+    return _callRemote(
+      () => remoteDataSource.approveReportCards(reportCardIds),
+    );
   }
 
   @override
-  Future<Either<Failure, void>> rejectReportCards(List<String> reportCardIds, String reason) async {
-    return _callRemote(() => remoteDataSource.rejectReportCards(reportCardIds, reason));
+  Future<Either<Failure, void>> rejectReportCards(
+    List<String> reportCardIds,
+    String reason,
+  ) async {
+    return _callRemote(
+      () => remoteDataSource.rejectReportCards(reportCardIds, reason),
+    );
   }
 
   @override
-  Future<Either<Failure, List<ReportCardApproval>>> getPendingReportApprovals() async {
+  Future<Either<Failure, List<ReportCardApproval>>>
+  getPendingReportApprovals() async {
     return _callRemote(() => remoteDataSource.getPendingReportApprovals());
   }
 
@@ -126,12 +162,14 @@ class DeanRepositoryImpl implements DeanRepository {
     String? academicYear,
     String? term,
   }) async {
-    return _callRemote(() => remoteDataSource.getPerformanceAnalytics(
-          type: type,
-          id: id,
-          academicYear: academicYear,
-          term: term,
-        ));
+    return _callRemote(
+      () => remoteDataSource.getPerformanceAnalytics(
+        type: type,
+        id: id,
+        academicYear: academicYear,
+        term: term,
+      ),
+    );
   }
 
   @override
@@ -140,13 +178,21 @@ class DeanRepositoryImpl implements DeanRepository {
   }
 
   @override
-  Future<Either<Failure, void>> createIntervention(AcademicIntervention intervention) async {
+  Future<Either<Failure, void>> createIntervention(
+    AcademicIntervention intervention,
+  ) async {
     return _callRemote(() => remoteDataSource.createIntervention(intervention));
   }
 
   @override
-  Future<Either<Failure, void>> updateInterventionStatus(String id, InterventionStatus status, String outcomes) async {
-    return _callRemote(() => remoteDataSource.updateInterventionStatus(id, status, outcomes));
+  Future<Either<Failure, void>> updateInterventionStatus(
+    String id,
+    InterventionStatus status,
+    String outcomes,
+  ) async {
+    return _callRemote(
+      () => remoteDataSource.updateInterventionStatus(id, status, outcomes),
+    );
   }
 
   @override
@@ -155,7 +201,9 @@ class DeanRepositoryImpl implements DeanRepository {
   }
 
   @override
-  Future<Either<Failure, void>> recordObservation(ClassObservation observation) async {
+  Future<Either<Failure, void>> recordObservation(
+    ClassObservation observation,
+  ) async {
     return _callRemote(() => remoteDataSource.recordObservation(observation));
   }
 
@@ -176,12 +224,14 @@ class DeanRepositoryImpl implements DeanRepository {
     required List<String> targetRoles,
     List<String>? targetIds,
   }) async {
-    return _callRemote(() => remoteDataSource.sendAcademicAnnouncement(
-          title: title,
-          message: message,
-          targetRoles: targetRoles,
-          targetIds: targetIds,
-        ));
+    return _callRemote(
+      () => remoteDataSource.sendAcademicAnnouncement(
+        title: title,
+        message: message,
+        targetRoles: targetRoles,
+        targetIds: targetIds,
+      ),
+    );
   }
 
   Future<Either<Failure, T>> _callRemote<T>(Future<T> Function() call) async {

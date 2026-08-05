@@ -7,7 +7,10 @@ abstract class NotificationsRemoteDataSource {
   /// 'Parents', 'Class:P.1') - without it, BroadcastSmsScreen announcements
   /// never show up here even though they show up in the staff notification
   /// bell (see StaffAlertsRepository, which does the equivalent merge).
-  Future<List<AlertModel>> getAlerts(List<String> studentIds, {List<String> groups = const []});
+  Future<List<AlertModel>> getAlerts(
+    List<String> studentIds, {
+    List<String> groups = const [],
+  });
   Future<void> markAlertRead(String alertId, String uid);
   Future<void> sendNotification({
     required String title,
@@ -24,7 +27,10 @@ class NotificationsRemoteDataSourceImpl
   NotificationsRemoteDataSourceImpl({required this.firestore});
 
   @override
-  Future<List<AlertModel>> getAlerts(List<String> studentIds, {List<String> groups = const []}) async {
+  Future<List<AlertModel>> getAlerts(
+    List<String> studentIds, {
+    List<String> groups = const [],
+  }) async {
     if (studentIds.isEmpty && groups.isEmpty) return [];
     try {
       final results = await Future.wait([
@@ -32,10 +38,9 @@ class NotificationsRemoteDataSourceImpl
         _getBroadcastAlerts(groups),
       ]);
       final seen = <String>{};
-      final merged = [...results[0], ...results[1]]
-          .where((a) => seen.add(a.id))
-          .toList()
-        ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      final merged =
+          [...results[0], ...results[1]].where((a) => seen.add(a.id)).toList()
+            ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
       return merged;
     } catch (e) {
       // This will print the Link to create the Parent Index in your terminal
@@ -94,11 +99,7 @@ class NotificationsRemoteDataSourceImpl
 
     // 2. Trigger FCM via broadcast_queue
     await firestore.collection('broadcast_queue').add({
-      'notification': {
-        'title': title,
-        'body': body,
-        'image': imageUrl,
-      },
+      'notification': {'title': title, 'body': body, 'image': imageUrl},
       'targets': targetGroups,
       'status': 'pending',
       'createdAt': timestamp,

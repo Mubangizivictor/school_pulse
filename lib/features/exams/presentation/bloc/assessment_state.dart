@@ -37,5 +37,11 @@ class AssessmentState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [status, assessmentTypes, gradingSystems, marks, errorMessage];
+  List<Object?> get props => [
+    status,
+    assessmentTypes,
+    gradingSystems,
+    marks,
+    errorMessage,
+  ];
 }

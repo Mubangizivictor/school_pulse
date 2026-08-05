@@ -42,7 +42,8 @@ class ReportPolicyService {
     final result = await financeRepository.getFees(studentId);
     return result.fold(
       (failure) => false,
-      (fees) => fees.every((fee) => fee.status.toString().split('.').last == 'paid'),
+      (fees) =>
+          fees.every((fee) => fee.status.toString().split('.').last == 'paid'),
     );
   }
 }

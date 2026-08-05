@@ -8,19 +8,33 @@ abstract class AppointmentRemoteDataSource {
   Future<Map<String, dynamic>?> getStaffAvailability(String staffId);
   Future<void> saveStaffAvailability(String staffId, Map<String, dynamic> data);
 
-  Future<List<Map<String, dynamic>>> getStaffByRoles(String schoolId, List<String> roleNames);
+  Future<List<Map<String, dynamic>>> getStaffByRoles(
+    String schoolId,
+    List<String> roleNames,
+  );
   Future<List<Map<String, dynamic>>> getStudentsByIds(List<String> ids);
 
   /// Appointments already booked for [staffId] on the calendar day containing
   /// [dayStart] (00:00-23:59), used to exclude taken slots when computing
   /// availability.
-  Future<List<Map<String, dynamic>>> getStaffAppointmentsOnDate(String staffId, DateTime dayStart);
+  Future<List<Map<String, dynamic>>> getStaffAppointmentsOnDate(
+    String staffId,
+    String schoolId,
+    DateTime dayStart,
+  );
 
   Future<String> createAppointment(Map<String, dynamic> data);
   Future<void> updateAppointment(String id, Map<String, dynamic> data);
+  Future<void> deleteAppointment(String id);
 
-  Stream<List<Map<String, dynamic>>> watchForParent(String parentId, String schoolId);
-  Stream<List<Map<String, dynamic>>> watchForStaff(String staffId, String schoolId);
+  Stream<List<Map<String, dynamic>>> watchForParent(
+    String parentId,
+    String schoolId,
+  );
+  Stream<List<Map<String, dynamic>>> watchForStaff(
+    String staffId,
+    String schoolId,
+  );
   Stream<List<Map<String, dynamic>>> watchForSchool(String schoolId);
 
   Future<void> addNote(String appointmentId, Map<String, dynamic> data);
@@ -36,8 +50,9 @@ class AppointmentRemoteDataSourceImpl implements AppointmentRemoteDataSource {
   static const _availabilityCollection = 'staff_availability';
   static const _appointmentsCollection = 'meeting_appointments';
 
-  List<Map<String, dynamic>> _withId(QuerySnapshot snap) =>
-      snap.docs.map((d) => {...(d.data() as Map<String, dynamic>), 'id': d.id}).toList();
+  List<Map<String, dynamic>> _withId(QuerySnapshot snap) => snap.docs
+      .map((d) => {...(d.data() as Map<String, dynamic>), 'id': d.id})
+      .toList();
 
   @override
   Stream<List<Map<String, dynamic>>> watchAppointmentTypes(String schoolId) {
@@ -50,7 +65,10 @@ class AppointmentRemoteDataSourceImpl implements AppointmentRemoteDataSource {
 
   @override
   Future<void> saveAppointmentType(String id, Map<String, dynamic> data) async {
-    await firestore.collection(_typesCollection).doc(id).set(data, SetOptions(merge: true));
+    await firestore
+        .collection(_typesCollection)
+        .doc(id)
+        .set(data, SetOptions(merge: true));
   }
 
   @override
@@ -60,17 +78,29 @@ class AppointmentRemoteDataSourceImpl implements AppointmentRemoteDataSource {
 
   @override
   Future<Map<String, dynamic>?> getStaffAvailability(String staffId) async {
-    final doc = await firestore.collection(_availabilityCollection).doc(staffId).get();
+    final doc = await firestore
+        .collection(_availabilityCollection)
+        .doc(staffId)
+        .get();
     return doc.data();
   }
 
   @override
-  Future<void> saveStaffAvailability(String staffId, Map<String, dynamic> data) async {
-    await firestore.collection(_availabilityCollection).doc(staffId).set(data, SetOptions(merge: true));
+  Future<void> saveStaffAvailability(
+    String staffId,
+    Map<String, dynamic> data,
+  ) async {
+    await firestore
+        .collection(_availabilityCollection)
+        .doc(staffId)
+        .set(data, SetOptions(merge: true));
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getStaffByRoles(String schoolId, List<String> roleNames) async {
+  Future<List<Map<String, dynamic>>> getStaffByRoles(
+    String schoolId,
+    List<String> roleNames,
+  ) async {
     if (roleNames.isEmpty) {
       final snap = await firestore
           .collection('users')
@@ -104,13 +134,21 @@ class AppointmentRemoteDataSourceImpl implements AppointmentRemoteDataSource {
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getStaffAppointmentsOnDate(String staffId, DateTime dayStart) async {
+  Future<List<Map<String, dynamic>>> getStaffAppointmentsOnDate(
+    String staffId,
+    String schoolId,
+    DateTime dayStart,
+  ) async {
     final start = DateTime(dayStart.year, dayStart.month, dayStart.day);
     final end = start.add(const Duration(days: 1));
     final snap = await firestore
         .collection(_appointmentsCollection)
+        .where('schoolId', isEqualTo: schoolId)
         .where('staffId', isEqualTo: staffId)
-        .where('scheduledStart', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where(
+          'scheduledStart',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(start),
+        )
         .where('scheduledStart', isLessThan: Timestamp.fromDate(end))
         .where('status', whereIn: ['pending', 'approved', 'rescheduleProposed'])
         .get();
@@ -119,7 +157,43 @@ class AppointmentRemoteDataSourceImpl implements AppointmentRemoteDataSource {
 
   @override
   Future<String> createAppointment(Map<String, dynamic> data) async {
-    final ref = await firestore.collection(_appointmentsCollection).add(data);
+    final schoolId = data['schoolId'] as String;
+    final staffId = data['staffId'] as String;
+    final start = data['scheduledStart'] as Timestamp;
+    final end = data['scheduledEnd'] as Timestamp;
+    final dayStart = DateTime(
+      start.toDate().year,
+      start.toDate().month,
+      start.toDate().day,
+    );
+    final dayEnd = dayStart.add(const Duration(days: 1));
+    final booked = await firestore
+        .collection(_appointmentsCollection)
+        .where('schoolId', isEqualTo: schoolId)
+        .where('staffId', isEqualTo: staffId)
+        .where(
+          'scheduledStart',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(dayStart),
+        )
+        .where('scheduledStart', isLessThan: Timestamp.fromDate(dayEnd))
+        .where('status', whereIn: ['pending', 'approved', 'rescheduleProposed'])
+        .get();
+    final conflict = booked.docs.any((doc) {
+      final value = doc.data();
+      final bookedStart = (value['scheduledStart'] as Timestamp).toDate();
+      final bookedEnd = (value['scheduledEnd'] as Timestamp).toDate();
+      return start.toDate().isBefore(bookedEnd) &&
+          end.toDate().isAfter(bookedStart);
+    });
+    if (conflict) {
+      throw StateError(
+        'That host is no longer available at the selected time.',
+      );
+    }
+    final ref = firestore.collection(_appointmentsCollection).doc();
+    await firestore.runTransaction((transaction) async {
+      transaction.set(ref, data);
+    });
     return ref.id;
   }
 
@@ -129,7 +203,15 @@ class AppointmentRemoteDataSourceImpl implements AppointmentRemoteDataSource {
   }
 
   @override
-  Stream<List<Map<String, dynamic>>> watchForParent(String parentId, String schoolId) {
+  Future<void> deleteAppointment(String id) async {
+    await firestore.collection(_appointmentsCollection).doc(id).delete();
+  }
+
+  @override
+  Stream<List<Map<String, dynamic>>> watchForParent(
+    String parentId,
+    String schoolId,
+  ) {
     return firestore
         .collection(_appointmentsCollection)
         .where('schoolId', isEqualTo: schoolId)
@@ -140,7 +222,10 @@ class AppointmentRemoteDataSourceImpl implements AppointmentRemoteDataSource {
   }
 
   @override
-  Stream<List<Map<String, dynamic>>> watchForStaff(String staffId, String schoolId) {
+  Stream<List<Map<String, dynamic>>> watchForStaff(
+    String staffId,
+    String schoolId,
+  ) {
     return firestore
         .collection(_appointmentsCollection)
         .where('schoolId', isEqualTo: schoolId)

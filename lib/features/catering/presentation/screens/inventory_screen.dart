@@ -10,7 +10,8 @@ class CateringInventoryScreen extends StatefulWidget {
   const CateringInventoryScreen({super.key});
 
   @override
-  State<CateringInventoryScreen> createState() => _CateringInventoryScreenState();
+  State<CateringInventoryScreen> createState() =>
+      _CateringInventoryScreenState();
 }
 
 class _CateringInventoryScreenState extends State<CateringInventoryScreen> {
@@ -57,17 +58,23 @@ class _CateringInventoryScreenState extends State<CateringInventoryScreen> {
                 return AppCard(
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
-                    title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    title: Text(
+                      item.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Category: ${item.category ?? 'N/A'}'),
                         if (item.expiryDate != null)
-                          Text('Expiry: ${item.expiryDate!.toLocal().toString().split(' ')[0]}',
-                              style: TextStyle(
-                                  color: item.expiryDate!.isBefore(DateTime.now())
-                                      ? semanticColors.error
-                                      : null)),
+                          Text(
+                            'Expiry: ${item.expiryDate!.toLocal().toString().split(' ')[0]}',
+                            style: TextStyle(
+                              color: item.expiryDate!.isBefore(DateTime.now())
+                                  ? semanticColors.error
+                                  : null,
+                            ),
+                          ),
                       ],
                     ),
                     trailing: Column(
@@ -79,12 +86,19 @@ class _CateringInventoryScreenState extends State<CateringInventoryScreen> {
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: isLowStock ? semanticColors.error : semanticColors.success,
+                            color: isLowStock
+                                ? semanticColors.error
+                                : semanticColors.success,
                           ),
                         ),
                         if (isLowStock)
-                          Text('Low Stock',
-                              style: TextStyle(color: semanticColors.error, fontSize: 12)),
+                          Text(
+                            'Low Stock',
+                            style: TextStyle(
+                              color: semanticColors.error,
+                              fontSize: 12,
+                            ),
+                          ),
                       ],
                     ),
                   ),

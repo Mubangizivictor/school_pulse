@@ -69,20 +69,20 @@ class Campus extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        name,
-        code,
-        address,
-        district,
-        contactPhone,
-        contactEmail,
-        headStaffId,
-        isPrimary,
-        isActive,
-        order,
-        archivedAt,
-      ];
+    id,
+    schoolId,
+    name,
+    code,
+    address,
+    district,
+    contactPhone,
+    contactEmail,
+    headStaffId,
+    isPrimary,
+    isActive,
+    order,
+    archivedAt,
+  ];
 }
 
 /// A school house (Blue House, Red House, ...) used for inter-house
@@ -124,7 +124,14 @@ class House extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, schoolId, name, colorHex, description, isActive];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    name,
+    colorHex,
+    description,
+    isActive,
+  ];
 }
 
 /// A club or society (Debate, Robotics, Scripture Union, ...).
@@ -168,7 +175,15 @@ class Club extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, schoolId, name, category, description, patronName, isActive];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    name,
+    category,
+    description,
+    patronName,
+    isActive,
+  ];
 }
 
 /// A physical school facility (library, lab, dormitory, dining hall, ...).
@@ -216,5 +231,14 @@ class Facility extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, schoolId, name, facilityType, location, capacity, description, isActive];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    name,
+    facilityType,
+    location,
+    capacity,
+    description,
+    isActive,
+  ];
 }

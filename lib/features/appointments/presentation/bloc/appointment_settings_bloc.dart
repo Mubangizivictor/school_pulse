@@ -5,7 +5,8 @@ import '../../domain/usecases/appointment_usecases.dart';
 import 'appointment_settings_event.dart';
 import 'appointment_settings_state.dart';
 
-class AppointmentSettingsBloc extends Bloc<AppointmentSettingsEvent, AppointmentSettingsState> {
+class AppointmentSettingsBloc
+    extends Bloc<AppointmentSettingsEvent, AppointmentSettingsState> {
   final WatchAppointmentTypes watchAppointmentTypes;
   final SaveAppointmentType saveAppointmentType;
   final DeleteAppointmentType deleteAppointmentType;
@@ -28,7 +29,10 @@ class AppointmentSettingsBloc extends Bloc<AppointmentSettingsEvent, Appointment
     on<SaveStaffAvailabilityEvent>(_onSaveAvailability);
   }
 
-  Future<void> _onWatchTypes(WatchAppointmentTypesEvent event, Emitter<AppointmentSettingsState> emit) async {
+  Future<void> _onWatchTypes(
+    WatchAppointmentTypesEvent event,
+    Emitter<AppointmentSettingsState> emit,
+  ) async {
     if (state is! AppointmentSettingsLoaded) emit(AppointmentSettingsLoading());
     await _typesSubscription?.cancel();
     final completer = Completer<void>();
@@ -44,7 +48,10 @@ class AppointmentSettingsBloc extends Bloc<AppointmentSettingsEvent, Appointment
     await completer.future;
   }
 
-  Future<void> _onSaveType(SaveAppointmentTypeEvent event, Emitter<AppointmentSettingsState> emit) async {
+  Future<void> _onSaveType(
+    SaveAppointmentTypeEvent event,
+    Emitter<AppointmentSettingsState> emit,
+  ) async {
     final result = await saveAppointmentType(event.type);
     result.fold(
       (failure) => emit(AppointmentSettingsError(failure.message)),
@@ -52,7 +59,10 @@ class AppointmentSettingsBloc extends Bloc<AppointmentSettingsEvent, Appointment
     );
   }
 
-  Future<void> _onDeleteType(DeleteAppointmentTypeEvent event, Emitter<AppointmentSettingsState> emit) async {
+  Future<void> _onDeleteType(
+    DeleteAppointmentTypeEvent event,
+    Emitter<AppointmentSettingsState> emit,
+  ) async {
     final result = await deleteAppointmentType(event.id);
     result.fold(
       (failure) => emit(AppointmentSettingsError(failure.message)),
@@ -60,34 +70,38 @@ class AppointmentSettingsBloc extends Bloc<AppointmentSettingsEvent, Appointment
     );
   }
 
-  Future<void> _onLoadAvailability(LoadStaffAvailabilityEvent event, Emitter<AppointmentSettingsState> emit) async {
+  Future<void> _onLoadAvailability(
+    LoadStaffAvailabilityEvent event,
+    Emitter<AppointmentSettingsState> emit,
+  ) async {
     final result = await getStaffAvailability(event.staffId, event.schoolId);
-    result.fold(
-      (failure) => emit(AppointmentSettingsError(failure.message)),
-      (availability) {
-        final current = state;
-        if (current is AppointmentSettingsLoaded) {
-          emit(current.copyWith(availability: availability));
-        } else {
-          emit(AppointmentSettingsLoaded(availability: availability));
-        }
-      },
-    );
+    result.fold((failure) => emit(AppointmentSettingsError(failure.message)), (
+      availability,
+    ) {
+      final current = state;
+      if (current is AppointmentSettingsLoaded) {
+        emit(current.copyWith(availability: availability));
+      } else {
+        emit(AppointmentSettingsLoaded(availability: availability));
+      }
+    });
   }
 
-  Future<void> _onSaveAvailability(SaveStaffAvailabilityEvent event, Emitter<AppointmentSettingsState> emit) async {
+  Future<void> _onSaveAvailability(
+    SaveStaffAvailabilityEvent event,
+    Emitter<AppointmentSettingsState> emit,
+  ) async {
     final result = await saveStaffAvailability(event.availability);
-    result.fold(
-      (failure) => emit(AppointmentSettingsError(failure.message)),
-      (_) {
-        final current = state;
-        if (current is AppointmentSettingsLoaded) {
-          emit(current.copyWith(availability: event.availability));
-        } else {
-          emit(AppointmentSettingsLoaded(availability: event.availability));
-        }
-      },
-    );
+    result.fold((failure) => emit(AppointmentSettingsError(failure.message)), (
+      _,
+    ) {
+      final current = state;
+      if (current is AppointmentSettingsLoaded) {
+        emit(current.copyWith(availability: event.availability));
+      } else {
+        emit(AppointmentSettingsLoaded(availability: event.availability));
+      }
+    });
   }
 
   @override

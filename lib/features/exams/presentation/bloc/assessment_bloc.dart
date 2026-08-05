@@ -26,9 +26,17 @@ class AssessmentBloc extends Bloc<AssessmentEvent, AssessmentState> {
     Emitter<AssessmentState> emit,
   ) async {
     emit(state.copyWith(status: AssessmentStatus.saving));
-    final result = await repository.moderateMarks(event.markIds, event.moderatorId);
+    final result = await repository.moderateMarks(
+      event.markIds,
+      event.moderatorId,
+    );
     result.fold(
-      (failure) => emit(state.copyWith(status: AssessmentStatus.failure, errorMessage: failure.message)),
+      (failure) => emit(
+        state.copyWith(
+          status: AssessmentStatus.failure,
+          errorMessage: failure.message,
+        ),
+      ),
       (_) {
         final updatedMarks = state.marks.map((m) {
           if (event.markIds.contains(m.id)) {
@@ -40,7 +48,9 @@ class AssessmentBloc extends Bloc<AssessmentEvent, AssessmentState> {
           }
           return m;
         }).toList();
-        emit(state.copyWith(status: AssessmentStatus.success, marks: updatedMarks));
+        emit(
+          state.copyWith(status: AssessmentStatus.success, marks: updatedMarks),
+        );
       },
     );
   }
@@ -50,9 +60,17 @@ class AssessmentBloc extends Bloc<AssessmentEvent, AssessmentState> {
     Emitter<AssessmentState> emit,
   ) async {
     emit(state.copyWith(status: AssessmentStatus.saving));
-    final result = await repository.approveMarks(event.markIds, event.approverId);
+    final result = await repository.approveMarks(
+      event.markIds,
+      event.approverId,
+    );
     result.fold(
-      (failure) => emit(state.copyWith(status: AssessmentStatus.failure, errorMessage: failure.message)),
+      (failure) => emit(
+        state.copyWith(
+          status: AssessmentStatus.failure,
+          errorMessage: failure.message,
+        ),
+      ),
       (_) {
         final updatedMarks = state.marks.map((m) {
           if (event.markIds.contains(m.id)) {
@@ -64,7 +82,9 @@ class AssessmentBloc extends Bloc<AssessmentEvent, AssessmentState> {
           }
           return m;
         }).toList();
-        emit(state.copyWith(status: AssessmentStatus.success, marks: updatedMarks));
+        emit(
+          state.copyWith(status: AssessmentStatus.success, marks: updatedMarks),
+        );
       },
     );
   }
@@ -74,12 +94,26 @@ class AssessmentBloc extends Bloc<AssessmentEvent, AssessmentState> {
     Emitter<AssessmentState> emit,
   ) async {
     emit(state.copyWith(status: AssessmentStatus.saving));
-    final result = await repository.createAssessmentType(event.schoolId, event.assessmentType);
+    final result = await repository.createAssessmentType(
+      event.schoolId,
+      event.assessmentType,
+    );
     result.fold(
-      (failure) => emit(state.copyWith(status: AssessmentStatus.failure, errorMessage: failure.message)),
+      (failure) => emit(
+        state.copyWith(
+          status: AssessmentStatus.failure,
+          errorMessage: failure.message,
+        ),
+      ),
       (_) {
-        final updatedTypes = List<AssessmentType>.from(state.assessmentTypes)..add(event.assessmentType);
-        emit(state.copyWith(status: AssessmentStatus.success, assessmentTypes: updatedTypes));
+        final updatedTypes = List<AssessmentType>.from(state.assessmentTypes)
+          ..add(event.assessmentType);
+        emit(
+          state.copyWith(
+            status: AssessmentStatus.success,
+            assessmentTypes: updatedTypes,
+          ),
+        );
       },
     );
   }
@@ -91,10 +125,21 @@ class AssessmentBloc extends Bloc<AssessmentEvent, AssessmentState> {
     emit(state.copyWith(status: AssessmentStatus.saving));
     final result = await repository.createGradingSystem(event.gradingSystem);
     result.fold(
-      (failure) => emit(state.copyWith(status: AssessmentStatus.failure, errorMessage: failure.message)),
+      (failure) => emit(
+        state.copyWith(
+          status: AssessmentStatus.failure,
+          errorMessage: failure.message,
+        ),
+      ),
       (_) {
-        final updatedSystems = List<GradingSystem>.from(state.gradingSystems)..add(event.gradingSystem);
-        emit(state.copyWith(status: AssessmentStatus.success, gradingSystems: updatedSystems));
+        final updatedSystems = List<GradingSystem>.from(state.gradingSystems)
+          ..add(event.gradingSystem);
+        emit(
+          state.copyWith(
+            status: AssessmentStatus.success,
+            gradingSystems: updatedSystems,
+          ),
+        );
       },
     );
   }
@@ -104,26 +149,32 @@ class AssessmentBloc extends Bloc<AssessmentEvent, AssessmentState> {
     Emitter<AssessmentState> emit,
   ) async {
     emit(state.copyWith(status: AssessmentStatus.loading));
-    
+
     final typesResult = await repository.getAssessmentTypes(event.schoolId);
     final systemsResult = await repository.getGradingSystems(event.schoolId);
 
     typesResult.fold(
-      (failure) => emit(state.copyWith(
-        status: AssessmentStatus.failure,
-        errorMessage: failure.message,
-      )),
+      (failure) => emit(
+        state.copyWith(
+          status: AssessmentStatus.failure,
+          errorMessage: failure.message,
+        ),
+      ),
       (types) {
         systemsResult.fold(
-          (failure) => emit(state.copyWith(
-            status: AssessmentStatus.failure,
-            errorMessage: failure.message,
-          )),
-          (systems) => emit(state.copyWith(
-            status: AssessmentStatus.loaded,
-            assessmentTypes: types,
-            gradingSystems: systems,
-          )),
+          (failure) => emit(
+            state.copyWith(
+              status: AssessmentStatus.failure,
+              errorMessage: failure.message,
+            ),
+          ),
+          (systems) => emit(
+            state.copyWith(
+              status: AssessmentStatus.loaded,
+              assessmentTypes: types,
+              gradingSystems: systems,
+            ),
+          ),
         );
       },
     );
@@ -143,14 +194,14 @@ class AssessmentBloc extends Bloc<AssessmentEvent, AssessmentState> {
     );
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        status: AssessmentStatus.failure,
-        errorMessage: failure.message,
-      )),
-      (marks) => emit(state.copyWith(
-        status: AssessmentStatus.loaded,
-        marks: marks,
-      )),
+      (failure) => emit(
+        state.copyWith(
+          status: AssessmentStatus.failure,
+          errorMessage: failure.message,
+        ),
+      ),
+      (marks) =>
+          emit(state.copyWith(status: AssessmentStatus.loaded, marks: marks)),
     );
   }
 
@@ -160,10 +211,7 @@ class AssessmentBloc extends Bloc<AssessmentEvent, AssessmentState> {
   ) {
     final updatedMarks = state.marks.map((mark) {
       if (mark.studentId == event.studentId) {
-        return mark.copyWith(
-          score: event.score,
-          updatedAt: DateTime.now(),
-        );
+        return mark.copyWith(score: event.score, updatedAt: DateTime.now());
       }
       return mark;
     }).toList();
@@ -176,14 +224,16 @@ class AssessmentBloc extends Bloc<AssessmentEvent, AssessmentState> {
     Emitter<AssessmentState> emit,
   ) async {
     emit(state.copyWith(status: AssessmentStatus.saving));
-    
+
     final result = await repository.saveMarks(event.schoolId, state.marks);
-    
+
     result.fold(
-      (failure) => emit(state.copyWith(
-        status: AssessmentStatus.failure,
-        errorMessage: failure.message,
-      )),
+      (failure) => emit(
+        state.copyWith(
+          status: AssessmentStatus.failure,
+          errorMessage: failure.message,
+        ),
+      ),
       (_) => emit(state.copyWith(status: AssessmentStatus.success)),
     );
   }
@@ -193,14 +243,16 @@ class AssessmentBloc extends Bloc<AssessmentEvent, AssessmentState> {
     Emitter<AssessmentState> emit,
   ) async {
     emit(state.copyWith(status: AssessmentStatus.saving));
-    
+
     final result = await repository.submitMarks(event.markIds);
-    
+
     result.fold(
-      (failure) => emit(state.copyWith(
-        status: AssessmentStatus.failure,
-        errorMessage: failure.message,
-      )),
+      (failure) => emit(
+        state.copyWith(
+          status: AssessmentStatus.failure,
+          errorMessage: failure.message,
+        ),
+      ),
       (_) => emit(state.copyWith(status: AssessmentStatus.success)),
     );
   }

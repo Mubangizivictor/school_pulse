@@ -47,12 +47,14 @@ class FingerprintCredentialReaderAdapter implements CredentialReaderAdapter {
     required String claimedIdentityType,
     required String deviceId,
   }) async {
-    _controller.add(FingerprintScanCredential(
-      claimedIdentityId: claimedIdentityId,
-      claimedIdentityType: claimedIdentityType,
-      deviceId: deviceId,
-      capturedAt: DateTime.now(),
-    ));
+    _controller.add(
+      FingerprintScanCredential(
+        claimedIdentityId: claimedIdentityId,
+        claimedIdentityType: claimedIdentityType,
+        deviceId: deviceId,
+        capturedAt: DateTime.now(),
+      ),
+    );
   }
 
   void dispose() {

@@ -15,7 +15,8 @@ class NotificationSearchScreen extends StatefulWidget {
   const NotificationSearchScreen({super.key});
 
   @override
-  State<NotificationSearchScreen> createState() => _NotificationSearchScreenState();
+  State<NotificationSearchScreen> createState() =>
+      _NotificationSearchScreenState();
 }
 
 class _NotificationSearchScreenState extends State<NotificationSearchScreen> {
@@ -105,16 +106,16 @@ class _NotificationSearchScreenState extends State<NotificationSearchScreen> {
     }
 
     final result = await di.sl<NotificationRepository>().getNotifications(
-          NotificationQuery(
-            schoolId: user.schoolId,
-            recipientUserId: user.id,
-            searchTerm: query,
-            // Search deliberately spans archived notifications: looking
-            // something up is exactly when a user wants their whole history.
-            includeArchived: true,
-            limit: 50,
-          ),
-        );
+      NotificationQuery(
+        schoolId: user.schoolId,
+        recipientUserId: user.id,
+        searchTerm: query,
+        // Search deliberately spans archived notifications: looking
+        // something up is exactly when a user wants their whole history.
+        includeArchived: true,
+        limit: 50,
+      ),
+    );
 
     // The screen may have been popped while the query was in flight.
     if (!mounted) return;
@@ -198,10 +199,17 @@ class _NotificationSearchScreenState extends State<NotificationSearchScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Recent Searches', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+              const Text(
+                'Recent Searches',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               TextButton(
-                onPressed:
-                    _recentSearches.isEmpty ? null : _clearRecentSearches,
+                onPressed: _recentSearches.isEmpty
+                    ? null
+                    : _clearRecentSearches,
                 child: Text(
                   'Clear all',
                   style: TextStyle(
@@ -228,7 +236,13 @@ class _NotificationSearchScreenState extends State<NotificationSearchScreen> {
                 : _recentSearches.map(_buildSearchChip).toList(),
           ),
           const SizedBox(height: 32),
-          const Text('Popular Searches', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+          const Text(
+            'Popular Searches',
+            style: TextStyle(
+              color: Colors.white70,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 16),
           _buildPopularSearch('Attendance'),
           _buildPopularSearch('Fee Payment'),
@@ -253,7 +267,10 @@ class _NotificationSearchScreenState extends State<NotificationSearchScreen> {
           color: Colors.white12,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        child: Text(
+          label,
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
+        ),
       ),
     );
   }
@@ -270,7 +287,10 @@ class _NotificationSearchScreenState extends State<NotificationSearchScreen> {
           children: [
             const Icon(Icons.trending_up, color: Colors.white24, size: 20),
             const SizedBox(width: 16),
-            Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
+            Text(
+              label,
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+            ),
             const Spacer(),
             const Icon(Icons.chevron_right, color: Colors.white24, size: 20),
           ],
@@ -299,18 +319,33 @@ class _SearchTile extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: _getCategoryColor(notification.category).withOpacity(0.2),
+                color: _getCategoryColor(
+                  notification.category,
+                ).withOpacity(0.2),
                 shape: BoxShape.circle,
               ),
-              child: Icon(_getCategoryIcon(notification.category), color: _getCategoryColor(notification.category), size: 18),
+              child: Icon(
+                _getCategoryIcon(notification.category),
+                color: _getCategoryColor(notification.category),
+                size: 18,
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(notification.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  Text(notification.senderName, style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                  Text(
+                    notification.title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    notification.senderName,
+                    style: const TextStyle(color: Colors.white60, fontSize: 12),
+                  ),
                 ],
               ),
             ),

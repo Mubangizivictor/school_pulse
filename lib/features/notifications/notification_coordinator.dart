@@ -101,14 +101,15 @@ class NotificationCoordinator {
 
     // Push whatever the user did while offline, then drop rows past their
     // retention window.
-    unawaited(repository.syncPendingStateChanges(
-      schoolId: schoolId,
-      recipientUserId: userId,
-    ));
-    unawaited(repository.purgeExpired(
-      schoolId: schoolId,
-      recipientUserId: userId,
-    ));
+    unawaited(
+      repository.syncPendingStateChanges(
+        schoolId: schoolId,
+        recipientUserId: userId,
+      ),
+    );
+    unawaited(
+      repository.purgeExpired(schoolId: schoolId, recipientUserId: userId),
+    );
 
     unawaited(pushHandler.replayPendingDeepLink());
   }

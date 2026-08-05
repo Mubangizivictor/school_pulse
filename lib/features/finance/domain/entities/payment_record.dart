@@ -8,7 +8,8 @@ class PaymentRecord extends Equatable {
   final String term;
   final double amount;
   final DateTime date;
-  final String method; // Cash, Bank Deposit, Bank Transfer, Cheque, Mobile Money, Card, etc.
+  final String
+  method; // Cash, Bank Deposit, Bank Transfer, Cheque, Mobile Money, Card, etc.
   final String reference;
   final String receiptNumber;
   final Map<String, double> feeBreakdown; // Map categoryId to amount
@@ -33,18 +34,18 @@ class PaymentRecord extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        studentId,
-        academicYear,
-        term,
-        amount,
-        date,
-        method,
-        reference,
-        receiptNumber,
-        feeBreakdown,
-        recordedBy,
-        notes,
-      ];
+    id,
+    schoolId,
+    studentId,
+    academicYear,
+    term,
+    amount,
+    date,
+    method,
+    reference,
+    receiptNumber,
+    feeBreakdown,
+    recordedBy,
+    notes,
+  ];
 }

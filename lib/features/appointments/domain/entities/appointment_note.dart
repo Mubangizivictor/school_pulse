@@ -30,15 +30,15 @@ class AppointmentNote extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        appointmentId,
-        authorId,
-        authorName,
-        summary,
-        actionItems,
-        followUpRequired,
-        nextAppointmentSuggested,
-        privateRemarks,
-        createdAt,
-      ];
+    id,
+    appointmentId,
+    authorId,
+    authorName,
+    summary,
+    actionItems,
+    followUpRequired,
+    nextAppointmentSuggested,
+    privateRemarks,
+    createdAt,
+  ];
 }

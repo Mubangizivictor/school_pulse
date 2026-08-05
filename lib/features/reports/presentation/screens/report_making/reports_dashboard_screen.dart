@@ -31,13 +31,19 @@ class ReportsDashboardScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.description_rounded, color: AppColors.royalBlue, size: 32),
+                const Icon(
+                  Icons.description_rounded,
+                  color: AppColors.royalBlue,
+                  size: 32,
+                ),
                 const SizedBox(height: AppSpacing.m),
                 Text('Class Reports', style: AppTypography.titleMedium),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   'Complete termly reports for your assigned class',
-                  style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context)),
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.textMuted(context),
+                  ),
                 ),
               ],
             ),
@@ -48,13 +54,19 @@ class ReportsDashboardScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.subject_rounded, color: AppColors.successGreen, size: 32),
+                const Icon(
+                  Icons.subject_rounded,
+                  color: AppColors.successGreen,
+                  size: 32,
+                ),
                 const SizedBox(height: AppSpacing.m),
                 Text('Subject Reports', style: AppTypography.titleMedium),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   'Enter comments and grades for specific subjects',
-                  style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context)),
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.textMuted(context),
+                  ),
                 ),
               ],
             ),
@@ -65,13 +77,19 @@ class ReportsDashboardScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.analytics_rounded, color: AppColors.electricBlue, size: 32),
+                const Icon(
+                  Icons.analytics_rounded,
+                  color: AppColors.electricBlue,
+                  size: 32,
+                ),
                 const SizedBox(height: AppSpacing.m),
                 Text('Performance Analytics', style: AppTypography.titleMedium),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   'View grade distribution and trends',
-                  style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context)),
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.textMuted(context),
+                  ),
                 ),
               ],
             ),

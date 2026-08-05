@@ -14,7 +14,7 @@ class AttendanceLogIsar {
   late String scannedBy;
   late String schoolId;
   late String module; // ATTENDANCE, LIBRARY, SECURITY, etc.
-  
+
   @Index()
   bool isSynced = false;
 }

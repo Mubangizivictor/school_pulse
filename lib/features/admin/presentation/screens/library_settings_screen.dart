@@ -21,21 +21,21 @@ class _LibrarySettingsScreenState extends State<LibrarySettingsScreen> {
     super.initState();
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
-      context.read<LibraryBloc>().add(WatchPoliciesRequested(authState.user.schoolId));
+      context.read<LibraryBloc>().add(
+        WatchPoliciesRequested(authState.user.schoolId),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Library Policies'),
-      ),
+      appBar: AppBar(title: const Text('Library Policies')),
       body: BlocBuilder<LibraryBloc, LibraryState>(
         builder: (context, state) {
           if (state is LibraryPoliciesLoaded) {
             final policies = state.policies.cast<LibraryPolicy>();
-            
+
             if (policies.isEmpty) {
               return Center(
                 child: Column(
@@ -69,7 +69,8 @@ class _LibrarySettingsScreenState extends State<LibrarySettingsScreen> {
                     ),
                     trailing: IconButton(
                       icon: const Icon(Icons.edit),
-                      onPressed: () => _showPolicyDialog(context, policy: policy),
+                      onPressed: () =>
+                          _showPolicyDialog(context, policy: policy),
                     ),
                   ),
                 );
@@ -133,7 +134,12 @@ class _PolicyEditDialogState extends State<_PolicyEditDialog> {
                 initialValue: _borrowerType,
                 decoration: const InputDecoration(labelText: 'Borrower Type'),
                 items: ['student', 'teacher', 'staff', 'parent']
-                    .map((t) => DropdownMenuItem(value: t, child: Text(t.toUpperCase())))
+                    .map(
+                      (t) => DropdownMenuItem(
+                        value: t,
+                        child: Text(t.toUpperCase()),
+                      ),
+                    )
                     .toList(),
                 onChanged: (val) => setState(() => _borrowerType = val!),
               ),
@@ -151,7 +157,9 @@ class _PolicyEditDialogState extends State<_PolicyEditDialog> {
               ),
               TextFormField(
                 initialValue: widget.policy?.finePerDay.toString() ?? '500.0',
-                decoration: const InputDecoration(labelText: 'Fine Per Day (UGX)'),
+                decoration: const InputDecoration(
+                  labelText: 'Fine Per Day (UGX)',
+                ),
                 keyboardType: TextInputType.number,
                 onSaved: (val) => _fine = double.parse(val!),
               ),
@@ -160,12 +168,16 @@ class _PolicyEditDialogState extends State<_PolicyEditDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
         ElevatedButton(
           onPressed: () {
             if (_formKey.currentState!.validate()) {
               _formKey.currentState!.save();
-              final authState = context.read<AuthBloc>().state as AuthAuthenticated;
+              final authState =
+                  context.read<AuthBloc>().state as AuthAuthenticated;
               final newPolicy = LibraryPolicy(
                 id: widget.policy?.id ?? '',
                 schoolId: authState.user.schoolId,
@@ -175,7 +187,8 @@ class _PolicyEditDialogState extends State<_PolicyEditDialog> {
                 finePerDay: _fine,
                 renewalLimit: widget.policy?.renewalLimit ?? 2,
                 gracePeriodDays: widget.policy?.gracePeriodDays ?? 1,
-                lostBookChargeMultiplier: widget.policy?.lostBookChargeMultiplier ?? 1.5,
+                lostBookChargeMultiplier:
+                    widget.policy?.lostBookChargeMultiplier ?? 1.5,
                 canReserve: widget.policy?.canReserve ?? true,
               );
               context.read<LibraryBloc>().add(UpdatePolicyRequested(newPolicy));

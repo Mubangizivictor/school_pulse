@@ -9,7 +9,8 @@ class SelectTermProfileScreen extends StatefulWidget {
   const SelectTermProfileScreen({super.key});
 
   @override
-  State<SelectTermProfileScreen> createState() => _SelectTermProfileScreenState();
+  State<SelectTermProfileScreen> createState() =>
+      _SelectTermProfileScreenState();
 }
 
 class _SelectTermProfileScreenState extends State<SelectTermProfileScreen> {
@@ -20,9 +21,7 @@ class _SelectTermProfileScreenState extends State<SelectTermProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Select Term & Profile'),
-      ),
+      appBar: AppBar(title: const Text('Select Term & Profile')),
       body: Column(
         children: [
           Expanded(
@@ -37,7 +36,9 @@ class _SelectTermProfileScreenState extends State<SelectTermProfileScreen> {
                 DropdownButtonFormField<String>(
                   value: selectedYear,
                   decoration: const InputDecoration(hintText: 'Select Year'),
-                  items: ['2024/2025', '2023/2024'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                  items: ['2024/2025', '2023/2024']
+                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                      .toList(),
                   onChanged: (v) {
                     if (v != null) setState(() => selectedYear = v);
                   },
@@ -51,9 +52,16 @@ class _SelectTermProfileScreenState extends State<SelectTermProfileScreen> {
                 DropdownButtonFormField<String>(
                   value: selectedTerm,
                   decoration: const InputDecoration(hintText: 'Select Term'),
-                  items: ['Term 1 (Sep - Dec 2024)', 'Term 2 (Jan - Apr 2025)', 'Term 3 (May - Aug 2025)']
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
+                  items:
+                      [
+                            'Term 1 (Sep - Dec 2024)',
+                            'Term 2 (Jan - Apr 2025)',
+                            'Term 3 (May - Aug 2025)',
+                          ]
+                          .map(
+                            (e) => DropdownMenuItem(value: e, child: Text(e)),
+                          )
+                          .toList(),
                   onChanged: (v) {
                     if (v != null) setState(() => selectedTerm = v);
                   },
@@ -67,16 +75,25 @@ class _SelectTermProfileScreenState extends State<SelectTermProfileScreen> {
                 DropdownButtonFormField<String>(
                   value: selectedProfile,
                   decoration: const InputDecoration(hintText: 'Select Profile'),
-                  items: ['Primary Competency & Percentage', 'Secondary Standard', 'Early Years Foundation']
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
+                  items:
+                      [
+                            'Primary Competency & Percentage',
+                            'Secondary Standard',
+                            'Early Years Foundation',
+                          ]
+                          .map(
+                            (e) => DropdownMenuItem(value: e, child: Text(e)),
+                          )
+                          .toList(),
                   onChanged: (v) {
                     if (v != null) setState(() => selectedProfile = v);
                   },
                 ),
                 const SizedBox(height: 16),
                 AppCard(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.05),
                   child: const Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -86,7 +103,10 @@ class _SelectTermProfileScreenState extends State<SelectTermProfileScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('About this profile', style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text(
+                              'About this profile',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
                             Text(
                               'Continuous Assessment (40%)\nEnd of Term Assessment (60%)\nGrading Scale: A - F',
                               style: TextStyle(fontSize: 13),
@@ -106,12 +126,12 @@ class _SelectTermProfileScreenState extends State<SelectTermProfileScreen> {
               label: 'Continue',
               onPressed: () {
                 context.read<ReportWizardBloc>().add(
-                      ReportWizardTermProfileSelected(
-                        year: selectedYear,
-                        term: selectedTerm,
-                        profile: selectedProfile,
-                      ),
-                    );
+                  ReportWizardTermProfileSelected(
+                    year: selectedYear,
+                    term: selectedTerm,
+                    profile: selectedProfile,
+                  ),
+                );
                 context.push('/staff/reports/sections');
               },
             ),

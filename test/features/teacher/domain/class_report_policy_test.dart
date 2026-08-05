@@ -120,15 +120,17 @@ void main() {
       expect(ClassReportPolicy.canEdit(entry: _entry()).isAllowed, isTrue);
     });
 
-    test('is allowed on a returned report - that is the point of returning it',
-        () {
-      expect(
-        ClassReportPolicy.canEdit(
-          entry: _entry(status: ReportEntryStatus.returnedForCorrection),
-        ).isAllowed,
-        isTrue,
-      );
-    });
+    test(
+      'is allowed on a returned report - that is the point of returning it',
+      () {
+        expect(
+          ClassReportPolicy.canEdit(
+            entry: _entry(status: ReportEntryStatus.returnedForCorrection),
+          ).isAllowed,
+          isTrue,
+        );
+      },
+    );
 
     test('is refused once the academic office has approved it', () {
       final decision = ClassReportPolicy.canEdit(

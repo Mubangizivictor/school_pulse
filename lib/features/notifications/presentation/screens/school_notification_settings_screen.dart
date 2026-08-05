@@ -76,8 +76,9 @@ class _SchoolNotificationSettingsScreenState
       return;
     }
 
-    final result =
-        await di.sl<NotificationRepository>().getSchoolPolicy(user.schoolId);
+    final result = await di.sl<NotificationRepository>().getSchoolPolicy(
+      user.schoolId,
+    );
     if (!mounted) return;
     setState(() {
       _policy = result.fold(
@@ -161,7 +162,9 @@ class _SchoolNotificationSettingsScreenState
     if (_loading) {
       return const _SettingsScaffold(
         saving: false,
-        child: Center(child: CircularProgressIndicator(color: Color(0xFF6366F1))),
+        child: Center(
+          child: CircularProgressIndicator(color: Color(0xFF6366F1)),
+        ),
       );
     }
 
@@ -281,8 +284,7 @@ class _SchoolNotificationSettingsScreenState
     final config = NotificationCategoryCatalog.of(category);
     final alwaysOn = config.isMandatory;
     final disabled = policy.disabledCategories.contains(category);
-    final mandatory =
-        alwaysOn || policy.mandatoryCategories.contains(category);
+    final mandatory = alwaysOn || policy.mandatoryCategories.contains(category);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -301,16 +303,19 @@ class _SchoolNotificationSettingsScreenState
         ),
         title: Text(
           config.displayName,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         subtitle: Text(
           alwaysOn
               ? 'Required — cannot be disabled or muted'
               : mandatory
-                  ? 'Mandatory — users cannot mute this'
-                  : disabled
-                      ? 'Disabled for this school'
-                      : 'Users may mute this',
+              ? 'Mandatory — users cannot mute this'
+              : disabled
+              ? 'Disabled for this school'
+              : 'Users may mute this',
           style: const TextStyle(color: Colors.white60, fontSize: 12),
         ),
         trailing: alwaysOn
@@ -368,7 +373,13 @@ class _SchoolNotificationSettingsScreenState
         break;
     }
 
-    _save(_copy(policy, disabledCategories: disabled, mandatoryCategories: mandatory));
+    _save(
+      _copy(
+        policy,
+        disabledCategories: disabled,
+        mandatoryCategories: mandatory,
+      ),
+    );
   }
 
   Future<void> _pickPreview(SchoolNotificationPolicy policy) async {
@@ -389,11 +400,13 @@ class _SchoolNotificationSettingsScreenState
       policy.retentionDaysOverride ?? 0,
     );
     if (choice != null) {
-      _save(_copy(
-        policy,
-        retentionDaysOverride: choice == 0 ? null : choice,
-        clearRetention: choice == 0,
-      ));
+      _save(
+        _copy(
+          policy,
+          retentionDaysOverride: choice == 0 ? null : choice,
+          clearRetention: choice == 0,
+        ),
+      );
     }
   }
 
@@ -405,18 +418,21 @@ class _SchoolNotificationSettingsScreenState
       policy.senderRateLimitPerHour ?? 0,
     );
     if (choice != null) {
-      _save(_copy(
-        policy,
-        senderRateLimitPerHour: choice == 0 ? null : choice,
-        clearRateLimit: choice == 0,
-      ));
+      _save(
+        _copy(
+          policy,
+          senderRateLimitPerHour: choice == 0 ? null : choice,
+          clearRateLimit: choice == 0,
+        ),
+      );
     }
   }
 
   Future<void> _pickQuietHours(SchoolNotificationPolicy policy) async {
     final start = await showTimePicker(
       context: context,
-      initialTime: policy.quietHoursStart ?? const TimeOfDay(hour: 21, minute: 0),
+      initialTime:
+          policy.quietHoursStart ?? const TimeOfDay(hour: 21, minute: 0),
       helpText: 'School quiet hours start',
     );
     if (start == null || !mounted) return;
@@ -504,8 +520,9 @@ class _SchoolNotificationSettingsScreenState
       maxLockScreenPreview: maxLockScreenPreview ?? p.maxLockScreenPreview,
       quietHoursStart: quietHoursStart ?? p.quietHoursStart,
       quietHoursEnd: quietHoursEnd ?? p.quietHoursEnd,
-      retentionDaysOverride:
-          clearRetention ? null : (retentionDaysOverride ?? p.retentionDaysOverride),
+      retentionDaysOverride: clearRetention
+          ? null
+          : (retentionDaysOverride ?? p.retentionDaysOverride),
       senderRateLimitPerHour: clearRateLimit
           ? null
           : (senderRateLimitPerHour ?? p.senderRateLimitPerHour),
@@ -516,13 +533,13 @@ class _SchoolNotificationSettingsScreenState
   }
 
   Widget _sectionTitle(String text) => Text(
-        text,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 15,
-        ),
-      );
+    text,
+    style: const TextStyle(
+      color: Colors.white,
+      fontWeight: FontWeight.bold,
+      fontSize: 15,
+    ),
+  );
 
   Widget _switchTile(
     String title,

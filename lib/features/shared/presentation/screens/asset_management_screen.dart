@@ -37,9 +37,7 @@ class _AssetManagementScreenState extends State<AssetManagementScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Asset Management'),
-        actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.add)),
-        ],
+        actions: [IconButton(onPressed: () {}, icon: const Icon(Icons.add))],
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
@@ -57,23 +55,45 @@ class _AssetManagementScreenState extends State<AssetManagementScreen> {
                     color: _getStatusColor(asset.status).withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.inventory, color: _getStatusColor(asset.status)),
+                  child: Icon(
+                    Icons.inventory,
+                    color: _getStatusColor(asset.status),
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(asset.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      Text('${asset.category} • ${asset.location}', style: Theme.of(context).textTheme.bodySmall),
+                      Text(
+                        asset.name,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        '${asset.category} • ${asset.location}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                     ],
                   ),
                 ),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(CurrencyFormatter.ugx(asset.value), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                    Text(asset.status.name.toUpperCase(), style: TextStyle(color: _getStatusColor(asset.status), fontSize: 10, fontWeight: FontWeight.bold)),
+                    Text(
+                      CurrencyFormatter.ugx(asset.value),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                    Text(
+                      asset.status.name.toUpperCase(),
+                      style: TextStyle(
+                        color: _getStatusColor(asset.status),
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -86,9 +106,12 @@ class _AssetManagementScreenState extends State<AssetManagementScreen> {
 
   Color _getStatusColor(AssetStatus status) {
     switch (status) {
-      case AssetStatus.operational: return Colors.green;
-      case AssetStatus.repairNeeded: return Colors.orange;
-      case AssetStatus.decommissioned: return Colors.red;
+      case AssetStatus.operational:
+        return Colors.green;
+      case AssetStatus.repairNeeded:
+        return Colors.orange;
+      case AssetStatus.decommissioned:
+        return Colors.red;
     }
   }
 }

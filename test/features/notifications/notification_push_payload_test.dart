@@ -8,7 +8,8 @@ void main() {
       expect(
         NotificationPushPayload.tryParse({'title': 'Hello'}),
         isNull,
-        reason: 'without an id there is nothing to fetch, mark read or route to',
+        reason:
+            'without an id there is nothing to fetch, mark read or route to',
       );
     });
 
@@ -103,7 +104,8 @@ void main() {
       expect(
         payload!.requiresAcknowledgment,
         isTrue,
-        reason: 'emergency requires acknowledgement even if the payload omits it',
+        reason:
+            'emergency requires acknowledgement even if the payload omits it',
       );
     });
   });
@@ -122,28 +124,31 @@ void main() {
       expect(
         first.systemNotificationId,
         second.systemNotificationId,
-        reason: 'a re-sent event must replace its banner, not stack a duplicate',
+        reason:
+            'a re-sent event must replace its banner, not stack a duplicate',
       );
     });
 
     test('differs without a collapse key', () {
-      final first =
-          NotificationPushPayload.tryParse({'notificationId': 'n1'})!;
-      final second =
-          NotificationPushPayload.tryParse({'notificationId': 'n2'})!;
+      final first = NotificationPushPayload.tryParse({'notificationId': 'n1'})!;
+      final second = NotificationPushPayload.tryParse({
+        'notificationId': 'n2',
+      })!;
 
-      expect(
-        first.systemNotificationId,
-        isNot(second.systemNotificationId),
-      );
+      expect(first.systemNotificationId, isNot(second.systemNotificationId));
     });
 
     test('always fits in a positive 32-bit int', () {
       // Android notification ids are signed 32-bit; a negative or oversized
       // value would be rejected at display time.
-      for (final id in ['a', 'some-very-long-notification-id-abcdef', '12345']) {
-        final payload =
-            NotificationPushPayload.tryParse({'notificationId': id})!;
+      for (final id in [
+        'a',
+        'some-very-long-notification-id-abcdef',
+        '12345',
+      ]) {
+        final payload = NotificationPushPayload.tryParse({
+          'notificationId': id,
+        })!;
         expect(payload.systemNotificationId, greaterThanOrEqualTo(0));
         expect(payload.systemNotificationId, lessThanOrEqualTo(0x7fffffff));
       }

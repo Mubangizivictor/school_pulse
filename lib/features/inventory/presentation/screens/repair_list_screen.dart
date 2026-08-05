@@ -25,9 +25,7 @@ class _RepairListScreenState extends State<RepairListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Repair Records'),
-      ),
+      appBar: AppBar(title: const Text('Repair Records')),
       body: BlocBuilder<StoresAssetsBloc, StoresAssetsState>(
         builder: (context, state) {
           if (state is StoresAssetsLoading) {
@@ -60,10 +58,16 @@ class _RepairListScreenState extends State<RepairListScreen> {
                         Expanded(
                           child: Text(
                             repair.assetName,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
                         ),
-                        StatusBadge(label: repair.status.name, color: _repairStatusColor(repair.status)),
+                        StatusBadge(
+                          label: repair.status.name,
+                          color: _repairStatusColor(repair.status),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -71,7 +75,11 @@ class _RepairListScreenState extends State<RepairListScreen> {
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
+                        const Icon(
+                          Icons.calendar_today,
+                          size: 14,
+                          color: Colors.grey,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           DateFormatter.format(repair.requestDate),
@@ -107,9 +115,9 @@ class _RepairListScreenState extends State<RepairListScreen> {
 }
 
 Color _repairStatusColor(RepairStatus status) => switch (status) {
-      RepairStatus.pending => Colors.orange,
-      RepairStatus.approved => Colors.blue,
-      RepairStatus.inProgress => Colors.deepPurple,
-      RepairStatus.completed => Colors.green,
-      RepairStatus.cancelled => Colors.red,
-    };
+  RepairStatus.pending => Colors.orange,
+  RepairStatus.approved => Colors.blue,
+  RepairStatus.inProgress => Colors.deepPurple,
+  RepairStatus.completed => Colors.green,
+  RepairStatus.cancelled => Colors.red,
+};

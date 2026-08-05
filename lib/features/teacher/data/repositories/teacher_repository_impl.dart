@@ -16,7 +16,9 @@ class TeacherRepositoryImpl implements TeacherRepository {
   TeacherRepositoryImpl({required this.remoteDataSource});
 
   @override
-  Future<Either<Failure, List<TeacherStudent>>> getStudentsByClass(String className) async {
+  Future<Either<Failure, List<TeacherStudent>>> getStudentsByClass(
+    String className,
+  ) async {
     try {
       final students = await remoteDataSource.getStudentsByClass(className);
       return Right(students);
@@ -70,7 +72,9 @@ class TeacherRepositoryImpl implements TeacherRepository {
   }
 
   @override
-  Future<Either<Failure, List<AttendanceHistoryRecord>>> getAttendanceHistory(String teacherId) async {
+  Future<Either<Failure, List<AttendanceHistoryRecord>>> getAttendanceHistory(
+    String teacherId,
+  ) async {
     try {
       final history = await remoteDataSource.getAttendanceHistory(teacherId);
       return Right(history);
@@ -80,7 +84,9 @@ class TeacherRepositoryImpl implements TeacherRepository {
   }
 
   @override
-  Future<Either<Failure, TeacherDashboardStats>> getTeacherDashboardStats(String teacherId) async {
+  Future<Either<Failure, TeacherDashboardStats>> getTeacherDashboardStats(
+    String teacherId,
+  ) async {
     try {
       final stats = await remoteDataSource.getTeacherDashboardStats(teacherId);
       return Right(stats);
@@ -178,7 +184,9 @@ class TeacherRepositoryImpl implements TeacherRepository {
   }
 
   @override
-  Future<Either<Failure, void>> saveCompetencyRating(CompetencyRating rating) async {
+  Future<Either<Failure, void>> saveCompetencyRating(
+    CompetencyRating rating,
+  ) async {
     try {
       await remoteDataSource.saveCompetencyRating(rating);
       return const Right(null);

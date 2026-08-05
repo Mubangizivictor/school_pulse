@@ -8,10 +8,8 @@ class StudentsBloc extends Bloc<StudentsEvent, StudentsState> {
   final GetStudentsByIds getStudentsByIds;
   final GetAllStudents getAllStudents;
 
-  StudentsBloc({
-    required this.getStudentsByIds,
-    required this.getAllStudents,
-  }) : super(StudentsInitial()) {
+  StudentsBloc({required this.getStudentsByIds, required this.getAllStudents})
+    : super(StudentsInitial()) {
     on<FetchStudents>(_onFetchStudents);
     on<SearchStudents>(_onSearchStudents);
   }
@@ -34,16 +32,15 @@ class StudentsBloc extends Bloc<StudentsEvent, StudentsState> {
   ) async {
     emit(StudentsLoading());
     final result = await getAllStudents();
-    result.fold(
-      (failure) => emit(const StudentsError('Server Failure')),
-      (students) {
-        final filtered = students.where((s) {
-          final query = event.query.toLowerCase();
-          return s.name.toLowerCase().contains(query) ||
-              s.studentId.toLowerCase().contains(query);
-        }).toList();
-        emit(StudentsLoaded(filtered));
-      },
-    );
+    result.fold((failure) => emit(const StudentsError('Server Failure')), (
+      students,
+    ) {
+      final filtered = students.where((s) {
+        final query = event.query.toLowerCase();
+        return s.name.toLowerCase().contains(query) ||
+            s.studentId.toLowerCase().contains(query);
+      }).toList();
+      emit(StudentsLoaded(filtered));
+    });
   }
 }

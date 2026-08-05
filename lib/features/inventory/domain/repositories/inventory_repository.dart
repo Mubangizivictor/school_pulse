@@ -14,5 +14,9 @@ abstract class InventoryRepository {
     required int lowStockThreshold,
     required int quantity,
   });
-  Future<Either<Failure, void>> issueItem({required String itemId, required int quantity, required String note});
+  Future<Either<Failure, void>> issueItem({
+    required String itemId,
+    required int quantity,
+    required String note,
+  });
 }

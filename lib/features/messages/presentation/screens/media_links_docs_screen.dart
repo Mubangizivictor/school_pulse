@@ -57,14 +57,22 @@ class MediaLinksDocsScreen extends StatelessWidget {
                   _buildMediaGrid(
                     context,
                     attachments
-                        .where((m) => m.type == MessageType.image || m.type == MessageType.video)
+                        .where(
+                          (m) =>
+                              m.type == MessageType.image ||
+                              m.type == MessageType.video,
+                        )
                         .toList(),
                   ),
                   _buildLinksList(context, attachments),
                   _buildDocsList(
                     context,
                     attachments
-                        .where((m) => m.type == MessageType.file || m.type == MessageType.audio)
+                        .where(
+                          (m) =>
+                              m.type == MessageType.file ||
+                              m.type == MessageType.audio,
+                        )
                         .toList(),
                   ),
                 ],
@@ -77,12 +85,15 @@ class MediaLinksDocsScreen extends StatelessWidget {
   }
 
   Widget _buildMediaGrid(BuildContext context, List<ChatMessage> media) {
-    if (media.isEmpty) return _buildEmpty(context, 'No photos or videos shared yet.');
+    if (media.isEmpty)
+      return _buildEmpty(context, 'No photos or videos shared yet.');
 
     // Grouped the way the chat itself reads - newest month first.
     final byMonth = <String, List<ChatMessage>>{};
     for (final message in media) {
-      byMonth.putIfAbsent(_monthLabel(message.timestamp), () => []).add(message);
+      byMonth
+          .putIfAbsent(_monthLabel(message.timestamp), () => [])
+          .add(message);
     }
 
     return ListView(
@@ -110,7 +121,10 @@ class MediaLinksDocsScreen extends StatelessWidget {
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stack) => Container(
                       color: Colors.grey[800],
-                      child: const Icon(Icons.broken_image_outlined, color: Colors.white54),
+                      child: const Icon(
+                        Icons.broken_image_outlined,
+                        color: Colors.white54,
+                      ),
                     ),
                   ),
                 ),
@@ -148,16 +162,19 @@ class MediaLinksDocsScreen extends StatelessWidget {
             leading: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                  color: AppColors.electricBlue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8)),
+                color: AppColors.electricBlue.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
               child: const Icon(Icons.link, color: AppColors.electricBlue),
             ),
             title: Text(
               link.url,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppTypography.bodyMedium
-                  .copyWith(color: AppColors.electricBlue, decoration: TextDecoration.underline),
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.electricBlue,
+                decoration: TextDecoration.underline,
+              ),
             ),
             subtitle: Text(
               '${link.message.senderName} • ${DateFormat('dd/MM/yy HH:mm').format(link.message.timestamp)}',
@@ -188,17 +205,26 @@ class MediaLinksDocsScreen extends StatelessWidget {
           child: ListTile(
             leading: Container(
               padding: const EdgeInsets.all(8),
-              decoration:
-                  BoxDecoration(color: Colors.red.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
               child: const Icon(Icons.picture_as_pdf, color: Colors.red),
             ),
-            title: Text(doc.fileName ?? 'Attachment', style: AppTypography.titleSmall),
+            title: Text(
+              doc.fileName ?? 'Attachment',
+              style: AppTypography.titleSmall,
+            ),
             subtitle: Text(
               '${doc.fileSize ?? ''} • ${DateFormat('dd/MM/yy • HH:mm').format(doc.timestamp)}',
-              style: AppTypography.labelSmall.copyWith(color: AppColors.textMuted(context)),
+              style: AppTypography.labelSmall.copyWith(
+                color: AppColors.textMuted(context),
+              ),
             ),
             trailing: const Icon(Icons.file_download_outlined, size: 20),
-            onTap: doc.mediaUrl == null ? null : () => _openUrl(context, doc.mediaUrl!),
+            onTap: doc.mediaUrl == null
+                ? null
+                : () => _openUrl(context, doc.mediaUrl!),
           ),
         );
       },
@@ -214,7 +240,9 @@ class MediaLinksDocsScreen extends StatelessWidget {
         child: Stack(
           children: [
             Center(
-              child: InteractiveViewer(child: Image.network(message.mediaUrl!, fit: BoxFit.contain)),
+              child: InteractiveViewer(
+                child: Image.network(message.mediaUrl!, fit: BoxFit.contain),
+              ),
             ),
             Positioned(
               top: 40,
@@ -232,7 +260,8 @@ class MediaLinksDocsScreen extends StatelessWidget {
 
   Future<void> _openUrl(BuildContext context, String url) async {
     final uri = Uri.tryParse(url);
-    if (uri == null || !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+    if (uri == null ||
+        !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (!context.mounted) return;
       context.showMessagingSnack('Could not open $url');
     }
@@ -242,9 +271,13 @@ class MediaLinksDocsScreen extends StatelessWidget {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Text(text,
-            textAlign: TextAlign.center,
-            style: AppTypography.bodyMedium.copyWith(color: AppColors.textMuted(context))),
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textMuted(context),
+          ),
+        ),
       ),
     );
   }
@@ -258,9 +291,13 @@ class MediaLinksDocsScreen extends StatelessWidget {
   Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.s, left: 4),
-      child: Text(title,
-          style:
-              AppTypography.labelSmall.copyWith(color: AppColors.textMuted(context), letterSpacing: 1.2)),
+      child: Text(
+        title,
+        style: AppTypography.labelSmall.copyWith(
+          color: AppColors.textMuted(context),
+          letterSpacing: 1.2,
+        ),
+      ),
     );
   }
 }

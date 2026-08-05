@@ -20,5 +20,13 @@ class OngoingLesson extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, subjectName, className, topic, startTime, endTime, room];
+  List<Object?> get props => [
+    id,
+    subjectName,
+    className,
+    topic,
+    startTime,
+    endTime,
+    room,
+  ];
 }

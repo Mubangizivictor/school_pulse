@@ -175,129 +175,125 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       ),
                       child: ConstrainedBox(
                         constraints: BoxConstraints(
-                          minHeight:
-                              viewport.maxHeight - (AppSpacing.m * 2),
+                          minHeight: viewport.maxHeight - (AppSpacing.m * 2),
                         ),
                         child: Center(
                           child: Container(
-                            constraints: BoxConstraints(
-                              maxWidth: contentWidth,
-                            ),
+                            constraints: BoxConstraints(maxWidth: contentWidth),
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-
-                          // Brand Identity Section - the horizontal logo asset
-                          // already carries the shield, its surrounding icons
-                          // and the SCHOOL PULSE wordmark with tagline.
-                          FadeTransition(
-                            opacity: _logoOpacity,
-                            child: ScaleTransition(
-                              scale: _logoScale,
-                              child: AnimatedBuilder(
-                                animation: _logoFloat,
-                                builder: (context, child) {
-                                  return Transform.translate(
-                                    offset: Offset(0, _logoFloat.value),
-                                    child: child,
-                                  );
-                                },
-                                // The asset carries a transparent margin.
-                                // Clipping it back keeps the mark large without
-                                // the empty space pushing the page down.
-                                child: ClipRect(
-                                  child: Align(
-                                    alignment: Alignment.center,
-                                    heightFactor: 0.84,
-                                    child: PulseLogo(
-                                      width: isMobile ? 190 : 220,
-                                      variant: PulseLogoVariant.vertical,
+                                // Brand Identity Section - the horizontal logo asset
+                                // already carries the shield, its surrounding icons
+                                // and the SCHOOL PULSE wordmark with tagline.
+                                FadeTransition(
+                                  opacity: _logoOpacity,
+                                  child: ScaleTransition(
+                                    scale: _logoScale,
+                                    child: AnimatedBuilder(
+                                      animation: _logoFloat,
+                                      builder: (context, child) {
+                                        return Transform.translate(
+                                          offset: Offset(0, _logoFloat.value),
+                                          child: child,
+                                        );
+                                      },
+                                      // The asset carries a transparent margin.
+                                      // Clipping it back keeps the mark large without
+                                      // the empty space pushing the page down.
+                                      child: ClipRect(
+                                        child: Align(
+                                          alignment: Alignment.center,
+                                          heightFactor: 0.84,
+                                          child: PulseLogo(
+                                            width: isMobile ? 190 : 220,
+                                            variant: PulseLogoVariant.vertical,
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ),
-                          ),
 
-                          SizedBox(height: headerGap),
+                                SizedBox(height: headerGap),
 
-                          // Welcome & Call to Action
-                          FadeTransition(
-                            opacity: _headerOpacity,
-                            child: SlideTransition(
-                              position: _headerSlide,
-                              child: const _WelcomeCarousel(),
-                            ),
-                          ),
+                                // Welcome & Call to Action
+                                FadeTransition(
+                                  opacity: _headerOpacity,
+                                  child: SlideTransition(
+                                    position: _headerSlide,
+                                    child: const _WelcomeCarousel(),
+                                  ),
+                                ),
 
-                          SizedBox(height: headerGap),
+                                SizedBox(height: headerGap),
 
-                          // Role Gateways
-                          _RoleCard(
-                            index: 0,
-                            title: "Parent Portal",
-                            subtitle: "Manage your child's education",
-                            icon: Icons.people_alt_rounded,
-                            bgIcons: const [
-                              Icons.school_outlined,
-                              Icons.menu_book_rounded,
-                            ],
-                            color: AppColors.electricBlue,
-                            opacity: _cardOpacities[0],
-                            slide: _cardSlides[0],
-                            pulse: _pulseController,
-                            onTap: () => context.push('/parent/login/child-id'),
-                          ),
-                          const SizedBox(height: AppSpacing.l),
-                          _RoleCard(
-                            index: 1,
-                            title: "Staff Gateway",
-                            subtitle: "School operations & management",
-                            icon: Icons.badge_rounded,
-                            bgIcons: const [
-                              Icons.calendar_today_rounded,
-                              Icons.bar_chart_rounded,
-                            ],
-                            color: AppColors.brightOrange,
-                            opacity: _cardOpacities[1],
-                            slide: _cardSlides[1],
-                            pulse: _pulseController,
-                            onTap: () => context.push('/staff/login'),
-                          ),
-                          const SizedBox(height: AppSpacing.l),
-                          _RoleCard(
-                            index: 2,
-                            title: "Student Hub",
-                            subtitle: "Your learning journey begins here",
-                            icon: Icons.school_rounded,
-                            bgIcons: const [
-                              Icons.menu_book_outlined,
-                              Icons.lightbulb_outline,
-                            ],
-                            color: AppColors.emeraldGreen,
-                            opacity: _cardOpacities[2],
-                            slide: _cardSlides[2],
-                            pulse: _pulseController,
-                            onTap: () => context.push('/student/login'),
-                          ),
+                                // Role Gateways
+                                _RoleCard(
+                                  index: 0,
+                                  title: "Parent Portal",
+                                  subtitle: "Manage your child's education",
+                                  icon: Icons.people_alt_rounded,
+                                  bgIcons: const [
+                                    Icons.school_outlined,
+                                    Icons.menu_book_rounded,
+                                  ],
+                                  color: AppColors.electricBlue,
+                                  opacity: _cardOpacities[0],
+                                  slide: _cardSlides[0],
+                                  pulse: _pulseController,
+                                  onTap: () =>
+                                      context.push('/parent/login/child-id'),
+                                ),
+                                const SizedBox(height: AppSpacing.l),
+                                _RoleCard(
+                                  index: 1,
+                                  title: "Staff Gateway",
+                                  subtitle: "School operations & management",
+                                  icon: Icons.badge_rounded,
+                                  bgIcons: const [
+                                    Icons.calendar_today_rounded,
+                                    Icons.bar_chart_rounded,
+                                  ],
+                                  color: AppColors.brightOrange,
+                                  opacity: _cardOpacities[1],
+                                  slide: _cardSlides[1],
+                                  pulse: _pulseController,
+                                  onTap: () => context.push('/staff/login'),
+                                ),
+                                const SizedBox(height: AppSpacing.l),
+                                _RoleCard(
+                                  index: 2,
+                                  title: "Student Hub",
+                                  subtitle: "Your learning journey begins here",
+                                  icon: Icons.school_rounded,
+                                  bgIcons: const [
+                                    Icons.menu_book_outlined,
+                                    Icons.lightbulb_outline,
+                                  ],
+                                  color: AppColors.emeraldGreen,
+                                  opacity: _cardOpacities[2],
+                                  slide: _cardSlides[2],
+                                  pulse: _pulseController,
+                                  onTap: () => context.push('/student/login'),
+                                ),
 
-                          SizedBox(height: headerGap),
-                          const _BottomFeatures(),
-                          const SizedBox(height: AppSpacing.x2l),
+                                SizedBox(height: headerGap),
+                                const _BottomFeatures(),
+                                const SizedBox(height: AppSpacing.x2l),
 
-                          // Footer
-                          Text(
-                            "© 2024 School Pulse. All rights reserved.",
-                            textAlign: TextAlign.center,
-                            style: AppTypography.labelSmall.copyWith(
-                              color: AppColors.textSecondaryDark.withValues(
-                                alpha: 0.5,
-                              ),
-                              fontSize: 11,
-                              letterSpacing: 0.2,
-                            ),
-                          ),
+                                // Footer
+                                Text(
+                                  "© 2024 School Pulse. All rights reserved.",
+                                  textAlign: TextAlign.center,
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: AppColors.textSecondaryDark
+                                        .withValues(alpha: 0.5),
+                                    fontSize: 11,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -372,17 +368,18 @@ class _BackgroundPainter extends CustomPainter {
       Offset(size.width / 2, size.height * 0.18),
       size.width * 0.62 * glow,
       Paint()
-        ..shader = RadialGradient(
-          colors: [
-            const Color(0xFF1E6BFF).withValues(alpha: 0.20),
-            const Color(0xFF1E6BFF).withValues(alpha: 0.0),
-          ],
-        ).createShader(
-          Rect.fromCircle(
-            center: Offset(size.width / 2, size.height * 0.18),
-            radius: size.width * 0.62 * glow,
-          ),
-        ),
+        ..shader =
+            RadialGradient(
+              colors: [
+                const Color(0xFF1E6BFF).withValues(alpha: 0.20),
+                const Color(0xFF1E6BFF).withValues(alpha: 0.0),
+              ],
+            ).createShader(
+              Rect.fromCircle(
+                center: Offset(size.width / 2, size.height * 0.18),
+                radius: size.width * 0.62 * glow,
+              ),
+            ),
     );
 
     // Cooler secondary glow low on the page.
@@ -390,17 +387,18 @@ class _BackgroundPainter extends CustomPainter {
       Offset(size.width * 0.5, size.height * 0.92),
       size.width * 0.7,
       Paint()
-        ..shader = RadialGradient(
-          colors: [
-            const Color(0xFF0A2A6B).withValues(alpha: 0.35),
-            const Color(0xFF0A2A6B).withValues(alpha: 0.0),
-          ],
-        ).createShader(
-          Rect.fromCircle(
-            center: Offset(size.width * 0.5, size.height * 0.92),
-            radius: size.width * 0.7,
-          ),
-        ),
+        ..shader =
+            RadialGradient(
+              colors: [
+                const Color(0xFF0A2A6B).withValues(alpha: 0.35),
+                const Color(0xFF0A2A6B).withValues(alpha: 0.0),
+              ],
+            ).createShader(
+              Rect.fromCircle(
+                center: Offset(size.width * 0.5, size.height * 0.92),
+                radius: size.width * 0.7,
+              ),
+            ),
     );
   }
 
@@ -408,7 +406,6 @@ class _BackgroundPainter extends CustomPainter {
   bool shouldRepaint(_BackgroundPainter oldDelegate) =>
       oldDelegate.progress != progress;
 }
-
 
 /// The headline/subtitle pair, presented as a swipeable carousel that also
 /// advances on its own. The page indicator below it is driven by the real
@@ -423,9 +420,18 @@ class _WelcomeCarousel extends StatefulWidget {
 class _WelcomeCarouselState extends State<_WelcomeCarousel> {
   static const _slides = [
     (title: 'Welcome to School Pulse', body: 'Choose how you want to continue'),
-    (title: 'One School, One Pulse', body: 'Parents, staff and students in a single place'),
-    (title: 'Always In Sync', body: 'Attendance, fees and results update in real time'),
-    (title: 'Built For Your School', body: 'Secure by default, and it works offline too'),
+    (
+      title: 'One School, One Pulse',
+      body: 'Parents, staff and students in a single place',
+    ),
+    (
+      title: 'Always In Sync',
+      body: 'Attendance, fees and results update in real time',
+    ),
+    (
+      title: 'Built For Your School',
+      body: 'Secure by default, and it works offline too',
+    ),
   ];
 
   static const _autoAdvance = Duration(seconds: 5);
@@ -448,7 +454,11 @@ class _WelcomeCarouselState extends State<_WelcomeCarousel> {
     _timer?.cancel();
     // Respect the platform "reduce motion" setting - an unprompted slide is
     // exactly the kind of movement that setting asks us to suppress.
-    if (WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.disableAnimations) {
+    if (WidgetsBinding
+        .instance
+        .platformDispatcher
+        .accessibilityFeatures
+        .disableAnimations) {
       return;
     }
     _timer = Timer.periodic(_autoAdvance, (_) {

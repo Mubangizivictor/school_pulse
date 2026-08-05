@@ -105,11 +105,11 @@ class _Step02PersonalInfoState extends State<Step02PersonalInfo> {
                       onTap: () => _pickPhoto(controller),
                       child: CircleAvatar(
                         radius: 15,
-                        backgroundColor: AppColors.electricBlue,
-                        child: const Icon(
+                        backgroundColor: AppColors.primary(context),
+                        child: Icon(
                           Icons.camera_alt,
                           size: 16,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                         ),
                       ),
                     ),
@@ -212,14 +212,16 @@ class _GenderChip extends StatelessWidget {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: selected
-              ? AppColors.electricBlue
+              ? AppColors.primary(context)
               : AppColors.surfaceContainer(context),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: selected ? Colors.white : AppColors.textPrimary(context),
+            color: selected
+                ? Theme.of(context).colorScheme.onPrimary
+                : AppColors.textPrimary(context),
             fontWeight: FontWeight.w600,
           ),
         ),

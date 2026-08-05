@@ -19,20 +19,19 @@ enum LessonStartRefusal {
 
 extension LessonStartRefusalMessage on LessonStartRefusal {
   String get message => switch (this) {
-        LessonStartRefusal.noPermission =>
-          'You do not have permission to start lessons.',
-        LessonStartRefusal.notYourLesson =>
-          'This lesson is assigned to another teacher.',
-        LessonStartRefusal.outsideAssignmentScope =>
-          'This lesson is outside your current responsibility. Switch subject or class first.',
-        LessonStartRefusal.alreadyStarted => 'This lesson has already started.',
-        LessonStartRefusal.alreadyFinished => 'This lesson has already ended.',
-        LessonStartRefusal.cancelled => 'This lesson was cancelled.',
-        LessonStartRefusal.tooEarly =>
-          'It is too early to start this lesson.',
-        LessonStartRefusal.tooLate =>
-          'The window for starting this lesson has passed.',
-      };
+    LessonStartRefusal.noPermission =>
+      'You do not have permission to start lessons.',
+    LessonStartRefusal.notYourLesson =>
+      'This lesson is assigned to another teacher.',
+    LessonStartRefusal.outsideAssignmentScope =>
+      'This lesson is outside your current responsibility. Switch subject or class first.',
+    LessonStartRefusal.alreadyStarted => 'This lesson has already started.',
+    LessonStartRefusal.alreadyFinished => 'This lesson has already ended.',
+    LessonStartRefusal.cancelled => 'This lesson was cancelled.',
+    LessonStartRefusal.tooEarly => 'It is too early to start this lesson.',
+    LessonStartRefusal.tooLate =>
+      'The window for starting this lesson has passed.',
+  };
 }
 
 /// How far either side of the scheduled start a lesson may be opened.
@@ -124,6 +123,5 @@ class LessonStartPolicy {
     required Lesson lesson,
     required ActiveResponsibilityContext context,
     DateTime? now,
-  }) =>
-      evaluate(lesson: lesson, context: context, now: now) == null;
+  }) => evaluate(lesson: lesson, context: context, now: now) == null;
 }

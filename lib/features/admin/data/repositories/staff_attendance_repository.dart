@@ -12,7 +12,12 @@ class StaffAttendanceRepository {
   }
 
   Stream<Map<String, StaffAttendanceRecord>> watchToday(String schoolId) {
-    final start = DateTime.now().copyWith(hour: 0, minute: 0, second: 0, millisecond: 0);
+    final start = DateTime.now().copyWith(
+      hour: 0,
+      minute: 0,
+      second: 0,
+      millisecond: 0,
+    );
     final end = start.add(const Duration(days: 1));
     return _firestore
         .collection('staff_attendance')
@@ -21,13 +26,13 @@ class StaffAttendanceRepository {
         .where('clockIn', isLessThan: Timestamp.fromDate(end))
         .snapshots()
         .map((snapshot) {
-      final map = <String, StaffAttendanceRecord>{};
-      for (final doc in snapshot.docs) {
-        final record = StaffAttendanceRecord.fromMap(doc.data());
-        map[record.staffId] = record;
-      }
-      return map;
-    });
+          final map = <String, StaffAttendanceRecord>{};
+          for (final doc in snapshot.docs) {
+            final record = StaffAttendanceRecord.fromMap(doc.data());
+            map[record.staffId] = record;
+          }
+          return map;
+        });
   }
 
   String todayDocId(String staffId) => '${staffId}_${_todayKeySuffix()}';

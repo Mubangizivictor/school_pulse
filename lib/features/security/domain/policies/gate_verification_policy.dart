@@ -46,39 +46,50 @@ class GateVerificationPolicy implements VerificationPolicyEvaluator {
     );
 
     if (permissionResult.isLeft()) {
-      final failure = permissionResult.swap().getOrElse(() => const ServerFailure());
+      final failure = permissionResult.swap().getOrElse(
+        () => const ServerFailure(),
+      );
       return Left(failure);
     }
 
     final isAllowed = permissionResult.getOrElse(() => false);
     if (!isAllowed) {
-      return Right(VerificationDecision(
-        outcome: VerificationOutcome.denied,
-        identity: identity,
-        message: 'You are not authorized to verify identities at this gate.',
-        reasonCode: 'NOT_AUTHORIZED',
-      ));
+      return Right(
+        VerificationDecision(
+          outcome: VerificationOutcome.denied,
+          identity: identity,
+          message: 'You are not authorized to verify identities at this gate.',
+          reasonCode: 'NOT_AUTHORIZED',
+        ),
+      );
     }
 
     if (identity is UnresolvedResolvedIdentity) {
-      return Right(VerificationDecision(
-        outcome: VerificationOutcome.denied,
-        identity: identity,
-        message: _messageForUnresolvedReason(identity.reason),
-        reasonCode: identity.reason,
-      ));
+      return Right(
+        VerificationDecision(
+          outcome: VerificationOutcome.denied,
+          identity: identity,
+          message: _messageForUnresolvedReason(identity.reason),
+          reasonCode: identity.reason,
+        ),
+      );
     }
 
     final suggestedDirection = await _suggestedDirection(identity, context);
-    return Right(VerificationDecision(
-      outcome: VerificationOutcome.allowed,
-      identity: identity,
-      message: 'Identity verified.',
-      suggestedDirection: suggestedDirection,
-    ));
+    return Right(
+      VerificationDecision(
+        outcome: VerificationOutcome.allowed,
+        identity: identity,
+        message: 'Identity verified.',
+        suggestedDirection: suggestedDirection,
+      ),
+    );
   }
 
-  Future<String> _suggestedDirection(ResolvedIdentity identity, VerificationContext context) async {
+  Future<String> _suggestedDirection(
+    ResolvedIdentity identity,
+    VerificationContext context,
+  ) async {
     final schoolId = context.gate.schoolId;
     final today = DateTime.now();
 
@@ -92,8 +103,8 @@ class GateVerificationPolicy implements VerificationPolicyEvaluator {
     final studentId = identity is StudentResolvedIdentity
         ? identity.id
         : identity is ParentPickupResolvedIdentity
-            ? identity.childId
-            : null;
+        ? identity.childId
+        : null;
     if (studentId == null) return 'In';
 
     final movements = await securityRepository
@@ -105,8 +116,10 @@ class GateVerificationPolicy implements VerificationPolicyEvaluator {
   String _messageForUnresolvedReason(String reason) {
     return switch (reason) {
       'revoked_credential' => 'This credential has been revoked.',
-      'multiple_children' => 'This parent code has multiple children linked - please select one manually.',
-      'fingerprint_mismatch' => 'Fingerprint did not match the expected person.',
+      'multiple_children' =>
+        'This parent code has multiple children linked - please select one manually.',
+      'fingerprint_mismatch' =>
+        'Fingerprint did not match the expected person.',
       _ => 'No matching student or staff record was found.',
     };
   }

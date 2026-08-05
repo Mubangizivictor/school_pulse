@@ -18,5 +18,12 @@ class MealCategory extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, name, price, startTime, endTime, applicableTo];
+  List<Object?> get props => [
+    id,
+    name,
+    price,
+    startTime,
+    endTime,
+    applicableTo,
+  ];
 }

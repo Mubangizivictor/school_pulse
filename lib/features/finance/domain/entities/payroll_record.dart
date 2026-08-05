@@ -39,7 +39,10 @@ class PayrollRecord {
     double taxableIncome = basicSalary + allowances;
     double paye = 0;
     if (taxableIncome > 10000000) {
-      paye = 0.3 * (taxableIncome - 410000) + 25000 + 0.1 * (taxableIncome - 10000000);
+      paye =
+          0.3 * (taxableIncome - 410000) +
+          25000 +
+          0.1 * (taxableIncome - 10000000);
     } else if (taxableIncome > 410000) {
       paye = 0.3 * (taxableIncome - 410000) + 25000;
     } else if (taxableIncome > 335000) {
@@ -50,7 +53,7 @@ class PayrollRecord {
 
     // NSSF is usually 5% from employee, 10% from employer. We track employee 5% here.
     double nssf = taxableIncome * 0.05;
-    
+
     double netSalary = taxableIncome - paye - nssf - otherDeductions;
 
     return PayrollRecord(

@@ -79,7 +79,9 @@ class MessageBubble extends StatelessWidget {
       // A selected row is tinted edge to edge, the way a list selection reads.
       color: isSelected ? AppColors.electricBlue.withValues(alpha: 0.12) : null,
       child: Column(
-        crossAxisAlignment: message.isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: message.isMe
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
         children: [
           if (!message.isMe && isGroup)
             Padding(
@@ -105,7 +107,9 @@ class MessageBubble extends StatelessWidget {
               decoration: BoxDecoration(
                 color: message.isMe
                     ? AppColors.electricBlue
-                    : (isDark ? AppColors.surfaceContainerHigh(context) : Colors.grey[200]),
+                    : (isDark
+                          ? AppColors.surfaceContainerHigh(context)
+                          : Colors.grey[200]),
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(16),
                   topRight: const Radius.circular(16),
@@ -123,7 +127,9 @@ class MessageBubble extends StatelessWidget {
                       'This message was deleted',
                       style: TextStyle(
                         fontStyle: FontStyle.italic,
-                        color: message.isMe ? Colors.white70 : AppColors.textMuted(context),
+                        color: message.isMe
+                            ? Colors.white70
+                            : AppColors.textMuted(context),
                       ),
                     )
                   else if (message.content.isNotEmpty)
@@ -131,7 +137,9 @@ class MessageBubble extends StatelessWidget {
                       message.content,
                       textScaler: TextScaler.linear(textScale),
                       style: TextStyle(
-                        color: message.isMe ? Colors.white : (isDark ? Colors.white : Colors.black87),
+                        color: message.isMe
+                            ? Colors.white
+                            : (isDark ? Colors.white : Colors.black87),
                       ),
                     ),
                   const SizedBox(height: 4),
@@ -142,7 +150,9 @@ class MessageBubble extends StatelessWidget {
                         Icon(
                           Icons.star,
                           size: 10,
-                          color: message.isMe ? Colors.white70 : AppColors.goldenYellow,
+                          color: message.isMe
+                              ? Colors.white70
+                              : AppColors.goldenYellow,
                         ),
                         const SizedBox(width: 4),
                       ],
@@ -150,7 +160,9 @@ class MessageBubble extends StatelessWidget {
                         Icon(
                           Icons.push_pin,
                           size: 10,
-                          color: message.isMe ? Colors.white70 : AppColors.textMuted(context),
+                          color: message.isMe
+                              ? Colors.white70
+                              : AppColors.textMuted(context),
                         ),
                         const SizedBox(width: 4),
                       ],
@@ -160,7 +172,9 @@ class MessageBubble extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 10,
                             fontStyle: FontStyle.italic,
-                            color: message.isMe ? Colors.white70 : AppColors.textMuted(context),
+                            color: message.isMe
+                                ? Colors.white70
+                                : AppColors.textMuted(context),
                           ),
                         ),
                         const SizedBox(width: 4),
@@ -169,7 +183,9 @@ class MessageBubble extends StatelessWidget {
                         DateFormat('HH:mm').format(message.timestamp),
                         style: TextStyle(
                           fontSize: 10,
-                          color: message.isMe ? Colors.white70 : AppColors.textMuted(context),
+                          color: message.isMe
+                              ? Colors.white70
+                              : AppColors.textMuted(context),
                         ),
                       ),
                       if (message.isMe) ...[
@@ -197,7 +213,9 @@ class MessageBubble extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: message.isMe ? Colors.white.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.05),
+        color: message.isMe
+            ? Colors.white.withValues(alpha: 0.15)
+            : Colors.black.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),
         border: Border(
           left: BorderSide(
@@ -221,7 +239,9 @@ class MessageBubble extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: AppTypography.bodySmall.copyWith(
-              color: message.isMe ? Colors.white70 : AppColors.textMuted(context),
+              color: message.isMe
+                  ? Colors.white70
+                  : AppColors.textMuted(context),
             ),
           ),
         ],
@@ -238,7 +258,9 @@ class MessageBubble extends StatelessWidget {
         return const SizedBox.shrink();
       case MessageType.image:
       case MessageType.video:
-        return message.mediaUrl == null ? const SizedBox.shrink() : _buildImage(context);
+        return message.mediaUrl == null
+            ? const SizedBox.shrink()
+            : _buildImage(context);
       case MessageType.audio:
         return message.mediaUrl == null
             ? const SizedBox.shrink()
@@ -271,15 +293,19 @@ class MessageBubble extends StatelessWidget {
   /// Panel behind a card inside the bubble - lighter on the sender's blue,
   /// darker on the recipient's grey.
   BoxDecoration _cardDecoration() => BoxDecoration(
-        color: message.isMe ? Colors.white.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(10),
-      );
+    color: message.isMe
+        ? Colors.white.withValues(alpha: 0.15)
+        : Colors.black.withValues(alpha: 0.05),
+    borderRadius: BorderRadius.circular(10),
+  );
 
   Widget _buildFileRow(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: GestureDetector(
-        onTap: message.mediaUrl == null ? null : () => _openUrl(context, message.mediaUrl!),
+        onTap: message.mediaUrl == null
+            ? null
+            : () => _openUrl(context, message.mediaUrl!),
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: _cardDecoration(),
@@ -307,7 +333,9 @@ class MessageBubble extends StatelessWidget {
                         message.fileSize!,
                         style: TextStyle(
                           fontSize: 11,
-                          color: message.isMe ? Colors.white70 : AppColors.textMuted(context),
+                          color: message.isMe
+                              ? Colors.white70
+                              : AppColors.textMuted(context),
                         ),
                       ),
                   ],
@@ -374,17 +402,30 @@ class MessageBubble extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('Shared location',
-                        style: TextStyle(color: _onBubble(context), fontWeight: FontWeight.w600)),
+                    Text(
+                      'Shared location',
+                      style: TextStyle(
+                        color: _onBubble(context),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     Text(
                       coordinates,
                       style: TextStyle(
                         fontSize: 11,
-                        color: message.isMe ? Colors.white70 : AppColors.textMuted(context),
+                        color: message.isMe
+                            ? Colors.white70
+                            : AppColors.textMuted(context),
                       ),
                     ),
-                    Text('Tap to open in Maps',
-                        style: TextStyle(fontSize: 11, color: _accent(), fontWeight: FontWeight.w600)),
+                    Text(
+                      'Tap to open in Maps',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: _accent(),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -425,19 +466,29 @@ class MessageBubble extends StatelessWidget {
                       message.content,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: _onBubble(context), fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        color: _onBubble(context),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     Text(
                       _roleLabel(message.sharedContactRole),
                       style: TextStyle(
                         fontSize: 11,
-                        color: message.isMe ? Colors.white70 : AppColors.textMuted(context),
+                        color: message.isMe
+                            ? Colors.white70
+                            : AppColors.textMuted(context),
                       ),
                     ),
                     if (onOpenContact != null)
-                      Text('Tap to message',
-                          style:
-                              TextStyle(fontSize: 11, color: _accent(), fontWeight: FontWeight.w600)),
+                      Text(
+                        'Tap to message',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: _accent(),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -469,13 +520,18 @@ class MessageBubble extends StatelessWidget {
                 children: [
                   Text(
                     DateFormat('EEE, d MMM y').format(message.eventStart!),
-                    style: TextStyle(color: _onBubble(context), fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: _onBubble(context),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   Text(
                     DateFormat('h:mm a').format(message.eventStart!),
                     style: TextStyle(
                       fontSize: 12,
-                      color: message.isMe ? Colors.white70 : AppColors.textMuted(context),
+                      color: message.isMe
+                          ? Colors.white70
+                          : AppColors.textMuted(context),
                     ),
                   ),
                   if (message.eventLocation != null)
@@ -483,7 +539,11 @@ class MessageBubble extends StatelessWidget {
                       padding: const EdgeInsets.only(top: 2),
                       child: Row(
                         children: [
-                          Icon(Icons.place_outlined, size: 12, color: _accent()),
+                          Icon(
+                            Icons.place_outlined,
+                            size: 12,
+                            color: _accent(),
+                          ),
                           const SizedBox(width: 2),
                           Flexible(
                             child: Text(
@@ -492,7 +552,9 @@ class MessageBubble extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 11,
-                                color: message.isMe ? Colors.white70 : AppColors.textMuted(context),
+                                color: message.isMe
+                                    ? Colors.white70
+                                    : AppColors.textMuted(context),
                               ),
                             ),
                           ),
@@ -523,13 +585,21 @@ class MessageBubble extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             for (var i = 0; i < options.length; i++)
-              _buildPollOption(context, i, options[i], tallies['$i'] ?? 0, total),
+              _buildPollOption(
+                context,
+                i,
+                options[i],
+                tallies['$i'] ?? 0,
+                total,
+              ),
             const SizedBox(height: 2),
             Text(
               total == 1 ? '1 vote' : '$total votes',
               style: TextStyle(
                 fontSize: 11,
-                color: message.isMe ? Colors.white70 : AppColors.textMuted(context),
+                color: message.isMe
+                    ? Colors.white70
+                    : AppColors.textMuted(context),
               ),
             ),
           ],
@@ -555,10 +625,7 @@ class MessageBubble extends StatelessWidget {
         onTap: onVote == null ? null : () => onVote!(index),
         child: Stack(
           children: [
-            Container(
-              height: 34,
-              decoration: _cardDecoration(),
-            ),
+            Container(height: 34, decoration: _cardDecoration()),
             // The filled portion, drawn over the track.
             FractionallySizedBox(
               widthFactor: share,
@@ -579,7 +646,9 @@ class MessageBubble extends StatelessWidget {
                 child: Row(
                   children: [
                     Icon(
-                      chosen ? Icons.check_circle : Icons.radio_button_unchecked,
+                      chosen
+                          ? Icons.check_circle
+                          : Icons.radio_button_unchecked,
                       size: 14,
                       color: _accent(),
                     ),
@@ -592,7 +661,9 @@ class MessageBubble extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 13,
                           color: _onBubble(context),
-                          fontWeight: chosen ? FontWeight.bold : FontWeight.normal,
+                          fontWeight: chosen
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                         ),
                       ),
                     ),
@@ -600,7 +671,9 @@ class MessageBubble extends StatelessWidget {
                       '$votes',
                       style: TextStyle(
                         fontSize: 12,
-                        color: message.isMe ? Colors.white70 : AppColors.textMuted(context),
+                        color: message.isMe
+                            ? Colors.white70
+                            : AppColors.textMuted(context),
                       ),
                     ),
                   ],
@@ -621,11 +694,12 @@ class MessageBubble extends StatelessWidget {
 
   Future<void> _openUrl(BuildContext context, String url) async {
     final uri = Uri.tryParse(url);
-    if (uri == null || !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+    if (uri == null ||
+        !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not open $url')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not open $url')));
     }
   }
 
@@ -645,12 +719,16 @@ class MessageBubble extends StatelessWidget {
                 : const SizedBox(
                     width: 220,
                     height: 160,
-                    child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                    child: Center(
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
                   ),
             errorBuilder: (context, error, stack) => const SizedBox(
               width: 220,
               height: 160,
-              child: Center(child: Icon(Icons.broken_image_outlined, color: Colors.white54)),
+              child: Center(
+                child: Icon(Icons.broken_image_outlined, color: Colors.white54),
+              ),
             ),
           ),
         ),
@@ -700,7 +778,9 @@ class MessageBubble extends StatelessWidget {
                 color: isDark ? AppColors.surfaceDark : Colors.white,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: mine ? AppColors.electricBlue : Colors.grey.withValues(alpha: 0.3),
+                  color: mine
+                      ? AppColors.electricBlue
+                      : Colors.grey.withValues(alpha: 0.3),
                 ),
               ),
               child: Text(
@@ -815,7 +895,9 @@ class _VoiceNoteBubbleState extends State<VoiceNoteBubble> {
                 child: Icon(
                   _failed
                       ? Icons.error_outline
-                      : (playing ? Icons.pause_circle_filled : Icons.play_circle_fill),
+                      : (playing
+                            ? Icons.pause_circle_filled
+                            : Icons.play_circle_fill),
                   size: 32,
                   color: foreground,
                 ),
@@ -825,11 +907,13 @@ class _VoiceNoteBubbleState extends State<VoiceNoteBubble> {
                 child: StreamBuilder<Duration>(
                   stream: _player.positionStream,
                   builder: (context, positionSnapshot) {
-                    final total = _player.duration ?? widget.duration ?? Duration.zero;
+                    final total =
+                        _player.duration ?? widget.duration ?? Duration.zero;
                     final position = positionSnapshot.data ?? Duration.zero;
                     final progress = total.inMilliseconds == 0
                         ? 0.0
-                        : (position.inMilliseconds / total.inMilliseconds).clamp(0.0, 1.0);
+                        : (position.inMilliseconds / total.inMilliseconds)
+                              .clamp(0.0, 1.0);
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
@@ -844,7 +928,9 @@ class _VoiceNoteBubbleState extends State<VoiceNoteBubble> {
                         Text(
                           _failed
                               ? 'Unavailable'
-                              : formatClipDuration(position > Duration.zero ? position : total),
+                              : formatClipDuration(
+                                  position > Duration.zero ? position : total,
+                                ),
                           style: TextStyle(fontSize: 11, color: muted),
                         ),
                       ],
@@ -923,7 +1009,9 @@ class MessageActionsMenu extends StatelessWidget {
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: mine ? AppColors.electricBlue.withValues(alpha: 0.2) : null,
+                        color: mine
+                            ? AppColors.electricBlue.withValues(alpha: 0.2)
+                            : null,
                       ),
                       child: Text(emoji, style: const TextStyle(fontSize: 24)),
                     ),
@@ -932,8 +1020,14 @@ class MessageActionsMenu extends StatelessWidget {
               ),
             ),
             const Divider(height: 1),
-            if (onReply != null) _ActionItem(icon: Icons.reply, label: 'Reply', onTap: onReply!),
-            if (onForward != null) _ActionItem(icon: Icons.forward, label: 'Forward', onTap: onForward!),
+            if (onReply != null)
+              _ActionItem(icon: Icons.reply, label: 'Reply', onTap: onReply!),
+            if (onForward != null)
+              _ActionItem(
+                icon: Icons.forward,
+                label: 'Forward',
+                onTap: onForward!,
+              ),
             if (onStar != null)
               _ActionItem(
                 icon: message.isStarred ? Icons.star : Icons.star_border,
@@ -942,12 +1036,20 @@ class MessageActionsMenu extends StatelessWidget {
               ),
             if (onPin != null)
               _ActionItem(
-                icon: message.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                icon: message.isPinned
+                    ? Icons.push_pin
+                    : Icons.push_pin_outlined,
                 label: message.isPinned ? 'Unpin' : 'Pin',
                 onTap: onPin!,
               ),
-            if (onCopy != null) _ActionItem(icon: Icons.copy, label: 'Copy', onTap: onCopy!),
-            if (onEdit != null) _ActionItem(icon: Icons.edit_outlined, label: 'Edit', onTap: onEdit!),
+            if (onCopy != null)
+              _ActionItem(icon: Icons.copy, label: 'Copy', onTap: onCopy!),
+            if (onEdit != null)
+              _ActionItem(
+                icon: Icons.edit_outlined,
+                label: 'Edit',
+                onTap: onEdit!,
+              ),
             if (onDelete != null)
               _ActionItem(
                 icon: Icons.delete_outline,
@@ -956,7 +1058,11 @@ class MessageActionsMenu extends StatelessWidget {
                 onTap: onDelete!,
               ),
             if (onSelect != null)
-              _ActionItem(icon: Icons.check_circle_outline, label: 'Select', onTap: onSelect!),
+              _ActionItem(
+                icon: Icons.check_circle_outline,
+                label: 'Select',
+                onTap: onSelect!,
+              ),
             const SizedBox(height: 8),
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -976,7 +1082,12 @@ class _ActionItem extends StatelessWidget {
   final Color? color;
   final VoidCallback onTap;
 
-  const _ActionItem({required this.icon, required this.label, this.color, required this.onTap});
+  const _ActionItem({
+    required this.icon,
+    required this.label,
+    this.color,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -61,7 +61,8 @@ class TaskRecurrence extends Equatable {
 
   /// A repeating task has to terminate somehow, unless the school explicitly
   /// asked for one that does not.
-  bool get isBounded => !repeats || neverEnds || endDate != null || maxOccurrences != null;
+  bool get isBounded =>
+      !repeats || neverEnds || endDate != null || maxOccurrences != null;
 
   static TaskRecurrence fromMap(Map<String, dynamic>? data) {
     if (data == null) return none;
@@ -78,16 +79,21 @@ class TaskRecurrence extends Equatable {
   }
 
   Map<String, dynamic> toMap() => {
-        'frequency': frequency,
-        'weekdays': weekdays.toList(),
-        'endDate': endDate,
-        'maxOccurrences': maxOccurrences,
-        'neverEnds': neverEnds,
-      };
+    'frequency': frequency,
+    'weekdays': weekdays.toList(),
+    'endDate': endDate,
+    'maxOccurrences': maxOccurrences,
+    'neverEnds': neverEnds,
+  };
 
   @override
-  List<Object?> get props =>
-      [frequency, weekdays, endDate, maxOccurrences, neverEnds];
+  List<Object?> get props => [
+    frequency,
+    weekdays,
+    endDate,
+    maxOccurrences,
+    neverEnds,
+  ];
 }
 
 class ClassTaskChecklistItem extends Equatable {
@@ -241,31 +247,31 @@ class ClassTask extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        campusId,
-        classId,
-        academicYearId,
-        termId,
-        title,
-        description,
-        category,
-        priority,
-        status,
-        dueAt,
-        studentId,
-        subjectName,
-        checklist,
-        attachments,
-        recurrence,
-        remindAt,
-        ownerUserId,
-        collaboratorUserIds,
-        createdAt,
-        completedAt,
-        completedBy,
-        roleAssignmentId,
-      ];
+    id,
+    schoolId,
+    campusId,
+    classId,
+    academicYearId,
+    termId,
+    title,
+    description,
+    category,
+    priority,
+    status,
+    dueAt,
+    studentId,
+    subjectName,
+    checklist,
+    attachments,
+    recurrence,
+    remindAt,
+    ownerUserId,
+    collaboratorUserIds,
+    createdAt,
+    completedAt,
+    completedBy,
+    roleAssignmentId,
+  ];
 }
 
 /// The task categories a school uses. Configurable, with a working default

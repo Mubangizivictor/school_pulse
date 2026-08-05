@@ -18,6 +18,12 @@ class RolePermissionDefaults {
     Permission.securityExitRecord,
   };
 
+  static const Set<String> _appointmentOfficePermissions = {
+    Permission.appointmentsView,
+    Permission.appointmentsManage,
+    Permission.appointmentsApprove,
+  };
+
   static const Set<String> _securityLeadPermissions = {
     ..._gatekeeperPermissions,
     Permission.securityOverride,
@@ -114,12 +120,35 @@ class RolePermissionDefaults {
     Permission.notificationRunDeliveryTest,
   };
 
+  // Full attendance authority across every category - school leadership's
+  // baseline so the unified Attendance feature is usable out of the box.
+  // Any other role only gains a specific category's scan permission through
+  // an explicit per-school role_permission_overrides grant.
+  static const Set<String> _attendanceAdminPermissions = {
+    Permission.attendanceClassScan,
+    Permission.attendanceSubjectScan,
+    Permission.attendanceStaffScan,
+    Permission.attendanceBoardingScan,
+    Permission.attendanceGateScan,
+    Permission.attendanceMealsScan,
+    Permission.attendanceLibraryScan,
+    Permission.attendanceTransportScan,
+    Permission.attendanceVisitorsScan,
+    Permission.attendanceCustomScan,
+    Permission.attendanceOverride,
+  };
+
   static const Map<UserRole, Set<String>> defaults = {
-    UserRole.gatekeeper: _gatekeeperPermissions,
+    UserRole.gatekeeper: {
+      ..._gatekeeperPermissions,
+      Permission.attendanceGateScan,
+    },
     UserRole.receptionist: {
       ..._gatekeeperPermissions,
       ..._admissionsPermissions,
       ..._notificationSenderPermissions,
+      Permission.attendanceVisitorsScan,
+      ..._appointmentOfficePermissions,
     },
     UserRole.securityHead: {
       ..._securityLeadPermissions,
@@ -132,45 +161,78 @@ class RolePermissionDefaults {
       ..._securityLeadPermissions,
       ..._admissionsPermissions,
       ..._notificationAdminPermissions,
+      ..._attendanceAdminPermissions,
+      Permission.calendarManage,
+      Permission.announcementManage,
+      ..._appointmentOfficePermissions,
     },
     UserRole.director: {
       ..._securityLeadPermissions,
       ..._admissionsPermissions,
       ..._notificationAdminPermissions,
+      ..._attendanceAdminPermissions,
+      Permission.announcementManage,
+      ..._appointmentOfficePermissions,
     },
     UserRole.headTeacher: {
       ..._securityLeadPermissions,
       ..._admissionsPermissions,
       ..._notificationAdminPermissions,
+      ..._attendanceAdminPermissions,
+      Permission.announcementManage,
+      ..._appointmentOfficePermissions,
     },
     UserRole.deputyHead: {
       ..._securityLeadPermissions,
       ..._admissionsPermissions,
       ..._notificationAdminPermissions,
+      ..._attendanceAdminPermissions,
+      ..._appointmentOfficePermissions,
     },
     UserRole.deanOfStudies: {
       ..._admissionsPermissions,
       ..._notificationOfficePermissions,
+      Permission.attendanceClassScan,
+      Permission.attendanceSubjectScan,
     },
     UserRole.hrOfficer: {
       ..._admissionsPermissions,
       ..._notificationOfficePermissions,
+      Permission.attendanceStaffScan,
     },
     UserRole.nurse: {..._nursePermissions, ..._notificationSenderPermissions},
     UserRole.bursar: {..._bursarPermissions, ..._notificationOfficePermissions},
-    UserRole.librarian: {..._librarianPermissions, ..._notificationSenderPermissions},
+    UserRole.librarian: {
+      ..._librarianPermissions,
+      ..._notificationSenderPermissions,
+      Permission.attendanceLibraryScan,
+    },
     UserRole.transportCoordinator: {
       ..._transportCoordinatorPermissions,
       ..._notificationOfficePermissions,
+      Permission.attendanceTransportScan,
     },
     UserRole.cateringManager: {
       ..._cateringManagerPermissions,
       ..._notificationSenderPermissions,
+      Permission.attendanceMealsScan,
     },
-    UserRole.classTeacher: _notificationSenderPermissions,
-    UserRole.subjectTeacher: _notificationSenderPermissions,
-    UserRole.boardingMatron: _notificationSenderPermissions,
-    UserRole.boardingPatron: _notificationSenderPermissions,
+    UserRole.classTeacher: {
+      ..._notificationSenderPermissions,
+      Permission.attendanceClassScan,
+    },
+    UserRole.subjectTeacher: {
+      ..._notificationSenderPermissions,
+      Permission.attendanceSubjectScan,
+    },
+    UserRole.boardingMatron: {
+      ..._notificationSenderPermissions,
+      Permission.attendanceBoardingScan,
+    },
+    UserRole.boardingPatron: {
+      ..._notificationSenderPermissions,
+      Permission.attendanceBoardingScan,
+    },
     UserRole.guidanceDiscipline: _notificationSenderPermissions,
     UserRole.gamesMaster: _notificationSenderPermissions,
     UserRole.religiousLeader: _notificationSenderPermissions,

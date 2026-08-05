@@ -42,9 +42,11 @@ class LessonAttendanceRepositoryImpl implements LessonAttendanceRepository {
     required List<SubjectStudentSummary> enrolledStudents,
   }) async {
     if (!context.can(Permission.subjectAttendanceTake)) {
-      return const Left(PermissionDeniedFailure(
-        'You do not have permission to take attendance for this subject.',
-      ));
+      return const Left(
+        PermissionDeniedFailure(
+          'You do not have permission to take attendance for this subject.',
+        ),
+      );
     }
     final scopeFailure = _checkScope(context, lesson);
     if (scopeFailure != null) return Left(scopeFailure);
@@ -54,7 +56,9 @@ class LessonAttendanceRepositoryImpl implements LessonAttendanceRepository {
       // marks taken offline that the server has never seen.
       final cached = await localDataSource.getAttendance(lesson.id);
       if (cached != null) {
-        return Right(_reconcileWithEnrollment(cached.toEntity(), enrolledStudents));
+        return Right(
+          _reconcileWithEnrollment(cached.toEntity(), enrolledStudents),
+        );
       }
 
       if (await networkInfo.isConnected) {
@@ -63,8 +67,9 @@ class LessonAttendanceRepositoryImpl implements LessonAttendanceRepository {
           lessonId: lesson.id,
         );
         if (remote != null) {
-          await localDataSource
-              .saveAttendance(LessonAttendanceIsar.fromEntity(remote));
+          await localDataSource.saveAttendance(
+            LessonAttendanceIsar.fromEntity(remote),
+          );
           return Right(_reconcileWithEnrollment(remote, enrolledStudents));
         }
       }
@@ -101,14 +106,18 @@ class LessonAttendanceRepositoryImpl implements LessonAttendanceRepository {
     required LessonAttendance attendance,
   }) async {
     if (!context.can(Permission.subjectAttendanceTake)) {
-      return const Left(PermissionDeniedFailure(
-        'You do not have permission to take attendance for this subject.',
-      ));
+      return const Left(
+        PermissionDeniedFailure(
+          'You do not have permission to take attendance for this subject.',
+        ),
+      );
     }
     if (!attendance.isEditable) {
-      return const Left(ValidationFailure(
-        'This register has been submitted. Request a correction to change it.',
-      ));
+      return const Left(
+        ValidationFailure(
+          'This register has been submitted. Request a correction to change it.',
+        ),
+      );
     }
 
     final draft = attendance.copyWith(
@@ -119,7 +128,9 @@ class LessonAttendanceRepositoryImpl implements LessonAttendanceRepository {
     try {
       // Local first, always. The teacher's marks are safe on the device
       // before any network call is attempted.
-      await localDataSource.saveAttendance(LessonAttendanceIsar.fromEntity(draft));
+      await localDataSource.saveAttendance(
+        LessonAttendanceIsar.fromEntity(draft),
+      );
 
       if (await networkInfo.isConnected) {
         await remoteDataSource.saveLessonAttendance(draft);
@@ -155,28 +166,34 @@ class LessonAttendanceRepositoryImpl implements LessonAttendanceRepository {
     required LessonAttendance attendance,
   }) async {
     if (!context.can(Permission.subjectAttendanceTake)) {
-      return const Left(PermissionDeniedFailure(
-        'You do not have permission to submit attendance for this subject.',
-      ));
+      return const Left(
+        PermissionDeniedFailure(
+          'You do not have permission to submit attendance for this subject.',
+        ),
+      );
     }
     if (attendance.status == AttendanceRegisterStatus.submitted ||
         attendance.status == AttendanceRegisterStatus.locked) {
-      return const Left(ValidationFailure(
-        'This register has already been submitted.',
-      ));
+      return const Left(
+        ValidationFailure('This register has already been submitted.'),
+      );
     }
     if (attendance.entries.isEmpty) {
-      return const Left(ValidationFailure(
-        'No students are enrolled in this subject for this class.',
-      ));
+      return const Left(
+        ValidationFailure(
+          'No students are enrolled in this subject for this class.',
+        ),
+      );
     }
     // Refusing here is the whole reason notMarked exists: submitting with
     // gaps would silently record absences nobody actually marked.
     if (attendance.unmarkedCount > 0) {
-      return Left(ValidationFailure(
-        '${attendance.unmarkedCount} student(s) are still unmarked.',
-        field: 'entries',
-      ));
+      return Left(
+        ValidationFailure(
+          '${attendance.unmarkedCount} student(s) are still unmarked.',
+          field: 'entries',
+        ),
+      );
     }
 
     final submitted = attendance.copyWith(
@@ -186,8 +203,9 @@ class LessonAttendanceRepositoryImpl implements LessonAttendanceRepository {
     );
 
     try {
-      await localDataSource
-          .saveAttendance(LessonAttendanceIsar.fromEntity(submitted));
+      await localDataSource.saveAttendance(
+        LessonAttendanceIsar.fromEntity(submitted),
+      );
 
       if (await networkInfo.isConnected) {
         await remoteDataSource.saveLessonAttendance(submitted);
@@ -225,51 +243,62 @@ class LessonAttendanceRepositoryImpl implements LessonAttendanceRepository {
     required String reason,
   }) async {
     if (!context.can(Permission.subjectAttendanceEdit)) {
-      return const Left(PermissionDeniedFailure(
-        'You do not have permission to edit submitted attendance.',
-      ));
+      return const Left(
+        PermissionDeniedFailure(
+          'You do not have permission to edit submitted attendance.',
+        ),
+      );
     }
     if (reason.trim().isEmpty) {
-      return const Left(ValidationFailure(
-        'Give a reason for changing this attendance mark.',
-        field: 'reason',
-      ));
+      return const Left(
+        ValidationFailure(
+          'Give a reason for changing this attendance mark.',
+          field: 'reason',
+        ),
+      );
     }
     if (attendance.status == AttendanceRegisterStatus.locked &&
         !context.can(Permission.subjectAttendanceEditHistorical)) {
-      return const Left(PermissionDeniedFailure(
-        'This register is locked. Ask the academic office to reopen it.',
-      ));
+      return const Left(
+        PermissionDeniedFailure(
+          'This register is locked. Ask the academic office to reopen it.',
+        ),
+      );
     }
 
     final existing = attendance.entryFor(studentId);
     if (existing == null) {
-      return const Left(ValidationFailure(
-        'That student is not on this register.',
-      ));
+      return const Left(
+        ValidationFailure('That student is not on this register.'),
+      );
     }
 
     // Corrections need connectivity: replaying one against a register the
     // office has since changed is how history gets silently overwritten.
     if (!await networkInfo.isConnected) {
-      return const Left(OfflineNotAllowedFailure(
-        'Correcting a submitted register needs an internet connection.',
-      ));
+      return const Left(
+        OfflineNotAllowedFailure(
+          'Correcting a submitted register needs an internet connection.',
+        ),
+      );
     }
 
     final corrected = attendance.copyWith(
       entries: attendance.entries
-          .map((e) => e.studentId == studentId
-              ? e.copyWith(status: newStatus, markedAt: DateTime.now())
-              : e)
+          .map(
+            (e) => e.studentId == studentId
+                ? e.copyWith(status: newStatus, markedAt: DateTime.now())
+                : e,
+          )
           .toList(),
       updatedAt: DateTime.now(),
     );
 
     try {
       await remoteDataSource.saveLessonAttendance(corrected);
-      await localDataSource
-          .saveAttendance(LessonAttendanceIsar.fromEntity(corrected));
+      await localDataSource.saveAttendance(
+        LessonAttendanceIsar.fromEntity(corrected),
+      );
 
       // Both values recorded: an attendance history that only shows the
       // current mark cannot be reviewed.
@@ -302,8 +331,9 @@ class LessonAttendanceRepositoryImpl implements LessonAttendanceRepository {
     // A submitted register is history and is left exactly as it was.
     if (!attendance.isEditable) return attendance;
 
-    final kept =
-        attendance.entries.where((e) => enrolledIds.contains(e.studentId));
+    final kept = attendance.entries.where(
+      (e) => enrolledIds.contains(e.studentId),
+    );
     final added = enrolledStudents
         .where((s) => !existingIds.contains(s.studentId))
         .map((s) => LessonAttendanceEntry(studentId: s.studentId));

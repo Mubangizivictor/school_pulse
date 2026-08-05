@@ -41,5 +41,11 @@ class ReportReleasePolicy extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, schoolId, option, releaseDate, restrictionMessage];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    option,
+    releaseDate,
+    restrictionMessage,
+  ];
 }

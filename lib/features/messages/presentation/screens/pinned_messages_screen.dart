@@ -30,7 +30,10 @@ class PinnedMessagesScreen extends StatelessWidget {
           stream: context.messages.watchPinnedMessages(user.id),
           builder: (context, snapshot) {
             if (snapshot.hasError) {
-              return _buildMessage(context, 'Could not load pinned messages.\n${snapshot.error}');
+              return _buildMessage(
+                context,
+                'Could not load pinned messages.\n${snapshot.error}',
+              );
             }
             if (!snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
@@ -49,13 +52,16 @@ class PinnedMessagesScreen extends StatelessWidget {
               itemBuilder: (context, index) {
                 final ref = pinned[index];
                 return InkWell(
-                  onTap: () => context.push('/messages/chat/${ref.conversationId}'),
+                  onTap: () =>
+                      context.push('/messages/chat/${ref.conversationId}'),
                   child: Container(
                     margin: const EdgeInsets.only(bottom: AppSpacing.m),
                     decoration: BoxDecoration(
                       color: isDark ? AppColors.surfaceDark : Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.electricBlue.withValues(alpha: 0.3)),
+                      border: Border.all(
+                        color: AppColors.electricBlue.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(AppSpacing.m),
@@ -64,20 +70,28 @@ class PinnedMessagesScreen extends StatelessWidget {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.push_pin, size: 16, color: AppColors.electricBlue),
+                              const Icon(
+                                Icons.push_pin,
+                                size: 16,
+                                color: AppColors.electricBlue,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   'Pinned by ${ref.message.senderName}',
-                                  style:
-                                      AppTypography.labelSmall.copyWith(color: AppColors.electricBlue),
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: AppColors.electricBlue,
+                                  ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               Text(
-                                DateFormat('dd/MM/yy').format(ref.message.timestamp),
-                                style: AppTypography.labelSmall
-                                    .copyWith(color: AppColors.textMuted(context)),
+                                DateFormat(
+                                  'dd/MM/yy',
+                                ).format(ref.message.timestamp),
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: AppColors.textMuted(context),
+                                ),
                               ),
                             ],
                           ),
@@ -86,22 +100,34 @@ class PinnedMessagesScreen extends StatelessWidget {
                             ref.message.content.isEmpty
                                 ? (ref.message.fileName ?? 'Attachment')
                                 : ref.message.content,
-                            style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w500),
+                            style: AppTypography.bodyMedium.copyWith(
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                           const SizedBox(height: 12),
                           Row(
                             children: [
                               Expanded(
-                                child: Text('in ${ref.conversationTitle}',
-                                    style: AppTypography.labelSmall
-                                        .copyWith(color: AppColors.textMuted(context))),
+                                child: Text(
+                                  'in ${ref.conversationTitle}',
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: AppColors.textMuted(context),
+                                  ),
+                                ),
                               ),
                               TextButton(
-                                onPressed: () => context.messages
-                                    .setMessagePinned(ref.conversationId, ref.message, false),
-                                child: Text('Unpin',
-                                    style:
-                                        AppTypography.labelSmall.copyWith(color: AppColors.electricBlue)),
+                                onPressed: () =>
+                                    context.messages.setMessagePinned(
+                                      ref.conversationId,
+                                      ref.message,
+                                      false,
+                                    ),
+                                child: Text(
+                                  'Unpin',
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: AppColors.electricBlue,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
@@ -125,7 +151,9 @@ class PinnedMessagesScreen extends StatelessWidget {
         child: Text(
           text,
           textAlign: TextAlign.center,
-          style: AppTypography.bodyMedium.copyWith(color: AppColors.textMuted(context)),
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textMuted(context),
+          ),
         ),
       ),
     );

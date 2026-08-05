@@ -16,7 +16,11 @@ class AnnouncementsScreen extends StatelessWidget {
         ),
         title: const Text(
           'Announcements',
-          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: false,
       ),
@@ -39,7 +43,11 @@ class AnnouncementsScreen extends StatelessWidget {
                     SizedBox(width: 8),
                     Text(
                       'Create New Announcement',
-                      style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -53,7 +61,11 @@ class AnnouncementsScreen extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: Text(
                 'Recent Announcements',
-                style: TextStyle(color: Color(0xFF6366F1), fontSize: 12, fontWeight: FontWeight.w900),
+                style: TextStyle(
+                  color: Color(0xFF6366F1),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
           ),
@@ -64,21 +76,24 @@ class AnnouncementsScreen extends StatelessWidget {
               children: [
                 _buildAnnouncementTile(
                   title: 'System Maintenance',
-                  message: 'Platform will be down for scheduled maintenance on June 5th, 2:00 AM - 4:00 AM UTC.',
+                  message:
+                      'Platform will be down for scheduled maintenance on June 5th, 2:00 AM - 4:00 AM UTC.',
                   target: 'All Schools',
                   date: 'Today, 10:30 AM',
                   status: 'Published',
                 ),
                 _buildAnnouncementTile(
                   title: 'New Feature: AI Reports',
-                  message: 'We are excited to announce that AI-powered reports are now available for all premium subscribers.',
+                  message:
+                      'We are excited to announce that AI-powered reports are now available for all premium subscribers.',
                   target: 'Premium Schools',
                   date: 'Yesterday, 2:15 PM',
                   status: 'Published',
                 ),
                 _buildAnnouncementTile(
                   title: 'Price Adjustment Notice',
-                  message: 'Starting July 1st, there will be a minor adjustment to our subscription plans.',
+                  message:
+                      'Starting July 1st, there will be a minor adjustment to our subscription plans.',
                   target: 'All Schools',
                   date: 'May 28, 2024',
                   status: 'Draft',
@@ -99,7 +114,7 @@ class AnnouncementsScreen extends StatelessWidget {
     required String status,
   }) {
     final bool isPublished = status == 'Published';
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -116,18 +131,28 @@ class AnnouncementsScreen extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: (isPublished ? const Color(0xFF22C55E) : const Color(0xFFF59E0B)).withValues(alpha: 0.1),
+                  color:
+                      (isPublished
+                              ? const Color(0xFF22C55E)
+                              : const Color(0xFFF59E0B))
+                          .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   status,
                   style: TextStyle(
-                    color: isPublished ? const Color(0xFF22C55E) : const Color(0xFFF59E0B),
+                    color: isPublished
+                        ? const Color(0xFF22C55E)
+                        : const Color(0xFFF59E0B),
                     fontSize: 9,
                     fontWeight: FontWeight.bold,
                   ),
@@ -138,7 +163,10 @@ class AnnouncementsScreen extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             message,
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12),
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.5),
+              fontSize: 12,
+            ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -148,11 +176,18 @@ class AnnouncementsScreen extends StatelessWidget {
             children: [
               Text(
                 'Target: $target',
-                style: const TextStyle(color: Color(0xFF6366F1), fontSize: 10, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Color(0xFF6366F1),
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               Text(
                 date,
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 10),
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.3),
+                  fontSize: 10,
+                ),
               ),
             ],
           ),

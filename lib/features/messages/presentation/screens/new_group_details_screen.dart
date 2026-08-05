@@ -64,7 +64,10 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
         ),
         title: Text(
           _screenTitle,
-          style: AppTypography.titleLarge.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+          style: AppTypography.titleLarge.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       body: MessagingUserBuilder(
@@ -84,15 +87,24 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.surfaceDark,
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.1),
+                            width: 1,
+                          ),
                           image: _photo != null
-                              ? DecorationImage(image: FileImage(_photo!), fit: BoxFit.cover)
+                              ? DecorationImage(
+                                  image: FileImage(_photo!),
+                                  fit: BoxFit.cover,
+                                )
                               : null,
                         ),
                         child: _photo != null
                             ? null
-                            : const Icon(Icons.camera_alt_outlined,
-                                size: 40, color: AppColors.electricBlue),
+                            : const Icon(
+                                Icons.camera_alt_outlined,
+                                size: 40,
+                                color: AppColors.electricBlue,
+                              ),
                       ),
                       Positioned(
                         bottom: 0,
@@ -103,7 +115,11 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
                             color: AppColors.electricBlue,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.add, size: 20, color: Colors.white),
+                          child: const Icon(
+                            Icons.add,
+                            size: 20,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ],
@@ -127,7 +143,8 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
               const SizedBox(height: AppSpacing.l),
               _buildInputField(
                 label: 'Description (Optional)',
-                hint: 'This group is for all P7 parents to discuss Mathematics updates and homework.',
+                hint:
+                    'This group is for all P7 parents to discuss Mathematics updates and homework.',
                 controller: _descController,
                 maxLines: 3,
               ),
@@ -147,7 +164,9 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
               _buildSettingTile(
                 Icons.admin_panel_settings_outlined,
                 'Who can send messages?',
-                _policy == MessagePolicy.everyone ? 'All Members' : 'Admins Only',
+                _policy == MessagePolicy.everyone
+                    ? 'All Members'
+                    : 'Admins Only',
                 onTap: _pickPolicy,
               ),
               const SizedBox(height: AppSpacing.x3l),
@@ -161,16 +180,26 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
                     disabledBackgroundColor: AppColors.disabled(context),
                     padding: const EdgeInsets.symmetric(vertical: 18),
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                   child: _creating
                       ? const SizedBox(
                           height: 22,
                           width: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : Text(_createLabel,
-                          style: AppTypography.titleMedium
-                              .copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          _createLabel,
+                          style: AppTypography.titleMedium.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(height: AppSpacing.x3l),
@@ -182,7 +211,9 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
   }
 
   bool get _canCreate =>
-      !_creating && _nameController.text.trim().isNotEmpty && _members.isNotEmpty;
+      !_creating &&
+      _nameController.text.trim().isNotEmpty &&
+      _members.isNotEmpty;
 
   String get _screenTitle {
     switch (_type) {
@@ -218,7 +249,10 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
   }
 
   Future<void> _pickPhoto() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 70);
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+    );
     if (picked == null || !mounted) return;
     setState(() => _photo = File(picked.path));
   }
@@ -234,32 +268,41 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            for (final option in [ChatType.group, ChatType.broadcast, ChatType.channel])
+            for (final option in [
+              ChatType.group,
+              ChatType.broadcast,
+              ChatType.channel,
+            ])
               ListTile(
                 title: Text(
                   option == ChatType.group
                       ? 'Private Group'
                       : option == ChatType.broadcast
-                          ? 'Broadcast List'
-                          : 'Announcement Channel',
+                      ? 'Broadcast List'
+                      : 'Announcement Channel',
                   style: const TextStyle(color: Colors.white),
                 ),
                 subtitle: Text(
                   option == ChatType.group
                       ? 'Everyone can see and reply to each other'
                       : option == ChatType.broadcast
-                          ? 'One-way messages to many recipients'
-                          : 'An announcement feed only admins post to',
+                      ? 'One-way messages to many recipients'
+                      : 'An announcement feed only admins post to',
                   style: const TextStyle(color: Colors.white60, fontSize: 12),
                 ),
                 trailing: _type == option
-                    ? const Icon(Icons.check_circle, color: AppColors.electricBlue)
+                    ? const Icon(
+                        Icons.check_circle,
+                        color: AppColors.electricBlue,
+                      )
                     : null,
                 onTap: () {
                   Navigator.pop(sheetContext);
                   setState(() {
                     _type = option;
-                    _policy = _type == ChatType.group ? MessagePolicy.everyone : MessagePolicy.adminsOnly;
+                    _policy = _type == ChatType.group
+                        ? MessagePolicy.everyone
+                        : MessagePolicy.adminsOnly;
                   });
                 },
               ),
@@ -283,11 +326,16 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
             for (final option in MessagePolicy.values)
               ListTile(
                 title: Text(
-                  option == MessagePolicy.everyone ? 'All Members' : 'Admins Only',
+                  option == MessagePolicy.everyone
+                      ? 'All Members'
+                      : 'Admins Only',
                   style: const TextStyle(color: Colors.white),
                 ),
                 trailing: _policy == option
-                    ? const Icon(Icons.check_circle, color: AppColors.electricBlue)
+                    ? const Icon(
+                        Icons.check_circle,
+                        color: AppColors.electricBlue,
+                      )
                     : null,
                 onTap: () {
                   Navigator.pop(sheetContext);
@@ -307,7 +355,9 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
         me: user,
         type: _type,
         title: _nameController.text.trim(),
-        description: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
+        description: _descController.text.trim().isEmpty
+            ? null
+            : _descController.text.trim(),
         members: _members,
         messagePolicy: _policy,
       );
@@ -362,11 +412,15 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
             fillColor: AppColors.surfaceDark,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+              borderSide: BorderSide(
+                color: Colors.white.withValues(alpha: 0.1),
+              ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+              borderSide: BorderSide(
+                color: Colors.white.withValues(alpha: 0.1),
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
@@ -379,7 +433,12 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
     );
   }
 
-  Widget _buildSettingTile(IconData icon, String title, String value, {VoidCallback? onTap}) {
+  Widget _buildSettingTile(
+    IconData icon,
+    String title,
+    String value, {
+    VoidCallback? onTap,
+  }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
@@ -399,7 +458,10 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
         ),
         title: Text(
           title,
-          style: AppTypography.titleSmall.copyWith(color: Colors.white, fontWeight: FontWeight.w600),
+          style: AppTypography.titleSmall.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,

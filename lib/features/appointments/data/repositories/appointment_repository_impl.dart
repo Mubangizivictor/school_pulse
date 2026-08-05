@@ -25,11 +25,17 @@ class AppointmentRepositoryImpl implements AppointmentRepository {
   Stream<List<AppointmentType>> watchAppointmentTypes(String schoolId) {
     return remoteDataSource
         .watchAppointmentTypes(schoolId)
-        .map((list) => list.map((m) => AppointmentTypeModel.fromMap(m, m['id'])).toList());
+        .map(
+          (list) => list
+              .map((m) => AppointmentTypeModel.fromMap(m, m['id']))
+              .toList(),
+        );
   }
 
   @override
-  Future<Either<Failure, void>> saveAppointmentType(AppointmentType type) async {
+  Future<Either<Failure, void>> saveAppointmentType(
+    AppointmentType type,
+  ) async {
     try {
       final model = AppointmentTypeModel.fromEntity(type);
       await remoteDataSource.saveAppointmentType(type.id, model.toMap());
@@ -50,7 +56,10 @@ class AppointmentRepositoryImpl implements AppointmentRepository {
   }
 
   @override
-  Future<Either<Failure, StaffAvailability>> getStaffAvailability(String staffId, String schoolId) async {
+  Future<Either<Failure, StaffAvailability>> getStaffAvailability(
+    String staffId,
+    String schoolId,
+  ) async {
     try {
       final data = await remoteDataSource.getStaffAvailability(staffId);
       if (data == null) {
@@ -63,10 +72,15 @@ class AppointmentRepositoryImpl implements AppointmentRepository {
   }
 
   @override
-  Future<Either<Failure, void>> saveStaffAvailability(StaffAvailability availability) async {
+  Future<Either<Failure, void>> saveStaffAvailability(
+    StaffAvailability availability,
+  ) async {
     try {
       final model = StaffAvailabilityModel.fromEntity(availability);
-      await remoteDataSource.saveStaffAvailability(availability.staffId, model.toMap());
+      await remoteDataSource.saveStaffAvailability(
+        availability.staffId,
+        model.toMap(),
+      );
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -74,18 +88,26 @@ class AppointmentRepositoryImpl implements AppointmentRepository {
   }
 
   @override
-  Future<Either<Failure, List<StaffSummary>>> getStaffByRoles(String schoolId, List<UserRole> roles) async {
+  Future<Either<Failure, List<StaffSummary>>> getStaffByRoles(
+    String schoolId,
+    List<UserRole> roles,
+  ) async {
     try {
-      final data = await remoteDataSource.getStaffByRoles(schoolId, roles.map((r) => r.name).toList());
+      final data = await remoteDataSource.getStaffByRoles(
+        schoolId,
+        roles.map((r) => r.name).toList(),
+      );
       final staff = data
-          .map((m) => StaffSummary(
-                id: m['id'],
-                name: m['name'] ?? '',
-                role: UserRole.values.firstWhere(
-                  (r) => r.name == m['role'],
-                  orElse: () => UserRole.schoolAdmin,
-                ),
-              ))
+          .map(
+            (m) => StaffSummary(
+              id: m['id'],
+              name: m['name'] ?? '',
+              role: UserRole.values.firstWhere(
+                (r) => r.name == m['role'],
+                orElse: () => UserRole.schoolAdmin,
+              ),
+            ),
+          )
           .toList();
       return Right(staff);
     } catch (e) {
@@ -94,11 +116,19 @@ class AppointmentRepositoryImpl implements AppointmentRepository {
   }
 
   @override
-  Future<Either<Failure, List<StudentSummary>>> getStudentsByIds(List<String> ids) async {
+  Future<Either<Failure, List<StudentSummary>>> getStudentsByIds(
+    List<String> ids,
+  ) async {
     try {
       final data = await remoteDataSource.getStudentsByIds(ids);
       final students = data
-          .map((m) => StudentSummary(id: m['id'], name: m['name'] ?? '', classId: m['classId'] ?? ''))
+          .map(
+            (m) => StudentSummary(
+              id: m['id'],
+              name: m['name'] ?? '',
+              classId: m['classId'] ?? '',
+            ),
+          )
           .toList();
       return Right(students);
     } catch (e) {
@@ -114,18 +144,25 @@ class AppointmentRepositoryImpl implements AppointmentRepository {
     required int durationMinutes,
   }) async {
     try {
-      final availabilityData = await remoteDataSource.getStaffAvailability(staffId);
+      final availabilityData = await remoteDataSource.getStaffAvailability(
+        staffId,
+      );
       final availability = availabilityData == null
           ? StaffAvailability(staffId: staffId, schoolId: schoolId)
           : StaffAvailabilityModel.fromMap(availabilityData, staffId);
 
       final dayStart = DateTime(date.year, date.month, date.day);
 
-      if (!availability.workingDays.contains(dayStart.weekday) || availability.isUnavailableOn(dayStart)) {
+      if (!availability.workingDays.contains(dayStart.weekday) ||
+          availability.isUnavailableOn(dayStart)) {
         return const Right([]);
       }
 
-      final bookedData = await remoteDataSource.getStaffAppointmentsOnDate(staffId, dayStart);
+      final bookedData = await remoteDataSource.getStaffAppointmentsOnDate(
+        staffId,
+        schoolId,
+        dayStart,
+      );
       if (bookedData.length >= availability.maxAppointmentsPerDay) {
         return const Right([]);
       }
@@ -139,15 +176,19 @@ class AppointmentRepositoryImpl implements AppointmentRepository {
       final slots = <DateTime>[];
       final now = DateTime.now();
 
-      for (var minute = availability.startMinuteOfDay;
-          minute + durationMinutes <= availability.endMinuteOfDay;
-          minute += step) {
+      for (
+        var minute = availability.startMinuteOfDay;
+        minute + durationMinutes <= availability.endMinuteOfDay;
+        minute += step
+      ) {
         final slotStart = dayStart.add(Duration(minutes: minute));
         final slotEnd = slotStart.add(Duration(minutes: durationMinutes));
 
         if (slotStart.isBefore(now)) continue;
 
-        final overlaps = booked.any((b) => slotStart.isBefore(b.end) && slotEnd.isAfter(b.start));
+        final overlaps = booked.any(
+          (b) => slotStart.isBefore(b.end) && slotEnd.isAfter(b.start),
+        );
         if (!overlaps) slots.add(slotStart);
       }
 
@@ -158,7 +199,9 @@ class AppointmentRepositoryImpl implements AppointmentRepository {
   }
 
   @override
-  Future<Either<Failure, Appointment>> requestAppointment(Appointment appointment) async {
+  Future<Either<Failure, Appointment>> requestAppointment(
+    Appointment appointment,
+  ) async {
     try {
       final model = AppointmentModel.fromEntity(appointment);
       final id = await remoteDataSource.createAppointment(model.toMap());
@@ -205,12 +248,15 @@ class AppointmentRepositoryImpl implements AppointmentRepository {
     String? reason,
   }) async {
     try {
-      await remoteDataSource.updateAppointment(id, _serializeTimestamps({
-        'status': AppointmentStatus.cancelled.name,
-        'respondedBy': cancelledBy,
-        'responseNote': reason,
-        'updatedAt': DateTime.now(),
-      }));
+      await remoteDataSource.updateAppointment(
+        id,
+        _serializeTimestamps({
+          'status': AppointmentStatus.cancelled.name,
+          'respondedBy': cancelledBy,
+          'responseNote': reason,
+          'updatedAt': DateTime.now(),
+        }),
+      );
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -224,12 +270,15 @@ class AppointmentRepositoryImpl implements AppointmentRepository {
     String? photoUrl,
   }) async {
     try {
-      await remoteDataSource.updateAppointment(id, _serializeTimestamps({
-        'checkInTime': DateTime.now(),
-        'checkInBy': checkedInBy,
-        'checkInPhotoUrl': photoUrl,
-        'updatedAt': DateTime.now(),
-      }));
+      await remoteDataSource.updateAppointment(
+        id,
+        _serializeTimestamps({
+          'checkInTime': DateTime.now(),
+          'checkInBy': checkedInBy,
+          'checkInPhotoUrl': photoUrl,
+          'updatedAt': DateTime.now(),
+        }),
+      );
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -239,11 +288,14 @@ class AppointmentRepositoryImpl implements AppointmentRepository {
   @override
   Future<Either<Failure, void>> checkOut(String id) async {
     try {
-      await remoteDataSource.updateAppointment(id, _serializeTimestamps({
-        'checkOutTime': DateTime.now(),
-        'status': AppointmentStatus.completed.name,
-        'updatedAt': DateTime.now(),
-      }));
+      await remoteDataSource.updateAppointment(
+        id,
+        _serializeTimestamps({
+          'checkOutTime': DateTime.now(),
+          'status': AppointmentStatus.completed.name,
+          'updatedAt': DateTime.now(),
+        }),
+      );
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -253,10 +305,23 @@ class AppointmentRepositoryImpl implements AppointmentRepository {
   @override
   Future<Either<Failure, void>> markCompleted(String id) async {
     try {
-      await remoteDataSource.updateAppointment(id, _serializeTimestamps({
-        'status': AppointmentStatus.completed.name,
-        'updatedAt': DateTime.now(),
-      }));
+      await remoteDataSource.updateAppointment(
+        id,
+        _serializeTimestamps({
+          'status': AppointmentStatus.completed.name,
+          'updatedAt': DateTime.now(),
+        }),
+      );
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteAppointment(String id) async {
+    try {
+      await remoteDataSource.deleteAppointment(id);
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -267,21 +332,30 @@ class AppointmentRepositoryImpl implements AppointmentRepository {
   Stream<List<Appointment>> watchForParent(String parentId, String schoolId) {
     return remoteDataSource
         .watchForParent(parentId, schoolId)
-        .map((list) => list.map((m) => AppointmentModel.fromMap(m, m['id'])).toList());
+        .map(
+          (list) =>
+              list.map((m) => AppointmentModel.fromMap(m, m['id'])).toList(),
+        );
   }
 
   @override
   Stream<List<Appointment>> watchForStaff(String staffId, String schoolId) {
     return remoteDataSource
         .watchForStaff(staffId, schoolId)
-        .map((list) => list.map((m) => AppointmentModel.fromMap(m, m['id'])).toList());
+        .map(
+          (list) =>
+              list.map((m) => AppointmentModel.fromMap(m, m['id'])).toList(),
+        );
   }
 
   @override
   Stream<List<Appointment>> watchForSchool(String schoolId) {
     return remoteDataSource
         .watchForSchool(schoolId)
-        .map((list) => list.map((m) => AppointmentModel.fromMap(m, m['id'])).toList());
+        .map(
+          (list) =>
+              list.map((m) => AppointmentModel.fromMap(m, m['id'])).toList(),
+        );
   }
 
   @override
@@ -299,7 +373,11 @@ class AppointmentRepositoryImpl implements AppointmentRepository {
   Stream<List<AppointmentNote>> watchNotes(String appointmentId) {
     return remoteDataSource
         .watchNotes(appointmentId)
-        .map((list) => list.map((m) => AppointmentNoteModel.fromMap(m, m['id'])).toList());
+        .map(
+          (list) => list
+              .map((m) => AppointmentNoteModel.fromMap(m, m['id']))
+              .toList(),
+        );
   }
 
   /// `update()` calls pass plain DateTimes above for readability - Firestore

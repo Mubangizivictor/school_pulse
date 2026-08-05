@@ -32,9 +32,9 @@ class _PrinterSetupPageState extends State<PrinterSetupPage> {
     } catch (e) {
       setState(() => _isScanning = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to scan: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to scan: $e')));
       }
     }
   }
@@ -44,15 +44,15 @@ class _PrinterSetupPageState extends State<PrinterSetupPage> {
     if (success) {
       setState(() => _connectedDevice = device);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Connected to ${device.name}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Connected to ${device.name}')));
       }
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Connection failed')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Connection failed')));
       }
     }
   }
@@ -83,8 +83,13 @@ class _PrinterSetupPageState extends State<PrinterSetupPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Connected Printer', style: TextStyle(fontWeight: FontWeight.bold)),
-                        Text('${_connectedDevice!.name} (${_connectedDevice!.address})'),
+                        const Text(
+                          'Connected Printer',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          '${_connectedDevice!.name} (${_connectedDevice!.address})',
+                        ),
                       ],
                     ),
                   ),
@@ -105,12 +110,13 @@ class _PrinterSetupPageState extends State<PrinterSetupPage> {
                     itemCount: _devices.length,
                     itemBuilder: (context, index) {
                       final device = _devices[index];
-                      final isConnected = _connectedDevice?.address == device.address;
+                      final isConnected =
+                          _connectedDevice?.address == device.address;
                       return ListTile(
                         leading: Icon(
-                          device.type == PrinterType.bluetooth 
-                              ? Icons.bluetooth 
-                              : Icons.settings_ethernet
+                          device.type == PrinterType.bluetooth
+                              ? Icons.bluetooth
+                              : Icons.settings_ethernet,
                         ),
                         title: Text(device.name),
                         subtitle: Text(device.address),
@@ -129,9 +135,11 @@ class _PrinterSetupPageState extends State<PrinterSetupPage> {
             child: ElevatedButton.icon(
               icon: const Icon(Icons.print),
               label: const Text('Print Test Page'),
-              onPressed: _connectedDevice == null 
-                  ? null 
-                  : () => _printerService.printText('School Pulse Printer Test\nDate: ${DateTime.now()}\nStatus: Operational\n\n\n\n'),
+              onPressed: _connectedDevice == null
+                  ? null
+                  : () => _printerService.printText(
+                      'School Pulse Printer Test\nDate: ${DateTime.now()}\nStatus: Operational\n\n\n\n',
+                    ),
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 50),
               ),

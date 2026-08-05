@@ -31,7 +31,9 @@ class _LessonPlansScreenState extends State<LessonPlansScreen> {
   }
 
   Future<List<LessonPlan>> _loadPlans() {
-    return di.sl<GetLessonPlans>()(_teacherId).then((r) => r.getOrElse(() => const []));
+    return di.sl<GetLessonPlans>()(_teacherId).then(
+      (r) => r.getOrElse(() => const []),
+    );
   }
 
   void _reload() {
@@ -44,7 +46,10 @@ class _LessonPlansScreenState extends State<LessonPlansScreen> {
       appBar: AppBar(
         title: const Text('Lesson Plans'),
         actions: [
-          IconButton(icon: const Icon(Icons.add), onPressed: () => _showAddPlanDialog(context)),
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () => _showAddPlanDialog(context),
+          ),
         ],
       ),
       body: FutureBuilder<List<LessonPlan>>(
@@ -75,8 +80,14 @@ class _LessonPlansScreenState extends State<LessonPlansScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('${plan.subject} • ${plan.className}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                        Text(DateFormat('MMM d, yyyy').format(plan.date), style: Theme.of(context).textTheme.labelSmall),
+                        Text(
+                          '${plan.subject} • ${plan.className}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          DateFormat('MMM d, yyyy').format(plan.date),
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -107,47 +118,68 @@ class _LessonPlansScreenState extends State<LessonPlansScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(controller: subjectController, decoration: const InputDecoration(labelText: 'Subject')),
+                TextField(
+                  controller: subjectController,
+                  decoration: const InputDecoration(labelText: 'Subject'),
+                ),
                 const SizedBox(height: 16),
-                TextField(controller: classController, decoration: const InputDecoration(labelText: 'Class')),
+                TextField(
+                  controller: classController,
+                  decoration: const InputDecoration(labelText: 'Class'),
+                ),
                 const SizedBox(height: 16),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Date'),
-                  subtitle: Text(DateFormat('MMM d, yyyy').format(selectedDate)),
+                  subtitle: Text(
+                    DateFormat('MMM d, yyyy').format(selectedDate),
+                  ),
                   trailing: const Icon(Icons.calendar_today, size: 18),
                   onTap: () async {
                     final picked = await showDatePicker(
                       context: dialogContext,
                       initialDate: selectedDate,
-                      firstDate: DateTime.now().subtract(const Duration(days: 30)),
+                      firstDate: DateTime.now().subtract(
+                        const Duration(days: 30),
+                      ),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
                     );
-                    if (picked != null) setDialogState(() => selectedDate = picked);
+                    if (picked != null)
+                      setDialogState(() => selectedDate = picked);
                   },
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: contentController,
                   maxLines: 4,
-                  decoration: const InputDecoration(labelText: 'Lesson Content / Objectives', alignLabelWithHint: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Lesson Content / Objectives',
+                    alignLabelWithHint: true,
+                  ),
                 ),
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
             FilledButton(
               onPressed: () async {
-                if (subjectController.text.trim().isEmpty || classController.text.trim().isEmpty) return;
-                await di.sl<AddLessonPlan>()(LessonPlan(
-                  id: '',
-                  teacherId: teacherId,
-                  subject: subjectController.text.trim(),
-                  className: classController.text.trim(),
-                  date: selectedDate,
-                  content: contentController.text.trim(),
-                ));
+                if (subjectController.text.trim().isEmpty ||
+                    classController.text.trim().isEmpty)
+                  return;
+                await di.sl<AddLessonPlan>()(
+                  LessonPlan(
+                    id: '',
+                    teacherId: teacherId,
+                    subject: subjectController.text.trim(),
+                    className: classController.text.trim(),
+                    date: selectedDate,
+                    content: contentController.text.trim(),
+                  ),
+                );
                 if (dialogContext.mounted) Navigator.pop(dialogContext);
                 _reload();
               },

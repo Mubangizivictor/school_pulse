@@ -7,19 +7,9 @@ enum StudentStatus {
   withdrawn,
 }
 
-enum AdmissionStatus {
-  application,
-  review,
-  approved,
-  admitted,
-  rejected,
-}
+enum AdmissionStatus { application, review, approved, admitted, rejected }
 
-enum Gender {
-  male,
-  female,
-  other,
-}
+enum Gender { male, female, other }
 
 enum EducationLevel {
   kindergarten,

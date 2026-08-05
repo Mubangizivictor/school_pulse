@@ -16,9 +16,11 @@ class MockStudentRepository extends Mock implements StudentRepository {}
 
 class MockIdGeneratorService extends Mock implements IdGeneratorService {}
 
-class MockStudentIdentityRepository extends Mock implements StudentIdentityRepository {}
+class MockStudentIdentityRepository extends Mock
+    implements StudentIdentityRepository {}
 
-class MockInitializeStudentFinancials extends Mock implements InitializeStudentFinancials {}
+class MockInitializeStudentFinancials extends Mock
+    implements InitializeStudentFinancials {}
 
 void main() {
   late AdmissionService service;
@@ -61,25 +63,32 @@ void main() {
       initializeFinancials: initializeFinancials,
     );
 
-    when(() => repository.generateAdmissionNumber(schoolId, academicYearId))
-        .thenAnswer((_) async => const Right(admissionNumber));
-    when(() => idGenerator.generateSchoolStudentId(
-          schoolPrefix: any(named: 'schoolPrefix'),
-          year: any(named: 'year'),
-          sequenceNumber: any(named: 'sequenceNumber'),
-        )).thenReturn(studentCode);
+    when(
+      () => repository.generateAdmissionNumber(schoolId, academicYearId),
+    ).thenAnswer((_) async => const Right(admissionNumber));
+    when(
+      () => idGenerator.generateSchoolStudentId(
+        schoolPrefix: any(named: 'schoolPrefix'),
+        year: any(named: 'year'),
+        sequenceNumber: any(named: 'sequenceNumber'),
+      ),
+    ).thenReturn(studentCode);
     when(() => idGenerator.generateUniqueSystemId()).thenReturn(uniqueSystemId);
-    when(() => repository.finalizeAdmission(
-          any(),
-          studentCode: any(named: 'studentCode'),
-          admissionNumber: any(named: 'admissionNumber'),
-          qrReference: any(named: 'qrReference'),
-        )).thenAnswer((_) async => const Right(studentId));
-    when(() => identityRepository.generateStudentIdentity(
-          any(),
-          uniqueSystemId: any(named: 'uniqueSystemId'),
-          schoolStudentId: any(named: 'schoolStudentId'),
-        )).thenAnswer((_) async => Right(identity));
+    when(
+      () => repository.finalizeAdmission(
+        any(),
+        studentCode: any(named: 'studentCode'),
+        admissionNumber: any(named: 'admissionNumber'),
+        qrReference: any(named: 'qrReference'),
+      ),
+    ).thenAnswer((_) async => const Right(studentId));
+    when(
+      () => identityRepository.generateStudentIdentity(
+        any(),
+        uniqueSystemId: any(named: 'uniqueSystemId'),
+        schoolStudentId: any(named: 'schoolStudentId'),
+      ),
+    ).thenAnswer((_) async => Right(identity));
   });
 
   group('admitStudent', () {
@@ -100,133 +109,190 @@ void main() {
       );
     }
 
-    test('derives the studentCode sequence from the minted admission number', () async {
-      await call();
+    test(
+      'derives the studentCode sequence from the minted admission number',
+      () async {
+        await call();
 
-      verify(() => idGenerator.generateSchoolStudentId(
+        verify(
+          () => idGenerator.generateSchoolStudentId(
             schoolPrefix: schoolCode,
             year: any(named: 'year'),
             sequenceNumber: 7,
-          )).called(1);
-    });
+          ),
+        ).called(1);
+      },
+    );
 
-    test('finalizes admission with the generated studentCode and qrReference', () async {
-      await call();
+    test(
+      'finalizes admission with the generated studentCode and qrReference',
+      () async {
+        await call();
 
-      verify(() => repository.finalizeAdmission(
+        verify(
+          () => repository.finalizeAdmission(
             applicationId,
             studentCode: studentCode,
             admissionNumber: admissionNumber,
             qrReference: uniqueSystemId,
-          )).called(1);
-    });
+          ),
+        ).called(1);
+      },
+    );
 
-    test('generates the StudentIdentity using the same codes just written to the student record', () async {
-      await call();
+    test(
+      'generates the StudentIdentity using the same codes just written to the student record',
+      () async {
+        await call();
 
-      final captured = verify(() => identityRepository.generateStudentIdentity(
+        final captured = verify(
+          () => identityRepository.generateStudentIdentity(
             captureAny(),
             uniqueSystemId: uniqueSystemId,
             schoolStudentId: studentCode,
-          )).captured;
+          ),
+        ).captured;
 
-      expect((captured.single as Student).id, studentId);
-    });
+        expect((captured.single as Student).id, studentId);
+      },
+    );
 
-    test('returns Right(studentId) when no financial parameters are supplied', () async {
-      final result = await call();
+    test(
+      'returns Right(studentId) when no financial parameters are supplied',
+      () async {
+        final result = await call();
 
-      expect(result, const Right<Failure, String>(studentId));
-      verifyNever(() => initializeFinancials(
+        expect(result, const Right<Failure, String>(studentId));
+        verifyNever(
+          () => initializeFinancials(
             studentId: any(named: 'studentId'),
             schoolId: any(named: 'schoolId'),
             academicYear: any(named: 'academicYear'),
             term: any(named: 'term'),
             feeStructureId: any(named: 'feeStructureId'),
             totalBilled: any(named: 'totalBilled'),
-          ));
-    });
+          ),
+        );
+      },
+    );
 
-    test('initializes financials when term/feeStructureId/totalBilled are supplied', () async {
-      when(() => initializeFinancials(
+    test(
+      'initializes financials when term/feeStructureId/totalBilled are supplied',
+      () async {
+        when(
+          () => initializeFinancials(
             studentId: any(named: 'studentId'),
             schoolId: any(named: 'schoolId'),
             academicYear: any(named: 'academicYear'),
             term: any(named: 'term'),
             feeStructureId: any(named: 'feeStructureId'),
             totalBilled: any(named: 'totalBilled'),
-          )).thenAnswer((_) async => const Right(null));
+          ),
+        ).thenAnswer((_) async => const Right(null));
 
-      final result = await call(term: 'Term 1', feeStructureId: 'fee-1', totalBilled: 500);
+        final result = await call(
+          term: 'Term 1',
+          feeStructureId: 'fee-1',
+          totalBilled: 500,
+        );
 
-      expect(result, const Right<Failure, String>(studentId));
-      verify(() => initializeFinancials(
+        expect(result, const Right<Failure, String>(studentId));
+        verify(
+          () => initializeFinancials(
             studentId: studentId,
             schoolId: schoolId,
             academicYear: academicYear,
             term: 'Term 1',
             feeStructureId: 'fee-1',
             totalBilled: 500,
-          )).called(1);
-    });
+          ),
+        ).called(1);
+      },
+    );
 
-    test('short-circuits and never finalizes admission when the admission number fails to generate', () async {
-      when(() => repository.generateAdmissionNumber(schoolId, academicYearId))
-          .thenAnswer((_) async => Left(ServerFailure('boom')));
+    test(
+      'short-circuits and never finalizes admission when the admission number fails to generate',
+      () async {
+        when(
+          () => repository.generateAdmissionNumber(schoolId, academicYearId),
+        ).thenAnswer((_) async => Left(ServerFailure('boom')));
 
-      final result = await call();
+        final result = await call();
 
-      expect(result, Left(ServerFailure('boom')));
-      verifyNever(() => repository.finalizeAdmission(
+        expect(result, Left(ServerFailure('boom')));
+        verifyNever(
+          () => repository.finalizeAdmission(
             any(),
             studentCode: any(named: 'studentCode'),
             admissionNumber: any(named: 'admissionNumber'),
             qrReference: any(named: 'qrReference'),
-          ));
-      verifyNever(() => identityRepository.generateStudentIdentity(
+          ),
+        );
+        verifyNever(
+          () => identityRepository.generateStudentIdentity(
             any(),
             uniqueSystemId: any(named: 'uniqueSystemId'),
             schoolStudentId: any(named: 'schoolStudentId'),
-          ));
-    });
+          ),
+        );
+      },
+    );
 
-    test('propagates finalizeAdmission failure without generating an identity', () async {
-      when(() => repository.finalizeAdmission(
+    test(
+      'propagates finalizeAdmission failure without generating an identity',
+      () async {
+        when(
+          () => repository.finalizeAdmission(
             any(),
             studentCode: any(named: 'studentCode'),
             admissionNumber: any(named: 'admissionNumber'),
             qrReference: any(named: 'qrReference'),
-          )).thenAnswer((_) async => Left(ServerFailure('finalize failed')));
+          ),
+        ).thenAnswer((_) async => Left(ServerFailure('finalize failed')));
 
-      final result = await call();
+        final result = await call();
 
-      expect(result, Left(ServerFailure('finalize failed')));
-      verifyNever(() => identityRepository.generateStudentIdentity(
+        expect(result, Left(ServerFailure('finalize failed')));
+        verifyNever(
+          () => identityRepository.generateStudentIdentity(
             any(),
             uniqueSystemId: any(named: 'uniqueSystemId'),
             schoolStudentId: any(named: 'schoolStudentId'),
-          ));
-    });
+          ),
+        );
+      },
+    );
 
-    test('propagates identity generation failure without initializing financials', () async {
-      when(() => identityRepository.generateStudentIdentity(
+    test(
+      'propagates identity generation failure without initializing financials',
+      () async {
+        when(
+          () => identityRepository.generateStudentIdentity(
             any(),
             uniqueSystemId: any(named: 'uniqueSystemId'),
             schoolStudentId: any(named: 'schoolStudentId'),
-          )).thenAnswer((_) async => Left(ServerFailure('identity failed')));
+          ),
+        ).thenAnswer((_) async => Left(ServerFailure('identity failed')));
 
-      final result = await call(term: 'Term 1', feeStructureId: 'fee-1', totalBilled: 500);
+        final result = await call(
+          term: 'Term 1',
+          feeStructureId: 'fee-1',
+          totalBilled: 500,
+        );
 
-      expect(result, Left(ServerFailure('identity failed')));
-      verifyNever(() => initializeFinancials(
+        expect(result, Left(ServerFailure('identity failed')));
+        verifyNever(
+          () => initializeFinancials(
             studentId: any(named: 'studentId'),
             schoolId: any(named: 'schoolId'),
             academicYear: any(named: 'academicYear'),
             term: any(named: 'term'),
             feeStructureId: any(named: 'feeStructureId'),
             totalBilled: any(named: 'totalBilled'),
-          ));
-    });
+          ),
+        );
+      },
+    );
   });
 
   group('checkForDuplicates', () {
@@ -251,45 +317,91 @@ void main() {
     }
 
     test('returns matches with the same name and date of birth', () async {
-      final existing = buildApplication(id: 'app-1', name: 'Jane Doe', dob: DateTime(2015, 6, 1));
-      when(() => repository.getApplications(schoolId)).thenAnswer((_) async => Right([existing]));
+      final existing = buildApplication(
+        id: 'app-1',
+        name: 'Jane Doe',
+        dob: DateTime(2015, 6, 1),
+      );
+      when(
+        () => repository.getApplications(schoolId),
+      ).thenAnswer((_) async => Right([existing]));
 
-      final result = await service.checkForDuplicates(schoolId, 'Jane Doe', DateTime(2015, 6, 1));
+      final result = await service.checkForDuplicates(
+        schoolId,
+        'Jane Doe',
+        DateTime(2015, 6, 1),
+      );
 
       expect(result.getOrElse(() => []), [existing]);
     });
 
     test('matching is case-insensitive and trims whitespace', () async {
-      final existing = buildApplication(id: 'app-1', name: 'Jane Doe', dob: DateTime(2015, 6, 1));
-      when(() => repository.getApplications(schoolId)).thenAnswer((_) async => Right([existing]));
+      final existing = buildApplication(
+        id: 'app-1',
+        name: 'Jane Doe',
+        dob: DateTime(2015, 6, 1),
+      );
+      when(
+        () => repository.getApplications(schoolId),
+      ).thenAnswer((_) async => Right([existing]));
 
-      final result = await service.checkForDuplicates(schoolId, '  jane doe  ', DateTime(2015, 6, 1));
+      final result = await service.checkForDuplicates(
+        schoolId,
+        '  jane doe  ',
+        DateTime(2015, 6, 1),
+      );
 
       expect(result.getOrElse(() => []), [existing]);
     });
 
     test('returns no matches when the name differs', () async {
-      final existing = buildApplication(id: 'app-1', name: 'Jane Doe', dob: DateTime(2015, 6, 1));
-      when(() => repository.getApplications(schoolId)).thenAnswer((_) async => Right([existing]));
+      final existing = buildApplication(
+        id: 'app-1',
+        name: 'Jane Doe',
+        dob: DateTime(2015, 6, 1),
+      );
+      when(
+        () => repository.getApplications(schoolId),
+      ).thenAnswer((_) async => Right([existing]));
 
-      final result = await service.checkForDuplicates(schoolId, 'John Doe', DateTime(2015, 6, 1));
+      final result = await service.checkForDuplicates(
+        schoolId,
+        'John Doe',
+        DateTime(2015, 6, 1),
+      );
 
       expect(result.getOrElse(() => []), isEmpty);
     });
 
     test('returns no matches when the date of birth differs', () async {
-      final existing = buildApplication(id: 'app-1', name: 'Jane Doe', dob: DateTime(2015, 6, 1));
-      when(() => repository.getApplications(schoolId)).thenAnswer((_) async => Right([existing]));
+      final existing = buildApplication(
+        id: 'app-1',
+        name: 'Jane Doe',
+        dob: DateTime(2015, 6, 1),
+      );
+      when(
+        () => repository.getApplications(schoolId),
+      ).thenAnswer((_) async => Right([existing]));
 
-      final result = await service.checkForDuplicates(schoolId, 'Jane Doe', DateTime(2016, 6, 1));
+      final result = await service.checkForDuplicates(
+        schoolId,
+        'Jane Doe',
+        DateTime(2016, 6, 1),
+      );
 
       expect(result.getOrElse(() => []), isEmpty);
     });
 
     test('propagates a repository failure', () async {
-      when(() => repository.getApplications(schoolId)).thenAnswer((_) async => Left(ServerFailure('boom')));
+      when(
+        () => repository.getApplications(schoolId),
+      ).thenAnswer((_) async => Left(ServerFailure('boom')));
 
-      final result = await service.checkForDuplicates(schoolId, 'Jane Doe', DateTime(2015, 6, 1));
+      final result = await service.checkForDuplicates(
+        schoolId,
+        'Jane Doe',
+        DateTime(2015, 6, 1),
+      );
 
       expect(result, Left(ServerFailure('boom')));
     });

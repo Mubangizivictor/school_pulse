@@ -15,8 +15,13 @@ class GamesRemoteDataSourceImpl implements GamesRemoteDataSource {
 
   @override
   Future<List<SportsHouseModel>> getSportsHouses() async {
-    final snapshot = await firestore.collection('sports_houses').orderBy('totalPoints', descending: true).get();
-    return snapshot.docs.map((doc) => SportsHouseModel.fromJson(doc.data(), doc.id)).toList();
+    final snapshot = await firestore
+        .collection('sports_houses')
+        .orderBy('totalPoints', descending: true)
+        .get();
+    return snapshot.docs
+        .map((doc) => SportsHouseModel.fromJson(doc.data(), doc.id))
+        .toList();
   }
 
   @override
@@ -26,7 +31,9 @@ class GamesRemoteDataSourceImpl implements GamesRemoteDataSource {
         .orderBy('date', descending: true)
         .limit(10)
         .get();
-    return snapshot.docs.map((doc) => SportsCompetitionModel.fromJson(doc.data(), doc.id)).toList();
+    return snapshot.docs
+        .map((doc) => SportsCompetitionModel.fromJson(doc.data(), doc.id))
+        .toList();
   }
 
   @override

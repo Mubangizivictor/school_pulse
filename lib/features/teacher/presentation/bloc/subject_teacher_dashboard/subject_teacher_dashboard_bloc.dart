@@ -68,13 +68,15 @@ class SubjectTeacherDashboardState extends Equatable {
   /// so the card does not go blank the moment teaching finishes.
   Lesson? get featuredLesson {
     if (todaysLessons.isEmpty) return null;
-    final ongoing =
-        todaysLessons.where((l) => l.status == LessonStatus.ongoing).firstOrNull;
+    final ongoing = todaysLessons
+        .where((l) => l.status == LessonStatus.ongoing)
+        .firstOrNull;
     if (ongoing != null) return ongoing;
 
     final now = DateTime.now();
-    final upcoming =
-        todaysLessons.where((l) => l.scheduledEnd.isAfter(now)).firstOrNull;
+    final upcoming = todaysLessons
+        .where((l) => l.scheduledEnd.isAfter(now))
+        .firstOrNull;
     return upcoming ?? todaysLessons.last;
   }
 
@@ -121,15 +123,15 @@ class SubjectTeacherDashboardState extends Equatable {
 
   @override
   List<Object?> get props => [
-        isLoading,
-        errorMessage,
-        roleAssignmentId,
-        studentsEnrolled,
-        presentToday,
-        absentToday,
-        lessonsToday,
-        todaysLessons,
-      ];
+    isLoading,
+    errorMessage,
+    roleAssignmentId,
+    studentsEnrolled,
+    presentToday,
+    absentToday,
+    lessonsToday,
+    todaysLessons,
+  ];
 }
 
 class SubjectTeacherDashboardBloc
@@ -151,10 +153,12 @@ class SubjectTeacherDashboardBloc
     // Start from a clean state rather than copyWith: carrying the previous
     // assignment's numbers across a switch would briefly show Grade 10A's
     // enrollment under Grade 10B.
-    emit(SubjectTeacherDashboardState(
-      isLoading: true,
-      roleAssignmentId: event.context.roleAssignmentId,
-    ));
+    emit(
+      SubjectTeacherDashboardState(
+        isLoading: true,
+        roleAssignmentId: event.context.roleAssignmentId,
+      ),
+    );
 
     // Both reads go out together; neither depends on the other.
     final results = await Future.wait([
@@ -165,8 +169,7 @@ class SubjectTeacherDashboardBloc
     // The teacher may have switched again while these were in flight.
     if (state.roleAssignmentId != event.context.roleAssignmentId) return;
 
-    final students =
-        results[0] as Either<Failure, List<SubjectStudentSummary>>;
+    final students = results[0] as Either<Failure, List<SubjectStudentSummary>>;
     final lessons = results[1] as Either<Failure, List<Lesson>>;
 
     var next = state.copyWith(isLoading: false);
@@ -181,22 +184,22 @@ class SubjectTeacherDashboardBloc
       // A timetable that will not load must not blank out the student count
       // that did.
       (failure) => error ??= _messageFor(failure),
-      (list) => next = next.copyWith(
-        lessonsToday: list.length,
-        todaysLessons: list,
-      ),
+      (list) =>
+          next = next.copyWith(lessonsToday: list.length, todaysLessons: list),
     );
 
-    emit(error == null
-        ? next.copyWith(clearError: true)
-        : next.copyWith(errorMessage: error));
+    emit(
+      error == null
+          ? next.copyWith(clearError: true)
+          : next.copyWith(errorMessage: error),
+    );
   }
 
   String _messageFor(Failure failure) => switch (failure) {
-        PermissionDeniedFailure() => failure.message,
-        AssignmentInvalidFailure() => failure.message,
-        NetworkFailure() => 'You are offline. Showing saved data.',
-        ValidationFailure() => failure.message,
-        _ => 'Could not load this subject. Pull down to retry.',
-      };
+    PermissionDeniedFailure() => failure.message,
+    AssignmentInvalidFailure() => failure.message,
+    NetworkFailure() => 'You are offline. Showing saved data.',
+    ValidationFailure() => failure.message,
+    _ => 'Could not load this subject. Pull down to retry.',
+  };
 }

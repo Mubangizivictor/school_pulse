@@ -25,11 +25,11 @@ class ReportDecision {
   final List<String> unapprovedSubjects;
 
   const ReportDecision.allowed()
-      : isAllowed = true,
-        refusal = null,
-        message = null,
-        missingSections = const [],
-        unapprovedSubjects = const [];
+    : isAllowed = true,
+      refusal = null,
+      message = null,
+      missingSections = const [],
+      unapprovedSubjects = const [];
 
   const ReportDecision.refused(
     this.refusal,
@@ -56,10 +56,12 @@ class ClassReportPolicy {
   }) {
     return ReportSection.values
         .where(profile.isEnabled)
-        .where((section) => !entry.isSectionComplete(
-              section,
-              commentMinLength: profile.commentMinLength,
-            ))
+        .where(
+          (section) => !entry.isSectionComplete(
+            section,
+            commentMinLength: profile.commentMinLength,
+          ),
+        )
         .toList();
   }
 
@@ -129,7 +131,7 @@ class ClassReportPolicy {
         unapprovedSubjects.length == 1
             ? 'Marks for ${unapprovedSubjects.first} have not been approved yet.'
             : '${unapprovedSubjects.length} subjects still have unapproved '
-                'marks.',
+                  'marks.',
         unapprovedSubjects: unapprovedSubjects,
       );
     }

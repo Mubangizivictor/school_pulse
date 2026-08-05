@@ -43,8 +43,15 @@ import 'package:school_pulse/features/structure/presentation/screens/campus_faci
 import 'package:school_pulse/features/structure/presentation/screens/operations_config_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/feature_toggles_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/structure_setup_wizard_screen.dart';
+import 'package:school_pulse/features/structure/presentation/screens/setup_progress_screen.dart';
+import 'package:school_pulse/features/structure/presentation/screens/structure_validation_screen.dart';
+import 'package:school_pulse/features/structure/presentation/screens/timetable_config_screen.dart';
+import 'package:school_pulse/features/structure/presentation/screens/attendance_config_screen.dart';
+import 'package:school_pulse/features/structure/presentation/screens/communication_config_screen.dart';
+import 'package:school_pulse/features/structure/presentation/screens/document_templates_screen.dart';
+import 'package:school_pulse/features/structure/presentation/screens/custom_fields_screen.dart';
 import 'package:school_pulse/features/admin/admin_staff_attendance_screen.dart';
-import 'package:school_pulse/features/admin/appointments_screen.dart';
+import 'package:school_pulse/features/appointments/presentation/screens/appointments_workspace_screen.dart';
 import 'package:school_pulse/features/admin/audit_log_screen.dart';
 import 'package:school_pulse/features/admin/broadcast_history_screen.dart';
 import 'package:school_pulse/features/admin/subscription_screen.dart';
@@ -87,15 +94,27 @@ import 'package:school_pulse/features/student/presentation/screens/admission_rev
 import 'package:school_pulse/features/student/presentation/screens/admissions_list_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/new_application_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/report_wizard/report_wizard_bloc.dart';
-import 'package:school_pulse/features/teacher/staff_more_screen.dart';
+import 'package:school_pulse/features/profile/presentation/screens/profile_more_screen.dart';
+import 'package:school_pulse/features/profile/presentation/screens/edit_profile_screen.dart';
+import 'package:school_pulse/features/profile/presentation/screens/personal_information_screen.dart';
+import 'package:school_pulse/features/profile/presentation/screens/security_privacy_screen.dart';
+import 'package:school_pulse/features/profile/presentation/screens/change_password_screen.dart';
+import 'package:school_pulse/features/profile/presentation/screens/two_factor_auth_screen.dart';
+import 'package:school_pulse/features/profile/presentation/screens/active_sessions_screen.dart';
+import 'package:school_pulse/features/profile/presentation/screens/login_history_screen.dart';
+import 'package:school_pulse/features/profile/presentation/screens/account_activity_screen.dart';
+import 'package:school_pulse/features/profile/presentation/screens/help_center_screen.dart';
+import 'package:school_pulse/features/profile/presentation/screens/terms_of_service_screen.dart';
+import 'package:school_pulse/features/school_directory/presentation/screens/school_directory_screen.dart';
+import 'package:school_pulse/features/announcements/presentation/screens/announcements_screen.dart';
+import 'package:school_pulse/features/announcements/presentation/screens/announcement_detail_screen.dart';
+import 'package:school_pulse/features/announcements/presentation/screens/announcement_editor_screen.dart';
 import 'package:school_pulse/features/teacher/attendance_screen.dart';
 import 'package:school_pulse/features/teacher/attendance_history_screen.dart';
-import 'package:school_pulse/features/teacher/staff_profile_screen.dart';
-import 'package:school_pulse/features/teacher/security_settings_screen.dart';
 import 'package:school_pulse/features/teacher/class_analytics_screen.dart';
 import 'package:school_pulse/features/teacher/homework_screen.dart';
 import 'package:school_pulse/features/teacher/report_comments_screen.dart';
-import 'package:school_pulse/features/calendar/presentation/school_calendar_screen.dart';
+import 'package:school_pulse/features/school_calendar/presentation/screens/calendar_home_screen.dart';
 import 'package:school_pulse/features/shared/tasks/presentation/screens/task_list_screen.dart';
 import 'package:school_pulse/features/shared/tasks/presentation/screens/task_details_screen.dart';
 import 'package:school_pulse/features/shared/tasks/presentation/screens/create_task_screen.dart';
@@ -165,7 +184,6 @@ import 'package:school_pulse/features/director/presentation/screens/director_rep
 import 'package:school_pulse/features/student_identity/presentation/screens/student_id_card_screen.dart';
 import 'package:school_pulse/features/student_identity/presentation/screens/batch_id_card_screen.dart';
 import 'package:school_pulse/features/student/domain/entities/student.dart';
-import 'package:school_pulse/features/attendance_qr_integration/presentation/bloc/attendance_qr_bloc.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/super_admin_dashboard.dart';
 import 'package:school_pulse/features/visitors/domain/entities/visitor.dart';
 import 'package:school_pulse/features/visitors/domain/entities/pre_approved_visitor.dart';
@@ -184,13 +202,22 @@ import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/design_system/components/pulse_logo.dart';
 
 import 'package:school_pulse/features/attendance/presentation/screens/attendance_method_screen.dart';
-import 'package:school_pulse/features/attendance/presentation/screens/nfc_scanner_screen.dart';
-import 'package:school_pulse/features/attendance/presentation/screens/qr_scanner_screen.dart';
-import 'package:school_pulse/features/attendance/presentation/screens/qr_success_screen.dart';
-import 'package:school_pulse/features/attendance/presentation/screens/manual_attendance_screen.dart';
+import 'package:school_pulse/features/attendance_hub/domain/entities/attendance_category.dart';
+import 'package:school_pulse/features/attendance_hub/presentation/bloc/attendance_bloc.dart';
+import 'package:school_pulse/features/attendance_hub/presentation/screens/manual_attendance_screen.dart'
+    as attendance_hub;
+import 'package:school_pulse/features/attendance_hub/presentation/screens/nfc_scan_screen.dart'
+    as attendance_hub;
+import 'package:school_pulse/features/attendance_hub/presentation/screens/qr_scan_screen.dart'
+    as attendance_hub;
+import 'package:school_pulse/features/attendance_hub/presentation/screens/previous_attendance_screen.dart'
+    as attendance_hub;
+import 'package:school_pulse/features/attendance_hub/presentation/screens/attendance_statistics_screen.dart'
+    as attendance_hub;
+import 'package:school_pulse/features/attendance_hub/presentation/screens/sheets_integration_screen.dart'
+    as attendance_hub;
 import 'package:school_pulse/features/attendance/presentation/screens/attendance_summary_screen.dart';
 import 'package:school_pulse/features/attendance/presentation/screens/attendance_list_screen.dart';
-import 'package:school_pulse/features/attendance/presentation/screens/attendance_history_screen.dart';
 import 'package:school_pulse/features/branding/presentation/screens/splash_screen.dart'
     as pulse_splash;
 import 'package:school_pulse/features/branding/presentation/screens/branded_splash_screen.dart';
@@ -234,7 +261,8 @@ import 'package:school_pulse/features/teacher/presentation/screens/report_making
 import 'package:school_pulse/features/teacher/presentation/screens/report_making/enter_scores_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/report_making/ca_ea_breakdown_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/report_making/competency_entry_screen.dart';
-import 'package:school_pulse/features/teacher/presentation/screens/report_making/attendance_summary_screen.dart' as report_scr;
+import 'package:school_pulse/features/teacher/presentation/screens/report_making/attendance_summary_screen.dart'
+    as report_scr;
 import 'package:school_pulse/features/teacher/presentation/screens/report_making/behaviour_conduct_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/report_making/teacher_comment_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/report_making/report_preview_screen.dart';
@@ -287,15 +315,9 @@ import 'package:school_pulse/features/notifications/domain/entities/notification
 
 import 'package:school_pulse/features/teacher/presentation/screens/more/teacher_subjects_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/more/teacher_timetable_screen.dart';
-import 'package:school_pulse/features/teacher/presentation/screens/more/teacher_announcements_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/more/teacher_reports_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/more/teacher_downloads_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/more/teacher_leave_requests_screen.dart';
-import 'package:school_pulse/features/teacher/presentation/screens/more/teacher_settings_screen.dart';
-import 'package:school_pulse/features/teacher/presentation/screens/more/teacher_support_screen.dart';
-import 'package:school_pulse/features/teacher/presentation/screens/more/teacher_about_screen.dart';
-import 'package:school_pulse/features/teacher/presentation/screens/more/teacher_change_password_screen.dart';
-import 'package:school_pulse/features/teacher/presentation/screens/more/teacher_notification_settings_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/resources/resources_home_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/resources/my_resources_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/resources/upload_resource_screen.dart';
@@ -333,7 +355,8 @@ final router = GoRouter(
 
     // Institution Context Engine gating. superAdmin operates platform-wide
     // and has no tenant to scope to, so it's exempt from all of this.
-    final isInstitutionSuspendedRoute = state.uri.path == '/institution-suspended';
+    final isInstitutionSuspendedRoute =
+        state.uri.path == '/institution-suspended';
     if (authState is AuthAuthenticated &&
         authState.user.role != UserRole.superAdmin &&
         !isLoggingIn &&
@@ -565,7 +588,7 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/parent/calendar',
-          builder: (context, state) => const SchoolCalendarScreen(),
+          builder: (context, state) => const CalendarHomeScreen(),
         ),
         GoRoute(
           path: '/parent/boarding',
@@ -609,7 +632,7 @@ final router = GoRouter(
                   path: 'performance',
                   builder: (context, state) => TeacherStudentPerformanceScreen(
                     studentId: state.pathParameters['id']!,
-                    ),
+                  ),
                 ),
                 GoRoute(
                   path: 'assessments',
@@ -637,15 +660,17 @@ final router = GoRouter(
                 ),
                 GoRoute(
                   path: 'leave-applications',
-                  builder: (context, state) => TeacherStudentLeaveApplicationsScreen(
-                    studentId: state.pathParameters['id']!,
-                  ),
+                  builder: (context, state) =>
+                      TeacherStudentLeaveApplicationsScreen(
+                        studentId: state.pathParameters['id']!,
+                      ),
                 ),
                 GoRoute(
                   path: 'communications',
-                  builder: (context, state) => TeacherStudentCommunicationsScreen(
-                    studentId: state.pathParameters['id']!,
-                  ),
+                  builder: (context, state) =>
+                      TeacherStudentCommunicationsScreen(
+                        studentId: state.pathParameters['id']!,
+                      ),
                 ),
               ],
             ),
@@ -657,9 +682,8 @@ final router = GoRouter(
           routes: [
             GoRoute(
               path: ':classId',
-              builder: (context, state) => ClassDetailsScreen(
-                classId: state.pathParameters['classId']!,
-              ),
+              builder: (context, state) =>
+                  ClassDetailsScreen(classId: state.pathParameters['classId']!),
               routes: [
                 GoRoute(
                   path: 'students',
@@ -760,7 +784,8 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'attendance-summary',
-              builder: (context, state) => const report_scr.AttendanceSummaryScreen(),
+              builder: (context, state) =>
+                  const report_scr.AttendanceSummaryScreen(),
             ),
             GoRoute(
               path: 'behaviour-conduct',
@@ -780,7 +805,8 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'generated-success',
-              builder: (context, state) => const ReportsGeneratedSuccessScreen(),
+              builder: (context, state) =>
+                  const ReportsGeneratedSuccessScreen(),
             ),
             GoRoute(
               path: 'a4-template',
@@ -915,15 +941,22 @@ final router = GoRouter(
           },
           builder: (context, state) {
             final auth = context.read<AuthBloc>().state;
-            final isGatekeeper = auth is AuthAuthenticated && auth.user.roles.contains(UserRole.gatekeeper) && !auth.user.roles.any({
-                  UserRole.securityHead,
-                  UserRole.receptionist,
-                  UserRole.schoolAdmin,
-                  UserRole.director,
-                  UserRole.headTeacher,
-                  UserRole.deputyHead,
-                }.contains);
-            return isGatekeeper ? const GatekeeperHomeScreen() : const SecurityDashboardScreen();
+            final isGatekeeper =
+                auth is AuthAuthenticated &&
+                auth.user.roles.contains(UserRole.gatekeeper) &&
+                !auth.user.roles.any(
+                  {
+                    UserRole.securityHead,
+                    UserRole.receptionist,
+                    UserRole.schoolAdmin,
+                    UserRole.director,
+                    UserRole.headTeacher,
+                    UserRole.deputyHead,
+                  }.contains,
+                );
+            return isGatekeeper
+                ? const GatekeeperHomeScreen()
+                : const SecurityDashboardScreen();
           },
           routes: [
             GoRoute(
@@ -988,7 +1021,10 @@ final router = GoRouter(
           redirect: (context, state) {
             final auth = context.read<AuthBloc>().state;
             if (auth is! AuthAuthenticated) return '/welcome';
-            const permitted = {UserRole.boardingMatron, ...UserRoleDisplay.adminConsoleRoles};
+            const permitted = {
+              UserRole.boardingMatron,
+              ...UserRoleDisplay.adminConsoleRoles,
+            };
             if (!auth.user.roles.any(permitted.contains)) {
               return UserRoleRouting.dashboardPath(auth.user.role);
             }
@@ -998,7 +1034,8 @@ final router = GoRouter(
           routes: [
             GoRoute(
               path: 'dorms',
-              builder: (context, state) => const matron_scr.DormitoryManagementScreen(),
+              builder: (context, state) =>
+                  const matron_scr.DormitoryManagementScreen(),
               routes: [
                 GoRoute(
                   path: 'new',
@@ -1035,19 +1072,23 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'leave',
-              builder: (context, state) => const matron_scr.LeaveManagementScreen(),
+              builder: (context, state) =>
+                  const matron_scr.LeaveManagementScreen(),
             ),
             GoRoute(
               path: 'welfare',
-              builder: (context, state) => const matron_scr.WelfareManagementScreen(),
+              builder: (context, state) =>
+                  const matron_scr.WelfareManagementScreen(),
             ),
             GoRoute(
               path: 'discipline',
-              builder: (context, state) => const matron_scr.DisciplineManagementScreen(),
+              builder: (context, state) =>
+                  const matron_scr.DisciplineManagementScreen(),
             ),
             GoRoute(
               path: 'communication',
-              builder: (context, state) => const matron_scr.CommunicationScreen(),
+              builder: (context, state) =>
+                  const matron_scr.CommunicationScreen(),
             ),
             GoRoute(
               path: 'reports',
@@ -1060,7 +1101,10 @@ final router = GoRouter(
           redirect: (context, state) {
             final auth = context.read<AuthBloc>().state;
             if (auth is! AuthAuthenticated) return '/welcome';
-            const permitted = {UserRole.boardingPatron, ...UserRoleDisplay.adminConsoleRoles};
+            const permitted = {
+              UserRole.boardingPatron,
+              ...UserRoleDisplay.adminConsoleRoles,
+            };
             if (!auth.user.roles.any(permitted.contains)) {
               return UserRoleRouting.dashboardPath(auth.user.role);
             }
@@ -1070,7 +1114,8 @@ final router = GoRouter(
           routes: [
             GoRoute(
               path: 'dorms',
-              builder: (context, state) => const patron_scr.DormitoryManagementScreen(),
+              builder: (context, state) =>
+                  const patron_scr.DormitoryManagementScreen(),
               routes: [
                 GoRoute(
                   path: 'new',
@@ -1099,15 +1144,15 @@ final router = GoRouter(
                 ),
                 GoRoute(
                   path: 'beds',
-                  builder: (context, state) => BedManagementScreen(
-                    dormitory: state.extra as Dormitory,
-                  ),
+                  builder: (context, state) =>
+                      BedManagementScreen(dormitory: state.extra as Dormitory),
                 ),
               ],
             ),
             GoRoute(
               path: 'leave',
-              builder: (context, state) => const patron_scr.LeaveManagementScreen(),
+              builder: (context, state) =>
+                  const patron_scr.LeaveManagementScreen(),
             ),
             GoRoute(
               path: 'welfare',
@@ -1119,7 +1164,8 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'communication',
-              builder: (context, state) => const patron_scr.CommunicationScreen(),
+              builder: (context, state) =>
+                  const patron_scr.CommunicationScreen(),
             ),
             GoRoute(
               path: 'reports',
@@ -1232,7 +1278,7 @@ final router = GoRouter(
           routes: [
             GoRoute(
               path: 'users',
-              builder: (context, state) => UserManagementPage(initialTab: state.uri.queryParameters['tab']),
+              builder: (context, state) => const UserManagementPage(),
               routes: [
                 GoRoute(
                   path: 'add-staff',
@@ -1247,7 +1293,9 @@ final router = GoRouter(
                     // same UserRoleDisplay.adminConsoleRoles set, so this
                     // route uses that too rather than a narrower list that
                     // would make it a dead end reachable from nowhere.
-                    if (!auth.user.roles.any(UserRoleDisplay.adminConsoleRoles.contains)) {
+                    if (!auth.user.roles.any(
+                      UserRoleDisplay.adminConsoleRoles.contains,
+                    )) {
                       return UserRoleRouting.dashboardPath(auth.user.role);
                     }
                     return null;
@@ -1266,7 +1314,10 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'structure',
-              builder: (context, state) => const StructureScreen(),
+              builder: (context, state) => StructureScreen(
+                initialSection:
+                    state.uri.queryParameters['section'] ?? 'overview',
+              ),
               routes: [
                 GoRoute(
                   path: 'institution',
@@ -1275,31 +1326,47 @@ final router = GoRouter(
                 GoRoute(
                   path: 'academic',
                   builder: (context, state) {
-                    final tab = int.tryParse(state.uri.queryParameters['tab'] ?? '0') ?? 0;
+                    final tab =
+                        int.tryParse(state.uri.queryParameters['tab'] ?? '0') ??
+                        0;
                     return AcademicStructureScreen(initialTab: tab);
                   },
                 ),
                 GoRoute(
                   path: 'people',
                   builder: (context, state) {
-                    final tab = int.tryParse(state.uri.queryParameters['tab'] ?? '0') ?? 0;
+                    final tab =
+                        int.tryParse(state.uri.queryParameters['tab'] ?? '0') ??
+                        0;
                     return PeopleStructureScreen(initialTab: tab);
                   },
                 ),
                 GoRoute(
                   path: 'assessment',
-                  builder: (context, state) => const AssessmentGradingScreen(),
+                  builder: (context, state) {
+                    final tab =
+                        int.tryParse(state.uri.queryParameters['tab'] ?? '0') ??
+                        0;
+                    return AssessmentGradingScreen(initialTab: tab);
+                  },
                 ),
                 GoRoute(
                   path: 'campus',
                   builder: (context, state) {
-                    final tab = int.tryParse(state.uri.queryParameters['tab'] ?? '0') ?? 0;
+                    final tab =
+                        int.tryParse(state.uri.queryParameters['tab'] ?? '0') ??
+                        0;
                     return CampusFacilitiesScreen(initialTab: tab);
                   },
                 ),
                 GoRoute(
                   path: 'operations',
-                  builder: (context, state) => const OperationsConfigScreen(),
+                  builder: (context, state) {
+                    final tab =
+                        int.tryParse(state.uri.queryParameters['tab'] ?? '0') ??
+                        0;
+                    return OperationsConfigScreen(initialTab: tab);
+                  },
                 ),
                 GoRoute(
                   path: 'feature-toggles',
@@ -1307,7 +1374,38 @@ final router = GoRouter(
                 ),
                 GoRoute(
                   path: 'wizard',
-                  builder: (context, state) => const StructureSetupWizardScreen(),
+                  builder: (context, state) =>
+                      const StructureSetupWizardScreen(),
+                ),
+                GoRoute(
+                  path: 'progress',
+                  builder: (context, state) => const SetupProgressScreen(),
+                ),
+                GoRoute(
+                  path: 'validation',
+                  builder: (context, state) =>
+                      const StructureValidationScreen(),
+                ),
+                GoRoute(
+                  path: 'timetable-config',
+                  builder: (context, state) => const TimetableConfigScreen(),
+                ),
+                GoRoute(
+                  path: 'attendance-config',
+                  builder: (context, state) => const AttendanceConfigScreen(),
+                ),
+                GoRoute(
+                  path: 'communication-config',
+                  builder: (context, state) =>
+                      const CommunicationConfigScreen(),
+                ),
+                GoRoute(
+                  path: 'document-templates',
+                  builder: (context, state) => const DocumentTemplatesScreen(),
+                ),
+                GoRoute(
+                  path: 'custom-fields',
+                  builder: (context, state) => const CustomFieldsScreen(),
                 ),
               ],
             ),
@@ -1342,18 +1440,35 @@ final router = GoRouter(
               routes: [
                 GoRoute(
                   path: 'new',
-                  builder: (context, state) => NewApplicationScreen(schoolId: state.extra as String),
+                  builder: (context, state) =>
+                      NewApplicationScreen(schoolId: state.extra as String),
                 ),
                 GoRoute(
                   path: 'review',
-                  builder: (context, state) =>
-                      AdmissionReviewScreen(application: state.extra as AdmissionApplication),
+                  builder: (context, state) => AdmissionReviewScreen(
+                    application: state.extra as AdmissionApplication,
+                  ),
                 ),
               ],
             ),
             GoRoute(
               path: 'appointments',
-              builder: (context, state) => const AppointmentsScreen(),
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                const permitted = {
+                  UserRole.director,
+                  UserRole.headTeacher,
+                  UserRole.deputyHead,
+                  UserRole.schoolAdmin,
+                  UserRole.receptionist,
+                  UserRole.securityHead,
+                };
+                return auth.user.roles.any(permitted.contains)
+                    ? null
+                    : UserRoleRouting.dashboardPath(auth.user.role);
+              },
+              builder: (context, state) => const AppointmentsWorkspaceScreen(),
             ),
             GoRoute(
               path: 'audit-log',
@@ -1385,7 +1500,8 @@ final router = GoRouter(
           routes: [
             GoRoute(
               path: 'center',
-              builder: (context, state) => const NotificationCenterGroupedScreen(),
+              builder: (context, state) =>
+                  const NotificationCenterGroupedScreen(),
             ),
             GoRoute(
               path: 'search',
@@ -1397,7 +1513,8 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'preferences',
-              builder: (context, state) => const NotificationPreferencesScreen(),
+              builder: (context, state) =>
+                  const NotificationPreferencesScreen(),
             ),
             // Delivery test tool. Reachable at /staff/notifications/test;
             // it only ever sends to the signed-in user's own devices.
@@ -1424,12 +1541,14 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'add-announcement',
-              builder: (context, state) => const AddNotificationScreen(isAnnouncement: true),
+              builder: (context, state) =>
+                  const AddNotificationScreen(isAnnouncement: true),
             ),
             GoRoute(
               path: 'attachments',
               builder: (context, state) {
-                final attachments = state.extra as List<NotificationAttachment>?;
+                final attachments =
+                    state.extra as List<NotificationAttachment>?;
                 return AttachmentViewerScreen(attachments: attachments);
               },
             ),
@@ -1476,37 +1595,49 @@ final router = GoRouter(
             }
             return null;
           },
-          builder: (context, state) => const AttendanceMethodScreen(),
+          builder: (context, state) => BlocProvider(
+            create: (_) => di.sl<AttendanceBloc>(),
+            child: const AttendanceMethodScreen(),
+          ),
           routes: [
             GoRoute(
               path: 'nfc',
-              builder: (context, state) => const NFCScannerScreen(),
+              builder: (context, state) => BlocProvider(
+                create: (_) => di.sl<AttendanceBloc>(),
+                child: const attendance_hub.NfcScanScreen(),
+              ),
             ),
-            // Legacy route: NFCScannerScreen now routes a successful lookup
-            // straight to the real qr-success screen (same
-            // AttendanceQrBloc-driven flow, keyed by uniqueSystemId
-            // regardless of how it was entered) since no real NFC engine
-            // exists to give this screen's own mocked-up success view
-            // anything genuine to show. Redirect rather than delete the
-            // path outright, in case anything still links here directly.
+            // Legacy route kept as a redirect in case anything still links
+            // here directly - the real NFC flow now lives entirely on the
+            // 'nfc' route above (attendance_hub.NfcScanScreen).
             GoRoute(
               path: 'nfc-success',
               redirect: (context, state) => '/staff/attendance',
             ),
             GoRoute(
               path: 'qr',
-              builder: (context, state) => const QRScannerScreen(),
+              builder: (context, state) => BlocProvider(
+                create: (_) => di.sl<AttendanceBloc>(),
+                child: const attendance_hub.QrScanScreen(),
+              ),
             ),
+            // Legacy route kept as a redirect in case anything still links
+            // here directly - the real QR flow now lives entirely on the
+            // 'qr' route above (attendance_hub.QrScanScreen).
             GoRoute(
               path: 'qr-success',
-              builder: (context, state) => BlocProvider(
-                create: (_) => di.sl<AttendanceQrBloc>(),
-                child: QRSuccessScreen(student: state.extra as Student),
-              ),
+              redirect: (context, state) => '/staff/attendance',
             ),
             GoRoute(
               path: 'manual',
-              builder: (context, state) => const ManualAttendanceScreen(),
+              builder: (context, state) => BlocProvider(
+                create: (_) => di.sl<AttendanceBloc>(),
+                child: attendance_hub.ManualAttendanceScreen(
+                  category:
+                      (state.extra as AttendanceCategory?) ??
+                      AttendanceCategory.students,
+                ),
+              ),
             ),
             GoRoute(
               path: 'summary',
@@ -1518,7 +1649,22 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'history',
-              builder: (context, state) => const AttendanceHistoryScreen(),
+              builder: (context, state) => BlocProvider(
+                create: (_) => di.sl<AttendanceBloc>(),
+                child: const attendance_hub.PreviousAttendanceScreen(),
+              ),
+            ),
+            GoRoute(
+              path: 'statistics',
+              builder: (context, state) => BlocProvider(
+                create: (_) => di.sl<AttendanceBloc>(),
+                child: const attendance_hub.AttendanceStatisticsScreen(),
+              ),
+            ),
+            GoRoute(
+              path: 'sheets',
+              builder: (context, state) =>
+                  const attendance_hub.SheetsIntegrationScreen(),
             ),
           ],
         ),
@@ -1554,9 +1700,8 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'edit/:id',
-              builder: (context, state) => EditMarksScreen(
-                studentId: state.pathParameters['id']!,
-              ),
+              builder: (context, state) =>
+                  EditMarksScreen(studentId: state.pathParameters['id']!),
             ),
             GoRoute(
               path: 'import',
@@ -1582,27 +1727,33 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'class/:id',
-              builder: (context, state) => ClassLessonsScreen(classId: state.pathParameters['id']!),
+              builder: (context, state) =>
+                  ClassLessonsScreen(classId: state.pathParameters['id']!),
             ),
             GoRoute(
               path: 'details/:id',
-              builder: (context, state) => LessonDetailsScreen(lessonId: state.pathParameters['id']!),
+              builder: (context, state) =>
+                  LessonDetailsScreen(lessonId: state.pathParameters['id']!),
             ),
             GoRoute(
               path: 'attendance/:id',
-              builder: (context, state) => TakeAttendanceScreen(lessonId: state.pathParameters['id']!),
+              builder: (context, state) =>
+                  TakeAttendanceScreen(lessonId: state.pathParameters['id']!),
             ),
             GoRoute(
               path: 'notes/:id',
-              builder: (context, state) => LessonNotesScreen(lessonId: state.pathParameters['id']!),
+              builder: (context, state) =>
+                  LessonNotesScreen(lessonId: state.pathParameters['id']!),
             ),
             GoRoute(
               path: 'add-note/:id',
-              builder: (context, state) => AddLessonNoteScreen(lessonId: state.pathParameters['id']!),
+              builder: (context, state) =>
+                  AddLessonNoteScreen(lessonId: state.pathParameters['id']!),
             ),
             GoRoute(
               path: 'resources/:id',
-              builder: (context, state) => LessonResourcesScreen(lessonId: state.pathParameters['id']!),
+              builder: (context, state) =>
+                  LessonResourcesScreen(lessonId: state.pathParameters['id']!),
             ),
           ],
         ),
@@ -1616,7 +1767,7 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/staff/more',
-          builder: (context, state) => const StaffMoreScreen(),
+          builder: (context, state) => const ProfileMoreScreen(),
           routes: [
             GoRoute(
               path: 'subjects',
@@ -1625,10 +1776,6 @@ final router = GoRouter(
             GoRoute(
               path: 'timetable',
               builder: (context, state) => const TeacherTimetableScreen(),
-            ),
-            GoRoute(
-              path: 'announcements',
-              builder: (context, state) => const TeacherAnnouncementsScreen(),
             ),
             GoRoute(
               path: 'reports',
@@ -1643,26 +1790,80 @@ final router = GoRouter(
               builder: (context, state) => const TeacherLeaveRequestsScreen(),
             ),
             GoRoute(
-              path: 'settings',
-              builder: (context, state) => const TeacherSettingsScreen(),
+              path: 'edit-profile',
+              builder: (context, state) => const EditProfileScreen(),
+            ),
+            GoRoute(
+              path: 'personal-information',
+              builder: (context, state) => const PersonalInformationScreen(),
+            ),
+            GoRoute(
+              path: 'notification-preferences',
+              builder: (context, state) =>
+                  const NotificationPreferencesScreen(),
+            ),
+            GoRoute(
+              path: 'security-privacy',
+              builder: (context, state) => const SecurityPrivacyScreen(),
               routes: [
                 GoRoute(
                   path: 'change-password',
-                  builder: (context, state) => const TeacherChangePasswordScreen(),
+                  builder: (context, state) => const ChangePasswordScreen(),
                 ),
                 GoRoute(
-                  path: 'notifications',
-                  builder: (context, state) => const TeacherNotificationSettingsScreen(),
+                  path: 'two-factor',
+                  builder: (context, state) => const TwoFactorAuthScreen(),
+                ),
+                GoRoute(
+                  path: 'active-sessions',
+                  builder: (context, state) => const ActiveSessionsScreen(),
+                ),
+                GoRoute(
+                  path: 'login-history',
+                  builder: (context, state) => const LoginHistoryScreen(),
+                ),
+                GoRoute(
+                  path: 'account-activity',
+                  builder: (context, state) => const AccountActivityScreen(),
                 ),
               ],
             ),
             GoRoute(
-              path: 'support',
-              builder: (context, state) => const TeacherSupportScreen(),
+              path: 'school-directory',
+              builder: (context, state) => const SchoolDirectoryScreen(),
             ),
             GoRoute(
-              path: 'about',
-              builder: (context, state) => const TeacherAboutScreen(),
+              path: 'announcements',
+              builder: (context, state) => const AnnouncementsScreen(),
+              routes: [
+                GoRoute(
+                  path: 'new',
+                  builder: (context, state) =>
+                      const AnnouncementEditorScreen(),
+                ),
+                GoRoute(
+                  path: ':id',
+                  builder: (context, state) => AnnouncementDetailScreen(
+                    announcementId: state.pathParameters['id']!,
+                  ),
+                  routes: [
+                    GoRoute(
+                      path: 'edit',
+                      builder: (context, state) => AnnouncementEditorScreen(
+                        announcementId: state.pathParameters['id'],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            GoRoute(
+              path: 'help-center',
+              builder: (context, state) => const HelpCenterScreen(),
+            ),
+            GoRoute(
+              path: 'terms-of-service',
+              builder: (context, state) => const TermsOfServiceScreen(),
             ),
           ],
         ),
@@ -1683,7 +1884,8 @@ final router = GoRouter(
           routes: [
             GoRoute(
               path: 'history',
-              builder: (context, state) => const TeacherAttendanceHistoryScreen(),
+              builder: (context, state) =>
+                  const TeacherAttendanceHistoryScreen(),
             ),
           ],
         ),
@@ -1692,20 +1894,12 @@ final router = GoRouter(
           builder: (context, state) => const ReportCommentsScreen(),
         ),
         GoRoute(
-          path: '/staff/profile',
-          builder: (context, state) => const StaffProfileScreen(),
-        ),
-        GoRoute(
-          path: '/staff/security-settings',
-          builder: (context, state) => const SecuritySettingsScreen(),
-        ),
-        GoRoute(
           path: '/staff/class-analytics',
           builder: (context, state) => const ClassAnalyticsScreen(),
         ),
         GoRoute(
           path: '/staff/calendar',
-          builder: (context, state) => const SchoolCalendarScreen(),
+          builder: (context, state) => const CalendarHomeScreen(),
         ),
         GoRoute(
           path: '/staff/tasks',
@@ -1729,15 +1923,18 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'edit/:id',
-              builder: (context, state) => EditTaskScreen(taskId: state.pathParameters['id']!),
+              builder: (context, state) =>
+                  EditTaskScreen(taskId: state.pathParameters['id']!),
             ),
             GoRoute(
               path: 'attachments/:id',
-              builder: (context, state) => TaskAttachmentsScreen(taskId: state.pathParameters['id']!),
+              builder: (context, state) =>
+                  TaskAttachmentsScreen(taskId: state.pathParameters['id']!),
             ),
             GoRoute(
               path: 'dormitory-assignment',
-              builder: (context, state) => const TaskDormitoryAssignmentScreen(),
+              builder: (context, state) =>
+                  const TaskDormitoryAssignmentScreen(),
             ),
             GoRoute(
               path: ':id',
@@ -1835,9 +2032,8 @@ final router = GoRouter(
         ),
         GoRoute(
           path: 'broadcast/:id',
-          builder: (context, state) => BroadcastDetailsScreen(
-            broadcastId: state.pathParameters['id']!,
-          ),
+          builder: (context, state) =>
+              BroadcastDetailsScreen(broadcastId: state.pathParameters['id']!),
         ),
         GoRoute(
           path: 'new',
@@ -1849,7 +2045,8 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'group',
-              builder: (context, state) => const SelectContactsScreen(isGroupSelection: true),
+              builder: (context, state) =>
+                  const SelectContactsScreen(isGroupSelection: true),
               routes: [
                 // Shared by the group, broadcast and channel flows - which
                 // one is being created travels in the NewConversationDraft.
@@ -1879,21 +2076,18 @@ final router = GoRouter(
         ),
         GoRoute(
           path: 'chat/:chatId',
-          builder: (context, state) => ChatConversationScreen(
-            chatId: state.pathParameters['chatId']!,
-          ),
+          builder: (context, state) =>
+              ChatConversationScreen(chatId: state.pathParameters['chatId']!),
           routes: [
             GoRoute(
               path: 'info',
-              builder: (context, state) => ChatInfoScreen(
-                chatId: state.pathParameters['chatId']!,
-              ),
+              builder: (context, state) =>
+                  ChatInfoScreen(chatId: state.pathParameters['chatId']!),
             ),
             GoRoute(
               path: 'media',
-              builder: (context, state) => MediaLinksDocsScreen(
-                chatId: state.pathParameters['chatId']!,
-              ),
+              builder: (context, state) =>
+                  MediaLinksDocsScreen(chatId: state.pathParameters['chatId']!),
             ),
             GoRoute(
               path: 'profile',
@@ -1966,7 +2160,10 @@ class ParentShell extends StatelessWidget {
               Navigator.pop(context);
               context.go('/welcome');
             },
-            child: const Text('Logout', style: TextStyle(color: AppColors.deepOrange)),
+            child: const Text(
+              'Logout',
+              style: TextStyle(color: AppColors.deepOrange),
+            ),
           ),
         ],
       ),
@@ -1991,7 +2188,10 @@ class ParentShell extends StatelessWidget {
       ),
       const NavigationDestination(
         icon: Icon(Icons.account_balance_wallet_outlined),
-        selectedIcon: Icon(Icons.account_balance_wallet, color: AppColors.royalBlue),
+        selectedIcon: Icon(
+          Icons.account_balance_wallet,
+          color: AppColors.royalBlue,
+        ),
         label: 'Fees',
       ),
       const NavigationDestination(
@@ -2016,7 +2216,9 @@ class ParentShell extends StatelessWidget {
                 color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
                 border: Border(
                   right: BorderSide(
-                    color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                    color: isDark
+                        ? AppColors.borderDark
+                        : AppColors.borderLight,
                     width: 1,
                   ),
                 ),
@@ -2031,11 +2233,13 @@ class ParentShell extends StatelessWidget {
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.x4l),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.x4l,
+                    ),
                     child: PulseLogo(
                       size: 40,
-                      variant: MediaQuery.of(context).size.width > 1200 
-                          ? PulseLogoVariant.full 
+                      variant: MediaQuery.of(context).size.width > 1200
+                          ? PulseLogoVariant.full
                           : PulseLogoVariant.shield,
                     ),
                   ),
@@ -2044,29 +2248,42 @@ class ParentShell extends StatelessWidget {
                       backgroundColor: Colors.transparent,
                       extended: MediaQuery.of(context).size.width > 1200,
                       selectedIndex: _calculateSelectedIndex(context),
-                      onDestinationSelected: (idx) => _onItemTapped(idx, context),
+                      onDestinationSelected: (idx) =>
+                          _onItemTapped(idx, context),
                       minExtendedWidth: 280,
-                      labelType: MediaQuery.of(context).size.width > 1200 
-                          ? NavigationRailLabelType.none 
+                      labelType: MediaQuery.of(context).size.width > 1200
+                          ? NavigationRailLabelType.none
                           : NavigationRailLabelType.all,
-                      unselectedLabelTextStyle: AppTypography.labelMedium.copyWith(
-                        color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-                      ),
-                      selectedLabelTextStyle: AppTypography.labelMedium.copyWith(
-                        color: AppColors.primary(context),
-                        fontWeight: FontWeight.bold,
-                      ),
-                      destinations: destinations.map((d) => NavigationRailDestination(
-                        icon: d.icon,
-                        selectedIcon: d.selectedIcon,
-                        label: Text(d.label),
-                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.m),
-                      )).toList(),
+                      unselectedLabelTextStyle: AppTypography.labelMedium
+                          .copyWith(
+                            color: isDark
+                                ? AppColors.textMutedDark
+                                : AppColors.textMutedLight,
+                          ),
+                      selectedLabelTextStyle: AppTypography.labelMedium
+                          .copyWith(
+                            color: AppColors.primary(context),
+                            fontWeight: FontWeight.bold,
+                          ),
+                      destinations: destinations
+                          .map(
+                            (d) => NavigationRailDestination(
+                              icon: d.icon,
+                              selectedIcon: d.selectedIcon,
+                              label: Text(d.label),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: AppSpacing.m,
+                              ),
+                            ),
+                          )
+                          .toList(),
                     ),
                   ),
                   Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.x3l),
-                    child: _LogoutButton(onPressed: () => _handleLogout(context)),
+                    child: _LogoutButton(
+                      onPressed: () => _handleLogout(context),
+                    ),
                   ),
                 ],
               ),
@@ -2092,7 +2309,9 @@ class ParentShell extends StatelessWidget {
               ),
               child: NavigationBar(
                 height: 64,
-                backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                backgroundColor: isDark
+                    ? AppColors.surfaceDark
+                    : AppColors.surfaceLight,
                 indicatorColor: AppColors.electricBlue.withValues(alpha: 0.1),
                 selectedIndex: _calculateSelectedIndex(context),
                 onDestinationSelected: (idx) => _onItemTapped(idx, context),
@@ -2112,7 +2331,7 @@ class _LogoutButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isExtended = MediaQuery.of(context).size.width > 1200;
-    
+
     if (isExtended) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
@@ -2121,7 +2340,9 @@ class _LogoutButton extends StatelessWidget {
           icon: const Icon(Icons.logout_rounded, color: AppColors.deepOrange),
           label: Text(
             'Logout',
-            style: AppTypography.labelLarge.copyWith(color: AppColors.deepOrange),
+            style: AppTypography.labelLarge.copyWith(
+              color: AppColors.deepOrange,
+            ),
           ),
           style: TextButton.styleFrom(
             alignment: Alignment.centerLeft,

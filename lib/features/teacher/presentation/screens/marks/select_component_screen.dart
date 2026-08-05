@@ -18,15 +18,32 @@ class SelectComponentScreen extends StatelessWidget {
           icon: const Icon(Icons.chevron_left, color: Colors.white),
           onPressed: () => context.pop(),
         ),
-        title: const Text('Select Component', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Select Component',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         centerTitle: true,
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            const Text('Mid Term Test', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-            const Text('Total: 40 Marks', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+            const Text(
+              'Mid Term Test',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const Text(
+              'Total: 40 Marks',
+              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+            ),
             const SizedBox(height: 24),
             _buildComponentCard(context, 'Section A', '20 Marks', surfaceColor),
             _buildComponentCard(context, 'Section B', '10 Marks', surfaceColor),
@@ -39,9 +56,17 @@ class SelectComponentScreen extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF4338CA),
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child: const Text('Continue', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Continue',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
           ],
@@ -50,7 +75,12 @@ class SelectComponentScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildComponentCard(BuildContext context, String title, String marks, Color surfaceColor) {
+  Widget _buildComponentCard(
+    BuildContext context,
+    String title,
+    String marks,
+    Color surfaceColor,
+  ) {
     return InkWell(
       onTap: () => context.push('/staff/marks/enter'),
       child: Container(
@@ -69,15 +99,31 @@ class SelectComponentScreen extends StatelessWidget {
                 color: const Color(0xFF312E81).withOpacity(0.5),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.description_outlined, color: Color(0xFF818CF8), size: 20),
+              child: const Icon(
+                Icons.description_outlined,
+                color: Color(0xFF818CF8),
+                size: 20,
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  Text(marks, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    marks,
+                    style: const TextStyle(
+                      color: Color(0xFF94A3B8),
+                      fontSize: 12,
+                    ),
+                  ),
                 ],
               ),
             ),

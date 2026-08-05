@@ -31,7 +31,14 @@ class MatronDashboardLoaded extends MatronState {
   });
 
   @override
-  List<Object?> get props => [dormitories, students, recentAttendance, recentIncidents, recentWelfare, announcements];
+  List<Object?> get props => [
+    dormitories,
+    students,
+    recentAttendance,
+    recentIncidents,
+    recentWelfare,
+    announcements,
+  ];
 }
 
 class DashboardOverviewLoaded extends MatronState {

@@ -6,20 +6,25 @@ import 'report_wizard_state.dart';
 class ReportWizardBloc extends Bloc<ReportWizardEvent, ReportWizardState> {
   final GenerateReports generateReports;
 
-  ReportWizardBloc({required this.generateReports}) : super(const ReportWizardState()) {
+  ReportWizardBloc({required this.generateReports})
+    : super(const ReportWizardState()) {
     on<ReportWizardClassSelected>((event, emit) {
-      emit(state.copyWith(
-        selectedClassId: event.classId,
-        selectedClassName: event.className,
-      ));
+      emit(
+        state.copyWith(
+          selectedClassId: event.classId,
+          selectedClassName: event.className,
+        ),
+      );
     });
 
     on<ReportWizardTermProfileSelected>((event, emit) {
-      emit(state.copyWith(
-        selectedYear: event.year,
-        selectedTerm: event.term,
-        selectedProfile: event.profile,
-      ));
+      emit(
+        state.copyWith(
+          selectedYear: event.year,
+          selectedTerm: event.term,
+          selectedProfile: event.profile,
+        ),
+      );
     });
 
     on<ReportWizardSectionsUpdated>((event, emit) {
@@ -35,28 +40,34 @@ class ReportWizardBloc extends Bloc<ReportWizardEvent, ReportWizardState> {
           state.selectedTerm == null ||
           state.selectedYear == null ||
           state.selectedStudentIds.isEmpty) {
-        emit(state.copyWith(
-          status: ReportWizardStatus.failure,
-          errorMessage: 'Missing required information for report generation.',
-        ));
+        emit(
+          state.copyWith(
+            status: ReportWizardStatus.failure,
+            errorMessage: 'Missing required information for report generation.',
+          ),
+        );
         return;
       }
 
       emit(state.copyWith(status: ReportWizardStatus.loading));
 
-      final result = await generateReports(GenerateReportsParams(
-        className: state.selectedClassName!,
-        term: state.selectedTerm!,
-        year: state.selectedYear!,
-        studentIds: state.selectedStudentIds,
-        enabledSections: state.enabledSections,
-      ));
+      final result = await generateReports(
+        GenerateReportsParams(
+          className: state.selectedClassName!,
+          term: state.selectedTerm!,
+          year: state.selectedYear!,
+          studentIds: state.selectedStudentIds,
+          enabledSections: state.enabledSections,
+        ),
+      );
 
       result.fold(
-        (failure) => emit(state.copyWith(
-          status: ReportWizardStatus.failure,
-          errorMessage: failure.message,
-        )),
+        (failure) => emit(
+          state.copyWith(
+            status: ReportWizardStatus.failure,
+            errorMessage: failure.message,
+          ),
+        ),
         (_) => emit(state.copyWith(status: ReportWizardStatus.success)),
       );
     });

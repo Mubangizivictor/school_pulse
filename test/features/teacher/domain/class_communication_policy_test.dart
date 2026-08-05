@@ -137,7 +137,9 @@ void main() {
     test('is refused for something already sent', () {
       expect(
         ClassCommunicationPolicy.canPublishAnnouncement(
-          announcement: _announcement(status: ClassAnnouncementStatus.published),
+          announcement: _announcement(
+            status: ClassAnnouncementStatus.published,
+          ),
           hasPublishPermission: true,
           recipientCount: 3,
         ).refusal,
@@ -169,8 +171,9 @@ void main() {
 
     test('honour a students-only audience', () {
       final recipients = ClassCommunicationPolicy.recipientsFor(
-        announcement:
-            _announcement(audience: ClassAnnouncementAudience.students),
+        announcement: _announcement(
+          audience: ClassAnnouncementAudience.students,
+        ),
         roster: roster,
       );
 
@@ -180,8 +183,9 @@ void main() {
 
     test('honour a guardians-only audience', () {
       final recipients = ClassCommunicationPolicy.recipientsFor(
-        announcement:
-            _announcement(audience: ClassAnnouncementAudience.guardians),
+        announcement: _announcement(
+          audience: ClassAnnouncementAudience.guardians,
+        ),
         roster: roster,
       );
 
@@ -255,8 +259,9 @@ void main() {
 
     test('a draft is never re-derived from the clock', () {
       expect(
-        _announcement(expiresAt: _now.subtract(const Duration(days: 3)))
-            .effectiveStatus(asOf: _now),
+        _announcement(
+          expiresAt: _now.subtract(const Duration(days: 3)),
+        ).effectiveStatus(asOf: _now),
         ClassAnnouncementStatus.draft,
       );
     });

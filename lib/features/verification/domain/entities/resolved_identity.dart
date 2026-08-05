@@ -62,7 +62,13 @@ class ParentPickupResolvedIdentity extends ResolvedIdentity {
   });
 
   @override
-  List<Object?> get props => [parentCode, childId, childName, parentName, phoneNumber];
+  List<Object?> get props => [
+    parentCode,
+    childId,
+    childName,
+    parentName,
+    phoneNumber,
+  ];
 }
 
 class UnresolvedResolvedIdentity extends ResolvedIdentity {

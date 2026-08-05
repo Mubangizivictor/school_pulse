@@ -40,7 +40,8 @@ class _SearchablePickerSheet<T> extends StatefulWidget {
   });
 
   @override
-  State<_SearchablePickerSheet<T>> createState() => _SearchablePickerSheetState<T>();
+  State<_SearchablePickerSheet<T>> createState() =>
+      _SearchablePickerSheetState<T>();
 }
 
 class _SearchablePickerSheetState<T> extends State<_SearchablePickerSheet<T>> {
@@ -58,8 +59,13 @@ class _SearchablePickerSheetState<T> extends State<_SearchablePickerSheet<T>> {
     final filtered = _query.isEmpty
         ? widget.items
         : widget.items
-            .where((item) => widget.labelBuilder(item).toLowerCase().contains(_query.toLowerCase()))
-            .toList();
+              .where(
+                (item) => widget
+                    .labelBuilder(item)
+                    .toLowerCase()
+                    .contains(_query.toLowerCase()),
+              )
+              .toList();
 
     return DraggableScrollableSheet(
       initialChildSize: 0.75,
@@ -67,13 +73,18 @@ class _SearchablePickerSheetState<T> extends State<_SearchablePickerSheet<T>> {
       maxChildSize: 0.95,
       expand: false,
       builder: (context, scrollController) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: Text(widget.title, style: Theme.of(context).textTheme.titleLarge),
+              child: Text(
+                widget.title,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -92,7 +103,9 @@ class _SearchablePickerSheetState<T> extends State<_SearchablePickerSheet<T>> {
                             setState(() => _query = '');
                           },
                         ),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 onChanged: (value) => setState(() => _query = value),
               ),
@@ -103,7 +116,9 @@ class _SearchablePickerSheetState<T> extends State<_SearchablePickerSheet<T>> {
                   ? Center(
                       child: Text(
                         'No matches for "$_query"',
-                        style: TextStyle(color: Theme.of(context).colorScheme.outline),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
                       ),
                     )
                   : ListView.builder(

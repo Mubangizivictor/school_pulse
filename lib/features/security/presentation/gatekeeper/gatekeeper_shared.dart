@@ -6,7 +6,10 @@ import 'package:school_pulse/features/security/domain/entities/security_entities
 /// inside should be suggested LEAVE. Defaults to entering if nothing was
 /// recorded today. The proposed action is always shown, never applied
 /// automatically - the guard still taps ENTER/LEAVE to confirm.
-String suggestStudentDirection(List<StudentMovement> todayMovements, String studentId) {
+String suggestStudentDirection(
+  List<StudentMovement> todayMovements,
+  String studentId,
+) {
   final mine = todayMovements.where((m) => m.studentId == studentId).toList()
     ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
   if (mine.isEmpty) return 'In';
@@ -14,7 +17,10 @@ String suggestStudentDirection(List<StudentMovement> todayMovements, String stud
 }
 
 /// Same smart-action heuristic as [suggestStudentDirection], for staff.
-String suggestStaffDirection(List<StaffMovement> todayMovements, String staffId) {
+String suggestStaffDirection(
+  List<StaffMovement> todayMovements,
+  String staffId,
+) {
   final mine = todayMovements.where((m) => m.staffId == staffId).toList()
     ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
   if (mine.isEmpty) return 'In';
@@ -33,7 +39,8 @@ String computeMovementType(Gate gate, String direction) {
   final now = DateTime.now();
 
   if (direction == 'In') {
-    if (open != null && now.isAfter(open.add(const Duration(minutes: 15)))) return 'Late Arrival';
+    if (open != null && now.isAfter(open.add(const Duration(minutes: 15))))
+      return 'Late Arrival';
     return 'Arrival';
   } else {
     if (close != null && now.isBefore(close)) return 'Early Departure';

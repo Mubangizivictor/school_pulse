@@ -44,126 +44,134 @@ class _BedManagementScreenState extends State<BedManagementScreen> {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-      appBar: AppBar(
-        title: Text('${widget.dormitory.name} Beds'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.history),
-            tooltip: 'Transfer History',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const _TransferHistoryScreen()),
-            ),
-          ),
-        ],
-      ),
-      body: BlocConsumer<MatronBloc, MatronState>(
-        listener: (context, state) {
-          if (state is MatronActionSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
-          } else if (state is MatronError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: semanticColors.error),
-            );
-          }
-        },
-        buildWhen: (previous, current) => current is BedsLoaded || current is MatronLoading,
-        builder: (context, state) {
-          if (state is! BedsLoaded) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final beds = state.beds;
-          final occupied = beds.where((b) => b.occupied).toList();
-          final available = beds.where((b) => !b.occupied).toList();
-
-          final visible = switch (_tab) {
-            1 => occupied,
-            2 => available,
-            _ => beds,
-          };
-
-          return Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.xl,
-                  AppSpacing.xl,
-                  AppSpacing.xl,
-                  AppSpacing.m,
+        appBar: AppBar(
+          title: Text('${widget.dormitory.name} Beds'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.history),
+              tooltip: 'Transfer History',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const _TransferHistoryScreen(),
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: DormStatTile(
-                        label: 'Total Beds',
-                        value: '${beds.length}',
-                        icon: Icons.bed_outlined,
-                        color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          ],
+        ),
+        body: BlocConsumer<MatronBloc, MatronState>(
+          listener: (context, state) {
+            if (state is MatronActionSuccess) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(state.message)));
+            } else if (state is MatronError) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: semanticColors.error,
+                ),
+              );
+            }
+          },
+          buildWhen: (previous, current) =>
+              current is BedsLoaded || current is MatronLoading,
+          builder: (context, state) {
+            if (state is! BedsLoaded) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            final beds = state.beds;
+            final occupied = beds.where((b) => b.occupied).toList();
+            final available = beds.where((b) => !b.occupied).toList();
+
+            final visible = switch (_tab) {
+              1 => occupied,
+              2 => available,
+              _ => beds,
+            };
+
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.xl,
+                    AppSpacing.xl,
+                    AppSpacing.xl,
+                    AppSpacing.m,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: DormStatTile(
+                          label: 'Total Beds',
+                          value: '${beds.length}',
+                          icon: Icons.bed_outlined,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: AppSpacing.m),
-                    Expanded(
-                      child: DormStatTile(
-                        label: 'Occupied',
-                        value: '${occupied.length}',
-                        icon: Icons.person_outline,
-                        color: Colors.orange,
+                      const SizedBox(width: AppSpacing.m),
+                      Expanded(
+                        child: DormStatTile(
+                          label: 'Occupied',
+                          value: '${occupied.length}',
+                          icon: Icons.person_outline,
+                          color: Colors.orange,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: AppSpacing.m),
-                    Expanded(
-                      child: DormStatTile(
-                        label: 'Available',
-                        value: '${available.length}',
-                        icon: Icons.event_available_outlined,
-                        color: semanticColors.success,
+                      const SizedBox(width: AppSpacing.m),
+                      Expanded(
+                        child: DormStatTile(
+                          label: 'Available',
+                          value: '${available.length}',
+                          icon: Icons.event_available_outlined,
+                          color: semanticColors.success,
+                        ),
                       ),
-                    ),
+                    ],
+                  ),
+                ),
+                TabBar(
+                  onTap: (i) => setState(() => _tab = i),
+                  tabs: const [
+                    Tab(text: 'All Beds'),
+                    Tab(text: 'Occupied'),
+                    Tab(text: 'Available'),
                   ],
                 ),
-              ),
-              TabBar(
-                onTap: (i) => setState(() => _tab = i),
-                tabs: const [
-                  Tab(text: 'All Beds'),
-                  Tab(text: 'Occupied'),
-                  Tab(text: 'Available'),
-                ],
-              ),
-              Expanded(
-                child: visible.isEmpty
-                    ? const EmptyState(
-                        icon: Icons.bed_outlined,
-                        title: 'No Beds Here',
-                        message: 'Tap + to add beds to this dormitory.',
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(AppSpacing.xl),
-                        itemCount: visible.length,
-                        itemBuilder: (context, index) {
-                          final bed = visible[index];
-                          return BedListTile(
-                            bedNumber: bed.bedNumber,
-                            occupied: bed.occupied,
-                            studentName: bed.studentName,
-                            onTap: () => _BedTile(
-                              bed: bed,
-                              dormitory: widget.dormitory,
-                              currentUserName: _currentUserName(context),
-                            ).showActions(context),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddBedDialog(context),
-        child: const Icon(Icons.add),
-      ),
+                Expanded(
+                  child: visible.isEmpty
+                      ? const EmptyState(
+                          icon: Icons.bed_outlined,
+                          title: 'No Beds Here',
+                          message: 'Tap + to add beds to this dormitory.',
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(AppSpacing.xl),
+                          itemCount: visible.length,
+                          itemBuilder: (context, index) {
+                            final bed = visible[index];
+                            return BedListTile(
+                              bedNumber: bed.bedNumber,
+                              occupied: bed.occupied,
+                              studentName: bed.studentName,
+                              onTap: () => _BedTile(
+                                bed: bed,
+                                dormitory: widget.dormitory,
+                                currentUserName: _currentUserName(context),
+                              ).showActions(context),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            );
+          },
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => _showAddBedDialog(context),
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }
@@ -180,11 +188,16 @@ class _BedManagementScreenState extends State<BedManagementScreen> {
           decoration: const InputDecoration(labelText: 'Bed Number'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             onPressed: () {
               if (controller.text.trim().isNotEmpty) {
-                bloc.add(AddBedEvent(widget.dormitory.id, controller.text.trim()));
+                bloc.add(
+                  AddBedEvent(widget.dormitory.id, controller.text.trim()),
+                );
               }
               Navigator.pop(dialogContext);
             },
@@ -201,7 +214,11 @@ class _BedTile extends StatelessWidget {
   final Dormitory dormitory;
   final String currentUserName;
 
-  const _BedTile({required this.bed, required this.dormitory, required this.currentUserName});
+  const _BedTile({
+    required this.bed,
+    required this.dormitory,
+    required this.currentUserName,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -216,7 +233,10 @@ class _BedTile extends StatelessWidget {
         children: [
           Icon(Icons.bed_outlined, color: color, size: 28),
           const SizedBox(height: 6),
-          Text(bed.bedNumber, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(
+            bed.bedNumber,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 4),
           if (bed.occupied)
             Text(
@@ -226,7 +246,12 @@ class _BedTile extends StatelessWidget {
               style: Theme.of(context).textTheme.labelSmall,
             )
           else
-            Text('Vacant', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: color)),
+            Text(
+              'Vacant',
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: color),
+            ),
         ],
       ),
     );
@@ -277,7 +302,9 @@ class _BedTile extends StatelessWidget {
 
   Future<void> _showAssignDialog(BuildContext context, MatronBloc bloc) async {
     final authState = context.read<AuthBloc>().state;
-    final schoolId = authState is AuthAuthenticated ? authState.user.schoolId : '';
+    final schoolId = authState is AuthAuthenticated
+        ? authState.user.schoolId
+        : '';
     final result = await di.sl<GetAllStudents>()(schoolId: schoolId);
     final students = result.fold(
       (_) => <Student>[],
@@ -306,23 +333,32 @@ class _BedTile extends StatelessWidget {
               const SizedBox(height: 12),
               TextField(
                 controller: reasonController,
-                decoration: const InputDecoration(labelText: 'Reason (optional)'),
+                decoration: const InputDecoration(
+                  labelText: 'Reason (optional)',
+                ),
               ),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
             FilledButton(
               onPressed: selected == null
                   ? null
                   : () {
-                      bloc.add(TransferStudentEvent(
-                        studentId: selected!.id,
-                        toDormitoryId: dormitory.id,
-                        toBedNumber: bed.bedNumber,
-                        transferredBy: currentUserName,
-                        reason: reasonController.text.trim().isEmpty ? null : reasonController.text.trim(),
-                      ));
+                      bloc.add(
+                        TransferStudentEvent(
+                          studentId: selected!.id,
+                          toDormitoryId: dormitory.id,
+                          toBedNumber: bed.bedNumber,
+                          transferredBy: currentUserName,
+                          reason: reasonController.text.trim().isEmpty
+                              ? null
+                              : reasonController.text.trim(),
+                        ),
+                      );
                       Navigator.pop(dialogContext);
                     },
               child: const Text('Confirm'),
@@ -379,7 +415,10 @@ class _TransferHistoryScreenState extends State<_TransferHistoryScreen> {
                     '${t.fromDormitoryName ?? 'Unassigned'} -> ${t.toDormitoryName}'
                     '${t.toBedNumber != null ? ' (Bed ${t.toBedNumber})' : ''}',
                   ),
-                  trailing: Text(DateFormat('MMM d').format(t.date), style: Theme.of(context).textTheme.labelSmall),
+                  trailing: Text(
+                    DateFormat('MMM d').format(t.date),
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
                 ),
               );
             },

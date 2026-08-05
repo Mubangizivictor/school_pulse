@@ -6,9 +6,7 @@ class StudentTimetableScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Weekly Timetable'),
-      ),
+      appBar: AppBar(title: const Text('Weekly Timetable')),
       body: const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

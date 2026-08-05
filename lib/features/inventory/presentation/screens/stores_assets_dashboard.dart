@@ -44,7 +44,9 @@ class _StoresAssetsDashboardState extends State<StoresAssetsDashboard> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const QRScannerScreen()),
+                MaterialPageRoute(
+                  builder: (context) => const QRScannerScreen(),
+                ),
               );
             },
           ),
@@ -65,7 +67,8 @@ class _StoresAssetsDashboardState extends State<StoresAssetsDashboard> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => AssetDetailsScreen(asset: state.scannedAsset!),
+                builder: (context) =>
+                    AssetDetailsScreen(asset: state.scannedAsset!),
               ),
             );
           }
@@ -103,7 +106,11 @@ class _StoresAssetsDashboardState extends State<StoresAssetsDashboard> {
                     _buildSection(
                       context,
                       title: 'Recent Stock Movements',
-                      child: _buildMovementsList(context, state, semanticColors),
+                      child: _buildMovementsList(
+                        context,
+                        state,
+                        semanticColors,
+                      ),
                     ),
                   ],
                 ),
@@ -123,17 +130,25 @@ class _StoresAssetsDashboardState extends State<StoresAssetsDashboard> {
       children: [
         Text(
           'Operational Overview',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
         ),
         Text(
           'Manage school resources from one place',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
         ),
       ],
     );
   }
 
-  Widget _buildStatsGrid(BuildContext context, StoresAssetsLoaded state, SemanticColors semanticColors) {
+  Widget _buildStatsGrid(
+    BuildContext context,
+    StoresAssetsLoaded state,
+    SemanticColors semanticColors,
+  ) {
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
@@ -187,7 +202,9 @@ class _StoresAssetsDashboardState extends State<StoresAssetsDashboard> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const InventoryListScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const InventoryListScreen(),
+                    ),
                   );
                 },
               ),
@@ -202,7 +219,9 @@ class _StoresAssetsDashboardState extends State<StoresAssetsDashboard> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const RepairListScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const RepairListScreen(),
+                    ),
                   );
                 },
               ),
@@ -222,7 +241,9 @@ class _StoresAssetsDashboardState extends State<StoresAssetsDashboard> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const MaintenanceScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const MaintenanceScreen(),
+                    ),
                   );
                 },
               ),
@@ -232,7 +253,9 @@ class _StoresAssetsDashboardState extends State<StoresAssetsDashboard> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const ProcurementScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const ProcurementScreen(),
+                    ),
                   );
                 },
               ),
@@ -243,7 +266,11 @@ class _StoresAssetsDashboardState extends State<StoresAssetsDashboard> {
     );
   }
 
-  Widget _buildSection(BuildContext context, {required String title, required Widget child}) {
+  Widget _buildSection(
+    BuildContext context, {
+    required String title,
+    required Widget child,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -263,11 +290,18 @@ class _StoresAssetsDashboardState extends State<StoresAssetsDashboard> {
     }
     // Combine and show top 3
     return Column(
-      children: state.repairs.take(3).map((r) => _RepairTile(repair: r)).toList(),
+      children: state.repairs
+          .take(3)
+          .map((r) => _RepairTile(repair: r))
+          .toList(),
     );
   }
 
-  Widget _buildMovementsList(BuildContext context, StoresAssetsLoaded state, SemanticColors semanticColors) {
+  Widget _buildMovementsList(
+    BuildContext context,
+    StoresAssetsLoaded state,
+    SemanticColors semanticColors,
+  ) {
     if (state.recentMovements.isEmpty) {
       return const AppCard(
         padding: EdgeInsets.all(16),
@@ -275,7 +309,12 @@ class _StoresAssetsDashboardState extends State<StoresAssetsDashboard> {
       );
     }
     return Column(
-      children: state.recentMovements.take(5).map((m) => _MovementTile(movement: m, semanticColors: semanticColors)).toList(),
+      children: state.recentMovements
+          .take(5)
+          .map(
+            (m) => _MovementTile(movement: m, semanticColors: semanticColors),
+          )
+          .toList(),
     );
   }
 }
@@ -285,7 +324,11 @@ class _QuickActionButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
 
-  const _QuickActionButton({required this.label, required this.icon, required this.onTap});
+  const _QuickActionButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -299,14 +342,19 @@ class _QuickActionButton extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primaryContainer.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: Theme.of(context).colorScheme.primary),
             ),
           ),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+          ),
         ],
       ),
     );
@@ -333,7 +381,11 @@ class _RepairTile extends StatelessWidget {
           ),
           child: Text(
             repair.status.name.toUpperCase(),
-            style: const TextStyle(fontSize: 10, color: Colors.orange, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              fontSize: 10,
+              color: Colors.orange,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ),
@@ -358,7 +410,9 @@ class _MovementTile extends StatelessWidget {
           color: isRestock ? semanticColors.success : semanticColors.warning,
         ),
         title: Text(movement.itemName),
-        subtitle: Text('${movement.note} • ${DateFormatter.relative(movement.date)}'),
+        subtitle: Text(
+          '${movement.note} • ${DateFormatter.relative(movement.date)}',
+        ),
         trailing: Text(
           '${isRestock ? "+" : "-"}${movement.quantity}',
           style: TextStyle(

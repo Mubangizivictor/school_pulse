@@ -23,9 +23,11 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
   void _onDismissAlert(DismissAlert event, Emitter<NotificationsState> emit) {
     final current = state;
     if (current is NotificationsLoaded) {
-      emit(NotificationsLoaded(
-        current.alerts.where((a) => a.id != event.alertId).toList(),
-      ));
+      emit(
+        NotificationsLoaded(
+          current.alerts.where((a) => a.id != event.alertId).toList(),
+        ),
+      );
     }
     // Fire-and-forget: persist so the alert doesn't reappear as unread on
     // the next FetchAlerts (e.g. app restart), and so the bell badge clears.
@@ -58,7 +60,8 @@ class NotificationsBloc extends Bloc<NotificationsEvent, NotificationsState> {
     );
 
     result.fold(
-      (failure) => emit(const NotificationsError('Failed to send notification')),
+      (failure) =>
+          emit(const NotificationsError('Failed to send notification')),
       (_) => null, // Success is handled by UI popping/snackbars
     );
   }

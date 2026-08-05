@@ -94,9 +94,12 @@ class _PatronDashboardState extends State<PatronDashboard> {
 
             // 1. Boarding overview strip
             BlocBuilder<PatronBloc, PatronState>(
-              buildWhen: (previous, current) => current is DashboardOverviewLoaded,
+              buildWhen: (previous, current) =>
+                  current is DashboardOverviewLoaded,
               builder: (context, state) {
-                final overview = state is DashboardOverviewLoaded ? state.overview : null;
+                final overview = state is DashboardOverviewLoaded
+                    ? state.overview
+                    : null;
                 return BoardingOverviewCard(
                   isLoading: overview == null,
                   metrics: _buildMetrics(overview, semanticColors),
@@ -116,9 +119,12 @@ class _PatronDashboardState extends State<PatronDashboard> {
 
             // 3. Today's Tasks
             BlocBuilder<PatronBloc, PatronState>(
-              buildWhen: (previous, current) => current is DashboardOverviewLoaded,
+              buildWhen: (previous, current) =>
+                  current is DashboardOverviewLoaded,
               builder: (context, state) {
-                final overview = state is DashboardOverviewLoaded ? state.overview : null;
+                final overview = state is DashboardOverviewLoaded
+                    ? state.overview
+                    : null;
                 if (overview == null) {
                   return const Skeleton(height: 220, borderRadius: 16);
                 }
@@ -132,9 +138,12 @@ class _PatronDashboardState extends State<PatronDashboard> {
 
             // 4. Urgent Alerts
             BlocBuilder<PatronBloc, PatronState>(
-              buildWhen: (previous, current) => current is DashboardOverviewLoaded,
+              buildWhen: (previous, current) =>
+                  current is DashboardOverviewLoaded,
               builder: (context, state) {
-                final overview = state is DashboardOverviewLoaded ? state.overview : null;
+                final overview = state is DashboardOverviewLoaded
+                    ? state.overview
+                    : null;
                 if (overview == null) {
                   return const Skeleton(height: 140, borderRadius: 16);
                 }
@@ -209,53 +218,66 @@ class _PatronDashboardState extends State<PatronDashboard> {
   ) {
     final tasks = <BoardingTask>[];
 
-    tasks.add(BoardingTask(
-      title: 'Morning Roll Call',
-      timeLabel: data.studentsPresent >= data.totalStudents && data.totalStudents > 0
-          ? 'All ${data.totalStudents} boarders accounted for'
-          : '${data.totalStudents - data.studentsPresent} still to confirm',
-      icon: Icons.how_to_reg_outlined,
-      color: semanticColors.success,
-      isDone: data.totalStudents > 0 && data.studentsPresent >= data.totalStudents,
-      onTap: () => _openSection('/staff/patron/attendance'),
-    ));
+    tasks.add(
+      BoardingTask(
+        title: 'Morning Roll Call',
+        timeLabel:
+            data.studentsPresent >= data.totalStudents && data.totalStudents > 0
+            ? 'All ${data.totalStudents} boarders accounted for'
+            : '${data.totalStudents - data.studentsPresent} still to confirm',
+        icon: Icons.how_to_reg_outlined,
+        color: semanticColors.success,
+        isDone:
+            data.totalStudents > 0 &&
+            data.studentsPresent >= data.totalStudents,
+        onTap: () => _openSection('/staff/patron/attendance'),
+      ),
+    );
 
-    tasks.add(BoardingTask(
-      title: 'Dorm Inspection',
-      timeLabel: '${data.occupiedBeds} / ${data.totalBeds} beds occupied',
-      icon: Icons.shield_outlined,
-      color: Theme.of(context).colorScheme.primary,
-      onTap: () => _openSection('/staff/patron/dorms'),
-    ));
+    tasks.add(
+      BoardingTask(
+        title: 'Dorm Inspection',
+        timeLabel: '${data.occupiedBeds} / ${data.totalBeds} beds occupied',
+        icon: Icons.shield_outlined,
+        color: Theme.of(context).colorScheme.primary,
+        onTap: () => _openSection('/staff/patron/dorms'),
+      ),
+    );
 
     if (data.pendingWelfareConcerns > 0) {
-      tasks.add(BoardingTask(
-        title: 'Follow up welfare concerns',
-        timeLabel: '${data.pendingWelfareConcerns} open concern(s)',
-        icon: Icons.medical_services_outlined,
-        color: Colors.purple,
-        onTap: () => _openSection('/staff/patron/welfare'),
-      ));
+      tasks.add(
+        BoardingTask(
+          title: 'Follow up welfare concerns',
+          timeLabel: '${data.pendingWelfareConcerns} open concern(s)',
+          icon: Icons.medical_services_outlined,
+          color: Colors.purple,
+          onTap: () => _openSection('/staff/patron/welfare'),
+        ),
+      );
     }
 
     if (data.pendingLeaveRequests > 0) {
-      tasks.add(BoardingTask(
-        title: 'Review ${data.pendingLeaveRequests} Leave Request(s)',
-        timeLabel: 'Awaiting your approval',
-        icon: Icons.exit_to_app,
-        color: Colors.deepOrange,
-        onTap: () => _openSection('/staff/patron/leave'),
-      ));
+      tasks.add(
+        BoardingTask(
+          title: 'Review ${data.pendingLeaveRequests} Leave Request(s)',
+          timeLabel: 'Awaiting your approval',
+          icon: Icons.exit_to_app,
+          color: Colors.deepOrange,
+          onTap: () => _openSection('/staff/patron/leave'),
+        ),
+      );
     }
 
     if (data.openDisciplineCases > 0) {
-      tasks.add(BoardingTask(
-        title: 'Open discipline cases',
-        timeLabel: '${data.openDisciplineCases} awaiting action',
-        icon: Icons.gavel_outlined,
-        color: semanticColors.error,
-        onTap: () => _openSection('/staff/patron/discipline'),
-      ));
+      tasks.add(
+        BoardingTask(
+          title: 'Open discipline cases',
+          timeLabel: '${data.openDisciplineCases} awaiting action',
+          icon: Icons.gavel_outlined,
+          color: semanticColors.error,
+          onTap: () => _openSection('/staff/patron/discipline'),
+        ),
+      );
     }
 
     return tasks;
@@ -270,49 +292,59 @@ class _PatronDashboardState extends State<PatronDashboard> {
     final alerts = <BoardingAlert>[];
 
     if (data.missingStudentCount > 0) {
-      alerts.add(BoardingAlert(
-        title: 'Unaccounted',
-        detail: '${data.missingStudentCount} boarder(s) missing at roll call',
-        icon: Icons.person_search_outlined,
-        color: semanticColors.error,
-        onTap: () => _openSection('/staff/patron/attendance'),
-      ));
+      alerts.add(
+        BoardingAlert(
+          title: 'Unaccounted',
+          detail: '${data.missingStudentCount} boarder(s) missing at roll call',
+          icon: Icons.person_search_outlined,
+          color: semanticColors.error,
+          onTap: () => _openSection('/staff/patron/attendance'),
+        ),
+      );
     }
     if (data.overdueLeaveCount > 0) {
-      alerts.add(BoardingAlert(
-        title: 'Leave Expiry',
-        detail: '${data.overdueLeaveCount} student(s) overdue from leave',
-        icon: Icons.watch_later_outlined,
-        color: semanticColors.warning,
-        onTap: () => _openSection('/staff/patron/leave'),
-      ));
+      alerts.add(
+        BoardingAlert(
+          title: 'Leave Expiry',
+          detail: '${data.overdueLeaveCount} student(s) overdue from leave',
+          icon: Icons.watch_later_outlined,
+          color: semanticColors.warning,
+          onTap: () => _openSection('/staff/patron/leave'),
+        ),
+      );
     }
     if (data.studentsInClinic > 0) {
-      alerts.add(BoardingAlert(
-        title: 'Clinic Review',
-        detail: '${data.studentsInClinic} boarder(s) in the clinic today',
-        icon: Icons.medical_services_outlined,
-        color: Colors.purple,
-        onTap: () => _openSection('/staff/patron/welfare'),
-      ));
+      alerts.add(
+        BoardingAlert(
+          title: 'Clinic Review',
+          detail: '${data.studentsInClinic} boarder(s) in the clinic today',
+          icon: Icons.medical_services_outlined,
+          color: Colors.purple,
+          onTap: () => _openSection('/staff/patron/welfare'),
+        ),
+      );
     }
     if (data.pendingWelfareConcerns > 0) {
-      alerts.add(BoardingAlert(
-        title: 'Welfare',
-        detail: '${data.pendingWelfareConcerns} open concern(s)',
-        icon: Icons.favorite_outline,
-        color: Colors.pink,
-        onTap: () => _openSection('/staff/patron/welfare'),
-      ));
+      alerts.add(
+        BoardingAlert(
+          title: 'Welfare',
+          detail: '${data.pendingWelfareConcerns} open concern(s)',
+          icon: Icons.favorite_outline,
+          color: Colors.pink,
+          onTap: () => _openSection('/staff/patron/welfare'),
+        ),
+      );
     }
     if (data.openDisciplineCases > 0) {
-      alerts.add(BoardingAlert(
-        title: 'Discipline',
-        detail: '${data.openDisciplineCases} case(s) awaiting action',
-        icon: Icons.gavel_outlined,
-        color: semanticColors.error,
-        onTap: () => _openSection('/staff/patron/discipline'),
-      ));
+      alerts.add(
+        BoardingAlert(
+          title: 'Discipline',
+          detail: '${data.openDisciplineCases} case(s) awaiting action',
+          icon: Icons.gavel_outlined,
+          color: semanticColors.error,
+          onTap: () => _openSection('/staff/patron/discipline'),
+        ),
+      );
     }
     return alerts;
   }
@@ -360,4 +392,3 @@ class _PatronDashboardState extends State<PatronDashboard> {
     );
   }
 }
-

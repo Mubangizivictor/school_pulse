@@ -19,7 +19,7 @@ class ReportCommentsScreen extends StatefulWidget {
 class _ReportCommentsScreenState extends State<ReportCommentsScreen> {
   String? _selectedClass;
   final String _currentTerm = 'Term 1'; // Mock data
-  final String _currentYear = '2024';   // Mock data
+  final String _currentYear = '2024'; // Mock data
 
   @override
   void initState() {
@@ -35,11 +35,13 @@ class _ReportCommentsScreenState extends State<ReportCommentsScreen> {
 
   void _fetchComments() {
     if (_selectedClass != null) {
-      context.read<TeacherBloc>().add(TeacherReportCommentsRequested(
-            className: _selectedClass!,
-            term: _currentTerm,
-            year: _currentYear,
-          ));
+      context.read<TeacherBloc>().add(
+        TeacherReportCommentsRequested(
+          className: _selectedClass!,
+          term: _currentTerm,
+          year: _currentYear,
+        ),
+      );
     }
   }
 
@@ -73,14 +75,20 @@ class _ReportCommentsScreenState extends State<ReportCommentsScreen> {
               },
               builder: (context, state) {
                 if (state is TeacherLoading) {
-                  return Center(child: CircularProgressIndicator(color: AppColors.primary(context)));
+                  return Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.primary(context),
+                    ),
+                  );
                 }
 
                 if (state is TeacherReportCommentsLoaded) {
                   return ListView.separated(
                     padding: const EdgeInsets.all(16),
                     itemCount: state.students.length,
-                    separatorBuilder: (context, index) => Divider(color: AppColors.border(context).withValues(alpha: 0.5)),
+                    separatorBuilder: (context, index) => Divider(
+                      color: AppColors.border(context).withValues(alpha: 0.5),
+                    ),
                     itemBuilder: (context, index) {
                       final student = state.students[index];
                       final comment = state.comments.firstWhere(
@@ -108,7 +116,8 @@ class _ReportCommentsScreenState extends State<ReportCommentsScreen> {
                 return EmptyState(
                   icon: Icons.comment_bank_outlined,
                   title: 'No reports to comment on',
-                  message: 'Select a class to manage report comments for your students.',
+                  message:
+                      'Select a class to manage report comments for your students.',
                   ctaLabel: 'Select Class',
                   onCtaPressed: () => {}, // Handled by class selector
                 );
@@ -127,13 +136,19 @@ class _ReportCommentsScreenState extends State<ReportCommentsScreen> {
         child: ListTile(
           title: Text(
             'Selected Class',
-            style: TextStyle(color: AppColors.textPrimary(context), fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: AppColors.textPrimary(context),
+              fontWeight: FontWeight.bold,
+            ),
           ),
           subtitle: Text(
             _selectedClass ?? 'None',
             style: TextStyle(color: AppColors.textSecondary(context)),
           ),
-          trailing: Icon(Icons.arrow_drop_down, color: AppColors.textPrimary(context)),
+          trailing: Icon(
+            Icons.arrow_drop_down,
+            color: AppColors.textPrimary(context),
+          ),
           onTap: () {
             // Logic to select class if teacher has multiple
           },
@@ -145,18 +160,20 @@ class _ReportCommentsScreenState extends State<ReportCommentsScreen> {
   void _saveComment(String studentId, String text) {
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
-      context.read<TeacherBloc>().add(TeacherReportCommentSaved(
-            ReportComment(
-              id: '', // Backend handles ID
-              studentId: studentId,
-              className: _selectedClass ?? '',
-              term: _currentTerm,
-              year: _currentYear,
-              comment: text,
-              teacherId: authState.user.id,
-              updatedAt: DateTime.now(),
-            ),
-          ));
+      context.read<TeacherBloc>().add(
+        TeacherReportCommentSaved(
+          ReportComment(
+            id: '', // Backend handles ID
+            studentId: studentId,
+            className: _selectedClass ?? '',
+            term: _currentTerm,
+            year: _currentYear,
+            comment: text,
+            teacherId: authState.user.id,
+            updatedAt: DateTime.now(),
+          ),
+        ),
+      );
     }
   }
 }
@@ -211,7 +228,9 @@ class _StudentCommentTileState extends State<_StudentCommentTile> {
               icon: Icon(
                 _isEditing ? Icons.check : Icons.edit,
                 size: 20,
-                color: _isEditing ? AppColors.success(context) : AppColors.primary(context),
+                color: _isEditing
+                    ? AppColors.success(context)
+                    : AppColors.primary(context),
               ),
               onPressed: () {
                 if (_isEditing) {
@@ -246,8 +265,12 @@ class _StudentCommentTileState extends State<_StudentCommentTile> {
           Text(
             _controller.text.isEmpty ? 'No comment added' : _controller.text,
             style: TextStyle(
-              color: _controller.text.isEmpty ? AppColors.textMuted(context) : AppColors.textSecondary(context),
-              fontStyle: _controller.text.isEmpty ? FontStyle.italic : FontStyle.normal,
+              color: _controller.text.isEmpty
+                  ? AppColors.textMuted(context)
+                  : AppColors.textSecondary(context),
+              fontStyle: _controller.text.isEmpty
+                  ? FontStyle.italic
+                  : FontStyle.normal,
             ),
           ),
       ],

@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 enum MaintenanceType { routine, preventive, emergency }
+
 enum MaintenanceStatus { scheduled, inProgress, completed, cancelled }
 
 class MaintenanceRecord extends Equatable {
@@ -32,16 +33,16 @@ class MaintenanceRecord extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        assetId,
-        assetName,
-        type,
-        description,
-        scheduledDate,
-        completionDate,
-        status,
-        performedBy,
-        cost,
-        notes,
-      ];
+    id,
+    assetId,
+    assetName,
+    type,
+    description,
+    scheduledDate,
+    completionDate,
+    status,
+    performedBy,
+    cost,
+    notes,
+  ];
 }

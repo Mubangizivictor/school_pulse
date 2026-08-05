@@ -63,6 +63,24 @@ abstract class AuthRemoteDataSource {
   Future<void> updateStaffMember(UserModel user);
 
   Future<void> deleteStaffMember(String userId);
+
+  /// Calls the `adminResetStaffPassword` Cloud Function, which verifies the
+  /// caller is a school administrator for [userId]'s school before using the
+  /// Admin SDK to set a new temporary password. Returns that password for
+  /// the admin to hand to the staff member.
+  Future<String> adminResetStaffPassword(String userId);
+
+  /// Reauthenticates via `EmailAuthProvider.credential` +
+  /// `reauthenticateWithCredential`, then calls `updatePassword`. Throws
+  /// [AuthFailure] with a friendly message on wrong-password/requires-recent-
+  /// login/weak-password FirebaseAuthExceptions.
+  Future<void> changePassword(String currentPassword, String newPassword);
+
+  /// Updates the signed-in user's own profile doc (name/phone/photoUrl).
+  Future<void> updateProfile(UserModel user);
+
+  /// Updates the signed-in user's own `mfaEnabled` flag.
+  Future<void> updateMfaEnabled(bool enabled);
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -441,11 +459,88 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     await batch.commit();
   }
 
+  @override
+  Future<String> adminResetStaffPassword(String userId) async {
+    try {
+      final callable = functions.httpsCallable('adminResetStaffPassword');
+      final result = await callable.call<Map<String, dynamic>>({
+        'userId': userId,
+      });
+      return result.data['temporaryPassword'] as String;
+    } on FirebaseFunctionsException catch (e) {
+      throw AuthFailure(e.message ?? 'Failed to reset password');
+    }
+  }
+
+  @override
+  Future<void> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
+    final user = firebaseAuth.currentUser;
+    if (user == null || user.email == null) {
+      throw const AuthFailure('You are not signed in.');
+    }
+    try {
+      final credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentPassword,
+      );
+      await user.reauthenticateWithCredential(credential);
+      await user.updatePassword(newPassword);
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'wrong-password':
+        case 'invalid-credential':
+          throw const AuthFailure('Your current password is incorrect.');
+        case 'requires-recent-login':
+          throw const AuthFailure(
+            'For your security, please log out and log back in before '
+            'changing your password.',
+          );
+        case 'weak-password':
+          throw const AuthFailure('Your new password is too weak.');
+        default:
+          throw AuthFailure(e.message ?? 'Failed to change password.');
+      }
+    }
+  }
+
+  @override
+  Future<void> updateProfile(UserModel user) async {
+    final current = firebaseAuth.currentUser;
+    if (current == null) {
+      throw const AuthFailure('You are not signed in.');
+    }
+    final batch = firestore.batch();
+    batch.update(firestore.collection('users').doc(user.id), {
+      'name': user.name,
+      'phoneNumber': user.phoneNumber,
+      'photoUrl': user.photoUrl,
+    });
+    batch.set(firestore.collection('school_contacts').doc(user.id), {
+      ..._schoolContactData(user),
+    }, SetOptions(merge: true));
+    await batch.commit();
+  }
+
+  @override
+  Future<void> updateMfaEnabled(bool enabled) async {
+    final user = firebaseAuth.currentUser;
+    if (user == null) {
+      throw const AuthFailure('You are not signed in.');
+    }
+    await firestore.collection('users').doc(user.uid).update({
+      'mfaEnabled': enabled,
+    });
+  }
+
   Map<String, dynamic> _schoolContactData(UserModel user) => {
     'name': user.name,
     'role': user.role.name,
     'roles': user.roles.map((role) => role.name).toList(),
     'schoolId': user.schoolId,
     'isActive': user.isActive,
+    'phone': user.phoneNumber,
   };
 }

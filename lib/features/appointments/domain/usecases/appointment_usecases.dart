@@ -13,26 +13,31 @@ import '../repositories/appointment_repository.dart';
 class WatchAppointmentTypes {
   final AppointmentRepository repository;
   WatchAppointmentTypes(this.repository);
-  Stream<List<AppointmentType>> call(String schoolId) => repository.watchAppointmentTypes(schoolId);
+  Stream<List<AppointmentType>> call(String schoolId) =>
+      repository.watchAppointmentTypes(schoolId);
 }
 
 class SaveAppointmentType {
   final AppointmentRepository repository;
   SaveAppointmentType(this.repository);
-  Future<Either<Failure, void>> call(AppointmentType type) => repository.saveAppointmentType(type);
+  Future<Either<Failure, void>> call(AppointmentType type) =>
+      repository.saveAppointmentType(type);
 }
 
 class DeleteAppointmentType {
   final AppointmentRepository repository;
   DeleteAppointmentType(this.repository);
-  Future<Either<Failure, void>> call(String id) => repository.deleteAppointmentType(id);
+  Future<Either<Failure, void>> call(String id) =>
+      repository.deleteAppointmentType(id);
 }
 
 class GetStaffAvailability {
   final AppointmentRepository repository;
   GetStaffAvailability(this.repository);
-  Future<Either<Failure, StaffAvailability>> call(String staffId, String schoolId) =>
-      repository.getStaffAvailability(staffId, schoolId);
+  Future<Either<Failure, StaffAvailability>> call(
+    String staffId,
+    String schoolId,
+  ) => repository.getStaffAvailability(staffId, schoolId);
 }
 
 class SaveStaffAvailability {
@@ -45,8 +50,10 @@ class SaveStaffAvailability {
 class GetStaffByRoles {
   final AppointmentRepository repository;
   GetStaffByRoles(this.repository);
-  Future<Either<Failure, List<StaffSummary>>> call(String schoolId, List<UserRole> roles) =>
-      repository.getStaffByRoles(schoolId, roles);
+  Future<Either<Failure, List<StaffSummary>>> call(
+    String schoolId,
+    List<UserRole> roles,
+  ) => repository.getStaffByRoles(schoolId, roles);
 }
 
 class GetStudentsByIds {
@@ -64,13 +71,12 @@ class GetAvailableSlots {
     required String schoolId,
     required DateTime date,
     required int durationMinutes,
-  }) =>
-      repository.getAvailableSlots(
-        staffId: staffId,
-        schoolId: schoolId,
-        date: date,
-        durationMinutes: durationMinutes,
-      );
+  }) => repository.getAvailableSlots(
+    staffId: staffId,
+    schoolId: schoolId,
+    date: date,
+    durationMinutes: durationMinutes,
+  );
 }
 
 class RequestAppointment {
@@ -90,15 +96,14 @@ class RespondToAppointment {
     String? responseNote,
     DateTime? proposedStart,
     DateTime? proposedEnd,
-  }) =>
-      repository.respondToAppointment(
-        id: id,
-        status: status,
-        respondedBy: respondedBy,
-        responseNote: responseNote,
-        proposedStart: proposedStart,
-        proposedEnd: proposedEnd,
-      );
+  }) => repository.respondToAppointment(
+    id: id,
+    status: status,
+    respondedBy: respondedBy,
+    responseNote: responseNote,
+    proposedStart: proposedStart,
+    proposedEnd: proposedEnd,
+  );
 }
 
 class CancelAppointment {
@@ -108,8 +113,11 @@ class CancelAppointment {
     required String id,
     required String cancelledBy,
     String? reason,
-  }) =>
-      repository.cancelAppointment(id: id, cancelledBy: cancelledBy, reason: reason);
+  }) => repository.cancelAppointment(
+    id: id,
+    cancelledBy: cancelledBy,
+    reason: reason,
+  );
 }
 
 class CheckInAppointment {
@@ -152,17 +160,20 @@ class WatchAppointmentsForStaff {
 class WatchAppointmentsForSchool {
   final AppointmentRepository repository;
   WatchAppointmentsForSchool(this.repository);
-  Stream<List<Appointment>> call(String schoolId) => repository.watchForSchool(schoolId);
+  Stream<List<Appointment>> call(String schoolId) =>
+      repository.watchForSchool(schoolId);
 }
 
 class AddAppointmentNote {
   final AppointmentRepository repository;
   AddAppointmentNote(this.repository);
-  Future<Either<Failure, void>> call(AppointmentNote note) => repository.addNote(note);
+  Future<Either<Failure, void>> call(AppointmentNote note) =>
+      repository.addNote(note);
 }
 
 class WatchAppointmentNotes {
   final AppointmentRepository repository;
   WatchAppointmentNotes(this.repository);
-  Stream<List<AppointmentNote>> call(String appointmentId) => repository.watchNotes(appointmentId);
+  Stream<List<AppointmentNote>> call(String appointmentId) =>
+      repository.watchNotes(appointmentId);
 }

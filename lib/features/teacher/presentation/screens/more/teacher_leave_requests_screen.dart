@@ -6,10 +6,12 @@ class TeacherLeaveRequestsScreen extends StatefulWidget {
   const TeacherLeaveRequestsScreen({super.key});
 
   @override
-  State<TeacherLeaveRequestsScreen> createState() => _TeacherLeaveRequestsScreenState();
+  State<TeacherLeaveRequestsScreen> createState() =>
+      _TeacherLeaveRequestsScreenState();
 }
 
-class _TeacherLeaveRequestsScreenState extends State<TeacherLeaveRequestsScreen> with SingleTickerProviderStateMixin {
+class _TeacherLeaveRequestsScreenState extends State<TeacherLeaveRequestsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -28,9 +30,7 @@ class _TeacherLeaveRequestsScreenState extends State<TeacherLeaveRequestsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        title: const Text('Leave Requests'),
-      ),
+      appBar: AppBar(title: const Text('Leave Requests')),
       body: Column(
         children: [
           Padding(
@@ -116,7 +116,10 @@ class _LeaveRequestCard extends StatelessWidget {
               children: [
                 Text(
                   type,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
                 Text(
                   status,
@@ -131,7 +134,10 @@ class _LeaveRequestCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               dates,
-              style: TextStyle(color: AppColors.textSecondary(context), fontSize: 14),
+              style: TextStyle(
+                color: AppColors.textSecondary(context),
+                fontSize: 14,
+              ),
             ),
           ],
         ),

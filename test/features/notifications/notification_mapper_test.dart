@@ -228,8 +228,10 @@ void main() {
     });
 
     test('pin and archive carry the requested value', () {
-      expect(NotificationMapper.stateUpdate('pinned', value: false)['isPinned'],
-          isFalse);
+      expect(
+        NotificationMapper.stateUpdate('pinned', value: false)['isPinned'],
+        isFalse,
+      );
       expect(
         NotificationMapper.stateUpdate('archived', value: true)['isArchived'],
         isTrue,

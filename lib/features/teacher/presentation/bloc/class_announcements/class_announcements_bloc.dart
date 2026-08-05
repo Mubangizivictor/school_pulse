@@ -79,9 +79,11 @@ class ClassAnnouncementsState extends Equatable {
       context?.can(Permission.classAnnouncementPublish) ?? false;
 
   List<ClassAnnouncement> get live => announcements
-      .where((a) =>
-          a.effectiveStatus() == ClassAnnouncementStatus.published ||
-          a.effectiveStatus() == ClassAnnouncementStatus.scheduled)
+      .where(
+        (a) =>
+            a.effectiveStatus() == ClassAnnouncementStatus.published ||
+            a.effectiveStatus() == ClassAnnouncementStatus.scheduled,
+      )
       .toList();
 
   List<ClassAnnouncement> get drafts =>
@@ -101,8 +103,9 @@ class ClassAnnouncementsState extends Equatable {
       isLoading: isLoading ?? this.isLoading,
       isSaving: isSaving ?? this.isSaving,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
-      successMessage:
-          clearSuccess ? null : (successMessage ?? this.successMessage),
+      successMessage: clearSuccess
+          ? null
+          : (successMessage ?? this.successMessage),
       context: context ?? this.context,
       announcements: announcements ?? this.announcements,
     );
@@ -110,13 +113,13 @@ class ClassAnnouncementsState extends Equatable {
 
   @override
   List<Object?> get props => [
-        isLoading,
-        isSaving,
-        errorMessage,
-        successMessage,
-        context,
-        announcements,
-      ];
+    isLoading,
+    isSaving,
+    errorMessage,
+    successMessage,
+    context,
+    announcements,
+  ];
 }
 
 class ClassAnnouncementsBloc
@@ -124,7 +127,7 @@ class ClassAnnouncementsBloc
   final ClassCommunicationRepository communicationRepository;
 
   ClassAnnouncementsBloc({required this.communicationRepository})
-      : super(const ClassAnnouncementsState.initial()) {
+    : super(const ClassAnnouncementsState.initial()) {
     on<ClassAnnouncementsRequested>(_onRequested);
     on<ClassAnnouncementSaved>(_onSaved);
     on<ClassAnnouncementPublished>(_onPublished);
@@ -138,19 +141,21 @@ class ClassAnnouncementsBloc
   ) async {
     emit(ClassAnnouncementsState(isLoading: true, context: event.context));
 
-    final result =
-        await communicationRepository.getAnnouncements(context: event.context);
+    final result = await communicationRepository.getAnnouncements(
+      context: event.context,
+    );
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        isLoading: false,
-        errorMessage: _messageFor(failure),
-      )),
-      (announcements) => emit(state.copyWith(
-        isLoading: false,
-        announcements: announcements,
-        clearError: true,
-      )),
+      (failure) => emit(
+        state.copyWith(isLoading: false, errorMessage: _messageFor(failure)),
+      ),
+      (announcements) => emit(
+        state.copyWith(
+          isLoading: false,
+          announcements: announcements,
+          clearError: true,
+        ),
+      ),
     );
   }
 
@@ -169,17 +174,18 @@ class ClassAnnouncementsBloc
     );
 
     await saved.fold(
-      (failure) async => emit(state.copyWith(
-        isSaving: false,
-        errorMessage: _messageFor(failure),
-      )),
+      (failure) async => emit(
+        state.copyWith(isSaving: false, errorMessage: _messageFor(failure)),
+      ),
       (announcement) async {
         if (!event.publish) {
-          emit(state.copyWith(
-            isSaving: false,
-            successMessage: 'Draft saved.',
-            clearError: true,
-          ));
+          emit(
+            state.copyWith(
+              isSaving: false,
+              successMessage: 'Draft saved.',
+              clearError: true,
+            ),
+          );
           add(ClassAnnouncementsRequested(context));
           return;
         }
@@ -189,17 +195,21 @@ class ClassAnnouncementsBloc
           announcement: announcement,
         );
         published.fold(
-          (failure) => emit(state.copyWith(
-            isSaving: false,
-            // The draft did save - saying so stops the teacher retyping it.
-            errorMessage:
-                'Saved as a draft, but not sent: ${_messageFor(failure)}',
-          )),
-          (sent) => emit(state.copyWith(
-            isSaving: false,
-            successMessage: 'Sent to ${sent.recipientCount} recipients.',
-            clearError: true,
-          )),
+          (failure) => emit(
+            state.copyWith(
+              isSaving: false,
+              // The draft did save - saying so stops the teacher retyping it.
+              errorMessage:
+                  'Saved as a draft, but not sent: ${_messageFor(failure)}',
+            ),
+          ),
+          (sent) => emit(
+            state.copyWith(
+              isSaving: false,
+              successMessage: 'Sent to ${sent.recipientCount} recipients.',
+              clearError: true,
+            ),
+          ),
         );
         add(ClassAnnouncementsRequested(context));
       },
@@ -221,15 +231,16 @@ class ClassAnnouncementsBloc
     );
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        isSaving: false,
-        errorMessage: _messageFor(failure),
-      )),
-      (sent) => emit(state.copyWith(
-        isSaving: false,
-        successMessage: 'Sent to ${sent.recipientCount} recipients.',
-        clearError: true,
-      )),
+      (failure) => emit(
+        state.copyWith(isSaving: false, errorMessage: _messageFor(failure)),
+      ),
+      (sent) => emit(
+        state.copyWith(
+          isSaving: false,
+          successMessage: 'Sent to ${sent.recipientCount} recipients.',
+          clearError: true,
+        ),
+      ),
     );
     add(ClassAnnouncementsRequested(context));
   }
@@ -249,15 +260,16 @@ class ClassAnnouncementsBloc
     );
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        isSaving: false,
-        errorMessage: _messageFor(failure),
-      )),
-      (_) => emit(state.copyWith(
-        isSaving: false,
-        successMessage: 'Announcement archived.',
-        clearError: true,
-      )),
+      (failure) => emit(
+        state.copyWith(isSaving: false, errorMessage: _messageFor(failure)),
+      ),
+      (_) => emit(
+        state.copyWith(
+          isSaving: false,
+          successMessage: 'Announcement archived.',
+          clearError: true,
+        ),
+      ),
     );
     add(ClassAnnouncementsRequested(context));
   }
@@ -270,11 +282,11 @@ class ClassAnnouncementsBloc
   }
 
   static String _messageFor(Failure failure) => switch (failure) {
-        PermissionDeniedFailure() => failure.message,
-        AssignmentInvalidFailure() => failure.message,
-        ValidationFailure() => failure.message,
-        OfflineNotAllowedFailure() => failure.message,
-        NetworkFailure() => failure.message,
-        _ => 'Something went wrong. Try again.',
-      };
+    PermissionDeniedFailure() => failure.message,
+    AssignmentInvalidFailure() => failure.message,
+    ValidationFailure() => failure.message,
+    OfflineNotAllowedFailure() => failure.message,
+    NetworkFailure() => failure.message,
+    _ => 'Something went wrong. Try again.',
+  };
 }

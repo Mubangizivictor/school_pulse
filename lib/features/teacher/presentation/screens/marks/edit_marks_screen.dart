@@ -17,9 +17,14 @@ class EditMarksScreen extends StatelessWidget {
           icon: Icon(Icons.chevron_left, color: AppColors.textPrimary(context)),
           onPressed: () => context.pop(),
         ),
-        title: Text('Edit Mark',
-            style: TextStyle(
-                color: AppColors.textPrimary(context), fontSize: 18, fontWeight: FontWeight.bold)),
+        title: Text(
+          'Edit Mark',
+          style: TextStyle(
+            color: AppColors.textPrimary(context),
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         centerTitle: true,
       ),
       body: Padding(
@@ -27,30 +32,51 @@ class EditMarksScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Mid Term Test • Section A',
-                style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12)),
+            Text(
+              'Mid Term Test • Section A',
+              style: TextStyle(
+                color: AppColors.textSecondary(context),
+                fontSize: 12,
+              ),
+            ),
             const SizedBox(height: 24),
             Row(
               children: [
-                CircleAvatar(radius: 20, backgroundColor: AppColors.disabled(context)),
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: AppColors.disabled(context),
+                ),
                 const SizedBox(width: 12),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Akena Brian',
-                        style: TextStyle(
-                            color: AppColors.textPrimary(context),
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold)),
-                    Text('ADM/2022/001',
-                        style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12)),
+                    Text(
+                      'Akena Brian',
+                      style: TextStyle(
+                        color: AppColors.textPrimary(context),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'ADM/2022/001',
+                      style: TextStyle(
+                        color: AppColors.textSecondary(context),
+                        fontSize: 12,
+                      ),
+                    ),
                   ],
                 ),
               ],
             ),
             const SizedBox(height: 32),
-            Text('Mark (out of 20)',
-                style: TextStyle(color: AppColors.textPrimary(context), fontSize: 14)),
+            Text(
+              'Mark (out of 20)',
+              style: TextStyle(
+                color: AppColors.textPrimary(context),
+                fontSize: 14,
+              ),
+            ),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -70,8 +96,13 @@ class EditMarksScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            Text('Remarks (Optional)',
-                style: TextStyle(color: AppColors.textPrimary(context), fontSize: 14)),
+            Text(
+              'Remarks (Optional)',
+              style: TextStyle(
+                color: AppColors.textPrimary(context),
+                fontSize: 14,
+              ),
+            ),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -87,7 +118,10 @@ class EditMarksScreen extends StatelessWidget {
                 decoration: InputDecoration(
                   border: InputBorder.none,
                   hintText: 'Add remarks...',
-                  hintStyle: TextStyle(color: AppColors.textMuted(context), fontSize: 14),
+                  hintStyle: TextStyle(
+                    color: AppColors.textMuted(context),
+                    fontSize: 14,
+                  ),
                 ),
               ),
             ),
@@ -100,9 +134,14 @@ class EditMarksScreen extends StatelessWidget {
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: AppColors.border(context)),
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    child: Text('Cancel', style: TextStyle(color: AppColors.textPrimary(context))),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(color: AppColors.textPrimary(context)),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -112,11 +151,18 @@ class EditMarksScreen extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary(context),
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       elevation: 0,
                     ),
-                    child: const Text('Save Changes',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      'Save Changes',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -127,4 +173,3 @@ class EditMarksScreen extends StatelessWidget {
     );
   }
 }
-

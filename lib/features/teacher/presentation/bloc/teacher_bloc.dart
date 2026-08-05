@@ -76,13 +76,10 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
   ) async {
     emit(TeacherLoading());
     final result = await createHomework(event.homework);
-    result.fold(
-      (failure) => emit(TeacherError(failure.message)),
-      (_) {
-        emit(const TeacherOperationSuccess('Homework created successfully'));
-        add(TeacherHomeworkRequested(event.homework.teacherId));
-      },
-    );
+    result.fold((failure) => emit(TeacherError(failure.message)), (_) {
+      emit(const TeacherOperationSuccess('Homework created successfully'));
+      add(TeacherHomeworkRequested(event.homework.teacherId));
+    });
   }
 
   Future<void> _onTeacherHomeworkUpdated(
@@ -91,13 +88,10 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
   ) async {
     emit(TeacherLoading());
     final result = await updateHomework(event.homework);
-    result.fold(
-      (failure) => emit(TeacherError(failure.message)),
-      (_) {
-        emit(const TeacherOperationSuccess('Homework updated successfully'));
-        add(TeacherHomeworkRequested(event.homework.teacherId));
-      },
-    );
+    result.fold((failure) => emit(TeacherError(failure.message)), (_) {
+      emit(const TeacherOperationSuccess('Homework updated successfully'));
+      add(TeacherHomeworkRequested(event.homework.teacherId));
+    });
   }
 
   Future<void> _onTeacherHomeworkDeleted(
@@ -107,18 +101,15 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
     final currentState = state;
     emit(TeacherLoading());
     final result = await deleteHomework(event.homeworkId);
-    result.fold(
-      (failure) => emit(TeacherError(failure.message)),
-      (_) {
-        emit(const TeacherOperationSuccess('Homework deleted successfully'));
-        if (currentState is TeacherHomeworkLoaded) {
-          final updatedList = currentState.homeworkList
-              .where((h) => h.id != event.homeworkId)
-              .toList();
-          emit(TeacherHomeworkLoaded(updatedList));
-        }
-      },
-    );
+    result.fold((failure) => emit(TeacherError(failure.message)), (_) {
+      emit(const TeacherOperationSuccess('Homework deleted successfully'));
+      if (currentState is TeacherHomeworkLoaded) {
+        final updatedList = currentState.homeworkList
+            .where((h) => h.id != event.homeworkId)
+            .toList();
+        emit(TeacherHomeworkLoaded(updatedList));
+      }
+    });
   }
 
   Future<void> _onTeacherReportCommentsRequested(
@@ -133,18 +124,16 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
       year: event.year,
     );
 
-    studentsResult.fold(
-      (failure) => emit(TeacherError(failure.message)),
-      (students) {
-        commentsResult.fold(
-          (failure) => emit(TeacherError(failure.message)),
-          (comments) => emit(TeacherReportCommentsLoaded(
-            students: students,
-            comments: comments,
-          )),
-        );
-      },
-    );
+    studentsResult.fold((failure) => emit(TeacherError(failure.message)), (
+      students,
+    ) {
+      commentsResult.fold(
+        (failure) => emit(TeacherError(failure.message)),
+        (comments) => emit(
+          TeacherReportCommentsLoaded(students: students, comments: comments),
+        ),
+      );
+    });
   }
 
   Future<void> _onTeacherReportCommentSaved(
@@ -172,18 +161,16 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
       competency: event.competency,
     );
 
-    studentsResult.fold(
-      (failure) => emit(TeacherError(failure.message)),
-      (students) {
-        ratingsResult.fold(
-          (failure) => emit(TeacherError(failure.message)),
-          (ratings) => emit(TeacherCompetencyRatingsLoaded(
-            students: students,
-            ratings: ratings,
-          )),
-        );
-      },
-    );
+    studentsResult.fold((failure) => emit(TeacherError(failure.message)), (
+      students,
+    ) {
+      ratingsResult.fold(
+        (failure) => emit(TeacherError(failure.message)),
+        (ratings) => emit(
+          TeacherCompetencyRatingsLoaded(students: students, ratings: ratings),
+        ),
+      );
+    });
   }
 
   Future<void> _onTeacherCompetencyRatingSaved(
@@ -204,26 +191,27 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
   ) async {
     emit(TeacherLoading());
 
-    final result = await submitMarks(MarksParams(
-      className: event.className,
-      subject: event.subject,
-      assessment: event.assessment,
-      term: event.term,
-      year: event.year,
-      marks: event.marks,
-    ));
+    final result = await submitMarks(
+      MarksParams(
+        className: event.className,
+        subject: event.subject,
+        assessment: event.assessment,
+        term: event.term,
+        year: event.year,
+        marks: event.marks,
+      ),
+    );
 
-    result.fold(
-      (failure) => emit(TeacherError(failure.message)),
-      (_) {
-        emit(TeacherMarksSubmitSuccess(event.marks.length));
-        add(TeacherMarksEntryRequested(
+    result.fold((failure) => emit(TeacherError(failure.message)), (_) {
+      emit(TeacherMarksSubmitSuccess(event.marks.length));
+      add(
+        TeacherMarksEntryRequested(
           className: event.className,
           subject: event.subject,
           assessment: event.assessment,
-        ));
-      },
-    );
+        ),
+      );
+    });
   }
 
   Future<void> _onTeacherAttendanceHistoryRequested(
@@ -232,7 +220,7 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
   ) async {
     emit(TeacherLoading());
     final result = await getAttendanceHistory(event.teacherId);
-    
+
     result.fold(
       (failure) => emit(TeacherError(failure.message)),
       (history) => emit(TeacherAttendanceHistoryLoaded(history)),
@@ -244,26 +232,25 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
     Emitter<TeacherState> emit,
   ) async {
     emit(TeacherLoading());
-    
-    final result = await submitAttendance(AttendanceParams(
-      schoolId: event.schoolId,
-      className: event.className,
-      date: DateTime.now(),
-      attendance: event.attendance.map(
-        (key, value) => MapEntry(
-          key,
-          StudentStatus.values.firstWhere((e) => e.name == value),
+
+    final result = await submitAttendance(
+      AttendanceParams(
+        schoolId: event.schoolId,
+        className: event.className,
+        date: DateTime.now(),
+        attendance: event.attendance.map(
+          (key, value) => MapEntry(
+            key,
+            StudentStatus.values.firstWhere((e) => e.name == value),
+          ),
         ),
       ),
-    ));
-
-    result.fold(
-      (failure) => emit(TeacherError(failure.message)),
-      (_) {
-        emit(TeacherInitial());
-        add(TeacherAttendanceRequested(event.className));
-      },
     );
+
+    result.fold((failure) => emit(TeacherError(failure.message)), (_) {
+      emit(TeacherInitial());
+      add(TeacherAttendanceRequested(event.className));
+    });
   }
 
   Future<void> _onTeacherDashboardRequested(
@@ -271,31 +258,33 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
     Emitter<TeacherState> emit,
   ) async {
     emit(TeacherLoading());
-    
+
     final result = await getTeacherDashboardStats(event.teacherId);
-    
+
     result.fold(
       (failure) => emit(TeacherError(failure.message)),
-      (stats) => emit(TeacherLoaded(
-        studentsToday: stats.studentsToday,
-        totalStudents: stats.totalStudents,
-        submissionsDue: stats.submissionsDue,
-        classesToday: stats.classesToday,
-        activeNotifications: stats.activeNotifications,
-        attendanceTaken: stats.attendanceTaken,
-        marksEntered: stats.marksEntered,
-        reportsGenerated: stats.reportsGenerated,
-        classProgress: stats.classProgress,
-        ongoingLesson: const OngoingLesson(
-          id: '1',
-          subjectName: 'Mathematics',
-          className: 'Grade 10A',
-          topic: 'Calculus: Derivatives',
-          startTime: '08:30',
-          endTime: '09:15',
-          room: 'Block B, R12',
+      (stats) => emit(
+        TeacherLoaded(
+          studentsToday: stats.studentsToday,
+          totalStudents: stats.totalStudents,
+          submissionsDue: stats.submissionsDue,
+          classesToday: stats.classesToday,
+          activeNotifications: stats.activeNotifications,
+          attendanceTaken: stats.attendanceTaken,
+          marksEntered: stats.marksEntered,
+          reportsGenerated: stats.reportsGenerated,
+          classProgress: stats.classProgress,
+          ongoingLesson: const OngoingLesson(
+            id: '1',
+            subjectName: 'Mathematics',
+            className: 'Grade 10A',
+            topic: 'Calculus: Derivatives',
+            startTime: '08:30',
+            endTime: '09:15',
+            room: 'Block B, R12',
+          ),
         ),
-      )),
+      ),
     );
   }
 
@@ -305,13 +294,15 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
   ) async {
     emit(TeacherLoading());
     final result = await getStudentsByClass(event.className);
-    
+
     result.fold(
       (failure) => emit(TeacherError(failure.message)),
-      (students) => emit(TeacherAttendanceLoaded(
-        students: students,
-        selectedClass: event.className,
-      )),
+      (students) => emit(
+        TeacherAttendanceLoaded(
+          students: students,
+          selectedClass: event.className,
+        ),
+      ),
     );
   }
 
@@ -321,15 +312,17 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
   ) async {
     emit(TeacherLoading());
     final result = await getStudentsByClass(event.className);
-    
+
     result.fold(
       (failure) => emit(TeacherError(failure.message)),
-      (students) => emit(TeacherMarksEntryLoaded(
-        students: students,
-        selectedClass: event.className,
-        selectedSubject: event.subject,
-        selectedAssessment: event.assessment,
-      )),
+      (students) => emit(
+        TeacherMarksEntryLoaded(
+          students: students,
+          selectedClass: event.className,
+          selectedSubject: event.subject,
+          selectedAssessment: event.assessment,
+        ),
+      ),
     );
   }
 }

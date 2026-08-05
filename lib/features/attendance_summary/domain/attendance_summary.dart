@@ -22,7 +22,13 @@ class AttendanceSummary extends Equatable {
   });
 
   @override
-  List<Object?> get props => [present, authorisedAbsent, unauthorisedAbsent, totalMarked, ratePercent];
+  List<Object?> get props => [
+    present,
+    authorisedAbsent,
+    unauthorisedAbsent,
+    totalMarked,
+    ratePercent,
+  ];
 }
 
 /// What one mark counts as when reducing a window into an [AttendanceSummary].

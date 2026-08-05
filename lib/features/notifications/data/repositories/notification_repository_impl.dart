@@ -68,18 +68,21 @@ class NotificationRepositoryImpl implements NotificationRepository {
 
     if (!await isConnected()) return;
 
-    yield* remoteDataSource.watch(query).asyncMap((items) async {
-      await localDataSource.upsertAll(
-        items,
-        schoolId: query.schoolId,
-        recipientUserId: query.recipientUserId,
-      );
-      return _pageFrom(items, query, fromCache: false);
-    }).handleError((Object e, StackTrace stack) {
-      // Swallowing here would leave the list silently frozen on stale data;
-      // logging keeps the failure visible without tearing down the screen.
-      _log('watchNotifications stream error', e, stack);
-    });
+    yield* remoteDataSource
+        .watch(query)
+        .asyncMap((items) async {
+          await localDataSource.upsertAll(
+            items,
+            schoolId: query.schoolId,
+            recipientUserId: query.recipientUserId,
+          );
+          return _pageFrom(items, query, fromCache: false);
+        })
+        .handleError((Object e, StackTrace stack) {
+          // Swallowing here would leave the list silently frozen on stale data;
+          // logging keeps the failure visible without tearing down the screen.
+          _log('watchNotifications stream error', e, stack);
+        });
   }
 
   Future<NotificationPage> _cachedPage(
@@ -214,8 +217,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
     required String schoolId,
     required String notificationId,
     required String recipientUserId,
-  }) =>
-      _changeState(notificationId: notificationId, field: PendingField.read);
+  }) => _changeState(notificationId: notificationId, field: PendingField.read);
 
   @override
   Future<Either<NotificationFailure, Unit>> markAsUnread({
@@ -238,11 +240,10 @@ class NotificationRepositoryImpl implements NotificationRepository {
     required String schoolId,
     required String notificationId,
     required String recipientUserId,
-  }) =>
-      _changeState(
-        notificationId: notificationId,
-        field: PendingField.acknowledged,
-      );
+  }) => _changeState(
+    notificationId: notificationId,
+    field: PendingField.acknowledged,
+  );
 
   @override
   Future<Either<NotificationFailure, Unit>> setPinned({
@@ -250,12 +251,11 @@ class NotificationRepositoryImpl implements NotificationRepository {
     required String notificationId,
     required String recipientUserId,
     required bool pinned,
-  }) =>
-      _changeState(
-        notificationId: notificationId,
-        field: PendingField.pinned,
-        value: pinned,
-      );
+  }) => _changeState(
+    notificationId: notificationId,
+    field: PendingField.pinned,
+    value: pinned,
+  );
 
   @override
   Future<Either<NotificationFailure, Unit>> setArchived({
@@ -263,12 +263,11 @@ class NotificationRepositoryImpl implements NotificationRepository {
     required String notificationId,
     required String recipientUserId,
     required bool archived,
-  }) =>
-      _changeState(
-        notificationId: notificationId,
-        field: PendingField.archived,
-        value: archived,
-      );
+  }) => _changeState(
+    notificationId: notificationId,
+    field: PendingField.archived,
+    value: archived,
+  );
 
   @override
   Future<Either<NotificationFailure, Unit>> delete({
@@ -312,8 +311,9 @@ class NotificationRepositoryImpl implements NotificationRepository {
           schoolId: schoolId,
           recipientUserId: recipientUserId,
         );
-        await localDataSource
-            .clearPendingFlags(pending.map((r) => r.notificationId).toList());
+        await localDataSource.clearPendingFlags(
+          pending.map((r) => r.notificationId).toList(),
+        );
       }
       return const Right(unit);
     } catch (e, stack) {

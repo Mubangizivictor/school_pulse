@@ -12,7 +12,9 @@ class ClassTimetableScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final primaryColor = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
@@ -28,11 +30,18 @@ class ClassTimetableScreen extends StatelessWidget {
           children: [
             Text(
               'Timetable',
-              style: AppTypography.titleLarge.copyWith(color: primaryColor, fontWeight: FontWeight.bold),
+              style: AppTypography.titleLarge.copyWith(
+                color: primaryColor,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             Text(
               'P5 East',
-              style: AppTypography.labelSmall.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+              style: AppTypography.labelSmall.copyWith(
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
             ),
           ],
         ),
@@ -44,8 +53,10 @@ class ClassTimetableScreen extends StatelessWidget {
             child: ListView.separated(
               padding: const EdgeInsets.all(AppSpacing.xl),
               itemCount: 6,
-              separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.m),
-              itemBuilder: (context, index) => _buildTimetableItem(index, isDark),
+              separatorBuilder: (context, index) =>
+                  const SizedBox(height: AppSpacing.m),
+              itemBuilder: (context, index) =>
+                  _buildTimetableItem(index, isDark),
             ),
           ),
         ],
@@ -67,11 +78,16 @@ class ClassTimetableScreen extends StatelessWidget {
             onTap: () {},
             child: Container(
               margin: const EdgeInsets.only(right: AppSpacing.m),
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.s),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.l,
+                vertical: AppSpacing.s,
+              ),
               decoration: BoxDecoration(
                 border: Border(
                   bottom: BorderSide(
-                    color: isSelected ? AppColors.royalBlue : Colors.transparent,
+                    color: isSelected
+                        ? AppColors.royalBlue
+                        : Colors.transparent,
                     width: 2,
                   ),
                 ),
@@ -80,8 +96,14 @@ class ClassTimetableScreen extends StatelessWidget {
                 child: Text(
                   days[index],
                   style: AppTypography.labelMedium.copyWith(
-                    color: isSelected ? AppColors.royalBlue : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected
+                        ? AppColors.royalBlue
+                        : (isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight),
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                   ),
                 ),
               ),
@@ -94,12 +116,42 @@ class ClassTimetableScreen extends StatelessWidget {
 
   Widget _buildTimetableItem(int index, bool isDark) {
     final periods = [
-      {'time': '08:00 - 09:00', 'subject': 'Mathematics', 'room': 'Room 12', 'color': Colors.blue},
-      {'time': '09:00 - 10:20', 'subject': 'English', 'room': 'Room 12', 'color': Colors.orange},
-      {'time': '10:20 - 10:50', 'subject': 'Break', 'room': 'Playground', 'color': Colors.green},
-      {'time': '10:50 - 11:50', 'subject': 'Science', 'room': 'Lab 1', 'color': Colors.purple},
-      {'time': '11:50 - 12:50', 'subject': 'Social Studies', 'room': 'Room 12', 'color': Colors.red},
-      {'time': '12:50 - 14:00', 'subject': 'Lunch', 'room': 'Dining Hall', 'color': Colors.teal},
+      {
+        'time': '08:00 - 09:00',
+        'subject': 'Mathematics',
+        'room': 'Room 12',
+        'color': Colors.blue,
+      },
+      {
+        'time': '09:00 - 10:20',
+        'subject': 'English',
+        'room': 'Room 12',
+        'color': Colors.orange,
+      },
+      {
+        'time': '10:20 - 10:50',
+        'subject': 'Break',
+        'room': 'Playground',
+        'color': Colors.green,
+      },
+      {
+        'time': '10:50 - 11:50',
+        'subject': 'Science',
+        'room': 'Lab 1',
+        'color': Colors.purple,
+      },
+      {
+        'time': '11:50 - 12:50',
+        'subject': 'Social Studies',
+        'room': 'Room 12',
+        'color': Colors.red,
+      },
+      {
+        'time': '12:50 - 14:00',
+        'subject': 'Lunch',
+        'room': 'Dining Hall',
+        'color': Colors.teal,
+      },
     ];
 
     final period = periods[index];
@@ -124,13 +176,17 @@ class ClassTimetableScreen extends StatelessWidget {
                 Text(
                   period['time'] as String,
                   style: AppTypography.labelSmall.copyWith(
-                    color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                    color: isDark
+                        ? AppColors.textMutedDark
+                        : AppColors.textMutedLight,
                   ),
                 ),
                 Text(
                   period['subject'] as String,
                   style: AppTypography.titleMedium.copyWith(
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimaryLight,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -140,11 +196,17 @@ class ClassTimetableScreen extends StatelessWidget {
           Text(
             period['room'] as String,
             style: AppTypography.labelSmall.copyWith(
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              color: isDark
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondaryLight,
             ),
           ),
           const SizedBox(width: AppSpacing.s),
-          Icon(Icons.chevron_right, size: 16, color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+          Icon(
+            Icons.chevron_right,
+            size: 16,
+            color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+          ),
         ],
       ),
     );

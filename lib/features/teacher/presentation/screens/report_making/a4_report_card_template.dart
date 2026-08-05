@@ -14,7 +14,10 @@ class A4ReportCardTemplate extends StatelessWidget {
           TextButton.icon(
             onPressed: () {},
             icon: const Icon(Icons.print, color: Colors.white),
-            label: const Text('Print PDF', style: TextStyle(color: Colors.white)),
+            label: const Text(
+              'Print PDF',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -60,7 +63,11 @@ class A4ReportCardTemplate extends StatelessWidget {
                   const Center(
                     child: Text(
                       'This is a computer generated report card. Signature is valid without seal.',
-                      style: TextStyle(fontSize: 10, fontStyle: FontStyle.italic, color: Colors.grey),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontStyle: FontStyle.italic,
+                        color: Colors.grey,
+                      ),
                     ),
                   ),
                 ],
@@ -95,7 +102,11 @@ class A4ReportCardTemplate extends StatelessWidget {
               SizedBox(height: 8),
               Text(
                 'ACADEMIC PERFORMANCE REPORT',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, decoration: TextDecoration.underline),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  decoration: TextDecoration.underline,
+                ),
               ),
             ],
           ),
@@ -103,10 +114,10 @@ class A4ReportCardTemplate extends StatelessWidget {
         Container(
           width: 60,
           height: 70,
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey),
+          decoration: BoxDecoration(border: Border.all(color: Colors.grey)),
+          child: const Center(
+            child: Text('Photo', style: TextStyle(fontSize: 10)),
           ),
-          child: const Center(child: Text('Photo', style: TextStyle(fontSize: 10))),
         ),
       ],
     );
@@ -147,7 +158,10 @@ class A4ReportCardTemplate extends StatelessWidget {
         text: TextSpan(
           style: const TextStyle(color: Colors.black, fontSize: 12),
           children: [
-            TextSpan(text: '$label ', style: const TextStyle(fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '$label ',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             TextSpan(text: value),
           ],
         ),
@@ -159,7 +173,10 @@ class A4ReportCardTemplate extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('ACADEMIC RECORD', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        const Text(
+          'ACADEMIC RECORD',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        ),
         const SizedBox(height: 8),
         Table(
           border: TableBorder.all(color: Colors.black),
@@ -173,13 +190,62 @@ class A4ReportCardTemplate extends StatelessWidget {
           },
           children: [
             _buildTableHeader(),
-            _buildTableRow('Mathematics', '35', '55', '90', 'A+', 'Distinction'),
-            _buildTableRow('English Language', '30', '52', '82', 'A', 'Excellent'),
-            _buildTableRow('Basic Science', '28', '48', '76', 'B+', 'Very Good'),
-            _buildTableRow('Social Studies', '32', '50', '82', 'A', 'Excellent'),
-            _buildTableRow('Physical Education', '38', '58', '96', 'A+', 'Distinction'),
-            _buildTableRow('Information Tech.', '34', '54', '88', 'A', 'Excellent'),
-            _buildTableRow('Creative Arts', '30', '45', '75', 'B+', 'Very Good'),
+            _buildTableRow(
+              'Mathematics',
+              '35',
+              '55',
+              '90',
+              'A+',
+              'Distinction',
+            ),
+            _buildTableRow(
+              'English Language',
+              '30',
+              '52',
+              '82',
+              'A',
+              'Excellent',
+            ),
+            _buildTableRow(
+              'Basic Science',
+              '28',
+              '48',
+              '76',
+              'B+',
+              'Very Good',
+            ),
+            _buildTableRow(
+              'Social Studies',
+              '32',
+              '50',
+              '82',
+              'A',
+              'Excellent',
+            ),
+            _buildTableRow(
+              'Physical Education',
+              '38',
+              '58',
+              '96',
+              'A+',
+              'Distinction',
+            ),
+            _buildTableRow(
+              'Information Tech.',
+              '34',
+              '54',
+              '88',
+              'A',
+              'Excellent',
+            ),
+            _buildTableRow(
+              'Creative Arts',
+              '30',
+              '45',
+              '75',
+              'B+',
+              'Very Good',
+            ),
           ],
         ),
       ],
@@ -190,25 +256,93 @@ class A4ReportCardTemplate extends StatelessWidget {
     return const TableRow(
       decoration: BoxDecoration(color: Colors.black12),
       children: [
-        Padding(padding: EdgeInsets.all(8), child: Text('SUBJECT', style: TextStyle(fontWeight: FontWeight.bold))),
-        Padding(padding: EdgeInsets.all(8), child: Text('CA', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold))),
-        Padding(padding: EdgeInsets.all(8), child: Text('EXAM', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold))),
-        Padding(padding: EdgeInsets.all(8), child: Text('TOTAL', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold))),
-        Padding(padding: EdgeInsets.all(8), child: Text('GRADE', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold))),
-        Padding(padding: EdgeInsets.all(8), child: Text('REMARKS', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold))),
+        Padding(
+          padding: EdgeInsets.all(8),
+          child: Text('SUBJECT', style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        Padding(
+          padding: EdgeInsets.all(8),
+          child: Text(
+            'CA',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.all(8),
+          child: Text(
+            'EXAM',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.all(8),
+          child: Text(
+            'TOTAL',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.all(8),
+          child: Text(
+            'GRADE',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.all(8),
+          child: Text(
+            'REMARKS',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
       ],
     );
   }
 
-  TableRow _buildTableRow(String subject, String ca, String exam, String total, String grade, String remark) {
+  TableRow _buildTableRow(
+    String subject,
+    String ca,
+    String exam,
+    String total,
+    String grade,
+    String remark,
+  ) {
     return TableRow(
       children: [
         Padding(padding: const EdgeInsets.all(8), child: Text(subject)),
-        Padding(padding: const EdgeInsets.all(8), child: Text(ca, textAlign: TextAlign.center)),
-        Padding(padding: const EdgeInsets.all(8), child: Text(exam, textAlign: TextAlign.center)),
-        Padding(padding: const EdgeInsets.all(8), child: Text(total, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold))),
-        Padding(padding: const EdgeInsets.all(8), child: Text(grade, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold))),
-        Padding(padding: const EdgeInsets.all(8), child: Text(remark, textAlign: TextAlign.center)),
+        Padding(
+          padding: const EdgeInsets.all(8),
+          child: Text(ca, textAlign: TextAlign.center),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(8),
+          child: Text(exam, textAlign: TextAlign.center),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(8),
+          child: Text(
+            total,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(8),
+          child: Text(
+            grade,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(8),
+          child: Text(remark, textAlign: TextAlign.center),
+        ),
       ],
     );
   }
@@ -217,7 +351,10 @@ class A4ReportCardTemplate extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('AFFECTIVE & PSYCHOMOTOR', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        const Text(
+          'AFFECTIVE & PSYCHOMOTOR',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        ),
         const SizedBox(height: 8),
         Table(
           border: TableBorder.all(color: Colors.black),
@@ -232,7 +369,10 @@ class A4ReportCardTemplate extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 4),
-        const Text('Key: 5-Excellent, 4-Very Good, 3-Good, 2-Fair, 1-Poor', style: TextStyle(fontSize: 10)),
+        const Text(
+          'Key: 5-Excellent, 4-Very Good, 3-Good, 2-Fair, 1-Poor',
+          style: TextStyle(fontSize: 10),
+        ),
       ],
     );
   }
@@ -240,8 +380,18 @@ class A4ReportCardTemplate extends StatelessWidget {
   TableRow _skillRow(String skill, String rating) {
     return TableRow(
       children: [
-        Padding(padding: const EdgeInsets.all(6), child: Text(skill, style: const TextStyle(fontSize: 11))),
-        Padding(padding: const EdgeInsets.all(6), child: Text(rating, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
+        Padding(
+          padding: const EdgeInsets.all(6),
+          child: Text(skill, style: const TextStyle(fontSize: 11)),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(6),
+          child: Text(
+            rating,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+          ),
+        ),
       ],
     );
   }
@@ -250,11 +400,17 @@ class A4ReportCardTemplate extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('ATTENDANCE & CONDUCT', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        const Text(
+          'ATTENDANCE & CONDUCT',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        ),
         const SizedBox(height: 8),
         _summaryBox('Attendance', '95 / 100 Days'),
         const SizedBox(height: 12),
-        _summaryBox('Conduct', 'Amara exhibits exemplary behavior. She is respectful to staff and peers.'),
+        _summaryBox(
+          'Conduct',
+          'Amara exhibits exemplary behavior. She is respectful to staff and peers.',
+        ),
       ],
     );
   }
@@ -263,13 +419,18 @@ class A4ReportCardTemplate extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.black),
-      ),
+      decoration: BoxDecoration(border: Border.all(color: Colors.black)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: Colors.grey)),
+          Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 10,
+              color: Colors.grey,
+            ),
+          ),
           const SizedBox(height: 4),
           Text(content, style: const TextStyle(fontSize: 12)),
         ],
@@ -281,14 +442,15 @@ class A4ReportCardTemplate extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('GENERAL REMARKS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        const Text(
+          'GENERAL REMARKS',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        ),
         const SizedBox(height: 8),
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.black),
-          ),
+          decoration: BoxDecoration(border: Border.all(color: Colors.black)),
           child: const Text(
             'Amara is a very dedicated student. She has shown remarkable improvement in her Mathematics skills this term. Her participation in class activities is commendable. Keep up the good work!',
             style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
@@ -314,7 +476,10 @@ class A4ReportCardTemplate extends StatelessWidget {
       children: [
         Container(width: 150, height: 1, color: Colors.black),
         const SizedBox(height: 4),
-        Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+        Text(
+          title,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+        ),
       ],
     );
   }

@@ -56,7 +56,8 @@ abstract class SubjectTeacherLocalDataSource {
   Future<void> clearAll();
 }
 
-class SubjectTeacherLocalDataSourceImpl implements SubjectTeacherLocalDataSource {
+class SubjectTeacherLocalDataSourceImpl
+    implements SubjectTeacherLocalDataSource {
   final Isar isar;
 
   SubjectTeacherLocalDataSourceImpl({required this.isar});
@@ -75,7 +76,9 @@ class SubjectTeacherLocalDataSourceImpl implements SubjectTeacherLocalDataSource
   }
 
   @override
-  Future<void> cacheAssignments(List<StaffRoleAssignmentIsar> assignments) async {
+  Future<void> cacheAssignments(
+    List<StaffRoleAssignmentIsar> assignments,
+  ) async {
     await isar.writeTxn(() async {
       await isar.staffRoleAssignmentIsars.putAll(assignments);
     });
@@ -92,7 +95,9 @@ class SubjectTeacherLocalDataSourceImpl implements SubjectTeacherLocalDataSource
           .filter()
           .schoolIdEqualTo(schoolId)
           .findAll();
-      await isar.staffRoleAssignmentIsars.deleteAll(stale.map((e) => e.id).toList());
+      await isar.staffRoleAssignmentIsars.deleteAll(
+        stale.map((e) => e.id).toList(),
+      );
     });
   }
 
@@ -118,7 +123,9 @@ class SubjectTeacherLocalDataSourceImpl implements SubjectTeacherLocalDataSource
     // Stream is filtered in memory: a null streamId on the assignment means
     // "the whole class", so it must not narrow the result.
     if (streamId == null || streamId.isEmpty) return rows;
-    return rows.where((e) => e.streamId == null || e.streamId == streamId).toList();
+    return rows
+        .where((e) => e.streamId == null || e.streamId == streamId)
+        .toList();
   }
 
   @override
@@ -139,7 +146,9 @@ class SubjectTeacherLocalDataSourceImpl implements SubjectTeacherLocalDataSource
           .filter()
           .schoolIdEqualTo(schoolId)
           .findAll();
-      await isar.subjectEnrollmentIsars.deleteAll(stale.map((e) => e.id).toList());
+      await isar.subjectEnrollmentIsars.deleteAll(
+        stale.map((e) => e.id).toList(),
+      );
     });
   }
 
@@ -184,7 +193,10 @@ class SubjectTeacherLocalDataSourceImpl implements SubjectTeacherLocalDataSource
 
   @override
   Future<LessonAttendanceIsar?> getAttendance(String lessonId) {
-    return isar.lessonAttendanceIsars.filter().lessonIdEqualTo(lessonId).findFirst();
+    return isar.lessonAttendanceIsars
+        .filter()
+        .lessonIdEqualTo(lessonId)
+        .findFirst();
   }
 
   @override
@@ -195,7 +207,9 @@ class SubjectTeacherLocalDataSourceImpl implements SubjectTeacherLocalDataSource
   }
 
   @override
-  Future<void> enqueueOperation(SubjectTeacherOfflineOperationIsar operation) async {
+  Future<void> enqueueOperation(
+    SubjectTeacherOfflineOperationIsar operation,
+  ) async {
     await isar.writeTxn(() async {
       await isar.subjectTeacherOfflineOperationIsars.put(operation);
     });
@@ -205,7 +219,9 @@ class SubjectTeacherLocalDataSourceImpl implements SubjectTeacherLocalDataSource
   Future<List<SubjectTeacherOfflineOperationIsar>> getPendingOperations({
     String? schoolId,
   }) async {
-    final query = isar.subjectTeacherOfflineOperationIsars.filter().statusEqualTo('pending');
+    final query = isar.subjectTeacherOfflineOperationIsars
+        .filter()
+        .statusEqualTo('pending');
     final rows = schoolId == null
         ? await query.findAll()
         : await query.and().schoolIdEqualTo(schoolId).findAll();
@@ -230,7 +246,9 @@ class SubjectTeacherLocalDataSourceImpl implements SubjectTeacherLocalDataSource
   }
 
   @override
-  Future<void> updateOperation(SubjectTeacherOfflineOperationIsar operation) async {
+  Future<void> updateOperation(
+    SubjectTeacherOfflineOperationIsar operation,
+  ) async {
     await isar.writeTxn(() async {
       await isar.subjectTeacherOfflineOperationIsars.put(operation);
     });

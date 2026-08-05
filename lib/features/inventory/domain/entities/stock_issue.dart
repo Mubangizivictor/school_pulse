@@ -31,17 +31,17 @@ class StockIssue extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        itemId,
-        itemName,
-        issuedToId,
-        issuedToName,
-        department,
-        purpose,
-        quantity,
-        date,
-        approvedBy,
-        returned,
-        returnDate,
-      ];
+    id,
+    itemId,
+    itemName,
+    issuedToId,
+    issuedToName,
+    department,
+    purpose,
+    quantity,
+    date,
+    approvedBy,
+    returned,
+    returnDate,
+  ];
 }

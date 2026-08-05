@@ -78,7 +78,10 @@ abstract class SubjectTeacherRemoteDataSource {
     DateTime? to,
   });
 
-  Future<Lesson?> getLesson({required String schoolId, required String lessonId});
+  Future<Lesson?> getLesson({
+    required String schoolId,
+    required String lessonId,
+  });
 
   /// Records what happened during a lesson. [roleAssignmentId] is written so
   /// the rules can prove the writer held a responsibility covering it.
@@ -119,7 +122,8 @@ abstract class SubjectTeacherRemoteDataSource {
   });
 }
 
-class SubjectTeacherRemoteDataSourceImpl implements SubjectTeacherRemoteDataSource {
+class SubjectTeacherRemoteDataSourceImpl
+    implements SubjectTeacherRemoteDataSource {
   final FirebaseFirestore firestore;
 
   SubjectTeacherRemoteDataSourceImpl({required this.firestore});
@@ -143,10 +147,13 @@ class SubjectTeacherRemoteDataSourceImpl implements SubjectTeacherRemoteDataSour
   }) async {
     final snapshot = await _assignments(schoolId)
         .where('userId', isEqualTo: userId)
-        .where('status', whereIn: [
-          AssignmentStatus.active.name,
-          AssignmentStatus.suspended.name,
-        ])
+        .where(
+          'status',
+          whereIn: [
+            AssignmentStatus.active.name,
+            AssignmentStatus.suspended.name,
+          ],
+        )
         .get();
 
     return snapshot.docs
@@ -161,14 +168,19 @@ class SubjectTeacherRemoteDataSourceImpl implements SubjectTeacherRemoteDataSour
   }) {
     return _assignments(schoolId)
         .where('userId', isEqualTo: userId)
-        .where('status', whereIn: [
-          AssignmentStatus.active.name,
-          AssignmentStatus.suspended.name,
-        ])
+        .where(
+          'status',
+          whereIn: [
+            AssignmentStatus.active.name,
+            AssignmentStatus.suspended.name,
+          ],
+        )
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((d) => _assignmentFromDoc(d.id, schoolId, d.data()))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((d) => _assignmentFromDoc(d.id, schoolId, d.data()))
+              .toList(),
+        );
   }
 
   @override
@@ -245,7 +257,9 @@ class SubjectTeacherRemoteDataSourceImpl implements SubjectTeacherRemoteDataSour
   @override
   Future<void> updateEnrollment(SubjectEnrollment enrollment) async {
     await _enrollments(enrollment.schoolId)
-        .doc(enrollment.id.isEmpty ? _enrollmentDocId(enrollment) : enrollment.id)
+        .doc(
+          enrollment.id.isEmpty ? _enrollmentDocId(enrollment) : enrollment.id,
+        )
         .set(_enrollmentToMap(enrollment), SetOptions(merge: true));
   }
 
@@ -290,7 +304,8 @@ class SubjectTeacherRemoteDataSourceImpl implements SubjectTeacherRemoteDataSour
       return EligibleStudent(
         studentId: d.id,
         name: data['name'] as String? ?? '',
-        admissionNumber: data['admissionNumber'] as String? ??
+        admissionNumber:
+            data['admissionNumber'] as String? ??
             data['studentCode'] as String? ??
             '',
         photoUrl: data['photoUrl'] as String?,
@@ -323,16 +338,22 @@ class SubjectTeacherRemoteDataSourceImpl implements SubjectTeacherRemoteDataSour
         .where('academicYearId', isEqualTo: academicYearId);
 
     if (from != null) {
-      query = query.where('scheduledStart',
-          isGreaterThanOrEqualTo: Timestamp.fromDate(from));
+      query = query.where(
+        'scheduledStart',
+        isGreaterThanOrEqualTo: Timestamp.fromDate(from),
+      );
     }
     if (to != null) {
-      query = query.where('scheduledStart',
-          isLessThanOrEqualTo: Timestamp.fromDate(to));
+      query = query.where(
+        'scheduledStart',
+        isLessThanOrEqualTo: Timestamp.fromDate(to),
+      );
     }
 
     final snapshot = await query.orderBy('scheduledStart').get();
-    return snapshot.docs.map((d) => _lessonFromDoc(d.id, schoolId, d.data())).toList();
+    return snapshot.docs
+        .map((d) => _lessonFromDoc(d.id, schoolId, d.data()))
+        .toList();
   }
 
   @override
@@ -347,7 +368,10 @@ class SubjectTeacherRemoteDataSourceImpl implements SubjectTeacherRemoteDataSour
   }
 
   @override
-  Future<void> updateLesson(Lesson lesson, {required String roleAssignmentId}) async {
+  Future<void> updateLesson(
+    Lesson lesson, {
+    required String roleAssignmentId,
+  }) async {
     // Only the fields the panel owns. The timetable owns the schedule, the
     // room and who is assigned - a merge write of the whole entity would let
     // a teacher quietly move their own lesson.
@@ -393,12 +417,15 @@ class SubjectTeacherRemoteDataSourceImpl implements SubjectTeacherRemoteDataSour
       'staffId': attendance.staffId,
       'roleAssignmentId': attendance.roleAssignmentId,
       'entries': attendance.entries
-          .map((e) => {
-                'studentId': e.studentId,
-                'status': e.status.name,
-                'note': e.note,
-                if (e.markedAt != null) 'markedAt': Timestamp.fromDate(e.markedAt!),
-              })
+          .map(
+            (e) => {
+              'studentId': e.studentId,
+              'status': e.status.name,
+              'note': e.note,
+              if (e.markedAt != null)
+                'markedAt': Timestamp.fromDate(e.markedAt!),
+            },
+          )
           .toList(),
       'status': attendance.status.name,
       if (attendance.submittedAt != null)
@@ -546,32 +573,28 @@ class SubjectTeacherRemoteDataSourceImpl implements SubjectTeacherRemoteDataSour
       // Deterministic id per student/component: a re-save corrects the same
       // row rather than adding a second mark for the same paper.
       final docId = '${assessment.id}_${component.id}_${entry.studentId}';
-      batch.set(
-        _marks(schoolId).doc(docId),
-        {
-          'schoolId': schoolId,
-          'assessmentId': assessment.id,
-          'componentId': component.id,
-          'studentId': entry.studentId,
-          'subjectId': assessment.subjectId,
-          'classId': assessment.classId,
-          'streamId': assessment.streamId,
-          'academicYearId': assessment.academicYearId,
-          'termId': assessment.termId,
-          'score': entry.score,
-          'entryStatus': entry.status.name,
-          'remark': entry.remark,
-          'maximumMark': component.maximumMark,
-          // Read back by the rules to refuse a teacher overwriting an
-          // approved or published mark.
-          'markStatus': markStatus,
-          'roleAssignmentId': roleAssignmentId,
-          'staffId': staffId,
-          'enteredAt': Timestamp.fromDate(entry.enteredAt ?? DateTime.now()),
-          'updatedAt': FieldValue.serverTimestamp(),
-        },
-        SetOptions(merge: true),
-      );
+      batch.set(_marks(schoolId).doc(docId), {
+        'schoolId': schoolId,
+        'assessmentId': assessment.id,
+        'componentId': component.id,
+        'studentId': entry.studentId,
+        'subjectId': assessment.subjectId,
+        'classId': assessment.classId,
+        'streamId': assessment.streamId,
+        'academicYearId': assessment.academicYearId,
+        'termId': assessment.termId,
+        'score': entry.score,
+        'entryStatus': entry.status.name,
+        'remark': entry.remark,
+        'maximumMark': component.maximumMark,
+        // Read back by the rules to refuse a teacher overwriting an
+        // approved or published mark.
+        'markStatus': markStatus,
+        'roleAssignmentId': roleAssignmentId,
+        'staffId': staffId,
+        'enteredAt': Timestamp.fromDate(entry.enteredAt ?? DateTime.now()),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
     }
 
     await batch.commit();
@@ -611,7 +634,9 @@ class SubjectTeacherRemoteDataSourceImpl implements SubjectTeacherRemoteDataSour
           maximumMark: (c['maximumMark'] as num?)?.toDouble() ?? 0,
           weight: (c['weight'] as num?)?.toDouble() ?? 0,
           isRequired: c['isRequired'] as bool? ?? true,
-          entryStatus: AssessmentAvailability.fromId(c['entryStatus'] as String?),
+          entryStatus: AssessmentAvailability.fromId(
+            c['entryStatus'] as String?,
+          ),
           deadline: _toDate(c['deadline']),
         );
       }).toList(),
@@ -626,7 +651,8 @@ class SubjectTeacherRemoteDataSourceImpl implements SubjectTeacherRemoteDataSour
     String schoolId,
     Map<String, dynamic> data,
   ) {
-    final scope = (data['permissionScope'] as Map<String, dynamic>?) ?? const {};
+    final scope =
+        (data['permissionScope'] as Map<String, dynamic>?) ?? const {};
     return StaffRoleAssignment(
       id: id,
       schoolId: schoolId,
@@ -710,8 +736,10 @@ class SubjectTeacherRemoteDataSourceImpl implements SubjectTeacherRemoteDataSour
       if (e.removedAt != null) 'removedAt': Timestamp.fromDate(e.removedAt!),
       if (e.removedBy != null) 'removedBy': e.removedBy,
       if (e.removalReason != null) 'removalReason': e.removalReason,
-      if (e.effectiveFrom != null) 'effectiveFrom': Timestamp.fromDate(e.effectiveFrom!),
-      if (e.effectiveTo != null) 'effectiveTo': Timestamp.fromDate(e.effectiveTo!),
+      if (e.effectiveFrom != null)
+        'effectiveFrom': Timestamp.fromDate(e.effectiveFrom!),
+      if (e.effectiveTo != null)
+        'effectiveTo': Timestamp.fromDate(e.effectiveTo!),
       'updatedAt': FieldValue.serverTimestamp(),
     };
   }

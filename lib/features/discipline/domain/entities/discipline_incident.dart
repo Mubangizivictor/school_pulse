@@ -25,13 +25,13 @@ class DisciplineIncident extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        studentId,
-        date,
-        description,
-        severity,
-        resolution,
-        counselingNotes,
-        punishment,
-      ];
+    id,
+    studentId,
+    date,
+    description,
+    severity,
+    resolution,
+    counselingNotes,
+    punishment,
+  ];
 }

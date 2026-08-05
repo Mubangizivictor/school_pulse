@@ -23,5 +23,13 @@ class BursarStudentView extends Equatable {
   });
 
   @override
-  List<Object?> get props => [studentId, name, classId, totalBilled, totalPaid, balance, isFullyPaid];
+  List<Object?> get props => [
+    studentId,
+    name,
+    classId,
+    totalBilled,
+    totalPaid,
+    balance,
+    isFullyPaid,
+  ];
 }

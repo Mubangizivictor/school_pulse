@@ -14,13 +14,21 @@ abstract class SecurityLocalDataSource {
   Future<void> cacheStudentMovement(StudentMovementIsar movement);
   Future<List<StudentMovementIsar>> getUnsyncedStudentMovements();
   Future<void> markStudentMovementsAsSynced(List<String> movementIds);
-  Stream<List<StudentMovementIsar>> watchCachedStudentMovements(String schoolId, {DateTime? date, String? gateId});
+  Stream<List<StudentMovementIsar>> watchCachedStudentMovements(
+    String schoolId, {
+    DateTime? date,
+    String? gateId,
+  });
 
   // Staff Movement
   Future<void> cacheStaffMovement(StaffMovementIsar movement);
   Future<List<StaffMovementIsar>> getUnsyncedStaffMovements();
   Future<void> markStaffMovementsAsSynced(List<String> movementIds);
-  Stream<List<StaffMovementIsar>> watchCachedStaffMovements(String schoolId, {DateTime? date, String? gateId});
+  Stream<List<StaffMovementIsar>> watchCachedStaffMovements(
+    String schoolId, {
+    DateTime? date,
+    String? gateId,
+  });
 
   // Incidents
   Future<void> cacheIncident(SecurityIncidentIsar incident);
@@ -48,9 +56,14 @@ abstract class SecurityLocalDataSource {
   Stream<List<LostAndFoundItemIsar>> watchCachedLostAndFound(String schoolId);
 
   // Pickup Authorizations
-  Future<void> cachePickupAuthorizations(String studentId, List<PickupAuthorizationIsar> authorizations);
+  Future<void> cachePickupAuthorizations(
+    String studentId,
+    List<PickupAuthorizationIsar> authorizations,
+  );
   Future<void> cachePickupAuthorization(PickupAuthorizationIsar authorization);
-  Future<List<PickupAuthorizationIsar>> getCachedPickupAuthorizations(String studentId);
+  Future<List<PickupAuthorizationIsar>> getCachedPickupAuthorizations(
+    String studentId,
+  );
   Future<List<PickupAuthorizationIsar>> getUnsyncedPickupAuthorizations();
   Future<void> markPickupAuthorizationsAsSynced(List<String> authorizationIds);
 }
@@ -81,7 +94,10 @@ class SecurityLocalDataSourceImpl implements SecurityLocalDataSource {
 
   @override
   Stream<List<GateIsar>> watchCachedGates(String schoolId) {
-    return isar.gateIsars.filter().schoolIdEqualTo(schoolId).watch(fireImmediately: true);
+    return isar.gateIsars
+        .filter()
+        .schoolIdEqualTo(schoolId)
+        .watch(fireImmediately: true);
   }
 
   @override
@@ -93,7 +109,10 @@ class SecurityLocalDataSourceImpl implements SecurityLocalDataSource {
   Future<void> markGatesAsSynced(List<String> gateIds) async {
     await isar.writeTxn(() async {
       for (final id in gateIds) {
-        final gate = await isar.gateIsars.filter().gateIdEqualTo(id).findFirst();
+        final gate = await isar.gateIsars
+            .filter()
+            .gateIdEqualTo(id)
+            .findFirst();
         if (gate != null) {
           gate.isSynced = true;
           await isar.gateIsars.put(gate);
@@ -111,14 +130,20 @@ class SecurityLocalDataSourceImpl implements SecurityLocalDataSource {
 
   @override
   Future<List<StudentMovementIsar>> getUnsyncedStudentMovements() async {
-    return await isar.studentMovementIsars.filter().isSyncedEqualTo(false).findAll();
+    return await isar.studentMovementIsars
+        .filter()
+        .isSyncedEqualTo(false)
+        .findAll();
   }
 
   @override
   Future<void> markStudentMovementsAsSynced(List<String> movementIds) async {
     await isar.writeTxn(() async {
       for (final id in movementIds) {
-        final movement = await isar.studentMovementIsars.filter().movementIdEqualTo(id).findFirst();
+        final movement = await isar.studentMovementIsars
+            .filter()
+            .movementIdEqualTo(id)
+            .findFirst();
         if (movement != null) {
           movement.isSynced = true;
           await isar.studentMovementIsars.put(movement);
@@ -128,9 +153,18 @@ class SecurityLocalDataSourceImpl implements SecurityLocalDataSource {
   }
 
   @override
-  Stream<List<StudentMovementIsar>> watchCachedStudentMovements(String schoolId, {DateTime? date, String? gateId}) {
+  Stream<List<StudentMovementIsar>> watchCachedStudentMovements(
+    String schoolId, {
+    DateTime? date,
+    String? gateId,
+  }) {
     var q = isar.studentMovementIsars.filter().schoolIdEqualTo(schoolId);
-    QueryBuilder<StudentMovementIsar, StudentMovementIsar, QAfterFilterCondition> query = q;
+    QueryBuilder<
+      StudentMovementIsar,
+      StudentMovementIsar,
+      QAfterFilterCondition
+    >
+    query = q;
     if (date != null) {
       final start = DateTime(date.year, date.month, date.day);
       final end = start.add(const Duration(days: 1));
@@ -151,14 +185,20 @@ class SecurityLocalDataSourceImpl implements SecurityLocalDataSource {
 
   @override
   Future<List<StaffMovementIsar>> getUnsyncedStaffMovements() async {
-    return await isar.staffMovementIsars.filter().isSyncedEqualTo(false).findAll();
+    return await isar.staffMovementIsars
+        .filter()
+        .isSyncedEqualTo(false)
+        .findAll();
   }
 
   @override
   Future<void> markStaffMovementsAsSynced(List<String> movementIds) async {
     await isar.writeTxn(() async {
       for (final id in movementIds) {
-        final movement = await isar.staffMovementIsars.filter().movementIdEqualTo(id).findFirst();
+        final movement = await isar.staffMovementIsars
+            .filter()
+            .movementIdEqualTo(id)
+            .findFirst();
         if (movement != null) {
           movement.isSynced = true;
           await isar.staffMovementIsars.put(movement);
@@ -168,9 +208,14 @@ class SecurityLocalDataSourceImpl implements SecurityLocalDataSource {
   }
 
   @override
-  Stream<List<StaffMovementIsar>> watchCachedStaffMovements(String schoolId, {DateTime? date, String? gateId}) {
+  Stream<List<StaffMovementIsar>> watchCachedStaffMovements(
+    String schoolId, {
+    DateTime? date,
+    String? gateId,
+  }) {
     var q = isar.staffMovementIsars.filter().schoolIdEqualTo(schoolId);
-    QueryBuilder<StaffMovementIsar, StaffMovementIsar, QAfterFilterCondition> query = q;
+    QueryBuilder<StaffMovementIsar, StaffMovementIsar, QAfterFilterCondition>
+    query = q;
     if (date != null) {
       final start = DateTime(date.year, date.month, date.day);
       final end = start.add(const Duration(days: 1));
@@ -191,14 +236,20 @@ class SecurityLocalDataSourceImpl implements SecurityLocalDataSource {
 
   @override
   Future<List<SecurityIncidentIsar>> getUnsyncedIncidents() async {
-    return await isar.securityIncidentIsars.filter().isSyncedEqualTo(false).findAll();
+    return await isar.securityIncidentIsars
+        .filter()
+        .isSyncedEqualTo(false)
+        .findAll();
   }
 
   @override
   Future<void> markIncidentsAsSynced(List<String> incidentIds) async {
     await isar.writeTxn(() async {
       for (final id in incidentIds) {
-        final incident = await isar.securityIncidentIsars.filter().incidentIdEqualTo(id).findFirst();
+        final incident = await isar.securityIncidentIsars
+            .filter()
+            .incidentIdEqualTo(id)
+            .findFirst();
         if (incident != null) {
           incident.isSynced = true;
           await isar.securityIncidentIsars.put(incident);
@@ -245,14 +296,20 @@ class SecurityLocalDataSourceImpl implements SecurityLocalDataSource {
 
   @override
   Future<List<EmergencyEventIsar>> getUnsyncedEmergencies() async {
-    return await isar.emergencyEventIsars.filter().isSyncedEqualTo(false).findAll();
+    return await isar.emergencyEventIsars
+        .filter()
+        .isSyncedEqualTo(false)
+        .findAll();
   }
 
   @override
   Future<void> markEmergenciesAsSynced(List<String> eventIds) async {
     await isar.writeTxn(() async {
       for (final id in eventIds) {
-        final event = await isar.emergencyEventIsars.filter().eventIdEqualTo(id).findFirst();
+        final event = await isar.emergencyEventIsars
+            .filter()
+            .eventIdEqualTo(id)
+            .findFirst();
         if (event != null) {
           event.isSynced = true;
           await isar.emergencyEventIsars.put(event);
@@ -270,14 +327,20 @@ class SecurityLocalDataSourceImpl implements SecurityLocalDataSource {
 
   @override
   Future<List<SecurityPatrolIsar>> getUnsyncedPatrols() async {
-    return await isar.securityPatrolIsars.filter().isSyncedEqualTo(false).findAll();
+    return await isar.securityPatrolIsars
+        .filter()
+        .isSyncedEqualTo(false)
+        .findAll();
   }
 
   @override
   Future<void> markPatrolsAsSynced(List<String> patrolIds) async {
     await isar.writeTxn(() async {
       for (final id in patrolIds) {
-        final patrol = await isar.securityPatrolIsars.filter().patrolIdEqualTo(id).findFirst();
+        final patrol = await isar.securityPatrolIsars
+            .filter()
+            .patrolIdEqualTo(id)
+            .findFirst();
         if (patrol != null) {
           patrol.isSynced = true;
           await isar.securityPatrolIsars.put(patrol);
@@ -304,14 +367,20 @@ class SecurityLocalDataSourceImpl implements SecurityLocalDataSource {
 
   @override
   Future<List<LostAndFoundItemIsar>> getUnsyncedLostAndFound() async {
-    return await isar.lostAndFoundItemIsars.filter().isSyncedEqualTo(false).findAll();
+    return await isar.lostAndFoundItemIsars
+        .filter()
+        .isSyncedEqualTo(false)
+        .findAll();
   }
 
   @override
   Future<void> markLostAndFoundAsSynced(List<String> itemIds) async {
     await isar.writeTxn(() async {
       for (final id in itemIds) {
-        final item = await isar.lostAndFoundItemIsars.filter().itemIdEqualTo(id).findFirst();
+        final item = await isar.lostAndFoundItemIsars
+            .filter()
+            .itemIdEqualTo(id)
+            .findFirst();
         if (item != null) {
           item.isSynced = true;
           await isar.lostAndFoundItemIsars.put(item);
@@ -330,36 +399,60 @@ class SecurityLocalDataSourceImpl implements SecurityLocalDataSource {
   }
 
   @override
-  Future<void> cachePickupAuthorizations(String studentId, List<PickupAuthorizationIsar> authorizations) async {
+  Future<void> cachePickupAuthorizations(
+    String studentId,
+    List<PickupAuthorizationIsar> authorizations,
+  ) async {
     await isar.writeTxn(() async {
-      final existing = await isar.pickupAuthorizationIsars.filter().studentIdEqualTo(studentId).findAll();
-      await isar.pickupAuthorizationIsars.deleteAll(existing.map((e) => e.id).toList());
+      final existing = await isar.pickupAuthorizationIsars
+          .filter()
+          .studentIdEqualTo(studentId)
+          .findAll();
+      await isar.pickupAuthorizationIsars.deleteAll(
+        existing.map((e) => e.id).toList(),
+      );
       await isar.pickupAuthorizationIsars.putAll(authorizations);
     });
   }
 
   @override
-  Future<void> cachePickupAuthorization(PickupAuthorizationIsar authorization) async {
+  Future<void> cachePickupAuthorization(
+    PickupAuthorizationIsar authorization,
+  ) async {
     await isar.writeTxn(() async {
       await isar.pickupAuthorizationIsars.put(authorization);
     });
   }
 
   @override
-  Future<List<PickupAuthorizationIsar>> getCachedPickupAuthorizations(String studentId) async {
-    return await isar.pickupAuthorizationIsars.filter().studentIdEqualTo(studentId).findAll();
+  Future<List<PickupAuthorizationIsar>> getCachedPickupAuthorizations(
+    String studentId,
+  ) async {
+    return await isar.pickupAuthorizationIsars
+        .filter()
+        .studentIdEqualTo(studentId)
+        .findAll();
   }
 
   @override
-  Future<List<PickupAuthorizationIsar>> getUnsyncedPickupAuthorizations() async {
-    return await isar.pickupAuthorizationIsars.filter().isSyncedEqualTo(false).findAll();
+  Future<List<PickupAuthorizationIsar>>
+  getUnsyncedPickupAuthorizations() async {
+    return await isar.pickupAuthorizationIsars
+        .filter()
+        .isSyncedEqualTo(false)
+        .findAll();
   }
 
   @override
-  Future<void> markPickupAuthorizationsAsSynced(List<String> authorizationIds) async {
+  Future<void> markPickupAuthorizationsAsSynced(
+    List<String> authorizationIds,
+  ) async {
     await isar.writeTxn(() async {
       for (final id in authorizationIds) {
-        final auth = await isar.pickupAuthorizationIsars.filter().authorizationIdEqualTo(id).findFirst();
+        final auth = await isar.pickupAuthorizationIsars
+            .filter()
+            .authorizationIdEqualTo(id)
+            .findFirst();
         if (auth != null) {
           auth.isSynced = true;
           await isar.pickupAuthorizationIsars.put(auth);

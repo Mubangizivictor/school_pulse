@@ -28,7 +28,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
   void initState() {
     super.initState();
     final authState = context.read<AuthBloc>().state;
-    final schoolId = authState is AuthAuthenticated ? authState.user.schoolId : '';
+    final schoolId = authState is AuthAuthenticated
+        ? authState.user.schoolId
+        : '';
     if (schoolId.isNotEmpty) {
       context.read<PatronBloc>().add(WatchDashboardOverview(schoolId));
     }
@@ -47,7 +49,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
         listener: (context, state) {
           setState(() {
             if (state is DormitoriesLoaded) _dormitories = state.dormitories;
-            if (state is DisciplineIncidentsLoaded) _discipline = state.incidents;
+            if (state is DisciplineIncidentsLoaded)
+              _discipline = state.incidents;
             if (state is WelfareRecordsLoaded) _welfare = state.records;
             if (state is LeaveRequestsLoaded) _leave = state.requests;
           });
@@ -56,10 +59,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             BlocBuilder<PatronBloc, PatronState>(
-              buildWhen: (previous, current) => current is DashboardOverviewLoaded,
+              buildWhen: (previous, current) =>
+                  current is DashboardOverviewLoaded,
               builder: (context, state) {
                 if (state is DashboardOverviewLoaded) {
-                  return _StatsGrid(data: state.overview, semanticColors: semanticColors);
+                  return _StatsGrid(
+                    data: state.overview,
+                    semanticColors: semanticColors,
+                  );
                 }
                 return const _StatsGridSkeleton();
               },
@@ -68,24 +75,41 @@ class _ReportsScreenState extends State<ReportsScreen> {
             SectionHeader(title: 'Dormitory Occupancy'),
             const SizedBox(height: 12),
             _BarChartCard(
-              data: {for (final d in _dormitories) d.name: d.occupantCount.toDouble()},
+              data: {
+                for (final d in _dormitories)
+                  d.name: d.occupantCount.toDouble(),
+              },
               maxValue: _dormitories.isEmpty
                   ? 10
-                  : _dormitories.map((d) => d.capacity).reduce((a, b) => a > b ? a : b).toDouble(),
+                  : _dormitories
+                        .map((d) => d.capacity)
+                        .reduce((a, b) => a > b ? a : b)
+                        .toDouble(),
               color: Colors.blue,
             ),
             const SizedBox(height: 24),
             SectionHeader(title: 'Discipline Cases by Category'),
             const SizedBox(height: 12),
-            _BarChartCard(data: _countBy(_discipline.map((d) => d.category)), color: Colors.red),
+            _BarChartCard(
+              data: _countBy(_discipline.map((d) => d.category)),
+              color: Colors.red,
+            ),
             const SizedBox(height: 24),
             SectionHeader(title: 'Welfare Records by Category'),
             const SizedBox(height: 12),
-            _BarChartCard(data: _countBy(_welfare.map((w) => w.category)), color: Colors.pink),
+            _BarChartCard(
+              data: _countBy(_welfare.map((w) => w.category)),
+              color: Colors.pink,
+            ),
             const SizedBox(height: 24),
             SectionHeader(title: 'Leave Requests by Status'),
             const SizedBox(height: 12),
-            _BarChartCard(data: _countBy(_leave.map((l) => l.isOverdue ? 'Overdue' : l.status)), color: Colors.orange),
+            _BarChartCard(
+              data: _countBy(
+                _leave.map((l) => l.isOverdue ? 'Overdue' : l.status),
+              ),
+              color: Colors.orange,
+            ),
           ],
         ),
       ),
@@ -140,7 +164,9 @@ class _StatsGrid extends StatelessWidget {
             ),
             AnalyticalStatCard(
               title: 'Bed Occupancy',
-              value: data.totalBeds == 0 ? 0 : (data.occupiedBeds / data.totalBeds) * 100,
+              value: data.totalBeds == 0
+                  ? 0
+                  : (data.occupiedBeds / data.totalBeds) * 100,
               icon: Icons.bed_outlined,
               color: Colors.blue,
               suffix: '%',
@@ -209,7 +235,9 @@ class _BarChartCard extends StatelessWidget {
         child: Center(child: Text('No data yet')),
       );
     }
-    final maxY = maxValue ?? (entries.map((e) => e.value).reduce((a, b) => a > b ? a : b) * 1.2);
+    final maxY =
+        maxValue ??
+        (entries.map((e) => e.value).reduce((a, b) => a > b ? a : b) * 1.2);
 
     return AppCard(
       padding: const EdgeInsets.fromLTRB(8, 20, 20, 12),
@@ -227,7 +255,8 @@ class _BarChartCard extends StatelessWidget {
                   showTitles: true,
                   getTitlesWidget: (value, meta) {
                     final index = value.toInt();
-                    if (index < 0 || index >= entries.length) return const SizedBox.shrink();
+                    if (index < 0 || index >= entries.length)
+                      return const SizedBox.shrink();
                     return SideTitleWidget(
                       axisSide: meta.axisSide,
                       child: Padding(
@@ -245,9 +274,15 @@ class _BarChartCard extends StatelessWidget {
                   reservedSize: 36,
                 ),
               ),
-              leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 28)),
-              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              leftTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: true, reservedSize: 28),
+              ),
+              topTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              rightTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
             ),
             gridData: const FlGridData(show: false),
             borderData: FlBorderData(show: false),

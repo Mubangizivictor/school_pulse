@@ -32,172 +32,252 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<EducationalLevel>> watchLevels(String schoolId) {
     return remoteDataSource.watchLevels(schoolId).map((levels) {
-      localDataSource.cacheLevels(levels.map((e) => EducationalLevelIsar.fromEntity(e)).toList());
+      localDataSource.cacheLevels(
+        levels.map((e) => EducationalLevelIsar.fromEntity(e)).toList(),
+      );
       return levels;
     });
   }
 
   @override
-  Future<void> addLevel(EducationalLevel level) => remoteDataSource.saveLevel(level);
+  Future<void> addLevel(EducationalLevel level) =>
+      remoteDataSource.saveLevel(level);
 
   @override
-  Future<void> updateLevel(EducationalLevel level) => remoteDataSource.saveLevel(level);
+  Future<void> updateLevel(EducationalLevel level) =>
+      remoteDataSource.saveLevel(level);
 
   @override
-  Future<void> deleteLevel(String levelId) => remoteDataSource.deleteLevel(levelId);
+  Future<void> deleteLevel(String levelId) =>
+      remoteDataSource.deleteLevel(levelId);
 
   @override
-  Future<void> archiveLevel(String levelId) => remoteDataSource.archiveLevel(levelId);
+  Future<void> archiveLevel(String levelId) =>
+      remoteDataSource.archiveLevel(levelId);
+
+  @override
+  Future<void> restoreLevel(String levelId) =>
+      remoteDataSource.restoreLevel(levelId);
 
   @override
   Stream<List<AcademicYear>> watchAcademicYears(String schoolId) {
     return remoteDataSource.watchAcademicYears(schoolId).map((years) {
-      localDataSource.cacheAcademicYears(years.map((e) => AcademicYearIsar.fromEntity(e)).toList());
+      localDataSource.cacheAcademicYears(
+        years.map((e) => AcademicYearIsar.fromEntity(e)).toList(),
+      );
       return years;
     });
   }
 
   @override
-  Future<void> addAcademicYear(AcademicYear year) => remoteDataSource.saveAcademicYear(year);
+  Future<void> addAcademicYear(AcademicYear year) =>
+      remoteDataSource.saveAcademicYear(year);
 
   @override
-  Future<void> updateAcademicYear(AcademicYear year) => remoteDataSource.saveAcademicYear(year);
+  Future<void> updateAcademicYear(AcademicYear year) =>
+      remoteDataSource.saveAcademicYear(year);
 
   @override
-  Future<void> deleteAcademicYear(String yearId) => remoteDataSource.deleteAcademicYear(yearId);
+  Future<void> deleteAcademicYear(String yearId) =>
+      remoteDataSource.deleteAcademicYear(yearId);
 
   @override
   Future<void> setCurrentAcademicYear(String yearId, String schoolId) =>
       remoteDataSource.setCurrentAcademicYear(yearId, schoolId);
 
   @override
+  Future<void> archiveAcademicYear(String yearId) =>
+      remoteDataSource.archiveAcademicYear(yearId);
+
+  @override
+  Future<void> restoreAcademicYear(String yearId) =>
+      remoteDataSource.restoreAcademicYear(yearId);
+
+  @override
   Stream<List<AcademicTerm>> watchAcademicTerms(String schoolId) {
     return remoteDataSource.watchAcademicTerms(schoolId).map((terms) {
-      localDataSource.cacheAcademicTerms(terms.map((e) => AcademicTermIsar.fromEntity(e)).toList());
+      localDataSource.cacheAcademicTerms(
+        terms.map((e) => AcademicTermIsar.fromEntity(e)).toList(),
+      );
       return terms;
     });
   }
 
   @override
-  Future<void> addAcademicTerm(AcademicTerm term) => remoteDataSource.saveAcademicTerm(term);
+  Future<void> addAcademicTerm(AcademicTerm term) =>
+      remoteDataSource.saveAcademicTerm(term);
 
   @override
-  Future<void> updateAcademicTerm(AcademicTerm term) => remoteDataSource.saveAcademicTerm(term);
+  Future<void> updateAcademicTerm(AcademicTerm term) =>
+      remoteDataSource.saveAcademicTerm(term);
 
   @override
-  Future<void> deleteAcademicTerm(String termId) => remoteDataSource.deleteAcademicTerm(termId);
+  Future<void> deleteAcademicTerm(String termId) =>
+      remoteDataSource.deleteAcademicTerm(termId);
 
   @override
   Future<void> setCurrentAcademicTerm(String termId, String schoolId) =>
       remoteDataSource.setCurrentAcademicTerm(termId, schoolId);
 
   @override
+  Future<void> archiveAcademicTerm(String termId) =>
+      remoteDataSource.archiveAcademicTerm(termId);
+
+  @override
+  Future<void> restoreAcademicTerm(String termId) =>
+      remoteDataSource.restoreAcademicTerm(termId);
+
+  @override
   Stream<List<SchoolClass>> watchClasses(String schoolId) {
     return remoteDataSource.watchClasses(schoolId).map((classes) {
-      localDataSource.cacheClasses(classes.map((e) => SchoolClassIsar.fromEntity(e)).toList());
+      localDataSource.cacheClasses(
+        classes.map((e) => SchoolClassIsar.fromEntity(e)).toList(),
+      );
       return classes;
     });
   }
 
   @override
-  Future<void> addClass(SchoolClass schoolClass) => remoteDataSource.saveClass(schoolClass);
+  Future<void> addClass(SchoolClass schoolClass) =>
+      remoteDataSource.saveClass(schoolClass);
 
   @override
-  Future<void> updateClass(SchoolClass schoolClass) => remoteDataSource.saveClass(schoolClass);
+  Future<void> updateClass(SchoolClass schoolClass) =>
+      remoteDataSource.saveClass(schoolClass);
 
   @override
-  Future<void> deleteClass(String classId) => remoteDataSource.deleteClass(classId);
+  Future<void> deleteClass(String classId) =>
+      remoteDataSource.deleteClass(classId);
 
   @override
-  Future<void> archiveClass(String classId) => remoteDataSource.archiveClass(classId);
+  Future<void> archiveClass(String classId) =>
+      remoteDataSource.archiveClass(classId);
+
+  @override
+  Future<void> restoreClass(String classId) =>
+      remoteDataSource.restoreClass(classId);
 
   @override
   Stream<List<ClassStream>> watchStreams(String schoolId) {
     return remoteDataSource.watchStreams(schoolId).map((streams) {
-      localDataSource.cacheStreams(streams.map((e) => ClassStreamIsar.fromEntity(e)).toList());
+      localDataSource.cacheStreams(
+        streams.map((e) => ClassStreamIsar.fromEntity(e)).toList(),
+      );
       return streams;
     });
   }
 
   @override
-  Future<void> addStream(ClassStream stream) => remoteDataSource.saveStream(stream);
+  Future<void> addStream(ClassStream stream) =>
+      remoteDataSource.saveStream(stream);
 
   @override
-  Future<void> updateStream(ClassStream stream) => remoteDataSource.saveStream(stream);
+  Future<void> updateStream(ClassStream stream) =>
+      remoteDataSource.saveStream(stream);
 
   @override
-  Future<void> deleteStream(String streamId) => remoteDataSource.deleteStream(streamId);
+  Future<void> deleteStream(String streamId) =>
+      remoteDataSource.deleteStream(streamId);
+
+  @override
+  Future<void> archiveStream(String streamId) =>
+      remoteDataSource.archiveStream(streamId);
+
+  @override
+  Future<void> restoreStream(String streamId) =>
+      remoteDataSource.restoreStream(streamId);
 
   @override
   Stream<List<Subject>> watchSubjects(String schoolId) {
     return remoteDataSource.watchSubjects(schoolId).map((subjects) {
-      localDataSource.cacheSubjects(subjects.map((e) => SubjectIsar.fromEntity(e)).toList());
+      localDataSource.cacheSubjects(
+        subjects.map((e) => SubjectIsar.fromEntity(e)).toList(),
+      );
       return subjects;
     });
   }
 
   @override
-  Future<void> addSubject(Subject subject) => remoteDataSource.saveSubject(subject);
+  Future<void> addSubject(Subject subject) =>
+      remoteDataSource.saveSubject(subject);
 
   @override
-  Future<void> updateSubject(Subject subject) => remoteDataSource.saveSubject(subject);
+  Future<void> updateSubject(Subject subject) =>
+      remoteDataSource.saveSubject(subject);
 
   @override
-  Future<void> deleteSubject(String subjectId) => remoteDataSource.deleteSubject(subjectId);
+  Future<void> deleteSubject(String subjectId) =>
+      remoteDataSource.deleteSubject(subjectId);
 
   @override
   Stream<List<Department>> watchDepartments(String schoolId) {
     return remoteDataSource.watchDepartments(schoolId).map((departments) {
-      localDataSource.cacheDepartments(departments.map((e) => DepartmentIsar.fromEntity(e)).toList());
+      localDataSource.cacheDepartments(
+        departments.map((e) => DepartmentIsar.fromEntity(e)).toList(),
+      );
       return departments;
     });
   }
 
   @override
-  Future<void> addDepartment(Department department) => remoteDataSource.saveDepartment(department);
+  Future<void> addDepartment(Department department) =>
+      remoteDataSource.saveDepartment(department);
 
   @override
-  Future<void> updateDepartment(Department department) => remoteDataSource.saveDepartment(department);
+  Future<void> updateDepartment(Department department) =>
+      remoteDataSource.saveDepartment(department);
 
   @override
-  Future<void> deleteDepartment(String departmentId) => remoteDataSource.deleteDepartment(departmentId);
+  Future<void> deleteDepartment(String departmentId) =>
+      remoteDataSource.deleteDepartment(departmentId);
 
   @override
-  Future<void> archiveDepartment(String departmentId) => remoteDataSource.archiveDepartment(departmentId);
+  Future<void> archiveDepartment(String departmentId) =>
+      remoteDataSource.archiveDepartment(departmentId);
 
   @override
   Stream<List<StaffDesignation>> watchDesignations(String schoolId) {
     return remoteDataSource.watchDesignations(schoolId).map((designations) {
-      localDataSource.cacheDesignations(designations.map((e) => StaffDesignationIsar.fromEntity(e)).toList());
+      localDataSource.cacheDesignations(
+        designations.map((e) => StaffDesignationIsar.fromEntity(e)).toList(),
+      );
       return designations;
     });
   }
 
   @override
-  Future<void> addDesignation(StaffDesignation designation) => remoteDataSource.saveDesignation(designation);
+  Future<void> addDesignation(StaffDesignation designation) =>
+      remoteDataSource.saveDesignation(designation);
 
   @override
-  Future<void> updateDesignation(StaffDesignation designation) => remoteDataSource.saveDesignation(designation);
+  Future<void> updateDesignation(StaffDesignation designation) =>
+      remoteDataSource.saveDesignation(designation);
 
   @override
-  Future<void> deleteDesignation(String designationId) => remoteDataSource.deleteDesignation(designationId);
+  Future<void> deleteDesignation(String designationId) =>
+      remoteDataSource.deleteDesignation(designationId);
 
   @override
   Stream<List<StaffRole>> watchStaffRoles(String schoolId) {
     return remoteDataSource.watchStaffRoles(schoolId).map((roles) {
-      localDataSource.cacheStaffRoles(roles.map((e) => StaffRoleIsar.fromEntity(e)).toList());
+      localDataSource.cacheStaffRoles(
+        roles.map((e) => StaffRoleIsar.fromEntity(e)).toList(),
+      );
       return roles;
     });
   }
 
   @override
-  Future<void> addStaffRole(StaffRole role) => remoteDataSource.saveStaffRole(role);
+  Future<void> addStaffRole(StaffRole role) =>
+      remoteDataSource.saveStaffRole(role);
 
   @override
-  Future<void> updateStaffRole(StaffRole role) => remoteDataSource.saveStaffRole(role);
+  Future<void> updateStaffRole(StaffRole role) =>
+      remoteDataSource.saveStaffRole(role);
 
   @override
-  Future<void> deleteStaffRole(String roleId) => remoteDataSource.deleteStaffRole(roleId);
+  Future<void> deleteStaffRole(String roleId) =>
+      remoteDataSource.deleteStaffRole(roleId);
 
   @override
   Stream<FeatureToggles> watchFeatureToggles(String schoolId) =>
@@ -212,13 +292,17 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.watchInstitutionProfile(schoolId);
 
   @override
-  Future<void> updateInstitutionProfile(InstitutionProfile profile, String schoolId) =>
-      remoteDataSource.updateInstitutionProfile(profile, schoolId);
+  Future<void> updateInstitutionProfile(
+    InstitutionProfile profile,
+    String schoolId,
+  ) => remoteDataSource.updateInstitutionProfile(profile, schoolId);
 
   @override
   Stream<List<Campus>> watchCampuses(String schoolId) {
     return remoteDataSource.watchCampuses(schoolId).map((campuses) {
-      localDataSource.cacheCampuses(campuses.map((e) => CampusIsar.fromEntity(e)).toList());
+      localDataSource.cacheCampuses(
+        campuses.map((e) => CampusIsar.fromEntity(e)).toList(),
+      );
       return campuses;
     });
   }
@@ -227,18 +311,23 @@ class StructureRepositoryImpl implements StructureRepository {
   Future<void> addCampus(Campus campus) => remoteDataSource.saveCampus(campus);
 
   @override
-  Future<void> updateCampus(Campus campus) => remoteDataSource.saveCampus(campus);
+  Future<void> updateCampus(Campus campus) =>
+      remoteDataSource.saveCampus(campus);
 
   @override
-  Future<void> deleteCampus(String campusId) => remoteDataSource.deleteCampus(campusId);
+  Future<void> deleteCampus(String campusId) =>
+      remoteDataSource.deleteCampus(campusId);
 
   @override
-  Future<void> archiveCampus(String campusId) => remoteDataSource.archiveCampus(campusId);
+  Future<void> archiveCampus(String campusId) =>
+      remoteDataSource.archiveCampus(campusId);
 
   @override
   Stream<List<House>> watchHouses(String schoolId) {
     return remoteDataSource.watchHouses(schoolId).map((houses) {
-      localDataSource.cacheHouses(houses.map((e) => HouseIsar.fromEntity(e)).toList());
+      localDataSource.cacheHouses(
+        houses.map((e) => HouseIsar.fromEntity(e)).toList(),
+      );
       return houses;
     });
   }
@@ -250,12 +339,15 @@ class StructureRepositoryImpl implements StructureRepository {
   Future<void> updateHouse(House house) => remoteDataSource.saveHouse(house);
 
   @override
-  Future<void> deleteHouse(String houseId) => remoteDataSource.deleteHouse(houseId);
+  Future<void> deleteHouse(String houseId) =>
+      remoteDataSource.deleteHouse(houseId);
 
   @override
   Stream<List<Club>> watchClubs(String schoolId) {
     return remoteDataSource.watchClubs(schoolId).map((clubs) {
-      localDataSource.cacheClubs(clubs.map((e) => ClubIsar.fromEntity(e)).toList());
+      localDataSource.cacheClubs(
+        clubs.map((e) => ClubIsar.fromEntity(e)).toList(),
+      );
       return clubs;
     });
   }
@@ -272,24 +364,31 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<Facility>> watchFacilities(String schoolId) {
     return remoteDataSource.watchFacilities(schoolId).map((facilities) {
-      localDataSource.cacheFacilities(facilities.map((e) => FacilityIsar.fromEntity(e)).toList());
+      localDataSource.cacheFacilities(
+        facilities.map((e) => FacilityIsar.fromEntity(e)).toList(),
+      );
       return facilities;
     });
   }
 
   @override
-  Future<void> addFacility(Facility facility) => remoteDataSource.saveFacility(facility);
+  Future<void> addFacility(Facility facility) =>
+      remoteDataSource.saveFacility(facility);
 
   @override
-  Future<void> updateFacility(Facility facility) => remoteDataSource.saveFacility(facility);
+  Future<void> updateFacility(Facility facility) =>
+      remoteDataSource.saveFacility(facility);
 
   @override
-  Future<void> deleteFacility(String facilityId) => remoteDataSource.deleteFacility(facilityId);
+  Future<void> deleteFacility(String facilityId) =>
+      remoteDataSource.deleteFacility(facilityId);
 
   @override
   Stream<List<Hostel>> watchHostels(String schoolId) {
     return remoteDataSource.watchHostels(schoolId).map((hostels) {
-      localDataSource.cacheHostels(hostels.map((e) => HostelIsar.fromEntity(e)).toList());
+      localDataSource.cacheHostels(
+        hostels.map((e) => HostelIsar.fromEntity(e)).toList(),
+      );
       return hostels;
     });
   }
@@ -298,67 +397,85 @@ class StructureRepositoryImpl implements StructureRepository {
   Future<void> addHostel(Hostel hostel) => remoteDataSource.saveHostel(hostel);
 
   @override
-  Future<void> updateHostel(Hostel hostel) => remoteDataSource.saveHostel(hostel);
+  Future<void> updateHostel(Hostel hostel) =>
+      remoteDataSource.saveHostel(hostel);
 
   @override
-  Future<void> deleteHostel(String hostelId) => remoteDataSource.deleteHostel(hostelId);
+  Future<void> deleteHostel(String hostelId) =>
+      remoteDataSource.deleteHostel(hostelId);
 
   @override
   Stream<List<HostelRoom>> watchHostelRooms(String schoolId) {
     return remoteDataSource.watchHostelRooms(schoolId).map((rooms) {
-      localDataSource.cacheHostelRooms(rooms.map((e) => HostelRoomIsar.fromEntity(e)).toList());
+      localDataSource.cacheHostelRooms(
+        rooms.map((e) => HostelRoomIsar.fromEntity(e)).toList(),
+      );
       return rooms;
     });
   }
 
   @override
-  Future<void> addHostelRoom(HostelRoom room) => remoteDataSource.saveHostelRoom(room);
+  Future<void> addHostelRoom(HostelRoom room) =>
+      remoteDataSource.saveHostelRoom(room);
 
   @override
-  Future<void> updateHostelRoom(HostelRoom room) => remoteDataSource.saveHostelRoom(room);
+  Future<void> updateHostelRoom(HostelRoom room) =>
+      remoteDataSource.saveHostelRoom(room);
 
   @override
-  Future<void> deleteHostelRoom(String roomId) => remoteDataSource.deleteHostelRoom(roomId);
+  Future<void> deleteHostelRoom(String roomId) =>
+      remoteDataSource.deleteHostelRoom(roomId);
 
   @override
   Stream<List<TransportRoute>> watchTransportRoutes(String schoolId) {
     return remoteDataSource.watchTransportRoutes(schoolId).map((routes) {
-      localDataSource.cacheTransportRoutes(routes.map((e) => TransportRouteIsar.fromEntity(e)).toList());
+      localDataSource.cacheTransportRoutes(
+        routes.map((e) => TransportRouteIsar.fromEntity(e)).toList(),
+      );
       return routes;
     });
   }
 
   @override
-  Future<void> addTransportRoute(TransportRoute route) => remoteDataSource.saveTransportRoute(route);
+  Future<void> addTransportRoute(TransportRoute route) =>
+      remoteDataSource.saveTransportRoute(route);
 
   @override
-  Future<void> updateTransportRoute(TransportRoute route) => remoteDataSource.saveTransportRoute(route);
+  Future<void> updateTransportRoute(TransportRoute route) =>
+      remoteDataSource.saveTransportRoute(route);
 
   @override
-  Future<void> deleteTransportRoute(String routeId) => remoteDataSource.deleteTransportRoute(routeId);
+  Future<void> deleteTransportRoute(String routeId) =>
+      remoteDataSource.deleteTransportRoute(routeId);
 
   @override
   Stream<List<TransportStop>> watchTransportStops(String schoolId) {
     return remoteDataSource.watchTransportStops(schoolId).map((stops) {
-      localDataSource.cacheTransportStops(stops.map((e) => TransportStopIsar.fromEntity(e)).toList());
+      localDataSource.cacheTransportStops(
+        stops.map((e) => TransportStopIsar.fromEntity(e)).toList(),
+      );
       return stops;
     });
   }
 
   @override
-  Future<void> addTransportStop(TransportStop stop) => remoteDataSource.saveTransportStop(stop);
+  Future<void> addTransportStop(TransportStop stop) =>
+      remoteDataSource.saveTransportStop(stop);
 
   @override
-  Future<void> updateTransportStop(TransportStop stop) => remoteDataSource.saveTransportStop(stop);
+  Future<void> updateTransportStop(TransportStop stop) =>
+      remoteDataSource.saveTransportStop(stop);
 
   @override
-  Future<void> deleteTransportStop(String stopId) => remoteDataSource.deleteTransportStop(stopId);
+  Future<void> deleteTransportStop(String stopId) =>
+      remoteDataSource.deleteTransportStop(stopId);
 
   @override
   Stream<List<TransportVehicle>> watchTransportVehicles(String schoolId) {
     return remoteDataSource.watchTransportVehicles(schoolId).map((vehicles) {
-      localDataSource
-          .cacheTransportVehicles(vehicles.map((e) => TransportVehicleIsar.fromEntity(e)).toList());
+      localDataSource.cacheTransportVehicles(
+        vehicles.map((e) => TransportVehicleIsar.fromEntity(e)).toList(),
+      );
       return vehicles;
     });
   }
@@ -378,71 +495,90 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<FeeCategory>> watchFeeCategories(String schoolId) {
     return remoteDataSource.watchFeeCategories(schoolId).map((categories) {
-      localDataSource
-          .cacheFeeCategories(categories.map((e) => StructureFeeCategoryIsar.fromEntity(e)).toList());
+      localDataSource.cacheFeeCategories(
+        categories.map((e) => StructureFeeCategoryIsar.fromEntity(e)).toList(),
+      );
       return categories;
     });
   }
 
   @override
-  Future<void> addFeeCategory(FeeCategory category) => remoteDataSource.saveFeeCategory(category);
+  Future<void> addFeeCategory(FeeCategory category) =>
+      remoteDataSource.saveFeeCategory(category);
 
   @override
-  Future<void> updateFeeCategory(FeeCategory category) => remoteDataSource.saveFeeCategory(category);
+  Future<void> updateFeeCategory(FeeCategory category) =>
+      remoteDataSource.saveFeeCategory(category);
 
   @override
-  Future<void> deleteFeeCategory(String categoryId) => remoteDataSource.deleteFeeCategory(categoryId);
+  Future<void> deleteFeeCategory(String categoryId) =>
+      remoteDataSource.deleteFeeCategory(categoryId);
 
   @override
   Stream<List<AssessmentTypeDef>> watchAssessmentTypes(String schoolId) {
     return remoteDataSource.watchAssessmentTypes(schoolId).map((types) {
-      localDataSource.cacheAssessmentTypes(types.map((e) => AssessmentTypeDefIsar.fromEntity(e)).toList());
+      localDataSource.cacheAssessmentTypes(
+        types.map((e) => AssessmentTypeDefIsar.fromEntity(e)).toList(),
+      );
       return types;
     });
   }
 
   @override
-  Future<void> addAssessmentType(AssessmentTypeDef type) => remoteDataSource.saveAssessmentType(type);
+  Future<void> addAssessmentType(AssessmentTypeDef type) =>
+      remoteDataSource.saveAssessmentType(type);
 
   @override
-  Future<void> updateAssessmentType(AssessmentTypeDef type) => remoteDataSource.saveAssessmentType(type);
+  Future<void> updateAssessmentType(AssessmentTypeDef type) =>
+      remoteDataSource.saveAssessmentType(type);
 
   @override
-  Future<void> deleteAssessmentType(String typeId) => remoteDataSource.deleteAssessmentType(typeId);
+  Future<void> deleteAssessmentType(String typeId) =>
+      remoteDataSource.deleteAssessmentType(typeId);
 
   @override
   Stream<List<GradingSystemDef>> watchGradingSystems(String schoolId) {
     return remoteDataSource.watchGradingSystems(schoolId).map((systems) {
-      localDataSource.cacheGradingSystems(systems.map((e) => GradingSystemDefIsar.fromEntity(e)).toList());
+      localDataSource.cacheGradingSystems(
+        systems.map((e) => GradingSystemDefIsar.fromEntity(e)).toList(),
+      );
       return systems;
     });
   }
 
   @override
-  Future<void> addGradingSystem(GradingSystemDef system) => remoteDataSource.saveGradingSystem(system);
+  Future<void> addGradingSystem(GradingSystemDef system) =>
+      remoteDataSource.saveGradingSystem(system);
 
   @override
-  Future<void> updateGradingSystem(GradingSystemDef system) => remoteDataSource.saveGradingSystem(system);
+  Future<void> updateGradingSystem(GradingSystemDef system) =>
+      remoteDataSource.saveGradingSystem(system);
 
   @override
-  Future<void> deleteGradingSystem(String systemId) => remoteDataSource.deleteGradingSystem(systemId);
+  Future<void> deleteGradingSystem(String systemId) =>
+      remoteDataSource.deleteGradingSystem(systemId);
 
   @override
   Stream<List<GradeBand>> watchGradeBands(String schoolId) {
     return remoteDataSource.watchGradeBands(schoolId).map((bands) {
-      localDataSource.cacheGradeBands(bands.map((e) => GradeBandIsar.fromEntity(e)).toList());
+      localDataSource.cacheGradeBands(
+        bands.map((e) => GradeBandIsar.fromEntity(e)).toList(),
+      );
       return bands;
     });
   }
 
   @override
-  Future<void> addGradeBand(GradeBand band) => remoteDataSource.saveGradeBand(band);
+  Future<void> addGradeBand(GradeBand band) =>
+      remoteDataSource.saveGradeBand(band);
 
   @override
-  Future<void> updateGradeBand(GradeBand band) => remoteDataSource.saveGradeBand(band);
+  Future<void> updateGradeBand(GradeBand band) =>
+      remoteDataSource.saveGradeBand(band);
 
   @override
-  Future<void> deleteGradeBand(String bandId) => remoteDataSource.deleteGradeBand(bandId);
+  Future<void> deleteGradeBand(String bandId) =>
+      remoteDataSource.deleteGradeBand(bandId);
 
   @override
   Stream<TimetableConfig> watchTimetableConfig(String schoolId) =>
@@ -455,26 +591,31 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<AttendanceTypeDef>> watchAttendanceTypes(String schoolId) {
     return remoteDataSource.watchAttendanceTypes(schoolId).map((types) {
-      localDataSource
-          .cacheAttendanceTypes(types.map((e) => AttendanceTypeDefIsar.fromEntity(e)).toList());
+      localDataSource.cacheAttendanceTypes(
+        types.map((e) => AttendanceTypeDefIsar.fromEntity(e)).toList(),
+      );
       return types;
     });
   }
 
   @override
-  Future<void> addAttendanceType(AttendanceTypeDef type) => remoteDataSource.saveAttendanceType(type);
+  Future<void> addAttendanceType(AttendanceTypeDef type) =>
+      remoteDataSource.saveAttendanceType(type);
 
   @override
-  Future<void> updateAttendanceType(AttendanceTypeDef type) => remoteDataSource.saveAttendanceType(type);
+  Future<void> updateAttendanceType(AttendanceTypeDef type) =>
+      remoteDataSource.saveAttendanceType(type);
 
   @override
-  Future<void> deleteAttendanceType(String typeId) => remoteDataSource.deleteAttendanceType(typeId);
+  Future<void> deleteAttendanceType(String typeId) =>
+      remoteDataSource.deleteAttendanceType(typeId);
 
   @override
   Stream<List<AttendanceSessionDef>> watchAttendanceSessions(String schoolId) {
     return remoteDataSource.watchAttendanceSessions(schoolId).map((sessions) {
       localDataSource.cacheAttendanceSessions(
-          sessions.map((e) => AttendanceSessionDefIsar.fromEntity(e)).toList());
+        sessions.map((e) => AttendanceSessionDefIsar.fromEntity(e)).toList(),
+      );
       return sessions;
     });
   }
@@ -492,10 +633,17 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.deleteAttendanceSession(sessionId);
 
   @override
-  Stream<List<AnnouncementCategoryDef>> watchAnnouncementCategories(String schoolId) {
-    return remoteDataSource.watchAnnouncementCategories(schoolId).map((categories) {
+  Stream<List<AnnouncementCategoryDef>> watchAnnouncementCategories(
+    String schoolId,
+  ) {
+    return remoteDataSource.watchAnnouncementCategories(schoolId).map((
+      categories,
+    ) {
       localDataSource.cacheAnnouncementCategories(
-          categories.map((e) => AnnouncementCategoryDefIsar.fromEntity(e)).toList());
+        categories
+            .map((e) => AnnouncementCategoryDefIsar.fromEntity(e))
+            .toList(),
+      );
       return categories;
     });
   }
@@ -513,10 +661,17 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.deleteAnnouncementCategory(categoryId);
 
   @override
-  Stream<List<NotificationCategoryDef>> watchNotificationCategories(String schoolId) {
-    return remoteDataSource.watchNotificationCategories(schoolId).map((categories) {
+  Stream<List<NotificationCategoryDef>> watchNotificationCategories(
+    String schoolId,
+  ) {
+    return remoteDataSource.watchNotificationCategories(schoolId).map((
+      categories,
+    ) {
       localDataSource.cacheNotificationCategories(
-          categories.map((e) => NotificationCategoryDefIsar.fromEntity(e)).toList());
+        categories
+            .map((e) => NotificationCategoryDefIsar.fromEntity(e))
+            .toList(),
+      );
       return categories;
     });
   }
@@ -536,8 +691,9 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<MessageTemplateDef>> watchMessageTemplates(String schoolId) {
     return remoteDataSource.watchMessageTemplates(schoolId).map((templates) {
-      localDataSource
-          .cacheMessageTemplates(templates.map((e) => MessageTemplateDefIsar.fromEntity(e)).toList());
+      localDataSource.cacheMessageTemplates(
+        templates.map((e) => MessageTemplateDefIsar.fromEntity(e)).toList(),
+      );
       return templates;
     });
   }
@@ -557,8 +713,9 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<DocumentTemplateDef>> watchDocumentTemplates(String schoolId) {
     return remoteDataSource.watchDocumentTemplates(schoolId).map((templates) {
-      localDataSource
-          .cacheDocumentTemplates(templates.map((e) => DocumentTemplateDefIsar.fromEntity(e)).toList());
+      localDataSource.cacheDocumentTemplates(
+        templates.map((e) => DocumentTemplateDefIsar.fromEntity(e)).toList(),
+      );
       return templates;
     });
   }
@@ -578,17 +735,22 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<CustomFieldDef>> watchCustomFields(String schoolId) {
     return remoteDataSource.watchCustomFields(schoolId).map((fields) {
-      localDataSource.cacheCustomFields(fields.map((e) => CustomFieldDefIsar.fromEntity(e)).toList());
+      localDataSource.cacheCustomFields(
+        fields.map((e) => CustomFieldDefIsar.fromEntity(e)).toList(),
+      );
       return fields;
     });
   }
 
   @override
-  Future<void> addCustomField(CustomFieldDef field) => remoteDataSource.saveCustomField(field);
+  Future<void> addCustomField(CustomFieldDef field) =>
+      remoteDataSource.saveCustomField(field);
 
   @override
-  Future<void> updateCustomField(CustomFieldDef field) => remoteDataSource.saveCustomField(field);
+  Future<void> updateCustomField(CustomFieldDef field) =>
+      remoteDataSource.saveCustomField(field);
 
   @override
-  Future<void> deleteCustomField(String fieldId) => remoteDataSource.deleteCustomField(fieldId);
+  Future<void> deleteCustomField(String fieldId) =>
+      remoteDataSource.deleteCustomField(fieldId);
 }

@@ -36,7 +36,11 @@ class InstitutionConfirmScreen extends StatelessWidget {
   final InstitutionContext context;
   final VoidCallback onConfirmed;
 
-  const InstitutionConfirmScreen({super.key, required this.context, required this.onConfirmed});
+  const InstitutionConfirmScreen({
+    super.key,
+    required this.context,
+    required this.onConfirmed,
+  });
 
   @override
   Widget build(BuildContext buildContext) {
@@ -46,13 +50,20 @@ class InstitutionConfirmScreen extends StatelessWidget {
 
     return OnboardingStepScaffold(
       title: 'Confirm Your Institution',
-      subtitle: 'This is the institution you are being onboarded as an administrator for.',
+      subtitle:
+          'This is the institution you are being onboarded as an administrator for.',
       primaryLabel: 'This is my institution',
       onPrimaryPressed: onConfirmed,
       child: Column(
         children: [
-          OnboardingSummaryRow(label: 'Institution', value: context.displayLabel),
-          OnboardingSummaryRow(label: 'Type', value: _classificationLabel(context.classification)),
+          OnboardingSummaryRow(
+            label: 'Institution',
+            value: context.displayLabel,
+          ),
+          OnboardingSummaryRow(
+            label: 'Type',
+            value: _classificationLabel(context.classification),
+          ),
           OnboardingSummaryRow(label: 'Divisions', value: divisionNames),
         ],
       ),

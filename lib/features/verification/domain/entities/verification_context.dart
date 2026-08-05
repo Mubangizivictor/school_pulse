@@ -28,10 +28,10 @@ class VerificationContext extends Equatable {
 
   @override
   List<Object?> get props => [
-        gate,
-        operatorUser,
-        purpose,
-        deviceId,
-        requestedAt,
-      ];
+    gate,
+    operatorUser,
+    purpose,
+    deviceId,
+    requestedAt,
+  ];
 }

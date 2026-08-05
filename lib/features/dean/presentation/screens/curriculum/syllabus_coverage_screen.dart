@@ -10,9 +10,7 @@ class SyllabusCoverageScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(subject.name),
-      ),
+      appBar: AppBar(title: Text(subject.name)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -62,7 +60,10 @@ class SyllabusCoverageScreen extends StatelessWidget {
               ),
               Text(
                 '${subject.currentCoverage.toStringAsFixed(0)}%',
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
@@ -70,14 +71,22 @@ class SyllabusCoverageScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _SummaryItem(label: 'Topics', value: subject.topics.length.toString()),
+              _SummaryItem(
+                label: 'Topics',
+                value: subject.topics.length.toString(),
+              ),
               _SummaryItem(
                 label: 'Subtopics',
-                value: subject.topics.fold(0, (sum, t) => sum + t.subTopics.length).toString(),
+                value: subject.topics
+                    .fold(0, (sum, t) => sum + t.subTopics.length)
+                    .toString(),
               ),
               _SummaryItem(
                 label: 'Core Objectives',
-                value: subject.objectives.where((o) => o.isCore).length.toString(),
+                value: subject.objectives
+                    .where((o) => o.isCore)
+                    .length
+                    .toString(),
               ),
             ],
           ),
@@ -97,7 +106,10 @@ class _SummaryItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
         Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
       ],
     );
@@ -119,21 +131,30 @@ class _TopicExpansionTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: ExpansionTile(
-        title: Text(topic.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          topic.title,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         subtitle: Text('$completedCount/$totalCount subtopics completed'),
         leading: CircularProgressIndicator(
           value: progress,
           strokeWidth: 3,
           backgroundColor: Colors.grey[200],
         ),
-        children: topic.subTopics.map((st) => ListTile(
-          dense: true,
-          title: Text(st.title),
-          trailing: Icon(
-            st.isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
-            color: st.isCompleted ? Colors.green : Colors.grey,
-          ),
-        )).toList(),
+        children: topic.subTopics
+            .map(
+              (st) => ListTile(
+                dense: true,
+                title: Text(st.title),
+                trailing: Icon(
+                  st.isCompleted
+                      ? Icons.check_circle
+                      : Icons.radio_button_unchecked,
+                  color: st.isCompleted ? Colors.green : Colors.grey,
+                ),
+              ),
+            )
+            .toList(),
       ),
     );
   }
@@ -161,7 +182,14 @@ class _ObjectiveTile extends StatelessWidget {
                   color: Colors.blue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: const Text('CORE', style: TextStyle(fontSize: 8, color: Colors.blue, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'CORE',
+                  style: TextStyle(
+                    fontSize: 8,
+                    color: Colors.blue,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               )
             : null,
       ),

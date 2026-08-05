@@ -28,21 +28,22 @@ class StudentFinancialAccount extends Equatable {
     this.applicableRestrictions = const [],
   });
 
-  double get balance => totalBilled - totalPaid - scholarshipAmount - discountAmount;
+  double get balance =>
+      totalBilled - totalPaid - scholarshipAmount - discountAmount;
   bool get isFullyPaid => balance <= 0;
 
   @override
   List<Object?> get props => [
-        studentId,
-        schoolId,
-        academicYear,
-        term,
-        feeStructureId,
-        scholarshipAmount,
-        discountAmount,
-        totalBilled,
-        totalPaid,
-        paymentHistory,
-        applicableRestrictions,
-      ];
+    studentId,
+    schoolId,
+    academicYear,
+    term,
+    feeStructureId,
+    scholarshipAmount,
+    discountAmount,
+    totalBilled,
+    totalPaid,
+    paymentHistory,
+    applicableRestrictions,
+  ];
 }

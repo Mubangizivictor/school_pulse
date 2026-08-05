@@ -5,9 +5,15 @@ import '../../domain/entities/campus_entities.dart';
 import 'structure_dialogs.dart' show kSubjectColorSwatches;
 import 'structure_ui_kit.dart';
 
-String _colorToHex(Color color) => '#${color.toARGB32().toRadixString(16).substring(2)}';
+String _colorToHex(Color color) =>
+    '#${color.toARGB32().toRadixString(16).substring(2)}';
 
-Future<void> showCampusFormDialog(BuildContext context, {Campus? existing, required String schoolId, required void Function(Campus) onSave}) {
+Future<void> showCampusFormDialog(
+  BuildContext context, {
+  Campus? existing,
+  required String schoolId,
+  required void Function(Campus) onSave,
+}) {
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController(text: existing?.name);
   final codeController = TextEditingController(text: existing?.code);
@@ -76,26 +82,37 @@ Future<void> showCampusFormDialog(BuildContext context, {Campus? existing, requi
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(Campus(
-        id: existing?.id ?? const Uuid().v4(),
-        schoolId: existing?.schoolId ?? schoolId,
-        name: nameController.text,
-        code: codeController.text,
-        address: addressController.text,
-        district: districtController.text,
-        contactPhone: phoneController.text.isEmpty ? null : phoneController.text,
-        contactEmail: emailController.text.isEmpty ? null : emailController.text,
-        isPrimary: isPrimary,
-        isActive: isActive,
-        order: existing?.order ?? 0,
-        archivedAt: existing?.archivedAt,
-      ));
+      onSave(
+        Campus(
+          id: existing?.id ?? const Uuid().v4(),
+          schoolId: existing?.schoolId ?? schoolId,
+          name: nameController.text,
+          code: codeController.text,
+          address: addressController.text,
+          district: districtController.text,
+          contactPhone: phoneController.text.isEmpty
+              ? null
+              : phoneController.text,
+          contactEmail: emailController.text.isEmpty
+              ? null
+              : emailController.text,
+          isPrimary: isPrimary,
+          isActive: isActive,
+          order: existing?.order ?? 0,
+          archivedAt: existing?.archivedAt,
+        ),
+      );
       Navigator.pop(context);
     },
   );
 }
 
-Future<void> showHouseFormDialog(BuildContext context, {House? existing, required String schoolId, required void Function(House) onSave}) {
+Future<void> showHouseFormDialog(
+  BuildContext context, {
+  House? existing,
+  required String schoolId,
+  required void Function(House) onSave,
+}) {
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController(text: existing?.name);
   final descController = TextEditingController(text: existing?.description);
@@ -122,7 +139,10 @@ Future<void> showHouseFormDialog(BuildContext context, {House? existing, require
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('House Color', style: Theme.of(context).textTheme.labelMedium),
+              Text(
+                'House Color',
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
@@ -133,7 +153,13 @@ Future<void> showHouseFormDialog(BuildContext context, {House? existing, require
                     child: CircleAvatar(
                       backgroundColor: c,
                       radius: 14,
-                      child: selected ? const Icon(Icons.check, color: Colors.white, size: 16) : null,
+                      child: selected
+                          ? const Icon(
+                              Icons.check,
+                              color: Colors.white,
+                              size: 16,
+                            )
+                          : null,
                     ),
                   );
                 }).toList(),
@@ -158,20 +184,27 @@ Future<void> showHouseFormDialog(BuildContext context, {House? existing, require
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(House(
-        id: existing?.id ?? const Uuid().v4(),
-        schoolId: existing?.schoolId ?? schoolId,
-        name: nameController.text,
-        colorHex: _colorToHex(selectedColor),
-        description: descController.text,
-        isActive: isActive,
-      ));
+      onSave(
+        House(
+          id: existing?.id ?? const Uuid().v4(),
+          schoolId: existing?.schoolId ?? schoolId,
+          name: nameController.text,
+          colorHex: _colorToHex(selectedColor),
+          description: descController.text,
+          isActive: isActive,
+        ),
+      );
       Navigator.pop(context);
     },
   );
 }
 
-Future<void> showClubFormDialog(BuildContext context, {Club? existing, required String schoolId, required void Function(Club) onSave}) {
+Future<void> showClubFormDialog(
+  BuildContext context, {
+  Club? existing,
+  required String schoolId,
+  required void Function(Club) onSave,
+}) {
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController(text: existing?.name);
   final categoryController = TextEditingController(text: existing?.category);
@@ -222,26 +255,35 @@ Future<void> showClubFormDialog(BuildContext context, {Club? existing, required 
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(Club(
-        id: existing?.id ?? const Uuid().v4(),
-        schoolId: existing?.schoolId ?? schoolId,
-        name: nameController.text,
-        category: categoryController.text,
-        description: descController.text,
-        patronName: patronController.text,
-        isActive: isActive,
-      ));
+      onSave(
+        Club(
+          id: existing?.id ?? const Uuid().v4(),
+          schoolId: existing?.schoolId ?? schoolId,
+          name: nameController.text,
+          category: categoryController.text,
+          description: descController.text,
+          patronName: patronController.text,
+          isActive: isActive,
+        ),
+      );
       Navigator.pop(context);
     },
   );
 }
 
-Future<void> showFacilityFormDialog(BuildContext context, {Facility? existing, required String schoolId, required void Function(Facility) onSave}) {
+Future<void> showFacilityFormDialog(
+  BuildContext context, {
+  Facility? existing,
+  required String schoolId,
+  required void Function(Facility) onSave,
+}) {
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController(text: existing?.name);
   final typeController = TextEditingController(text: existing?.facilityType);
   final locationController = TextEditingController(text: existing?.location);
-  final capacityController = TextEditingController(text: existing?.capacity.toString() ?? '0');
+  final capacityController = TextEditingController(
+    text: existing?.capacity.toString() ?? '0',
+  );
   final descController = TextEditingController(text: existing?.description);
   bool isActive = existing?.isActive ?? true;
 
@@ -294,16 +336,18 @@ Future<void> showFacilityFormDialog(BuildContext context, {Facility? existing, r
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(Facility(
-        id: existing?.id ?? const Uuid().v4(),
-        schoolId: existing?.schoolId ?? schoolId,
-        name: nameController.text,
-        facilityType: typeController.text,
-        location: locationController.text,
-        capacity: int.tryParse(capacityController.text) ?? 0,
-        description: descController.text,
-        isActive: isActive,
-      ));
+      onSave(
+        Facility(
+          id: existing?.id ?? const Uuid().v4(),
+          schoolId: existing?.schoolId ?? schoolId,
+          name: nameController.text,
+          facilityType: typeController.text,
+          location: locationController.text,
+          capacity: int.tryParse(capacityController.text) ?? 0,
+          description: descController.text,
+          isActive: isActive,
+        ),
+      );
       Navigator.pop(context);
     },
   );

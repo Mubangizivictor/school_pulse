@@ -40,7 +40,10 @@ class _WastageTrackingScreenState extends State<WastageTrackingScreen> {
                 context: context,
                 firstDate: DateTime(2020),
                 lastDate: DateTime.now(),
-                initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
+                initialDateRange: DateTimeRange(
+                  start: _startDate,
+                  end: _endDate,
+                ),
               );
               if (range != null) {
                 setState(() {
@@ -60,16 +63,25 @@ class _WastageTrackingScreenState extends State<WastageTrackingScreen> {
           } else if (state is WastageRecordsLoaded) {
             final records = state.records;
             if (records.isEmpty) {
-              return const Center(child: Text('No wastage records found for the selected period.'));
+              return const Center(
+                child: Text(
+                  'No wastage records found for the selected period.',
+                ),
+              );
             }
             return ListView.builder(
               itemCount: records.length,
               itemBuilder: (context, index) {
                 final record = records[index];
                 return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: ListTile(
-                    title: Text('${record.mealCategoryName} - ${DateFormat('MMM dd, yyyy').format(record.date)}'),
+                    title: Text(
+                      '${record.mealCategoryName} - ${DateFormat('MMM dd, yyyy').format(record.date)}',
+                    ),
                     subtitle: Text('Reason: ${record.reason}'),
                     trailing: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -77,7 +89,10 @@ class _WastageTrackingScreenState extends State<WastageTrackingScreen> {
                       children: [
                         Text(
                           '${record.quantityWasted} ${record.unit} wasted',
-                          style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         Text(
                           'Impact: UGX ${record.costImpact.toStringAsFixed(0)}',
@@ -92,7 +107,9 @@ class _WastageTrackingScreenState extends State<WastageTrackingScreen> {
           } else if (state is CateringError) {
             return Center(child: Text('Error: ${state.message}'));
           }
-          return const Center(child: Text('Select a date range to view wastage.'));
+          return const Center(
+            child: Text('Select a date range to view wastage.'),
+          );
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -131,21 +148,31 @@ class _WastageTrackingScreenState extends State<WastageTrackingScreen> {
                   ],
                   onChanged: (val) {
                     mealCategoryId = val!;
-                    mealCategoryName = val == '1' ? 'Breakfast' : val == '2' ? 'Lunch' : 'Supper';
+                    mealCategoryName = val == '1'
+                        ? 'Breakfast'
+                        : val == '2'
+                        ? 'Lunch'
+                        : 'Supper';
                   },
                 ),
                 TextFormField(
-                  decoration: const InputDecoration(labelText: 'Quantity Prepared (Kg/Litres)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Quantity Prepared (Kg/Litres)',
+                  ),
                   keyboardType: TextInputType.number,
                   onSaved: (val) => prepared = double.tryParse(val!) ?? 0,
                 ),
                 TextFormField(
-                  decoration: const InputDecoration(labelText: 'Quantity Served (Kg/Litres)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Quantity Served (Kg/Litres)',
+                  ),
                   keyboardType: TextInputType.number,
                   onSaved: (val) => served = double.tryParse(val!) ?? 0,
                 ),
                 TextFormField(
-                  decoration: const InputDecoration(labelText: 'Reason for Wastage'),
+                  decoration: const InputDecoration(
+                    labelText: 'Reason for Wastage',
+                  ),
                   maxLines: 2,
                   onSaved: (val) => reason = val ?? '',
                 ),
@@ -154,7 +181,10 @@ class _WastageTrackingScreenState extends State<WastageTrackingScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () {
               if (formKey.currentState!.validate()) {
@@ -170,9 +200,12 @@ class _WastageTrackingScreenState extends State<WastageTrackingScreen> {
                   quantityWasted: wasted > 0 ? wasted : 0,
                   unit: unit,
                   reason: reason,
-                  costImpact: (wasted > 0 ? wasted : 0) * 2500, // Example cost per unit
+                  costImpact:
+                      (wasted > 0 ? wasted : 0) * 2500, // Example cost per unit
                 );
-                context.read<CateringBloc>().add(SaveWastageRecordEvent(record));
+                context.read<CateringBloc>().add(
+                  SaveWastageRecordEvent(record),
+                );
                 Navigator.pop(context);
               }
             },

@@ -48,7 +48,9 @@ class MaintenanceRecordModel extends MaintenanceRecord {
       'type': type.name,
       'description': description,
       'scheduledDate': Timestamp.fromDate(scheduledDate),
-      'completionDate': completionDate != null ? Timestamp.fromDate(completionDate!) : null,
+      'completionDate': completionDate != null
+          ? Timestamp.fromDate(completionDate!)
+          : null,
       'status': status.name,
       'performedBy': performedBy,
       'cost': cost,

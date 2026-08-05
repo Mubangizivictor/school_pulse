@@ -42,14 +42,14 @@ class TeacherDashboardStats extends Equatable {
 
   @override
   List<Object?> get props => [
-        studentsToday,
-        totalStudents,
-        submissionsDue,
-        classesToday,
-        activeNotifications,
-        attendanceTaken,
-        marksEntered,
-        reportsGenerated,
-        classProgress,
-      ];
+    studentsToday,
+    totalStudents,
+    submissionsDue,
+    classesToday,
+    activeNotifications,
+    attendanceTaken,
+    marksEntered,
+    reportsGenerated,
+    classProgress,
+  ];
 }

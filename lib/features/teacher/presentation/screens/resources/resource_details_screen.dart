@@ -32,7 +32,11 @@ class ResourceDetailsScreen extends StatelessWidget {
                       color: Colors.red.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.picture_as_pdf, color: Colors.red, size: 32),
+                    child: const Icon(
+                      Icons.picture_as_pdf,
+                      color: Colors.red,
+                      size: 32,
+                    ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -41,7 +45,10 @@ class ResourceDetailsScreen extends StatelessWidget {
                       children: [
                         const Text(
                           'P4_Math_Workbook.pdf',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         Text(
                           'PDF Document • 2.4 MB',
@@ -61,11 +68,31 @@ class ResourceDetailsScreen extends StatelessWidget {
               padding: EdgeInsets.zero,
               child: Column(
                 children: [
-                  _InfoTile(icon: Icons.person_outline, label: 'Uploaded By', value: 'Mrs. Grace W. Gikama'),
-                  _InfoTile(icon: Icons.calendar_today_outlined, label: 'Uploaded On', value: '15 May 2025 • 08:30 AM'),
-                  _InfoTile(icon: Icons.class_outlined, label: 'Class', value: 'Primary 4 - Emerald'),
-                  _InfoTile(icon: Icons.folder_open_outlined, label: 'Folder', value: 'Mathematics'),
-                  _InfoTile(icon: Icons.file_download_outlined, label: 'Downloads', value: '32'),
+                  _InfoTile(
+                    icon: Icons.person_outline,
+                    label: 'Uploaded By',
+                    value: 'Mrs. Grace W. Gikama',
+                  ),
+                  _InfoTile(
+                    icon: Icons.calendar_today_outlined,
+                    label: 'Uploaded On',
+                    value: '15 May 2025 • 08:30 AM',
+                  ),
+                  _InfoTile(
+                    icon: Icons.class_outlined,
+                    label: 'Class',
+                    value: 'Primary 4 - Emerald',
+                  ),
+                  _InfoTile(
+                    icon: Icons.folder_open_outlined,
+                    label: 'Folder',
+                    value: 'Mathematics',
+                  ),
+                  _InfoTile(
+                    icon: Icons.file_download_outlined,
+                    label: 'Downloads',
+                    value: '32',
+                  ),
                   _InfoTile(
                     icon: Icons.description_outlined,
                     label: 'Description',
@@ -87,17 +114,37 @@ class ResourceDetailsScreen extends StatelessWidget {
               crossAxisSpacing: 12,
               childAspectRatio: 1.2,
               children: [
-                _ActionButton(icon: Icons.remove_red_eye_outlined, label: 'Preview', color: Colors.blue),
-                _ActionButton(icon: Icons.file_download_outlined, label: 'Download', color: Colors.green),
+                _ActionButton(
+                  icon: Icons.remove_red_eye_outlined,
+                  label: 'Preview',
+                  color: Colors.blue,
+                ),
+                _ActionButton(
+                  icon: Icons.file_download_outlined,
+                  label: 'Download',
+                  color: Colors.green,
+                ),
                 _ActionButton(
                   icon: Icons.share_outlined,
                   label: 'Share',
                   color: Colors.orange,
                   onTap: () => context.push('/staff/resources/share'),
                 ),
-                _ActionButton(icon: Icons.drive_file_move_outlined, label: 'Move', color: Colors.purple),
-                _ActionButton(icon: Icons.edit_outlined, label: 'Rename', color: Colors.teal),
-                _ActionButton(icon: Icons.delete_outline, label: 'Delete', color: Colors.red),
+                _ActionButton(
+                  icon: Icons.drive_file_move_outlined,
+                  label: 'Move',
+                  color: Colors.purple,
+                ),
+                _ActionButton(
+                  icon: Icons.edit_outlined,
+                  label: 'Rename',
+                  color: Colors.teal,
+                ),
+                _ActionButton(
+                  icon: Icons.delete_outline,
+                  label: 'Delete',
+                  color: Colors.red,
+                ),
               ],
             ),
           ],
@@ -137,7 +184,10 @@ class _InfoTile extends StatelessWidget {
                   children: [
                     Text(
                       label,
-                      style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).hintColor,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(

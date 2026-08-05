@@ -1,4 +1,11 @@
-enum BiometricEventType { enrollment, verificationSuccess, verificationFailed, deviceRegistered, deviceRemoved, templateUpdated }
+enum BiometricEventType {
+  enrollment,
+  verificationSuccess,
+  verificationFailed,
+  deviceRegistered,
+  deviceRemoved,
+  templateUpdated,
+}
 
 class BiometricAuditLog {
   final String id;
@@ -59,7 +66,9 @@ class BiometricAuditLog {
         (e) => e.name == map['eventType'],
         orElse: () => BiometricEventType.verificationFailed,
       ),
-      timestamp: DateTime.parse(map['timestamp'] ?? DateTime.now().toIso8601String()),
+      timestamp: DateTime.parse(
+        map['timestamp'] ?? DateTime.now().toIso8601String(),
+      ),
       result: map['result'],
       failureReason: map['failureReason'],
       location: map['location'],

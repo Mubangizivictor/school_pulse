@@ -93,7 +93,8 @@ class ActiveResponsibilityContext extends Equatable {
     );
   }
 
-  bool get isSubjectTeacher => roleType == StaffResponsibilityType.subjectTeacher;
+  bool get isSubjectTeacher =>
+      roleType == StaffResponsibilityType.subjectTeacher;
   bool get isClassTeacher => roleType == StaffResponsibilityType.classTeacher;
 
   /// Whether the active assignment grants [permissionId] and, if academic
@@ -121,9 +122,10 @@ class ActiveResponsibilityContext extends Equatable {
   /// Human label for the responsibility currently in effect, used by the
   /// header and the switcher.
   String get responsibilityLabel {
-    final classLabel = [className, streamName]
-        .where((e) => e != null && e.isNotEmpty)
-        .join(' ');
+    final classLabel = [
+      className,
+      streamName,
+    ].where((e) => e != null && e.isNotEmpty).join(' ');
     return switch (roleType) {
       StaffResponsibilityType.subjectTeacher =>
         'Subject Teacher${subjectName == null ? '' : ' • $subjectName'}',
@@ -140,9 +142,10 @@ class ActiveResponsibilityContext extends Equatable {
       className,
       if (streamName != null && streamName!.isNotEmpty) '($streamName)',
     ].where((e) => e != null && e.isNotEmpty).join(' ');
-    final calendarPart = [termName, academicYearName]
-        .where((e) => e.isNotEmpty)
-        .join(', ');
+    final calendarPart = [
+      termName,
+      academicYearName,
+    ].where((e) => e.isNotEmpty).join(', ');
     return [classPart, calendarPart].where((e) => e.isNotEmpty).join(' • ');
   }
 
@@ -181,27 +184,27 @@ class ActiveResponsibilityContext extends Equatable {
 
   @override
   List<Object?> get props => [
-        schoolId,
-        campusId,
-        academicYearId,
-        academicYearName,
-        termId,
-        termName,
-        staffId,
-        userId,
-        roleAssignmentId,
-        roleType,
-        subjectId,
-        subjectName,
-        classId,
-        className,
-        streamId,
-        streamName,
-        departmentId,
-        permissionScope,
-        assignmentStartDate,
-        assignmentEndDate,
-        assignmentStatus,
-        isSubstitute,
-      ];
+    schoolId,
+    campusId,
+    academicYearId,
+    academicYearName,
+    termId,
+    termName,
+    staffId,
+    userId,
+    roleAssignmentId,
+    roleType,
+    subjectId,
+    subjectName,
+    classId,
+    className,
+    streamId,
+    streamName,
+    departmentId,
+    permissionScope,
+    assignmentStartDate,
+    assignmentEndDate,
+    assignmentStatus,
+    isSubstitute,
+  ];
 }

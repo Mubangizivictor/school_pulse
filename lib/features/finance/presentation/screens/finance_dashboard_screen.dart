@@ -72,7 +72,9 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen> {
 
             if (state is FinanceDashboardLoaded) {
               final authState = context.watch<AuthBloc>().state;
-              final userName = authState is AuthAuthenticated ? authState.user.name : 'User';
+              final userName = authState is AuthAuthenticated
+                  ? authState.user.name
+                  : 'User';
 
               return RefreshIndicator(
                 onRefresh: () async => _loadDashboard(),
@@ -89,13 +91,17 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen> {
                             children: [
                               Text(
                                 'Welcome back,',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: Theme.of(context).colorScheme.outline,
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.outline,
                                     ),
                               ),
                               Text(
                                 userName,
-                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                style: Theme.of(context).textTheme.headlineSmall
+                                    ?.copyWith(
                                       fontWeight: FontWeight.w900,
                                       letterSpacing: -0.5,
                                     ),
@@ -106,20 +112,27 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen> {
                         Row(
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.chat_bubble_outline_rounded),
+                              icon: const Icon(
+                                Icons.chat_bubble_outline_rounded,
+                              ),
                               onPressed: () => context.push('/staff/messages'),
                               tooltip: 'Messages',
                               style: IconButton.styleFrom(
-                                backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+                                backgroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainer,
                               ),
                             ),
                             const SizedBox(width: 8),
                             IconButton(
                               icon: const Icon(Icons.search),
-                              onPressed: () => context.push('/staff/bursar/lookup'),
+                              onPressed: () =>
+                                  context.push('/staff/bursar/lookup'),
                               tooltip: 'Student Balance Lookup',
                               style: IconButton.styleFrom(
-                                backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+                                backgroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainer,
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -128,12 +141,16 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen> {
                               onPressed: () => _scanReceipt(context),
                               tooltip: 'Verify Receipt',
                               style: IconButton.styleFrom(
-                                backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+                                backgroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainer,
                               ),
                             ),
                             const SizedBox(width: 8),
                             NotificationBellButton(
-                              backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainer,
                             ),
                           ],
                         ),

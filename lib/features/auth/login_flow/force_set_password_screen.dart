@@ -40,7 +40,7 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
 
   Future<void> _submit() async {
     final password = _passwordController.text;
-    
+
     if (_isParent) {
       if (password.length != 4 || int.tryParse(password) == null) {
         setState(() => _error = 'PIN must be 4 digits.');
@@ -99,7 +99,7 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
       context.go('/welcome');
       return;
     }
-    
+
     context.go('/school-splash', extra: widget.user);
   }
 
@@ -108,7 +108,7 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final title = _isParent ? 'Set Your Secret PIN' : 'Set New Password';
-    final subtitle = _isParent 
+    final subtitle = _isParent
         ? "For your security, please choose a 4-digit PIN to use for future logins."
         : "For your security, choose a new password to replace the temporary one.";
     final label = _isParent ? 'New 4-Digit PIN' : 'New Password';
@@ -134,36 +134,49 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
             child: ResponsiveBuilder(
               builder: (context, layout) {
                 final isDesktop = layout == ResponsiveLayout.desktop;
-                
+
                 return Container(
                   constraints: BoxConstraints(maxWidth: isDesktop ? 450 : 400),
-                  padding: isDesktop ? const EdgeInsets.all(AppSpacing.x4l) : null,
-                  decoration: isDesktop ? BoxDecoration(
-                    color: isDark ? AppColors.surfaceDark.withValues(alpha: 0.5) : Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: isDark ? AppColors.white.withValues(alpha: 0.1) : AppColors.borderLight,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ) : null,
+                  padding: isDesktop
+                      ? const EdgeInsets.all(AppSpacing.x4l)
+                      : null,
+                  decoration: isDesktop
+                      ? BoxDecoration(
+                          color: isDark
+                              ? AppColors.surfaceDark.withValues(alpha: 0.5)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: isDark
+                                ? AppColors.white.withValues(alpha: 0.1)
+                                : AppColors.borderLight,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        )
+                      : null,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const Center(
-                        child: PulseLogo(size: 80, variant: PulseLogoVariant.auth),
+                        child: PulseLogo(
+                          size: 80,
+                          variant: PulseLogoVariant.auth,
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.x4l),
                       Text(
                         title,
                         style: AppTypography.headlineMedium.copyWith(
                           fontWeight: FontWeight.w800,
-                          color: isDark ? Colors.white : AppColors.textPrimaryLight,
+                          color: isDark
+                              ? Colors.white
+                              : AppColors.textPrimaryLight,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -171,7 +184,9 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
                       Text(
                         subtitle,
                         style: AppTypography.bodyMedium.copyWith(
-                          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -179,19 +194,27 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
                       PulseTextField(
                         controller: _passwordController,
                         isPassword: true,
-                        keyboardType: _isParent ? TextInputType.number : TextInputType.text,
+                        keyboardType: _isParent
+                            ? TextInputType.number
+                            : TextInputType.text,
                         label: label,
                         hint: _isParent ? '••••' : '••••••••',
-                        prefixIcon: _isParent ? Icons.dialpad : Icons.lock_outline,
+                        prefixIcon: _isParent
+                            ? Icons.dialpad
+                            : Icons.lock_outline,
                       ),
                       const SizedBox(height: AppSpacing.xl),
                       PulseTextField(
                         controller: _confirmController,
                         isPassword: true,
-                        keyboardType: _isParent ? TextInputType.number : TextInputType.text,
+                        keyboardType: _isParent
+                            ? TextInputType.number
+                            : TextInputType.text,
                         label: confirmLabel,
                         hint: _isParent ? '••••' : '••••••••',
-                        prefixIcon: _isParent ? Icons.dialpad : Icons.lock_reset_rounded,
+                        prefixIcon: _isParent
+                            ? Icons.dialpad
+                            : Icons.lock_reset_rounded,
                         validator: (_) => _error,
                       ),
                       const SizedBox(height: AppSpacing.x4l),
@@ -204,7 +227,7 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
                     ],
                   ),
                 );
-              }
+              },
             ),
           ),
         ),
@@ -212,4 +235,3 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
     );
   }
 }
-

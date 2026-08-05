@@ -35,17 +35,21 @@ class SubjectStudentRepositoryImpl implements SubjectStudentRepository {
     bool forceRefresh = false,
   }) async {
     if (!context.can(Permission.subjectStudentsView)) {
-      return const Left(PermissionDeniedFailure(
-        'You do not have permission to view this subject\'s students.',
-      ));
+      return const Left(
+        PermissionDeniedFailure(
+          'You do not have permission to view this subject\'s students.',
+        ),
+      );
     }
 
     final subjectId = context.subjectId;
     final classId = context.classId;
     if (subjectId == null || classId == null) {
-      return const Left(ValidationFailure(
-        'This responsibility is not tied to a subject and class.',
-      ));
+      return const Left(
+        ValidationFailure(
+          'This responsibility is not tied to a subject and class.',
+        ),
+      );
     }
 
     try {
@@ -56,8 +60,10 @@ class SubjectStudentRepositoryImpl implements SubjectStudentRepository {
         forceRefresh: forceRefresh,
       );
 
-      final active =
-          enrollments.where((e) => e.isActive).map((e) => e.studentId).toSet();
+      final active = enrollments
+          .where((e) => e.isActive)
+          .map((e) => e.studentId)
+          .toSet();
       if (active.isEmpty) return const Right([]);
 
       final roster = await remoteDataSource.getClassRoster(
@@ -75,27 +81,34 @@ class SubjectStudentRepositoryImpl implements SubjectStudentRepository {
       // both on the class roster and enrolled in this subject. Being in the
       // class is not enough, which is what keeps an elective's teacher from
       // seeing the students who did not take it.
-      final students = roster
-          .where((s) => active.contains(s.studentId))
-          .map((s) => SubjectStudentSummary(
-                studentId: s.studentId,
-                name: s.name,
-                admissionNumber: s.admissionNumber,
-                photoUrl: s.photoUrl,
-                classId: s.classId,
-                className: s.className,
-                streamId: s.streamId,
-                streamName: s.streamName,
-                isMandatory: mandatoryBy[s.studentId] ?? false,
-              ))
-          .toList()
-        ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      final students =
+          roster
+              .where((s) => active.contains(s.studentId))
+              .map(
+                (s) => SubjectStudentSummary(
+                  studentId: s.studentId,
+                  name: s.name,
+                  admissionNumber: s.admissionNumber,
+                  photoUrl: s.photoUrl,
+                  classId: s.classId,
+                  className: s.className,
+                  streamId: s.streamId,
+                  streamName: s.streamName,
+                  isMandatory: mandatoryBy[s.studentId] ?? false,
+                ),
+              )
+              .toList()
+            ..sort(
+              (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+            );
 
       return Right(students);
     } on NetworkFailureException {
-      return const Left(NetworkFailure(
-        'You are offline. Pull down again when you have a connection.',
-      ));
+      return const Left(
+        NetworkFailure(
+          'You are offline. Pull down again when you have a connection.',
+        ),
+      );
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -106,25 +119,31 @@ class SubjectStudentRepositoryImpl implements SubjectStudentRepository {
     required ActiveResponsibilityContext context,
   }) async {
     if (!context.can(Permission.subjectStudentEnroll)) {
-      return const Left(PermissionDeniedFailure(
-        'You do not have permission to add students to this subject.',
-      ));
+      return const Left(
+        PermissionDeniedFailure(
+          'You do not have permission to add students to this subject.',
+        ),
+      );
     }
 
     final subjectId = context.subjectId;
     final classId = context.classId;
     if (subjectId == null || classId == null) {
-      return const Left(ValidationFailure(
-        'This responsibility is not tied to a subject and class.',
-      ));
+      return const Left(
+        ValidationFailure(
+          'This responsibility is not tied to a subject and class.',
+        ),
+      );
     }
 
     if (!await networkInfo.isConnected) {
       // Enrolling from a stale roster risks adding a student who has since
       // transferred out, so this one needs a live read.
-      return const Left(OfflineNotAllowedFailure(
-        'Adding students needs an internet connection.',
-      ));
+      return const Left(
+        OfflineNotAllowedFailure(
+          'Adding students needs an internet connection.',
+        ),
+      );
     }
 
     try {
@@ -149,7 +168,9 @@ class SubjectStudentRepositoryImpl implements SubjectStudentRepository {
 
       return Right(
         roster.where((s) => !alreadyEnrolled.contains(s.studentId)).toList()
-          ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase())),
+          ..sort(
+            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+          ),
       );
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -162,9 +183,11 @@ class SubjectStudentRepositoryImpl implements SubjectStudentRepository {
     required List<String> studentIds,
   }) async {
     if (!context.can(Permission.subjectStudentEnroll)) {
-      return const Left(PermissionDeniedFailure(
-        'You do not have permission to add students to this subject.',
-      ));
+      return const Left(
+        PermissionDeniedFailure(
+          'You do not have permission to add students to this subject.',
+        ),
+      );
     }
     if (studentIds.isEmpty) {
       return const Left(ValidationFailure('Select at least one student.'));
@@ -173,34 +196,40 @@ class SubjectStudentRepositoryImpl implements SubjectStudentRepository {
     final subjectId = context.subjectId;
     final classId = context.classId;
     if (subjectId == null || classId == null) {
-      return const Left(ValidationFailure(
-        'This responsibility is not tied to a subject and class.',
-      ));
+      return const Left(
+        ValidationFailure(
+          'This responsibility is not tied to a subject and class.',
+        ),
+      );
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(OfflineNotAllowedFailure(
-        'Adding students needs an internet connection.',
-      ));
+      return const Left(
+        OfflineNotAllowedFailure(
+          'Adding students needs an internet connection.',
+        ),
+      );
     }
 
     try {
       final now = DateTime.now();
       final enrollments = studentIds
-          .map((studentId) => SubjectEnrollment(
-                id: '',
-                schoolId: context.schoolId,
-                campusId: context.campusId,
-                studentId: studentId,
-                subjectId: subjectId,
-                classId: classId,
-                streamId: context.streamId,
-                academicYearId: context.academicYearId,
-                roleAssignmentId: context.roleAssignmentId,
-                enrolledAt: now,
-                enrolledBy: context.staffId,
-                effectiveFrom: now,
-              ))
+          .map(
+            (studentId) => SubjectEnrollment(
+              id: '',
+              schoolId: context.schoolId,
+              campusId: context.campusId,
+              studentId: studentId,
+              subjectId: subjectId,
+              classId: classId,
+              streamId: context.streamId,
+              academicYearId: context.academicYearId,
+              roleAssignmentId: context.roleAssignmentId,
+              enrolledAt: now,
+              enrolledBy: context.staffId,
+              effectiveFrom: now,
+            ),
+          )
           .toList();
 
       await remoteDataSource.createEnrollments(enrollments);
@@ -236,79 +265,88 @@ class SubjectStudentRepositoryImpl implements SubjectStudentRepository {
     required bool requiresApproval,
   }) async {
     if (!context.can(Permission.subjectStudentRemove)) {
-      return const Left(PermissionDeniedFailure(
-        'You do not have permission to remove students from this subject.',
-      ));
+      return const Left(
+        PermissionDeniedFailure(
+          'You do not have permission to remove students from this subject.',
+        ),
+      );
     }
     if (reason.trim().isEmpty) {
-      return const Left(ValidationFailure(
-        'Give a reason for removing this student.',
-        field: 'reason',
-      ));
+      return const Left(
+        ValidationFailure(
+          'Give a reason for removing this student.',
+          field: 'reason',
+        ),
+      );
     }
     if (!await networkInfo.isConnected) {
-      return const Left(OfflineNotAllowedFailure(
-        'Removing a student needs an internet connection.',
-      ));
+      return const Left(
+        OfflineNotAllowedFailure(
+          'Removing a student needs an internet connection.',
+        ),
+      );
     }
 
-    final existing = await getEnrollment(context: context, studentId: studentId);
-    return existing.fold(
-      (failure) async => Left(failure),
-      (enrollment) async {
-        if (enrollment == null) {
-          return const Left(ValidationFailure(
-            'This student is not enrolled in the subject.',
-          ));
-        }
-        // A mandatory subject is not the teacher's to drop, whatever their
-        // own permission says - that decision belongs to the academic office.
-        if (enrollment.isMandatory && !requiresApproval) {
-          return const Left(ValidationFailure(
+    final existing = await getEnrollment(
+      context: context,
+      studentId: studentId,
+    );
+    return existing.fold((failure) async => Left(failure), (enrollment) async {
+      if (enrollment == null) {
+        return const Left(
+          ValidationFailure('This student is not enrolled in the subject.'),
+        );
+      }
+      // A mandatory subject is not the teacher's to drop, whatever their
+      // own permission says - that decision belongs to the academic office.
+      if (enrollment.isMandatory && !requiresApproval) {
+        return const Left(
+          ValidationFailure(
             'This subject is mandatory. Removal needs approval from the '
             'academic office.',
-          ));
-        }
+          ),
+        );
+      }
 
-        final now = DateTime.now();
-        // Historical marks stay attached to the enrollment row, so removal
-        // closes the row rather than deleting it.
-        final updated = enrollment.copyWith(
-          // Restamped with the responsibility doing the removing, not the one
-          // that created the enrollment - that is what the rules check.
-          roleAssignmentId: context.roleAssignmentId,
-          status: requiresApproval
-              ? SubjectEnrollmentStatus.pendingRemoval
-              : SubjectEnrollmentStatus.removed,
-          removedAt: requiresApproval ? null : now,
-          removedBy: context.staffId,
-          removalReason: reason.trim(),
-          effectiveTo: requiresApproval ? null : now,
+      final now = DateTime.now();
+      // Historical marks stay attached to the enrollment row, so removal
+      // closes the row rather than deleting it.
+      final updated = enrollment.copyWith(
+        // Restamped with the responsibility doing the removing, not the one
+        // that created the enrollment - that is what the rules check.
+        roleAssignmentId: context.roleAssignmentId,
+        status: requiresApproval
+            ? SubjectEnrollmentStatus.pendingRemoval
+            : SubjectEnrollmentStatus.removed,
+        removedAt: requiresApproval ? null : now,
+        removedBy: context.staffId,
+        removalReason: reason.trim(),
+        effectiveTo: requiresApproval ? null : now,
+      );
+
+      try {
+        await remoteDataSource.updateEnrollment(updated);
+        await localDataSource.cacheEnrollments([
+          SubjectEnrollmentIsar.fromEntity(updated),
+        ]);
+
+        await auditService.record(
+          context: context,
+          action: requiresApproval
+              ? SubjectAuditAction.studentRemovalRequested
+              : SubjectAuditAction.studentRemoved,
+          entityType: 'subject_enrollment',
+          entityId: studentId,
+          previousValue: {'status': enrollment.status.name},
+          newValue: {'status': updated.status.name},
+          reason: reason.trim(),
         );
 
-        try {
-          await remoteDataSource.updateEnrollment(updated);
-          await localDataSource
-              .cacheEnrollments([SubjectEnrollmentIsar.fromEntity(updated)]);
-
-          await auditService.record(
-            context: context,
-            action: requiresApproval
-                ? SubjectAuditAction.studentRemovalRequested
-                : SubjectAuditAction.studentRemoved,
-            entityType: 'subject_enrollment',
-            entityId: studentId,
-            previousValue: {'status': enrollment.status.name},
-            newValue: {'status': updated.status.name},
-            reason: reason.trim(),
-          );
-
-          return Right(updated.status);
-        } catch (e) {
-          return Left(ServerFailure(e.toString()));
-        }
-      },
-    );
+        return Right(updated.status);
+      } catch (e) {
+        return Left(ServerFailure(e.toString()));
+      }
+    });
   }
 
   @override
@@ -318,9 +356,9 @@ class SubjectStudentRepositoryImpl implements SubjectStudentRepository {
   }) async {
     final subjectId = context.subjectId;
     if (subjectId == null) {
-      return const Left(ValidationFailure(
-        'This responsibility is not tied to a subject.',
-      ));
+      return const Left(
+        ValidationFailure('This responsibility is not tied to a subject.'),
+      );
     }
 
     try {

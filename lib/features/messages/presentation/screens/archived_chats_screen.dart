@@ -17,7 +17,10 @@ class ArchivedChatsScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           'Archived',
-          style: AppTypography.titleLarge.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+          style: AppTypography.titleLarge.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -47,7 +50,8 @@ class ArchivedChatsScreen extends StatelessWidget {
                     chat: chat,
                     onTap: () => context.push('/messages/chat/${chat.id}'),
                     // Long-press is the only way back out of the archive.
-                    onLongPress: () => _confirmUnarchive(context, user.id, chat),
+                    onLongPress: () =>
+                        _confirmUnarchive(context, user.id, chat),
                   ),
                 );
               },
@@ -58,7 +62,11 @@ class ArchivedChatsScreen extends StatelessWidget {
     );
   }
 
-  void _confirmUnarchive(BuildContext context, String userId, ChatConversation chat) {
+  void _confirmUnarchive(
+    BuildContext context,
+    String userId,
+    ChatConversation chat,
+  ) {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surfaceDark,
@@ -70,16 +78,28 @@ class ArchivedChatsScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.unarchive_outlined, color: Colors.white70),
-              title: const Text('Unarchive', style: TextStyle(color: Colors.white)),
+              leading: const Icon(
+                Icons.unarchive_outlined,
+                color: Colors.white70,
+              ),
+              title: const Text(
+                'Unarchive',
+                style: TextStyle(color: Colors.white),
+              ),
               onTap: () {
                 Navigator.pop(sheetContext);
                 context.messages.setArchived(chat.id, userId, false);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
-              title: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+              leading: const Icon(
+                Icons.delete_outline,
+                color: Colors.redAccent,
+              ),
+              title: const Text(
+                'Delete',
+                style: TextStyle(color: Colors.redAccent),
+              ),
               onTap: () {
                 Navigator.pop(sheetContext);
                 context.messages.leaveConversation(chat.id, userId);
@@ -122,9 +142,7 @@ class ArchivedChatsScreen extends StatelessWidget {
             child: Text(
               'These chats stay archived when new messages are received.',
               textAlign: TextAlign.center,
-              style: AppTypography.bodyMedium.copyWith(
-                color: Colors.white60,
-              ),
+              style: AppTypography.bodyMedium.copyWith(color: Colors.white60),
             ),
           ),
         ],

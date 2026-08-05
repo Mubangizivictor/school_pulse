@@ -1,12 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-enum MarkStatus {
-  draft,
-  submitted,
-  moderated,
-  approved,
-  published,
-}
+enum MarkStatus { draft, submitted, moderated, approved, published }
 
 class AssessmentMark extends Equatable {
   final String id;
@@ -41,20 +35,20 @@ class AssessmentMark extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        studentId,
-        assessmentTypeId,
-        subjectId,
-        teacherId,
-        score,
-        competencyLevel,
-        teacherComment,
-        status,
-        createdAt,
-        updatedAt,
-        moderatedBy,
-        approvedBy,
-      ];
+    id,
+    studentId,
+    assessmentTypeId,
+    subjectId,
+    teacherId,
+    score,
+    competencyLevel,
+    teacherComment,
+    status,
+    createdAt,
+    updatedAt,
+    moderatedBy,
+    approvedBy,
+  ];
 
   AssessmentMark copyWith({
     double? score,

@@ -5,7 +5,7 @@ import '../../../matron/domain/entities/boarding_entities.dart';
 
 abstract class DisciplineState extends Equatable {
   const DisciplineState();
-  
+
   @override
   List<Object> get props => [];
 }

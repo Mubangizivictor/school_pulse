@@ -23,18 +23,27 @@ class BiometricLocalDataSourceImpl implements BiometricLocalDataSource {
 
   @override
   Future<BiometricTemplateIsar?> getTemplate(String personId) async {
-    return await isar.biometricTemplateIsars.filter().personIdEqualTo(personId).findFirst();
+    return await isar.biometricTemplateIsars
+        .filter()
+        .personIdEqualTo(personId)
+        .findFirst();
   }
 
   @override
   Future<List<BiometricTemplateIsar>> getPendingSyncTemplates() async {
-    return await isar.biometricTemplateIsars.filter().isSyncedEqualTo(false).findAll();
+    return await isar.biometricTemplateIsars
+        .filter()
+        .isSyncedEqualTo(false)
+        .findAll();
   }
 
   @override
   Future<void> markTemplateAsSynced(String personId) async {
     await isar.writeTxn(() async {
-      final template = await isar.biometricTemplateIsars.filter().personIdEqualTo(personId).findFirst();
+      final template = await isar.biometricTemplateIsars
+          .filter()
+          .personIdEqualTo(personId)
+          .findFirst();
       if (template != null) {
         template.isSynced = true;
         await isar.biometricTemplateIsars.put(template);

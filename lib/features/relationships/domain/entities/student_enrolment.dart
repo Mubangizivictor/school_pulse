@@ -37,17 +37,17 @@ class StudentEnrolment extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        studentId,
-        classId,
-        streamId,
-        academicYearId,
-        status,
-        startDate,
-        endDate,
-        reason,
-        recordedBy,
-        createdAt,
-      ];
+    id,
+    schoolId,
+    studentId,
+    classId,
+    streamId,
+    academicYearId,
+    status,
+    startDate,
+    endDate,
+    reason,
+    recordedBy,
+    createdAt,
+  ];
 }

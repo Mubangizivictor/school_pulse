@@ -28,7 +28,10 @@ class BiometricRepositoryImpl implements BiometricRepository {
   }
 
   @override
-  Future<void> updateSettings(String schoolId, BiometricSettings settings) async {
+  Future<void> updateSettings(
+    String schoolId,
+    BiometricSettings settings,
+  ) async {
     await remoteDataSource.updateSettings(
       schoolId,
       BiometricSettingsModel.fromEntity(settings),
@@ -57,24 +60,31 @@ class BiometricRepositoryImpl implements BiometricRepository {
 
     // 2. Try to save to remote
     try {
-      await remoteDataSource.saveTemplate(schoolId, personId, personType, template);
+      await remoteDataSource.saveTemplate(
+        schoolId,
+        personId,
+        personType,
+        template,
+      );
       await localDataSource.markTemplateAsSynced(personId);
     } catch (e) {
       // Stay as isSynced = false
     }
 
     // 3. Log the enrollment event
-    await logEvent(BiometricAuditLog(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      schoolId: schoolId,
-      personId: personId,
-      personType: personType,
-      deviceId: deviceId,
-      operatorId: operatorId,
-      eventType: BiometricEventType.enrollment,
-      timestamp: DateTime.now(),
-      result: 'Success',
-    ));
+    await logEvent(
+      BiometricAuditLog(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        schoolId: schoolId,
+        personId: personId,
+        personType: personType,
+        deviceId: deviceId,
+        operatorId: operatorId,
+        eventType: BiometricEventType.enrollment,
+        timestamp: DateTime.now(),
+        result: 'Success',
+      ),
+    );
   }
 
   @override
@@ -88,13 +98,16 @@ class BiometricRepositoryImpl implements BiometricRepository {
       final remote = await remoteDataSource.getTemplate(schoolId, personId);
       if (remote != null) {
         // Cache it locally
-        await localDataSource.saveTemplate(BiometricTemplateIsar()
-          ..personId = personId
-          ..schoolId = schoolId
-          ..personType = 'unknown' // Would be better to know this
-          ..encryptedTemplate = remote
-          ..updatedAt = DateTime.now()
-          ..isSynced = true);
+        await localDataSource.saveTemplate(
+          BiometricTemplateIsar()
+            ..personId = personId
+            ..schoolId = schoolId
+            ..personType =
+                'unknown' // Would be better to know this
+            ..encryptedTemplate = remote
+            ..updatedAt = DateTime.now()
+            ..isSynced = true,
+        );
       }
       return remote;
     } catch (e) {
@@ -112,15 +125,18 @@ class BiometricRepositoryImpl implements BiometricRepository {
   }
 
   @override
-  Stream<List<BiometricAuditLog>> getAuditLogs(String schoolId, {String? personId}) {
+  Stream<List<BiometricAuditLog>> getAuditLogs(
+    String schoolId, {
+    String? personId,
+  }) {
     return remoteDataSource.getAuditLogs(schoolId, personId: personId);
   }
 
   @override
   Future<List<BiometricDevice>> getRegisteredDevices(String schoolId) async {
-    // Implement device storage in remote data source if needed, 
+    // Implement device storage in remote data source if needed,
     // for now using settings or a separate collection
-    return []; 
+    return [];
   }
 
   @override
@@ -129,7 +145,11 @@ class BiometricRepositoryImpl implements BiometricRepository {
   }
 
   @override
-  Future<void> updateDeviceStatus(String schoolId, String deviceId, bool isActive) async {
+  Future<void> updateDeviceStatus(
+    String schoolId,
+    String deviceId,
+    bool isActive,
+  ) async {
     // Implementation
   }
 

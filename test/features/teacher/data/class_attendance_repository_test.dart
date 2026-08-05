@@ -163,26 +163,37 @@ void main() {
     when(() => local.getAttendanceDraft(any())).thenAnswer((_) async => null);
     when(() => remote.saveAttendanceSession(any())).thenAnswer((_) async {});
     when(() => queue.enqueueOperation(any())).thenAnswer((_) async {});
-    when(() => audit.record(
-          context: any(named: 'context'),
-          action: any(named: 'action'),
-          entityType: any(named: 'entityType'),
-          entityId: any(named: 'entityId'),
-          previousValue: any(named: 'previousValue'),
-          newValue: any(named: 'newValue'),
-          reason: any(named: 'reason'),
-          offlineOperationId: any(named: 'offlineOperationId'),
-        )).thenAnswer((_) async {});
-    when(() => responsibility.revalidate())
-        .thenAnswer((_) async => Right(_context()));
+    when(
+      () => audit.record(
+        context: any(named: 'context'),
+        action: any(named: 'action'),
+        entityType: any(named: 'entityType'),
+        entityId: any(named: 'entityId'),
+        previousValue: any(named: 'previousValue'),
+        newValue: any(named: 'newValue'),
+        reason: any(named: 'reason'),
+        offlineOperationId: any(named: 'offlineOperationId'),
+      ),
+    ).thenAnswer((_) async {});
+    when(
+      () => responsibility.revalidate(),
+    ).thenAnswer((_) async => Right(_context()));
   });
 
   group('status options', () {
     test('come from the school configuration', () async {
-      when(() => structure.watchAttendanceTypes()).thenAnswer(
+      when(() => structure.watchAttendanceTypes(any())).thenAnswer(
         (_) => Stream.value(const [
-          AttendanceTypeDef(id: 'present', name: 'Present'),
-          AttendanceTypeDef(id: 'sickbay', name: 'Sick Bay'),
+          AttendanceTypeDef(
+            id: 'present',
+            schoolId: 'school1',
+            name: 'Present',
+          ),
+          AttendanceTypeDef(
+            id: 'sickbay',
+            schoolId: 'school1',
+            name: 'Sick Bay',
+          ),
         ]),
       );
 
@@ -197,24 +208,30 @@ void main() {
       );
     });
 
-    test('fall back to the shared defaults when the config read fails', () async {
-      when(() => structure.watchAttendanceTypes())
-          .thenAnswer((_) => Stream.error(Exception('offline')));
+    test(
+      'fall back to the shared defaults when the config read fails',
+      () async {
+        when(
+          () => structure.watchAttendanceTypes(any()),
+        ).thenAnswer((_) => Stream.error(Exception('offline')));
 
-      final result = await repository.getStatusOptions(context: _context());
+        final result = await repository.getStatusOptions(context: _context());
 
-      // A register with no buttons would be worse than an opinionated one.
-      expect(result.getOrElse(() => const []), hasLength(6));
-    });
+        // A register with no buttons would be worse than an opinionated one.
+        expect(result.getOrElse(() => const []), hasLength(6));
+      },
+    );
   });
 
   group('submitting', () {
     test('is refused while any student is unmarked', () async {
       final result = await repository.submit(
         context: _context(),
-        session: _session(entries: [
-          const ClassAttendanceEntry(studentId: 's1', statusCode: 'present'),
-        ]),
+        session: _session(
+          entries: [
+            const ClassAttendanceEntry(studentId: 's1', statusCode: 'present'),
+          ],
+        ),
         rosterStudentIds: const ['s1', 's2'],
       );
 
@@ -222,57 +239,78 @@ void main() {
       verifyNever(() => remote.saveAttendanceSession(any()));
     });
 
-    test('re-verifies the assignment against the server before writing', () async {
-      // An admin revoked the assignment while the register was open.
-      when(() => responsibility.revalidate())
-          .thenAnswer((_) async => const Left(AssignmentInvalidFailure()));
+    test(
+      're-verifies the assignment against the server before writing',
+      () async {
+        // An admin revoked the assignment while the register was open.
+        when(
+          () => responsibility.revalidate(),
+        ).thenAnswer((_) async => const Left(AssignmentInvalidFailure()));
 
-      final result = await repository.submit(
-        context: _context(),
-        session: _session(entries: [
-          const ClassAttendanceEntry(studentId: 's1', statusCode: 'present'),
-        ]),
-        rosterStudentIds: const ['s1'],
-      );
+        final result = await repository.submit(
+          context: _context(),
+          session: _session(
+            entries: [
+              const ClassAttendanceEntry(
+                studentId: 's1',
+                statusCode: 'present',
+              ),
+            ],
+          ),
+          rosterStudentIds: const ['s1'],
+        );
 
-      expect(result.isLeft(), isTrue);
-      verifyNever(() => remote.saveAttendanceSession(any()));
-    });
+        expect(result.isLeft(), isTrue);
+        verifyNever(() => remote.saveAttendanceSession(any()));
+      },
+    );
 
-    test('stamps the submission time rather than trusting the caller', () async {
-      final result = await repository.submit(
-        context: _context(),
-        session: _session(entries: [
-          const ClassAttendanceEntry(studentId: 's1', statusCode: 'present'),
-        ]),
-        rosterStudentIds: const ['s1'],
-      );
+    test(
+      'stamps the submission time rather than trusting the caller',
+      () async {
+        final result = await repository.submit(
+          context: _context(),
+          session: _session(
+            entries: [
+              const ClassAttendanceEntry(
+                studentId: 's1',
+                statusCode: 'present',
+              ),
+            ],
+          ),
+          rosterStudentIds: const ['s1'],
+        );
 
-      final submitted = result.getOrElse(() => _session());
-      expect(submitted.status, ClassAttendanceSessionStatus.submitted);
-      expect(submitted.submittedAt, isNotNull);
-      expect(submitted.submittedBy, 'user1');
-    });
+        final submitted = result.getOrElse(() => _session());
+        expect(submitted.status, ClassAttendanceSessionStatus.submitted);
+        expect(submitted.submittedAt, isNotNull);
+        expect(submitted.submittedBy, 'user1');
+      },
+    );
 
     test('audits the submission', () async {
       await repository.submit(
         context: _context(),
-        session: _session(entries: [
-          const ClassAttendanceEntry(studentId: 's1', statusCode: 'present'),
-        ]),
+        session: _session(
+          entries: [
+            const ClassAttendanceEntry(studentId: 's1', statusCode: 'present'),
+          ],
+        ),
         rosterStudentIds: const ['s1'],
       );
 
-      verify(() => audit.record(
-            context: any(named: 'context'),
-            action: 'attendance.submitted',
-            entityType: 'class_attendance_session',
-            entityId: any(named: 'entityId'),
-            previousValue: any(named: 'previousValue'),
-            newValue: any(named: 'newValue'),
-            reason: any(named: 'reason'),
-            offlineOperationId: any(named: 'offlineOperationId'),
-          )).called(1);
+      verify(
+        () => audit.record(
+          context: any(named: 'context'),
+          action: 'attendance.submitted',
+          entityType: 'class_attendance_session',
+          entityId: any(named: 'entityId'),
+          previousValue: any(named: 'previousValue'),
+          newValue: any(named: 'newValue'),
+          reason: any(named: 'reason'),
+          offlineOperationId: any(named: 'offlineOperationId'),
+        ),
+      ).called(1);
     });
 
     test('queues the register when offline instead of losing it', () async {
@@ -280,9 +318,11 @@ void main() {
 
       final result = await repository.submit(
         context: _context(),
-        session: _session(entries: [
-          const ClassAttendanceEntry(studentId: 's1', statusCode: 'present'),
-        ]),
+        session: _session(
+          entries: [
+            const ClassAttendanceEntry(studentId: 's1', statusCode: 'present'),
+          ],
+        ),
         rosterStudentIds: const ['s1'],
       );
 
@@ -294,9 +334,11 @@ void main() {
     test('writes the register locally before attempting the network', () async {
       await repository.submit(
         context: _context(),
-        session: _session(entries: [
-          const ClassAttendanceEntry(studentId: 's1', statusCode: 'present'),
-        ]),
+        session: _session(
+          entries: [
+            const ClassAttendanceEntry(studentId: 's1', statusCode: 'present'),
+          ],
+        ),
         rosterStudentIds: const ['s1'],
       );
 
@@ -323,28 +365,33 @@ void main() {
         reason: 'Arrived late, marked in error',
       );
 
-      final captured = verify(() => audit.record(
-            context: any(named: 'context'),
-            action: 'attendance.edited',
-            entityType: any(named: 'entityType'),
-            entityId: any(named: 'entityId'),
-            previousValue: captureAny(named: 'previousValue'),
-            newValue: captureAny(named: 'newValue'),
-            reason: any(named: 'reason'),
-            offlineOperationId: any(named: 'offlineOperationId'),
-          )).captured;
+      final captured = verify(
+        () => audit.record(
+          context: any(named: 'context'),
+          action: 'attendance.edited',
+          entityType: any(named: 'entityType'),
+          entityId: any(named: 'entityId'),
+          previousValue: captureAny(named: 'previousValue'),
+          newValue: captureAny(named: 'newValue'),
+          reason: any(named: 'reason'),
+          offlineOperationId: any(named: 'offlineOperationId'),
+        ),
+      ).captured;
 
       expect((captured[0] as Map)['status'], 'absent');
       expect((captured[1] as Map)['status'], 'present');
     });
 
     test('is refused without the edit permission', () async {
-      final context = _context(permissions: const {
-        Permission.classAttendanceTake,
-        Permission.classAttendanceView,
-      });
-      when(() => responsibility.revalidate())
-          .thenAnswer((_) async => Right(context));
+      final context = _context(
+        permissions: const {
+          Permission.classAttendanceTake,
+          Permission.classAttendanceView,
+        },
+      );
+      when(
+        () => responsibility.revalidate(),
+      ).thenAnswer((_) async => Right(context));
 
       final result = await repository.correct(
         context: context,
@@ -401,7 +448,9 @@ void main() {
     });
 
     test('are sent as pending for the academic office to decide', () async {
-      when(() => remote.createCorrectionRequest(any())).thenAnswer((_) async {});
+      when(
+        () => remote.createCorrectionRequest(any()),
+      ).thenAnswer((_) async {});
 
       final result = await repository.requestCorrection(
         context: _context(),
@@ -412,9 +461,13 @@ void main() {
       );
 
       expect(result.isRight(), isTrue);
-      final captured =
-          verify(() => remote.createCorrectionRequest(captureAny())).captured;
-      expect((captured.single as AttendanceCorrectionRequest).status, 'pending');
+      final captured = verify(
+        () => remote.createCorrectionRequest(captureAny()),
+      ).captured;
+      expect(
+        (captured.single as AttendanceCorrectionRequest).status,
+        'pending',
+      );
     });
 
     test('need a connection', () async {
@@ -438,13 +491,17 @@ void main() {
 
       await repository.submit(
         context: _context(),
-        session: _session(entries: [
-          const ClassAttendanceEntry(studentId: 's1', statusCode: 'present'),
-        ]),
+        session: _session(
+          entries: [
+            const ClassAttendanceEntry(studentId: 's1', statusCode: 'present'),
+          ],
+        ),
         rosterStudentIds: const ['s1'],
       );
 
-      final captured = verify(() => queue.enqueueOperation(captureAny())).captured;
+      final captured = verify(
+        () => queue.enqueueOperation(captureAny()),
+      ).captured;
       // A class roll call and a subject lesson register are different records
       // and must not replay into each other.
       expect(

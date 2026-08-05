@@ -16,11 +16,27 @@ import 'audit_logs_screen.dart';
 import 'billing_page.dart';
 
 const _kSections = [
-  (icon: Icons.dashboard_outlined, selectedIcon: Icons.dashboard, label: 'Overview'),
+  (
+    icon: Icons.dashboard_outlined,
+    selectedIcon: Icons.dashboard,
+    label: 'Overview',
+  ),
   (icon: Icons.school_outlined, selectedIcon: Icons.school, label: 'Schools'),
-  (icon: Icons.subscriptions_outlined, selectedIcon: Icons.subscriptions, label: 'Plans'),
-  (icon: Icons.receipt_long_outlined, selectedIcon: Icons.receipt_long, label: 'Billing'),
-  (icon: Icons.history_outlined, selectedIcon: Icons.history, label: 'Audit Logs'),
+  (
+    icon: Icons.subscriptions_outlined,
+    selectedIcon: Icons.subscriptions,
+    label: 'Plans',
+  ),
+  (
+    icon: Icons.receipt_long_outlined,
+    selectedIcon: Icons.receipt_long,
+    label: 'Billing',
+  ),
+  (
+    icon: Icons.history_outlined,
+    selectedIcon: Icons.history,
+    label: 'Audit Logs',
+  ),
 ];
 
 class SuperAdminDashboard extends StatefulWidget {
@@ -67,7 +83,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       body: content,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+        onDestinationSelected: (index) =>
+            setState(() => _selectedIndex = index),
         destinations: [
           for (final section in _kSections)
             NavigationDestination(
@@ -82,7 +99,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
 
   Widget _buildSidebar() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Container(
       width: 280,
       decoration: BoxDecoration(
@@ -106,10 +123,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           const SizedBox(height: AppSpacing.x4l),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-            child: PulseLogo(
-              variant: PulseLogoVariant.full,
-              size: 40,
-            ),
+            child: PulseLogo(variant: PulseLogoVariant.full, size: 40),
           ),
           const SizedBox(height: AppSpacing.x4l),
           Expanded(
@@ -162,19 +176,25 @@ class _SidebarItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = isDestructive 
-        ? AppColors.deepOrange 
-        : (isSelected ? AppColors.primary(context) : AppColors.textSecondary(context));
+    final color = isDestructive
+        ? AppColors.deepOrange
+        : (isSelected
+              ? AppColors.primary(context)
+              : AppColors.textSecondary(context));
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Material(
-        color: isSelected ? AppColors.primary(context).withValues(alpha: 0.1) : Colors.transparent,
+        color: isSelected
+            ? AppColors.primary(context).withValues(alpha: 0.1)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
         child: ListTile(
           onTap: onTap,
           dense: true,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           leading: Icon(
             isSelected ? (selectedIcon ?? icon) : icon,
             color: color,
@@ -209,7 +229,9 @@ class SuperAdminOverview extends StatelessWidget {
         return Scaffold(
           appBar: AppBar(
             title: const Text('Platform Overview'),
-            actions: isSuperAdminWide(context) ? null : const [SuperAdminLogoutButton()],
+            actions: isSuperAdminWide(context)
+                ? null
+                : const [SuperAdminLogoutButton()],
           ),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(24),

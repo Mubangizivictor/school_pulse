@@ -12,7 +12,9 @@ class ClassStudentsListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final primaryColor = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
@@ -28,11 +30,18 @@ class ClassStudentsListScreen extends StatelessWidget {
           children: [
             Text(
               'Class Students',
-              style: AppTypography.titleLarge.copyWith(color: primaryColor, fontWeight: FontWeight.bold),
+              style: AppTypography.titleLarge.copyWith(
+                color: primaryColor,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             Text(
               'P5 East • 32 Students',
-              style: AppTypography.labelSmall.copyWith(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+              style: AppTypography.labelSmall.copyWith(
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
             ),
           ],
         ),
@@ -58,8 +67,10 @@ class ClassStudentsListScreen extends StatelessWidget {
             child: ListView.separated(
               padding: const EdgeInsets.all(AppSpacing.xl),
               itemCount: 10,
-              separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.m),
-              itemBuilder: (context, index) => _buildStudentItem(context, index, isDark),
+              separatorBuilder: (context, index) =>
+                  const SizedBox(height: AppSpacing.m),
+              itemBuilder: (context, index) =>
+                  _buildStudentItem(context, index, isDark),
             ),
           ),
         ],
@@ -84,16 +95,27 @@ class ClassStudentsListScreen extends StatelessWidget {
   Widget _buildFilterChip(String label, bool isSelected, bool isDark) {
     return Container(
       margin: const EdgeInsets.only(right: AppSpacing.m),
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.s),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.l,
+        vertical: AppSpacing.s,
+      ),
       decoration: BoxDecoration(
         color: isSelected ? AppColors.royalBlue : Colors.transparent,
         borderRadius: BorderRadius.circular(AppSpacing.m),
-        border: isSelected ? null : Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+        border: isSelected
+            ? null
+            : Border.all(
+                color: isDark ? AppColors.borderDark : AppColors.borderLight,
+              ),
       ),
       child: Text(
         label,
         style: AppTypography.labelMedium.copyWith(
-          color: isSelected ? Colors.white : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+          color: isSelected
+              ? Colors.white
+              : (isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight),
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
       ),
@@ -101,9 +123,16 @@ class ClassStudentsListScreen extends StatelessWidget {
   }
 
   Widget _buildStudentItem(BuildContext context, int index, bool isDark) {
-    final names = ['Abalo Peter', 'Adong Grace', 'Aguti Brian', 'Anywar Doris', 'Atim Charles', 'Bamuwamye Sarah'];
+    final names = [
+      'Abalo Peter',
+      'Adong Grace',
+      'Aguti Brian',
+      'Anywar Doris',
+      'Atim Charles',
+      'Bamuwamye Sarah',
+    ];
     final name = names[index % names.length];
-    
+
     return InkWell(
       onTap: () => context.push('/staff/students/student_$index'),
       child: Container(
@@ -111,13 +140,17 @@ class ClassStudentsListScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
           borderRadius: BorderRadius.circular(AppSpacing.m),
-          border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+          border: Border.all(
+            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+          ),
         ),
         child: Row(
           children: [
             CircleAvatar(
               radius: 24,
-              backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=$index'),
+              backgroundImage: NetworkImage(
+                'https://i.pravatar.cc/150?u=$index',
+              ),
             ),
             const SizedBox(width: AppSpacing.m),
             Expanded(
@@ -127,32 +160,47 @@ class ClassStudentsListScreen extends StatelessWidget {
                   Text(
                     name,
                     style: AppTypography.titleMedium.copyWith(
-                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
                     'S1-2024-040$index',
                     style: AppTypography.labelSmall.copyWith(
-                      color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                      color: isDark
+                          ? AppColors.textMutedDark
+                          : AppColors.textMutedLight,
                     ),
                   ),
                 ],
               ),
             ),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s, vertical: 2),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s,
+                vertical: 2,
+              ),
               decoration: BoxDecoration(
                 color: AppColors.successGreen.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppSpacing.s),
               ),
               child: Text(
                 'Active',
-                style: AppTypography.labelSmall.copyWith(color: AppColors.successGreen, fontSize: 10),
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.successGreen,
+                  fontSize: 10,
+                ),
               ),
             ),
             const SizedBox(width: AppSpacing.s),
-            Icon(Icons.chevron_right, color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+            Icon(
+              Icons.chevron_right,
+              color: isDark
+                  ? AppColors.textMutedDark
+                  : AppColors.textMutedLight,
+            ),
           ],
         ),
       ),

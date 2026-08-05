@@ -71,9 +71,13 @@ class SemanticColors extends ThemeExtension<SemanticColors> {
 }
 
 class AppTheme {
-  static ThemeData getTheme(Brightness brightness, {Color? primary, Color? secondary}) {
-    return brightness == Brightness.light 
-        ? light(primary: primary, secondary: secondary) 
+  static ThemeData getTheme(
+    Brightness brightness, {
+    Color? primary,
+    Color? secondary,
+  }) {
+    return brightness == Brightness.light
+        ? light(primary: primary, secondary: secondary)
         : dark(primary: primary, secondary: secondary);
   }
 
@@ -96,12 +100,19 @@ class AppTheme {
       brightness: Brightness.light,
     );
 
-    final textTheme = GoogleFonts.interTextTheme(ThemeData.light().textTheme).copyWith(
-      headlineMedium: GoogleFonts.inter(fontWeight: FontWeight.w800, letterSpacing: -0.5),
-      headlineSmall: GoogleFonts.inter(fontWeight: FontWeight.w700, letterSpacing: -0.3),
-      titleLarge: GoogleFonts.inter(fontWeight: FontWeight.w600),
-      titleMedium: GoogleFonts.inter(fontWeight: FontWeight.w600),
-    );
+    final textTheme = GoogleFonts.interTextTheme(ThemeData.light().textTheme)
+        .copyWith(
+          headlineMedium: GoogleFonts.inter(
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
+          ),
+          headlineSmall: GoogleFonts.inter(
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.3,
+          ),
+          titleLarge: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          titleMedium: GoogleFonts.inter(fontWeight: FontWeight.w600),
+        );
 
     return ThemeData(
       useMaterial3: true,
@@ -110,7 +121,7 @@ class AppTheme {
       textTheme: textTheme,
       extensions: [SemanticColors.light],
       scaffoldBackgroundColor: const Color(0xFFF8FAFC),
-      
+
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.white,
         foregroundColor: colorScheme.onSurface,
@@ -144,7 +155,10 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Color(0xFFF1F3F4)),
@@ -161,7 +175,10 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: colorScheme.error),
         ),
-        labelStyle: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 14),
+        labelStyle: TextStyle(
+          color: colorScheme.onSurfaceVariant,
+          fontSize: 14,
+        ),
         hintStyle: TextStyle(color: colorScheme.outline, fontSize: 14),
       ),
 
@@ -171,7 +188,9 @@ class AppTheme {
           foregroundColor: colorScheme.onPrimary,
           elevation: 0,
           minimumSize: const Size(double.infinity, 48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
         ),
       ),
@@ -181,7 +200,9 @@ class AppTheme {
           foregroundColor: colorScheme.primary,
           side: BorderSide(color: colorScheme.primary),
           minimumSize: const Size(double.infinity, 48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
         ),
       ),
@@ -201,7 +222,10 @@ class AppTheme {
         indicatorColor: colorScheme.primary,
         indicatorSize: TabBarIndicatorSize.tab,
         labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 14),
+        unselectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.normal,
+          fontSize: 14,
+        ),
         dividerColor: Colors.transparent,
       ),
 
@@ -212,7 +236,10 @@ class AppTheme {
         // back to the ambient DefaultTextStyle (white here), rendering
         // invisible white-on-white text whenever a chip is unselected.
         labelStyle: TextStyle(fontSize: 12, color: colorScheme.onSurface),
-        secondaryLabelStyle: TextStyle(fontSize: 12, color: colorScheme.onSurface),
+        secondaryLabelStyle: TextStyle(
+          fontSize: 12,
+          color: colorScheme.onSurface,
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         side: const BorderSide(color: Color(0xFFF1F3F4)),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -222,7 +249,10 @@ class AppTheme {
         backgroundColor: Colors.white,
         selectedItemColor: colorScheme.primary,
         unselectedItemColor: colorScheme.onSurfaceVariant,
-        selectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        selectedLabelStyle: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
         unselectedLabelStyle: const TextStyle(fontSize: 12),
         type: BottomNavigationBarType.fixed,
         elevation: 8,
@@ -295,14 +325,21 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: const Color(0xFF1C1F23),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+          borderSide: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+          ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+          borderSide: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -312,7 +349,10 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: colorScheme.error),
         ),
-        labelStyle: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 14),
+        labelStyle: TextStyle(
+          color: colorScheme.onSurfaceVariant,
+          fontSize: 14,
+        ),
         hintStyle: TextStyle(color: colorScheme.outline, fontSize: 14),
       ),
 
@@ -322,7 +362,9 @@ class AppTheme {
           foregroundColor: colorScheme.onPrimary,
           elevation: 0,
           minimumSize: const Size(double.infinity, 48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
         ),
       ),
@@ -332,7 +374,9 @@ class AppTheme {
           foregroundColor: colorScheme.primary,
           side: BorderSide(color: colorScheme.primary),
           minimumSize: const Size(double.infinity, 48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
         ),
       ),
@@ -352,7 +396,10 @@ class AppTheme {
         indicatorColor: colorScheme.primary,
         indicatorSize: TabBarIndicatorSize.tab,
         labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 14),
+        unselectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.normal,
+          fontSize: 14,
+        ),
         dividerColor: Colors.transparent,
       ),
 
@@ -360,7 +407,10 @@ class AppTheme {
         backgroundColor: const Color(0xFF2C3138),
         selectedColor: colorScheme.primary.withValues(alpha: 0.2),
         labelStyle: TextStyle(fontSize: 12, color: colorScheme.onSurface),
-        secondaryLabelStyle: TextStyle(fontSize: 12, color: colorScheme.onSurface),
+        secondaryLabelStyle: TextStyle(
+          fontSize: 12,
+          color: colorScheme.onSurface,
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         side: BorderSide.none,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -370,7 +420,10 @@ class AppTheme {
         backgroundColor: const Color(0xFF1C1F23),
         selectedItemColor: colorScheme.primary,
         unselectedItemColor: colorScheme.onSurfaceVariant,
-        selectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        selectedLabelStyle: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
         unselectedLabelStyle: const TextStyle(fontSize: 12),
         type: BottomNavigationBarType.fixed,
         elevation: 8,
@@ -392,4 +445,3 @@ class AppTheme {
     );
   }
 }
-

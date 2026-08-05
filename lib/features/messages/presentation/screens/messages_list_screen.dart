@@ -41,8 +41,9 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
   /// un-archived once, after the frame that noticed it.
   void _reconcileArchived(List<ChatConversation> conversations, String userId) {
     if (_preferences.keepArchived) return;
-    final resurfacing =
-        conversations.where((c) => c.isArchived && c.unreadCount > 0).toList();
+    final resurfacing = conversations
+        .where((c) => c.isArchived && c.unreadCount > 0)
+        .toList();
     if (resurfacing.isEmpty) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -61,7 +62,10 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
         elevation: 0,
         title: Text(
           'Messages',
-          style: AppTypography.headlineMedium.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+          style: AppTypography.headlineMedium.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         actions: [
           IconButton(
@@ -79,11 +83,16 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                 onTap: () => context.push('/messages/search'),
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceDark,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.1),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -91,7 +100,9 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                       const SizedBox(width: 12),
                       Text(
                         'Search messages',
-                        style: AppTypography.bodyLarge.copyWith(color: Colors.white54),
+                        style: AppTypography.bodyLarge.copyWith(
+                          color: Colors.white54,
+                        ),
                       ),
                     ],
                   ),
@@ -103,43 +114,46 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
               child: StreamBuilder<List<ChatConversation>>(
                 stream: context.messages.watchConversations(user.id),
                 builder: (context, snapshot) => ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                children: [
-                  _FilterChip(
-                    label: 'All',
-                    isSelected: _filter == _InboxFilter.all,
-                    onTap: () => setState(() => _filter = _InboxFilter.all),
-                  ),
-                  _FilterChip(
-                    label: 'Unread',
-                    isSelected: _filter == _InboxFilter.unread,
-                    onTap: () => setState(() => _filter = _InboxFilter.unread),
-                  ),
-                  _FilterChip(
-                    label: 'Groups',
-                    isSelected: _filter == _InboxFilter.groups,
-                    onTap: () => setState(() => _filter = _InboxFilter.groups),
-                  ),
-                  _FilterChip(
-                    label: 'Official',
-                    isSelected: _filter == _InboxFilter.official,
-                    onTap: () => setState(() => _filter = _InboxFilter.official),
-                  ),
-                  _FilterChip(
-                    label: 'Archived',
-                    isSelected: false,
-                    onTap: () => context.push('/messages/archived'),
-                  ),
-                  // Only appears when something is actually waiting, so the
-                  // chip row stays as short as it was for most people.
-                  if (_pendingRequests(snapshot.data) > 0)
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  children: [
                     _FilterChip(
-                      label: 'Requests (${_pendingRequests(snapshot.data)})',
-                      isSelected: false,
-                      onTap: () => context.push('/messages/requests'),
+                      label: 'All',
+                      isSelected: _filter == _InboxFilter.all,
+                      onTap: () => setState(() => _filter = _InboxFilter.all),
                     ),
-                ],
+                    _FilterChip(
+                      label: 'Unread',
+                      isSelected: _filter == _InboxFilter.unread,
+                      onTap: () =>
+                          setState(() => _filter = _InboxFilter.unread),
+                    ),
+                    _FilterChip(
+                      label: 'Groups',
+                      isSelected: _filter == _InboxFilter.groups,
+                      onTap: () =>
+                          setState(() => _filter = _InboxFilter.groups),
+                    ),
+                    _FilterChip(
+                      label: 'Official',
+                      isSelected: _filter == _InboxFilter.official,
+                      onTap: () =>
+                          setState(() => _filter = _InboxFilter.official),
+                    ),
+                    _FilterChip(
+                      label: 'Archived',
+                      isSelected: false,
+                      onTap: () => context.push('/messages/archived'),
+                    ),
+                    // Only appears when something is actually waiting, so the
+                    // chip row stays as short as it was for most people.
+                    if (_pendingRequests(snapshot.data) > 0)
+                      _FilterChip(
+                        label: 'Requests (${_pendingRequests(snapshot.data)})',
+                        isSelected: false,
+                        onTap: () => context.push('/messages/requests'),
+                      ),
+                  ],
                 ),
               ),
             ),
@@ -160,7 +174,10 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                     return _buildEmptyState();
                   }
                   return ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     itemCount: conversations.length,
                     itemBuilder: (context, index) {
                       final chat = conversations[index];
@@ -168,8 +185,10 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                         padding: const EdgeInsets.only(bottom: 8),
                         child: ChatListTile(
                           chat: chat,
-                          onTap: () => context.push('/messages/chat/${chat.id}'),
-                          onLongPress: () => _showChatActions(context, user, chat),
+                          onTap: () =>
+                              context.push('/messages/chat/${chat.id}'),
+                          onLongPress: () =>
+                              _showChatActions(context, user, chat),
                         ),
                       );
                     },
@@ -207,12 +226,18 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
         // "Official" is the school's one-way traffic: broadcast lists and
         // announcement channels.
         return visible
-            .where((c) => c.type == ChatType.broadcast || c.type == ChatType.channel)
+            .where(
+              (c) => c.type == ChatType.broadcast || c.type == ChatType.channel,
+            )
             .toList();
     }
   }
 
-  void _showChatActions(BuildContext context, UserEntity user, ChatConversation chat) {
+  void _showChatActions(
+    BuildContext context,
+    UserEntity user,
+    ChatConversation chat,
+  ) {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surfaceDark,
@@ -227,12 +252,21 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
               padding: const EdgeInsets.all(AppSpacing.m),
               child: Text(
                 chat.title,
-                style: AppTypography.titleMedium.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                style: AppTypography.titleMedium.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             ListTile(
-              leading: Icon(chat.isPinned ? Icons.push_pin : Icons.push_pin_outlined, color: Colors.white70),
-              title: Text(chat.isPinned ? 'Unpin' : 'Pin to top', style: const TextStyle(color: Colors.white)),
+              leading: Icon(
+                chat.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                color: Colors.white70,
+              ),
+              title: Text(
+                chat.isPinned ? 'Unpin' : 'Pin to top',
+                style: const TextStyle(color: Colors.white),
+              ),
               onTap: () {
                 Navigator.pop(sheetContext);
                 context.messages.setPinned(chat.id, user.id, !chat.isPinned);
@@ -240,25 +274,39 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
             ),
             ListTile(
               leading: Icon(
-                chat.isMuted ? Icons.notifications_off : Icons.notifications_none,
+                chat.isMuted
+                    ? Icons.notifications_off
+                    : Icons.notifications_none,
                 color: Colors.white70,
               ),
-              title: Text(chat.isMuted ? 'Unmute' : 'Mute', style: const TextStyle(color: Colors.white)),
+              title: Text(
+                chat.isMuted ? 'Unmute' : 'Mute',
+                style: const TextStyle(color: Colors.white),
+              ),
               onTap: () {
                 Navigator.pop(sheetContext);
                 context.messages.setMuted(chat.id, user.id, !chat.isMuted);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.archive_outlined, color: Colors.white70),
-              title: const Text('Archive', style: TextStyle(color: Colors.white)),
+              leading: const Icon(
+                Icons.archive_outlined,
+                color: Colors.white70,
+              ),
+              title: const Text(
+                'Archive',
+                style: TextStyle(color: Colors.white),
+              ),
               onTap: () {
                 Navigator.pop(sheetContext);
                 context.messages.setArchived(chat.id, user.id, true);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
+              leading: const Icon(
+                Icons.delete_outline,
+                color: Colors.redAccent,
+              ),
               title: Text(
                 chat.type == ChatType.direct ? 'Delete chat' : 'Exit group',
                 style: const TextStyle(color: Colors.redAccent),
@@ -282,7 +330,11 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.cloud_off, size: 56, color: Colors.white.withValues(alpha: 0.3)),
+            Icon(
+              Icons.cloud_off,
+              size: 56,
+              color: Colors.white.withValues(alpha: 0.3),
+            ),
             const SizedBox(height: AppSpacing.m),
             Text(
               'Could not load your messages',
@@ -351,7 +403,10 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                   ),
                   elevation: 0,
                 ),
-                child: const Text('Start Messaging', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                child: const Text(
+                  'Start Messaging',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
               ),
             ),
           ],
@@ -366,7 +421,11 @@ class _FilterChip extends StatelessWidget {
   final bool isSelected;
   final VoidCallback? onTap;
 
-  const _FilterChip({required this.label, required this.isSelected, this.onTap});
+  const _FilterChip({
+    required this.label,
+    required this.isSelected,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -384,7 +443,11 @@ class _FilterChip extends StatelessWidget {
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: isSelected ? AppColors.electricBlue : Colors.white.withValues(alpha: 0.05)),
+          side: BorderSide(
+            color: isSelected
+                ? AppColors.electricBlue
+                : Colors.white.withValues(alpha: 0.05),
+          ),
         ),
         showCheckmark: false,
       ),

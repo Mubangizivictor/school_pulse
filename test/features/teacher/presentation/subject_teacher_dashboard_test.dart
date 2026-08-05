@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:provider/provider.dart';
 import 'package:school_pulse/core/theme_provider.dart';
+import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
@@ -18,14 +19,16 @@ import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_dashboard/subject_teacher_dashboard_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/subject_teacher_dashboard.dart';
 
-class _MockAuthBloc extends MockBloc<AuthEvent, AuthState> implements AuthBloc {}
+class _MockAuthBloc extends MockBloc<AuthEvent, AuthState>
+    implements AuthBloc {}
 
 class _MockContextBloc
     extends MockBloc<SubjectTeacherContextEvent, SubjectTeacherContextState>
     implements SubjectTeacherContextBloc {}
 
-class _MockDashboardBloc extends MockBloc<SubjectTeacherDashboardEvent,
-    SubjectTeacherDashboardState> implements SubjectTeacherDashboardBloc {}
+class _MockDashboardBloc
+    extends MockBloc<SubjectTeacherDashboardEvent, SubjectTeacherDashboardState>
+    implements SubjectTeacherDashboardBloc {}
 
 const _user = UserEntity(
   id: 'user1',
@@ -101,9 +104,12 @@ void main() {
           providers: [
             BlocProvider<AuthBloc>.value(value: authBloc),
             BlocProvider<SubjectTeacherContextBloc>.value(value: contextBloc),
-            BlocProvider<SubjectTeacherDashboardBloc>.value(value: dashboardBloc),
+            BlocProvider<SubjectTeacherDashboardBloc>.value(
+              value: dashboardBloc,
+            ),
           ],
           child: MaterialApp.router(
+            theme: AppTheme.light(),
             routerConfig: GoRouter(
               routes: [
                 GoRoute(
@@ -119,8 +125,9 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('names the active subject, class and term from the context',
-      (tester) async {
+  testWidgets('names the active subject, class and term from the context', (
+    tester,
+  ) async {
     await pump(
       tester,
       contextState: SubjectTeacherContextState(
@@ -152,8 +159,9 @@ void main() {
     expect(find.text('Quick Actions'), findsNothing);
   });
 
-  testWidgets('shows a dash, not a zero, for figures it does not have yet',
-      (tester) async {
+  testWidgets('shows a dash, not a zero, for figures it does not have yet', (
+    tester,
+  ) async {
     await pump(
       tester,
       contextState: SubjectTeacherContextState(
@@ -170,8 +178,9 @@ void main() {
     expect(find.text('–'), findsNWidgets(5));
   });
 
-  testWidgets('counts the teacher\'s own classes in the My Teaching tabs',
-      (tester) async {
+  testWidgets('counts the teacher\'s own classes in the My Teaching tabs', (
+    tester,
+  ) async {
     await pump(
       tester,
       contextState: SubjectTeacherContextState(
@@ -194,8 +203,9 @@ void main() {
     expect(find.text('Other Subjects (1)'), findsOneWidget);
   });
 
-  testWidgets('explains an empty panel instead of showing a blank dashboard',
-      (tester) async {
+  testWidgets('explains an empty panel instead of showing a blank dashboard', (
+    tester,
+  ) async {
     await pump(
       tester,
       contextState: const SubjectTeacherContextState(
@@ -207,20 +217,23 @@ void main() {
     expect(find.text('Take Attendance'), findsNothing);
   });
 
-  testWidgets('says which academic year is missing rather than showing nothing',
-      (tester) async {
-    await pump(
-      tester,
-      contextState: const SubjectTeacherContextState(
-        unavailableReason: ContextUnavailableReason.noAcademicYear,
-      ),
-    );
+  testWidgets(
+    'says which academic year is missing rather than showing nothing',
+    (tester) async {
+      await pump(
+        tester,
+        contextState: const SubjectTeacherContextState(
+          unavailableReason: ContextUnavailableReason.noAcademicYear,
+        ),
+      );
 
-    expect(find.text('No academic year set'), findsOneWidget);
-  });
+      expect(find.text('No academic year set'), findsOneWidget);
+    },
+  );
 
-  testWidgets('opens the switcher listing every responsibility held',
-      (tester) async {
+  testWidgets('opens the switcher listing every responsibility held', (
+    tester,
+  ) async {
     await pump(
       tester,
       contextState: SubjectTeacherContextState(
@@ -242,8 +255,9 @@ void main() {
     expect(find.text('Other responsibilities'.toUpperCase()), findsOneWidget);
   });
 
-  testWidgets('switching from the sheet asks the context bloc to switch',
-      (tester) async {
+  testWidgets('switching from the sheet asks the context bloc to switch', (
+    tester,
+  ) async {
     await pump(
       tester,
       contextState: SubjectTeacherContextState(

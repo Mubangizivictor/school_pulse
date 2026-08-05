@@ -8,7 +8,7 @@ class MealRecordIsar {
 
   @Index()
   late String studentId;
-  
+
   late String studentName;
   late String classId;
   late String mealCategoryId;
@@ -16,7 +16,7 @@ class MealRecordIsar {
 
   @Index()
   late DateTime servedAt;
-  
+
   late String servedBy;
   late String schoolId;
   late String academicYear;

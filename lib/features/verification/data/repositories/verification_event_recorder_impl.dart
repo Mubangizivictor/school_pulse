@@ -78,7 +78,8 @@ class VerificationEventRecorderImpl implements VerificationEventRecorder {
   @override
   Future<Either<Failure, void>> syncPendingEvents() async {
     try {
-      if (!(await networkInfo.isConnected)) return const Left(NetworkFailure('No internet connection'));
+      if (!(await networkInfo.isConnected))
+        return const Left(NetworkFailure('No internet connection'));
 
       final unsynced = await localDataSource.getUnsyncedEvents();
       for (final event in unsynced) {
@@ -98,41 +99,41 @@ class VerificationEventRecorderImpl implements VerificationEventRecorder {
         .collection('verification_events')
         .doc(event.eventId)
         .set({
-      'eventId': event.eventId,
-      'schoolId': event.schoolId,
-      'gateId': event.gateId,
-      'operatorId': event.operatorId,
-      'credentialKind': event.credentialKind,
-      'identityId': event.identityId,
-      'identityType': event.identityType,
-      'outcome': event.outcome,
-      'reasonCode': event.reasonCode,
-      'direction': event.direction,
-      'timestamp': event.timestamp.toIso8601String(),
-      'deviceId': event.deviceId,
-    });
+          'eventId': event.eventId,
+          'schoolId': event.schoolId,
+          'gateId': event.gateId,
+          'operatorId': event.operatorId,
+          'credentialKind': event.credentialKind,
+          'identityId': event.identityId,
+          'identityType': event.identityType,
+          'outcome': event.outcome,
+          'reasonCode': event.reasonCode,
+          'direction': event.direction,
+          'timestamp': event.timestamp.toIso8601String(),
+          'deviceId': event.deviceId,
+        });
   }
 
   String _kindOf(ScanCredential credential) => switch (credential) {
-        QrScanCredential() => 'qr',
-        NfcScanCredential() => 'nfc',
-        FingerprintScanCredential() => 'fingerprint',
-        ManualCodeScanCredential() => 'manualCode',
-        ParentCodeScanCredential() => 'parentCode',
-        StaffLookupScanCredential() => 'staffLookup',
-      };
+    QrScanCredential() => 'qr',
+    NfcScanCredential() => 'nfc',
+    FingerprintScanCredential() => 'fingerprint',
+    ManualCodeScanCredential() => 'manualCode',
+    ParentCodeScanCredential() => 'parentCode',
+    StaffLookupScanCredential() => 'staffLookup',
+  };
 
   String _identityIdOf(ResolvedIdentity identity) => switch (identity) {
-        StudentResolvedIdentity(:final id) => id,
-        StaffResolvedIdentity(:final id) => id,
-        ParentPickupResolvedIdentity(:final childId) => childId,
-        UnresolvedResolvedIdentity() => 'unknown',
-      };
+    StudentResolvedIdentity(:final id) => id,
+    StaffResolvedIdentity(:final id) => id,
+    ParentPickupResolvedIdentity(:final childId) => childId,
+    UnresolvedResolvedIdentity() => 'unknown',
+  };
 
   String _identityTypeOf(ResolvedIdentity identity) => switch (identity) {
-        StudentResolvedIdentity() => 'student',
-        StaffResolvedIdentity() => 'staff',
-        ParentPickupResolvedIdentity() => 'student',
-        UnresolvedResolvedIdentity() => 'unknown',
-      };
+    StudentResolvedIdentity() => 'student',
+    StaffResolvedIdentity() => 'staff',
+    ParentPickupResolvedIdentity() => 'student',
+    UnresolvedResolvedIdentity() => 'unknown',
+  };
 }

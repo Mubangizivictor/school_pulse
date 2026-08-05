@@ -28,32 +28,35 @@ class CateringEligibilityService {
   }) async {
     final allowed = await _can(Permission.mealsVerify, operatorUser);
     if (!allowed) {
-      return const Left(PermissionDeniedFailure('You do not have permission to verify meal eligibility.'));
+      return const Left(
+        PermissionDeniedFailure(
+          'You do not have permission to verify meal eligibility.',
+        ),
+      );
     }
 
     final studentResult = await studentRepository.getStudentById(studentId);
-    return studentResult.fold(
-      Left.new,
-      (student) async {
-        final eligibilityResult = await cateringRepository.verifyStudentMealEligibility(studentId);
-        return eligibilityResult.fold(
-          Left.new,
-          (data) {
-            final status = data['eligibilityStatus'] as String? ?? 'Not Cleared';
-            final eligible = status == 'Cleared';
-            return Right(CateringEligibilityView(
-              studentId: student.id,
-              name: student.name,
-              classId: student.classId,
-              photoUrl: student.photoUrl,
-              eligible: eligible,
-              message: eligible ? 'Meal authorized' : 'Meal not authorized. Please contact the bursar.',
-              dietaryRestrictions: student.medicalInfo?.allergies ?? const [],
-            ));
-          },
+    return studentResult.fold(Left.new, (student) async {
+      final eligibilityResult = await cateringRepository
+          .verifyStudentMealEligibility(studentId);
+      return eligibilityResult.fold(Left.new, (data) {
+        final status = data['eligibilityStatus'] as String? ?? 'Not Cleared';
+        final eligible = status == 'Cleared';
+        return Right(
+          CateringEligibilityView(
+            studentId: student.id,
+            name: student.name,
+            classId: student.classId,
+            photoUrl: student.photoUrl,
+            eligible: eligible,
+            message: eligible
+                ? 'Meal authorized'
+                : 'Meal not authorized. Please contact the bursar.',
+            dietaryRestrictions: student.medicalInfo?.allergies ?? const [],
+          ),
         );
-      },
-    );
+      });
+    });
   }
 
   Future<bool> _can(String permissionId, UserEntity operatorUser) async {

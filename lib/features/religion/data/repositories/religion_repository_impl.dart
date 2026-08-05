@@ -11,7 +11,8 @@ class ReligionRepositoryImpl implements ReligionRepository {
   ReligionRepositoryImpl({required this.remoteDataSource});
 
   @override
-  Future<Either<Failure, List<ReligionActivity>>> getUpcomingActivities() async {
+  Future<Either<Failure, List<ReligionActivity>>>
+  getUpcomingActivities() async {
     try {
       final activities = await remoteDataSource.getUpcomingActivities();
       return Right(activities);
@@ -31,7 +32,9 @@ class ReligionRepositoryImpl implements ReligionRepository {
   }
 
   @override
-  Future<Either<Failure, void>> createActivity(ReligionActivity activity) async {
+  Future<Either<Failure, void>> createActivity(
+    ReligionActivity activity,
+  ) async {
     try {
       final model = ReligionActivityModel(
         id: activity.id,
@@ -48,7 +51,10 @@ class ReligionRepositoryImpl implements ReligionRepository {
   }
 
   @override
-  Future<Either<Failure, void>> updateGroupMemberCount(String groupId, int count) async {
+  Future<Either<Failure, void>> updateGroupMemberCount(
+    String groupId,
+    int count,
+  ) async {
     try {
       await remoteDataSource.updateGroupMemberCount(groupId, count);
       return const Right(null);

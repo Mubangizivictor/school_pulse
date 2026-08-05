@@ -16,12 +16,22 @@ abstract class AppointmentRepository {
   Future<Either<Failure, void>> deleteAppointmentType(String id);
 
   // Staff availability
-  Future<Either<Failure, StaffAvailability>> getStaffAvailability(String staffId, String schoolId);
-  Future<Either<Failure, void>> saveStaffAvailability(StaffAvailability availability);
+  Future<Either<Failure, StaffAvailability>> getStaffAvailability(
+    String staffId,
+    String schoolId,
+  );
+  Future<Either<Failure, void>> saveStaffAvailability(
+    StaffAvailability availability,
+  );
 
   // Pickers
-  Future<Either<Failure, List<StaffSummary>>> getStaffByRoles(String schoolId, List<UserRole> roles);
-  Future<Either<Failure, List<StudentSummary>>> getStudentsByIds(List<String> ids);
+  Future<Either<Failure, List<StaffSummary>>> getStaffByRoles(
+    String schoolId,
+    List<UserRole> roles,
+  );
+  Future<Either<Failure, List<StudentSummary>>> getStudentsByIds(
+    List<String> ids,
+  );
 
   // Slot computation for a given staff member/day, respecting their
   // availability plus any appointments already booked that day.
@@ -33,7 +43,9 @@ abstract class AppointmentRepository {
   });
 
   // Appointment lifecycle
-  Future<Either<Failure, Appointment>> requestAppointment(Appointment appointment);
+  Future<Either<Failure, Appointment>> requestAppointment(
+    Appointment appointment,
+  );
   Future<Either<Failure, void>> respondToAppointment({
     required String id,
     required AppointmentStatus status,
@@ -54,6 +66,7 @@ abstract class AppointmentRepository {
   });
   Future<Either<Failure, void>> checkOut(String id);
   Future<Either<Failure, void>> markCompleted(String id);
+  Future<Either<Failure, void>> deleteAppointment(String id);
 
   Stream<List<Appointment>> watchForParent(String parentId, String schoolId);
   Stream<List<Appointment>> watchForStaff(String staffId, String schoolId);

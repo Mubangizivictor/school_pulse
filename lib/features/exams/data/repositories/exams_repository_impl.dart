@@ -14,13 +14,15 @@ class ExamsRepositoryImpl implements ExamsRepository {
     try {
       final exams = await remoteDataSource.getUpcomingExams();
       final stats = await remoteDataSource.getExamsStats();
-      
-      return Right(ExamsLoaded(
-        totalStudents: stats['totalStudents'] ?? 0,
-        pendingResults: stats['pendingResults'] ?? 0,
-        completionRate: (stats['completionRate'] ?? 0).toDouble(),
-        upcomingExams: exams,
-      ));
+
+      return Right(
+        ExamsLoaded(
+          totalStudents: stats['totalStudents'] ?? 0,
+          pendingResults: stats['pendingResults'] ?? 0,
+          completionRate: (stats['completionRate'] ?? 0).toDouble(),
+          upcomingExams: exams,
+        ),
+      );
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }

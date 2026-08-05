@@ -53,7 +53,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
             );
           } else if (state is FinanceLoaded) {
             final payments = state.paymentHistory;
-            
+
             if (payments.isEmpty) {
               return const FadeInSlide(
                 child: EmptyState(
@@ -75,18 +75,25 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
                     padding: const EdgeInsets.only(bottom: 8),
                     child: AppCard(
                       onTap: () => _showReceiptDetail(context, payment),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       child: Row(
                         children: [
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primaryContainer,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primaryContainer,
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
                               Icons.receipt_long,
-                              color: Theme.of(context).colorScheme.onPrimaryContainer,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onPrimaryContainer,
                               size: 20,
                             ),
                           ),
@@ -97,7 +104,9 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
                               children: [
                                 Text(
                                   payment.method,
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                                 Text(
                                   DateFormatter.format(payment.date),
@@ -110,7 +119,9 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
                             CurrencyFormatter.format(payment.amount),
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: Theme.of(context).extension<SemanticColors>()!.success,
+                              color: Theme.of(
+                                context,
+                              ).extension<SemanticColors>()!.success,
                             ),
                           ),
                         ],
@@ -138,12 +149,25 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildDetailRow(context, 'Reference', payment.reference),
-            _buildDetailRow(context, 'Date', DateFormatter.format(payment.date)),
+            _buildDetailRow(
+              context,
+              'Date',
+              DateFormatter.format(payment.date),
+            ),
             _buildDetailRow(context, 'Method', payment.method),
-            _buildDetailRow(context, 'Amount', CurrencyFormatter.format(payment.amount)),
+            _buildDetailRow(
+              context,
+              'Amount',
+              CurrencyFormatter.format(payment.amount),
+            ),
             const Divider(),
-            Text('Status: Successful',
-                style: TextStyle(color: semanticColors.success, fontWeight: FontWeight.bold)),
+            Text(
+              'Status: Successful',
+              style: TextStyle(
+                color: semanticColors.success,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
         actions: [
@@ -162,7 +186,12 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          Text(
+            label,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
           Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
         ],
       ),

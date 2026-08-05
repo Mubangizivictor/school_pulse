@@ -10,28 +10,31 @@ class HeadTeacherApprovalScreen extends StatefulWidget {
   const HeadTeacherApprovalScreen({super.key});
 
   @override
-  State<HeadTeacherApprovalScreen> createState() => _HeadTeacherApprovalScreenState();
+  State<HeadTeacherApprovalScreen> createState() =>
+      _HeadTeacherApprovalScreenState();
 }
 
 class _HeadTeacherApprovalScreenState extends State<HeadTeacherApprovalScreen> {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => sl<DeanBloc>()..add(PendingReportApprovalsRequested()),
+      create: (context) =>
+          sl<DeanBloc>()..add(PendingReportApprovalsRequested()),
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Final Report Approvals'),
-        ),
+        appBar: AppBar(title: const Text('Final Report Approvals')),
         body: BlocListener<DeanBloc, DeanState>(
           listener: (context, state) {
             if (state is DeanOperationSuccess) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.message)),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(state.message)));
               context.read<DeanBloc>().add(PendingReportApprovalsRequested());
             } else if (state is DeanError) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.red,
+                ),
               );
             }
           },
@@ -49,7 +52,9 @@ class _HeadTeacherApprovalScreenState extends State<HeadTeacherApprovalScreen> {
         }
         if (state is PendingReportApprovalsLoaded) {
           if (state.approvals.isEmpty) {
-            return const Center(child: Text('No reports awaiting final signature'));
+            return const Center(
+              child: Text('No reports awaiting final signature'),
+            );
           }
           return ListView.builder(
             itemCount: state.approvals.length,
@@ -78,15 +83,19 @@ class _HeadTeacherReportCardTile extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: ListTile(
         title: Text(report.studentName),
-        subtitle: Text('${report.className} • Avg: ${report.averageScore.toStringAsFixed(1)}%'),
+        subtitle: Text(
+          '${report.className} • Avg: ${report.averageScore.toStringAsFixed(1)}%',
+        ),
         trailing: canSign
             ? ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Colors.white,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 ),
                 onPressed: () {
-                  context.read<DeanBloc>().add(ApproveReportCardsRequested([report.id]));
+                  context.read<DeanBloc>().add(
+                    ApproveReportCardsRequested([report.id]),
+                  );
                 },
                 child: const Text('Final Sign'),
               )
@@ -97,7 +106,10 @@ class _HeadTeacherReportCardTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(color: Colors.green),
                 ),
-                child: const Text('Signed', style: TextStyle(color: Colors.green, fontSize: 12)),
+                child: const Text(
+                  'Signed',
+                  style: TextStyle(color: Colors.green, fontSize: 12),
+                ),
               ),
       ),
     );

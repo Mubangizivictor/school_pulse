@@ -8,7 +8,7 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
 
   DeanBloc({required this.repository}) : super(DeanInitial()) {
     on<AcademicDashboardRequested>(_onAcademicDashboardRequested);
-    
+
     // Curriculum & Subjects
     on<CurriculaRequested>(_onCurriculaRequested);
     on<UpdateCurriculumRequested>(_onUpdateCurriculumRequested);
@@ -26,7 +26,9 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
     on<HomeworkRecordsRequested>(_onHomeworkRecordsRequested);
 
     // Assessment & Marks QA
-    on<PendingModerationAssessmentsRequested>(_onPendingModerationAssessmentsRequested);
+    on<PendingModerationAssessmentsRequested>(
+      _onPendingModerationAssessmentsRequested,
+    );
     on<ApproveAssessmentMarksRequested>(_onApproveAssessmentMarksRequested);
     on<RejectAssessmentMarksRequested>(_onRejectAssessmentMarksRequested);
 
@@ -56,7 +58,9 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
   }
 
   Future<void> _onAcademicDashboardRequested(
-      AcademicDashboardRequested event, Emitter<DeanState> emit) async {
+    AcademicDashboardRequested event,
+    Emitter<DeanState> emit,
+  ) async {
     emit(DeanLoading());
     final result = await repository.getAcademicDashboardStats();
     result.fold(
@@ -65,7 +69,10 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
     );
   }
 
-  Future<void> _onCurriculaRequested(CurriculaRequested event, Emitter<DeanState> emit) async {
+  Future<void> _onCurriculaRequested(
+    CurriculaRequested event,
+    Emitter<DeanState> emit,
+  ) async {
     emit(DeanLoading());
     final result = await repository.getCurricula();
     result.fold(
@@ -75,16 +82,22 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
   }
 
   Future<void> _onUpdateCurriculumRequested(
-      UpdateCurriculumRequested event, Emitter<DeanState> emit) async {
+    UpdateCurriculumRequested event,
+    Emitter<DeanState> emit,
+  ) async {
     emit(DeanLoading());
     final result = await repository.updateCurriculum(event.curriculum);
     result.fold(
       (failure) => emit(DeanError(failure.message)),
-      (_) => emit(const DeanOperationSuccess('Curriculum updated successfully')),
+      (_) =>
+          emit(const DeanOperationSuccess('Curriculum updated successfully')),
     );
   }
 
-  Future<void> _onSubjectsRequested(SubjectsRequested event, Emitter<DeanState> emit) async {
+  Future<void> _onSubjectsRequested(
+    SubjectsRequested event,
+    Emitter<DeanState> emit,
+  ) async {
     emit(DeanLoading());
     final result = await repository.getSubjects();
     result.fold(
@@ -94,9 +107,14 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
   }
 
   Future<void> _onUpdateSubjectAllocationRequested(
-      UpdateSubjectAllocationRequested event, Emitter<DeanState> emit) async {
+    UpdateSubjectAllocationRequested event,
+    Emitter<DeanState> emit,
+  ) async {
     emit(DeanLoading());
-    final result = await repository.updateSubjectAllocation(event.subjectId, event.teacherIds);
+    final result = await repository.updateSubjectAllocation(
+      event.subjectId,
+      event.teacherIds,
+    );
     result.fold(
       (failure) => emit(DeanError(failure.message)),
       (_) => emit(const DeanOperationSuccess('Subject allocation updated')),
@@ -104,7 +122,9 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
   }
 
   Future<void> _onTeacherWorkloadsRequested(
-      TeacherWorkloadsRequested event, Emitter<DeanState> emit) async {
+    TeacherWorkloadsRequested event,
+    Emitter<DeanState> emit,
+  ) async {
     emit(DeanLoading());
     final result = await repository.getTeacherWorkloads();
     result.fold(
@@ -114,7 +134,9 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
   }
 
   Future<void> _onTeacherWorkloadDetailRequested(
-      TeacherWorkloadDetailRequested event, Emitter<DeanState> emit) async {
+    TeacherWorkloadDetailRequested event,
+    Emitter<DeanState> emit,
+  ) async {
     emit(DeanLoading());
     final result = await repository.getTeacherWorkloadDetail(event.teacherId);
     result.fold(
@@ -124,7 +146,9 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
   }
 
   Future<void> _onLessonRecordsRequested(
-      LessonRecordsRequested event, Emitter<DeanState> emit) async {
+    LessonRecordsRequested event,
+    Emitter<DeanState> emit,
+  ) async {
     emit(DeanLoading());
     final result = await repository.getLessonRecords(
       startDate: event.startDate,
@@ -140,7 +164,9 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
   }
 
   Future<void> _onHomeworkRecordsRequested(
-      HomeworkRecordsRequested event, Emitter<DeanState> emit) async {
+    HomeworkRecordsRequested event,
+    Emitter<DeanState> emit,
+  ) async {
     emit(DeanLoading());
     final result = await repository.getHomeworkRecords(
       classId: event.classId,
@@ -155,7 +181,9 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
   }
 
   Future<void> _onPendingModerationAssessmentsRequested(
-      PendingModerationAssessmentsRequested event, Emitter<DeanState> emit) async {
+    PendingModerationAssessmentsRequested event,
+    Emitter<DeanState> emit,
+  ) async {
     emit(DeanLoading());
     final result = await repository.getPendingModerationAssessments();
     result.fold(
@@ -165,7 +193,9 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
   }
 
   Future<void> _onApproveAssessmentMarksRequested(
-      ApproveAssessmentMarksRequested event, Emitter<DeanState> emit) async {
+    ApproveAssessmentMarksRequested event,
+    Emitter<DeanState> emit,
+  ) async {
     emit(DeanLoading());
     final result = await repository.approveAssessmentMarks(event.assessmentId);
     result.fold(
@@ -175,17 +205,26 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
   }
 
   Future<void> _onRejectAssessmentMarksRequested(
-      RejectAssessmentMarksRequested event, Emitter<DeanState> emit) async {
+    RejectAssessmentMarksRequested event,
+    Emitter<DeanState> emit,
+  ) async {
     emit(DeanLoading());
-    final result = await repository.rejectAssessmentMarks(event.assessmentId, event.reason);
+    final result = await repository.rejectAssessmentMarks(
+      event.assessmentId,
+      event.reason,
+    );
     result.fold(
       (failure) => emit(DeanError(failure.message)),
-      (_) => emit(const DeanOperationSuccess('Assessment marks returned for correction')),
+      (_) => emit(
+        const DeanOperationSuccess('Assessment marks returned for correction'),
+      ),
     );
   }
 
   Future<void> _onPendingReportApprovalsRequested(
-      PendingReportApprovalsRequested event, Emitter<DeanState> emit) async {
+    PendingReportApprovalsRequested event,
+    Emitter<DeanState> emit,
+  ) async {
     emit(DeanLoading());
     final result = await repository.getPendingReportApprovals();
     result.fold(
@@ -195,19 +234,28 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
   }
 
   Future<void> _onApproveReportCardsRequested(
-      ApproveReportCardsRequested event, Emitter<DeanState> emit) async {
+    ApproveReportCardsRequested event,
+    Emitter<DeanState> emit,
+  ) async {
     emit(DeanLoading());
     final result = await repository.approveReportCards(event.reportCardIds);
     result.fold(
       (failure) => emit(DeanError(failure.message)),
-      (_) => emit(const DeanOperationSuccess('Report cards approved for publication')),
+      (_) => emit(
+        const DeanOperationSuccess('Report cards approved for publication'),
+      ),
     );
   }
 
   Future<void> _onRejectReportCardsRequested(
-      RejectReportCardsRequested event, Emitter<DeanState> emit) async {
+    RejectReportCardsRequested event,
+    Emitter<DeanState> emit,
+  ) async {
     emit(DeanLoading());
-    final result = await repository.rejectReportCards(event.reportCardIds, event.reason);
+    final result = await repository.rejectReportCards(
+      event.reportCardIds,
+      event.reason,
+    );
     result.fold(
       (failure) => emit(DeanError(failure.message)),
       (_) => emit(const DeanOperationSuccess('Report cards rejected')),
@@ -215,7 +263,9 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
   }
 
   Future<void> _onPerformanceAnalyticsRequested(
-      PerformanceAnalyticsRequested event, Emitter<DeanState> emit) async {
+    PerformanceAnalyticsRequested event,
+    Emitter<DeanState> emit,
+  ) async {
     emit(DeanLoading());
     final result = await repository.getPerformanceAnalytics(
       type: event.type,
@@ -230,7 +280,9 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
   }
 
   Future<void> _onInterventionsRequested(
-      InterventionsRequested event, Emitter<DeanState> emit) async {
+    InterventionsRequested event,
+    Emitter<DeanState> emit,
+  ) async {
     emit(DeanLoading());
     final result = await repository.getInterventions();
     result.fold(
@@ -240,7 +292,9 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
   }
 
   Future<void> _onCreateInterventionRequested(
-      CreateInterventionRequested event, Emitter<DeanState> emit) async {
+    CreateInterventionRequested event,
+    Emitter<DeanState> emit,
+  ) async {
     emit(DeanLoading());
     final result = await repository.createIntervention(event.intervention);
     result.fold(
@@ -250,9 +304,15 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
   }
 
   Future<void> _onUpdateInterventionStatusRequested(
-      UpdateInterventionStatusRequested event, Emitter<DeanState> emit) async {
+    UpdateInterventionStatusRequested event,
+    Emitter<DeanState> emit,
+  ) async {
     emit(DeanLoading());
-    final result = await repository.updateInterventionStatus(event.id, event.status, event.outcomes);
+    final result = await repository.updateInterventionStatus(
+      event.id,
+      event.status,
+      event.outcomes,
+    );
     result.fold(
       (failure) => emit(DeanError(failure.message)),
       (_) => emit(const DeanOperationSuccess('Intervention status updated')),
@@ -260,7 +320,9 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
   }
 
   Future<void> _onClassObservationsRequested(
-      ClassObservationsRequested event, Emitter<DeanState> emit) async {
+    ClassObservationsRequested event,
+    Emitter<DeanState> emit,
+  ) async {
     emit(DeanLoading());
     final result = await repository.getClassObservations();
     result.fold(
@@ -270,7 +332,9 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
   }
 
   Future<void> _onRecordObservationRequested(
-      RecordObservationRequested event, Emitter<DeanState> emit) async {
+    RecordObservationRequested event,
+    Emitter<DeanState> emit,
+  ) async {
     emit(DeanLoading());
     final result = await repository.recordObservation(event.observation);
     result.fold(
@@ -280,7 +344,9 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
   }
 
   Future<void> _onMasterTimetableRequested(
-      MasterTimetableRequested event, Emitter<DeanState> emit) async {
+    MasterTimetableRequested event,
+    Emitter<DeanState> emit,
+  ) async {
     emit(DeanLoading());
     final result = await repository.getMasterTimetable();
     result.fold(
@@ -290,7 +356,9 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
   }
 
   Future<void> _onExaminationSchedulesRequested(
-      ExaminationSchedulesRequested event, Emitter<DeanState> emit) async {
+    ExaminationSchedulesRequested event,
+    Emitter<DeanState> emit,
+  ) async {
     emit(DeanLoading());
     final result = await repository.getExaminationSchedules();
     result.fold(
@@ -300,7 +368,9 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
   }
 
   Future<void> _onSendAcademicAnnouncementRequested(
-      SendAcademicAnnouncementRequested event, Emitter<DeanState> emit) async {
+    SendAcademicAnnouncementRequested event,
+    Emitter<DeanState> emit,
+  ) async {
     emit(DeanLoading());
     final result = await repository.sendAcademicAnnouncement(
       title: event.title,

@@ -10,9 +10,7 @@ class FoldersScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        title: const Text('Folders'),
-      ),
+      appBar: AppBar(title: const Text('Folders')),
       body: Column(
         children: [
           Padding(
@@ -23,12 +21,32 @@ class FoldersScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
               children: const [
-                _FolderItem(title: 'Mathematics', count: 12, color: Colors.orange),
+                _FolderItem(
+                  title: 'Mathematics',
+                  count: 12,
+                  color: Colors.orange,
+                ),
                 _FolderItem(title: 'Science', count: 8, color: Colors.red),
-                _FolderItem(title: 'English Language', count: 15, color: Colors.blue),
-                _FolderItem(title: 'Social Studies', count: 6, color: Colors.green),
-                _FolderItem(title: 'Worksheets', count: 24, color: Colors.purple),
-                _FolderItem(title: 'Exams & Past Papers', count: 10, color: Colors.teal),
+                _FolderItem(
+                  title: 'English Language',
+                  count: 15,
+                  color: Colors.blue,
+                ),
+                _FolderItem(
+                  title: 'Social Studies',
+                  count: 6,
+                  color: Colors.green,
+                ),
+                _FolderItem(
+                  title: 'Worksheets',
+                  count: 24,
+                  color: Colors.purple,
+                ),
+                _FolderItem(
+                  title: 'Exams & Past Papers',
+                  count: 10,
+                  color: Colors.teal,
+                ),
               ],
             ),
           ),
@@ -71,7 +89,10 @@ class _FolderItem extends StatelessWidget {
                 ),
                 Text(
                   '$count resources',
-                  style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).hintColor,
+                  ),
                 ),
               ],
             ),

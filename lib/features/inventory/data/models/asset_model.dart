@@ -75,7 +75,9 @@ class AssetModel extends Asset {
       'purchaseDate': Timestamp.fromDate(purchaseDate),
       'purchasePrice': purchasePrice,
       'supplierId': supplierId,
-      'warrantyExpiry': warrantyExpiry != null ? Timestamp.fromDate(warrantyExpiry!) : null,
+      'warrantyExpiry': warrantyExpiry != null
+          ? Timestamp.fromDate(warrantyExpiry!)
+          : null,
       'assignedDepartment': assignedDepartment,
       'assignedStaffId': assignedStaffId,
       'assignedRoom': assignedRoom,

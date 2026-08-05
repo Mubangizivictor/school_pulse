@@ -73,7 +73,8 @@ class NotificationDeliveryPolicy {
 
     // 1. Mandatory categories bypass every switch below. An emergency alert
     //    must reach the user even if they muted everything and it is 2am.
-    final isMandatory = config.isMandatory ||
+    final isMandatory =
+        config.isMandatory ||
         (schoolPolicy?.mandatoryCategories.contains(notification.category) ??
             false);
     final isUrgent = notification.priority == NotificationPriority.urgent;
@@ -102,7 +103,8 @@ class NotificationDeliveryPolicy {
     }
 
     // 3. User opt-out. Absent from the map means enabled.
-    final userEnabled = preferences.categoryEnabled[notification.category] ?? true;
+    final userEnabled =
+        preferences.categoryEnabled[notification.category] ?? true;
     if (!userEnabled) {
       return DeliveryEvaluation(
         decision: DeliveryDecision.suppress,
@@ -215,7 +217,9 @@ class NotificationDeliveryPolicy {
     if (notification.persistence == NotificationPersistence.permanent) {
       return false;
     }
-    return !NotificationCategoryCatalog.of(notification.category).persistsAfterOpen;
+    return !NotificationCategoryCatalog.of(
+      notification.category,
+    ).persistsAfterOpen;
   }
 
   /// Retention cutoff for a category, honouring a school-wide override.
@@ -226,7 +230,8 @@ class NotificationDeliveryPolicy {
     DateTime? now,
   }) {
     final override = schoolPolicy?.retentionDaysOverride;
-    final days = override ?? NotificationCategoryCatalog.of(category).retentionDays;
+    final days =
+        override ?? NotificationCategoryCatalog.of(category).retentionDays;
     if (days == null) return null;
     return (now ?? DateTime.now()).subtract(Duration(days: days));
   }

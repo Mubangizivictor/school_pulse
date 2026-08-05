@@ -37,14 +37,14 @@ class VisitorsLoaded extends VisitorsState {
 
   @override
   List<Object?> get props => [
-        visitors,
-        activeVisitors,
-        overstayedVisitors,
-        blacklist,
-        preApprovedVisitors,
-        scheduledVisits,
-        packageDeliveries,
-      ];
+    visitors,
+    activeVisitors,
+    overstayedVisitors,
+    blacklist,
+    preApprovedVisitors,
+    scheduledVisits,
+    packageDeliveries,
+  ];
 
   VisitorsLoaded copyWith({
     List<Visitor>? visitors,

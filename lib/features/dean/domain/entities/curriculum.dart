@@ -20,7 +20,15 @@ class Curriculum extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, schoolId, name, description, subjects, applicableLevels, calendarConfig];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    name,
+    description,
+    subjects,
+    applicableLevels,
+    calendarConfig,
+  ];
 }
 
 class AcademicCalendarConfig extends Equatable {
@@ -68,7 +76,15 @@ class Subject extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, name, code, department, objectives, topics, currentCoverage];
+  List<Object?> get props => [
+    id,
+    name,
+    code,
+    department,
+    objectives,
+    topics,
+    currentCoverage,
+  ];
 }
 
 class LearningObjective extends Equatable {
@@ -76,7 +92,11 @@ class LearningObjective extends Equatable {
   final String description;
   final bool isCore;
 
-  const LearningObjective({required this.id, required this.description, this.isCore = true});
+  const LearningObjective({
+    required this.id,
+    required this.description,
+    this.isCore = true,
+  });
 
   @override
   List<Object?> get props => [id, description, isCore];
@@ -88,7 +108,12 @@ class Topic extends Equatable {
   final List<SubTopic> subTopics;
   final int estimatedLessons;
 
-  const Topic({required this.id, required this.title, required this.subTopics, required this.estimatedLessons});
+  const Topic({
+    required this.id,
+    required this.title,
+    required this.subTopics,
+    required this.estimatedLessons,
+  });
 
   @override
   List<Object?> get props => [id, title, subTopics, estimatedLessons];
@@ -99,7 +124,11 @@ class SubTopic extends Equatable {
   final String title;
   final bool isCompleted;
 
-  const SubTopic({required this.id, required this.title, this.isCompleted = false});
+  const SubTopic({
+    required this.id,
+    required this.title,
+    this.isCompleted = false,
+  });
 
   @override
   List<Object?> get props => [id, title, isCompleted];

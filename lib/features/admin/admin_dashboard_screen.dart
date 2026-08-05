@@ -20,7 +20,8 @@ class AdminDashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => di.sl<AdminDashboardBloc>()..add(LoadAdminDashboardStats()),
+      create: (context) =>
+          di.sl<AdminDashboardBloc>()..add(LoadAdminDashboardStats()),
       child: Scaffold(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
         body: Row(
@@ -29,8 +30,12 @@ class AdminDashboardScreen extends StatelessWidget {
               child: Builder(
                 builder: (context) => RefreshIndicator(
                   onRefresh: () async {
-                    context.read<AdminDashboardBloc>().add(LoadAdminDashboardStats());
-                    await context.read<AdminDashboardBloc>().stream.firstWhere((state) => state is! AdminDashboardLoading);
+                    context.read<AdminDashboardBloc>().add(
+                      LoadAdminDashboardStats(),
+                    );
+                    await context.read<AdminDashboardBloc>().stream.firstWhere(
+                      (state) => state is! AdminDashboardLoading,
+                    );
                   },
                   child: CustomScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -38,7 +43,10 @@ class AdminDashboardScreen extends StatelessWidget {
                       _buildAppBar(context),
                       SliverToBoxAdapter(
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 15,
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -87,47 +95,81 @@ class AdminDashboardScreen extends StatelessWidget {
           ),
         ),
       ),
-      title: isDesktop ? Row(
-        children: [
-          const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Pulse Console', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 24, letterSpacing: -1)),
-              Text('Cloud Infrastructure • Term 3', style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal)),
-            ],
-          ),
-          const SizedBox(width: 48),
-          Expanded(
-            child: InkWell(
-              borderRadius: BorderRadius.circular(8),
-              onTap: () => showSearch(context: context, delegate: AdminSearchDelegate()),
-              child: Container(
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainer,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.05)),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
+      title: isDesktop
+          ? Row(
+              children: [
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.search, size: 18, color: Theme.of(context).colorScheme.outline),
-                    const SizedBox(width: 12),
-                    Text('Search anything (staff, students, settings...)', style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.outline)),
+                    Text(
+                      'Pulse Console',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 24,
+                        letterSpacing: -1,
+                      ),
+                    ),
+                    Text(
+                      'Cloud Infrastructure • Term 3',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.normal,
+                      ),
+                    ),
                   ],
                 ),
-              ),
+                const SizedBox(width: 48),
+                Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => showSearch(
+                      context: context,
+                      delegate: AdminSearchDelegate(),
+                    ),
+                    child: Container(
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainer,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Theme.of(
+                            context,
+                          ).dividerColor.withValues(alpha: 0.05),
+                        ),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.search,
+                            size: 18,
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Search anything (staff, students, settings...)',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 48),
+              ],
+            )
+          : const Text(
+              'Pulse Console',
+              style: TextStyle(fontWeight: FontWeight.w900),
             ),
-          ),
-          const SizedBox(width: 48),
-        ],
-      ) : const Text('Pulse Console', style: TextStyle(fontWeight: FontWeight.w900)),
       actions: [
-        if (isDesktop) ...[
-          _buildLiveIndicator(),
-          const SizedBox(width: 16),
-        ],
-        NotificationBellButton(backgroundColor: Theme.of(context).colorScheme.surfaceContainer),
+        if (isDesktop) ...[_buildLiveIndicator(), const SizedBox(width: 16)],
+        NotificationBellButton(
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+        ),
         const SizedBox(width: 8),
         const _LogoutButton(),
         const SizedBox(width: 12),
@@ -149,15 +191,25 @@ class AdminDashboardScreen extends StatelessWidget {
           Container(
             width: 8,
             height: 8,
-            decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
+            decoration: const BoxDecoration(
+              color: Colors.green,
+              shape: BoxShape.circle,
+            ),
           ),
           const SizedBox(width: 8),
-          const Text('SYSTEM LIVE', style: TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+          const Text(
+            'SYSTEM LIVE',
+            style: TextStyle(
+              color: Colors.green,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.5,
+            ),
+          ),
         ],
       ),
     );
   }
-
 
   Widget _buildHighLevelStats(BuildContext context) {
     return BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
@@ -168,7 +220,8 @@ class AdminDashboardScreen extends StatelessWidget {
         if (state is AdminDashboardError) {
           return AlertBanner(
             title: 'Couldn\'t load dashboard stats',
-            message: 'Something went wrong on our end. Pull to refresh or check back shortly.',
+            message:
+                'Something went wrong on our end. Pull to refresh or check back shortly.',
             color: Theme.of(context).extension<SemanticColors>()!.error,
             icon: Icons.error_outline_rounded,
           );
@@ -177,7 +230,7 @@ class AdminDashboardScreen extends StatelessWidget {
           final stats = state.stats;
           final screenWidth = MediaQuery.of(context).size.width;
           final isMobile = screenWidth < 600;
-          
+
           if (isMobile) {
             // Row/Expanded instead of a fixed-aspect-ratio grid: each card
             // sizes to its own content height, so it's structurally
@@ -188,18 +241,51 @@ class AdminDashboardScreen extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(child: DashboardStatCard(title: 'Health', value: stats.systemHealth, suffix: '%', icon: Icons.cloud_done_rounded, color: Colors.teal, trend: 'STABLE')),
+                    Expanded(
+                      child: DashboardStatCard(
+                        title: 'Health',
+                        value: stats.systemHealth,
+                        suffix: '%',
+                        icon: Icons.cloud_done_rounded,
+                        color: Colors.teal,
+                        trend: 'STABLE',
+                      ),
+                    ),
                     const SizedBox(width: 12),
-                    Expanded(child: DashboardStatCard(title: 'Visitors', value: stats.visitorsTodayCount.toDouble(), icon: Icons.people_rounded, color: Colors.blue, trend: '${stats.activeVisitorsCount} LIVE')),
+                    Expanded(
+                      child: DashboardStatCard(
+                        title: 'Visitors',
+                        value: stats.visitorsTodayCount.toDouble(),
+                        icon: Icons.people_rounded,
+                        color: Colors.blue,
+                        trend: '${stats.activeVisitorsCount} LIVE',
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(child: DashboardStatCard(title: 'Staff', value: stats.activeStaffCount.toDouble(), icon: Icons.badge_rounded, color: Colors.indigo, trend: 'VERIFIED')),
+                    Expanded(
+                      child: DashboardStatCard(
+                        title: 'Staff',
+                        value: stats.activeStaffCount.toDouble(),
+                        icon: Icons.badge_rounded,
+                        color: Colors.indigo,
+                        trend: 'VERIFIED',
+                      ),
+                    ),
                     const SizedBox(width: 12),
-                    Expanded(child: DashboardStatCard(title: 'Students', value: stats.totalStudentsCount.toDouble(), icon: Icons.school_rounded, color: Colors.orange, trend: 'ENROLLED')),
+                    Expanded(
+                      child: DashboardStatCard(
+                        title: 'Students',
+                        value: stats.totalStudentsCount.toDouble(),
+                        icon: Icons.school_rounded,
+                        color: Colors.orange,
+                        trend: 'ENROLLED',
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -208,13 +294,46 @@ class AdminDashboardScreen extends StatelessWidget {
 
           return Row(
             children: [
-              Expanded(child: DashboardStatCard(title: 'System Health', value: stats.systemHealth, suffix: '%', icon: Icons.cloud_done_rounded, color: Colors.teal, trend: 'STABLE')),
+              Expanded(
+                child: DashboardStatCard(
+                  title: 'System Health',
+                  value: stats.systemHealth,
+                  suffix: '%',
+                  icon: Icons.cloud_done_rounded,
+                  color: Colors.teal,
+                  trend: 'STABLE',
+                ),
+              ),
               const SizedBox(width: 16),
-              Expanded(child: DashboardStatCard(title: 'Visitors Today', value: stats.visitorsTodayCount.toDouble(), icon: Icons.people_rounded, color: Colors.blue, trend: '${stats.activeVisitorsCount} LIVE')),
+              Expanded(
+                child: DashboardStatCard(
+                  title: 'Visitors Today',
+                  value: stats.visitorsTodayCount.toDouble(),
+                  icon: Icons.people_rounded,
+                  color: Colors.blue,
+                  trend: '${stats.activeVisitorsCount} LIVE',
+                ),
+              ),
               const SizedBox(width: 16),
-              Expanded(child: DashboardStatCard(title: 'Active Staff', value: stats.activeStaffCount.toDouble(), icon: Icons.badge_rounded, color: Colors.indigo, trend: 'VERIFIED')),
+              Expanded(
+                child: DashboardStatCard(
+                  title: 'Active Staff',
+                  value: stats.activeStaffCount.toDouble(),
+                  icon: Icons.badge_rounded,
+                  color: Colors.indigo,
+                  trend: 'VERIFIED',
+                ),
+              ),
               const SizedBox(width: 16),
-              Expanded(child: DashboardStatCard(title: 'Total Students', value: stats.totalStudentsCount.toDouble(), icon: Icons.school_rounded, color: Colors.orange, trend: 'ENROLLED')),
+              Expanded(
+                child: DashboardStatCard(
+                  title: 'Total Students',
+                  value: stats.totalStudentsCount.toDouble(),
+                  icon: Icons.school_rounded,
+                  color: Colors.orange,
+                  trend: 'ENROLLED',
+                ),
+              ),
             ],
           );
         }
@@ -257,7 +376,7 @@ class AdminDashboardScreen extends StatelessWidget {
                 children: [
                   _buildShortcutSection(context),
                   const SizedBox(height: 24),
-                  if (isExtraWide) 
+                  if (isExtraWide)
                     _buildServiceStatus(context)
                   else ...[
                     _buildServiceStatus(context),
@@ -291,7 +410,9 @@ class AdminDashboardScreen extends StatelessWidget {
   Widget _buildUpcomingDeadlines(BuildContext context) {
     return BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
       builder: (context, state) {
-        final deadlines = state is AdminDashboardLoaded ? state.stats.upcomingDeadlines : const <DashboardDeadline>[];
+        final deadlines = state is AdminDashboardLoaded
+            ? state.stats.upcomingDeadlines
+            : const <DashboardDeadline>[];
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -301,7 +422,10 @@ class AdminDashboardScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Text(
                   'No deadlines scheduled. Add one from the Schedule calendar.',
-                  style: TextStyle(color: Theme.of(context).colorScheme.outline, fontSize: 13),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.outline,
+                    fontSize: 13,
+                  ),
                 ),
               )
             else
@@ -311,8 +435,8 @@ class AdminDashboardScreen extends StatelessWidget {
                 final color = daysLeft <= 2
                     ? Colors.red
                     : daysLeft <= 7
-                        ? Colors.orange
-                        : Colors.blue;
+                    ? Colors.orange
+                    : Colors.blue;
                 return _DeadlineItem(
                   label: d.title,
                   date: _formatDeadlineDate(d.date),
@@ -333,20 +457,41 @@ class AdminDashboardScreen extends StatelessWidget {
     final daysLeft = target.difference(today).inDays;
     if (daysLeft == 0) return 'Today';
     if (daysLeft == 1) return 'Tomorrow';
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return '${months[date.month - 1]} ${date.day.toString().padLeft(2, '0')}';
   }
 
   Widget _buildShortcutSection(BuildContext context) {
     return GridView.count(
       padding: EdgeInsets.zero,
-      crossAxisCount: MediaQuery.of(context).size.width > 1200 ? 6 : (MediaQuery.of(context).size.width > 600 ? 4 : 3),
+      crossAxisCount: MediaQuery.of(context).size.width > 1200
+          ? 6
+          : (MediaQuery.of(context).size.width > 600 ? 4 : 3),
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: 8,
       crossAxisSpacing: 8,
       childAspectRatio: MediaQuery.of(context).size.width > 600 ? 1.5 : 1.1,
       children: [
+        _AdminShortcut(
+          icon: Icons.people_rounded,
+          label: 'Users',
+          color: Colors.blueAccent,
+          onTap: () => context.go('/staff/admin/users'),
+        ),
         _AdminShortcut(
           icon: Icons.meeting_room_rounded,
           label: 'Visitors',
@@ -358,6 +503,12 @@ class AdminDashboardScreen extends StatelessWidget {
           label: 'Schedule',
           color: Colors.blue,
           onTap: () => context.go('/staff/calendar'),
+        ),
+        _AdminShortcut(
+          icon: Icons.fact_check_rounded,
+          label: 'Take Attendance',
+          color: Colors.teal,
+          onTap: () => context.go('/staff/attendance'),
         ),
         _AdminShortcut(
           icon: Icons.event_available_rounded,
@@ -407,24 +558,29 @@ class AdminDashboardScreen extends StatelessWidget {
           color: Colors.deepPurple,
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const StoresAssetsDashboard()),
+            MaterialPageRoute(
+              builder: (context) => const StoresAssetsDashboard(),
+            ),
           ),
         ),
         _AdminShortcut(
           icon: Icons.local_library_rounded,
           label: 'Library',
           color: Colors.orange,
-          onTap: () => context.go('/staff/library'), // Assuming Librarian/Admin dashboard path
+          onTap: () => context.go(
+            '/staff/library',
+          ), // Assuming Librarian/Admin dashboard path
         ),
       ],
     );
   }
 
-
   Widget _buildServiceStatus(BuildContext context) {
     return BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
       builder: (context, state) {
-        final services = state is AdminDashboardLoaded ? state.stats.serviceStatuses : const <ServiceStatusItem>[];
+        final services = state is AdminDashboardLoaded
+            ? state.stats.serviceStatuses
+            : const <ServiceStatusItem>[];
         final allOperational = services.every((s) => s.status == 'Operational');
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -432,9 +588,15 @@ class AdminDashboardScreen extends StatelessWidget {
             SectionHeader(
               title: 'Live Services',
               trailing: StatusBadge(
-                label: services.isEmpty ? 'Checking...' : (allOperational ? 'Global: Stable' : 'Global: Degraded'),
-                color: services.isEmpty ? Colors.grey : (allOperational ? Colors.green : Colors.orange),
-                icon: allOperational ? Icons.check_circle : Icons.warning_amber_rounded,
+                label: services.isEmpty
+                    ? 'Checking...'
+                    : (allOperational ? 'Global: Stable' : 'Global: Degraded'),
+                color: services.isEmpty
+                    ? Colors.grey
+                    : (allOperational ? Colors.green : Colors.orange),
+                icon: allOperational
+                    ? Icons.check_circle
+                    : Icons.warning_amber_rounded,
               ),
             ),
             if (services.isEmpty)
@@ -443,7 +605,13 @@ class AdminDashboardScreen extends StatelessWidget {
                 child: Skeleton(height: 48),
               )
             else
-              ...services.map((s) => _StatusRow(label: s.label, status: s.status, color: _statusColor(s.status))),
+              ...services.map(
+                (s) => _StatusRow(
+                  label: s.label,
+                  status: s.status,
+                  color: _statusColor(s.status),
+                ),
+              ),
           ],
         );
       },
@@ -452,9 +620,12 @@ class AdminDashboardScreen extends StatelessWidget {
 
   Color _statusColor(String status) {
     switch (status) {
-      case 'Operational': return Colors.green;
-      case 'Degraded': return Colors.orange;
-      default: return Colors.red;
+      case 'Operational':
+        return Colors.green;
+      case 'Degraded':
+        return Colors.orange;
+      default:
+        return Colors.red;
     }
   }
 
@@ -462,8 +633,12 @@ class AdminDashboardScreen extends StatelessWidget {
     return BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
       builder: (context, state) {
         final stats = state is AdminDashboardLoaded ? state.stats : null;
-        final recentLogs = state is AdminDashboardLoaded ? state.recentLogs : const [];
-        final lastActivity = recentLogs.isNotEmpty ? _formatTimestamp(recentLogs.first.timestamp) : 'No activity';
+        final recentLogs = state is AdminDashboardLoaded
+            ? state.recentLogs
+            : const [];
+        final lastActivity = recentLogs.isNotEmpty
+            ? _formatTimestamp(recentLogs.first.timestamp)
+            : 'No activity';
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -471,17 +646,33 @@ class AdminDashboardScreen extends StatelessWidget {
             const SectionHeader(title: 'Data Integrity & Health'),
             Row(
               children: [
-                Expanded(child: _TechMetric(
-                  label: 'Sync Rate',
-                  value: stats == null ? '—' : '${stats.dataSyncRatePercent.toStringAsFixed(1)}%',
-                  color: Colors.blue,
-                )),
-                Expanded(child: _TechMetric(
-                  label: 'Failed Ops (7d)',
-                  value: stats == null ? '—' : '${stats.failedOperationsCount}',
-                  color: stats != null && stats.failedOperationsCount > 0 ? Colors.orange : Colors.green,
-                )),
-                Expanded(child: _TechMetric(label: 'Last Activity', value: lastActivity, color: Colors.purple)),
+                Expanded(
+                  child: _TechMetric(
+                    label: 'Sync Rate',
+                    value: stats == null
+                        ? '—'
+                        : '${stats.dataSyncRatePercent.toStringAsFixed(1)}%',
+                    color: Colors.blue,
+                  ),
+                ),
+                Expanded(
+                  child: _TechMetric(
+                    label: 'Failed Ops (7d)',
+                    value: stats == null
+                        ? '—'
+                        : '${stats.failedOperationsCount}',
+                    color: stats != null && stats.failedOperationsCount > 0
+                        ? Colors.orange
+                        : Colors.green,
+                  ),
+                ),
+                Expanded(
+                  child: _TechMetric(
+                    label: 'Last Activity',
+                    value: lastActivity,
+                    color: Colors.purple,
+                  ),
+                ),
               ],
             ),
           ],
@@ -501,19 +692,25 @@ class AdminDashboardScreen extends StatelessWidget {
               actionLabel: 'View All Logs',
               onActionPressed: () => context.go('/staff/admin/audit-log'),
             ),
-            if (state is AdminDashboardLoading || state is AdminDashboardInitial)
+            if (state is AdminDashboardLoading ||
+                state is AdminDashboardInitial)
               Column(
-                children: List.generate(3, (index) => const Padding(
-                  padding: EdgeInsets.only(bottom: 8),
-                  child: Skeleton(height: 48),
-                )),
+                children: List.generate(
+                  3,
+                  (index) => const Padding(
+                    padding: EdgeInsets.only(bottom: 8),
+                    child: Skeleton(height: 48),
+                  ),
+                ),
               )
             else if (state is AdminDashboardLoaded && state.recentLogs.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 20),
                 child: Text(
                   'No recent activity yet.',
-                  style: TextStyle(color: Theme.of(context).colorScheme.outline),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
                 ),
               )
             else if (state is AdminDashboardLoaded)
@@ -530,12 +727,37 @@ class AdminDashboardScreen extends StatelessWidget {
                     contentPadding: EdgeInsets.zero,
                     leading: Container(
                       padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
-                      child: Icon(_getIconData(log.iconName), size: 16, color: color),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        _getIconData(log.iconName),
+                        size: 16,
+                        color: color,
+                      ),
                     ),
-                    title: Text(log.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                    subtitle: Text(log.description, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.outline)),
-                    trailing: Text(_formatTimestamp(log.timestamp), style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.outline)),
+                    title: Text(
+                      log.title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                    subtitle: Text(
+                      log.description,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
+                    ),
+                    trailing: Text(
+                      _formatTimestamp(log.timestamp),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
+                    ),
                   );
                 },
               ),
@@ -547,12 +769,18 @@ class AdminDashboardScreen extends StatelessWidget {
 
   IconData _getIconData(String name) {
     switch (name) {
-      case 'person_add': return Icons.person_add;
-      case 'vpn_key': return Icons.vpn_key;
-      case 'send': return Icons.send;
-      case 'gpp_maybe': return Icons.gpp_maybe;
-      case 'inventory_2': return Icons.inventory_2;
-      default: return Icons.info;
+      case 'person_add':
+        return Icons.person_add;
+      case 'vpn_key':
+        return Icons.vpn_key;
+      case 'send':
+        return Icons.send;
+      case 'gpp_maybe':
+        return Icons.gpp_maybe;
+      case 'inventory_2':
+        return Icons.inventory_2;
+      default:
+        return Icons.info;
     }
   }
 
@@ -567,7 +795,9 @@ class AdminDashboardScreen extends StatelessWidget {
   Widget _buildSchoolAnnouncements(BuildContext context) {
     return BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
       builder: (context, state) {
-        final notices = state is AdminDashboardLoaded ? state.stats.activeNotices : const <DashboardNotice>[];
+        final notices = state is AdminDashboardLoaded
+            ? state.stats.activeNotices
+            : const <DashboardNotice>[];
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -577,11 +807,16 @@ class AdminDashboardScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Text(
                   'No recent staff-wide broadcasts.',
-                  style: TextStyle(color: Theme.of(context).colorScheme.outline, fontSize: 13),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.outline,
+                    fontSize: 13,
+                  ),
                 ),
               )
             else
-              ...notices.map((n) => _NoticeItem(title: n.title, subtitle: n.body)),
+              ...notices.map(
+                (n) => _NoticeItem(title: n.title, subtitle: n.body),
+              ),
           ],
         );
       },
@@ -596,10 +831,14 @@ class AdminDashboardScreen extends StatelessWidget {
         if (state is AdminDashboardLoaded) {
           final stats = state.stats;
           if (stats.staffPendingSetupCount > 0) {
-            items.add('${stats.staffPendingSetupCount} staff account${stats.staffPendingSetupCount == 1 ? '' : 's'} pending first-login setup');
+            items.add(
+              '${stats.staffPendingSetupCount} staff account${stats.staffPendingSetupCount == 1 ? '' : 's'} pending first-login setup',
+            );
           }
           if (stats.overdueVisitorsCount > 0) {
-            items.add('${stats.overdueVisitorsCount} visitor${stats.overdueVisitorsCount == 1 ? '' : 's'} on premises over 2 hours - check them out');
+            items.add(
+              '${stats.overdueVisitorsCount} visitor${stats.overdueVisitorsCount == 1 ? '' : 's'} on premises over 2 hours - check them out',
+            );
           }
         }
 
@@ -607,7 +846,8 @@ class AdminDashboardScreen extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: (items.isEmpty ? semantic.success : semantic.warning).withValues(alpha: 0.05),
+            color: (items.isEmpty ? semantic.success : semantic.warning)
+                .withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
@@ -616,34 +856,47 @@ class AdminDashboardScreen extends StatelessWidget {
               Row(
                 children: [
                   Icon(
-                    items.isEmpty ? Icons.check_circle_outline_rounded : Icons.warning_amber_rounded,
+                    items.isEmpty
+                        ? Icons.check_circle_outline_rounded
+                        : Icons.warning_amber_rounded,
                     color: items.isEmpty ? semantic.success : semantic.warning,
                     size: 20,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     'Pending Actions',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: items.isEmpty ? semantic.success : semantic.warning),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: items.isEmpty
+                          ? semantic.success
+                          : semantic.warning,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
               if (items.isEmpty)
-                const Text('All clear - nothing needs your attention.', style: TextStyle(fontSize: 13))
+                const Text(
+                  'All clear - nothing needs your attention.',
+                  style: TextStyle(fontSize: 13),
+                )
               else
-                ...items.map((text) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text('• $text', style: const TextStyle(fontSize: 13)),
-                    )),
+                ...items.map(
+                  (text) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      '• $text',
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ),
+                ),
             ],
           ),
         );
       },
     );
   }
-
 }
-
 
 class _AdminShortcut extends StatelessWidget {
   final IconData icon;
@@ -651,7 +904,12 @@ class _AdminShortcut extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
 
-  const _AdminShortcut({required this.icon, required this.label, required this.color, required this.onTap});
+  const _AdminShortcut({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -689,14 +947,31 @@ class _TechMetric extends StatelessWidget {
   final String value;
   final Color color;
 
-  const _TechMetric({required this.label, required this.value, required this.color});
+  const _TechMetric({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(value, style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: color)),
-        Text(label, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
       ],
     );
   }
@@ -707,7 +982,11 @@ class _StatusRow extends StatelessWidget {
   final String status;
   final Color color;
 
-  const _StatusRow({required this.label, required this.status, required this.color});
+  const _StatusRow({
+    required this.label,
+    required this.status,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -725,7 +1004,11 @@ class _StatusRow extends StatelessWidget {
             ),
             child: Text(
               status,
-              style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -740,7 +1023,12 @@ class _DeadlineItem extends StatelessWidget {
   final double progress;
   final Color color;
 
-  const _DeadlineItem({required this.label, required this.date, required this.progress, required this.color});
+  const _DeadlineItem({
+    required this.label,
+    required this.date,
+    required this.progress,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -752,8 +1040,20 @@ class _DeadlineItem extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-              Text(date, style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.outline)),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                date,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 6),
@@ -782,14 +1082,33 @@ class _NoticeItem extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          Container(width: 4, height: 32, decoration: BoxDecoration(color: Colors.blue, borderRadius: BorderRadius.circular(2))),
+          Container(
+            width: 4,
+            height: 32,
+            decoration: BoxDecoration(
+              color: Colors.blue,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                Text(subtitle, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 11,
+                  ),
+                ),
               ],
             ),
           ),
@@ -819,7 +1138,10 @@ class _LogoutButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      icon: Icon(Icons.logout_rounded, color: Theme.of(context).colorScheme.error),
+      icon: Icon(
+        Icons.logout_rounded,
+        color: Theme.of(context).colorScheme.error,
+      ),
       tooltip: 'Logout',
       onPressed: () => _handleLogout(context),
     );

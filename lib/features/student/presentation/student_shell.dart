@@ -50,14 +50,20 @@ class StudentShell extends StatelessWidget {
         title: const Text('Logout'),
         content: const Text('Are you sure you want to log out?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () {
               context.read<AuthBloc>().add(LogoutPressed());
               Navigator.pop(context);
               context.go('/welcome');
             },
-            child: const Text('Logout', style: TextStyle(color: AppColors.deepOrange)),
+            child: const Text(
+              'Logout',
+              style: TextStyle(color: AppColors.deepOrange),
+            ),
           ),
         ],
       ),
@@ -87,7 +93,10 @@ class StudentShell extends StatelessWidget {
       ),
       const NavigationDestination(
         icon: Icon(Icons.chat_bubble_outline_rounded),
-        selectedIcon: Icon(Icons.chat_bubble_rounded, color: AppColors.royalBlue),
+        selectedIcon: Icon(
+          Icons.chat_bubble_rounded,
+          color: AppColors.royalBlue,
+        ),
         label: 'Messages',
       ),
       const NavigationDestination(
@@ -107,7 +116,9 @@ class StudentShell extends StatelessWidget {
                 color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
                 border: Border(
                   right: BorderSide(
-                    color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                    color: isDark
+                        ? AppColors.borderDark
+                        : AppColors.borderLight,
                     width: 1,
                   ),
                 ),
@@ -122,11 +133,13 @@ class StudentShell extends StatelessWidget {
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.x4l),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.x4l,
+                    ),
                     child: PulseLogo(
                       size: 40,
-                      variant: MediaQuery.of(context).size.width > 1200 
-                          ? PulseLogoVariant.full 
+                      variant: MediaQuery.of(context).size.width > 1200
+                          ? PulseLogoVariant.full
                           : PulseLogoVariant.shield,
                     ),
                   ),
@@ -135,29 +148,42 @@ class StudentShell extends StatelessWidget {
                       backgroundColor: Colors.transparent,
                       extended: MediaQuery.of(context).size.width > 1200,
                       selectedIndex: _calculateSelectedIndex(context),
-                      onDestinationSelected: (idx) => _onItemTapped(idx, context),
+                      onDestinationSelected: (idx) =>
+                          _onItemTapped(idx, context),
                       minExtendedWidth: 280,
-                      labelType: MediaQuery.of(context).size.width > 1200 
-                          ? NavigationRailLabelType.none 
+                      labelType: MediaQuery.of(context).size.width > 1200
+                          ? NavigationRailLabelType.none
                           : NavigationRailLabelType.all,
-                      unselectedLabelTextStyle: AppTypography.labelMedium.copyWith(
-                        color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-                      ),
-                      selectedLabelTextStyle: AppTypography.labelMedium.copyWith(
-                        color: AppColors.primary(context),
-                        fontWeight: FontWeight.bold,
-                      ),
-                      destinations: destinations.map((d) => NavigationRailDestination(
-                        icon: d.icon,
-                        selectedIcon: d.selectedIcon,
-                        label: Text(d.label),
-                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.m),
-                      )).toList(),
+                      unselectedLabelTextStyle: AppTypography.labelMedium
+                          .copyWith(
+                            color: isDark
+                                ? AppColors.textMutedDark
+                                : AppColors.textMutedLight,
+                          ),
+                      selectedLabelTextStyle: AppTypography.labelMedium
+                          .copyWith(
+                            color: AppColors.primary(context),
+                            fontWeight: FontWeight.bold,
+                          ),
+                      destinations: destinations
+                          .map(
+                            (d) => NavigationRailDestination(
+                              icon: d.icon,
+                              selectedIcon: d.selectedIcon,
+                              label: Text(d.label),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: AppSpacing.m,
+                              ),
+                            ),
+                          )
+                          .toList(),
                     ),
                   ),
                   Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.x3l),
-                    child: _LogoutButton(onPressed: () => _handleLogout(context)),
+                    child: _LogoutButton(
+                      onPressed: () => _handleLogout(context),
+                    ),
                   ),
                 ],
               ),
@@ -183,7 +209,9 @@ class StudentShell extends StatelessWidget {
               ),
               child: NavigationBar(
                 height: 64,
-                backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                backgroundColor: isDark
+                    ? AppColors.surfaceDark
+                    : AppColors.surfaceLight,
                 indicatorColor: AppColors.electricBlue.withValues(alpha: 0.1),
                 selectedIndex: _calculateSelectedIndex(context),
                 onDestinationSelected: (idx) => _onItemTapped(idx, context),
@@ -203,7 +231,7 @@ class _LogoutButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isExtended = MediaQuery.of(context).size.width > 1200;
-    
+
     if (isExtended) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
@@ -212,7 +240,9 @@ class _LogoutButton extends StatelessWidget {
           icon: const Icon(Icons.logout_rounded, color: AppColors.deepOrange),
           label: Text(
             'Logout',
-            style: AppTypography.labelLarge.copyWith(color: AppColors.deepOrange),
+            style: AppTypography.labelLarge.copyWith(
+              color: AppColors.deepOrange,
+            ),
           ),
           style: TextButton.styleFrom(
             alignment: Alignment.centerLeft,

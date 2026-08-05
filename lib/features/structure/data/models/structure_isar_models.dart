@@ -106,6 +106,8 @@ class AcademicTermIsar {
   late DateTime startDate;
   late DateTime endDate;
   late bool isCurrent;
+  late String periodType;
+  late bool isArchived;
 
   AcademicTermIsar();
 
@@ -118,7 +120,9 @@ class AcademicTermIsar {
       ..order = e.order
       ..startDate = e.startDate
       ..endDate = e.endDate
-      ..isCurrent = e.isCurrent;
+      ..isCurrent = e.isCurrent
+      ..periodType = e.periodType.name
+      ..isArchived = e.isArchived;
   }
 
   AcademicTerm toEntity() {
@@ -131,6 +135,11 @@ class AcademicTermIsar {
       startDate: startDate,
       endDate: endDate,
       isCurrent: isCurrent,
+      periodType: AcademicPeriodType.values.firstWhere(
+        (t) => t.name == periodType,
+        orElse: () => AcademicPeriodType.term,
+      ),
+      isArchived: isArchived,
     );
   }
 }

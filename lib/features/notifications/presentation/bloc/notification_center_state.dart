@@ -68,8 +68,7 @@ class NotificationCenterState extends Equatable {
   List<NotificationItem> get mentions =>
       items.where((n) => n.relatedStudentId != null).toList();
 
-  bool get isEmpty =>
-      status == NotificationCenterStatus.ready && items.isEmpty;
+  bool get isEmpty => status == NotificationCenterStatus.ready && items.isEmpty;
 
   /// Groups by calendar day for the date-grouped view, preserving order.
   Map<DateTime, List<NotificationItem>> get groupedByDay {
@@ -123,8 +122,9 @@ class NotificationCenterState extends Equatable {
       readFilter: clearReadFilter ? null : (readFilter ?? this.readFilter),
       pinnedOnly: pinnedOnly ?? this.pinnedOnly,
       includeArchived: includeArchived ?? this.includeArchived,
-      studentFilter:
-          clearStudentFilter ? null : (studentFilter ?? this.studentFilter),
+      studentFilter: clearStudentFilter
+          ? null
+          : (studentFilter ?? this.studentFilter),
       searchTerm: searchTerm ?? this.searchTerm,
       unreadCount: unreadCount ?? this.unreadCount,
       pinnedCount: pinnedCount ?? this.pinnedCount,
@@ -139,22 +139,22 @@ class NotificationCenterState extends Equatable {
 
   @override
   List<Object?> get props => [
-        status,
-        items,
-        categoryFilter,
-        priorityFilter,
-        readFilter,
-        pinnedOnly,
-        includeArchived,
-        studentFilter,
-        searchTerm,
-        unreadCount,
-        pinnedCount,
-        totalCount,
-        acknowledgementCount,
-        isLoadingMore,
-        hasMore,
-        isOffline,
-        failure,
-      ];
+    status,
+    items,
+    categoryFilter,
+    priorityFilter,
+    readFilter,
+    pinnedOnly,
+    includeArchived,
+    studentFilter,
+    searchTerm,
+    unreadCount,
+    pinnedCount,
+    totalCount,
+    acknowledgementCount,
+    isLoadingMore,
+    hasMore,
+    isOffline,
+    failure,
+  ];
 }

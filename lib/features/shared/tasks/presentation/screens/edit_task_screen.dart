@@ -13,7 +13,9 @@ class EditTaskScreen extends StatefulWidget {
 
 class _EditTaskScreenState extends State<EditTaskScreen> {
   final _titleController = TextEditingController(text: 'Inspect Sunset House');
-  final _descController = TextEditingController(text: 'Routine weekly inspection for hygiene and maintenance.');
+  final _descController = TextEditingController(
+    text: 'Routine weekly inspection for hygiene and maintenance.',
+  );
   String _selectedPriority = 'High';
   final String _category = 'Hygiene Inspection';
 
@@ -28,7 +30,11 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
         elevation: 0,
         title: Text(
           'Edit Task',
-          style: TextStyle(color: AppColors.textPrimary(context), fontWeight: FontWeight.w900, fontSize: 20),
+          style: TextStyle(
+            color: AppColors.textPrimary(context),
+            fontWeight: FontWeight.w900,
+            fontSize: 20,
+          ),
         ),
         leading: IconButton(
           icon: Icon(Icons.close, color: AppColors.textPrimary(context)),
@@ -55,7 +61,9 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const TaskTypeSelectionScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const TaskTypeSelectionScreen(),
+                  ),
                 );
               },
               child: InputDecorator(
@@ -66,8 +74,14 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(_category, style: TextStyle(color: AppColors.textPrimary(context))),
-                    Icon(Icons.chevron_right, color: AppColors.textMuted(context)),
+                    Text(
+                      _category,
+                      style: TextStyle(color: AppColors.textPrimary(context)),
+                    ),
+                    Icon(
+                      Icons.chevron_right,
+                      color: AppColors.textMuted(context),
+                    ),
                   ],
                 ),
               ),
@@ -89,7 +103,11 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
             const SizedBox(height: 16),
             Text(
               'Select Priority',
-              style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context), fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary(context),
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 12),
             Row(
@@ -106,9 +124,23 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
             const SizedBox(height: 12),
             Row(
               children: [
-                Expanded(child: _buildPickerField(context, 'Due Date', 'May 20, 2024', Icons.calendar_today)),
+                Expanded(
+                  child: _buildPickerField(
+                    context,
+                    'Due Date',
+                    'May 20, 2024',
+                    Icons.calendar_today,
+                  ),
+                ),
                 const SizedBox(width: 12),
-                Expanded(child: _buildPickerField(context, 'Due Time', '09:00 AM', Icons.access_time)),
+                Expanded(
+                  child: _buildPickerField(
+                    context,
+                    'Due Time',
+                    '09:00 AM',
+                    Icons.access_time,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 24),
@@ -139,7 +171,11 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: AppColors.background(context),
-          border: Border(top: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight)),
+          border: Border(
+            top: BorderSide(
+              color: isDark ? AppColors.borderDark : AppColors.borderLight,
+            ),
+          ),
         ),
         child: SafeArea(
           child: PrimaryButton(
@@ -173,10 +209,14 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? color.withValues(alpha: 0.15) : (isDark ? AppColors.surfaceDark : Colors.white),
+            color: isSelected
+                ? color.withValues(alpha: 0.15)
+                : (isDark ? AppColors.surfaceDark : Colors.white),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isSelected ? color : (isDark ? AppColors.borderDark : AppColors.borderLight),
+              color: isSelected
+                  ? color
+                  : (isDark ? AppColors.borderDark : AppColors.borderLight),
               width: 1.5,
             ),
           ),
@@ -221,7 +261,12 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     );
   }
 
-  Widget _buildPickerField(BuildContext context, String label, String value, IconData icon) {
+  Widget _buildPickerField(
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return InputDecorator(
       decoration: InputDecoration(
@@ -229,7 +274,10 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
         prefixIcon: Icon(icon, size: 18, color: AppColors.electricBlue),
         fillColor: isDark ? AppColors.surfaceDark : Colors.white,
       ),
-      child: Text(value, style: TextStyle(fontSize: 13, color: AppColors.textPrimary(context))),
+      child: Text(
+        value,
+        style: TextStyle(fontSize: 13, color: AppColors.textPrimary(context)),
+      ),
     );
   }
 
@@ -243,25 +291,39 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
         borderColor: isDark ? AppColors.borderDark : AppColors.borderLight,
         child: Row(
           children: [
-            Icon(Icons.drag_indicator, size: 20, color: AppColors.textMuted(context)),
+            Icon(
+              Icons.drag_indicator,
+              size: 20,
+              color: AppColors.textMuted(context),
+            ),
             const SizedBox(width: 8),
             Container(
               width: 18,
               height: 18,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(5),
-                border: Border.all(color: AppColors.textMuted(context), width: 1.5),
+                border: Border.all(
+                  color: AppColors.textMuted(context),
+                  width: 1.5,
+                ),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 title,
-                style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context)),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textPrimary(context),
+                ),
               ),
             ),
             IconButton(
-              icon: Icon(Icons.close, size: 18, color: AppColors.danger(context)),
+              icon: Icon(
+                Icons.close,
+                size: 18,
+                color: AppColors.danger(context),
+              ),
               onPressed: () {},
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),

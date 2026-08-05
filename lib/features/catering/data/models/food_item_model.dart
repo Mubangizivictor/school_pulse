@@ -19,7 +19,9 @@ class FoodItemModel extends FoodItem {
       currentStock: (json['currentStock'] ?? 0.0).toDouble(),
       reorderLevel: (json['reorderLevel'] ?? 0.0).toDouble(),
       category: json['category'],
-      expiryDate: json['expiryDate'] != null ? DateTime.parse(json['expiryDate']) : null,
+      expiryDate: json['expiryDate'] != null
+          ? DateTime.parse(json['expiryDate'])
+          : null,
     );
   }
 

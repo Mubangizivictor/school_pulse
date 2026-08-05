@@ -44,7 +44,9 @@ class _SearchMessagesScreenState extends State<SearchMessagesScreen> {
   Future<void> _loadRecent() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
-    setState(() => _recent = prefs.getStringList(_kRecentSearchesKey) ?? const []);
+    setState(
+      () => _recent = prefs.getStringList(_kRecentSearchesKey) ?? const [],
+    );
   }
 
   Future<void> _rememberSearch(String term) async {
@@ -70,7 +72,10 @@ class _SearchMessagesScreenState extends State<SearchMessagesScreen> {
       setState(() => _results = const []);
       return;
     }
-    _debounce = Timer(const Duration(milliseconds: 350), () => _runSearch(value.trim()));
+    _debounce = Timer(
+      const Duration(milliseconds: 350),
+      () => _runSearch(value.trim()),
+    );
   }
 
   Future<void> _runSearch(String term) async {
@@ -115,12 +120,20 @@ class _SearchMessagesScreenState extends State<SearchMessagesScreen> {
           child: TextField(
             controller: _searchController,
             autofocus: true,
-            style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary(context)),
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.textPrimary(context),
+            ),
             decoration: InputDecoration(
               hintText: 'Search messages...',
-              hintStyle: AppTypography.bodyMedium.copyWith(color: AppColors.textMuted(context)),
+              hintStyle: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textMuted(context),
+              ),
               border: InputBorder.none,
-              prefixIcon: Icon(Icons.search, size: 20, color: AppColors.textMuted(context)),
+              prefixIcon: Icon(
+                Icons.search,
+                size: 20,
+                color: AppColors.textMuted(context),
+              ),
               contentPadding: const EdgeInsets.symmetric(vertical: 10),
             ),
             onChanged: _onQueryChanged,
@@ -149,7 +162,9 @@ class _SearchMessagesScreenState extends State<SearchMessagesScreen> {
               indicatorColor: AppColors.electricBlue,
               indicatorSize: TabBarIndicatorSize.label,
               labelStyle: AppTypography.titleSmall,
-              dividerColor: isDark ? AppColors.borderDark : AppColors.borderLight,
+              dividerColor: isDark
+                  ? AppColors.borderDark
+                  : AppColors.borderLight,
               tabs: const [
                 Tab(text: 'Messages'),
                 Tab(text: 'Media'),
@@ -163,15 +178,25 @@ class _SearchMessagesScreenState extends State<SearchMessagesScreen> {
                   : TabBarView(
                       children: [
                         _buildResults(_results),
-                        _buildResults(_results
-                            .where((r) => r.message.type == MessageType.image ||
-                                r.message.type == MessageType.video)
-                            .toList()),
                         _buildResults(
-                            _results.where((r) => r.message.content.contains('http')).toList()),
-                        _buildResults(_results
-                            .where((r) => r.message.type == MessageType.file)
-                            .toList()),
+                          _results
+                              .where(
+                                (r) =>
+                                    r.message.type == MessageType.image ||
+                                    r.message.type == MessageType.video,
+                              )
+                              .toList(),
+                        ),
+                        _buildResults(
+                          _results
+                              .where((r) => r.message.content.contains('http'))
+                              .toList(),
+                        ),
+                        _buildResults(
+                          _results
+                              .where((r) => r.message.type == MessageType.file)
+                              .toList(),
+                        ),
                       ],
                     ),
             ),
@@ -188,21 +213,33 @@ class _SearchMessagesScreenState extends State<SearchMessagesScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('RECENT SEARCHES',
-                style: AppTypography.labelSmall.copyWith(color: AppColors.textMuted(context))),
+            Text(
+              'RECENT SEARCHES',
+              style: AppTypography.labelSmall.copyWith(
+                color: AppColors.textMuted(context),
+              ),
+            ),
             if (_recent.isNotEmpty)
               TextButton(
                 onPressed: _clearRecent,
-                child: Text('Clear All',
-                    style: AppTypography.labelSmall.copyWith(color: AppColors.electricBlue)),
+                child: Text(
+                  'Clear All',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.electricBlue,
+                  ),
+                ),
               ),
           ],
         ),
         if (_recent.isEmpty)
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.m),
-            child: Text('Your recent searches will show up here.',
-                style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context))),
+            child: Text(
+              'Your recent searches will show up here.',
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.textMuted(context),
+              ),
+            ),
           )
         else
           ..._recent.map(_buildRecentItem),
@@ -238,9 +275,13 @@ class _SearchMessagesScreenState extends State<SearchMessagesScreen> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.xl),
-          child: Text('No matches for "$_query"',
-              textAlign: TextAlign.center,
-              style: AppTypography.bodyMedium.copyWith(color: AppColors.textMuted(context))),
+          child: Text(
+            'No matches for "$_query"',
+            textAlign: TextAlign.center,
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.textMuted(context),
+            ),
+          ),
         ),
       );
     }
@@ -254,15 +295,26 @@ class _SearchMessagesScreenState extends State<SearchMessagesScreen> {
           leading: CircleAvatar(
             backgroundColor: AppColors.royalBlue,
             child: Text(
-              ref.message.senderName.isEmpty ? '?' : ref.message.senderName[0].toUpperCase(),
+              ref.message.senderName.isEmpty
+                  ? '?'
+                  : ref.message.senderName[0].toUpperCase(),
               style: const TextStyle(color: Colors.white),
             ),
           ),
           title: Row(
             children: [
-              Expanded(child: Text(ref.message.senderName, style: AppTypography.titleSmall)),
-              Text(DateFormat('dd/MM/yy').format(ref.message.timestamp),
-                  style: AppTypography.labelSmall.copyWith(color: AppColors.textMuted(context))),
+              Expanded(
+                child: Text(
+                  ref.message.senderName,
+                  style: AppTypography.titleSmall,
+                ),
+              ),
+              Text(
+                DateFormat('dd/MM/yy').format(ref.message.timestamp),
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.textMuted(context),
+                ),
+              ),
             ],
           ),
           subtitle: Padding(
@@ -274,12 +326,18 @@ class _SearchMessagesScreenState extends State<SearchMessagesScreen> {
                   ref.message.content.isEmpty
                       ? (ref.message.fileName ?? 'Attachment')
                       : ref.message.content,
-                  style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted(context)),
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.textMuted(context),
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                Text('in ${ref.conversationTitle}',
-                    style: AppTypography.labelSmall.copyWith(color: AppColors.electricBlue)),
+                Text(
+                  'in ${ref.conversationTitle}',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.electricBlue,
+                  ),
+                ),
               ],
             ),
           ),

@@ -3,12 +3,12 @@ import '../../domain/usecases/get_homework_for_student.dart';
 import 'student_homework_event.dart';
 import 'student_homework_state.dart';
 
-class StudentHomeworkBloc extends Bloc<StudentHomeworkEvent, StudentHomeworkState> {
+class StudentHomeworkBloc
+    extends Bloc<StudentHomeworkEvent, StudentHomeworkState> {
   final GetHomeworkForStudent getHomeworkForStudent;
 
-  StudentHomeworkBloc({
-    required this.getHomeworkForStudent,
-  }) : super(StudentHomeworkInitial()) {
+  StudentHomeworkBloc({required this.getHomeworkForStudent})
+    : super(StudentHomeworkInitial()) {
     on<LoadStudentHomework>(_onLoadStudentHomework);
   }
 

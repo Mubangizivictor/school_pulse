@@ -78,9 +78,10 @@ class NotificationPushHandler {
   /// permanent blank screen.
   Future<void> checkInitialMessage() async {
     try {
-      final message = await messaging
-          .getInitialMessage()
-          .timeout(const Duration(seconds: 5), onTimeout: () => null);
+      final message = await messaging.getInitialMessage().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => null,
+      );
       if (message != null) {
         await _onNotificationTapped(message);
       }
@@ -166,16 +167,20 @@ class NotificationPushHandler {
 
     // Opening is recorded before navigating, so the receipt survives even if
     // the destination fails to load.
-    unawaited(repository.markAsOpened(
-      schoolId: user.schoolId,
-      notificationId: item.id,
-      recipientUserId: user.userId,
-    ));
-    unawaited(repository.markAsRead(
-      schoolId: user.schoolId,
-      notificationId: item.id,
-      recipientUserId: user.userId,
-    ));
+    unawaited(
+      repository.markAsOpened(
+        schoolId: user.schoolId,
+        notificationId: item.id,
+        recipientUserId: user.userId,
+      ),
+    );
+    unawaited(
+      repository.markAsRead(
+        schoolId: user.schoolId,
+        notificationId: item.id,
+        recipientUserId: user.userId,
+      ),
+    );
 
     await navigate(item);
   }

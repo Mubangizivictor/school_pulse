@@ -47,9 +47,16 @@ void main() {
     academicYearId: 'ay-2026',
     status: StudentStatus.active,
     level: EducationLevel.primary,
-    medicalInfo: const MedicalInfo(allergies: ['Peanuts'], chronicConditions: ['Asthma']),
+    medicalInfo: const MedicalInfo(
+      allergies: ['Peanuts'],
+      chronicConditions: ['Asthma'],
+    ),
     emergencyContacts: const [
-      EmergencyContact(name: 'John Doe', relationship: 'Father', phoneNumber: '0700000000'),
+      EmergencyContact(
+        name: 'John Doe',
+        relationship: 'Father',
+        phoneNumber: '0700000000',
+      ),
     ],
   );
 
@@ -73,31 +80,55 @@ void main() {
       healthRepository: healthRepository,
     );
 
-    when(() => studentRepository.getStudentById(studentId)).thenAnswer((_) async => Right(student));
-    when(() => healthRepository.getClinicVisits(schoolId: schoolId, studentId: studentId))
-        .thenAnswer((_) async => const Right(<ClinicVisit>[]));
+    when(
+      () => studentRepository.getStudentById(studentId),
+    ).thenAnswer((_) async => Right(student));
+    when(
+      () => healthRepository.getClinicVisits(
+        schoolId: schoolId,
+        studentId: studentId,
+      ),
+    ).thenAnswer((_) async => const Right(<ClinicVisit>[]));
   });
 
-  test('denies without exposing any student data when basic read is not granted', () async {
-    when(() => permissionEvaluator.can(Permission.healthStudentBasicRead, operatorUser))
-        .thenAnswer((_) async => const Right(false));
+  test(
+    'denies without exposing any student data when basic read is not granted',
+    () async {
+      when(
+        () => permissionEvaluator.can(
+          Permission.healthStudentBasicRead,
+          operatorUser,
+        ),
+      ).thenAnswer((_) async => const Right(false));
 
-    final result = await service.getStudentView(
-      studentId: studentId,
-      schoolId: schoolId,
-      operatorUser: operatorUser,
-    );
+      final result = await service.getStudentView(
+        studentId: studentId,
+        schoolId: schoolId,
+        operatorUser: operatorUser,
+      );
 
-    expect(result.isLeft(), true);
-    expect(result.fold((f) => f, (r) => null), isA<PermissionDeniedFailure>());
-    verifyNever(() => studentRepository.getStudentById(any()));
-  });
+      expect(result.isLeft(), true);
+      expect(
+        result.fold((f) => f, (r) => null),
+        isA<PermissionDeniedFailure>(),
+      );
+      verifyNever(() => studentRepository.getStudentById(any()));
+    },
+  );
 
   test('returns identity-only view when only basic read is granted', () async {
-    when(() => permissionEvaluator.can(Permission.healthStudentBasicRead, operatorUser))
-        .thenAnswer((_) async => const Right(true));
-    when(() => permissionEvaluator.can(Permission.healthStudentClinicalRead, operatorUser))
-        .thenAnswer((_) async => const Right(false));
+    when(
+      () => permissionEvaluator.can(
+        Permission.healthStudentBasicRead,
+        operatorUser,
+      ),
+    ).thenAnswer((_) async => const Right(true));
+    when(
+      () => permissionEvaluator.can(
+        Permission.healthStudentClinicalRead,
+        operatorUser,
+      ),
+    ).thenAnswer((_) async => const Right(false));
 
     final result = await service.getStudentView(
       studentId: studentId,
@@ -113,24 +144,36 @@ void main() {
     verifyNever(() => healthRepository.getStudentHealthProfile(any(), any()));
   });
 
-  test('returns full clinical view (from StudentHealthProfile) when both permissions are granted', () async {
-    when(() => permissionEvaluator.can(Permission.healthStudentBasicRead, operatorUser))
-        .thenAnswer((_) async => const Right(true));
-    when(() => permissionEvaluator.can(Permission.healthStudentClinicalRead, operatorUser))
-        .thenAnswer((_) async => const Right(true));
-    when(() => healthRepository.getStudentHealthProfile(studentId, schoolId))
-        .thenAnswer((_) async => Right(healthProfile));
+  test(
+    'returns full clinical view (from StudentHealthProfile) when both permissions are granted',
+    () async {
+      when(
+        () => permissionEvaluator.can(
+          Permission.healthStudentBasicRead,
+          operatorUser,
+        ),
+      ).thenAnswer((_) async => const Right(true));
+      when(
+        () => permissionEvaluator.can(
+          Permission.healthStudentClinicalRead,
+          operatorUser,
+        ),
+      ).thenAnswer((_) async => const Right(true));
+      when(
+        () => healthRepository.getStudentHealthProfile(studentId, schoolId),
+      ).thenAnswer((_) async => Right(healthProfile));
 
-    final result = await service.getStudentView(
-      studentId: studentId,
-      schoolId: schoolId,
-      operatorUser: operatorUser,
-    );
+      final result = await service.getStudentView(
+        studentId: studentId,
+        schoolId: schoolId,
+        operatorUser: operatorUser,
+      );
 
-    final view = result.getOrElse(() => throw StateError('expected Right'));
-    expect(view.hasClinicalAccess, true);
-    expect(view.allergies, const ['Peanuts', 'Dust']);
-    expect(view.currentMedications, const ['Inhaler']);
-    expect(view.emergencyContactPhone, '0700000000');
-  });
+      final view = result.getOrElse(() => throw StateError('expected Right'));
+      expect(view.hasClinicalAccess, true);
+      expect(view.allergies, const ['Peanuts', 'Dust']);
+      expect(view.currentMedications, const ['Inhaler']);
+      expect(view.emergencyContactPhone, '0700000000');
+    },
+  );
 }

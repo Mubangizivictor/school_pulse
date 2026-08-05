@@ -51,11 +51,9 @@ class ClassTeacherContextBloc
   ) async {
     _schoolId = event.schoolId;
     _userId = event.userId;
-    emit(state.copyWith(
-      isLoading: true,
-      clearError: true,
-      clearUnavailable: true,
-    ));
+    emit(
+      state.copyWith(isLoading: true, clearError: true, clearUnavailable: true),
+    );
 
     await _load(emit, forceRefresh: event.forceRefresh);
     _listenForAssignmentChanges();
@@ -80,13 +78,15 @@ class ClassTeacherContextBloc
     final schoolId = _schoolId!;
     final userId = _userId!;
 
-    final period = await calendarService.getCurrentPeriod();
+    final period = await calendarService.getCurrentPeriod(schoolId);
     if (!period.hasYear) {
-      emit(state.copyWith(
-        isLoading: false,
-        unavailableReason: ClassContextUnavailableReason.noAcademicYear,
-        clearActive: true,
-      ));
+      emit(
+        state.copyWith(
+          isLoading: false,
+          unavailableReason: ClassContextUnavailableReason.noAcademicYear,
+          clearActive: true,
+        ),
+      );
       return;
     }
 
@@ -106,14 +106,16 @@ class ClassTeacherContextBloc
     if (shared != null &&
         shared.isClassTeacher &&
         shared.assignmentStatus == AssignmentStatus.active) {
-      emit(state.copyWith(
-        isLoading: false,
-        active: shared,
-        available: allAssignments,
-        hasCurrentTerm: period.hasTerm,
-        clearUnavailable: true,
-        clearError: true,
-      ));
+      emit(
+        state.copyWith(
+          isLoading: false,
+          active: shared,
+          available: allAssignments,
+          hasCurrentTerm: period.hasTerm,
+          clearUnavailable: true,
+          clearError: true,
+        ),
+      );
       return;
     }
 
@@ -124,24 +126,28 @@ class ClassTeacherContextBloc
     );
 
     await activeResult.fold(
-      (failure) async => emit(state.copyWith(
-        isLoading: false,
-        available: allAssignments,
-        errorMessage: _messageFor(failure),
-        unavailableReason: ClassContextUnavailableReason.loadFailed,
-      )),
+      (failure) async => emit(
+        state.copyWith(
+          isLoading: false,
+          available: allAssignments,
+          errorMessage: _messageFor(failure),
+          unavailableReason: ClassContextUnavailableReason.loadFailed,
+        ),
+      ),
       (assignment) async {
         if (assignment == null) {
           // No *valid* class row. Distinguish "never had one" from "had one
           // that an admin suspended or that ran out", because the teacher's
           // next step differs and the approved UI says so.
-          emit(state.copyWith(
-            isLoading: false,
-            available: allAssignments,
-            unavailableReason: _explainMissingClass(allAssignments),
-            hasCurrentTerm: period.hasTerm,
-            clearActive: true,
-          ));
+          emit(
+            state.copyWith(
+              isLoading: false,
+              available: allAssignments,
+              unavailableReason: _explainMissingClass(allAssignments),
+              hasCurrentTerm: period.hasTerm,
+              clearActive: true,
+            ),
+          );
           return;
         }
 
@@ -154,21 +160,25 @@ class ClassTeacherContextBloc
         );
 
         switched.fold(
-          (failure) => emit(state.copyWith(
-            isLoading: false,
-            available: allAssignments,
-            errorMessage: _messageFor(failure),
-            unavailableReason: ClassContextUnavailableReason.loadFailed,
-            clearActive: true,
-          )),
-          (context) => emit(state.copyWith(
-            isLoading: false,
-            active: context,
-            available: allAssignments,
-            hasCurrentTerm: period.hasTerm,
-            clearUnavailable: true,
-            clearError: true,
-          )),
+          (failure) => emit(
+            state.copyWith(
+              isLoading: false,
+              available: allAssignments,
+              errorMessage: _messageFor(failure),
+              unavailableReason: ClassContextUnavailableReason.loadFailed,
+              clearActive: true,
+            ),
+          ),
+          (context) => emit(
+            state.copyWith(
+              isLoading: false,
+              active: context,
+              available: allAssignments,
+              hasCurrentTerm: period.hasTerm,
+              clearUnavailable: true,
+              clearError: true,
+            ),
+          ),
         );
       },
     );
@@ -195,7 +205,12 @@ class ClassTeacherContextBloc
         // Refused - the assignment is gone or suspended since the switcher was
         // drawn. Keep the current class in effect and reload so the stale row
         // disappears from the list.
-        emit(state.copyWith(isSwitching: false, errorMessage: _messageFor(failure)));
+        emit(
+          state.copyWith(
+            isSwitching: false,
+            errorMessage: _messageFor(failure),
+          ),
+        );
         add(const ClassContextAssignmentsChanged());
       },
       (context) async {
@@ -209,23 +224,27 @@ class ClassTeacherContextBloc
           // The teacher chose a responsibility this panel does not serve.
           // Drop the class context so nothing class-scoped survives the
           // switch, and let the router open the right panel.
-          emit(state.copyWith(
-            isSwitching: false,
-            available: available,
-            handOffTo: context.roleType,
-            clearActive: true,
-            clearError: true,
-          ));
+          emit(
+            state.copyWith(
+              isSwitching: false,
+              available: available,
+              handOffTo: context.roleType,
+              clearActive: true,
+              clearError: true,
+            ),
+          );
           return;
         }
 
-        emit(state.copyWith(
-          isSwitching: false,
-          active: context,
-          available: available,
-          clearUnavailable: true,
-          clearError: true,
-        ));
+        emit(
+          state.copyWith(
+            isSwitching: false,
+            active: context,
+            available: available,
+            clearUnavailable: true,
+            clearError: true,
+          ),
+        );
       },
     );
   }
@@ -238,12 +257,14 @@ class ClassTeacherContextBloc
 
     final result = await responsibilityService.revalidate();
     result.fold(
-      (failure) => emit(state.copyWith(
-        errorMessage: _messageFor(failure),
-        unavailableReason: failure is AssignmentInvalidFailure
-            ? ClassContextUnavailableReason.assignmentSuspended
-            : null,
-      )),
+      (failure) => emit(
+        state.copyWith(
+          errorMessage: _messageFor(failure),
+          unavailableReason: failure is AssignmentInvalidFailure
+              ? ClassContextUnavailableReason.assignmentSuspended
+              : null,
+        ),
+      ),
       // Permissions are re-read here too: an admin may have narrowed the
       // scope without ending the assignment, and open screens must see that.
       (context) => emit(state.copyWith(active: context, clearError: true)),
@@ -290,9 +311,11 @@ class ClassTeacherContextBloc
     if (classRows.any((a) => a.status == AssignmentStatus.suspended)) {
       return ClassContextUnavailableReason.assignmentSuspended;
     }
-    if (classRows.any((a) =>
-        a.status == AssignmentStatus.expired ||
-        (a.status == AssignmentStatus.active && !a.isCurrentlyValid()))) {
+    if (classRows.any(
+      (a) =>
+          a.status == AssignmentStatus.expired ||
+          (a.status == AssignmentStatus.active && !a.isCurrentlyValid()),
+    )) {
       return ClassContextUnavailableReason.assignmentExpired;
     }
     return ClassContextUnavailableReason.noClassAssignment;
@@ -309,22 +332,22 @@ class ClassTeacherContextBloc
     _assignmentWatch = assignmentRepository
         .watchAssignments(schoolId: schoolId, userId: userId)
         .listen(
-      (_) => add(const ClassContextAssignmentsChanged()),
-      // A dropped listener must not break the panel; the revalidate before
-      // every sensitive write still catches revocations.
-      onError: (_) {},
-    );
+          (_) => add(const ClassContextAssignmentsChanged()),
+          // A dropped listener must not break the panel; the revalidate before
+          // every sensitive write still catches revocations.
+          onError: (_) {},
+        );
   }
 
   String _messageFor(Failure failure) => switch (failure) {
-        AssignmentInvalidFailure() => failure.message,
-        PermissionDeniedFailure() => failure.message,
-        NetworkFailure() => 'You are offline. Showing your saved class.',
-        CacheFailure() => 'Could not read your saved class.',
-        // Raw Firestore text never reaches the user - it leaks document paths
-        // and internal ids.
-        _ => 'Could not load your class. Pull down to retry.',
-      };
+    AssignmentInvalidFailure() => failure.message,
+    PermissionDeniedFailure() => failure.message,
+    NetworkFailure() => 'You are offline. Showing your saved class.',
+    CacheFailure() => 'Could not read your saved class.',
+    // Raw Firestore text never reaches the user - it leaks document paths
+    // and internal ids.
+    _ => 'Could not load your class. Pull down to retry.',
+  };
 
   @override
   Future<void> close() {

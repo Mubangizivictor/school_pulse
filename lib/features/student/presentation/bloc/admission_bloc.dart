@@ -29,16 +29,15 @@ class AdmissionBloc extends Bloc<AdmissionEvent, AdmissionState> {
       event.application.studentName,
       event.application.dateOfBirth,
     );
-    result.fold(
-      (failure) => emit(AdmissionError(failure.message)),
-      (candidates) {
-        if (candidates.isEmpty) {
-          add(SubmitApplicationRequested(event.application));
-        } else {
-          emit(DuplicatesFound(candidates, event.application));
-        }
-      },
-    );
+    result.fold((failure) => emit(AdmissionError(failure.message)), (
+      candidates,
+    ) {
+      if (candidates.isEmpty) {
+        add(SubmitApplicationRequested(event.application));
+      } else {
+        emit(DuplicatesFound(candidates, event.application));
+      }
+    });
   }
 
   Future<void> _onLoadApplications(
@@ -46,7 +45,9 @@ class AdmissionBloc extends Bloc<AdmissionEvent, AdmissionState> {
     Emitter<AdmissionState> emit,
   ) async {
     emit(AdmissionLoading());
-    final result = await admissionService.getPendingApplications(event.schoolId);
+    final result = await admissionService.getPendingApplications(
+      event.schoolId,
+    );
     result.fold(
       (failure) => emit(AdmissionError(failure.message)),
       (applications) => emit(AdmissionApplicationsLoaded(applications)),
@@ -76,9 +77,11 @@ class AdmissionBloc extends Bloc<AdmissionEvent, AdmissionState> {
     );
     result.fold(
       (failure) => emit(AdmissionError(failure.message)),
-      (_) => emit(AdmissionActionSuccess(
-        event.approve ? 'Application approved' : 'Application rejected',
-      )),
+      (_) => emit(
+        AdmissionActionSuccess(
+          event.approve ? 'Application approved' : 'Application rejected',
+        ),
+      ),
     );
   }
 
@@ -93,7 +96,11 @@ class AdmissionBloc extends Bloc<AdmissionEvent, AdmissionState> {
     final allowed = permissionResult.fold((failure) => false, (value) => value);
 
     if (!allowed) {
-      emit(const AdmissionActionDenied('You do not have permission to enroll students.'));
+      emit(
+        const AdmissionActionDenied(
+          'You do not have permission to enroll students.',
+        ),
+      );
       return;
     }
 
@@ -109,7 +116,8 @@ class AdmissionBloc extends Bloc<AdmissionEvent, AdmissionState> {
     );
     result.fold(
       (failure) => emit(AdmissionError(failure.message)),
-      (studentId) => emit(AdmissionEnrollSuccess('Student enrolled', studentId)),
+      (studentId) =>
+          emit(AdmissionEnrollSuccess('Student enrolled', studentId)),
     );
   }
 }

@@ -40,7 +40,12 @@ class AcademicPlacementUpdated extends EnrollmentWizardEvent {
     this.previousSchool,
   });
   @override
-  List<Object?> get props => [targetClassId, targetStreamId, academicYearId, previousSchool];
+  List<Object?> get props => [
+    targetClassId,
+    targetStreamId,
+    academicYearId,
+    previousSchool,
+  ];
 }
 
 class ParentInfoUpdated extends EnrollmentWizardEvent {

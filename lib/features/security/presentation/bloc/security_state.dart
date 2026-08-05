@@ -77,16 +77,16 @@ class SecurityState extends Equatable {
 
   @override
   List<Object?> get props => [
-        status,
-        errorMessage,
-        stats,
-        gates,
-        studentMovements,
-        staffMovements,
-        incidents,
-        activeEmergencies,
-        patrols,
-        lostAndFound,
-        feedback,
-      ];
+    status,
+    errorMessage,
+    stats,
+    gates,
+    studentMovements,
+    staffMovements,
+    incidents,
+    activeEmergencies,
+    patrols,
+    lostAndFound,
+    feedback,
+  ];
 }

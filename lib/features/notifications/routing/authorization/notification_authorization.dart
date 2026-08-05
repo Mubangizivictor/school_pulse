@@ -41,8 +41,7 @@ class NotificationAuthorization {
     UserRole.hrOfficer,
   };
 
-  static bool isStaff(UserEntity user) =>
-      user.roles.any(_staffRoles.contains);
+  static bool isStaff(UserEntity user) => user.roles.any(_staffRoles.contains);
 
   static bool isParent(UserEntity user) => user.roles.contains(UserRole.parent);
 
@@ -51,13 +50,15 @@ class NotificationAuthorization {
 
   /// School leadership and admin - the roles permitted to see cross-student
   /// welfare, discipline and medical detail.
-  static bool isLeadership(UserEntity user) => user.roles.any(const {
-        UserRole.director,
-        UserRole.headTeacher,
-        UserRole.deputyHead,
-        UserRole.deanOfStudies,
-        UserRole.schoolAdmin,
-      }.contains);
+  static bool isLeadership(UserEntity user) => user.roles.any(
+    const {
+      UserRole.director,
+      UserRole.headTeacher,
+      UserRole.deputyHead,
+      UserRole.deanOfStudies,
+      UserRole.schoolAdmin,
+    }.contains,
+  );
 
   /// Whether [user] is entitled to see data about [studentId].
   ///

@@ -41,7 +41,9 @@ class BiometricDevice {
         orElse: () => BiometricDeviceType.usb,
       ),
       isActive: map['isActive'] ?? true,
-      lastSeen: map['lastSeen'] != null ? DateTime.parse(map['lastSeen']) : null,
+      lastSeen: map['lastSeen'] != null
+          ? DateTime.parse(map['lastSeen'])
+          : null,
       serialNumber: map['serialNumber'],
     );
   }

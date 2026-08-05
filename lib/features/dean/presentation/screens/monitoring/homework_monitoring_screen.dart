@@ -13,11 +13,10 @@ class HomeworkMonitoringScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => sl<DeanBloc>()..add(const HomeworkRecordsRequested()),
+      create: (context) =>
+          sl<DeanBloc>()..add(const HomeworkRecordsRequested()),
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Homework Monitoring'),
-        ),
+        appBar: AppBar(title: const Text('Homework Monitoring')),
         body: BlocBuilder<DeanBloc, DeanState>(
           builder: (context, state) {
             if (state is DeanLoading) {
@@ -34,21 +33,34 @@ class HomeworkMonitoringScreen extends StatelessWidget {
                   return AppCard(
                     margin: const EdgeInsets.only(bottom: 12),
                     child: ListTile(
-                      title: Text(record.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      title: Text(
+                        record.title,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('${record.subjectName} • ${record.className}'),
                           Text('Teacher: ${record.teacherName}'),
-                          Text('Due: ${DateFormat('MMM dd, yyyy').format(record.dueDate)}'),
+                          Text(
+                            'Due: ${DateFormat('MMM dd, yyyy').format(record.dueDate)}',
+                          ),
                         ],
                       ),
                       trailing: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text('${(record.submissionRate * 100).toInt()}%',
-                              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
-                          const Text('Submissions', style: TextStyle(fontSize: 10)),
+                          Text(
+                            '${(record.submissionRate * 100).toInt()}%',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue,
+                            ),
+                          ),
+                          const Text(
+                            'Submissions',
+                            style: TextStyle(fontSize: 10),
+                          ),
                         ],
                       ),
                       isThreeLine: true,

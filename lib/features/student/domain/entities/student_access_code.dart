@@ -33,15 +33,15 @@ class StudentAccessCode extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        studentCode,
-        schoolId,
-        studentId,
-        studentName,
-        phoneNumber,
-        pin,
-        mustChangePin,
-        isActive,
-        deactivationReason,
-      ];
+    id,
+    studentCode,
+    schoolId,
+    studentId,
+    studentName,
+    phoneNumber,
+    pin,
+    mustChangePin,
+    isActive,
+    deactivationReason,
+  ];
 }

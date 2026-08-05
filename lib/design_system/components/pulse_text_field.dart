@@ -67,7 +67,9 @@ class _PulseTextFieldState extends State<PulseTextField> {
               Text(
                 widget.label!,
                 style: AppTypography.labelLarge.copyWith(
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -75,7 +77,10 @@ class _PulseTextFieldState extends State<PulseTextField> {
                 const SizedBox(width: 4),
                 Text(
                   '*',
-                  style: TextStyle(color: AppColors.deepOrange, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: AppColors.deepOrange,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ],
@@ -96,15 +101,19 @@ class _PulseTextFieldState extends State<PulseTextField> {
             onTap: widget.onTap,
             textCapitalization: widget.textCapitalization,
             style: AppTypography.bodyLarge.copyWith(
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              color: isDark
+                  ? AppColors.textPrimaryDark
+                  : AppColors.textPrimaryLight,
             ),
             decoration: InputDecoration(
               hintText: widget.hint,
               helperText: widget.helperText,
               errorText: widget.errorText,
               filled: true,
-              fillColor: isDark 
-                  ? (_isFocused ? AppColors.elevatedSurfaceDark : AppColors.surfaceDark) 
+              fillColor: isDark
+                  ? (_isFocused
+                        ? AppColors.elevatedSurfaceDark
+                        : AppColors.surfaceDark)
                   : (_isFocused ? AppColors.pureWhite : AppColors.bgLight),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.xl,
@@ -113,25 +122,38 @@ class _PulseTextFieldState extends State<PulseTextField> {
               prefixIcon: widget.prefixIcon != null
                   ? Icon(
                       widget.prefixIcon,
-                      color: _isFocused ? AppColors.electricBlue : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+                      color: _isFocused
+                          ? AppColors.electricBlue
+                          : (isDark
+                                ? AppColors.textMutedDark
+                                : AppColors.textMutedLight),
                       size: 22,
                     )
                   : null,
               suffixIcon: widget.isPassword
                   ? IconButton(
                       icon: Icon(
-                        _obscureText ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                        color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                        _obscureText
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        color: isDark
+                            ? AppColors.textMutedDark
+                            : AppColors.textMutedLight,
                         size: 22,
                       ),
-                      onPressed: () => setState(() => _obscureText = !_obscureText),
+                      onPressed: () =>
+                          setState(() => _obscureText = !_obscureText),
                     )
                   : widget.suffixIcon,
               border: _buildBorder(isDark),
               enabledBorder: _buildBorder(isDark),
               focusedBorder: _buildBorder(isDark, isFocused: true),
               errorBorder: _buildBorder(isDark, isError: true),
-              focusedErrorBorder: _buildBorder(isDark, isError: true, isFocused: true),
+              focusedErrorBorder: _buildBorder(
+                isDark,
+                isError: true,
+                isFocused: true,
+              ),
               disabledBorder: _buildBorder(isDark, isDisabled: true),
             ),
           ),
@@ -159,10 +181,7 @@ class _PulseTextFieldState extends State<PulseTextField> {
 
     return OutlineInputBorder(
       borderRadius: AppRadius.medium,
-      borderSide: BorderSide(
-        color: borderColor,
-        width: isFocused ? 2.0 : 1.0,
-      ),
+      borderSide: BorderSide(color: borderColor, width: isFocused ? 2.0 : 1.0),
     );
   }
 }

@@ -11,10 +11,8 @@ class SystemConfigBloc extends Bloc<SystemConfigEvent, SystemConfigState> {
   final SystemConfigRepository repository;
   final BrandingBloc brandingBloc;
 
-  SystemConfigBloc({
-    required this.repository,
-    required this.brandingBloc,
-  }) : super(SystemConfigInitial()) {
+  SystemConfigBloc({required this.repository, required this.brandingBloc})
+    : super(SystemConfigInitial()) {
     on<LoadSystemConfig>((event, emit) async {
       emit(SystemConfigLoading());
       try {
@@ -45,7 +43,8 @@ class SystemConfigBloc extends Bloc<SystemConfigEvent, SystemConfigState> {
           _updateBrandingFromConfig(config);
           return SystemConfigLoaded(config);
         },
-        onError: (e, stackTrace) => SystemConfigError(e.toString(), config: _getCurrentConfig()),
+        onError: (e, stackTrace) =>
+            SystemConfigError(e.toString(), config: _getCurrentConfig()),
       );
     });
 
@@ -54,7 +53,7 @@ class SystemConfigBloc extends Bloc<SystemConfigEvent, SystemConfigState> {
       if (currentConfig != null) {
         emit(SystemConfigLogoUploading(currentConfig));
       }
-      
+
       try {
         final logoUrl = await repository.uploadLogo(event.imageFile);
         final latestConfig = await repository.getConfig();
@@ -69,15 +68,20 @@ class SystemConfigBloc extends Bloc<SystemConfigEvent, SystemConfigState> {
   }
 
   void _updateBrandingFromConfig(SystemConfig config) {
-    brandingBloc.add(BrandingUpdateRequested(SchoolBranding(
-      schoolId: 'system', // Consistent with the collection('config').doc('system') logic
-      schoolName: config.schoolName,
-      schoolMotto: config.schoolMotto,
-      logoUrl: config.schoolLogoUrl,
-      primaryColor: config.primaryColor,
-      secondaryColor: config.secondaryColor,
-      version: 1,
-    )));
+    brandingBloc.add(
+      BrandingUpdateRequested(
+        SchoolBranding(
+          schoolId:
+              'system', // Consistent with the collection('config').doc('system') logic
+          schoolName: config.schoolName,
+          schoolMotto: config.schoolMotto,
+          logoUrl: config.schoolLogoUrl,
+          primaryColor: config.primaryColor,
+          secondaryColor: config.secondaryColor,
+          version: 1,
+        ),
+      ),
+    );
   }
 
   SystemConfig? _getCurrentConfig() {

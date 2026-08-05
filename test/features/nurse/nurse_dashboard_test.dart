@@ -166,8 +166,11 @@ void main() {
           studentRepository.getAllAccessCodes(schoolId: any(named: 'schoolId')),
     ).thenAnswer((_) async => const Right([]));
     when(
-      () => authRepository.getStaffMembers(),
+      () => authRepository.getStaffMembers(any()),
     ).thenAnswer((_) async => Right(staff));
+    when(
+      () => authRepository.getCurrentUser(),
+    ).thenAnswer((_) async => Right(nurse));
 
     stubAuth(nurse);
     stubHealth(emptyDashboard);
@@ -235,7 +238,10 @@ void main() {
     expect(find.text('Visits Today'), findsOneWidget);
     expect(find.text("Today's Emergencies"), findsOneWidget);
     expect(find.text('Fell during break time'), findsOneWidget);
-    expect(find.text('Recent Clinic Visits', skipOffstage: false), findsOneWidget);
+    expect(
+      find.text('Recent Clinic Visits', skipOffstage: false),
+      findsOneWidget,
+    );
     expect(find.text('Headache', skipOffstage: false), findsOneWidget);
     expect(find.text('Inventory Alerts', skipOffstage: false), findsOneWidget);
     expect(find.text('Paracetamol', skipOffstage: false), findsOneWidget);

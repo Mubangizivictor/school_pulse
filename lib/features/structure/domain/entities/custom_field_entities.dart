@@ -5,6 +5,7 @@ import 'package:equatable/equatable.dart';
 /// custom-field values is left to whichever module owns that record.
 class CustomFieldDef extends Equatable {
   final String id;
+  final String schoolId;
   final String appliesTo;
   final String fieldName;
   final String fieldType;
@@ -14,6 +15,7 @@ class CustomFieldDef extends Equatable {
 
   const CustomFieldDef({
     required this.id,
+    required this.schoolId,
     required this.appliesTo,
     required this.fieldName,
     this.fieldType = 'text',
@@ -24,6 +26,7 @@ class CustomFieldDef extends Equatable {
 
   CustomFieldDef copyWith({
     String? id,
+    String? schoolId,
     String? appliesTo,
     String? fieldName,
     String? fieldType,
@@ -33,6 +36,7 @@ class CustomFieldDef extends Equatable {
   }) {
     return CustomFieldDef(
       id: id ?? this.id,
+      schoolId: schoolId ?? this.schoolId,
       appliesTo: appliesTo ?? this.appliesTo,
       fieldName: fieldName ?? this.fieldName,
       fieldType: fieldType ?? this.fieldType,
@@ -43,6 +47,14 @@ class CustomFieldDef extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [id, appliesTo, fieldName, fieldType, options, isRequired, isActive];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    appliesTo,
+    fieldName,
+    fieldType,
+    options,
+    isRequired,
+    isActive,
+  ];
 }

@@ -67,15 +67,23 @@ class BiometricSettings {
   }) {
     return BiometricSettings(
       enableBiometrics: enableBiometrics ?? this.enableBiometrics,
-      enableFingerprintAttendance: enableFingerprintAttendance ?? this.enableFingerprintAttendance,
-      enableGateVerification: enableGateVerification ?? this.enableGateVerification,
-      enableLibraryVerification: enableLibraryVerification ?? this.enableLibraryVerification,
-      enableExamVerification: enableExamVerification ?? this.enableExamVerification,
-      enableStaffAttendance: enableStaffAttendance ?? this.enableStaffAttendance,
-      enableStudentAttendance: enableStudentAttendance ?? this.enableStudentAttendance,
+      enableFingerprintAttendance:
+          enableFingerprintAttendance ?? this.enableFingerprintAttendance,
+      enableGateVerification:
+          enableGateVerification ?? this.enableGateVerification,
+      enableLibraryVerification:
+          enableLibraryVerification ?? this.enableLibraryVerification,
+      enableExamVerification:
+          enableExamVerification ?? this.enableExamVerification,
+      enableStaffAttendance:
+          enableStaffAttendance ?? this.enableStaffAttendance,
+      enableStudentAttendance:
+          enableStudentAttendance ?? this.enableStudentAttendance,
       allowQrFallback: allowQrFallback ?? this.allowQrFallback,
-      requireFingerprintAndQr: requireFingerprintAndQr ?? this.requireFingerprintAndQr,
-      offlineVerificationEnabled: offlineVerificationEnabled ?? this.offlineVerificationEnabled,
+      requireFingerprintAndQr:
+          requireFingerprintAndQr ?? this.requireFingerprintAndQr,
+      offlineVerificationEnabled:
+          offlineVerificationEnabled ?? this.offlineVerificationEnabled,
     );
   }
 }

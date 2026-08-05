@@ -6,6 +6,7 @@ import 'package:equatable/equatable.dart';
 /// structures; this is not a replacement for it.
 class FeeCategory extends Equatable {
   final String id;
+  final String schoolId;
   final String name;
   final String code;
   final String description;
@@ -14,6 +15,7 @@ class FeeCategory extends Equatable {
 
   const FeeCategory({
     required this.id,
+    required this.schoolId,
     required this.name,
     this.code = '',
     this.description = '',
@@ -23,6 +25,7 @@ class FeeCategory extends Equatable {
 
   FeeCategory copyWith({
     String? id,
+    String? schoolId,
     String? name,
     String? code,
     String? description,
@@ -31,6 +34,7 @@ class FeeCategory extends Equatable {
   }) {
     return FeeCategory(
       id: id ?? this.id,
+      schoolId: schoolId ?? this.schoolId,
       name: name ?? this.name,
       code: code ?? this.code,
       description: description ?? this.description,
@@ -40,5 +44,13 @@ class FeeCategory extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, name, code, description, isMandatory, isActive];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    name,
+    code,
+    description,
+    isMandatory,
+    isActive,
+  ];
 }

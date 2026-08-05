@@ -119,10 +119,7 @@ void main() {
     });
 
     test('names the actual maximum in the message', () {
-      expect(
-        MarkRejection.aboveMaximum.messageFor(40),
-        contains('40'),
-      );
+      expect(MarkRejection.aboveMaximum.messageFor(40), contains('40'));
     });
 
     test('rejects a student who is not enrolled in the subject', () {
@@ -169,10 +166,7 @@ void main() {
 
     test('rejects scored with no number', () {
       expect(
-        _policy.validateEntry(
-          entry: _entry('s1'),
-          component: _component,
-        ),
+        _policy.validateEntry(entry: _entry('s1'), component: _component),
         MarkRejection.scoreWithoutStatus,
       );
     });
@@ -191,10 +185,14 @@ void main() {
   group('parsing typed input', () {
     test('reads a whole number', () => expect(_policy.parseScore('32'), 32));
     test('reads a decimal', () => expect(_policy.parseScore('32.5'), 32.5));
-    test('ignores surrounding space',
-        () => expect(_policy.parseScore('  18 '), 18));
-    test('treats blank as clearing the cell',
-        () => expect(_policy.parseScore('   '), isNull));
+    test(
+      'ignores surrounding space',
+      () => expect(_policy.parseScore('  18 '), 18),
+    );
+    test(
+      'treats blank as clearing the cell',
+      () => expect(_policy.parseScore('   '), isNull),
+    );
     test('refuses letters', () => expect(_policy.parseScore('abc'), isNull));
   });
 
@@ -269,40 +267,31 @@ void main() {
     });
 
     test('refuses without the submit permission', () {
-      final report = review(
-        [
-          _entry('s1', score: 30),
-          _entry('s2', score: 20),
-          _entry('s3', score: 10),
-        ],
-        context: _context(permissions: const {Permission.subjectMarksEnter}),
-      );
+      final report = review([
+        _entry('s1', score: 30),
+        _entry('s2', score: 20),
+        _entry('s3', score: 10),
+      ], context: _context(permissions: const {Permission.subjectMarksEnter}));
 
       expect(report.refusal, SubmissionRefusal.noPermission);
     });
 
     test('refuses an assessment for a subject the teacher is not on', () {
-      final report = review(
-        [
-          _entry('s1', score: 30),
-          _entry('s2', score: 20),
-          _entry('s3', score: 10),
-        ],
-        assessment: _assessment(subjectId: 'physics'),
-      );
+      final report = review([
+        _entry('s1', score: 30),
+        _entry('s2', score: 20),
+        _entry('s3', score: 10),
+      ], assessment: _assessment(subjectId: 'physics'));
 
       expect(report.refusal, SubmissionRefusal.outsideScope);
     });
 
     test('refuses an approved assessment', () {
-      final report = review(
-        [
-          _entry('s1', score: 30),
-          _entry('s2', score: 20),
-          _entry('s3', score: 10),
-        ],
-        assessment: _assessment(status: AssessmentAvailability.approved),
-      );
+      final report = review([
+        _entry('s1', score: 30),
+        _entry('s2', score: 20),
+        _entry('s3', score: 10),
+      ], assessment: _assessment(status: AssessmentAvailability.approved));
 
       expect(report.refusal, SubmissionRefusal.assessmentLocked);
     });
@@ -323,14 +312,11 @@ void main() {
     });
 
     test('accepts a returned assessment so corrections can be resubmitted', () {
-      final report = review(
-        [
-          _entry('s1', score: 30),
-          _entry('s2', score: 20),
-          _entry('s3', score: 10),
-        ],
-        assessment: _assessment(status: AssessmentAvailability.returned),
-      );
+      final report = review([
+        _entry('s1', score: 30),
+        _entry('s2', score: 20),
+        _entry('s3', score: 10),
+      ], assessment: _assessment(status: AssessmentAvailability.returned));
 
       expect(report.canSubmit, isTrue);
     });

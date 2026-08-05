@@ -28,37 +28,57 @@ class NurseStudentProjectionService {
     required String schoolId,
     required UserEntity operatorUser,
   }) async {
-    final basicAllowed = await _can(Permission.healthStudentBasicRead, operatorUser);
+    final basicAllowed = await _can(
+      Permission.healthStudentBasicRead,
+      operatorUser,
+    );
     if (!basicAllowed) {
-      return const Left(PermissionDeniedFailure('You do not have permission to view student health records.'));
+      return const Left(
+        PermissionDeniedFailure(
+          'You do not have permission to view student health records.',
+        ),
+      );
     }
 
     final studentResult = await studentRepository.getStudentById(studentId);
-    return studentResult.fold(
-      Left.new,
-      (student) async {
-        final age = _ageFrom(student.dateOfBirth);
-        final clinicalAllowed = await _can(Permission.healthStudentClinicalRead, operatorUser);
+    return studentResult.fold(Left.new, (student) async {
+      final age = _ageFrom(student.dateOfBirth);
+      final clinicalAllowed = await _can(
+        Permission.healthStudentClinicalRead,
+        operatorUser,
+      );
 
-        if (!clinicalAllowed) {
-          return Right(NurseStudentView(
+      if (!clinicalAllowed) {
+        return Right(
+          NurseStudentView(
             studentId: student.id,
             name: student.name,
             photoUrl: student.photoUrl,
             age: age,
             classId: student.classId,
             hasClinicalAccess: false,
-          ));
-        }
+          ),
+        );
+      }
 
-        final profileResult = await healthRepository.getStudentHealthProfile(studentId, schoolId);
-        final visitsResult = await healthRepository.getClinicVisits(schoolId: schoolId, studentId: studentId);
-        final recentVisitCount = visitsResult.fold((_) => null, (visits) => visits.length);
+      final profileResult = await healthRepository.getStudentHealthProfile(
+        studentId,
+        schoolId,
+      );
+      final visitsResult = await healthRepository.getClinicVisits(
+        schoolId: schoolId,
+        studentId: studentId,
+      );
+      final recentVisitCount = visitsResult.fold(
+        (_) => null,
+        (visits) => visits.length,
+      );
 
-        return profileResult.fold(
-          // No health profile on file yet isn't a permission problem -
-          // still show basic + whatever the Student record itself has.
-          (_) => Right(NurseStudentView(
+      return profileResult.fold(
+        // No health profile on file yet isn't a permission problem -
+        // still show basic + whatever the Student record itself has.
+        (_) => Right(
+          NurseStudentView(
             studentId: student.id,
             name: student.name,
             photoUrl: student.photoUrl,
@@ -66,14 +86,22 @@ class NurseStudentProjectionService {
             classId: student.classId,
             hasClinicalAccess: true,
             allergies: student.medicalInfo?.allergies ?? const [],
-            currentMedications: student.medicalInfo?.medications != null ? [student.medicalInfo!.medications!] : const [],
-            chronicIllnesses: student.medicalInfo?.chronicConditions ?? const [],
-            emergencyContactName: student.emergencyContacts.isNotEmpty ? student.emergencyContacts.first.name : null,
-            emergencyContactPhone:
-                student.emergencyContacts.isNotEmpty ? student.emergencyContacts.first.phoneNumber : null,
+            currentMedications: student.medicalInfo?.medications != null
+                ? [student.medicalInfo!.medications!]
+                : const [],
+            chronicIllnesses:
+                student.medicalInfo?.chronicConditions ?? const [],
+            emergencyContactName: student.emergencyContacts.isNotEmpty
+                ? student.emergencyContacts.first.name
+                : null,
+            emergencyContactPhone: student.emergencyContacts.isNotEmpty
+                ? student.emergencyContacts.first.phoneNumber
+                : null,
             recentClinicVisitCount: recentVisitCount,
-          )),
-          (profile) => Right(NurseStudentView(
+          ),
+        ),
+        (profile) => Right(
+          NurseStudentView(
             studentId: student.id,
             name: student.name,
             photoUrl: student.photoUrl,
@@ -86,10 +114,10 @@ class NurseStudentProjectionService {
             emergencyContactName: profile.emergencyContactName,
             emergencyContactPhone: profile.emergencyContactPhone,
             recentClinicVisitCount: recentVisitCount,
-          )),
-        );
-      },
-    );
+          ),
+        ),
+      );
+    });
   }
 
   Future<bool> _can(String permissionId, UserEntity operatorUser) async {
@@ -100,7 +128,8 @@ class NurseStudentProjectionService {
   int? _ageFrom(DateTime dateOfBirth) {
     final now = DateTime.now();
     var age = now.year - dateOfBirth.year;
-    if (now.month < dateOfBirth.month || (now.month == dateOfBirth.month && now.day < dateOfBirth.day)) {
+    if (now.month < dateOfBirth.month ||
+        (now.month == dateOfBirth.month && now.day < dateOfBirth.day)) {
       age--;
     }
     return age;

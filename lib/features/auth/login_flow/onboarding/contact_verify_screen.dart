@@ -11,19 +11,27 @@ class ContactVerifyScreen extends StatelessWidget {
   final UserEntity user;
   final VoidCallback onContinue;
 
-  const ContactVerifyScreen({super.key, required this.user, required this.onContinue});
+  const ContactVerifyScreen({
+    super.key,
+    required this.user,
+    required this.onContinue,
+  });
 
   @override
   Widget build(BuildContext context) {
     return OnboardingStepScaffold(
       title: 'Verify Your Contact',
-      subtitle: 'This is the email and phone number School Pulse will use to reach you.',
+      subtitle:
+          'This is the email and phone number School Pulse will use to reach you.',
       primaryLabel: 'Looks correct, continue',
       onPrimaryPressed: onContinue,
       child: Column(
         children: [
           OnboardingSummaryRow(label: 'Email', value: user.email),
-          OnboardingSummaryRow(label: 'Phone', value: user.phoneNumber ?? 'Not provided'),
+          OnboardingSummaryRow(
+            label: 'Phone',
+            value: user.phoneNumber ?? 'Not provided',
+          ),
         ],
       ),
     );

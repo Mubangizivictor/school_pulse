@@ -43,7 +43,8 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             return const EmptyState(
               icon: Icons.error_outline_rounded,
               title: 'Couldn\'t load appointments',
-              message: 'Something went wrong on our end. Pull to refresh or check back shortly.',
+              message:
+                  'Something went wrong on our end. Pull to refresh or check back shortly.',
             );
           }
           final appointments = snapshot.data ?? const [];
@@ -51,7 +52,8 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             return EmptyState(
               icon: Icons.event_available_outlined,
               title: 'No appointments scheduled',
-              message: 'Book a visitor meeting or staff appointment to see it here.',
+              message:
+                  'Book a visitor meeting or staff appointment to see it here.',
               ctaLabel: 'New Appointment',
               onCtaPressed: () => _showAddDialog(context),
             );
@@ -62,8 +64,10 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             separatorBuilder: (context, index) => const SizedBox(height: 12),
             itemBuilder: (context, index) => _AppointmentTile(
               appointment: appointments[index],
-              onUpdateStatus: (status) =>
-                  _repository.updateAppointmentStatus(appointments[index].id, status),
+              onUpdateStatus: (status) => _repository.updateAppointmentStatus(
+                appointments[index].id,
+                status,
+              ),
             ),
           );
         },
@@ -89,7 +93,9 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             children: [
               TextField(
                 controller: nameController,
-                decoration: const InputDecoration(labelText: 'Visitor / Guest Name'),
+                decoration: const InputDecoration(
+                  labelText: 'Visitor / Guest Name',
+                ),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -113,29 +119,47 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                   );
                   if (time == null) return;
                   setDialogState(() {
-                    scheduled = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+                    scheduled = DateTime(
+                      date.year,
+                      date.month,
+                      date.day,
+                      time.hour,
+                      time.minute,
+                    );
                   });
                 },
                 child: InputDecorator(
-                  decoration: const InputDecoration(labelText: 'Scheduled Time', suffixIcon: Icon(Icons.calendar_today)),
-                  child: Text(DateFormat('MMM dd, yyyy • hh:mm a').format(scheduled)),
+                  decoration: const InputDecoration(
+                    labelText: 'Scheduled Time',
+                    suffixIcon: Icon(Icons.calendar_today),
+                  ),
+                  child: Text(
+                    DateFormat('MMM dd, yyyy • hh:mm a').format(scheduled),
+                  ),
                 ),
               ),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
             FilledButton(
               onPressed: () async {
                 if (nameController.text.trim().isEmpty) return;
-                await _repository.createAppointment(Appointment(
-                  id: '',
-                  visitorName: nameController.text.trim(),
-                  purpose: purposeController.text.trim().isEmpty ? 'General visit' : purposeController.text.trim(),
-                  scheduledTime: scheduled,
-                  status: 'pending',
-                  hostStaffId: hostId,
-                ));
+                await _repository.createAppointment(
+                  Appointment(
+                    id: '',
+                    visitorName: nameController.text.trim(),
+                    purpose: purposeController.text.trim().isEmpty
+                        ? 'General visit'
+                        : purposeController.text.trim(),
+                    scheduledTime: scheduled,
+                    status: 'pending',
+                    hostStaffId: hostId,
+                  ),
+                );
                 if (dialogContext.mounted) Navigator.pop(dialogContext);
               },
               child: const Text('Schedule'),
@@ -151,7 +175,10 @@ class _AppointmentTile extends StatelessWidget {
   final Appointment appointment;
   final ValueChanged<String> onUpdateStatus;
 
-  const _AppointmentTile({required this.appointment, required this.onUpdateStatus});
+  const _AppointmentTile({
+    required this.appointment,
+    required this.onUpdateStatus,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -169,18 +196,30 @@ class _AppointmentTile extends StatelessWidget {
           Container(
             width: 4,
             height: 44,
-            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(appointment.visitorName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                Text(
+                  appointment.visitorName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   '${appointment.purpose} • ${DateFormat('MMM dd, hh:mm a').format(appointment.scheduledTime)}',
-                  style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -189,15 +228,22 @@ class _AppointmentTile extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           StatusBadge(label: label, color: color),
-          if (appointment.status == 'pending' || appointment.status == 'checked_in')
+          if (appointment.status == 'pending' ||
+              appointment.status == 'checked_in')
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert, size: 18),
               onSelected: onUpdateStatus,
               itemBuilder: (context) => [
                 if (appointment.status == 'pending')
-                  const PopupMenuItem(value: 'checked_in', child: Text('Check In')),
+                  const PopupMenuItem(
+                    value: 'checked_in',
+                    child: Text('Check In'),
+                  ),
                 if (appointment.status == 'checked_in')
-                  const PopupMenuItem(value: 'completed', child: Text('Mark Completed')),
+                  const PopupMenuItem(
+                    value: 'completed',
+                    child: Text('Mark Completed'),
+                  ),
                 const PopupMenuItem(value: 'cancelled', child: Text('Cancel')),
               ],
             ),

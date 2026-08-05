@@ -51,12 +51,34 @@ class AttachmentViewerScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayAttachments = attachments ?? [
-      NotificationAttachment(name: 'Exam_Timetable_Term2_2025.pdf', size: '2.4 MB', type: 'PDF', url: ''),
-      NotificationAttachment(name: 'Bus_Route_Updates_May.xlsx', size: '512 KB', type: 'XLSX', url: ''),
-      NotificationAttachment(name: 'Sports_Day_Poster.jpg', size: '1.8 MB', type: 'JPG', url: ''),
-      NotificationAttachment(name: 'Fee_Structure_2025.docx', size: '320 KB', type: 'DOCX', url: ''),
-    ];
+    final displayAttachments =
+        attachments ??
+        [
+          NotificationAttachment(
+            name: 'Exam_Timetable_Term2_2025.pdf',
+            size: '2.4 MB',
+            type: 'PDF',
+            url: '',
+          ),
+          NotificationAttachment(
+            name: 'Bus_Route_Updates_May.xlsx',
+            size: '512 KB',
+            type: 'XLSX',
+            url: '',
+          ),
+          NotificationAttachment(
+            name: 'Sports_Day_Poster.jpg',
+            size: '1.8 MB',
+            type: 'JPG',
+            url: '',
+          ),
+          NotificationAttachment(
+            name: 'Fee_Structure_2025.docx',
+            size: '320 KB',
+            type: 'DOCX',
+            url: '',
+          ),
+        ];
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
@@ -79,7 +101,7 @@ class AttachmentViewerScreen extends StatelessWidget {
                 final attachment = displayAttachments[index];
                 Color color;
                 IconData icon;
-                
+
                 switch (attachment.type.toUpperCase()) {
                   case 'PDF':
                     color = Colors.red;
@@ -100,7 +122,7 @@ class AttachmentViewerScreen extends StatelessWidget {
                     color = Colors.purple;
                     icon = Icons.description;
                 }
-                
+
                 return _buildAttachmentItem(
                   attachment.name,
                   '${attachment.size} • ${attachment.type}',
@@ -136,7 +158,13 @@ class AttachmentViewerScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAttachmentItem(String name, String details, Color color, IconData icon, String url) {
+  Widget _buildAttachmentItem(
+    String name,
+    String details,
+    Color color,
+    IconData icon,
+    String url,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -159,8 +187,17 @@ class AttachmentViewerScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
-                Text(details, style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                Text(
+                  name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  details,
+                  style: const TextStyle(color: Colors.white60, fontSize: 12),
+                ),
               ],
             ),
           ),
@@ -168,14 +205,11 @@ class AttachmentViewerScreen extends StatelessWidget {
             builder: (buttonContext) => IconButton(
               icon: const Icon(Icons.download, color: Colors.white70),
               onPressed: () async {
-                final error = await _downloadAndOpen(
-                  url: url,
-                  fileName: name,
-                );
+                final error = await _downloadAndOpen(url: url, fileName: name);
                 if (error != null && buttonContext.mounted) {
-                  ScaffoldMessenger.of(buttonContext).showSnackBar(
-                    SnackBar(content: Text(error)),
-                  );
+                  ScaffoldMessenger.of(
+                    buttonContext,
+                  ).showSnackBar(SnackBar(content: Text(error)));
                 }
               },
             ),
@@ -201,7 +235,10 @@ class ImageViewerScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => context.pop(),
         ),
-        title: const Text('Image Viewer', style: TextStyle(color: Colors.white, fontSize: 14)),
+        title: const Text(
+          'Image Viewer',
+          style: TextStyle(color: Colors.white, fontSize: 14),
+        ),
         centerTitle: true,
         actions: [
           Builder(
@@ -213,9 +250,9 @@ class ImageViewerScreen extends StatelessWidget {
                   fileName: 'notification_image.jpg',
                 );
                 if (error != null && buttonContext.mounted) {
-                  ScaffoldMessenger.of(buttonContext).showSnackBar(
-                    SnackBar(content: Text(error)),
-                  );
+                  ScaffoldMessenger.of(
+                    buttonContext,
+                  ).showSnackBar(SnackBar(content: Text(error)));
                 }
               },
             ),
@@ -226,9 +263,14 @@ class ImageViewerScreen extends StatelessWidget {
         children: [
           Center(
             child: Image.network(
-              imageUrl ?? 'https://images.unsplash.com/photo-1577891729319-86adcd962860?q=80&w=2069&auto=format&fit=crop',
+              imageUrl ??
+                  'https://images.unsplash.com/photo-1577891729319-86adcd962860?q=80&w=2069&auto=format&fit=crop',
               fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.white54, size: 64),
+              errorBuilder: (context, error, stackTrace) => const Icon(
+                Icons.broken_image,
+                color: Colors.white54,
+                size: 64,
+              ),
             ),
           ),
           Positioned(

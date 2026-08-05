@@ -6,10 +6,12 @@ class TeacherAnnouncementsScreen extends StatefulWidget {
   const TeacherAnnouncementsScreen({super.key});
 
   @override
-  State<TeacherAnnouncementsScreen> createState() => _TeacherAnnouncementsScreenState();
+  State<TeacherAnnouncementsScreen> createState() =>
+      _TeacherAnnouncementsScreenState();
 }
 
-class _TeacherAnnouncementsScreenState extends State<TeacherAnnouncementsScreen> with SingleTickerProviderStateMixin {
+class _TeacherAnnouncementsScreenState extends State<TeacherAnnouncementsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -68,7 +70,8 @@ class _TeacherAnnouncementsScreenState extends State<TeacherAnnouncementsScreen>
           icon: Icons.groups_rounded,
           iconColor: Colors.blue,
           title: 'School Assembly',
-          description: 'There will be a school assembly on 26th May 2024 at 10:00 AM.',
+          description:
+              'There will be a school assembly on 26th May 2024 at 10:00 AM.',
           time: '9:30 AM',
         ),
         const SizedBox(height: 20),
@@ -77,7 +80,8 @@ class _TeacherAnnouncementsScreenState extends State<TeacherAnnouncementsScreen>
           icon: Icons.people_outline_rounded,
           iconColor: Colors.orange,
           title: "Parents' Meeting",
-          description: "Parents' meeting for P3 East on 22nd May 2024 at 2:00 PM.",
+          description:
+              "Parents' meeting for P3 East on 22nd May 2024 at 2:00 PM.",
           time: 'Yesterday',
         ),
         const SizedBox(height: 20),
@@ -160,14 +164,20 @@ class _AnnouncementCard extends StatelessWidget {
                     ),
                     Text(
                       time,
-                      style: TextStyle(fontSize: 10, color: AppColors.textMuted(context)),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: AppColors.textMuted(context),
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Text(
                   description,
-                  style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context)),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary(context),
+                  ),
                 ),
               ],
             ),

@@ -21,7 +21,8 @@ class GamesRepositoryImpl implements GamesRepository {
   }
 
   @override
-  Future<Either<Failure, List<SportsCompetition>>> getRecentCompetitions() async {
+  Future<Either<Failure, List<SportsCompetition>>>
+  getRecentCompetitions() async {
     try {
       final competitions = await remoteDataSource.getRecentCompetitions();
       return Right(competitions);
@@ -31,7 +32,10 @@ class GamesRepositoryImpl implements GamesRepository {
   }
 
   @override
-  Future<Either<Failure, void>> updateHousePoints(String houseId, int points) async {
+  Future<Either<Failure, void>> updateHousePoints(
+    String houseId,
+    int points,
+  ) async {
     try {
       await remoteDataSource.updateHousePoints(houseId, points);
       return const Right(null);
@@ -41,7 +45,9 @@ class GamesRepositoryImpl implements GamesRepository {
   }
 
   @override
-  Future<Either<Failure, void>> createCompetition(SportsCompetition competition) async {
+  Future<Either<Failure, void>> createCompetition(
+    SportsCompetition competition,
+  ) async {
     try {
       final model = SportsCompetitionModel(
         id: competition.id,

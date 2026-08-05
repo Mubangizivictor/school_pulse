@@ -16,7 +16,11 @@ class BrandingSettingsScreen extends StatelessWidget {
         ),
         title: const Text(
           'Branding & Appearance',
-          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: false,
       ),
@@ -63,7 +67,11 @@ class BrandingSettingsScreen extends StatelessWidget {
             child: const Center(
               child: Text(
                 'Save Branding Changes',
-                style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -118,11 +126,18 @@ class BrandingSettingsScreen extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text(
                   subtitle,
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.4),
+                    fontSize: 11,
+                  ),
                 ),
               ],
             ),
@@ -147,7 +162,11 @@ class BrandingSettingsScreen extends StatelessWidget {
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
           Container(
@@ -161,7 +180,11 @@ class BrandingSettingsScreen extends StatelessWidget {
           const SizedBox(width: 12),
           Text(
             '#${color.value.toRadixString(16).substring(2).toUpperCase()}',
-            style: const TextStyle(color: Color(0x66FFFFFF), fontSize: 11, fontFamily: 'Monospace'),
+            style: const TextStyle(
+              color: Color(0x66FFFFFF),
+              fontSize: 11,
+              fontFamily: 'Monospace',
+            ),
           ),
         ],
       ),
@@ -189,11 +212,18 @@ class BrandingSettingsScreen extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text(
                   subtitle,
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.4),
+                    fontSize: 11,
+                  ),
                 ),
               ],
             ),

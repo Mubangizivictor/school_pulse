@@ -21,15 +21,16 @@ class PeoplePolicy extends Equatable {
     this.updatedBy,
   });
 
-  factory PeoplePolicy.defaultFor(String schoolId) => PeoplePolicy(schoolId: schoolId);
+  factory PeoplePolicy.defaultFor(String schoolId) =>
+      PeoplePolicy(schoolId: schoolId);
 
   @override
   List<Object?> get props => [
-        schoolId,
-        maxStandardGuardians,
-        allowAdditionalEmergencyContacts,
-        sponsorsGetFinanceAccess,
-        updatedAt,
-        updatedBy,
-      ];
+    schoolId,
+    maxStandardGuardians,
+    allowAdditionalEmergencyContacts,
+    sponsorsGetFinanceAccess,
+    updatedAt,
+    updatedBy,
+  ];
 }

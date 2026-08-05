@@ -28,7 +28,10 @@ class StaffAvailabilityModel extends StaffAvailability {
     );
   }
 
-  factory StaffAvailabilityModel.fromMap(Map<String, dynamic> map, String staffId) {
+  factory StaffAvailabilityModel.fromMap(
+    Map<String, dynamic> map,
+    String staffId,
+  ) {
     return StaffAvailabilityModel(
       staffId: staffId,
       schoolId: map['schoolId'] ?? '',
@@ -55,7 +58,9 @@ class StaffAvailabilityModel extends StaffAvailability {
       'slotDurationMinutes': slotDurationMinutes,
       'bufferMinutes': bufferMinutes,
       'maxAppointmentsPerDay': maxAppointmentsPerDay,
-      'unavailableDates': unavailableDates.map((d) => Timestamp.fromDate(d)).toList(),
+      'unavailableDates': unavailableDates
+          .map((d) => Timestamp.fromDate(d))
+          .toList(),
     };
   }
 }

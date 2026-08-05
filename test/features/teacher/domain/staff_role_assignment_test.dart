@@ -51,14 +51,18 @@ void main() {
 
     test('a suspended assignment never grants access', () {
       expect(
-        _assignment(status: AssignmentStatus.suspended).isCurrentlyValid(asOf: today),
+        _assignment(
+          status: AssignmentStatus.suspended,
+        ).isCurrentlyValid(asOf: today),
         isFalse,
       );
     });
 
     test('a removed assignment never grants access', () {
       expect(
-        _assignment(status: AssignmentStatus.removed).isCurrentlyValid(asOf: today),
+        _assignment(
+          status: AssignmentStatus.removed,
+        ).isCurrentlyValid(asOf: today),
         isFalse,
       );
     });
@@ -79,7 +83,10 @@ void main() {
 
     test('access lasts to the end of the final day, not midnight', () {
       final ending = _assignment(endDate: DateTime(2026, 6, 1));
-      expect(ending.isCurrentlyValid(asOf: DateTime(2026, 6, 1, 16, 30)), isTrue);
+      expect(
+        ending.isCurrentlyValid(asOf: DateTime(2026, 6, 1, 16, 30)),
+        isTrue,
+      );
     });
   });
 
@@ -137,27 +144,39 @@ void main() {
         academicYearId: '2026',
       );
       // No streamId on the scope means every stream of the class is in range.
-      expect(wholeClass.covers(subjectId: 'maths', classId: 'g10', streamId: 'b'),
-          isTrue);
+      expect(
+        wholeClass.covers(subjectId: 'maths', classId: 'g10', streamId: 'b'),
+        isTrue,
+      );
     });
   });
 
   group('active responsibility context', () {
     ActiveResponsibilityContext contextFor(StaffRoleAssignment a) =>
-        ActiveResponsibilityContext.fromAssignment(a, termId: 't2', termName: 'Term 2');
+        ActiveResponsibilityContext.fromAssignment(
+          a,
+          termId: 't2',
+          termName: 'Term 2',
+        );
 
     test('grants a held permission inside its own scope', () {
       final ctx = contextFor(
         _assignment(permissions: {Permission.subjectMarksEnter}),
       );
       expect(
-        ctx.can(Permission.subjectMarksEnter, subjectId: 'maths', classId: 'g10'),
+        ctx.can(
+          Permission.subjectMarksEnter,
+          subjectId: 'maths',
+          classId: 'g10',
+        ),
         isTrue,
       );
     });
 
     test('refuses a permission it was never granted', () {
-      final ctx = contextFor(_assignment(permissions: {Permission.subjectMarksView}));
+      final ctx = contextFor(
+        _assignment(permissions: {Permission.subjectMarksView}),
+      );
       expect(ctx.can(Permission.subjectMarksEnter), isFalse);
     });
 
@@ -168,17 +187,26 @@ void main() {
         _assignment(permissions: {Permission.subjectMarksEnter}),
       );
       expect(
-        ctx.can(Permission.subjectMarksEnter, subjectId: 'maths', classId: 'g11'),
+        ctx.can(
+          Permission.subjectMarksEnter,
+          subjectId: 'maths',
+          classId: 'g11',
+        ),
         isFalse,
       );
     });
 
     test('refuses everything once the assignment is suspended', () {
-      final ctx = contextFor(_assignment(
-        permissions: {Permission.subjectMarksEnter},
-        status: AssignmentStatus.suspended,
-      ));
-      expect(ctx.can(Permission.subjectMarksEnter, subjectId: 'maths'), isFalse);
+      final ctx = contextFor(
+        _assignment(
+          permissions: {Permission.subjectMarksEnter},
+          status: AssignmentStatus.suspended,
+        ),
+      );
+      expect(
+        ctx.can(Permission.subjectMarksEnter, subjectId: 'maths'),
+        isFalse,
+      );
     });
 
     test('carries the term through from the calendar', () {
@@ -195,7 +223,9 @@ void main() {
 
     test('a class teacher assignment is labelled by responsibility', () {
       expect(
-        _assignment(roleType: StaffResponsibilityType.classTeacher).displayLabel,
+        _assignment(
+          roleType: StaffResponsibilityType.classTeacher,
+        ).displayLabel,
         'Class Teacher - Grade 10 A',
       );
     });

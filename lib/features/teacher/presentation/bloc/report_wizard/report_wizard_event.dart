@@ -11,7 +11,10 @@ class ReportWizardClassSelected extends ReportWizardEvent {
   final String classId;
   final String className;
 
-  const ReportWizardClassSelected({required this.classId, required this.className});
+  const ReportWizardClassSelected({
+    required this.classId,
+    required this.className,
+  });
 
   @override
   List<Object?> get props => [classId, className];

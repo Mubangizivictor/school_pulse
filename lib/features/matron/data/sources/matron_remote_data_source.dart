@@ -112,9 +112,7 @@ abstract class MatronRemoteDataSource {
     String? studentId,
     bool publicOnly = false,
   });
-  Future<List<legacy.DisciplineCase>> getDisciplineCases({
-    String? studentId,
-  });
+  Future<List<legacy.DisciplineCase>> getDisciplineCases({String? studentId});
 }
 
 class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
@@ -136,10 +134,17 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
     return 'parent_${snap.docs.first.id}';
   }
 
-  Future<void> _notifyParent(String studentId, String title, String body) async {
+  Future<void> _notifyParent(
+    String studentId,
+    String title,
+    String body,
+  ) async {
     final parentUid = await _parentUidForStudent(studentId);
     if (parentUid == null) return;
-    final studentDoc = await firestore.collection('students').doc(studentId).get();
+    final studentDoc = await firestore
+        .collection('students')
+        .doc(studentId)
+        .get();
     final schoolId = studentDoc.data()?['schoolId'] as String? ?? '';
     await NotificationService().sendStudentAlert(
       schoolId: schoolId,
@@ -225,7 +230,8 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
         int occupiedBeds = 0;
         for (final doc in dorms.docs) {
           totalBeds += (doc.data()['capacity'] as num?)?.toInt() ?? 0;
-          occupiedBeds += (doc.data()['currentOccupants'] as num?)?.toInt() ?? 0;
+          occupiedBeds +=
+              (doc.data()['currentOccupants'] as num?)?.toInt() ?? 0;
         }
 
         final now = DateTime.now();
@@ -235,7 +241,8 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
           final data = doc.data();
           if (data['status'] == 'Pending') pendingLeave++;
           if (data['status'] == 'Out') {
-            final expected = (data['expectedReturnDate'] as Timestamp?)?.toDate();
+            final expected = (data['expectedReturnDate'] as Timestamp?)
+                ?.toDate();
             if (expected != null && now.isAfter(expected)) overdueLeave++;
           }
         }
@@ -303,7 +310,8 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
     await auditRepository.logAction(
       schoolId: '',
       title: 'Dormitory created',
-      description: '${dormitory.name} was added (capacity ${dormitory.capacity}).',
+      description:
+          '${dormitory.name} was added (capacity ${dormitory.capacity}).',
       iconName: 'hotel',
       colorHex: '#2196F3',
     );
@@ -347,7 +355,10 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
     String? roomLeaderId,
     String? dormPrefectId,
   }) async {
-    final dormDoc = await firestore.collection('dormitories').doc(dormitoryId).get();
+    final dormDoc = await firestore
+        .collection('dormitories')
+        .doc(dormitoryId)
+        .get();
     final dormName = dormDoc.data()?['name'] ?? '';
     final previousRoomLeaderId = dormDoc.data()?['roomLeaderId'] as String?;
     final previousDormPrefectId = dormDoc.data()?['dormPrefectId'] as String?;
@@ -356,15 +367,21 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
     final batch = firestore.batch();
 
     if (roomLeaderId != null && roomLeaderId != previousRoomLeaderId) {
-      final doc = await firestore.collection('students').doc(roomLeaderId).get();
+      final doc = await firestore
+          .collection('students')
+          .doc(roomLeaderId)
+          .get();
       update['roomLeaderId'] = roomLeaderId;
       update['roomLeaderName'] = doc.data()?['fullName'] ?? doc.data()?['name'];
       if (previousRoomLeaderId != null) {
-        batch.update(firestore.collection('students').doc(previousRoomLeaderId), {
-          'dormLeadershipRole': null,
-          'dormLeadershipDormId': null,
-          'dormLeadershipDormName': null,
-        });
+        batch.update(
+          firestore.collection('students').doc(previousRoomLeaderId),
+          {
+            'dormLeadershipRole': null,
+            'dormLeadershipDormId': null,
+            'dormLeadershipDormName': null,
+          },
+        );
       }
       batch.update(firestore.collection('students').doc(roomLeaderId), {
         'dormLeadershipRole': 'Room Leader',
@@ -373,15 +390,22 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
       });
     }
     if (dormPrefectId != null && dormPrefectId != previousDormPrefectId) {
-      final doc = await firestore.collection('students').doc(dormPrefectId).get();
+      final doc = await firestore
+          .collection('students')
+          .doc(dormPrefectId)
+          .get();
       update['dormPrefectId'] = dormPrefectId;
-      update['dormPrefectName'] = doc.data()?['fullName'] ?? doc.data()?['name'];
+      update['dormPrefectName'] =
+          doc.data()?['fullName'] ?? doc.data()?['name'];
       if (previousDormPrefectId != null) {
-        batch.update(firestore.collection('students').doc(previousDormPrefectId), {
-          'dormLeadershipRole': null,
-          'dormLeadershipDormId': null,
-          'dormLeadershipDormName': null,
-        });
+        batch.update(
+          firestore.collection('students').doc(previousDormPrefectId),
+          {
+            'dormLeadershipRole': null,
+            'dormLeadershipDormId': null,
+            'dormLeadershipDormName': null,
+          },
+        );
       }
       batch.update(firestore.collection('students').doc(dormPrefectId), {
         'dormLeadershipRole': 'Dorm Prefect',
@@ -413,17 +437,19 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
         .collection('beds')
         .orderBy('bedNumber')
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) {
-              final data = doc.data();
-              return Bed(
-                id: doc.id,
-                dormitoryId: dormitoryId,
-                bedNumber: data['bedNumber'] ?? '',
-                occupied: data['occupied'] ?? false,
-                studentId: data['studentId'],
-                studentName: data['studentName'],
-              );
-            }).toList());
+        .map(
+          (snapshot) => snapshot.docs.map((doc) {
+            final data = doc.data();
+            return Bed(
+              id: doc.id,
+              dormitoryId: dormitoryId,
+              bedNumber: data['bedNumber'] ?? '',
+              occupied: data['occupied'] ?? false,
+              studentId: data['studentId'],
+              studentName: data['studentName'],
+            );
+          }).toList(),
+        );
   }
 
   @override
@@ -453,14 +479,21 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
     required String transferredBy,
     String? reason,
   }) async {
-    final studentDoc = await firestore.collection('students').doc(studentId).get();
+    final studentDoc = await firestore
+        .collection('students')
+        .doc(studentId)
+        .get();
     final studentData = studentDoc.data() ?? {};
-    final studentName = studentData['fullName'] ?? studentData['name'] ?? 'Unknown';
+    final studentName =
+        studentData['fullName'] ?? studentData['name'] ?? 'Unknown';
     final fromDormitoryId = studentData['dormitoryId'] as String?;
     final fromDormitoryName = studentData['dormitoryName'] as String?;
     final fromBedNumber = studentData['bedNumber'] as String?;
 
-    final toDormDoc = await firestore.collection('dormitories').doc(toDormitoryId).get();
+    final toDormDoc = await firestore
+        .collection('dormitories')
+        .doc(toDormitoryId)
+        .get();
     final toDormName = toDormDoc.data()?['name'] ?? '';
 
     final batch = firestore.batch();
@@ -471,7 +504,9 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
     });
 
     if (fromDormitoryId != null && fromDormitoryId != toDormitoryId) {
-      final fromDormRef = firestore.collection('dormitories').doc(fromDormitoryId);
+      final fromDormRef = firestore
+          .collection('dormitories')
+          .doc(fromDormitoryId);
       batch.update(fromDormRef, {'currentOccupants': FieldValue.increment(-1)});
       final toDormRef = firestore.collection('dormitories').doc(toDormitoryId);
       batch.update(toDormRef, {'currentOccupants': FieldValue.increment(1)});
@@ -497,7 +532,8 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
     await auditRepository.logAction(
       schoolId: studentDoc.data()?['schoolId'] as String? ?? '',
       title: 'Student transferred',
-      description: '$studentName moved to $toDormName${toBedNumber != null ? ' (Bed $toBedNumber)' : ''}.',
+      description:
+          '$studentName moved to $toDormName${toBedNumber != null ? ' (Bed $toBedNumber)' : ''}.',
       iconName: 'swap_horiz',
       colorHex: '#9C27B0',
       userId: transferredBy,
@@ -534,8 +570,7 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
           transferredBy: data['transferredBy'] ?? '',
           reason: data['reason'],
         );
-      }).toList()
-        ..sort((a, b) => b.date.compareTo(a.date));
+      }).toList()..sort((a, b) => b.date.compareTo(a.date));
       return transfers;
     });
   }
@@ -579,15 +614,17 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
         .where('gender', isEqualTo: _kGender)
         .where('dormitoryId', isNull: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) {
-              final data = doc.data();
-              return BoardingStudent(
-                id: doc.id,
-                name: data['fullName'] ?? data['name'] ?? '',
-                studentClass: data['class'] ?? '',
-                gender: data['gender'] ?? _kGender,
-              );
-            }).toList());
+        .map(
+          (snapshot) => snapshot.docs.map((doc) {
+            final data = doc.data();
+            return BoardingStudent(
+              id: doc.id,
+              name: data['fullName'] ?? data['name'] ?? '',
+              studentClass: data['class'] ?? '',
+              gender: data['gender'] ?? _kGender,
+            );
+          }).toList(),
+        );
   }
 
   @override
@@ -596,10 +633,17 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
     String dormitoryId,
     String? bedNumber,
   ) async {
-    final dormDoc = await firestore.collection('dormitories').doc(dormitoryId).get();
+    final dormDoc = await firestore
+        .collection('dormitories')
+        .doc(dormitoryId)
+        .get();
     final dormName = dormDoc.data()?['name'] ?? '';
-    final studentDoc = await firestore.collection('students').doc(studentId).get();
-    final studentName = studentDoc.data()?['fullName'] ?? studentDoc.data()?['name'] ?? '';
+    final studentDoc = await firestore
+        .collection('students')
+        .doc(studentId)
+        .get();
+    final studentName =
+        studentDoc.data()?['fullName'] ?? studentDoc.data()?['name'] ?? '';
     final alreadyAllocated = studentDoc.data()?['dormitoryId'] != null;
 
     final batch = firestore.batch();
@@ -619,7 +663,8 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
     await auditRepository.logAction(
       schoolId: studentDoc.data()?['schoolId'] as String? ?? '',
       title: 'Student allocated',
-      description: '$studentName allocated to $dormName${bedNumber != null ? ' (Bed $bedNumber)' : ''}.',
+      description:
+          '$studentName allocated to $dormName${bedNumber != null ? ' (Bed $bedNumber)' : ''}.',
       iconName: 'person_add',
       colorHex: '#4CAF50',
     );
@@ -641,8 +686,12 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
   Future<void> setRoomLeader(String dormitoryId, String? studentId) async {
     String? studentName;
     if (studentId != null) {
-      final studentDoc = await firestore.collection('students').doc(studentId).get();
-      studentName = studentDoc.data()?['fullName'] ?? studentDoc.data()?['name'];
+      final studentDoc = await firestore
+          .collection('students')
+          .doc(studentId)
+          .get();
+      studentName =
+          studentDoc.data()?['fullName'] ?? studentDoc.data()?['name'];
     }
 
     return firestore.collection('dormitories').doc(dormitoryId).update({
@@ -714,7 +763,9 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
       'gender': _kGender,
     });
     await firestore.collection('students').doc(attendance.studentId).update({
-      'boardingStatus': attendance.status == 'Absent' ? 'Missing' : attendance.status,
+      'boardingStatus': attendance.status == 'Absent'
+          ? 'Missing'
+          : attendance.status,
     });
   }
 
@@ -759,7 +810,8 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
     await auditRepository.logAction(
       schoolId: '',
       title: 'Roll call submitted',
-      description: '${records.length} ${records.isNotEmpty ? records.first.type : ''} attendance records saved.',
+      description:
+          '${records.length} ${records.isNotEmpty ? records.first.type : ''} attendance records saved.',
       iconName: 'how_to_reg',
       colorHex: '#4CAF50',
       userId: records.isNotEmpty ? records.first.recordedBy : null,
@@ -799,21 +851,24 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
           destination: data['destination'],
           requestedBy: data['requestedBy'] ?? '',
           departureDate: (data['departureDate'] as Timestamp).toDate(),
-          expectedReturnDate: (data['expectedReturnDate'] as Timestamp).toDate(),
+          expectedReturnDate: (data['expectedReturnDate'] as Timestamp)
+              .toDate(),
           actualReturnDate: (data['actualReturnDate'] as Timestamp?)?.toDate(),
           status: data['status'] ?? 'Pending',
           approvedBy: data['approvedBy'],
           notes: data['notes'],
         );
-      }).toList()
-        ..sort((a, b) => b.departureDate.compareTo(a.departureDate));
+      }).toList()..sort((a, b) => b.departureDate.compareTo(a.departureDate));
       return requests;
     });
   }
 
   @override
   Future<void> requestLeave(LeaveRequest request) async {
-    final studentDoc = await firestore.collection('students').doc(request.studentId).get();
+    final studentDoc = await firestore
+        .collection('students')
+        .doc(request.studentId)
+        .get();
     final dormId = studentDoc.data()?['dormitoryId'] ?? request.dormitoryId;
 
     await firestore.collection('boarding_leave_requests').add({
@@ -858,11 +913,17 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
     }
     if (notes != null) update['notes'] = notes;
 
-    final requestDoc = await firestore.collection('boarding_leave_requests').doc(requestId).get();
+    final requestDoc = await firestore
+        .collection('boarding_leave_requests')
+        .doc(requestId)
+        .get();
     final studentId = requestDoc.data()?['studentId'] as String?;
     final studentName = requestDoc.data()?['studentName'] ?? 'Student';
 
-    await firestore.collection('boarding_leave_requests').doc(requestId).update(update);
+    await firestore
+        .collection('boarding_leave_requests')
+        .doc(requestId)
+        .update(update);
 
     if (studentId != null) {
       if (status == 'Approved' || status == 'Out') {
@@ -923,7 +984,9 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
     return query.snapshots().map((snapshot) => _mapWelfare(snapshot));
   }
 
-  List<WelfareRecord> _mapWelfare(QuerySnapshot<Map<String, dynamic>> snapshot) {
+  List<WelfareRecord> _mapWelfare(
+    QuerySnapshot<Map<String, dynamic>> snapshot,
+  ) {
     final records = snapshot.docs.map((doc) {
       final data = doc.data();
       return WelfareRecord(
@@ -938,8 +1001,7 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
         isPrivate: data['isPrivate'] ?? false,
         followUpDate: (data['followUpDate'] as Timestamp?)?.toDate(),
       );
-    }).toList()
-      ..sort((a, b) => b.date.compareTo(a.date));
+    }).toList()..sort((a, b) => b.date.compareTo(a.date));
     return records;
   }
 
@@ -948,7 +1010,10 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
     if (record.schoolId.trim().isEmpty) {
       throw StateError('A school assignment is required for welfare records.');
     }
-    final studentDoc = await firestore.collection('students').doc(record.studentId).get();
+    final studentDoc = await firestore
+        .collection('students')
+        .doc(record.studentId)
+        .get();
     final recordRef = firestore.collection('welfare_records').doc();
     await recordRef.set({
       'schoolId': record.schoolId.trim(),
@@ -960,7 +1025,9 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
       'recordedBy': record.recordedBy,
       'isPrivate': record.isPrivate,
       'gender': studentDoc.data()?['gender'] ?? _kGender,
-      'followUpDate': record.followUpDate != null ? Timestamp.fromDate(record.followUpDate!) : null,
+      'followUpDate': record.followUpDate != null
+          ? Timestamp.fromDate(record.followUpDate!)
+          : null,
     });
 
     await auditRepository.logAction(
@@ -1008,15 +1075,17 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
           status: data['status'] ?? 'Pending',
           followUpNotes: data['followUpNotes'],
         );
-      }).toList()
-        ..sort((a, b) => b.referralDate.compareTo(a.referralDate));
+      }).toList()..sort((a, b) => b.referralDate.compareTo(a.referralDate));
       return referrals;
     });
   }
 
   @override
   Future<void> logCounselingReferral(CounselingReferral referral) async {
-    final studentDoc = await firestore.collection('students').doc(referral.studentId).get();
+    final studentDoc = await firestore
+        .collection('students')
+        .doc(referral.studentId)
+        .get();
     await firestore.collection('boarding_counseling_referrals').add({
       'studentId': referral.studentId,
       'studentName': referral.studentName,
@@ -1051,7 +1120,10 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
   }) {
     final update = <String, dynamic>{'status': status};
     if (followUpNotes != null) update['followUpNotes'] = followUpNotes;
-    return firestore.collection('boarding_counseling_referrals').doc(referralId).update(update);
+    return firestore
+        .collection('boarding_counseling_referrals')
+        .doc(referralId)
+        .update(update);
   }
 
   // ---------------------------------------------------------------------
@@ -1059,7 +1131,9 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
   // ---------------------------------------------------------------------
 
   @override
-  Stream<List<BehaviourObservation>> getBehaviourObservations(String? studentId) {
+  Stream<List<BehaviourObservation>> getBehaviourObservations(
+    String? studentId,
+  ) {
     Query<Map<String, dynamic>> query = firestore
         .collection('boarding_behaviour_observations')
         .where('gender', isEqualTo: _kGender);
@@ -1078,15 +1152,17 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
           date: (data['date'] as Timestamp).toDate(),
           recordedBy: data['recordedBy'] ?? '',
         );
-      }).toList()
-        ..sort((a, b) => b.date.compareTo(a.date));
+      }).toList()..sort((a, b) => b.date.compareTo(a.date));
       return observations;
     });
   }
 
   @override
   Future<void> logBehaviourObservation(BehaviourObservation observation) async {
-    final studentDoc = await firestore.collection('students').doc(observation.studentId).get();
+    final studentDoc = await firestore
+        .collection('students')
+        .doc(observation.studentId)
+        .get();
     await firestore.collection('boarding_behaviour_observations').add({
       'studentId': observation.studentId,
       'studentName': observation.studentName,
@@ -1101,7 +1177,8 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
     await auditRepository.logAction(
       schoolId: studentDoc.data()?['schoolId'] as String? ?? '',
       title: 'Behaviour observation logged',
-      description: '${observation.type}: ${observation.studentName} - ${observation.description}',
+      description:
+          '${observation.type}: ${observation.studentName} - ${observation.description}',
       iconName: 'visibility',
       colorHex: observation.type == 'Positive' ? '#4CAF50' : '#FF9800',
       userId: observation.recordedBy,
@@ -1147,7 +1224,10 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
 
   @override
   Future<void> logDisciplineIncident(DisciplineIncident incident) async {
-    final studentDoc = await firestore.collection('students').doc(incident.studentId).get();
+    final studentDoc = await firestore
+        .collection('students')
+        .doc(incident.studentId)
+        .get();
     await firestore.collection('boarding_discipline').add({
       'studentId': incident.studentId,
       'studentName': incident.studentName,
@@ -1162,7 +1242,9 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
       'severity': incident.severity,
       'parentNotified': incident.parentNotified,
       'followUpRequired': incident.followUpRequired,
-      'followUpDate': incident.followUpDate != null ? Timestamp.fromDate(incident.followUpDate!) : null,
+      'followUpDate': incident.followUpDate != null
+          ? Timestamp.fromDate(incident.followUpDate!)
+          : null,
       'isPrivate': incident.isPrivate,
       'schoolId': studentDoc.data()?['schoolId'],
       'gender': studentDoc.data()?['gender'] ?? _kGender,
@@ -1171,7 +1253,8 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
     await auditRepository.logAction(
       schoolId: studentDoc.data()?['schoolId'] as String? ?? '',
       title: 'Discipline incident logged',
-      description: '${incident.studentName}: ${incident.category} (${incident.severity})',
+      description:
+          '${incident.studentName}: ${incident.category} (${incident.severity})',
       iconName: 'gavel',
       colorHex: '#F44336',
       userId: incident.recordedBy,
@@ -1274,7 +1357,8 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
   }) async {
     Query<Map<String, dynamic>> query = firestore.collection('welfare_records');
     if (schoolId != null) query = query.where('schoolId', isEqualTo: schoolId);
-    if (studentId != null) query = query.where('studentId', isEqualTo: studentId);
+    if (studentId != null)
+      query = query.where('studentId', isEqualTo: studentId);
     if (publicOnly) query = query.where('isPrivate', isEqualTo: false);
     final snapshot = await query.get();
     final records = snapshot.docs.map((doc) {
@@ -1290,8 +1374,7 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
         recordedBy: data['recordedBy'],
         isPrivate: data['isPrivate'] ?? false,
       );
-    }).toList()
-      ..sort((a, b) => b.date.compareTo(a.date));
+    }).toList()..sort((a, b) => b.date.compareTo(a.date));
     return records;
   }
 
@@ -1299,8 +1382,11 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
   Future<List<legacy.DisciplineCase>> getDisciplineCases({
     String? studentId,
   }) async {
-    Query<Map<String, dynamic>> query = firestore.collection('boarding_discipline');
-    if (studentId != null) query = query.where('studentId', isEqualTo: studentId);
+    Query<Map<String, dynamic>> query = firestore.collection(
+      'boarding_discipline',
+    );
+    if (studentId != null)
+      query = query.where('studentId', isEqualTo: studentId);
     final snapshot = await query.get();
     final cases = snapshot.docs.map((doc) {
       final data = doc.data();
@@ -1315,8 +1401,7 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
         status: data['status'] ?? 'Pending',
         recordedBy: data['recordedBy'] ?? '',
       );
-    }).toList()
-      ..sort((a, b) => b.date.compareTo(a.date));
+    }).toList()..sort((a, b) => b.date.compareTo(a.date));
     return cases;
   }
 }

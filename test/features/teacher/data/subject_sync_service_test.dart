@@ -96,17 +96,21 @@ void main() {
     when(() => remote.saveLessonAttendance(any())).thenAnswer((_) async {});
   });
 
-  void queueContains(List<SubjectTeacherOfflineOperationIsar> first,
-      {List<SubjectTeacherOfflineOperationIsar> then = const []}) {
+  void queueContains(
+    List<SubjectTeacherOfflineOperationIsar> first, {
+    List<SubjectTeacherOfflineOperationIsar> then = const [],
+  }) {
     var call = 0;
-    when(() => local.getPendingOperations(schoolId: any(named: 'schoolId')))
-        .thenAnswer((_) async => call++ == 0 ? first : then);
+    when(
+      () => local.getPendingOperations(schoolId: any(named: 'schoolId')),
+    ).thenAnswer((_) async => call++ == 0 ? first : then);
   }
 
   test('does nothing but count while offline', () async {
     when(() => network.isConnected).thenAnswer((_) async => false);
-    when(() => local.getPendingOperations(schoolId: any(named: 'schoolId')))
-        .thenAnswer((_) async => [_queued()]);
+    when(
+      () => local.getPendingOperations(schoolId: any(named: 'schoolId')),
+    ).thenAnswer((_) async => [_queued()]);
 
     final result = await service.drain();
 
@@ -117,12 +121,15 @@ void main() {
 
   test('pushes a queued register and clears it from the queue', () async {
     queueContains([_queued()]);
-    when(() => local.getAttendance('l1'))
-        .thenAnswer((_) async => LessonAttendanceIsar.fromEntity(_register()));
-    when(() => remote.getLessonAttendance(
-          schoolId: any(named: 'schoolId'),
-          lessonId: any(named: 'lessonId'),
-        )).thenAnswer((_) async => null);
+    when(
+      () => local.getAttendance('l1'),
+    ).thenAnswer((_) async => LessonAttendanceIsar.fromEntity(_register()));
+    when(
+      () => remote.getLessonAttendance(
+        schoolId: any(named: 'schoolId'),
+        lessonId: any(named: 'lessonId'),
+      ),
+    ).thenAnswer((_) async => null);
 
     final result = await service.drain();
 
@@ -132,32 +139,41 @@ void main() {
     verify(() => local.deleteOperation('attendance_l1')).called(1);
   });
 
-  test('reads the newest local register rather than a queued snapshot',
-      () async {
-    // The queue holds only the lesson id on purpose, so marks added after
-    // the operation was queued still go up.
-    queueContains([_queued()]);
-    when(() => local.getAttendance('l1'))
-        .thenAnswer((_) async => LessonAttendanceIsar.fromEntity(_register()));
-    when(() => remote.getLessonAttendance(
+  test(
+    'reads the newest local register rather than a queued snapshot',
+    () async {
+      // The queue holds only the lesson id on purpose, so marks added after
+      // the operation was queued still go up.
+      queueContains([_queued()]);
+      when(
+        () => local.getAttendance('l1'),
+      ).thenAnswer((_) async => LessonAttendanceIsar.fromEntity(_register()));
+      when(
+        () => remote.getLessonAttendance(
           schoolId: any(named: 'schoolId'),
           lessonId: any(named: 'lessonId'),
-        )).thenAnswer((_) async => null);
+        ),
+      ).thenAnswer((_) async => null);
 
-    await service.drain();
+      await service.drain();
 
-    verify(() => local.getAttendance('l1')).called(1);
-  });
+      verify(() => local.getAttendance('l1')).called(1);
+    },
+  );
 
   test('refuses to overwrite a register the office has locked', () async {
     queueContains([_queued()]);
-    when(() => local.getAttendance('l1'))
-        .thenAnswer((_) async => LessonAttendanceIsar.fromEntity(_register()));
-    when(() => remote.getLessonAttendance(
-          schoolId: any(named: 'schoolId'),
-          lessonId: any(named: 'lessonId'),
-        )).thenAnswer(
-        (_) async => _register(status: AttendanceRegisterStatus.locked));
+    when(
+      () => local.getAttendance('l1'),
+    ).thenAnswer((_) async => LessonAttendanceIsar.fromEntity(_register()));
+    when(
+      () => remote.getLessonAttendance(
+        schoolId: any(named: 'schoolId'),
+        lessonId: any(named: 'lessonId'),
+      ),
+    ).thenAnswer(
+      (_) async => _register(status: AttendanceRegisterStatus.locked),
+    );
 
     final result = await service.drain();
 
@@ -175,11 +191,14 @@ void main() {
         _register(status: AttendanceRegisterStatus.draft),
       ),
     );
-    when(() => remote.getLessonAttendance(
-          schoolId: any(named: 'schoolId'),
-          lessonId: any(named: 'lessonId'),
-        )).thenAnswer(
-        (_) async => _register(status: AttendanceRegisterStatus.submitted));
+    when(
+      () => remote.getLessonAttendance(
+        schoolId: any(named: 'schoolId'),
+        lessonId: any(named: 'lessonId'),
+      ),
+    ).thenAnswer(
+      (_) async => _register(status: AttendanceRegisterStatus.submitted),
+    );
 
     final result = await service.drain();
 
@@ -194,12 +213,12 @@ void main() {
         _register(submittedAt: DateTime(2026, 6, 1, 10, 5)),
       ),
     );
-    when(() => remote.getLessonAttendance(
-          schoolId: any(named: 'schoolId'),
-          lessonId: any(named: 'lessonId'),
-        )).thenAnswer(
-      (_) async => _register(submittedAt: DateTime(2026, 6, 1, 11)),
-    );
+    when(
+      () => remote.getLessonAttendance(
+        schoolId: any(named: 'schoolId'),
+        lessonId: any(named: 'lessonId'),
+      ),
+    ).thenAnswer((_) async => _register(submittedAt: DateTime(2026, 6, 1, 11)));
 
     final result = await service.drain();
 
@@ -220,14 +239,18 @@ void main() {
 
   test('keeps a failed operation queued and counts the retry', () async {
     queueContains([_queued()]);
-    when(() => local.getAttendance('l1'))
-        .thenAnswer((_) async => LessonAttendanceIsar.fromEntity(_register()));
-    when(() => remote.getLessonAttendance(
-          schoolId: any(named: 'schoolId'),
-          lessonId: any(named: 'lessonId'),
-        )).thenAnswer((_) async => null);
-    when(() => remote.saveLessonAttendance(any()))
-        .thenThrow(Exception('connection reset'));
+    when(
+      () => local.getAttendance('l1'),
+    ).thenAnswer((_) async => LessonAttendanceIsar.fromEntity(_register()));
+    when(
+      () => remote.getLessonAttendance(
+        schoolId: any(named: 'schoolId'),
+        lessonId: any(named: 'lessonId'),
+      ),
+    ).thenAnswer((_) async => null);
+    when(
+      () => remote.saveLessonAttendance(any()),
+    ).thenThrow(Exception('connection reset'));
 
     final result = await service.drain();
 
@@ -238,12 +261,15 @@ void main() {
 
   test('replays audit rows only after the actions they describe', () async {
     queueContains([_queued()]);
-    when(() => local.getAttendance('l1'))
-        .thenAnswer((_) async => LessonAttendanceIsar.fromEntity(_register()));
-    when(() => remote.getLessonAttendance(
-          schoolId: any(named: 'schoolId'),
-          lessonId: any(named: 'lessonId'),
-        )).thenAnswer((_) async => null);
+    when(
+      () => local.getAttendance('l1'),
+    ).thenAnswer((_) async => LessonAttendanceIsar.fromEntity(_register()));
+    when(
+      () => remote.getLessonAttendance(
+        schoolId: any(named: 'schoolId'),
+        lessonId: any(named: 'lessonId'),
+      ),
+    ).thenAnswer((_) async => null);
 
     await service.drain();
 

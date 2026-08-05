@@ -37,19 +37,19 @@ class RepairRecord extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        assetId,
-        assetName,
-        description,
-        technicianName,
-        estimatedCost,
-        actualCost,
-        status,
-        partsUsed,
-        requestDate,
-        completionDate,
-        notes,
-        beforePhotoUrl,
-        afterPhotoUrl,
-      ];
+    id,
+    assetId,
+    assetName,
+    description,
+    technicianName,
+    estimatedCost,
+    actualCost,
+    status,
+    partsUsed,
+    requestDate,
+    completionDate,
+    notes,
+    beforePhotoUrl,
+    afterPhotoUrl,
+  ];
 }

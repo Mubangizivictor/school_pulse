@@ -23,5 +23,13 @@ class MedicineStock extends Equatable {
   bool get isExpired => expiryDate.isBefore(DateTime.now());
 
   @override
-  List<Object?> get props => [id, name, category, quantity, unit, expiryDate, lowStockThreshold];
+  List<Object?> get props => [
+    id,
+    name,
+    category,
+    quantity,
+    unit,
+    expiryDate,
+    lowStockThreshold,
+  ];
 }

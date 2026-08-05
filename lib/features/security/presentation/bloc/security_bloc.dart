@@ -81,15 +81,28 @@ class SecurityBloc extends Bloc<SecurityEvent, SecurityState> {
     // Internal event handlers - registered once here, never inside another
     // handler (Bloc throws on duplicate `on<Event>` registration).
     on<_GatesUpdated>((e, emit) => emit(state.copyWith(gates: e.gates)));
-    on<_StudentMovementsUpdated>((e, emit) => emit(state.copyWith(studentMovements: e.movements)));
-    on<_StaffMovementsUpdated>((e, emit) => emit(state.copyWith(staffMovements: e.movements)));
-    on<_IncidentsUpdated>((e, emit) => emit(state.copyWith(incidents: e.incidents)));
-    on<_EmergenciesUpdated>((e, emit) => emit(state.copyWith(activeEmergencies: e.emergencies)));
+    on<_StudentMovementsUpdated>(
+      (e, emit) => emit(state.copyWith(studentMovements: e.movements)),
+    );
+    on<_StaffMovementsUpdated>(
+      (e, emit) => emit(state.copyWith(staffMovements: e.movements)),
+    );
+    on<_IncidentsUpdated>(
+      (e, emit) => emit(state.copyWith(incidents: e.incidents)),
+    );
+    on<_EmergenciesUpdated>(
+      (e, emit) => emit(state.copyWith(activeEmergencies: e.emergencies)),
+    );
     on<_PatrolsUpdated>((e, emit) => emit(state.copyWith(patrols: e.patrols)));
-    on<_LostAndFoundUpdated>((e, emit) => emit(state.copyWith(lostAndFound: e.items)));
+    on<_LostAndFoundUpdated>(
+      (e, emit) => emit(state.copyWith(lostAndFound: e.items)),
+    );
   }
 
-  Future<void> _onLoadDashboard(LoadSecurityDashboard event, Emitter<SecurityState> emit) async {
+  Future<void> _onLoadDashboard(
+    LoadSecurityDashboard event,
+    Emitter<SecurityState> emit,
+  ) async {
     emit(state.copyWith(status: SecurityStatus.loading));
 
     add(WatchGatesRequested(event.schoolId));
@@ -100,191 +113,336 @@ class SecurityBloc extends Bloc<SecurityEvent, SecurityState> {
     final statsResult = await getSecurityDashboardStats(event.schoolId);
 
     statsResult.fold(
-      (failure) => emit(state.copyWith(status: SecurityStatus.error, errorMessage: failure.message)),
-      (stats) => emit(state.copyWith(status: SecurityStatus.loaded, stats: stats)),
+      (failure) => emit(
+        state.copyWith(
+          status: SecurityStatus.error,
+          errorMessage: failure.message,
+        ),
+      ),
+      (stats) =>
+          emit(state.copyWith(status: SecurityStatus.loaded, stats: stats)),
     );
   }
 
-  Future<void> _onWatchGates(WatchGatesRequested event, Emitter<SecurityState> emit) async {
+  Future<void> _onWatchGates(
+    WatchGatesRequested event,
+    Emitter<SecurityState> emit,
+  ) async {
     await _gatesSubscription?.cancel();
-    _gatesSubscription = watchGates(event.schoolId).listen(
-      (gates) => add(_GatesUpdated(gates)),
-    );
+    _gatesSubscription = watchGates(
+      event.schoolId,
+    ).listen((gates) => add(_GatesUpdated(gates)));
   }
 
-  Future<void> _onCreateGate(CreateGateRequested event, Emitter<SecurityState> emit) async {
+  Future<void> _onCreateGate(
+    CreateGateRequested event,
+    Emitter<SecurityState> emit,
+  ) async {
     final result = await createGate(event.gate);
     result.fold(
-      (failure) => emit(state.copyWith(feedback: SecurityFeedback(failure.message, isError: true))),
+      (failure) => emit(
+        state.copyWith(
+          feedback: SecurityFeedback(failure.message, isError: true),
+        ),
+      ),
       (_) {
-        emit(state.copyWith(feedback: SecurityFeedback('Gate created successfully')));
+        emit(
+          state.copyWith(
+            feedback: SecurityFeedback('Gate created successfully'),
+          ),
+        );
         di.sl<AuditRepository>().logAction(
-              title: 'Gate created',
-              description: '${event.gate.name} (${event.gate.type}) was added to the security structure.',
-              iconName: 'door_front_door',
-              colorHex: '#2196F3',
-            );
+          title: 'Gate created',
+          description:
+              '${event.gate.name} (${event.gate.type}) was added to the security structure.',
+          iconName: 'door_front_door',
+          colorHex: '#2196F3',
+        );
       },
     );
   }
 
-  Future<void> _onUpdateGate(UpdateGateRequested event, Emitter<SecurityState> emit) async {
+  Future<void> _onUpdateGate(
+    UpdateGateRequested event,
+    Emitter<SecurityState> emit,
+  ) async {
     final result = await updateGate(event.gate);
     result.fold(
-      (failure) => emit(state.copyWith(feedback: SecurityFeedback(failure.message, isError: true))),
+      (failure) => emit(
+        state.copyWith(
+          feedback: SecurityFeedback(failure.message, isError: true),
+        ),
+      ),
       (_) {
-        emit(state.copyWith(feedback: SecurityFeedback('Gate updated successfully')));
+        emit(
+          state.copyWith(
+            feedback: SecurityFeedback('Gate updated successfully'),
+          ),
+        );
         di.sl<AuditRepository>().logAction(
-              title: 'Gate updated',
-              description: '${event.gate.name} configuration was changed.',
-              iconName: 'door_front_door',
-              colorHex: '#2196F3',
-            );
+          title: 'Gate updated',
+          description: '${event.gate.name} configuration was changed.',
+          iconName: 'door_front_door',
+          colorHex: '#2196F3',
+        );
       },
     );
   }
 
-  Future<void> _onRecordStudentMovement(RecordStudentMovementRequested event, Emitter<SecurityState> emit) async {
+  Future<void> _onRecordStudentMovement(
+    RecordStudentMovementRequested event,
+    Emitter<SecurityState> emit,
+  ) async {
     final result = await recordStudentMovement(event.movement);
     result.fold(
-      (failure) => emit(state.copyWith(feedback: SecurityFeedback(failure.message, isError: true))),
-      (_) => emit(state.copyWith(feedback: SecurityFeedback('Movement recorded'))),
+      (failure) => emit(
+        state.copyWith(
+          feedback: SecurityFeedback(failure.message, isError: true),
+        ),
+      ),
+      (_) =>
+          emit(state.copyWith(feedback: SecurityFeedback('Movement recorded'))),
     );
   }
 
-  Future<void> _onWatchStudentMovements(WatchStudentMovementsRequested event, Emitter<SecurityState> emit) async {
+  Future<void> _onWatchStudentMovements(
+    WatchStudentMovementsRequested event,
+    Emitter<SecurityState> emit,
+  ) async {
     await _studentMovementsSubscription?.cancel();
-    _studentMovementsSubscription = watchStudentMovements(event.schoolId, date: event.date, gateId: event.gateId, studentId: event.studentId).listen(
-      (movements) => add(_StudentMovementsUpdated(movements)),
-    );
+    _studentMovementsSubscription = watchStudentMovements(
+      event.schoolId,
+      date: event.date,
+      gateId: event.gateId,
+      studentId: event.studentId,
+    ).listen((movements) => add(_StudentMovementsUpdated(movements)));
   }
 
-  Future<void> _onRecordStaffMovement(RecordStaffMovementRequested event, Emitter<SecurityState> emit) async {
+  Future<void> _onRecordStaffMovement(
+    RecordStaffMovementRequested event,
+    Emitter<SecurityState> emit,
+  ) async {
     final result = await recordStaffMovement(event.movement);
     result.fold(
-      (failure) => emit(state.copyWith(feedback: SecurityFeedback(failure.message, isError: true))),
-      (_) => emit(state.copyWith(feedback: SecurityFeedback('Staff movement recorded'))),
+      (failure) => emit(
+        state.copyWith(
+          feedback: SecurityFeedback(failure.message, isError: true),
+        ),
+      ),
+      (_) => emit(
+        state.copyWith(feedback: SecurityFeedback('Staff movement recorded')),
+      ),
     );
   }
 
-  Future<void> _onWatchStaffMovements(WatchStaffMovementsRequested event, Emitter<SecurityState> emit) async {
+  Future<void> _onWatchStaffMovements(
+    WatchStaffMovementsRequested event,
+    Emitter<SecurityState> emit,
+  ) async {
     await _staffMovementsSubscription?.cancel();
-    _staffMovementsSubscription = watchStaffMovements(event.schoolId, date: event.date, gateId: event.gateId).listen(
-      (movements) => add(_StaffMovementsUpdated(movements)),
-    );
+    _staffMovementsSubscription = watchStaffMovements(
+      event.schoolId,
+      date: event.date,
+      gateId: event.gateId,
+    ).listen((movements) => add(_StaffMovementsUpdated(movements)));
   }
 
-  Future<void> _onReportIncident(ReportIncidentRequested event, Emitter<SecurityState> emit) async {
+  Future<void> _onReportIncident(
+    ReportIncidentRequested event,
+    Emitter<SecurityState> emit,
+  ) async {
     final result = await reportIncident(event.incident);
     result.fold(
-      (failure) => emit(state.copyWith(feedback: SecurityFeedback(failure.message, isError: true))),
+      (failure) => emit(
+        state.copyWith(
+          feedback: SecurityFeedback(failure.message, isError: true),
+        ),
+      ),
       (_) {
         emit(state.copyWith(feedback: SecurityFeedback('Incident reported')));
         di.sl<AuditRepository>().logAction(
-              title: 'Security incident reported',
-              description: '${event.incident.type} at ${event.incident.location}: ${event.incident.description}',
-              iconName: 'gavel',
-              colorHex: '#FF9800',
-              userId: event.incident.reportedByOfficerId,
-            );
+          title: 'Security incident reported',
+          description:
+              '${event.incident.type} at ${event.incident.location}: ${event.incident.description}',
+          iconName: 'gavel',
+          colorHex: '#FF9800',
+          userId: event.incident.reportedByOfficerId,
+        );
       },
     );
   }
 
-  Future<void> _onWatchIncidents(WatchIncidentsRequested event, Emitter<SecurityState> emit) async {
+  Future<void> _onWatchIncidents(
+    WatchIncidentsRequested event,
+    Emitter<SecurityState> emit,
+  ) async {
     await _incidentsSubscription?.cancel();
-    _incidentsSubscription = watchIncidents(event.schoolId).listen(
-      (incidents) => add(_IncidentsUpdated(incidents)),
-    );
+    _incidentsSubscription = watchIncidents(
+      event.schoolId,
+    ).listen((incidents) => add(_IncidentsUpdated(incidents)));
   }
 
-  Future<void> _onUpdateIncidentStatus(UpdateIncidentStatusRequested event, Emitter<SecurityState> emit) async {
-    final result = await updateIncidentStatus(event.schoolId, event.incidentId, event.status, event.resolution);
+  Future<void> _onUpdateIncidentStatus(
+    UpdateIncidentStatusRequested event,
+    Emitter<SecurityState> emit,
+  ) async {
+    final result = await updateIncidentStatus(
+      event.schoolId,
+      event.incidentId,
+      event.status,
+      event.resolution,
+    );
     result.fold(
-      (failure) => emit(state.copyWith(feedback: SecurityFeedback(failure.message, isError: true))),
-      (_) => emit(state.copyWith(feedback: SecurityFeedback('Incident updated'))),
+      (failure) => emit(
+        state.copyWith(
+          feedback: SecurityFeedback(failure.message, isError: true),
+        ),
+      ),
+      (_) =>
+          emit(state.copyWith(feedback: SecurityFeedback('Incident updated'))),
     );
   }
 
-  Future<void> _onTriggerEmergency(TriggerEmergencyRequested event, Emitter<SecurityState> emit) async {
+  Future<void> _onTriggerEmergency(
+    TriggerEmergencyRequested event,
+    Emitter<SecurityState> emit,
+  ) async {
     final result = await triggerEmergency(event.event);
     result.fold(
-      (failure) => emit(state.copyWith(feedback: SecurityFeedback(failure.message, isError: true))),
+      (failure) => emit(
+        state.copyWith(
+          feedback: SecurityFeedback(failure.message, isError: true),
+        ),
+      ),
       (_) {
         emit(state.copyWith(feedback: SecurityFeedback('Emergency triggered')));
         NotificationService().sendSecurityAlert(
           title: event.event.type,
-          body: event.event.description.isNotEmpty ? event.event.description : 'Emergency alert triggered - respond immediately.',
+          body: event.event.description.isNotEmpty
+              ? event.event.description
+              : 'Emergency alert triggered - respond immediately.',
         );
         di.sl<AuditRepository>().logAction(
-              title: 'EMERGENCY: ${event.event.type}',
-              description: event.event.description.isEmpty ? 'No description provided.' : event.event.description,
-              iconName: 'emergency',
-              colorHex: '#F44336',
-            );
+          title: 'EMERGENCY: ${event.event.type}',
+          description: event.event.description.isEmpty
+              ? 'No description provided.'
+              : event.event.description,
+          iconName: 'emergency',
+          colorHex: '#F44336',
+        );
       },
     );
   }
 
-  Future<void> _onWatchActiveEmergencies(WatchActiveEmergenciesRequested event, Emitter<SecurityState> emit) async {
+  Future<void> _onWatchActiveEmergencies(
+    WatchActiveEmergenciesRequested event,
+    Emitter<SecurityState> emit,
+  ) async {
     await _emergenciesSubscription?.cancel();
-    _emergenciesSubscription = watchActiveEmergencies(event.schoolId).listen(
-      (emergencies) => add(_EmergenciesUpdated(emergencies)),
-    );
+    _emergenciesSubscription = watchActiveEmergencies(
+      event.schoolId,
+    ).listen((emergencies) => add(_EmergenciesUpdated(emergencies)));
   }
 
-  Future<void> _onResolveEmergency(ResolveEmergencyRequested event, Emitter<SecurityState> emit) async {
-    final result = await resolveEmergency(event.schoolId, event.emergencyId, event.endTime, event.actions);
+  Future<void> _onResolveEmergency(
+    ResolveEmergencyRequested event,
+    Emitter<SecurityState> emit,
+  ) async {
+    final result = await resolveEmergency(
+      event.schoolId,
+      event.emergencyId,
+      event.endTime,
+      event.actions,
+    );
     result.fold(
-      (failure) => emit(state.copyWith(feedback: SecurityFeedback(failure.message, isError: true))),
+      (failure) => emit(
+        state.copyWith(
+          feedback: SecurityFeedback(failure.message, isError: true),
+        ),
+      ),
       (_) {
         emit(state.copyWith(feedback: SecurityFeedback('Emergency resolved')));
         di.sl<AuditRepository>().logAction(
-              title: 'Emergency resolved',
-              description: 'Response actions: ${event.actions.isEmpty ? 'none recorded' : event.actions.join('; ')}',
-              iconName: 'emergency',
-              colorHex: '#4CAF50',
-            );
+          title: 'Emergency resolved',
+          description:
+              'Response actions: ${event.actions.isEmpty ? 'none recorded' : event.actions.join('; ')}',
+          iconName: 'emergency',
+          colorHex: '#4CAF50',
+        );
       },
     );
   }
 
-  Future<void> _onRecordPatrol(RecordPatrolRequested event, Emitter<SecurityState> emit) async {
+  Future<void> _onRecordPatrol(
+    RecordPatrolRequested event,
+    Emitter<SecurityState> emit,
+  ) async {
     final result = await recordPatrol(event.patrol);
     result.fold(
-      (failure) => emit(state.copyWith(feedback: SecurityFeedback(failure.message, isError: true))),
-      (_) => emit(state.copyWith(feedback: SecurityFeedback('Patrol recorded'))),
+      (failure) => emit(
+        state.copyWith(
+          feedback: SecurityFeedback(failure.message, isError: true),
+        ),
+      ),
+      (_) =>
+          emit(state.copyWith(feedback: SecurityFeedback('Patrol recorded'))),
     );
   }
 
-  Future<void> _onWatchPatrols(WatchPatrolsRequested event, Emitter<SecurityState> emit) async {
+  Future<void> _onWatchPatrols(
+    WatchPatrolsRequested event,
+    Emitter<SecurityState> emit,
+  ) async {
     await _patrolsSubscription?.cancel();
-    _patrolsSubscription = watchPatrols(event.schoolId).listen(
-      (patrols) => add(_PatrolsUpdated(patrols)),
-    );
+    _patrolsSubscription = watchPatrols(
+      event.schoolId,
+    ).listen((patrols) => add(_PatrolsUpdated(patrols)));
   }
 
-  Future<void> _onReportFoundItem(ReportFoundItemRequested event, Emitter<SecurityState> emit) async {
+  Future<void> _onReportFoundItem(
+    ReportFoundItemRequested event,
+    Emitter<SecurityState> emit,
+  ) async {
     final result = await reportFoundItem(event.item);
     result.fold(
-      (failure) => emit(state.copyWith(feedback: SecurityFeedback(failure.message, isError: true))),
-      (_) => emit(state.copyWith(feedback: SecurityFeedback('Found item reported'))),
+      (failure) => emit(
+        state.copyWith(
+          feedback: SecurityFeedback(failure.message, isError: true),
+        ),
+      ),
+      (_) => emit(
+        state.copyWith(feedback: SecurityFeedback('Found item reported')),
+      ),
     );
   }
 
-  Future<void> _onClaimItem(ClaimItemRequested event, Emitter<SecurityState> emit) async {
-    final result = await claimItem(event.schoolId, event.itemId, event.claimDetails);
+  Future<void> _onClaimItem(
+    ClaimItemRequested event,
+    Emitter<SecurityState> emit,
+  ) async {
+    final result = await claimItem(
+      event.schoolId,
+      event.itemId,
+      event.claimDetails,
+    );
     result.fold(
-      (failure) => emit(state.copyWith(feedback: SecurityFeedback(failure.message, isError: true))),
+      (failure) => emit(
+        state.copyWith(
+          feedback: SecurityFeedback(failure.message, isError: true),
+        ),
+      ),
       (_) => emit(state.copyWith(feedback: SecurityFeedback('Item claimed'))),
     );
   }
 
-  Future<void> _onWatchLostAndFound(WatchLostAndFoundRequested event, Emitter<SecurityState> emit) async {
+  Future<void> _onWatchLostAndFound(
+    WatchLostAndFoundRequested event,
+    Emitter<SecurityState> emit,
+  ) async {
     await _lostAndFoundSubscription?.cancel();
-    _lostAndFoundSubscription = watchLostAndFound(event.schoolId).listen(
-      (items) => add(_LostAndFoundUpdated(items)),
-    );
+    _lostAndFoundSubscription = watchLostAndFound(
+      event.schoolId,
+    ).listen((items) => add(_LostAndFoundUpdated(items)));
   }
 
   @override

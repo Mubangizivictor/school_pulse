@@ -108,10 +108,12 @@ class NotificationPreferences {
       badgeEnabled: badgeEnabled ?? this.badgeEnabled,
       lockScreenPreview: lockScreenPreview ?? this.lockScreenPreview,
       imageDownloadPolicy: imageDownloadPolicy ?? this.imageDownloadPolicy,
-      quietHoursStart:
-          clearQuietHours ? null : (quietHoursStart ?? this.quietHoursStart),
-      quietHoursEnd:
-          clearQuietHours ? null : (quietHoursEnd ?? this.quietHoursEnd),
+      quietHoursStart: clearQuietHours
+          ? null
+          : (quietHoursStart ?? this.quietHoursStart),
+      quietHoursEnd: clearQuietHours
+          ? null
+          : (quietHoursEnd ?? this.quietHoursEnd),
       emailCopies: emailCopies ?? this.emailCopies,
       smsCopies: smsCopies ?? this.smsCopies,
       dailyDigest: dailyDigest ?? this.dailyDigest,

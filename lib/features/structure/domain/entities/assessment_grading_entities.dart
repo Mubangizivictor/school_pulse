@@ -5,6 +5,7 @@ import 'package:equatable/equatable.dart';
 /// avoid colliding with Exams'/Academic's already-wired AssessmentType.
 class AssessmentTypeDef extends Equatable {
   final String id;
+  final String schoolId;
   final String name;
   final double weightPercentage;
   final String description;
@@ -12,6 +13,7 @@ class AssessmentTypeDef extends Equatable {
 
   const AssessmentTypeDef({
     required this.id,
+    required this.schoolId,
     required this.name,
     this.weightPercentage = 0,
     this.description = '',
@@ -20,6 +22,7 @@ class AssessmentTypeDef extends Equatable {
 
   AssessmentTypeDef copyWith({
     String? id,
+    String? schoolId,
     String? name,
     double? weightPercentage,
     String? description,
@@ -27,6 +30,7 @@ class AssessmentTypeDef extends Equatable {
   }) {
     return AssessmentTypeDef(
       id: id ?? this.id,
+      schoolId: schoolId ?? this.schoolId,
       name: name ?? this.name,
       weightPercentage: weightPercentage ?? this.weightPercentage,
       description: description ?? this.description,
@@ -35,7 +39,14 @@ class AssessmentTypeDef extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, name, weightPercentage, description, isActive];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    name,
+    weightPercentage,
+    description,
+    isActive,
+  ];
 }
 
 /// Structure's own grading system definition (A-F, 1-9, Percentage,
@@ -43,6 +54,7 @@ class AssessmentTypeDef extends Equatable {
 /// colliding with Exams'/Academic's already-wired GradingSystem.
 class GradingSystemDef extends Equatable {
   final String id;
+  final String schoolId;
   final String name;
   final String type;
   final bool isDefault;
@@ -50,6 +62,7 @@ class GradingSystemDef extends Equatable {
 
   const GradingSystemDef({
     required this.id,
+    required this.schoolId,
     required this.name,
     this.type = '',
     this.isDefault = false,
@@ -58,6 +71,7 @@ class GradingSystemDef extends Equatable {
 
   GradingSystemDef copyWith({
     String? id,
+    String? schoolId,
     String? name,
     String? type,
     bool? isDefault,
@@ -65,6 +79,7 @@ class GradingSystemDef extends Equatable {
   }) {
     return GradingSystemDef(
       id: id ?? this.id,
+      schoolId: schoolId ?? this.schoolId,
       name: name ?? this.name,
       type: type ?? this.type,
       isDefault: isDefault ?? this.isDefault,
@@ -73,12 +88,13 @@ class GradingSystemDef extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, name, type, isDefault, isActive];
+  List<Object?> get props => [id, schoolId, name, type, isDefault, isActive];
 }
 
 /// A single grade band (e.g. "A": 80-100) within a GradingSystemDef.
 class GradeBand extends Equatable {
   final String id;
+  final String schoolId;
   final String gradingSystemId;
   final String grade;
   final double minScore;
@@ -88,6 +104,7 @@ class GradeBand extends Equatable {
 
   const GradeBand({
     required this.id,
+    required this.schoolId,
     required this.gradingSystemId,
     required this.grade,
     this.minScore = 0,
@@ -98,6 +115,7 @@ class GradeBand extends Equatable {
 
   GradeBand copyWith({
     String? id,
+    String? schoolId,
     String? gradingSystemId,
     String? grade,
     double? minScore,
@@ -107,6 +125,7 @@ class GradeBand extends Equatable {
   }) {
     return GradeBand(
       id: id ?? this.id,
+      schoolId: schoolId ?? this.schoolId,
       gradingSystemId: gradingSystemId ?? this.gradingSystemId,
       grade: grade ?? this.grade,
       minScore: minScore ?? this.minScore,
@@ -117,6 +136,14 @@ class GradeBand extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [id, gradingSystemId, grade, minScore, maxScore, remarks, order];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    gradingSystemId,
+    grade,
+    minScore,
+    maxScore,
+    remarks,
+    order,
+  ];
 }

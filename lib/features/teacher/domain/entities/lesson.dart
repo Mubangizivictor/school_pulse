@@ -27,15 +27,15 @@ enum LessonStatus {
 
 extension LessonStatusDisplay on LessonStatus {
   String get label => switch (this) {
-        LessonStatus.draft => 'Draft',
-        LessonStatus.scheduled => 'Scheduled',
-        LessonStatus.ongoing => 'Ongoing',
-        LessonStatus.completed => 'Completed',
-        LessonStatus.missed => 'Missed',
-        LessonStatus.cancelled => 'Cancelled',
-        LessonStatus.substituted => 'Substituted',
-        LessonStatus.rescheduled => 'Rescheduled',
-      };
+    LessonStatus.draft => 'Draft',
+    LessonStatus.scheduled => 'Scheduled',
+    LessonStatus.ongoing => 'Ongoing',
+    LessonStatus.completed => 'Completed',
+    LessonStatus.missed => 'Missed',
+    LessonStatus.cancelled => 'Cancelled',
+    LessonStatus.substituted => 'Substituted',
+    LessonStatus.rescheduled => 'Rescheduled',
+  };
 }
 
 /// One period on the timetable, for one subject and class.
@@ -121,7 +121,8 @@ class Lesson extends Equatable {
   }
 
   bool get isUpcoming =>
-      status == LessonStatus.scheduled && scheduledStart.isAfter(DateTime.now());
+      status == LessonStatus.scheduled &&
+      scheduledStart.isAfter(DateTime.now());
 
   /// Whether [staffId] is entitled to act on this lesson: either the teacher
   /// the timetable assigned, or the substitute covering for them.
@@ -176,36 +177,36 @@ class Lesson extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        campusId,
-        academicYearId,
-        termId,
-        subjectId,
-        subjectName,
-        classId,
-        className,
-        streamId,
-        streamName,
-        timetableSlotId,
-        teacherStaffId,
-        substituteStaffId,
-        title,
-        topic,
-        subtopic,
-        scheduledStart,
-        scheduledEnd,
-        actualStart,
-        actualEnd,
-        room,
-        status,
-        statusReason,
-        enrolledCount,
-        attendanceSubmitted,
-        lessonNoteCount,
-        resourceCount,
-        relatedAssessmentId,
-      ];
+    id,
+    schoolId,
+    campusId,
+    academicYearId,
+    termId,
+    subjectId,
+    subjectName,
+    classId,
+    className,
+    streamId,
+    streamName,
+    timetableSlotId,
+    teacherStaffId,
+    substituteStaffId,
+    title,
+    topic,
+    subtopic,
+    scheduledStart,
+    scheduledEnd,
+    actualStart,
+    actualEnd,
+    room,
+    status,
+    statusReason,
+    enrolledCount,
+    attendanceSubmitted,
+    lessonNoteCount,
+    resourceCount,
+    relatedAssessmentId,
+  ];
 }
 
 /// What the teacher recorded when they closed the lesson.
@@ -232,13 +233,13 @@ class LessonCompletion extends Equatable {
 
   @override
   List<Object?> get props => [
-        topicsCovered,
-        syllabusReference,
-        syllabusProgress,
-        outcome,
-        challenges,
-        followUpRequired,
-        homeworkAssigned,
-        teacherNote,
-      ];
+    topicsCovered,
+    syllabusReference,
+    syllabusProgress,
+    outcome,
+    challenges,
+    followUpRequired,
+    homeworkAssigned,
+    teacherNote,
+  ];
 }

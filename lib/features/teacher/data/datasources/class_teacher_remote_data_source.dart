@@ -133,7 +133,7 @@ abstract class ClassTeacherRemoteDataSource {
   /// The behaviour categories the school configured, or empty when it has
   /// configured none and the shared defaults should stand.
   Future<List<({String id, String name, String colorHex, bool isActive})>>
-      getBehaviourCategories({required String schoolId});
+  getBehaviourCategories({required String schoolId});
 
   /// One class register, or null when it has not been started.
   Future<ClassAttendanceSession?> getAttendanceSession({
@@ -239,8 +239,9 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
   DocumentReference<Map<String, dynamic>> _school(String schoolId) =>
       firestore.collection('schools').doc(schoolId);
 
-  CollectionReference<Map<String, dynamic>> _attendanceSessions(String schoolId) =>
-      _school(schoolId).collection('class_attendance_sessions');
+  CollectionReference<Map<String, dynamic>> _attendanceSessions(
+    String schoolId,
+  ) => _school(schoolId).collection('class_attendance_sessions');
 
   CollectionReference<Map<String, dynamic>> _lessons(String schoolId) =>
       _school(schoolId).collection('lessons');
@@ -295,9 +296,19 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
       streamId: streamId,
     ).get();
 
-    return _sorted(snapshot.docs
-        .map((d) => _studentFromDoc(d.id, schoolId, classId, academicYearId, d.data()))
-        .toList());
+    return _sorted(
+      snapshot.docs
+          .map(
+            (d) => _studentFromDoc(
+              d.id,
+              schoolId,
+              classId,
+              academicYearId,
+              d.data(),
+            ),
+          )
+          .toList(),
+    );
   }
 
   @override
@@ -312,9 +323,21 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
       classId: classId,
       academicYearId: academicYearId,
       streamId: streamId,
-    ).snapshots().map((snapshot) => _sorted(snapshot.docs
-        .map((d) => _studentFromDoc(d.id, schoolId, classId, academicYearId, d.data()))
-        .toList()));
+    ).snapshots().map(
+      (snapshot) => _sorted(
+        snapshot.docs
+            .map(
+              (d) => _studentFromDoc(
+                d.id,
+                schoolId,
+                classId,
+                academicYearId,
+                d.data(),
+              ),
+            )
+            .toList(),
+      ),
+    );
   }
 
   @override
@@ -354,11 +377,7 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
     String? streamId,
   }) async {
     final doc = await _attendanceSessions(schoolId)
-        .doc(classSessionId(
-          classId: classId,
-          streamId: streamId,
-          date: date,
-        ))
+        .doc(classSessionId(classId: classId, streamId: streamId, date: date))
         .get();
 
     final data = doc.data();
@@ -385,12 +404,13 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
     required String schoolId,
     required String ownerUserId,
   }) async {
-    final snapshot = await _tasks(schoolId)
-        .where('ownerUserId', isEqualTo: ownerUserId)
-        .orderBy('dueAt')
-        .get();
+    final snapshot = await _tasks(
+      schoolId,
+    ).where('ownerUserId', isEqualTo: ownerUserId).orderBy('dueAt').get();
 
-    return snapshot.docs.map((d) => _taskFromDoc(d.id, schoolId, d.data())).toList();
+    return snapshot.docs
+        .map((d) => _taskFromDoc(d.id, schoolId, d.data()))
+        .toList();
   }
 
   @override
@@ -410,11 +430,9 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
       'studentId': task.studentId,
       'subjectName': task.subjectName,
       'checklist': task.checklist
-          .map((c) => {
-                'id': c.id,
-                'title': c.title,
-                'isCompleted': c.isCompleted,
-              })
+          .map(
+            (c) => {'id': c.id, 'title': c.title, 'isCompleted': c.isCompleted},
+          )
           .toList(),
       'attachments': task.attachments,
       'recurrence': {
@@ -423,13 +441,15 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
             ? null
             : Timestamp.fromDate(task.recurrence.endDate!),
       },
-      'remindAt':
-          task.remindAt == null ? null : Timestamp.fromDate(task.remindAt!),
+      'remindAt': task.remindAt == null
+          ? null
+          : Timestamp.fromDate(task.remindAt!),
       'ownerUserId': task.ownerUserId,
       'collaboratorUserIds': task.collaboratorUserIds,
       'createdAt': Timestamp.fromDate(task.createdAt),
-      'completedAt':
-          task.completedAt == null ? null : Timestamp.fromDate(task.completedAt!),
+      'completedAt': task.completedAt == null
+          ? null
+          : Timestamp.fromDate(task.completedAt!),
       'completedBy': task.completedBy,
       'roleAssignmentId': task.roleAssignmentId,
       'updatedAt': FieldValue.serverTimestamp(),
@@ -444,8 +464,13 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
     await _tasks(schoolId).doc(taskId).delete();
   }
 
-  ClassTask _taskFromDoc(String id, String schoolId, Map<String, dynamic> data) {
-    final recurrence = (data['recurrence'] as Map<String, dynamic>?) ?? const {};
+  ClassTask _taskFromDoc(
+    String id,
+    String schoolId,
+    Map<String, dynamic> data,
+  ) {
+    final recurrence =
+        (data['recurrence'] as Map<String, dynamic>?) ?? const {};
 
     return ClassTask(
       id: id,
@@ -464,14 +489,17 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
       subjectName: data['subjectName'] as String?,
       checklist: ((data['checklist'] as List?) ?? const [])
           .whereType<Map<String, dynamic>>()
-          .map((e) => ClassTaskChecklistItem(
-                id: e['id'] as String? ?? '',
-                title: e['title'] as String? ?? '',
-                isCompleted: e['isCompleted'] as bool? ?? false,
-              ))
+          .map(
+            (e) => ClassTaskChecklistItem(
+              id: e['id'] as String? ?? '',
+              title: e['title'] as String? ?? '',
+              isCompleted: e['isCompleted'] as bool? ?? false,
+            ),
+          )
           .toList(),
       attachments:
-          (data['attachments'] as List?)?.whereType<String>().toList() ?? const [],
+          (data['attachments'] as List?)?.whereType<String>().toList() ??
+          const [],
       recurrence: TaskRecurrence.fromMap({
         ...recurrence,
         'endDate': _toDate(recurrence['endDate']),
@@ -479,8 +507,10 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
       remindAt: _toDate(data['remindAt']),
       ownerUserId: data['ownerUserId'] as String? ?? '',
       collaboratorUserIds:
-          (data['collaboratorUserIds'] as List?)?.whereType<String>().toList() ??
-              const [],
+          (data['collaboratorUserIds'] as List?)
+              ?.whereType<String>()
+              .toList() ??
+          const [],
       createdAt: _toDate(data['createdAt']) ?? DateTime(1970),
       completedAt: _toDate(data['completedAt']),
       completedBy: data['completedBy'] as String?,
@@ -519,19 +549,23 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
       'studentName': entry.studentName,
       'status': entry.status.name,
       'competencies': entry.competencies
-          .map((c) => {
-                'domainId': c.domainId,
-                'domainLabel': c.domainLabel,
-                'levelCode': c.levelCode,
-                'evidenceNote': c.evidenceNote,
-              })
+          .map(
+            (c) => {
+              'domainId': c.domainId,
+              'domainLabel': c.domainLabel,
+              'levelCode': c.levelCode,
+              'evidenceNote': c.evidenceNote,
+            },
+          )
           .toList(),
       'conduct': entry.conduct
-          .map((c) => {
-                'criterionId': c.criterionId,
-                'criterionLabel': c.criterionLabel,
-                'ratingCode': c.ratingCode,
-              })
+          .map(
+            (c) => {
+              'criterionId': c.criterionId,
+              'criterionLabel': c.criterionLabel,
+              'ratingCode': c.ratingCode,
+            },
+          )
           .toList(),
       'overallConductCode': entry.overallConductCode,
       'teacherComment': entry.teacherComment,
@@ -552,10 +586,9 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
     required String schoolId,
     required String academicYearId,
   }) async {
-    final doc = await _school(schoolId)
-        .collection('configs')
-        .doc('classReportProfile')
-        .get();
+    final doc = await _school(
+      schoolId,
+    ).collection('configs').doc('classReportProfile').get();
 
     final data = doc.data();
     if (!doc.exists || data == null) return null;
@@ -563,10 +596,12 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
     List<({String id, String label})> pairs(String key) {
       return ((data[key] as List?) ?? const [])
           .whereType<Map<String, dynamic>>()
-          .map((e) => (
-                id: e['id'] as String? ?? '',
-                label: e['label'] as String? ?? '',
-              ))
+          .map(
+            (e) => (
+              id: e['id'] as String? ?? '',
+              label: e['label'] as String? ?? '',
+            ),
+          )
           .where((e) => e.id.isNotEmpty)
           .toList();
     }
@@ -574,10 +609,12 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
     List<({String code, String label})> codes(String key) {
       return ((data[key] as List?) ?? const [])
           .whereType<Map<String, dynamic>>()
-          .map((e) => (
-                code: e['code'] as String? ?? '',
-                label: e['label'] as String? ?? '',
-              ))
+          .map(
+            (e) => (
+              code: e['code'] as String? ?? '',
+              label: e['label'] as String? ?? '',
+            ),
+          )
           .where((e) => e.code.isNotEmpty)
           .toList();
     }
@@ -617,26 +654,30 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
       status: ReportEntryStatus.fromId(data['status'] as String?),
       competencies: ((data['competencies'] as List?) ?? const [])
           .whereType<Map<String, dynamic>>()
-          .map((e) => CompetencyEntry(
-                domainId: e['domainId'] as String? ?? '',
-                domainLabel: e['domainLabel'] as String? ?? '',
-                levelCode: e['levelCode'] as String?,
-                evidenceNote: e['evidenceNote'] as String?,
-              ))
+          .map(
+            (e) => CompetencyEntry(
+              domainId: e['domainId'] as String? ?? '',
+              domainLabel: e['domainLabel'] as String? ?? '',
+              levelCode: e['levelCode'] as String?,
+              evidenceNote: e['evidenceNote'] as String?,
+            ),
+          )
           .toList(),
       conduct: ((data['conduct'] as List?) ?? const [])
           .whereType<Map<String, dynamic>>()
-          .map((e) => ConductEntry(
-                criterionId: e['criterionId'] as String? ?? '',
-                criterionLabel: e['criterionLabel'] as String? ?? '',
-                ratingCode: e['ratingCode'] as String?,
-              ))
+          .map(
+            (e) => ConductEntry(
+              criterionId: e['criterionId'] as String? ?? '',
+              criterionLabel: e['criterionLabel'] as String? ?? '',
+              ratingCode: e['ratingCode'] as String?,
+            ),
+          )
           .toList(),
       overallConductCode: data['overallConductCode'] as String?,
       teacherComment: data['teacherComment'] as String?,
       recommendations:
           (data['recommendations'] as List?)?.whereType<String>().toList() ??
-              const [],
+          const [],
       attendanceVerified: data['attendanceVerified'] as bool? ?? false,
       returnReason: data['returnReason'] as String?,
       updatedBy: data['updatedBy'] as String?,
@@ -681,12 +722,14 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
           ? (score / maximum) * 100
           : score;
 
-      rows.add(ClassMarkRow(
-        studentId: data['studentId'] as String? ?? '',
-        subjectId: data['subjectId'] as String? ?? '',
-        subjectName: data['subjectName'] as String? ?? '',
-        percentage: percentage,
-      ));
+      rows.add(
+        ClassMarkRow(
+          studentId: data['studentId'] as String? ?? '',
+          subjectId: data['subjectId'] as String? ?? '',
+          subjectName: data['subjectName'] as String? ?? '',
+          percentage: percentage,
+        ),
+      );
     }
 
     return rows;
@@ -765,7 +808,8 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
       status: ClassAnnouncementStatus.fromId(data['status'] as String?),
       audience: ClassAnnouncementAudience.fromId(data['audience'] as String?),
       attachments:
-          (data['attachments'] as List?)?.whereType<String>().toList() ?? const [],
+          (data['attachments'] as List?)?.whereType<String>().toList() ??
+          const [],
       scheduledFor: _toDate(data['scheduledFor']),
       expiresAt: _toDate(data['expiresAt']),
       publishedAt: _toDate(data['publishedAt']),
@@ -844,8 +888,10 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
       query = query.where('studentId', isEqualTo: studentId);
     }
 
-    final snapshot =
-        await query.orderBy('recordedAt', descending: true).limit(limit).get();
+    final snapshot = await query
+        .orderBy('recordedAt', descending: true)
+        .limit(limit)
+        .get();
     return snapshot.docs
         .map((d) => _behaviourFromDoc(d.id, schoolId, d.data()))
         .toList();
@@ -878,9 +924,10 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
 
   @override
   Future<List<({String id, String name, String colorHex, bool isActive})>>
-      getBehaviourCategories({required String schoolId}) async {
-    final snapshot =
-        await _school(schoolId).collection('class_behaviour_categories').get();
+  getBehaviourCategories({required String schoolId}) async {
+    final snapshot = await _school(
+      schoolId,
+    ).collection('class_behaviour_categories').get();
     return snapshot.docs.map((d) {
       final data = d.data();
       return (
@@ -914,7 +961,8 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
       status: ClassHomeworkStatus.fromId(data['status'] as String?),
       priority: ClassHomeworkPriority.fromId(data['priority'] as String?),
       attachments:
-          (data['attachments'] as List?)?.whereType<String>().toList() ?? const [],
+          (data['attachments'] as List?)?.whereType<String>().toList() ??
+          const [],
       createdBy: data['createdBy'] as String? ?? '',
       createdAt: _toDate(data['createdAt']) ?? DateTime(1970),
       updatedBy: data['updatedBy'] as String?,
@@ -980,13 +1028,16 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
       'date': Timestamp.fromDate(session.date),
       'status': session.status.name,
       'entries': session.entries
-          .map((e) => {
-                'studentId': e.studentId,
-                'status': e.statusCode,
-                'note': e.note,
-                'markedAt':
-                    e.markedAt == null ? null : Timestamp.fromDate(e.markedAt!),
-              })
+          .map(
+            (e) => {
+              'studentId': e.studentId,
+              'status': e.statusCode,
+              'note': e.note,
+              'markedAt': e.markedAt == null
+                  ? null
+                  : Timestamp.fromDate(e.markedAt!),
+            },
+          )
           .toList(),
       // Denormalised so the dashboard reads one document instead of counting
       // an entries array on every refresh.
@@ -1033,10 +1084,9 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
   Future<void> createCorrectionRequest(
     AttendanceCorrectionRequest request,
   ) async {
-    await _school(request.schoolId)
-        .collection('class_attendance_corrections')
-        .doc(request.id)
-        .set({
+    await _school(
+      request.schoolId,
+    ).collection('class_attendance_corrections').doc(request.id).set({
       'schoolId': request.schoolId,
       'sessionId': request.sessionId,
       'classId': request.classId,
@@ -1121,7 +1171,8 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
     return {
       for (final entry in entries.whereType<Map<String, dynamic>>())
         if ((entry['studentId'] as String? ?? '').isNotEmpty)
-          entry['studentId'] as String: entry['status'] as String? ?? 'notMarked',
+          entry['studentId'] as String:
+              entry['status'] as String? ?? 'notMarked',
     };
   }
 
@@ -1139,8 +1190,10 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
     Query<Map<String, dynamic>> query = _lessons(schoolId)
         .where('classId', isEqualTo: classId)
         .where('academicYearId', isEqualTo: academicYearId)
-        .where('scheduledStart',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(dayStart))
+        .where(
+          'scheduledStart',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(dayStart),
+        )
         .where('scheduledStart', isLessThan: Timestamp.fromDate(dayEnd));
 
     if (streamId != null && streamId.isNotEmpty) {
@@ -1148,7 +1201,9 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
     }
 
     final snapshot = await query.orderBy('scheduledStart').get();
-    return snapshot.docs.map((d) => _lessonFromDoc(d.id, schoolId, d.data())).toList();
+    return snapshot.docs
+        .map((d) => _lessonFromDoc(d.id, schoolId, d.data()))
+        .toList();
   }
 
   @override
@@ -1194,20 +1249,29 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
     // downloading a class's homework just to length it would be a wasted
     // round trip on every dashboard refresh.
     final results = await Future.wait([
-      _countOrZero(_homework(schoolId)
-          .where('classId', isEqualTo: classId)
-          .where('academicYearId', isEqualTo: academicYearId)
-          .where('status', whereIn: ['published', 'active', 'due_soon', 'overdue'])),
-      _countOrZero(_reportEntries(schoolId)
-          .where('classId', isEqualTo: classId)
-          .where('academicYearId', isEqualTo: academicYearId)
-          .where('termId', isEqualTo: termId)
-          .where('status', whereIn: ['draft', 'in_progress', 'returned'])),
-      _countOrZero(_behaviour(schoolId)
-          .where('classId', isEqualTo: classId)
-          .where('academicYearId', isEqualTo: academicYearId)
-          .where('followUpRequired', isEqualTo: true)
-          .where('followUpClosed', isEqualTo: false)),
+      _countOrZero(
+        _homework(schoolId)
+            .where('classId', isEqualTo: classId)
+            .where('academicYearId', isEqualTo: academicYearId)
+            .where(
+              'status',
+              whereIn: ['published', 'active', 'due_soon', 'overdue'],
+            ),
+      ),
+      _countOrZero(
+        _reportEntries(schoolId)
+            .where('classId', isEqualTo: classId)
+            .where('academicYearId', isEqualTo: academicYearId)
+            .where('termId', isEqualTo: termId)
+            .where('status', whereIn: ['draft', 'in_progress', 'returned']),
+      ),
+      _countOrZero(
+        _behaviour(schoolId)
+            .where('classId', isEqualTo: classId)
+            .where('academicYearId', isEqualTo: academicYearId)
+            .where('followUpRequired', isEqualTo: true)
+            .where('followUpClosed', isEqualTo: false),
+      ),
     ]);
 
     return ClassPendingCounts(
@@ -1230,7 +1294,9 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
   }
 
   List<ClassStudentSummary> _sorted(List<ClassStudentSummary> students) {
-    students.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    students.sort(
+      (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+    );
     return students;
   }
 
@@ -1245,7 +1311,8 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
       studentId: id,
       schoolId: schoolId,
       name: data['name'] as String? ?? '',
-      admissionNumber: data['admissionNumber'] as String? ??
+      admissionNumber:
+          data['admissionNumber'] as String? ??
           data['studentCode'] as String? ??
           '',
       photoUrl: data['photoUrl'] as String?,
@@ -1317,28 +1384,28 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
   /// Human label for an audit action, so the activity feed reads as English
   /// rather than as dotted action ids.
   static String _activityTitle(String action) => switch (action) {
-        'attendance.saved' => 'Attendance Draft Saved',
-        'attendance.submitted' => 'Attendance Logged',
-        'attendance.edited' => 'Attendance Corrected',
-        'homework.created' => 'Homework Created',
-        'homework.published' => 'Homework Published',
-        'behaviour.recorded' => 'Behaviour Recorded',
-        'achievement.recorded' => 'Achievement Recorded',
-        'announcement.created' => 'Announcement Created',
-        'announcement.published' => 'Announcement Published',
-        'message.sent' => 'Message Sent',
-        'report.draft_saved' => 'Report Draft Saved',
-        'report.submitted' => 'Report Submitted',
-        'report.generated' => 'Reports Generated',
-        'competency.entered' => 'Competencies Entered',
-        'conduct.entered' => 'Conduct Ratings Entered',
-        'comment.added' => 'Teacher Comment Added',
-        'task.created' => 'Task Created',
-        'task.completed' => 'Task Completed',
-        'resource.uploaded' => 'Resource Uploaded',
-        'resource.shared' => 'Resource Shared',
-        _ => 'Class Activity',
-      };
+    'attendance.saved' => 'Attendance Draft Saved',
+    'attendance.submitted' => 'Attendance Logged',
+    'attendance.edited' => 'Attendance Corrected',
+    'homework.created' => 'Homework Created',
+    'homework.published' => 'Homework Published',
+    'behaviour.recorded' => 'Behaviour Recorded',
+    'achievement.recorded' => 'Achievement Recorded',
+    'announcement.created' => 'Announcement Created',
+    'announcement.published' => 'Announcement Published',
+    'message.sent' => 'Message Sent',
+    'report.draft_saved' => 'Report Draft Saved',
+    'report.submitted' => 'Report Submitted',
+    'report.generated' => 'Reports Generated',
+    'competency.entered' => 'Competencies Entered',
+    'conduct.entered' => 'Conduct Ratings Entered',
+    'comment.added' => 'Teacher Comment Added',
+    'task.created' => 'Task Created',
+    'task.completed' => 'Task Completed',
+    'resource.uploaded' => 'Resource Uploaded',
+    'resource.shared' => 'Resource Shared',
+    _ => 'Class Activity',
+  };
 }
 
 /// The deterministic id of one class's register for one day.
@@ -1352,7 +1419,8 @@ String classSessionId({
   required DateTime date,
   String sessionType = 'daily',
 }) {
-  final day = '${date.year}-'
+  final day =
+      '${date.year}-'
       '${date.month.toString().padLeft(2, '0')}-'
       '${date.day.toString().padLeft(2, '0')}';
   final stream = (streamId == null || streamId.isEmpty) ? 'all' : streamId;

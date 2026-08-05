@@ -8,9 +8,11 @@ class SubscriptionRepository {
   final FirebaseFunctions _functions = FirebaseFunctions.instance;
 
   Stream<Subscription> watchSubscription() {
-    return _firestore.collection('subscription').doc('current').snapshots().map(
-          (doc) => Subscription.fromFirestore(doc.data()),
-        );
+    return _firestore
+        .collection('subscription')
+        .doc('current')
+        .snapshots()
+        .map((doc) => Subscription.fromFirestore(doc.data()));
   }
 
   Stream<List<PaymentTransaction>> watchRecentTransactions() {
@@ -19,7 +21,10 @@ class SubscriptionRepository {
         .orderBy('createdAt', descending: true)
         .limit(10)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map(PaymentTransaction.fromFirestore).toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs.map(PaymentTransaction.fromFirestore).toList(),
+        );
   }
 
   /// Calls the `initiateMobileMoneyCharge` Cloud Function, which prompts the

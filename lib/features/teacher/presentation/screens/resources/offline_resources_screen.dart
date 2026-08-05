@@ -10,9 +10,7 @@ class OfflineResourcesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        title: const Text('Offline Resources'),
-      ),
+      appBar: AppBar(title: const Text('Offline Resources')),
       body: Column(
         children: [
           Padding(
@@ -66,10 +64,7 @@ class OfflineResourcesScreen extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.all(AppSpacing.xl),
-            child: SecondaryButton(
-              label: 'Download More',
-              onPressed: () {},
-            ),
+            child: SecondaryButton(label: 'Download More', onPressed: () {}),
           ),
         ],
       ),
@@ -115,7 +110,10 @@ class _OfflineItem extends StatelessWidget {
                 ),
                 Text(
                   subtitle,
-                  style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).hintColor,
+                  ),
                 ),
               ],
             ),

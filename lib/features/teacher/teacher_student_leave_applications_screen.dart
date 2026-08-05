@@ -6,7 +6,10 @@ import 'package:school_pulse/design_system/theme/app_typography.dart';
 
 class TeacherStudentLeaveApplicationsScreen extends StatelessWidget {
   final String studentId;
-  const TeacherStudentLeaveApplicationsScreen({super.key, required this.studentId});
+  const TeacherStudentLeaveApplicationsScreen({
+    super.key,
+    required this.studentId,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -18,13 +21,18 @@ class TeacherStudentLeaveApplicationsScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black),
+          icon: Icon(
+            Icons.arrow_back,
+            color: isDark ? Colors.white : Colors.black,
+          ),
           onPressed: () => context.pop(),
         ),
         title: Text(
           'Leave Applications',
           style: AppTypography.headlineSmall.copyWith(
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            color: isDark
+                ? AppColors.textPrimaryDark
+                : AppColors.textPrimaryLight,
           ),
         ),
       ),
@@ -73,11 +81,16 @@ class TeacherStudentLeaveApplicationsScreen extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: () {},
                 icon: const Icon(Icons.add, color: Colors.white),
-                label: const Text('New Leave Request', style: TextStyle(color: Colors.white)),
+                label: const Text(
+                  'New Leave Request',
+                  style: TextStyle(color: Colors.white),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.royalBlue,
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.l),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.m)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppSpacing.m),
+                  ),
                 ),
               ),
             ),
@@ -108,7 +121,11 @@ class _FilterTabItem extends StatelessWidget {
   final bool isSelected;
   final bool isDark;
 
-  const _FilterTabItem({required this.label, required this.isSelected, required this.isDark});
+  const _FilterTabItem({
+    required this.label,
+    required this.isSelected,
+    required this.isDark,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -119,7 +136,11 @@ class _FilterTabItem extends StatelessWidget {
           Text(
             label,
             style: AppTypography.labelLarge.copyWith(
-              color: isSelected ? AppColors.royalBlue : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+              color: isSelected
+                  ? AppColors.royalBlue
+                  : (isDark
+                        ? AppColors.textMutedDark
+                        : AppColors.textMutedLight),
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
           ),
@@ -159,7 +180,9 @@ class _LeaveApplicationTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
         borderRadius: BorderRadius.circular(AppSpacing.l),
-        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -170,26 +193,38 @@ class _LeaveApplicationTile extends StatelessWidget {
               Text(
                 reason,
                 style: AppTypography.titleMedium.copyWith(
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 dateRange,
-                style: AppTypography.bodySmall.copyWith(color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+                style: AppTypography.bodySmall.copyWith(
+                  color: isDark
+                      ? AppColors.textMutedDark
+                      : AppColors.textMutedLight,
+                ),
               ),
             ],
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: 4),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.m,
+              vertical: 4,
+            ),
             decoration: BoxDecoration(
               color: statusColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppSpacing.s),
             ),
             child: Text(
               status,
-              style: AppTypography.labelSmall.copyWith(color: statusColor, fontWeight: FontWeight.bold),
+              style: AppTypography.labelSmall.copyWith(
+                color: statusColor,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],

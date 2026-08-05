@@ -18,7 +18,10 @@ abstract class MessagesRepository {
   /// keeps them).
   Stream<List<ChatConversation>> watchConversations(String userId);
 
-  Stream<ChatConversation?> watchConversation(String conversationId, String userId);
+  Stream<ChatConversation?> watchConversation(
+    String conversationId,
+    String userId,
+  );
 
   /// Opens (or reuses) the 1:1 thread between [me] and [contact] and returns
   /// its id. Reusing is guaranteed by the deterministic document id, so two
@@ -77,7 +80,11 @@ abstract class MessagesRepository {
 
   // --- One conversation --------------------------------------------------
 
-  Stream<List<ChatMessage>> watchMessages(String conversationId, String userId, {int limit});
+  Stream<List<ChatMessage>> watchMessages(
+    String conversationId,
+    String userId, {
+    int limit,
+  });
 
   Future<void> sendMessage({
     required String conversationId,
@@ -120,13 +127,31 @@ abstract class MessagesRepository {
   /// hadn't seen - this is what turns the sender's single tick into a double.
   Future<void> markConversationRead(String conversationId, String userId);
 
-  Future<void> setStarred(String conversationId, String messageId, String userId, bool value);
-  Future<void> setMessagePinned(String conversationId, ChatMessage message, bool value);
+  Future<void> setStarred(
+    String conversationId,
+    String messageId,
+    String userId,
+    bool value,
+  );
+  Future<void> setMessagePinned(
+    String conversationId,
+    ChatMessage message,
+    bool value,
+  );
   Future<void> deleteMessage(String conversationId, String messageId);
-  Future<void> editMessage(String conversationId, String messageId, String content);
+  Future<void> editMessage(
+    String conversationId,
+    String messageId,
+    String content,
+  );
 
   /// Passing null for [emoji] removes the user's existing reaction.
-  Future<void> react(String conversationId, String messageId, String userId, String? emoji);
+  Future<void> react(
+    String conversationId,
+    String messageId,
+    String userId,
+    String? emoji,
+  );
 
   Future<void> forwardMessage({
     required ChatMessage message,
@@ -135,7 +160,10 @@ abstract class MessagesRepository {
   });
 
   /// Attachments in one thread, for the Media / Links / Docs screen.
-  Stream<List<ChatMessage>> watchAttachments(String conversationId, String userId);
+  Stream<List<ChatMessage>> watchAttachments(
+    String conversationId,
+    String userId,
+  );
 
   // --- Across conversations ----------------------------------------------
 
@@ -150,7 +178,10 @@ abstract class MessagesRepository {
 
   /// Everyone in the school who can be messaged, minus [excludeId] (the
   /// signed-in user). Sourced from `school_contacts`.
-  Future<List<MessageContact>> getContacts(String schoolId, {String? excludeId});
+  Future<List<MessageContact>> getContacts(
+    String schoolId, {
+    String? excludeId,
+  });
 
   Future<MessageContact?> getContact(String userId);
 

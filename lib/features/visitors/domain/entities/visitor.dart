@@ -2,21 +2,9 @@ import 'package:equatable/equatable.dart';
 
 enum VisitorStatus { checkedIn, checkedOut }
 
-enum VisitorCategory { 
-  parent, 
-  vendor, 
-  official, 
-  contractor, 
-  personal, 
-  other 
-}
+enum VisitorCategory { parent, vendor, official, contractor, personal, other }
 
-enum ApprovalStatus { 
-  pending, 
-  approved, 
-  rejected, 
-  notRequired 
-}
+enum ApprovalStatus { pending, approved, rejected, notRequired }
 
 class Visitor extends Equatable {
   final String id;
@@ -49,7 +37,8 @@ class Visitor extends Equatable {
   final String? idImageUrl;
   final String? signatureLocalPath;
   final String? signatureUrl;
-  final String? studentId; // For student pickup verification, or the child a parent visitor is linked to
+  final String?
+  studentId; // For student pickup verification, or the child a parent visitor is linked to
   final String? scheduledVisitId;
   final bool isSynced;
   final bool isBlacklisted;
@@ -99,44 +88,44 @@ class Visitor extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        fullName,
-        phone,
-        nationalId,
-        gender,
-        vehicleNumber,
-        parkingSlot,
-        company,
-        host,
-        hostId,
-        department,
-        purpose,
-        category,
-        expectedDuration,
-        expectedDepartureTime,
-        itemsCarried,
-        notes,
-        arrivalTime,
-        departureTime,
-        status,
-        approvalStatus,
-        deviceId,
-        gateId,
-        photoLocalPath,
-        photoUrl,
-        idImageLocalPath,
-        idImageUrl,
-        signatureLocalPath,
-        signatureUrl,
-        studentId,
-        scheduledVisitId,
-        isSynced,
-        isBlacklisted,
-        badgeNumber,
-        badgeReplacementCount,
-        agreementAccepted,
-      ];
+    id,
+    schoolId,
+    fullName,
+    phone,
+    nationalId,
+    gender,
+    vehicleNumber,
+    parkingSlot,
+    company,
+    host,
+    hostId,
+    department,
+    purpose,
+    category,
+    expectedDuration,
+    expectedDepartureTime,
+    itemsCarried,
+    notes,
+    arrivalTime,
+    departureTime,
+    status,
+    approvalStatus,
+    deviceId,
+    gateId,
+    photoLocalPath,
+    photoUrl,
+    idImageLocalPath,
+    idImageUrl,
+    signatureLocalPath,
+    signatureUrl,
+    studentId,
+    scheduledVisitId,
+    isSynced,
+    isBlacklisted,
+    badgeNumber,
+    badgeReplacementCount,
+    agreementAccepted,
+  ];
 
   Visitor copyWith({
     String? id,
@@ -193,7 +182,8 @@ class Visitor extends Equatable {
       purpose: purpose ?? this.purpose,
       category: category ?? this.category,
       expectedDuration: expectedDuration ?? this.expectedDuration,
-      expectedDepartureTime: expectedDepartureTime ?? this.expectedDepartureTime,
+      expectedDepartureTime:
+          expectedDepartureTime ?? this.expectedDepartureTime,
       itemsCarried: itemsCarried ?? this.itemsCarried,
       notes: notes ?? this.notes,
       arrivalTime: arrivalTime ?? this.arrivalTime,
@@ -213,7 +203,8 @@ class Visitor extends Equatable {
       isSynced: isSynced ?? this.isSynced,
       isBlacklisted: isBlacklisted ?? this.isBlacklisted,
       badgeNumber: badgeNumber ?? this.badgeNumber,
-      badgeReplacementCount: badgeReplacementCount ?? this.badgeReplacementCount,
+      badgeReplacementCount:
+          badgeReplacementCount ?? this.badgeReplacementCount,
       agreementAccepted: agreementAccepted ?? this.agreementAccepted,
     );
   }

@@ -24,7 +24,9 @@ class _EmergencyRollCallPageState extends State<EmergencyRollCallPage> {
     super.initState();
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
-      context.read<VisitorsBloc>().add(LoadEmergencyRollCall(authState.user.schoolId));
+      context.read<VisitorsBloc>().add(
+        LoadEmergencyRollCall(authState.user.schoolId),
+      );
     }
   }
 
@@ -47,9 +49,9 @@ class _EmergencyRollCallPageState extends State<EmergencyRollCallPage> {
     final uri = Uri(scheme: 'tel', path: phone);
     if (!await launchUrl(uri)) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to place call to $phone')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Unable to place call to $phone')));
     }
   }
 
@@ -75,9 +77,19 @@ class _EmergencyRollCallPageState extends State<EmergencyRollCallPage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.check_circle_outline, size: 64, color: Colors.green),
+                    Icon(
+                      Icons.check_circle_outline,
+                      size: 64,
+                      color: Colors.green,
+                    ),
                     SizedBox(height: 16),
-                    Text('All visitors accounted for.', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text(
+                      'All visitors accounted for.',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     Text('No visitors are currently checked in.'),
                   ],
                 ),
@@ -96,7 +108,10 @@ class _EmergencyRollCallPageState extends State<EmergencyRollCallPage> {
                       Expanded(
                         child: Text(
                           '${activeVisitors.length} visitors are currently on the premises.',
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red,
+                          ),
                         ),
                       ),
                       ElevatedButton.icon(
@@ -115,7 +130,8 @@ class _EmergencyRollCallPageState extends State<EmergencyRollCallPage> {
                   child: ListView.separated(
                     padding: const EdgeInsets.all(16),
                     itemCount: activeVisitors.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 8),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       final visitor = activeVisitors[index];
                       return AppCard(
@@ -123,18 +139,26 @@ class _EmergencyRollCallPageState extends State<EmergencyRollCallPage> {
                           leading: const CircleAvatar(
                             child: Icon(Icons.person),
                           ),
-                          title: Text(visitor.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          title: Text(
+                            visitor.fullName,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Host: ${visitor.host} (${visitor.department})'),
+                              Text(
+                                'Host: ${visitor.host} (${visitor.department})',
+                              ),
                               Text('Phone: ${visitor.phone}'),
-                              Text('Arrival: ${DateFormat('HH:mm').format(visitor.arrivalTime)}'),
+                              Text(
+                                'Arrival: ${DateFormat('HH:mm').format(visitor.arrivalTime)}',
+                              ),
                             ],
                           ),
                           trailing: IconButton(
                             icon: const Icon(Icons.phone, color: Colors.green),
-                            onPressed: () => _callVisitor(context, visitor.phone),
+                            onPressed: () =>
+                                _callVisitor(context, visitor.phone),
                           ),
                         ),
                       );

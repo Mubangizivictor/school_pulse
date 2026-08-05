@@ -21,7 +21,9 @@ class AdmissionService {
     this.initializeFinancials,
   });
 
-  Future<Either<Failure, void>> submitApplication(AdmissionApplication application) {
+  Future<Either<Failure, void>> submitApplication(
+    AdmissionApplication application,
+  ) {
     return repository.createAdmissionApplication(application);
   }
 
@@ -40,7 +42,8 @@ class AdmissionService {
       final normalizedName = studentName.trim().toLowerCase();
       final matches = applications.where((a) {
         final sameName = a.studentName.trim().toLowerCase() == normalizedName;
-        final sameDob = a.dateOfBirth.year == dateOfBirth.year &&
+        final sameDob =
+            a.dateOfBirth.year == dateOfBirth.year &&
             a.dateOfBirth.month == dateOfBirth.month &&
             a.dateOfBirth.day == dateOfBirth.day;
         return sameName && sameDob;
@@ -49,7 +52,9 @@ class AdmissionService {
     });
   }
 
-  Future<Either<Failure, List<AdmissionApplication>>> getPendingApplications(String schoolId) {
+  Future<Either<Failure, List<AdmissionApplication>>> getPendingApplications(
+    String schoolId,
+  ) {
     return repository.getApplications(schoolId);
   }
 
@@ -59,7 +64,9 @@ class AdmissionService {
     required bool approve,
     String? comments,
   }) async {
-    final status = approve ? AdmissionStatus.approved : AdmissionStatus.rejected;
+    final status = approve
+        ? AdmissionStatus.approved
+        : AdmissionStatus.rejected;
     return repository.updateApplicationStatus(
       applicationId,
       status,
@@ -79,70 +86,64 @@ class AdmissionService {
     double? totalBilled,
   }) async {
     // 1. Generate the legacy/sequential admission number.
-    final numResult = await repository.generateAdmissionNumber(schoolId, academicYearId);
-
-    return numResult.fold(
-      (failure) => Left(failure),
-      (admissionNumber) async {
-        // 2. Mint the identity codes up front. finalizeAdmission needs a
-        // studentCode as an *input* (the student doc doesn't exist yet), so
-        // this can't wait for the Student.id that identityRepository would
-        // otherwise generate against - reuse the admission sequence so the
-        // human-friendly code and the admission number stay aligned.
-        final sequenceNumber = _sequenceFrom(admissionNumber);
-        final studentCode = idGenerator.generateSchoolStudentId(
-          schoolPrefix: schoolCode,
-          year: DateTime.now().year,
-          sequenceNumber: sequenceNumber,
-        );
-        final uniqueSystemId = idGenerator.generateUniqueSystemId();
-
-        // 3. Finalize admission with both codes.
-        final finalizeResult = await repository.finalizeAdmission(
-          applicationId,
-          studentCode: studentCode,
-          admissionNumber: admissionNumber,
-          qrReference: uniqueSystemId,
-        );
-
-        return finalizeResult.fold(
-          (failure) => Left(failure),
-          (studentId) async {
-            // 4. Persist the StudentIdentity record (QR data + NFC
-            // placeholder) using the same codes just written to the student
-            // record, so the two never drift apart.
-            final identityResult = await identityRepository.generateStudentIdentity(
-              Student.empty(studentId),
-              uniqueSystemId: uniqueSystemId,
-              schoolStudentId: studentCode,
-            );
-
-            return identityResult.fold(
-              (failure) => Left(failure),
-              (_) async {
-                // 5. Initialize the financial account if financial
-                // parameters were provided.
-                if (initializeFinancials != null &&
-                    term != null &&
-                    feeStructureId != null &&
-                    totalBilled != null) {
-                  final financeResult = await initializeFinancials!(
-                    studentId: studentId,
-                    schoolId: schoolId,
-                    academicYear: academicYear,
-                    term: term,
-                    feeStructureId: feeStructureId,
-                    totalBilled: totalBilled,
-                  );
-                  return financeResult.fold(Left.new, (_) => Right(studentId));
-                }
-                return Right(studentId);
-              },
-            );
-          },
-        );
-      },
+    final numResult = await repository.generateAdmissionNumber(
+      schoolId,
+      academicYearId,
     );
+
+    return numResult.fold((failure) => Left(failure), (admissionNumber) async {
+      // 2. Mint the identity codes up front. finalizeAdmission needs a
+      // studentCode as an *input* (the student doc doesn't exist yet), so
+      // this can't wait for the Student.id that identityRepository would
+      // otherwise generate against - reuse the admission sequence so the
+      // human-friendly code and the admission number stay aligned.
+      final sequenceNumber = _sequenceFrom(admissionNumber);
+      final studentCode = idGenerator.generateSchoolStudentId(
+        schoolPrefix: schoolCode,
+        year: DateTime.now().year,
+        sequenceNumber: sequenceNumber,
+      );
+      final uniqueSystemId = idGenerator.generateUniqueSystemId();
+
+      // 3. Finalize admission with both codes.
+      final finalizeResult = await repository.finalizeAdmission(
+        applicationId,
+        studentCode: studentCode,
+        admissionNumber: admissionNumber,
+        qrReference: uniqueSystemId,
+      );
+
+      return finalizeResult.fold((failure) => Left(failure), (studentId) async {
+        // 4. Persist the StudentIdentity record (QR data + NFC
+        // placeholder) using the same codes just written to the student
+        // record, so the two never drift apart.
+        final identityResult = await identityRepository.generateStudentIdentity(
+          Student.empty(studentId),
+          uniqueSystemId: uniqueSystemId,
+          schoolStudentId: studentCode,
+        );
+
+        return identityResult.fold((failure) => Left(failure), (_) async {
+          // 5. Initialize the financial account if financial
+          // parameters were provided.
+          if (initializeFinancials != null &&
+              term != null &&
+              feeStructureId != null &&
+              totalBilled != null) {
+            final financeResult = await initializeFinancials!(
+              studentId: studentId,
+              schoolId: schoolId,
+              academicYear: academicYear,
+              term: term,
+              feeStructureId: feeStructureId,
+              totalBilled: totalBilled,
+            );
+            return financeResult.fold(Left.new, (_) => Right(studentId));
+          }
+          return Right(studentId);
+        });
+      });
+    });
   }
 
   // Pulls the trailing sequence digits out of an admission number formatted

@@ -17,9 +17,21 @@ class ClassLessonsScreen extends StatelessWidget {
         elevation: 0,
         title: Column(
           children: [
-            Text('Grade 10A (Science)',
-                style: TextStyle(color: AppColors.textPrimary(context), fontSize: 16, fontWeight: FontWeight.bold)),
-            Text('Mathematics • Section A', style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12)),
+            Text(
+              'Grade 10A (Science)',
+              style: TextStyle(
+                color: AppColors.textPrimary(context),
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              'Mathematics • Section A',
+              style: TextStyle(
+                color: AppColors.textSecondary(context),
+                fontSize: 12,
+              ),
+            ),
           ],
         ),
         centerTitle: true,
@@ -39,9 +51,19 @@ class ClassLessonsScreen extends StatelessWidget {
               children: [
                 _buildTab(context, 'Lessons', true),
                 const SizedBox(width: 12),
-                _buildTab(context, 'Notes', false, () => context.push('/staff/lessons/notes/123')),
+                _buildTab(
+                  context,
+                  'Notes',
+                  false,
+                  () => context.push('/staff/lessons/notes/123'),
+                ),
                 const SizedBox(width: 12),
-                _buildTab(context, 'Resources', false, () => context.push('/staff/lessons/resources/123')),
+                _buildTab(
+                  context,
+                  'Resources',
+                  false,
+                  () => context.push('/staff/lessons/resources/123'),
+                ),
               ],
             ),
           ),
@@ -49,8 +71,14 @@ class ClassLessonsScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               children: [
-                Text('This Week',
-                    style: TextStyle(color: AppColors.textPrimary(context), fontSize: 14, fontWeight: FontWeight.bold)),
+                Text(
+                  'This Week',
+                  style: TextStyle(
+                    color: AppColors.textPrimary(context),
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 16),
                 _buildTimelineItem(
                   context,
@@ -77,8 +105,14 @@ class ClassLessonsScreen extends StatelessWidget {
                   AppColors.primary(context),
                 ),
                 const SizedBox(height: 24),
-                Text('Next Week',
-                    style: TextStyle(color: AppColors.textPrimary(context), fontSize: 14, fontWeight: FontWeight.bold)),
+                Text(
+                  'Next Week',
+                  style: TextStyle(
+                    color: AppColors.textPrimary(context),
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 16),
                 _buildTimelineItem(
                   context,
@@ -102,7 +136,12 @@ class ClassLessonsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTab(BuildContext context, String label, bool isActive, [VoidCallback? onTap]) {
+  Widget _buildTab(
+    BuildContext context,
+    String label,
+    bool isActive, [
+    VoidCallback? onTap,
+  ]) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -110,7 +149,9 @@ class ClassLessonsScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: isActive ? AppColors.primary(context) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
-          border: isActive ? null : Border.all(color: AppColors.border(context)),
+          border: isActive
+              ? null
+              : Border.all(color: AppColors.border(context)),
         ),
         child: Text(
           label,
@@ -124,14 +165,26 @@ class ClassLessonsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTimelineItem(BuildContext context, String date, String time, String title, String status,
-      Color statusColor) {
+  Widget _buildTimelineItem(
+    BuildContext context,
+    String date,
+    String time,
+    String title,
+    String status,
+    Color statusColor,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(date, style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12)),
+          Text(
+            date,
+            style: TextStyle(
+              color: AppColors.textSecondary(context),
+              fontSize: 12,
+            ),
+          ),
           const SizedBox(height: 8),
           AppCard(
             onTap: () => context.push('/staff/lessons/details/123'),
@@ -142,20 +195,32 @@ class ClassLessonsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(time, style: TextStyle(color: AppColors.textSecondary(context), fontSize: 12)),
+                      Text(
+                        time,
+                        style: TextStyle(
+                          color: AppColors.textSecondary(context),
+                          fontSize: 12,
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      Text(title,
-                          style: TextStyle(
-                            color: AppColors.textPrimary(context),
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          )),
+                      Text(
+                        title,
+                        style: TextStyle(
+                          color: AppColors.textPrimary(context),
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 StatusBadge(label: status, color: statusColor),
                 const SizedBox(width: 8),
-                Icon(Icons.chevron_right, color: AppColors.textMuted(context), size: 20),
+                Icon(
+                  Icons.chevron_right,
+                  color: AppColors.textMuted(context),
+                  size: 20,
+                ),
               ],
             ),
           ),
@@ -164,4 +229,3 @@ class ClassLessonsScreen extends StatelessWidget {
     );
   }
 }
-

@@ -31,19 +31,19 @@ class SchoolBranding extends Equatable {
 
   @override
   List<Object?> get props => [
-        schoolId,
-        schoolName,
-        schoolMotto,
-        logoUrl,
-        badgeUrl,
-        primaryColor,
-        secondaryColor,
-        accentColor,
-        welcomeMessage,
-        dashboardBannerUrl,
-        loginBackgroundUrl,
-        version,
-      ];
+    schoolId,
+    schoolName,
+    schoolMotto,
+    logoUrl,
+    badgeUrl,
+    primaryColor,
+    secondaryColor,
+    accentColor,
+    welcomeMessage,
+    dashboardBannerUrl,
+    loginBackgroundUrl,
+    version,
+  ];
 
   SchoolBranding copyWith({
     String? schoolName,

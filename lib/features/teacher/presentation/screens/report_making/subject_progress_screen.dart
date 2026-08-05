@@ -9,20 +9,66 @@ class SubjectProgressScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<Map<String, dynamic>> subjects = [
-      {'name': 'English Language', 'entered': 8, 'total': 32, 'icon': Icons.book, 'color': AppColors.primary(context)},
-      {'name': 'Mathematics', 'entered': 8, 'total': 32, 'icon': Icons.calculate, 'color': Colors.purple},
-      {'name': 'Integrated Science', 'entered': 8, 'total': 32, 'icon': Icons.science, 'color': AppColors.success(context)},
-      {'name': 'Social Studies', 'entered': 0, 'total': 32, 'icon': Icons.public, 'color': AppColors.warning(context)},
-      {'name': 'Religious & Moral Educ.', 'entered': 0, 'total': 32, 'icon': Icons.mosque, 'color': AppColors.error},
-      {'name': 'ICT', 'entered': 0, 'total': 32, 'icon': Icons.computer, 'color': Colors.cyan},
-      {'name': 'Creative Arts', 'entered': 0, 'total': 32, 'icon': Icons.palette, 'color': Colors.pink},
-      {'name': 'Physical Education', 'entered': 0, 'total': 32, 'icon': Icons.sports_soccer, 'color': Colors.brown},
+      {
+        'name': 'English Language',
+        'entered': 8,
+        'total': 32,
+        'icon': Icons.book,
+        'color': AppColors.primary(context),
+      },
+      {
+        'name': 'Mathematics',
+        'entered': 8,
+        'total': 32,
+        'icon': Icons.calculate,
+        'color': Colors.purple,
+      },
+      {
+        'name': 'Integrated Science',
+        'entered': 8,
+        'total': 32,
+        'icon': Icons.science,
+        'color': AppColors.success(context),
+      },
+      {
+        'name': 'Social Studies',
+        'entered': 0,
+        'total': 32,
+        'icon': Icons.public,
+        'color': AppColors.warning(context),
+      },
+      {
+        'name': 'Religious & Moral Educ.',
+        'entered': 0,
+        'total': 32,
+        'icon': Icons.mosque,
+        'color': AppColors.error,
+      },
+      {
+        'name': 'ICT',
+        'entered': 0,
+        'total': 32,
+        'icon': Icons.computer,
+        'color': Colors.cyan,
+      },
+      {
+        'name': 'Creative Arts',
+        'entered': 0,
+        'total': 32,
+        'icon': Icons.palette,
+        'color': Colors.pink,
+      },
+      {
+        'name': 'Physical Education',
+        'entered': 0,
+        'total': 32,
+        'icon': Icons.sports_soccer,
+        'color': Colors.brown,
+      },
     ];
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Subject List'),
-      ),
+      appBar: AppBar(title: const Text('Subject List')),
       body: Column(
         children: [
           Padding(
@@ -47,7 +93,11 @@ class SubjectProgressScreen extends StatelessWidget {
                           color: subject['color'].withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(subject['icon'], color: subject['color'], size: 24),
+                        child: Icon(
+                          subject['icon'],
+                          color: subject['color'],
+                          size: 24,
+                        ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -74,7 +124,9 @@ class SubjectProgressScreen extends StatelessWidget {
                       ),
                       StatusBadge(
                         label: isPending ? 'Pending' : 'Entered',
-                        color: isPending ? AppColors.warning(context) : AppColors.success(context),
+                        color: isPending
+                            ? AppColors.warning(context)
+                            : AppColors.success(context),
                       ),
                     ],
                   ),

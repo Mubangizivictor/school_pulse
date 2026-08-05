@@ -28,9 +28,7 @@ class _StockRequestScreenState extends State<StockRequestScreen> {
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Stock Requests'),
-      ),
+      appBar: AppBar(title: const Text('Stock Requests')),
       body: BlocBuilder<CateringBloc, CateringState>(
         builder: (context, state) {
           if (state is CateringLoading && state is! StockRequestsLoaded) {
@@ -44,7 +42,11 @@ class _StockRequestScreenState extends State<StockRequestScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.shopping_basket_outlined, size: 64, color: Colors.grey),
+                    const Icon(
+                      Icons.shopping_basket_outlined,
+                      size: 64,
+                      color: Colors.grey,
+                    ),
                     const SizedBox(height: 16),
                     const Text('No stock requests found'),
                     const SizedBox(height: 16),
@@ -67,7 +69,9 @@ class _StockRequestScreenState extends State<StockRequestScreen> {
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ExpansionTile(
                     title: Text('Request #${request.id.substring(0, 8)}'),
-                    subtitle: Text('Status: ${request.status.name.toUpperCase()}'),
+                    subtitle: Text(
+                      'Status: ${request.status.name.toUpperCase()}',
+                    ),
                     trailing: _getStatusChip(request.status, semanticColors),
                     children: [
                       Padding(
@@ -76,21 +80,33 @@ class _StockRequestScreenState extends State<StockRequestScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('Requested By: ${request.requestedBy}'),
-                            Text('Date: ${request.requestedAt.toLocal().toString().split('.')[0]}'),
+                            Text(
+                              'Date: ${request.requestedAt.toLocal().toString().split('.')[0]}',
+                            ),
                             const Divider(),
-                            ...request.items.map((item) => Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4.0),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(item.foodItemName),
-                                  Text('${item.quantity} ${item.unit}'),
-                                ],
+                            ...request.items.map(
+                              (item) => Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 4.0,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(item.foodItemName),
+                                    Text('${item.quantity} ${item.unit}'),
+                                  ],
+                                ),
                               ),
-                            )),
+                            ),
                             if (request.comments != null) ...[
                               const SizedBox(height: 8),
-                              Text('Comments: ${request.comments}', style: const TextStyle(fontStyle: FontStyle.italic)),
+                              Text(
+                                'Comments: ${request.comments}',
+                                style: const TextStyle(
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
                             ],
                           ],
                         ),
@@ -114,13 +130,24 @@ class _StockRequestScreenState extends State<StockRequestScreen> {
   Widget _getStatusChip(StockRequestStatus status, SemanticColors colors) {
     Color color;
     switch (status) {
-      case StockRequestStatus.pending: color = Colors.orange; break;
-      case StockRequestStatus.approved: color = colors.success; break;
-      case StockRequestStatus.issued: color = Colors.blue; break;
-      case StockRequestStatus.rejected: color = colors.error; break;
+      case StockRequestStatus.pending:
+        color = Colors.orange;
+        break;
+      case StockRequestStatus.approved:
+        color = colors.success;
+        break;
+      case StockRequestStatus.issued:
+        color = Colors.blue;
+        break;
+      case StockRequestStatus.rejected:
+        color = colors.error;
+        break;
     }
     return Chip(
-      label: Text(status.name.toUpperCase(), style: const TextStyle(fontSize: 10, color: Colors.white)),
+      label: Text(
+        status.name.toUpperCase(),
+        style: const TextStyle(fontSize: 10, color: Colors.white),
+      ),
       backgroundColor: color,
     );
   }
@@ -147,7 +174,8 @@ class _CreateStockRequestSheet extends StatefulWidget {
   const _CreateStockRequestSheet({required this.inventory});
 
   @override
-  State<_CreateStockRequestSheet> createState() => _CreateStockRequestSheetState();
+  State<_CreateStockRequestSheet> createState() =>
+      _CreateStockRequestSheetState();
 }
 
 class _CreateStockRequestSheetState extends State<_CreateStockRequestSheet> {
@@ -160,19 +188,26 @@ class _CreateStockRequestSheetState extends State<_CreateStockRequestSheet> {
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
-        left: 20, right: 20, top: 20,
+        left: 20,
+        right: 20,
+        top: 20,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('New Stock Request', style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            'New Stock Request',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: 20),
           DropdownButtonFormField<FoodItem>(
-            items: widget.inventory.map((item) => DropdownMenuItem(
-              value: item,
-              child: Text(item.name),
-            )).toList(),
+            items: widget.inventory
+                .map(
+                  (item) =>
+                      DropdownMenuItem(value: item, child: Text(item.name)),
+                )
+                .toList(),
             onChanged: (val) => setState(() => _currentItem = val),
             decoration: const InputDecoration(labelText: 'Select Food Item'),
           ),
@@ -192,14 +227,17 @@ class _CreateStockRequestSheetState extends State<_CreateStockRequestSheet> {
               const SizedBox(width: 12),
               IconButton.filled(
                 onPressed: () {
-                  if (_currentItem != null && _quantityController.text.isNotEmpty) {
+                  if (_currentItem != null &&
+                      _quantityController.text.isNotEmpty) {
                     setState(() {
-                      _selectedItems.add(StockRequestItem(
-                        foodItemId: _currentItem!.id,
-                        foodItemName: _currentItem!.name,
-                        quantity: double.parse(_quantityController.text),
-                        unit: _currentItem!.unit,
-                      ));
+                      _selectedItems.add(
+                        StockRequestItem(
+                          foodItemId: _currentItem!.id,
+                          foodItemName: _currentItem!.name,
+                          quantity: double.parse(_quantityController.text),
+                          unit: _currentItem!.unit,
+                        ),
+                      );
                       _quantityController.clear();
                     });
                   }
@@ -210,37 +248,50 @@ class _CreateStockRequestSheetState extends State<_CreateStockRequestSheet> {
           ),
           const SizedBox(height: 20),
           if (_selectedItems.isNotEmpty) ...[
-            const Text('Items in Request:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              'Items in Request:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
-            ..._selectedItems.map((item) => ListTile(
-              title: Text(item.foodItemName),
-              dense: true,
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('${item.quantity} ${item.unit}'),
-                  IconButton(
-                    icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
-                    onPressed: () => setState(() => _selectedItems.remove(item)),
-                  ),
-                ],
+            ..._selectedItems.map(
+              (item) => ListTile(
+                title: Text(item.foodItemName),
+                dense: true,
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('${item.quantity} ${item.unit}'),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.remove_circle_outline,
+                        color: Colors.red,
+                      ),
+                      onPressed: () =>
+                          setState(() => _selectedItems.remove(item)),
+                    ),
+                  ],
+                ),
               ),
-            )),
+            ),
           ],
           const SizedBox(height: 32),
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: _selectedItems.isEmpty ? null : () {
-                final request = StockRequest(
-                  id: '', // Generated by backend
-                  requestedBy: 'Catering Manager', // Get from Auth
-                  requestedAt: DateTime.now(),
-                  items: _selectedItems,
-                );
-                context.read<CateringBloc>().add(CreateStockRequestEvent(request));
-                Navigator.pop(context);
-              },
+              onPressed: _selectedItems.isEmpty
+                  ? null
+                  : () {
+                      final request = StockRequest(
+                        id: '', // Generated by backend
+                        requestedBy: 'Catering Manager', // Get from Auth
+                        requestedAt: DateTime.now(),
+                        items: _selectedItems,
+                      );
+                      context.read<CateringBloc>().add(
+                        CreateStockRequestEvent(request),
+                      );
+                      Navigator.pop(context);
+                    },
               child: const Text('Submit Request'),
             ),
           ),

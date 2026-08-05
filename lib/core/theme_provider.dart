@@ -20,14 +20,13 @@ class ThemeProvider extends ChangeNotifier {
   static const _themeKey = 'theme_mode';
   static const _configKey = 'system_config';
 
-  ThemeData get lightTheme => BrandingThemeEngine.createTheme(_branding, Brightness.light);
-  ThemeData get darkTheme => BrandingThemeEngine.createTheme(_branding, Brightness.dark);
+  ThemeData get lightTheme =>
+      BrandingThemeEngine.createTheme(_branding, Brightness.light);
+  ThemeData get darkTheme =>
+      BrandingThemeEngine.createTheme(_branding, Brightness.dark);
 
   Future<void> initialize() async {
-    await Future.wait([
-      _loadTheme(),
-      _loadConfig(),
-    ]);
+    await Future.wait([_loadTheme(), _loadConfig()]);
   }
 
   Future<void> _loadTheme() async {

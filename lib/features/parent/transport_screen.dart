@@ -27,7 +27,9 @@ class _TransportScreenState extends State<TransportScreen> {
   void _fetchData() {
     final studentState = context.read<SelectedStudentBloc>().state;
     if (studentState is SelectedStudentLoaded) {
-      context.read<TransportBloc>().add(FetchTransportInfo(studentState.student.id));
+      context.read<TransportBloc>().add(
+        FetchTransportInfo(studentState.student.id),
+      );
     }
   }
 
@@ -40,7 +42,9 @@ class _TransportScreenState extends State<TransportScreen> {
       body: BlocListener<SelectedStudentBloc, SelectedStudentState>(
         listener: (context, state) {
           if (state is SelectedStudentLoaded) {
-            context.read<TransportBloc>().add(FetchTransportInfo(state.student.id));
+            context.read<TransportBloc>().add(
+              FetchTransportInfo(state.student.id),
+            );
           }
         },
         child: BlocBuilder<TransportBloc, TransportState>(
@@ -78,15 +82,31 @@ class _TransportScreenState extends State<TransportScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('Today\'s Status',
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                              StatusBadge(label: transport.status, color: semanticColors.info),
+                              Text(
+                                'Today\'s Status',
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              StatusBadge(
+                                label: transport.status,
+                                color: semanticColors.info,
+                              ),
                             ],
                           ),
                           const SizedBox(height: 16),
-                          _buildRouteInfo(context, Icons.directions_bus, 'Route', transport.routeName),
+                          _buildRouteInfo(
+                            context,
+                            Icons.directions_bus,
+                            'Route',
+                            transport.routeName,
+                          ),
                           const SizedBox(height: 12),
-                          _buildRouteInfo(context, Icons.location_on, 'Assigned Stop', transport.stopName),
+                          _buildRouteInfo(
+                            context,
+                            Icons.location_on,
+                            'Assigned Stop',
+                            transport.stopName,
+                          ),
                         ],
                       ),
                     ),
@@ -113,14 +133,20 @@ class _TransportScreenState extends State<TransportScreen> {
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                       colors: [
-                                        Theme.of(context).colorScheme.primary.withValues(alpha: 0.06),
-                                        Theme.of(context).colorScheme.surfaceContainerHighest,
+                                        Theme.of(context).colorScheme.primary
+                                            .withValues(alpha: 0.06),
+                                        Theme.of(
+                                          context,
+                                        ).colorScheme.surfaceContainerHighest,
                                       ],
                                     ),
                                   ),
                                   child: CustomPaint(
                                     painter: _RoutePathPainter(
-                                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.35),
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary
+                                          .withValues(alpha: 0.35),
                                     ),
                                   ),
                                 ),
@@ -129,19 +155,32 @@ class _TransportScreenState extends State<TransportScreen> {
                                 top: 12,
                                 left: 12,
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
+                                    color: Theme.of(context).colorScheme.surface
+                                        .withValues(alpha: 0.9),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.satellite_alt_outlined, size: 14, color: semanticColors.info),
+                                      Icon(
+                                        Icons.satellite_alt_outlined,
+                                        size: 14,
+                                        color: semanticColors.info,
+                                      ),
                                       const SizedBox(width: 6),
                                       Text(
                                         'Live GPS tracking · coming soon',
-                                        style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelSmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                            ),
                                       ),
                                     ],
                                   ),
@@ -153,10 +192,19 @@ class _TransportScreenState extends State<TransportScreen> {
                                 left: 60,
                                 child: Column(
                                   children: [
-                                    Icon(Icons.person_pin_circle, color: semanticColors.error, size: 32),
+                                    Icon(
+                                      Icons.person_pin_circle,
+                                      color: semanticColors.error,
+                                      size: 32,
+                                    ),
                                     Text(
                                       'Home',
-                                      style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                     ),
                                   ],
                                 ),
@@ -186,7 +234,12 @@ class _TransportScreenState extends State<TransportScreen> {
     );
   }
 
-  Widget _buildRouteInfo(BuildContext context, IconData icon, String label, String value) {
+  Widget _buildRouteInfo(
+    BuildContext context,
+    IconData icon,
+    String label,
+    String value,
+  ) {
     return Row(
       children: [
         Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
@@ -217,7 +270,8 @@ class AnimatedBusMarker extends StatefulWidget {
   State<AnimatedBusMarker> createState() => _AnimatedBusMarkerState();
 }
 
-class _AnimatedBusMarkerState extends State<AnimatedBusMarker> with SingleTickerProviderStateMixin {
+class _AnimatedBusMarkerState extends State<AnimatedBusMarker>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
@@ -228,9 +282,10 @@ class _AnimatedBusMarkerState extends State<AnimatedBusMarker> with SingleTicker
       vsync: this,
       duration: const Duration(seconds: 4),
     )..repeat(reverse: true);
-    _animation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _animation = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -257,10 +312,18 @@ class _AnimatedBusMarkerState extends State<AnimatedBusMarker> with SingleTicker
                 ),
                 child: const Text(
                   'Bus 04',
-                  style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-              Icon(Icons.directions_bus, color: Theme.of(context).colorScheme.primary, size: 32),
+              Icon(
+                Icons.directions_bus,
+                color: Theme.of(context).colorScheme.primary,
+                size: 32,
+              ),
             ],
           ),
         );
@@ -274,7 +337,12 @@ class PositionDescriptor extends StatelessWidget {
   final double? left;
   final Widget child;
 
-  const PositionDescriptor({super.key, this.top, this.left, required this.child});
+  const PositionDescriptor({
+    super.key,
+    this.top,
+    this.left,
+    required this.child,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -298,12 +366,16 @@ class _RoutePathPainter extends CustomPainter {
     final path = Path()
       ..moveTo(size.width * 0.22, size.height * 0.78)
       ..quadraticBezierTo(
-        size.width * 0.35, size.height * 0.45,
-        size.width * 0.6, size.height * 0.4,
+        size.width * 0.35,
+        size.height * 0.45,
+        size.width * 0.6,
+        size.height * 0.4,
       )
       ..quadraticBezierTo(
-        size.width * 0.75, size.height * 0.36,
-        size.width * 0.78, size.height * 0.18,
+        size.width * 0.75,
+        size.height * 0.36,
+        size.width * 0.78,
+        size.height * 0.18,
       );
 
     const dashWidth = 8.0;
@@ -313,12 +385,16 @@ class _RoutePathPainter extends CustomPainter {
       double distance = 0;
       while (distance < metric.length) {
         final next = distance + dashWidth;
-        canvas.drawPath(metric.extractPath(distance, next.clamp(0, metric.length)), paint);
+        canvas.drawPath(
+          metric.extractPath(distance, next.clamp(0, metric.length)),
+          paint,
+        );
         distance = next + dashSpace;
       }
     }
   }
 
   @override
-  bool shouldRepaint(covariant _RoutePathPainter oldDelegate) => oldDelegate.color != color;
+  bool shouldRepaint(covariant _RoutePathPainter oldDelegate) =>
+      oldDelegate.color != color;
 }

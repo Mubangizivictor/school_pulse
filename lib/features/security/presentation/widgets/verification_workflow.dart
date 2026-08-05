@@ -22,7 +22,14 @@ import '../../domain/entities/verification_method.dart';
 import '../bloc/security_bloc.dart';
 import '../bloc/security_state.dart';
 
-enum _Step { gateSelect, methodSelect, manualStudentSearch, staffSearch, parentCode, fingerprintStub }
+enum _Step {
+  gateSelect,
+  methodSelect,
+  manualStudentSearch,
+  staffSearch,
+  parentCode,
+  fingerprintStub,
+}
 
 class VerificationWorkflow extends StatefulWidget {
   const VerificationWorkflow({super.key});
@@ -106,7 +113,10 @@ class _VerificationWorkflowState extends State<VerificationWorkflow> {
     if (!mounted) return;
     await Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
-        builder: (_) => VerificationScanScreen(context: verificationContext, initialCredential: credential),
+        builder: (_) => VerificationScanScreen(
+          context: verificationContext,
+          initialCredential: credential,
+        ),
       ),
     );
     if (mounted) Navigator.of(context).pop();
@@ -119,7 +129,9 @@ class _VerificationWorkflowState extends State<VerificationWorkflow> {
           mode: ScannerMode.security,
           onScan: (code) async {
             Navigator.of(context, rootNavigator: true).pop();
-            await _openScanScreen(QrScanCredential(rawPayload: code, scannedAt: DateTime.now()));
+            await _openScanScreen(
+              QrScanCredential(rawPayload: code, scannedAt: DateTime.now()),
+            );
           },
         ),
       ),
@@ -129,10 +141,14 @@ class _VerificationWorkflowState extends State<VerificationWorkflow> {
   Future<void> _searchStudents(String query) async {
     if (query.trim().isEmpty) return;
     setState(() => _isSearching = true);
-    final result = await di.sl<SearchStudents>()(schoolId: _schoolId, query: query.trim());
+    final result = await di.sl<SearchStudents>()(
+      schoolId: _schoolId,
+      query: query.trim(),
+    );
     if (!mounted) return;
     result.fold(
-      (failure) => _showSnack('Search failed: ${failure.message}', isError: true),
+      (failure) =>
+          _showSnack('Search failed: ${failure.message}', isError: true),
       (students) => setState(() => _studentResults = students),
     );
     setState(() => _isSearching = false);
@@ -143,14 +159,16 @@ class _VerificationWorkflowState extends State<VerificationWorkflow> {
     final result = await di.sl<GetStaffMembers>()(NoParams());
     if (!mounted) return;
     result.fold(
-      (failure) => _showSnack('Search failed: ${failure.message}', isError: true),
+      (failure) =>
+          _showSnack('Search failed: ${failure.message}', isError: true),
       (members) {
         final q = query.trim().toLowerCase();
         setState(() {
           _staffResults = members.where((m) {
             if (m.schoolId != _schoolId) return false;
             if (q.isEmpty) return true;
-            return m.name.toLowerCase().contains(q) || (m.staffCode ?? '').toLowerCase().contains(q);
+            return m.name.toLowerCase().contains(q) ||
+                (m.staffCode ?? '').toLowerCase().contains(q);
           }).toList();
         });
       },
@@ -173,7 +191,10 @@ class _VerificationWorkflowState extends State<VerificationWorkflow> {
   void _showSnack(String message, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: isError ? Colors.red : null),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : null,
+      ),
     );
   }
 
@@ -196,12 +217,19 @@ class _VerificationWorkflowState extends State<VerificationWorkflow> {
     return BlocBuilder<SecurityBloc, SecurityState>(
       builder: (context, state) {
         if (state.gates.isEmpty) {
-          return const Center(child: Text('No gates configured. Ask an admin to set up a gate first.'));
+          return const Center(
+            child: Text(
+              'No gates configured. Ask an admin to set up a gate first.',
+            ),
+          );
         }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Select Gate', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text(
+              'Select Gate',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
             Expanded(
               child: ListView.builder(
@@ -234,17 +262,23 @@ class _VerificationWorkflowState extends State<VerificationWorkflow> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('${_selectedGate?.name ?? ''} — Select Verification Method',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        Text(
+          '${_selectedGate?.name ?? ''} — Select Verification Method',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 20),
         Wrap(
           spacing: 16,
           runSpacing: 16,
-          children: options.map((method) => _MethodCard(
-                icon: _iconFor(method),
-                label: method.label,
-                onTap: () => _selectMethod(method),
-              )).toList(),
+          children: options
+              .map(
+                (method) => _MethodCard(
+                  icon: _iconFor(method),
+                  label: method.label,
+                  onTap: () => _selectMethod(method),
+                ),
+              )
+              .toList(),
         ),
       ],
     );
@@ -272,7 +306,10 @@ class _VerificationWorkflowState extends State<VerificationWorkflow> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Search Student', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const Text(
+          'Search Student',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 12),
         TextField(
           controller: _searchController,
@@ -298,7 +335,9 @@ class _VerificationWorkflowState extends State<VerificationWorkflow> {
                 leading: const Icon(Icons.person_outline),
                 title: Text(student.name),
                 subtitle: Text(student.studentCode),
-                onTap: () => _openScanScreen(ManualCodeScanCredential(code: student.studentCode)),
+                onTap: () => _openScanScreen(
+                  ManualCodeScanCredential(code: student.studentCode),
+                ),
               );
             },
           ),
@@ -311,14 +350,20 @@ class _VerificationWorkflowState extends State<VerificationWorkflow> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Search Staff', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const Text(
+          'Search Staff',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 12),
         TextField(
           autofocus: true,
           decoration: InputDecoration(
             labelText: 'Name or staff code',
             border: const OutlineInputBorder(),
-            suffixIcon: IconButton(icon: const Icon(Icons.search), onPressed: () {}),
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () {},
+            ),
           ),
           onChanged: _searchStaff,
         ),
@@ -333,7 +378,9 @@ class _VerificationWorkflowState extends State<VerificationWorkflow> {
                 leading: const Icon(Icons.badge_outlined),
                 title: Text(staff.name),
                 subtitle: Text(staff.staffCode ?? staff.email),
-                onTap: () => _openScanScreen(StaffLookupScanCredential(staffId: staff.id)),
+                onTap: () => _openScanScreen(
+                  StaffLookupScanCredential(staffId: staff.id),
+                ),
               );
             },
           ),
@@ -347,7 +394,10 @@ class _VerificationWorkflowState extends State<VerificationWorkflow> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Parent Code Verification', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const Text(
+          'Parent Code Verification',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 12),
         TextField(
           controller: _parentCodeController,
@@ -365,21 +415,28 @@ class _VerificationWorkflowState extends State<VerificationWorkflow> {
         const SizedBox(height: 16),
         if (_isSearching) const Center(child: CircularProgressIndicator()),
         if (code != null) ...[
-          Text('Linked children — select who is being picked up:', style: Theme.of(context).textTheme.titleSmall),
+          Text(
+            'Linked children — select who is being picked up:',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
           const SizedBox(height: 8),
           Expanded(
             child: ListView.builder(
               itemCount: code.studentIds.length,
               itemBuilder: (context, index) {
-                final childName = code.studentNames.length > index ? code.studentNames[index] : 'Student';
+                final childName = code.studentNames.length > index
+                    ? code.studentNames[index]
+                    : 'Student';
                 return ListTile(
                   leading: const Icon(Icons.child_care),
                   title: Text(childName),
-                  onTap: () => _openScanScreen(ParentCodeScanCredential(
-                    code: code.parentCode,
-                    preSelectedChildId: code.studentIds[index],
-                    preSelectedChildName: childName,
-                  )),
+                  onTap: () => _openScanScreen(
+                    ParentCodeScanCredential(
+                      code: code.parentCode,
+                      preSelectedChildId: code.studentIds[index],
+                      preSelectedChildName: childName,
+                    ),
+                  ),
                 );
               },
             ),
@@ -395,9 +452,15 @@ class _VerificationWorkflowState extends State<VerificationWorkflow> {
       children: [
         const Icon(Icons.fingerprint, size: 64, color: Colors.grey),
         const SizedBox(height: 16),
-        const Text('Fingerprint verification is not available on this device yet.', textAlign: TextAlign.center),
+        const Text(
+          'Fingerprint verification is not available on this device yet.',
+          textAlign: TextAlign.center,
+        ),
         const SizedBox(height: 16),
-        TextButton(onPressed: () => _goTo(_Step.methodSelect), child: const Text('Choose another method')),
+        TextButton(
+          onPressed: () => _goTo(_Step.methodSelect),
+          child: const Text('Choose another method'),
+        ),
       ],
     );
   }
@@ -408,7 +471,11 @@ class _MethodCard extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
 
-  const _MethodCard({required this.icon, required this.label, required this.onTap});
+  const _MethodCard({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -422,7 +489,11 @@ class _MethodCard extends StatelessWidget {
           children: [
             Icon(icon, size: 32, color: Theme.of(context).primaryColor),
             const SizedBox(height: 8),
-            Text(label, style: const TextStyle(fontSize: 10), textAlign: TextAlign.center),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 10),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),

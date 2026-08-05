@@ -59,11 +59,13 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
 
   void _requestMarks() {
     if (_selectedClass == null || _selectedSubject == null) return;
-    context.read<TeacherBloc>().add(TeacherMarksEntryRequested(
-          className: _selectedClass!,
-          subject: _selectedSubject!,
-          assessment: _selectedAssessment,
-        ));
+    context.read<TeacherBloc>().add(
+      TeacherMarksEntryRequested(
+        className: _selectedClass!,
+        subject: _selectedSubject!,
+        assessment: _selectedAssessment,
+      ),
+    );
   }
 
   TextEditingController _controllerFor(String studentId) {
@@ -101,14 +103,16 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
     final term = config?.currentTerm ?? 'Term 1';
     final year = config?.academicYear ?? DateTime.now().year.toString();
 
-    context.read<TeacherBloc>().add(TeacherMarksSubmitted(
-          className: _selectedClass!,
-          subject: _selectedSubject!,
-          assessment: _selectedAssessment,
-          term: term,
-          year: year,
-          marks: marks,
-        ));
+    context.read<TeacherBloc>().add(
+      TeacherMarksSubmitted(
+        className: _selectedClass!,
+        subject: _selectedSubject!,
+        assessment: _selectedAssessment,
+        term: term,
+        year: year,
+        marks: marks,
+      ),
+    );
   }
 
   @override
@@ -118,7 +122,10 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text('Enter Marks', style: TextStyle(color: AppColors.textPrimary(context))),
+        title: Text(
+          'Enter Marks',
+          style: TextStyle(color: AppColors.textPrimary(context)),
+        ),
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
           onPressed: () => Navigator.of(context).pop(),
@@ -136,7 +143,8 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                    'Saved marks for ${state.savedCount} student${state.savedCount == 1 ? '' : 's'}'),
+                  'Saved marks for ${state.savedCount} student${state.savedCount == 1 ? '' : 's'}',
+                ),
                 backgroundColor: AppColors.success(context),
                 behavior: SnackBarBehavior.floating,
               ),
@@ -148,7 +156,8 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
             return const EmptyState(
               icon: Icons.class_outlined,
               title: 'No classes assigned',
-              message: 'Your account has no class or subject assignments. Ask your '
+              message:
+                  'Your account has no class or subject assignments. Ask your '
                   'school admin to assign you a class before entering marks.',
             );
           }
@@ -194,8 +203,9 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.textPrimary(context)),
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textPrimary(context),
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 16),
@@ -205,24 +215,39 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
                                   controller: _controllerFor(student.id),
                                   keyboardType: TextInputType.number,
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(color: AppColors.textPrimary(context)),
+                                  style: TextStyle(
+                                    color: AppColors.textPrimary(context),
+                                  ),
                                   inputFormatters: [
                                     FilteringTextInputFormatter.digitsOnly,
                                     LengthLimitingTextInputFormatter(3),
                                   ],
                                   decoration: InputDecoration(
                                     hintText: '0-100',
-                                    hintStyle: TextStyle(color: AppColors.textMuted(context)),
-                                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                                    hintStyle: TextStyle(
+                                      color: AppColors.textMuted(context),
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      vertical: 8,
+                                    ),
                                     border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide(color: AppColors.border(context))),
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(
+                                        color: AppColors.border(context),
+                                      ),
+                                    ),
                                     enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide(color: AppColors.border(context))),
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(
+                                        color: AppColors.border(context),
+                                      ),
+                                    ),
                                     focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide(color: AppColors.primary(context))),
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(
+                                        color: AppColors.primary(context),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -257,9 +282,11 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
 
     final subjects = <String>{};
     if (user.subjects != null) {
-      subjects.addAll(user.subjects!
-          .where((s) => s.className == _selectedClass)
-          .map((s) => s.subjectName));
+      subjects.addAll(
+        user.subjects!
+            .where((s) => s.className == _selectedClass)
+            .map((s) => s.subjectName),
+      );
     }
     if (subjects.isEmpty) subjects.add('General');
 
@@ -267,7 +294,11 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated(context),
-        border: Border(bottom: BorderSide(color: AppColors.border(context).withValues(alpha: 0.1))),
+        border: Border(
+          bottom: BorderSide(
+            color: AppColors.border(context).withValues(alpha: 0.1),
+          ),
+        ),
       ),
       child: Column(
         children: [
@@ -280,12 +311,15 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
                 _selectedClass = v!;
                 _students = [];
                 // Update subjects for the new class
-                final classSubjects = user.subjects
+                final classSubjects =
+                    user.subjects
                         ?.where((s) => s.className == v)
                         .map((s) => s.subjectName)
                         .toList() ??
                     [];
-                _selectedSubject = classSubjects.isNotEmpty ? classSubjects.first : 'General';
+                _selectedSubject = classSubjects.isNotEmpty
+                    ? classSubjects.first
+                    : 'General';
               });
               _requestMarks();
             },
@@ -304,7 +338,12 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
           _DropdownRow(
             label: 'Type',
             value: _selectedAssessment,
-            items: const ['Mid-term Exam', 'Beginning of Term', 'End of Term', 'Quiz'],
+            items: const [
+              'Mid-term Exam',
+              'Beginning of Term',
+              'End of Term',
+              'Quiz',
+            ],
             onChanged: (v) {
               setState(() => _selectedAssessment = v!);
               _requestMarks();
@@ -348,11 +387,12 @@ class _MarksEntrySkeleton extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: List.generate(
-                3,
-                (index) => const Padding(
-                      padding: EdgeInsets.only(bottom: 12),
-                      child: Skeleton(height: 50, borderRadius: 8),
-                    )),
+              3,
+              (index) => const Padding(
+                padding: EdgeInsets.only(bottom: 12),
+                child: Skeleton(height: 50, borderRadius: 8),
+              ),
+            ),
           ),
         ),
         Expanded(
@@ -388,9 +428,15 @@ class _DropdownRow extends StatelessWidget {
     return Row(
       children: [
         SizedBox(
-            width: 80,
-            child: Text(label,
-                style: TextStyle(fontWeight: FontWeight.w500, color: AppColors.textPrimary(context)))),
+          width: 80,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+        ),
         Expanded(
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -405,8 +451,17 @@ class _DropdownRow extends StatelessWidget {
                 dropdownColor: AppColors.surfaceElevated(context),
                 style: TextStyle(color: AppColors.textPrimary(context)),
                 items: items
-                    .map((e) => DropdownMenuItem(
-                        value: e, child: Text(e, style: TextStyle(color: AppColors.textPrimary(context)))))
+                    .map(
+                      (e) => DropdownMenuItem(
+                        value: e,
+                        child: Text(
+                          e,
+                          style: TextStyle(
+                            color: AppColors.textPrimary(context),
+                          ),
+                        ),
+                      ),
+                    )
                     .toList(),
                 onChanged: onChanged,
               ),
@@ -417,4 +472,3 @@ class _DropdownRow extends StatelessWidget {
     );
   }
 }
-

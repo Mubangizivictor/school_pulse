@@ -22,5 +22,14 @@ class PreApprovedVisitor extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, schoolId, fullName, phone, purpose, expectedDate, host, isUsed];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    fullName,
+    phone,
+    purpose,
+    expectedDate,
+    host,
+    isUsed,
+  ];
 }

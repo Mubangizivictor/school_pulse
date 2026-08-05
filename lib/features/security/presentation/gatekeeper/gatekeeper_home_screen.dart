@@ -58,9 +58,13 @@ class _GatekeeperHomeScreenState extends State<GatekeeperHomeScreen> {
     _refreshConnectivity();
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
-      context.read<SecurityBloc>().add(LoadSecurityDashboard(authState.user.schoolId));
+      context.read<SecurityBloc>().add(
+        LoadSecurityDashboard(authState.user.schoolId),
+      );
       context.read<VisitorsBloc>().add(LoadVisitors(authState.user.schoolId));
-      context.read<VisitorsBloc>().add(WatchVisitorsList(authState.user.schoolId));
+      context.read<VisitorsBloc>().add(
+        WatchVisitorsList(authState.user.schoolId),
+      );
     }
   }
 
@@ -96,7 +100,9 @@ class _GatekeeperHomeScreenState extends State<GatekeeperHomeScreen> {
       final gate = await showModalBottomSheet<Gate>(
         context: context,
         isScrollControlled: true,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
         builder: (context) => _GatePickerSheet(gates: gates),
       );
       if (gate != null) {
@@ -109,7 +115,10 @@ class _GatekeeperHomeScreenState extends State<GatekeeperHomeScreen> {
   }
 
   void _openEmergency() {
-    showDialog(context: context, builder: (_) => const EmergencyProtocolDialog());
+    showDialog(
+      context: context,
+      builder: (_) => const EmergencyProtocolDialog(),
+    );
   }
 
   @override
@@ -125,14 +134,17 @@ class _GatekeeperHomeScreenState extends State<GatekeeperHomeScreen> {
           IconButton(
             icon: const Icon(Icons.swap_horiz),
             tooltip: 'Change Gate',
-            onPressed: () => _pickGate(context.read<SecurityBloc>().state.gates),
+            onPressed: () =>
+                _pickGate(context.read<SecurityBloc>().state.gates),
           ),
           const NotificationBellButton(),
         ],
       ),
       body: BlocBuilder<SecurityBloc, SecurityState>(
         builder: (context, securityState) {
-          if (!_gateLoaded || securityState.status == SecurityStatus.loading || securityState.status == SecurityStatus.initial) {
+          if (!_gateLoaded ||
+              securityState.status == SecurityStatus.loading ||
+              securityState.status == SecurityStatus.initial) {
             return const Center(child: CircularProgressIndicator());
           }
 
@@ -144,24 +156,36 @@ class _GatekeeperHomeScreenState extends State<GatekeeperHomeScreen> {
             );
           }
 
-          if (_selectedGateId == null || !securityState.gates.any((g) => g.id == _selectedGateId)) {
+          if (_selectedGateId == null ||
+              !securityState.gates.any((g) => g.id == _selectedGateId)) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted && (_selectedGateId == null || !securityState.gates.any((g) => g.id == _selectedGateId))) {
+              if (mounted &&
+                  (_selectedGateId == null ||
+                      !securityState.gates.any(
+                        (g) => g.id == _selectedGateId,
+                      ))) {
                 _pickGate(securityState.gates);
               }
             });
             return const Center(child: CircularProgressIndicator());
           }
 
-          final gate = securityState.gates.firstWhere((g) => g.id == _selectedGateId);
+          final gate = securityState.gates.firstWhere(
+            (g) => g.id == _selectedGateId,
+          );
           final visitorsState = context.watch<VisitorsBloc>().state;
-          final peopleInside = (securityState.stats['peopleCurrentlyInside'] ?? 0).toString();
-          final pendingSync = visitorsState is VisitorsLoaded ? visitorsState.visitors.where((v) => !v.isSynced).length : 0;
+          final peopleInside =
+              (securityState.stats['peopleCurrentlyInside'] ?? 0).toString();
+          final pendingSync = visitorsState is VisitorsLoaded
+              ? visitorsState.visitors.where((v) => !v.isSynced).length
+              : 0;
           final hasActiveEmergency = securityState.activeEmergencies.isNotEmpty;
 
           return RefreshIndicator(
             onRefresh: () async {
-              context.read<SecurityBloc>().add(LoadSecurityDashboard(user.schoolId));
+              context.read<SecurityBloc>().add(
+                LoadSecurityDashboard(user.schoolId),
+              );
               await _refreshConnectivity();
             },
             child: ListView(
@@ -199,50 +223,74 @@ class _GatekeeperHomeScreenState extends State<GatekeeperHomeScreen> {
     );
   }
 
-  List<Widget> _buildTiles(BuildContext context, Gate gate, bool hasActiveEmergency) {
+  List<Widget> _buildTiles(
+    BuildContext context,
+    Gate gate,
+    bool hasActiveEmergency,
+  ) {
     final colors = Theme.of(context).extension<SemanticColors>()!;
     return [
       GatekeeperActionTile(
         label: 'Scan',
         icon: Icons.qr_code_scanner,
         color: colors.info,
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => GatekeeperScanScreen(gate: gate))),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => GatekeeperScanScreen(gate: gate)),
+        ),
       ),
       GatekeeperActionTile(
         label: 'Student',
         icon: Icons.school_outlined,
         color: colors.primaryBlue,
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => GatekeeperStudentScreen(gate: gate))),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => GatekeeperStudentScreen(gate: gate),
+          ),
+        ),
       ),
       GatekeeperActionTile(
         label: 'Visitor In',
         icon: Icons.person_add_alt_1_outlined,
         color: colors.success,
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => GatekeeperVisitorCheckInScreen(gate: gate))),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => GatekeeperVisitorCheckInScreen(gate: gate),
+          ),
+        ),
       ),
       GatekeeperActionTile(
         label: 'Visitor Out',
         icon: Icons.logout,
         color: colors.info,
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const GatekeeperVisitorCheckOutScreen())),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => const GatekeeperVisitorCheckOutScreen(),
+          ),
+        ),
       ),
       GatekeeperActionTile(
         label: 'Staff',
         icon: Icons.badge_outlined,
         color: colors.primaryBlue,
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => GatekeeperStaffScreen(gate: gate))),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => GatekeeperStaffScreen(gate: gate)),
+        ),
       ),
       GatekeeperActionTile(
         label: 'Pickup',
         icon: Icons.family_restroom,
         color: colors.warning,
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => GatekeeperPickupScreen(gate: gate))),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => GatekeeperPickupScreen(gate: gate)),
+        ),
       ),
       GatekeeperActionTile(
         label: 'Incident',
         icon: Icons.report_gmailerrorred_outlined,
         color: colors.warning,
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const GatekeeperIncidentScreen())),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const GatekeeperIncidentScreen()),
+        ),
       ),
       GatekeeperActionTile(
         label: hasActiveEmergency ? 'EMERGENCY!' : 'Emergency',
@@ -288,7 +336,13 @@ class _HomeHeader extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(officerName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text(
+                      officerName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
                     Text(
                       '$schoolName • $gateName',
                       maxLines: 1,
@@ -299,7 +353,9 @@ class _HomeHeader extends StatelessWidget {
                 ),
               ),
               GatekeeperStatusChip(
-                state: isOnline ? GatekeeperConnectionState.online : GatekeeperConnectionState.offline,
+                state: isOnline
+                    ? GatekeeperConnectionState.online
+                    : GatekeeperConnectionState.offline,
                 pendingSyncCount: pendingSync,
               ),
             ],
@@ -307,16 +363,31 @@ class _HomeHeader extends StatelessWidget {
           const Divider(height: 28),
           Row(
             children: [
-              Icon(Icons.schedule, size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              Icon(
+                Icons.schedule,
+                size: 18,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
               const SizedBox(width: 6),
               Text(
                 DateFormat('EEE, d MMM • h:mm:ss a').format(now),
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
               const Spacer(),
-              Icon(Icons.groups_outlined, size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              Icon(
+                Icons.groups_outlined,
+                size: 18,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
               const SizedBox(width: 6),
-              Text('$peopleInside inside', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+              Text(
+                '$peopleInside inside',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+              ),
             ],
           ),
         ],
@@ -338,7 +409,10 @@ class _GatePickerSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Which gate are you at?', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const Text(
+              'Which gate are you at?',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
             Text(
               'You won\'t be asked again on this device.',
@@ -358,8 +432,17 @@ class _GatePickerSheet extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(gate.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                            Text(gate.location, style: Theme.of(context).textTheme.bodySmall),
+                            Text(
+                              gate.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Text(
+                              gate.location,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
                           ],
                         ),
                       ),

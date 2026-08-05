@@ -22,28 +22,36 @@ class TransportStudentProjectionService {
     required String studentId,
     required UserEntity operatorUser,
   }) async {
-    final allowed = await _can(Permission.transportBoardingVerify, operatorUser);
+    final allowed = await _can(
+      Permission.transportBoardingVerify,
+      operatorUser,
+    );
     if (!allowed) {
-      return const Left(PermissionDeniedFailure('You do not have permission to view transport assignments.'));
+      return const Left(
+        PermissionDeniedFailure(
+          'You do not have permission to view transport assignments.',
+        ),
+      );
     }
 
     final studentResult = await studentRepository.getStudentById(studentId);
-    return studentResult.fold(
-      Left.new,
-      (student) async {
-        final transportResult = await transportRepository.getTransportInfo(studentId);
-        return transportResult.fold(
-          Left.new,
-          (info) => Right(TransportStudentView(
+    return studentResult.fold(Left.new, (student) async {
+      final transportResult = await transportRepository.getTransportInfo(
+        studentId,
+      );
+      return transportResult.fold(
+        Left.new,
+        (info) => Right(
+          TransportStudentView(
             studentId: student.id,
             name: student.name,
             routeName: info.routeName,
             stopName: info.stopName,
             status: info.status,
-          )),
-        );
-      },
-    );
+          ),
+        ),
+      );
+    });
   }
 
   Future<bool> _can(String permissionId, UserEntity operatorUser) async {

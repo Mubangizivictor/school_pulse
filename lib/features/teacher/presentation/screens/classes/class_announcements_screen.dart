@@ -27,26 +27,28 @@ class _ClassAnnouncementsScreenState extends State<ClassAnnouncementsScreen> {
     super.initState();
     final active = context.read<ClassTeacherContextBloc>().state.active;
     if (active != null) {
-      context
-          .read<ClassAnnouncementsBloc>()
-          .add(ClassAnnouncementsRequested(active));
+      context.read<ClassAnnouncementsBloc>().add(
+        ClassAnnouncementsRequested(active),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final primaryColor = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
 
     return BlocBuilder<ClassTeacherContextBloc, ClassTeacherContextState>(
       builder: (context, contextState) {
         final active = contextState.active;
         final placement = active == null
             ? ''
-            : [active.className, active.streamName]
-                .where((e) => e != null && e.isNotEmpty)
-                .join(' ');
+            : [
+                active.className,
+                active.streamName,
+              ].where((e) => e != null && e.isNotEmpty).join(' ');
 
         return Scaffold(
           backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
@@ -62,8 +64,10 @@ class _ClassAnnouncementsScreenState extends State<ClassAnnouncementsScreen> {
               children: [
                 Text(
                   'Announcements',
-                  style: AppTypography.titleLarge
-                      .copyWith(color: primaryColor, fontWeight: FontWeight.bold),
+                  style: AppTypography.titleLarge.copyWith(
+                    color: primaryColor,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text(
                   placement.isEmpty ? 'No class assigned' : placement,
@@ -92,15 +96,17 @@ class _ClassAnnouncementsScreenState extends State<ClassAnnouncementsScreen> {
                     if (message == null) return;
                     ScaffoldMessenger.of(context)
                       ..hideCurrentSnackBar()
-                      ..showSnackBar(SnackBar(
-                        content: Text(message),
-                        backgroundColor: state.successMessage != null
-                            ? AppColors.success(context)
-                            : AppColors.danger(context),
-                      ));
-                    context
-                        .read<ClassAnnouncementsBloc>()
-                        .add(const ClassAnnouncementsFeedbackCleared());
+                      ..showSnackBar(
+                        SnackBar(
+                          content: Text(message),
+                          backgroundColor: state.successMessage != null
+                              ? AppColors.success(context)
+                              : AppColors.danger(context),
+                        ),
+                      );
+                    context.read<ClassAnnouncementsBloc>().add(
+                      const ClassAnnouncementsFeedbackCleared(),
+                    );
                   },
                   builder: (context, state) {
                     if (state.isLoading) {
@@ -128,11 +134,11 @@ class _ClassAnnouncementsScreenState extends State<ClassAnnouncementsScreen> {
                                       const SizedBox(height: AppSpacing.m),
                                   itemBuilder: (context, index) =>
                                       _buildAnnouncementItem(
-                                    context,
-                                    state,
-                                    state.announcements[index],
-                                    isDark,
-                                  ),
+                                        context,
+                                        state,
+                                        state.announcements[index],
+                                        isDark,
+                                      ),
                                 ),
                         ),
                         Padding(
@@ -238,9 +244,15 @@ class _ClassAnnouncementsScreenState extends State<ClassAnnouncementsScreen> {
                   // Sending is offered only on drafts, and only to a teacher
                   // who holds the publish permission.
                   if (announcement.isDraft && state.canPublish)
-                    const PopupMenuItem(value: 'publish', child: Text('Send now')),
+                    const PopupMenuItem(
+                      value: 'publish',
+                      child: Text('Send now'),
+                    ),
                   if (status != ClassAnnouncementStatus.archived)
-                    const PopupMenuItem(value: 'archive', child: Text('Archive')),
+                    const PopupMenuItem(
+                      value: 'archive',
+                      child: Text('Archive'),
+                    ),
                 ],
               ),
             ],
@@ -265,7 +277,8 @@ class _ClassAnnouncementsScreenState extends State<ClassAnnouncementsScreen> {
     ClassAnnouncement announcement,
     ClassAnnouncementStatus status,
   ) {
-    final when = announcement.publishedAt ??
+    final when =
+        announcement.publishedAt ??
         announcement.scheduledFor ??
         announcement.createdAt;
     final stamp = DateFormat('d MMM yyyy • HH:mm').format(when);
@@ -281,22 +294,23 @@ class _ClassAnnouncementsScreenState extends State<ClassAnnouncementsScreen> {
   }
 
   static IconData _iconFor(ClassAnnouncementStatus status) => switch (status) {
-        ClassAnnouncementStatus.published => Icons.campaign,
-        ClassAnnouncementStatus.scheduled => Icons.schedule,
-        ClassAnnouncementStatus.draft => Icons.edit_note,
-        ClassAnnouncementStatus.expired => Icons.history_toggle_off,
-        ClassAnnouncementStatus.archived => Icons.inventory_2_outlined,
-      };
+    ClassAnnouncementStatus.published => Icons.campaign,
+    ClassAnnouncementStatus.scheduled => Icons.schedule,
+    ClassAnnouncementStatus.draft => Icons.edit_note,
+    ClassAnnouncementStatus.expired => Icons.history_toggle_off,
+    ClassAnnouncementStatus.archived => Icons.inventory_2_outlined,
+  };
 
-  static Color _colorFor(BuildContext context, ClassAnnouncementStatus status) =>
-      switch (status) {
-        ClassAnnouncementStatus.published => AppColors.successGreen,
-        ClassAnnouncementStatus.scheduled => AppColors.royalBlue,
-        ClassAnnouncementStatus.draft => AppColors.textMuted(context),
-        ClassAnnouncementStatus.expired ||
-        ClassAnnouncementStatus.archived =>
-          AppColors.textMuted(context),
-      };
+  static Color _colorFor(
+    BuildContext context,
+    ClassAnnouncementStatus status,
+  ) => switch (status) {
+    ClassAnnouncementStatus.published => AppColors.successGreen,
+    ClassAnnouncementStatus.scheduled => AppColors.royalBlue,
+    ClassAnnouncementStatus.draft => AppColors.textMuted(context),
+    ClassAnnouncementStatus.expired ||
+    ClassAnnouncementStatus.archived => AppColors.textMuted(context),
+  };
 
   Future<void> _showComposer(
     BuildContext context,
@@ -308,7 +322,9 @@ class _ClassAnnouncementsScreenState extends State<ClassAnnouncementsScreen> {
       isScrollControlled: true,
       backgroundColor: AppColors.surfaceElevated(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.xl)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppSpacing.xl),
+        ),
       ),
       builder: (sheetContext) => BlocProvider.value(
         value: bloc,
@@ -412,8 +428,10 @@ class _AnnouncementComposerState extends State<_AnnouncementComposer> {
                     : DateFormat('d MMM yyyy').format(_expiresAt!),
                 style: TextStyle(color: AppColors.textSecondary(context)),
               ),
-              trailing:
-                  Icon(Icons.calendar_today, color: AppColors.primary(context)),
+              trailing: Icon(
+                Icons.calendar_today,
+                color: AppColors.primary(context),
+              ),
               onTap: () async {
                 final picked = await showDatePicker(
                   context: context,
@@ -450,22 +468,24 @@ class _AnnouncementComposerState extends State<_AnnouncementComposer> {
       _bodyController.text.trim().length >= 5;
 
   void _submit({required bool publish}) {
-    context.read<ClassAnnouncementsBloc>().add(ClassAnnouncementSaved(
-          ClassAnnouncement(
-            id: '',
-            // Coordinates are stamped by the repository from the verified
-            // context; the composer supplies only what the teacher typed.
-            schoolId: '',
-            classId: '',
-            academicYearId: '',
-            title: _titleController.text.trim(),
-            body: _bodyController.text.trim(),
-            audience: _audience,
-            expiresAt: _expiresAt,
-            createdAt: DateTime.now(),
-          ),
-          publish: publish,
-        ));
+    context.read<ClassAnnouncementsBloc>().add(
+      ClassAnnouncementSaved(
+        ClassAnnouncement(
+          id: '',
+          // Coordinates are stamped by the repository from the verified
+          // context; the composer supplies only what the teacher typed.
+          schoolId: '',
+          classId: '',
+          academicYearId: '',
+          title: _titleController.text.trim(),
+          body: _bodyController.text.trim(),
+          audience: _audience,
+          expiresAt: _expiresAt,
+          createdAt: DateTime.now(),
+        ),
+        publish: publish,
+      ),
+    );
     Navigator.of(context).pop();
   }
 }

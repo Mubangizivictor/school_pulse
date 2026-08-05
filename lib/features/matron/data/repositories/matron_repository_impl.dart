@@ -215,7 +215,9 @@ class MatronRepositoryImpl implements MatronRepository {
   }
 
   @override
-  Stream<List<BehaviourObservation>> getBehaviourObservations(String? studentId) {
+  Stream<List<BehaviourObservation>> getBehaviourObservations(
+    String? studentId,
+  ) {
     return remoteDataSource.getBehaviourObservations(studentId);
   }
 

@@ -20,7 +20,11 @@ class _Recipient {
   final String name;
   final String subtitle;
 
-  const _Recipient({required this.id, required this.name, required this.subtitle});
+  const _Recipient({
+    required this.id,
+    required this.name,
+    required this.subtitle,
+  });
 }
 
 class MessagesScreen extends StatefulWidget {
@@ -117,16 +121,40 @@ class _MessagesScreenState extends State<MessagesScreen> {
               return AppCard(
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                    child: Icon(Icons.message_outlined, color: Theme.of(context).colorScheme.primary, size: 20),
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.1),
+                    child: Icon(
+                      Icons.message_outlined,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 20,
+                    ),
                   ),
-                  title: Text(data['title'] ?? 'No Title', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(data['body'] ?? '', maxLines: 2, overflow: TextOverflow.ellipsis),
+                  title: Text(
+                    data['title'] ?? 'No Title',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    data['body'] ?? '',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   trailing: Text(
-                    _formatTimestamp((data['timestamp'] as Timestamp?)?.toDate()),
-                    style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.outline),
+                    _formatTimestamp(
+                      (data['timestamp'] as Timestamp?)?.toDate(),
+                    ),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
                   ),
-                  onTap: () => _showViewDialog(context, docs[index].id, userId, data['title'], data['body']),
+                  onTap: () => _showViewDialog(
+                    context,
+                    docs[index].id,
+                    userId,
+                    data['title'],
+                    data['body'],
+                  ),
                 ),
               );
             },
@@ -136,14 +164,25 @@ class _MessagesScreenState extends State<MessagesScreen> {
     );
   }
 
-  void _showViewDialog(BuildContext context, String alertId, String userId, String? title, String? body) {
+  void _showViewDialog(
+    BuildContext context,
+    String alertId,
+    String userId,
+    String? title,
+    String? body,
+  ) {
     StaffAlertsRepository().markRead(alertId, userId);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(title ?? 'Message'),
         content: Text(body ?? ''),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
       ),
     );
   }
@@ -161,38 +200,54 @@ class _MessagesScreenState extends State<MessagesScreen> {
     // Read before the await below - using context after an async gap is
     // what the lint is (rightly) suspicious of, even though this State's
     // context can't meaningfully become invalid mid-fetch here.
-    final currentUserId = (context.read<AuthBloc>().state as AuthAuthenticated).user.id;
+    final currentUserId =
+        (context.read<AuthBloc>().state as AuthAuthenticated).user.id;
 
     final results = await Future.wait([
       di.sl<GetStaffMembers>()(NoParams()),
       di.sl<GetAllAccessCodes>()(),
     ]);
 
-    final staff = (results[0] as dynamic).fold(
-      (_) => const <UserEntity>[],
-      (List<UserEntity> s) => s.where((m) => m.isActive).toList(),
-    ) as List<UserEntity>;
+    final staff =
+        (results[0] as dynamic).fold(
+              (_) => const <UserEntity>[],
+              (List<UserEntity> s) => s.where((m) => m.isActive).toList(),
+            )
+            as List<UserEntity>;
 
-    final codes = (results[1] as dynamic).fold(
-      (_) => const <ParentAccessCode>[],
-      (List<ParentAccessCode> c) => c.where((c) => c.isActive).toList(),
-    ) as List<ParentAccessCode>;
+    final codes =
+        (results[1] as dynamic).fold(
+              (_) => const <ParentAccessCode>[],
+              (List<ParentAccessCode> c) => c.where((c) => c.isActive).toList(),
+            )
+            as List<ParentAccessCode>;
 
     return [
-      ...staff.where((s) => s.id != currentUserId).map((s) => _Recipient(
-            id: s.id,
-            name: s.name,
-            subtitle: UserRoleDisplay.name(s.role),
-          )),
-      ...codes.where((c) => 'parent_${c.parentCode}' != currentUserId).map((c) => _Recipient(
-            id: 'parent_${c.parentCode}',
-            name: c.parentName ?? 'Parent',
-            subtitle: 'Parent of ${c.studentNames.join(", ")}',
-          )),
+      ...staff
+          .where((s) => s.id != currentUserId)
+          .map(
+            (s) => _Recipient(
+              id: s.id,
+              name: s.name,
+              subtitle: UserRoleDisplay.name(s.role),
+            ),
+          ),
+      ...codes
+          .where((c) => 'parent_${c.parentCode}' != currentUserId)
+          .map(
+            (c) => _Recipient(
+              id: 'parent_${c.parentCode}',
+              name: c.parentName ?? 'Parent',
+              subtitle: 'Parent of ${c.studentNames.join(", ")}',
+            ),
+          ),
     ];
   }
 
-  void _showComposeDialog(BuildContext context, {_Recipient? initialRecipient}) {
+  void _showComposeDialog(
+    BuildContext context, {
+    _Recipient? initialRecipient,
+  }) {
     final titleController = TextEditingController();
     final bodyController = TextEditingController();
     _Recipient? selected = initialRecipient;
@@ -204,8 +259,14 @@ class _MessagesScreenState extends State<MessagesScreen> {
       builder: (dialogContext) => FutureBuilder<List<_Recipient>>(
         future: _loadRecipients(),
         builder: (dialogContext, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting && selected == null) {
-            return const AlertDialog(content: SizedBox(height: 100, child: Center(child: CircularProgressIndicator())));
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              selected == null) {
+            return const AlertDialog(
+              content: SizedBox(
+                height: 100,
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            );
           }
           final recipients = snapshot.data ?? const [];
 
@@ -213,11 +274,24 @@ class _MessagesScreenState extends State<MessagesScreen> {
             builder: (dialogContext, setDialogState) {
               final filtered = query.isEmpty
                   ? recipients
-                  : recipients.where((r) => r.name.toLowerCase().contains(query.toLowerCase()) || 
-                                          r.subtitle.toLowerCase().contains(query.toLowerCase())).toList();
+                  : recipients
+                        .where(
+                          (r) =>
+                              r.name.toLowerCase().contains(
+                                query.toLowerCase(),
+                              ) ||
+                              r.subtitle.toLowerCase().contains(
+                                query.toLowerCase(),
+                              ),
+                        )
+                        .toList();
 
               return AlertDialog(
-                title: Text(selected == null ? 'New Message' : 'Message to ${selected!.name}'),
+                title: Text(
+                  selected == null
+                      ? 'New Message'
+                      : 'Message to ${selected!.name}',
+                ),
                 content: SizedBox(
                   width: 420,
                   height: 400,
@@ -250,7 +324,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
                             Expanded(
                               child: InputChip(
                                 label: Text(selected!.name),
-                                onDeleted: initialRecipient != null ? null : () => setDialogState(() => selected = null),
+                                onDeleted: initialRecipient != null
+                                    ? null
+                                    : () =>
+                                          setDialogState(() => selected = null),
                               ),
                             ),
                           ],
@@ -258,7 +335,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
                         const SizedBox(height: 16),
                         TextField(
                           controller: titleController,
-                          decoration: const InputDecoration(labelText: 'Subject'),
+                          decoration: const InputDecoration(
+                            labelText: 'Subject',
+                          ),
                         ),
                         const SizedBox(height: 16),
                         Expanded(
@@ -267,7 +346,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
                             maxLines: null,
                             expands: true,
                             textAlignVertical: TextAlignVertical.top,
-                            decoration: const InputDecoration(labelText: 'Message', alignLabelWithHint: true),
+                            decoration: const InputDecoration(
+                              labelText: 'Message',
+                              alignLabelWithHint: true,
+                            ),
                           ),
                         ),
                       ],
@@ -275,13 +357,18 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   ),
                 ),
                 actions: [
-                  TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    child: const Text('Cancel'),
+                  ),
                   if (selected != null)
                     FilledButton(
                       onPressed: isSending
                           ? null
                           : () async {
-                              if (titleController.text.trim().isEmpty || bodyController.text.trim().isEmpty) return;
+                              if (titleController.text.trim().isEmpty ||
+                                  bodyController.text.trim().isEmpty)
+                                return;
                               setDialogState(() => isSending = true);
                               try {
                                 // Capped so a hung write can never leave the
@@ -293,18 +380,28 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                       body: bodyController.text.trim(),
                                     )
                                     .timeout(const Duration(seconds: 15));
-                                if (dialogContext.mounted) Navigator.pop(dialogContext);
+                                if (dialogContext.mounted)
+                                  Navigator.pop(dialogContext);
                               } catch (e) {
                                 setDialogState(() => isSending = false);
                                 if (dialogContext.mounted) {
-                                  ScaffoldMessenger.of(dialogContext).showSnackBar(
-                                    SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                                  ScaffoldMessenger.of(
+                                    dialogContext,
+                                  ).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error: $e'),
+                                      backgroundColor: Colors.red,
+                                    ),
                                   );
                                 }
                               }
                             },
                       child: isSending
-                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
                           : const Text('Send'),
                     ),
                 ],

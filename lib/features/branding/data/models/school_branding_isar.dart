@@ -8,7 +8,7 @@ class SchoolBrandingIsar {
 
   @Index(unique: true, replace: true)
   late String schoolId;
-  
+
   late String schoolName;
   late String schoolMotto;
   String? logoUrl;

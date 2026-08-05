@@ -52,11 +52,13 @@ class SystemConfigRepository {
     final existing = await _firestore.collection('config').doc('system').get();
     if (existing.exists) {
       final old = SystemConfig.fromMap(existing.data()!);
-      if (old.currentTerm != config.currentTerm || old.academicYear != config.academicYear) {
-        await _firestore.collection('config').doc('system').collection('history').add({
-          ...old.toMap(),
-          'archivedAt': FieldValue.serverTimestamp(),
-        });
+      if (old.currentTerm != config.currentTerm ||
+          old.academicYear != config.academicYear) {
+        await _firestore
+            .collection('config')
+            .doc('system')
+            .collection('history')
+            .add({...old.toMap(), 'archivedAt': FieldValue.serverTimestamp()});
       }
     }
     await _firestore.collection('config').doc('system').set(config.toMap());
@@ -67,7 +69,11 @@ class SystemConfigRepository {
         .collection('config')
         .doc('system')
         .snapshots()
-        .map((doc) => doc.data() == null ? _defaultConfig() : SystemConfig.fromMap(doc.data()!));
+        .map(
+          (doc) => doc.data() == null
+              ? _defaultConfig()
+              : SystemConfig.fromMap(doc.data()!),
+        );
   }
 
   Stream<List<Map<String, dynamic>>> watchPastSessions() {
@@ -87,12 +93,13 @@ class SystemConfigRepository {
         throw 'Local file not found';
       }
 
-      final fileName = 'school_badge_${DateTime.now().millisecondsSinceEpoch}.png';
+      final fileName =
+          'school_badge_${DateTime.now().millisecondsSinceEpoch}.png';
       // Explicitly using the default bucket from options
       final ref = _storage.ref().child('school_assets').child(fileName);
       debugPrint('Uploading to bucket: ${_storage.bucket}');
       debugPrint('Full path: ${ref.fullPath}');
-      
+
       final uploadTask = ref.putFile(
         file,
         SettableMetadata(contentType: 'image/png'),
@@ -100,11 +107,13 @@ class SystemConfigRepository {
 
       // Listen to progress for better debugging
       uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
-        debugPrint('Upload progress: ${snapshot.bytesTransferred}/${snapshot.totalBytes} (${snapshot.state})');
+        debugPrint(
+          'Upload progress: ${snapshot.bytesTransferred}/${snapshot.totalBytes} (${snapshot.state})',
+        );
       });
 
       final snapshot = await uploadTask;
-      
+
       debugPrint('Upload snapshot final state: ${snapshot.state}');
       if (snapshot.state != TaskState.success) {
         throw 'Upload failed with state: ${snapshot.state}';

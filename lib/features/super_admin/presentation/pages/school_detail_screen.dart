@@ -21,23 +21,38 @@ class SchoolDetailScreen extends StatelessWidget {
         actions: [
           if (school.status == SchoolStatus.active)
             TextButton.icon(
-              onPressed: () => _confirmAction(context, 'Suspend', Colors.red, () {
-                context.read<SuperAdminBloc>().add(
-                  UpdateSchoolStatusEvent(schoolId: school.id, status: SchoolStatus.suspended, reason: 'Suspended by Owner'),
-                );
-              }),
+              onPressed: () =>
+                  _confirmAction(context, 'Suspend', Colors.red, () {
+                    context.read<SuperAdminBloc>().add(
+                      UpdateSchoolStatusEvent(
+                        schoolId: school.id,
+                        status: SchoolStatus.suspended,
+                        reason: 'Suspended by Owner',
+                      ),
+                    );
+                  }),
               icon: const Icon(Icons.block, color: Colors.red),
-              label: const Text('Suspend School', style: TextStyle(color: Colors.red)),
+              label: const Text(
+                'Suspend School',
+                style: TextStyle(color: Colors.red),
+              ),
             )
           else if (school.status == SchoolStatus.suspended)
             TextButton.icon(
-              onPressed: () => _confirmAction(context, 'Activate', Colors.green, () {
-                context.read<SuperAdminBloc>().add(
-                  UpdateSchoolStatusEvent(schoolId: school.id, status: SchoolStatus.active),
-                );
-              }),
+              onPressed: () =>
+                  _confirmAction(context, 'Activate', Colors.green, () {
+                    context.read<SuperAdminBloc>().add(
+                      UpdateSchoolStatusEvent(
+                        schoolId: school.id,
+                        status: SchoolStatus.active,
+                      ),
+                    );
+                  }),
               icon: const Icon(Icons.check_circle, color: Colors.green),
-              label: const Text('Activate School', style: TextStyle(color: Colors.green)),
+              label: const Text(
+                'Activate School',
+                style: TextStyle(color: Colors.green),
+              ),
             ),
           const SizedBox(width: 16),
         ],
@@ -88,7 +103,9 @@ class SchoolDetailScreen extends StatelessWidget {
               backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
               child: Text(
                 school.name.substring(0, 1).toUpperCase(),
-                style: theme.textTheme.headlineLarge?.copyWith(color: theme.colorScheme.primary),
+                style: theme.textTheme.headlineLarge?.copyWith(
+                  color: theme.colorScheme.primary,
+                ),
               ),
             ),
             const SizedBox(width: 24),
@@ -98,7 +115,9 @@ class SchoolDetailScreen extends StatelessWidget {
                 children: [
                   Text(school.name, style: theme.textTheme.headlineSmall),
                   const SizedBox(height: 4),
-                  Text('Tenant ID: ${school.tenantId} • Created ${DateFormat('MMM dd, yyyy').format(school.createdAt)}'),
+                  Text(
+                    'Tenant ID: ${school.tenantId} • Created ${DateFormat('MMM dd, yyyy').format(school.createdAt)}',
+                  ),
                 ],
               ),
             ),
@@ -157,10 +176,14 @@ class SchoolDetailScreen extends StatelessWidget {
               children: [
                 Text(
                   school.subscriptionPlanId.toUpperCase(),
-                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 8),
-                Text('Expires on ${DateFormat('MMM dd, yyyy').format(school.subscriptionExpiry)}'),
+                Text(
+                  'Expires on ${DateFormat('MMM dd, yyyy').format(school.subscriptionExpiry)}',
+                ),
                 const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: () => _showPlanSelector(context),
@@ -176,13 +199,29 @@ class SchoolDetailScreen extends StatelessWidget {
 
   Widget _buildFeatureControl(ThemeData theme, BuildContext context) {
     final allFeatures = [
-      {'id': 'attendance', 'name': 'Attendance Management', 'icon': Icons.calendar_today},
+      {
+        'id': 'attendance',
+        'name': 'Attendance Management',
+        'icon': Icons.calendar_today,
+      },
       {'id': 'finance', 'name': 'Financial Records', 'icon': Icons.payments},
       {'id': 'exams', 'name': 'Examination System', 'icon': Icons.assignment},
-      {'id': 'transport', 'name': 'Transport/Bus Tracking', 'icon': Icons.directions_bus},
+      {
+        'id': 'transport',
+        'name': 'Transport/Bus Tracking',
+        'icon': Icons.directions_bus,
+      },
       {'id': 'library', 'name': 'Library Management', 'icon': Icons.book},
-      {'id': 'qr_scanner', 'name': 'QR Attendance Integration', 'icon': Icons.qr_code},
-      {'id': 'parent_portal', 'name': 'Parent Engagement', 'icon': Icons.family_restroom},
+      {
+        'id': 'qr_scanner',
+        'name': 'QR Attendance Integration',
+        'icon': Icons.qr_code,
+      },
+      {
+        'id': 'parent_portal',
+        'name': 'Parent Engagement',
+        'icon': Icons.family_restroom,
+      },
     ];
 
     return Column(
@@ -233,13 +272,23 @@ class SchoolDetailScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Owner Support Mode', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                  const Text('Temporarily access this school\'s dashboard to assist the administrator.'),
+                  Text(
+                    'Owner Support Mode',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Text(
+                    'Temporarily access this school\'s dashboard to assist the administrator.',
+                  ),
                 ],
               ),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
               onPressed: () => _promptSupportModeReason(context, school),
               child: const Text('Enter Support Mode'),
             ),
@@ -249,14 +298,24 @@ class SchoolDetailScreen extends StatelessWidget {
     );
   }
 
-  void _confirmAction(BuildContext context, String action, Color color, VoidCallback onConfirm) {
+  void _confirmAction(
+    BuildContext context,
+    String action,
+    Color color,
+    VoidCallback onConfirm,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('$action School?'),
-        content: Text('Are you sure you want to $action ${school.name}? This action will be logged.'),
+        content: Text(
+          'Are you sure you want to $action ${school.name}? This action will be logged.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: color),
             onPressed: () {
@@ -290,9 +349,15 @@ class SchoolDetailScreen extends StatelessWidget {
           maxLines: 2,
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () {
               final reason = reasonController.text.trim();
               if (reason.isEmpty) return;
@@ -301,7 +366,11 @@ class SchoolDetailScreen extends StatelessWidget {
               );
               Navigator.pop(dialogContext);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Entering Support Mode for ${school.name}... (Logged)')),
+                SnackBar(
+                  content: Text(
+                    'Entering Support Mode for ${school.name}... (Logged)',
+                  ),
+                ),
               );
             },
             child: const Text('Enter Support Mode'),
@@ -332,7 +401,11 @@ class _SupportBadge extends StatelessWidget {
       ),
       child: Text(
         status.name.toUpperCase(),
-        style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12),
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
       ),
     );
   }

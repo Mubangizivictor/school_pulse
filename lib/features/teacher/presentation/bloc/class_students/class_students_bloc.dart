@@ -109,15 +109,14 @@ class ClassStudentsState extends Equatable {
   /// absent" from "the register has not been taken".
   bool get hasRegister => attendance.isNotEmpty;
 
-  int get presentCount => students
-      .where((s) => statusOf(s.studentId).countsAsPresent)
-      .length;
+  int get presentCount =>
+      students.where((s) => statusOf(s.studentId).countsAsPresent).length;
 
   int get absentCount => students.where((s) {
-        final status = statusOf(s.studentId);
-        return status != LessonAttendanceStatus.notMarked &&
-            !status.countsAsPresent;
-      }).length;
+    final status = statusOf(s.studentId);
+    return status != LessonAttendanceStatus.notMarked &&
+        !status.countsAsPresent;
+  }).length;
 
   /// The roster after search, tab and attribute filters. Applied in the BLoC's
   /// state rather than by re-querying, because the whole class is already in
@@ -134,10 +133,12 @@ class ClassStudentsState extends Equatable {
 
       return switch (filter) {
         ClassRosterFilter.all => true,
-        ClassRosterFilter.present => statusOf(student.studentId).countsAsPresent,
-        ClassRosterFilter.absent => statusOf(student.studentId) !=
-                LessonAttendanceStatus.notMarked &&
-            !statusOf(student.studentId).countsAsPresent,
+        ClassRosterFilter.present => statusOf(
+          student.studentId,
+        ).countsAsPresent,
+        ClassRosterFilter.absent =>
+          statusOf(student.studentId) != LessonAttendanceStatus.notMarked &&
+              !statusOf(student.studentId).countsAsPresent,
       };
     }).toList();
   }
@@ -167,23 +168,24 @@ class ClassStudentsState extends Equatable {
       query: query ?? this.query,
       filter: filter ?? this.filter,
       genderFilter: clearGender ? null : (genderFilter ?? this.genderFilter),
-      residencyFilter:
-          clearResidency ? null : (residencyFilter ?? this.residencyFilter),
+      residencyFilter: clearResidency
+          ? null
+          : (residencyFilter ?? this.residencyFilter),
     );
   }
 
   @override
   List<Object?> get props => [
-        isLoading,
-        errorMessage,
-        roleAssignmentId,
-        students,
-        attendance,
-        query,
-        filter,
-        genderFilter,
-        residencyFilter,
-      ];
+    isLoading,
+    errorMessage,
+    roleAssignmentId,
+    students,
+    attendance,
+    query,
+    filter,
+    genderFilter,
+    residencyFilter,
+  ];
 }
 
 class ClassStudentsBloc extends Bloc<ClassStudentsEvent, ClassStudentsState> {
@@ -206,12 +208,14 @@ class ClassStudentsBloc extends Bloc<ClassStudentsEvent, ClassStudentsState> {
   ) async {
     // A fresh state rather than copyWith: carrying one class's roster across a
     // switch would briefly list P5 East's students under P6 West.
-    emit(ClassStudentsState(
-      isLoading: true,
-      roleAssignmentId: event.context.roleAssignmentId,
-      query: state.query,
-      filter: state.filter,
-    ));
+    emit(
+      ClassStudentsState(
+        isLoading: true,
+        roleAssignmentId: event.context.roleAssignmentId,
+        query: state.query,
+        filter: state.filter,
+      ),
+    );
 
     final roster = await studentRepository.getClassStudents(
       context: event.context,
@@ -226,42 +230,54 @@ class ClassStudentsBloc extends Bloc<ClassStudentsEvent, ClassStudentsState> {
     if (state.roleAssignmentId != event.context.roleAssignmentId) return;
 
     roster.fold(
-      (failure) => emit(state.copyWith(
-        isLoading: false,
-        errorMessage: _messageFor(failure),
-      )),
-      (students) => emit(state.copyWith(
-        isLoading: false,
-        students: students,
-        // A register that will not load must not blank the roster that did.
-        attendance: register.getOrElse(() => const {}),
-        clearError: true,
-      )),
+      (failure) => emit(
+        state.copyWith(isLoading: false, errorMessage: _messageFor(failure)),
+      ),
+      (students) => emit(
+        state.copyWith(
+          isLoading: false,
+          students: students,
+          // A register that will not load must not blank the roster that did.
+          attendance: register.getOrElse(() => const {}),
+          clearError: true,
+        ),
+      ),
     );
   }
 
-  void _onSearched(ClassStudentsSearched event, Emitter<ClassStudentsState> emit) {
+  void _onSearched(
+    ClassStudentsSearched event,
+    Emitter<ClassStudentsState> emit,
+  ) {
     emit(state.copyWith(query: event.query));
   }
 
-  void _onFiltered(ClassStudentsFiltered event, Emitter<ClassStudentsState> emit) {
+  void _onFiltered(
+    ClassStudentsFiltered event,
+    Emitter<ClassStudentsState> emit,
+  ) {
     emit(state.copyWith(filter: event.filter));
   }
 
-  void _onRefined(ClassStudentsRefined event, Emitter<ClassStudentsState> emit) {
-    emit(state.copyWith(
-      genderFilter: event.gender,
-      residencyFilter: event.residency,
-      clearGender: event.clearGender,
-      clearResidency: event.clearResidency,
-    ));
+  void _onRefined(
+    ClassStudentsRefined event,
+    Emitter<ClassStudentsState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        genderFilter: event.gender,
+        residencyFilter: event.residency,
+        clearGender: event.clearGender,
+        clearResidency: event.clearResidency,
+      ),
+    );
   }
 
   String _messageFor(Failure failure) => switch (failure) {
-        PermissionDeniedFailure() => failure.message,
-        AssignmentInvalidFailure() => failure.message,
-        NetworkFailure() => failure.message,
-        ValidationFailure() => failure.message,
-        _ => 'Could not load your class list. Pull down to retry.',
-      };
+    PermissionDeniedFailure() => failure.message,
+    AssignmentInvalidFailure() => failure.message,
+    NetworkFailure() => failure.message,
+    ValidationFailure() => failure.message,
+    _ => 'Could not load your class list. Pull down to retry.',
+  };
 }

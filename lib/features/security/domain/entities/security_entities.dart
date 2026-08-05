@@ -28,7 +28,18 @@ class Gate extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, name, type, location, assignedOfficerIds, operatingHours, allowedUserRoles, requiredVerificationMethods, schoolId, cameraId];
+  List<Object?> get props => [
+    id,
+    name,
+    type,
+    location,
+    assignedOfficerIds,
+    operatingHours,
+    allowedUserRoles,
+    requiredVerificationMethods,
+    schoolId,
+    cameraId,
+  ];
 }
 
 class SecurityIncident extends Equatable {
@@ -63,7 +74,20 @@ class SecurityIncident extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, type, description, timestamp, location, involvedPersonIds, photoUrls, reportedByOfficerId, report, status, schoolId, cameraId];
+  List<Object?> get props => [
+    id,
+    type,
+    description,
+    timestamp,
+    location,
+    involvedPersonIds,
+    photoUrls,
+    reportedByOfficerId,
+    report,
+    status,
+    schoolId,
+    cameraId,
+  ];
 }
 
 class StudentMovement extends Equatable {
@@ -74,7 +98,8 @@ class StudentMovement extends Equatable {
   final DateTime timestamp;
   final String gateId;
   final String direction; // In, Out
-  final String movementType; // Arrival, Departure, Late Arrival, Early Departure, Boarding
+  final String
+  movementType; // Arrival, Departure, Late Arrival, Early Departure, Boarding
   final String verificationMethod;
   final String officerId;
   final String deviceId;
@@ -98,7 +123,21 @@ class StudentMovement extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, studentId, studentName, className, timestamp, gateId, direction, movementType, verificationMethod, officerId, deviceId, schoolId, pickupDetails];
+  List<Object?> get props => [
+    id,
+    studentId,
+    studentName,
+    className,
+    timestamp,
+    gateId,
+    direction,
+    movementType,
+    verificationMethod,
+    officerId,
+    deviceId,
+    schoolId,
+    pickupDetails,
+  ];
 }
 
 class StaffMovement extends Equatable {
@@ -125,7 +164,17 @@ class StaffMovement extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, staffId, staffName, timestamp, gateId, direction, verificationMethod, officerId, schoolId];
+  List<Object?> get props => [
+    id,
+    staffId,
+    staffName,
+    timestamp,
+    gateId,
+    direction,
+    verificationMethod,
+    officerId,
+    schoolId,
+  ];
 }
 
 class EmergencyEvent extends Equatable {
@@ -152,7 +201,17 @@ class EmergencyEvent extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, type, startTime, endTime, description, responseActions, involvedPersonIds, status, schoolId];
+  List<Object?> get props => [
+    id,
+    type,
+    startTime,
+    endTime,
+    description,
+    responseActions,
+    involvedPersonIds,
+    status,
+    schoolId,
+  ];
 }
 
 class LostAndFoundItem extends Equatable {
@@ -179,7 +238,17 @@ class LostAndFoundItem extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, description, locationFound, dateFound, photoUrl, foundByPersonId, isClaimed, claimDetails, schoolId];
+  List<Object?> get props => [
+    id,
+    description,
+    locationFound,
+    dateFound,
+    photoUrl,
+    foundByPersonId,
+    isClaimed,
+    claimDetails,
+    schoolId,
+  ];
 }
 
 class SecurityPatrol extends Equatable {
@@ -204,7 +273,16 @@ class SecurityPatrol extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, officerId, location, timestamp, observations, photoUrls, issuesFound, schoolId];
+  List<Object?> get props => [
+    id,
+    officerId,
+    location,
+    timestamp,
+    observations,
+    photoUrls,
+    issuesFound,
+    schoolId,
+  ];
 }
 
 class PickupAuthorization extends Equatable {
@@ -233,5 +311,16 @@ class PickupAuthorization extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, studentId, parentId, authorizedPersonName, phone, relationship, photoUrl, idDocumentUrl, expiryDate, schoolId];
+  List<Object?> get props => [
+    id,
+    studentId,
+    parentId,
+    authorizedPersonName,
+    phone,
+    relationship,
+    photoUrl,
+    idDocumentUrl,
+    expiryDate,
+    schoolId,
+  ];
 }

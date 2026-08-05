@@ -15,7 +15,10 @@ class QrVerificationService {
     final rawString = "$schoolId|$studentId|$term|$year|$_secretKey";
     final bytes = utf8.encode(rawString);
     final digest = sha256.convert(bytes);
-    return digest.toString().substring(0, 12).toUpperCase(); // Shortened for QR readability
+    return digest
+        .toString()
+        .substring(0, 12)
+        .toUpperCase(); // Shortened for QR readability
   }
 
   /// Generates the URL or data string that goes into the QR code.
@@ -31,7 +34,7 @@ class QrVerificationService {
       term: term,
       year: year,
     );
-    
+
     // This could be a deep link to the school's verification portal
     return "https://verify.schoolpulse.ug/report?s=$schoolId&st=$studentId&t=$term&y=$year&v=$verificationCode";
   }

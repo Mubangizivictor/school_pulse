@@ -61,44 +61,44 @@ class ResponsibilitySwitcherSheet extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(height: AppSpacing.s),
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.border(context),
-                borderRadius: BorderRadius.circular(2),
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border(context),
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: Row(
-                children: [
-                  Text(
-                    'Switch responsibility',
-                    style: TextStyle(
-                      color: AppColors.textPrimary(context),
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Row(
+                  children: [
+                    Text(
+                      'Switch responsibility',
+                      style: TextStyle(
+                        color: AppColors.textPrimary(context),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            Flexible(
-              child: ListView(
-                shrinkWrap: true,
-                padding: const EdgeInsets.only(bottom: 20),
-                children: [
-                  if (subjectAssignments.isNotEmpty)
-                    _sectionLabel(context, 'My subjects'),
-                  ...subjectAssignments.map((a) => _tile(context, a)),
-                  if (otherResponsibilities.isNotEmpty) ...[
-                    _sectionLabel(context, 'Other responsibilities'),
-                    ...otherResponsibilities.map((a) => _tile(context, a)),
                   ],
-                ],
+                ),
               ),
-            ),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.only(bottom: 20),
+                  children: [
+                    if (subjectAssignments.isNotEmpty)
+                      _sectionLabel(context, 'My subjects'),
+                    ...subjectAssignments.map((a) => _tile(context, a)),
+                    if (otherResponsibilities.isNotEmpty) ...[
+                      _sectionLabel(context, 'Other responsibilities'),
+                      ...otherResponsibilities.map((a) => _tile(context, a)),
+                    ],
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -157,7 +157,11 @@ class ResponsibilitySwitcherSheet extends StatelessWidget {
         style: TextStyle(color: AppColors.textSecondary(context), fontSize: 11),
       ),
       trailing: isActive
-          ? Icon(Icons.check_circle, color: AppColors.primary(context), size: 20)
+          ? Icon(
+              Icons.check_circle,
+              color: AppColors.primary(context),
+              size: 20,
+            )
           : null,
     );
   }

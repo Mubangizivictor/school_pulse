@@ -38,11 +38,16 @@ class SportsCompetitionModel extends SportsCompetition {
     required super.status,
   });
 
-  factory SportsCompetitionModel.fromJson(Map<String, dynamic> json, String id) {
+  factory SportsCompetitionModel.fromJson(
+    Map<String, dynamic> json,
+    String id,
+  ) {
     return SportsCompetitionModel(
       id: id,
       title: json['title'] ?? '',
-      date: json['date'] != null ? DateTime.parse(json['date']) : DateTime.now(),
+      date: json['date'] != null
+          ? DateTime.parse(json['date'])
+          : DateTime.now(),
       venue: json['venue'] ?? '',
       status: json['status'] ?? 'Planned',
     );

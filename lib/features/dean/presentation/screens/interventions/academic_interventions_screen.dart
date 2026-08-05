@@ -11,10 +11,12 @@ class AcademicInterventionsScreen extends StatefulWidget {
   const AcademicInterventionsScreen({super.key});
 
   @override
-  State<AcademicInterventionsScreen> createState() => _AcademicInterventionsScreenState();
+  State<AcademicInterventionsScreen> createState() =>
+      _AcademicInterventionsScreenState();
 }
 
-class _AcademicInterventionsScreenState extends State<AcademicInterventionsScreen> {
+class _AcademicInterventionsScreenState
+    extends State<AcademicInterventionsScreen> {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -34,9 +36,9 @@ class _AcademicInterventionsScreenState extends State<AcademicInterventionsScree
         body: BlocConsumer<DeanBloc, DeanState>(
           listener: (context, state) {
             if (state is DeanOperationSuccess) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.message)),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(state.message)));
               context.read<DeanBloc>().add(InterventionsRequested());
             }
           },
@@ -55,7 +57,10 @@ class _AcademicInterventionsScreenState extends State<AcademicInterventionsScree
                   return AppCard(
                     margin: const EdgeInsets.only(bottom: 12),
                     child: ListTile(
-                      title: Text(intervention.studentName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      title: Text(
+                        intervention.studentName,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -72,7 +77,8 @@ class _AcademicInterventionsScreenState extends State<AcademicInterventionsScree
                       ),
                       trailing: const Icon(Icons.chevron_right),
                       isThreeLine: true,
-                      onTap: () => _showUpdateStatusSheet(context, intervention),
+                      onTap: () =>
+                          _showUpdateStatusSheet(context, intervention),
                     ),
                   );
                 },
@@ -96,7 +102,11 @@ class _AcademicInterventionsScreenState extends State<AcademicInterventionsScree
       ),
       child: Text(
         type.name.toUpperCase(),
-        style: const TextStyle(fontSize: 10, color: Colors.blue, fontWeight: FontWeight.bold),
+        style: const TextStyle(
+          fontSize: 10,
+          color: Colors.blue,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -104,10 +114,18 @@ class _AcademicInterventionsScreenState extends State<AcademicInterventionsScree
   Widget _buildStatusBadge(InterventionStatus status) {
     Color color;
     switch (status) {
-      case InterventionStatus.pending: color = Colors.orange; break;
-      case InterventionStatus.inProgress: color = Colors.blue; break;
-      case InterventionStatus.completed: color = Colors.green; break;
-      case InterventionStatus.cancelled: color = Colors.grey; break;
+      case InterventionStatus.pending:
+        color = Colors.orange;
+        break;
+      case InterventionStatus.inProgress:
+        color = Colors.blue;
+        break;
+      case InterventionStatus.completed:
+        color = Colors.green;
+        break;
+      case InterventionStatus.cancelled:
+        color = Colors.grey;
+        break;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -117,7 +135,11 @@ class _AcademicInterventionsScreenState extends State<AcademicInterventionsScree
       ),
       child: Text(
         status.name.toUpperCase(),
-        style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold),
+        style: TextStyle(
+          fontSize: 10,
+          color: color,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -127,13 +149,18 @@ class _AcademicInterventionsScreenState extends State<AcademicInterventionsScree
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => CreateInterventionSheet(onCreated: (intervention) {
-        deanBloc.add(CreateInterventionRequested(intervention));
-      }),
+      builder: (context) => CreateInterventionSheet(
+        onCreated: (intervention) {
+          deanBloc.add(CreateInterventionRequested(intervention));
+        },
+      ),
     );
   }
 
-  void _showUpdateStatusSheet(BuildContext context, AcademicIntervention intervention) {
+  void _showUpdateStatusSheet(
+    BuildContext context,
+    AcademicIntervention intervention,
+  ) {
     final deanBloc = context.read<DeanBloc>();
     showModalBottomSheet(
       context: context,
@@ -141,7 +168,13 @@ class _AcademicInterventionsScreenState extends State<AcademicInterventionsScree
       builder: (context) => UpdateInterventionStatusSheet(
         intervention: intervention,
         onUpdated: (status, outcomes) {
-          deanBloc.add(UpdateInterventionStatusRequested(intervention.id, status, outcomes));
+          deanBloc.add(
+            UpdateInterventionStatusRequested(
+              intervention.id,
+              status,
+              outcomes,
+            ),
+          );
         },
       ),
     );
@@ -153,7 +186,8 @@ class CreateInterventionSheet extends StatefulWidget {
   const CreateInterventionSheet({super.key, required this.onCreated});
 
   @override
-  State<CreateInterventionSheet> createState() => _CreateInterventionSheetState();
+  State<CreateInterventionSheet> createState() =>
+      _CreateInterventionSheetState();
 }
 
 class _CreateInterventionSheetState extends State<CreateInterventionSheet> {
@@ -186,7 +220,9 @@ class _CreateInterventionSheetState extends State<CreateInterventionSheet> {
             ),
             const SizedBox(height: 16),
             TextFormField(
-              decoration: const InputDecoration(labelText: 'Reason for Intervention'),
+              decoration: const InputDecoration(
+                labelText: 'Reason for Intervention',
+              ),
               maxLines: 2,
               validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
               onSaved: (v) => _reason = v!,
@@ -195,7 +231,14 @@ class _CreateInterventionSheetState extends State<CreateInterventionSheet> {
             DropdownButtonFormField<InterventionType>(
               initialValue: _type,
               decoration: const InputDecoration(labelText: 'Intervention Type'),
-              items: InterventionType.values.map((t) => DropdownMenuItem(value: t, child: Text(t.name.toUpperCase()))).toList(),
+              items: InterventionType.values
+                  .map(
+                    (t) => DropdownMenuItem(
+                      value: t,
+                      child: Text(t.name.toUpperCase()),
+                    ),
+                  )
+                  .toList(),
               onChanged: (v) => setState(() => _type = v!),
             ),
             const SizedBox(height: 24),
@@ -203,17 +246,19 @@ class _CreateInterventionSheetState extends State<CreateInterventionSheet> {
               onPressed: () {
                 if (_formKey.currentState?.validate() ?? false) {
                   _formKey.currentState?.save();
-                  widget.onCreated(AcademicIntervention(
-                    id: DateTime.now().millisecondsSinceEpoch.toString(),
-                    studentId: 'temp',
-                    studentName: _studentName,
-                    reason: _reason,
-                    type: _type,
-                    status: InterventionStatus.pending,
-                    startDate: DateTime.now(),
-                    assignedTo: const [],
-                    outcomes: '',
-                  ));
+                  widget.onCreated(
+                    AcademicIntervention(
+                      id: DateTime.now().millisecondsSinceEpoch.toString(),
+                      studentId: 'temp',
+                      studentName: _studentName,
+                      reason: _reason,
+                      type: _type,
+                      status: InterventionStatus.pending,
+                      startDate: DateTime.now(),
+                      assignedTo: const [],
+                      outcomes: '',
+                    ),
+                  );
                   Navigator.pop(context);
                 }
               },
@@ -230,13 +275,19 @@ class _CreateInterventionSheetState extends State<CreateInterventionSheet> {
 class UpdateInterventionStatusSheet extends StatefulWidget {
   final AcademicIntervention intervention;
   final Function(InterventionStatus, String) onUpdated;
-  const UpdateInterventionStatusSheet({super.key, required this.intervention, required this.onUpdated});
+  const UpdateInterventionStatusSheet({
+    super.key,
+    required this.intervention,
+    required this.onUpdated,
+  });
 
   @override
-  State<UpdateInterventionStatusSheet> createState() => _UpdateInterventionStatusSheetState();
+  State<UpdateInterventionStatusSheet> createState() =>
+      _UpdateInterventionStatusSheetState();
 }
 
-class _UpdateInterventionStatusSheetState extends State<UpdateInterventionStatusSheet> {
+class _UpdateInterventionStatusSheetState
+    extends State<UpdateInterventionStatusSheet> {
   late InterventionStatus _status;
   late TextEditingController _outcomesController;
 
@@ -244,7 +295,9 @@ class _UpdateInterventionStatusSheetState extends State<UpdateInterventionStatus
   void initState() {
     super.initState();
     _status = widget.intervention.status;
-    _outcomesController = TextEditingController(text: widget.intervention.outcomes);
+    _outcomesController = TextEditingController(
+      text: widget.intervention.outcomes,
+    );
   }
 
   @override
@@ -265,7 +318,14 @@ class _UpdateInterventionStatusSheetState extends State<UpdateInterventionStatus
           DropdownButtonFormField<InterventionStatus>(
             initialValue: _status,
             decoration: const InputDecoration(labelText: 'Status'),
-            items: InterventionStatus.values.map((s) => DropdownMenuItem(value: s, child: Text(s.name.toUpperCase()))).toList(),
+            items: InterventionStatus.values
+                .map(
+                  (s) => DropdownMenuItem(
+                    value: s,
+                    child: Text(s.name.toUpperCase()),
+                  ),
+                )
+                .toList(),
             onChanged: (v) => setState(() => _status = v!),
           ),
           const SizedBox(height: 16),

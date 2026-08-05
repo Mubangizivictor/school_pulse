@@ -13,15 +13,33 @@ abstract class DeanRemoteDataSource {
   Future<DeanStatsModel> getDeanDashboardStats();
   Future<List<TeacherWorkload>> getTeacherWorkloads();
   Future<TeacherWorkload> getTeacherWorkloadDetail(String teacherId);
-  Future<List<LessonRecord>> getLessonRecords({DateTime? startDate, DateTime? endDate, String? teacherId, String? classId, LessonStatus? status});
-  Future<List<HomeworkRecord>> getHomeworkRecords({String? classId, String? teacherId, DateTime? startDate, DateTime? endDate});
+  Future<List<LessonRecord>> getLessonRecords({
+    DateTime? startDate,
+    DateTime? endDate,
+    String? teacherId,
+    String? classId,
+    LessonStatus? status,
+  });
+  Future<List<HomeworkRecord>> getHomeworkRecords({
+    String? classId,
+    String? teacherId,
+    DateTime? startDate,
+    DateTime? endDate,
+  });
   Future<List<AcademicIntervention>> getInterventions();
   Future<void> createIntervention(AcademicIntervention intervention);
-  Future<void> updateInterventionStatus(String id, InterventionStatus status, String outcomes);
+  Future<void> updateInterventionStatus(
+    String id,
+    InterventionStatus status,
+    String outcomes,
+  );
   Future<List<ClassObservation>> getClassObservations();
   Future<void> recordObservation(ClassObservation observation);
   Future<List<Subject>> getSubjects();
-  Future<void> updateSubjectAllocation(String subjectId, List<String> teacherIds);
+  Future<void> updateSubjectAllocation(
+    String subjectId,
+    List<String> teacherIds,
+  );
   Future<List<Curriculum>> getCurricula();
   Future<void> updateCurriculum(Curriculum curriculum);
   Future<void> approveAssessmentMarks(String assessmentId);
@@ -30,10 +48,20 @@ abstract class DeanRemoteDataSource {
   Future<void> approveReportCards(List<String> reportCardIds);
   Future<void> rejectReportCards(List<String> reportCardIds, String reason);
   Future<List<ReportCardApproval>> getPendingReportApprovals();
-  Future<Map<String, dynamic>> getPerformanceAnalytics({required String type, String? id, String? academicYear, String? term});
+  Future<Map<String, dynamic>> getPerformanceAnalytics({
+    required String type,
+    String? id,
+    String? academicYear,
+    String? term,
+  });
   Future<Map<String, dynamic>> getMasterTimetable();
   Future<List> getExaminationSchedules();
-  Future<void> sendAcademicAnnouncement({required String title, required String message, required List<String> targetRoles, List<String>? targetIds});
+  Future<void> sendAcademicAnnouncement({
+    required String title,
+    required String message,
+    required List<String> targetRoles,
+    List<String>? targetIds,
+  });
 }
 
 class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
@@ -56,14 +84,26 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
       overallSchoolAverage: 72.4,
       topPerformingClasses: const [
         ClassPerformance(classId: "c1", className: "P.7 Blue", average: 88.5),
-        ClassPerformance(classId: "c2", className: "S.4 Science", average: 82.1),
+        ClassPerformance(
+          classId: "c2",
+          className: "S.4 Science",
+          average: 82.1,
+        ),
       ],
       bottomPerformingClasses: const [
         ClassPerformance(classId: "c3", className: "P.5 Red", average: 54.2),
       ],
       subjectRankings: const [
-        SubjectPerformance(subjectId: "s1", subjectName: "Mathematics", average: 65.5),
-        SubjectPerformance(subjectId: "s2", subjectName: "English", average: 78.2),
+        SubjectPerformance(
+          subjectId: "s1",
+          subjectName: "Mathematics",
+          average: 65.5,
+        ),
+        SubjectPerformance(
+          subjectId: "s2",
+          subjectName: "English",
+          average: 78.2,
+        ),
       ],
       attendanceTrend: 2.5,
       homeworkCompletionRate: 85.0,
@@ -92,8 +132,20 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
         assessmentsCreated: 5,
         marksPending: 45,
         assignedSubjects: const [
-          AssignedSubject(subjectId: "s1", subjectName: "Mathematics", classId: "c1", className: "P.7 Blue", weeklyLessons: 10),
-          AssignedSubject(subjectId: "s1", subjectName: "Mathematics", classId: "c2", className: "P.7 Red", weeklyLessons: 10),
+          AssignedSubject(
+            subjectId: "s1",
+            subjectName: "Mathematics",
+            classId: "c1",
+            className: "P.7 Blue",
+            weeklyLessons: 10,
+          ),
+          AssignedSubject(
+            subjectId: "s1",
+            subjectName: "Mathematics",
+            classId: "c2",
+            className: "P.7 Red",
+            weeklyLessons: 10,
+          ),
         ],
       ),
     ];
@@ -114,7 +166,13 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
   }
 
   @override
-  Future<List<LessonRecord>> getLessonRecords({DateTime? startDate, DateTime? endDate, String? teacherId, String? classId, LessonStatus? status}) async {
+  Future<List<LessonRecord>> getLessonRecords({
+    DateTime? startDate,
+    DateTime? endDate,
+    String? teacherId,
+    String? classId,
+    LessonStatus? status,
+  }) async {
     return [
       LessonRecord(
         id: "l1",
@@ -132,7 +190,12 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
   }
 
   @override
-  Future<List<HomeworkRecord>> getHomeworkRecords({String? classId, String? teacherId, DateTime? startDate, DateTime? endDate}) async {
+  Future<List<HomeworkRecord>> getHomeworkRecords({
+    String? classId,
+    String? teacherId,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
     return [
       HomeworkRecord(
         id: "h1",
@@ -173,7 +236,11 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
   Future<void> createIntervention(AcademicIntervention intervention) async {}
 
   @override
-  Future<void> updateInterventionStatus(String id, InterventionStatus status, String outcomes) async {}
+  Future<void> updateInterventionStatus(
+    String id,
+    InterventionStatus status,
+    String outcomes,
+  ) async {}
 
   @override
   Future<List<ClassObservation>> getClassObservations() async {
@@ -208,9 +275,21 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
         department: "Science",
         currentCoverage: 75.0,
         objectives: const [
-          LearningObjective(id: "o1", description: "Understand linear equations", isCore: true),
-          LearningObjective(id: "o2", description: "Solve quadratic equations", isCore: true),
-          LearningObjective(id: "o3", description: "Introduction to Calculus", isCore: false),
+          LearningObjective(
+            id: "o1",
+            description: "Understand linear equations",
+            isCore: true,
+          ),
+          LearningObjective(
+            id: "o2",
+            description: "Solve quadratic equations",
+            isCore: true,
+          ),
+          LearningObjective(
+            id: "o3",
+            description: "Introduction to Calculus",
+            isCore: false,
+          ),
         ],
         topics: [
           Topic(
@@ -238,7 +317,10 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
   }
 
   @override
-  Future<void> updateSubjectAllocation(String subjectId, List<String> teacherIds) async {}
+  Future<void> updateSubjectAllocation(
+    String subjectId,
+    List<String> teacherIds,
+  ) async {}
 
   @override
   Future<void> updateCurriculum(Curriculum curriculum) async {}
@@ -252,7 +334,15 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
         schoolId: "s1",
         name: "National Primary Curriculum",
         description: "The standard curriculum for primary schools in Uganda.",
-        applicableLevels: const ["P.1", "P.2", "P.3", "P.4", "P.5", "P.6", "P.7"],
+        applicableLevels: const [
+          "P.1",
+          "P.2",
+          "P.3",
+          "P.4",
+          "P.5",
+          "P.6",
+          "P.7",
+        ],
         subjects: subjects,
         calendarConfig: const AcademicCalendarConfig(
           termsPerYear: 3,
@@ -270,7 +360,10 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
   Future<void> approveAssessmentMarks(String assessmentId) async {}
 
   @override
-  Future<void> rejectAssessmentMarks(String assessmentId, String reason) async {}
+  Future<void> rejectAssessmentMarks(
+    String assessmentId,
+    String reason,
+  ) async {}
 
   @override
   Future<List<AssessmentModeration>> getPendingModerationAssessments() async {
@@ -306,7 +399,10 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
   Future<void> approveReportCards(List<String> reportCardIds) async {}
 
   @override
-  Future<void> rejectReportCards(List<String> reportCardIds, String reason) async {}
+  Future<void> rejectReportCards(
+    List<String> reportCardIds,
+    String reason,
+  ) async {}
 
   @override
   Future<List<ReportCardApproval>> getPendingReportApprovals() async {
@@ -333,17 +429,30 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
   }
 
   @override
-  Future<Map<String, dynamic>> getPerformanceAnalytics({required String type, String? id, String? academicYear, String? term}) async {
+  Future<Map<String, dynamic>> getPerformanceAnalytics({
+    required String type,
+    String? id,
+    String? academicYear,
+    String? term,
+  }) async {
     return {
       'gradeDistribution': {
-        'D1': 15, 'D2': 25, 'C3': 45, 'C4': 60, 'C5': 30, 'C6': 20, 'P7': 10, 'P8': 5, 'F9': 2,
+        'D1': 15,
+        'D2': 25,
+        'C3': 45,
+        'C4': 60,
+        'C5': 30,
+        'C6': 20,
+        'P7': 10,
+        'P8': 5,
+        'F9': 2,
       },
       'subjectPassRates': [
         {'subject': 'Mathematics', 'rate': 0.88},
       ],
       'topStudents': [
         {'name': 'Namono Grace', 'class': 'P.7 Blue', 'score': 0.92},
-      ]
+      ],
     };
   }
 
@@ -354,5 +463,10 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
   Future<List> getExaminationSchedules() async => [];
 
   @override
-  Future<void> sendAcademicAnnouncement({required String title, required String message, required List<String> targetRoles, List<String>? targetIds}) async {}
+  Future<void> sendAcademicAnnouncement({
+    required String title,
+    required String message,
+    required List<String> targetRoles,
+    List<String>? targetIds,
+  }) async {}
 }

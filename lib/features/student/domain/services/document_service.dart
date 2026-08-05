@@ -9,7 +9,8 @@ class DocumentService {
 
   Future<Either<Failure, String>> uploadDocument({
     required String studentId,
-    required String documentType, // 'birth_certificate', 'previous_report', etc.
+    required String
+    documentType, // 'birth_certificate', 'previous_report', etc.
     required dynamic file,
   }) {
     return repository.uploadStudentDocument(studentId, documentType, file);

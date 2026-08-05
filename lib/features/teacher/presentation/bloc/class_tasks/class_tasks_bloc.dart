@@ -78,21 +78,23 @@ class ClassTasksState extends Equatable {
       tasks.where((t) => t.status.isOpen).toList()
         ..sort((a, b) => a.dueAt.compareTo(b.dueAt));
 
-  List<ClassTask> get highPriority => open
-      .where((t) => t.priority == ClassTaskPriority.high)
-      .toList();
+  List<ClassTask> get highPriority =>
+      open.where((t) => t.priority == ClassTaskPriority.high).toList();
 
   List<ClassTask> get overdue => tasks.where((t) => t.isOverdue()).toList();
 
-  List<ClassTask> get completed =>
-      tasks.where((t) => t.isComplete).toList();
+  List<ClassTask> get completed => tasks.where((t) => t.isComplete).toList();
 
   List<ClassTask> get dueToday {
     final now = DateTime.now();
-    return open.where((t) =>
-        t.dueAt.year == now.year &&
-        t.dueAt.month == now.month &&
-        t.dueAt.day == now.day).toList();
+    return open
+        .where(
+          (t) =>
+              t.dueAt.year == now.year &&
+              t.dueAt.month == now.month &&
+              t.dueAt.day == now.day,
+        )
+        .toList();
   }
 
   ClassTasksState copyWith({
@@ -109,8 +111,9 @@ class ClassTasksState extends Equatable {
       isLoading: isLoading ?? this.isLoading,
       isSaving: isSaving ?? this.isSaving,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
-      successMessage:
-          clearSuccess ? null : (successMessage ?? this.successMessage),
+      successMessage: clearSuccess
+          ? null
+          : (successMessage ?? this.successMessage),
       context: context ?? this.context,
       tasks: tasks ?? this.tasks,
     );
@@ -118,20 +121,20 @@ class ClassTasksState extends Equatable {
 
   @override
   List<Object?> get props => [
-        isLoading,
-        isSaving,
-        errorMessage,
-        successMessage,
-        context,
-        tasks,
-      ];
+    isLoading,
+    isSaving,
+    errorMessage,
+    successMessage,
+    context,
+    tasks,
+  ];
 }
 
 class ClassTasksBloc extends Bloc<ClassTasksEvent, ClassTasksState> {
   final ClassTaskRepository taskRepository;
 
   ClassTasksBloc({required this.taskRepository})
-      : super(const ClassTasksState.initial()) {
+    : super(const ClassTasksState.initial()) {
     on<ClassTasksRequested>(_onRequested);
     on<ClassTaskSaved>(_onSaved);
     on<ClassTaskCompleted>(_onCompleted);
@@ -148,15 +151,12 @@ class ClassTasksBloc extends Bloc<ClassTasksEvent, ClassTasksState> {
     final result = await taskRepository.getTasks(context: event.context);
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        isLoading: false,
-        errorMessage: _messageFor(failure),
-      )),
-      (tasks) => emit(state.copyWith(
-        isLoading: false,
-        tasks: tasks,
-        clearError: true,
-      )),
+      (failure) => emit(
+        state.copyWith(isLoading: false, errorMessage: _messageFor(failure)),
+      ),
+      (tasks) => emit(
+        state.copyWith(isLoading: false, tasks: tasks, clearError: true),
+      ),
     );
   }
 
@@ -189,7 +189,8 @@ class ClassTasksBloc extends Bloc<ClassTasksEvent, ClassTasksState> {
   ) async {
     await _mutate(
       emit,
-      (context) => taskRepository.deleteTask(context: context, task: event.task),
+      (context) =>
+          taskRepository.deleteTask(context: context, task: event.task),
       success: 'Task deleted.',
     );
   }
@@ -198,7 +199,8 @@ class ClassTasksBloc extends Bloc<ClassTasksEvent, ClassTasksState> {
   /// than patching the list in place keeps the derived counts honest.
   Future<void> _mutate(
     Emitter<ClassTasksState> emit,
-    Future<Either<Failure, Object?>> Function(ActiveResponsibilityContext) action, {
+    Future<Either<Failure, Object?>> Function(ActiveResponsibilityContext)
+    action, {
     required String success,
   }) async {
     final context = state.context;
@@ -209,15 +211,16 @@ class ClassTasksBloc extends Bloc<ClassTasksEvent, ClassTasksState> {
     final result = await action(context);
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        isSaving: false,
-        errorMessage: _messageFor(failure),
-      )),
-      (_) => emit(state.copyWith(
-        isSaving: false,
-        successMessage: success,
-        clearError: true,
-      )),
+      (failure) => emit(
+        state.copyWith(isSaving: false, errorMessage: _messageFor(failure)),
+      ),
+      (_) => emit(
+        state.copyWith(
+          isSaving: false,
+          successMessage: success,
+          clearError: true,
+        ),
+      ),
     );
     add(ClassTasksRequested(context));
   }
@@ -230,10 +233,10 @@ class ClassTasksBloc extends Bloc<ClassTasksEvent, ClassTasksState> {
   }
 
   static String _messageFor(Failure failure) => switch (failure) {
-        PermissionDeniedFailure() => failure.message,
-        ValidationFailure() => failure.message,
-        OfflineNotAllowedFailure() => failure.message,
-        NetworkFailure() => failure.message,
-        _ => 'Something went wrong. Try again.',
-      };
+    PermissionDeniedFailure() => failure.message,
+    ValidationFailure() => failure.message,
+    OfflineNotAllowedFailure() => failure.message,
+    NetworkFailure() => failure.message,
+    _ => 'Something went wrong. Try again.',
+  };
 }

@@ -22,7 +22,8 @@ class CateringDashboardScreen extends StatefulWidget {
   const CateringDashboardScreen({super.key});
 
   @override
-  State<CateringDashboardScreen> createState() => _CateringDashboardScreenState();
+  State<CateringDashboardScreen> createState() =>
+      _CateringDashboardScreenState();
 }
 
 class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
@@ -62,7 +63,10 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
           );
         } else if (state is CateringSuccess) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message), backgroundColor: Colors.green),
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.green,
+            ),
           );
         }
       },
@@ -100,7 +104,8 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
           },
           child: BlocBuilder<CateringBloc, CateringState>(
             builder: (context, state) {
-              if (state is CateringLoading && state is! CateringDashboardLoaded) {
+              if (state is CateringLoading &&
+                  state is! CateringDashboardLoaded) {
                 return const _CateringSkeleton();
               }
 
@@ -115,13 +120,20 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
                     const SizedBox(height: 24),
                     _buildTodayMenuSection(context, data['todayMenu'] ?? []),
                     const SizedBox(height: 24),
-                    _buildInventoryAlerts(context, data['lowStockAlertsCount'] ?? 0, semanticColors),
+                    _buildInventoryAlerts(
+                      context,
+                      data['lowStockAlertsCount'] ?? 0,
+                      semanticColors,
+                    ),
                     const SizedBox(height: 24),
-                    _buildKitchenActivities(context, data['kitchenActivities'] ?? []),
+                    _buildKitchenActivities(
+                      context,
+                      data['kitchenActivities'] ?? [],
+                    ),
                   ],
                 );
               }
-              
+
               if (state is CateringError) {
                 return Center(
                   child: Column(
@@ -129,7 +141,9 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
                     children: [
                       Text(state.message),
                       ElevatedButton(
-                        onPressed: () => context.read<CateringBloc>().add(LoadCateringDashboard()),
+                        onPressed: () => context.read<CateringBloc>().add(
+                          LoadCateringDashboard(),
+                        ),
                         child: const Text('Retry'),
                       ),
                     ],
@@ -145,7 +159,11 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
     );
   }
 
-  Widget _buildOverviewGrid(BuildContext context, Map<String, dynamic> data, SemanticColors semanticColors) {
+  Widget _buildOverviewGrid(
+    BuildContext context,
+    Map<String, dynamic> data,
+    SemanticColors semanticColors,
+  ) {
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
@@ -188,7 +206,9 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
       children: [
         Text(
           'Quick Actions',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
         SingleChildScrollView(
@@ -201,7 +221,9 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const MealPlanningScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const MealPlanningScreen(),
+                    ),
                   );
                 },
               ),
@@ -211,7 +233,9 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const CateringInventoryScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const CateringInventoryScreen(),
+                    ),
                   );
                 },
               ),
@@ -221,7 +245,9 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const StockRequestScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const StockRequestScreen(),
+                    ),
                   );
                 },
               ),
@@ -231,7 +257,9 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const WastageTrackingScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const WastageTrackingScreen(),
+                    ),
                   );
                 },
               ),
@@ -241,7 +269,10 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const CateringFinancialReportScreen()),
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          const CateringFinancialReportScreen(),
+                    ),
                   );
                 },
               ),
@@ -261,43 +292,56 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
           children: [
             Text(
               "Today's Menu",
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
-            TextButton(
-              onPressed: () {},
-              child: const Text('View Weekly'),
-            ),
+            TextButton(onPressed: () {}, child: const Text('View Weekly')),
           ],
         ),
         if (menu.isEmpty)
           const AppCard(
-            child: Center(child: Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text('No menu items set for today'),
-            )),
-          )
-        else
-          ...menu.map((item) => Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: AppCard(
-              child: ListTile(
-                title: Text(item['mealCategory'] ?? ''),
-                subtitle: Text(item['menu'] ?? ''),
-                trailing: Text(item['time'] ?? ''),
+            child: Center(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text('No menu items set for today'),
               ),
             ),
-          )),
+          )
+        else
+          ...menu.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: AppCard(
+                child: ListTile(
+                  title: Text(item['mealCategory'] ?? ''),
+                  subtitle: Text(item['menu'] ?? ''),
+                  trailing: Text(item['time'] ?? ''),
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
 
-  Widget _buildInventoryAlerts(BuildContext context, int count, SemanticColors semanticColors) {
+  Widget _buildInventoryAlerts(
+    BuildContext context,
+    int count,
+    SemanticColors semanticColors,
+  ) {
     if (count == 0) return const SizedBox.shrink();
     return AppCard(
       color: semanticColors.error.withValues(alpha: 0.1),
       child: ListTile(
         leading: Icon(Icons.warning, color: semanticColors.error),
-        title: Text('$count Items Low in Stock', style: TextStyle(color: semanticColors.error, fontWeight: FontWeight.bold)),
+        title: Text(
+          '$count Items Low in Stock',
+          style: TextStyle(
+            color: semanticColors.error,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         subtitle: const Text('Action required to avoid stockout'),
         trailing: const Icon(Icons.chevron_right),
         onTap: () {},
@@ -305,13 +349,18 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
     );
   }
 
-  Widget _buildKitchenActivities(BuildContext context, List<dynamic> activities) {
+  Widget _buildKitchenActivities(
+    BuildContext context,
+    List<dynamic> activities,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Kitchen Activities',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
         if (activities.isEmpty)
@@ -343,7 +392,9 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) => Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -353,12 +404,16 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: isCleared ? semanticColors.success.withValues(alpha: 0.1) : semanticColors.error.withValues(alpha: 0.1),
+                color: isCleared
+                    ? semanticColors.success.withValues(alpha: 0.1)
+                    : semanticColors.error.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 isCleared ? Icons.check_circle : Icons.cancel,
-                color: isCleared ? semanticColors.success : semanticColors.error,
+                color: isCleared
+                    ? semanticColors.success
+                    : semanticColors.error,
                 size: 48,
               ),
             ),
@@ -367,7 +422,9 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
               isCleared ? 'Access Granted' : 'Access Denied',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: isCleared ? semanticColors.success : semanticColors.error,
+                color: isCleared
+                    ? semanticColors.success
+                    : semanticColors.error,
               ),
             ),
             const SizedBox(height: 24),
@@ -381,7 +438,10 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
             if (!isCleared)
               const Padding(
                 padding: EdgeInsets.only(top: 8),
-                child: Text('Meal not authorized. Please contact the bursar.', textAlign: TextAlign.center),
+                child: Text(
+                  'Meal not authorized. Please contact the bursar.',
+                  textAlign: TextAlign.center,
+                ),
               ),
             const SizedBox(height: 32),
             if (isCleared)
@@ -397,21 +457,24 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
                       schoolId = authState.user.schoolId;
                     }
 
-                    context.read<CateringBloc>().add(RecordMealServedEvent(
-                      MealRecord(
-                        id: DateTime.now().millisecondsSinceEpoch.toString(),
-                        studentId: data['studentId'],
-                        studentName: data['studentName'],
-                        classId: data['class'],
-                        mealCategoryId: '1', // Should be determined by current time
-                        mealCategoryName: 'Lunch', 
-                        servedAt: DateTime.now(),
-                        servedBy: userId,
-                        schoolId: schoolId,
-                        academicYear: '2024',
-                        term: 'Term 1',
+                    context.read<CateringBloc>().add(
+                      RecordMealServedEvent(
+                        MealRecord(
+                          id: DateTime.now().millisecondsSinceEpoch.toString(),
+                          studentId: data['studentId'],
+                          studentName: data['studentName'],
+                          classId: data['class'],
+                          mealCategoryId:
+                              '1', // Should be determined by current time
+                          mealCategoryName: 'Lunch',
+                          servedAt: DateTime.now(),
+                          servedBy: userId,
+                          schoolId: schoolId,
+                          academicYear: '2024',
+                          term: 'Term 1',
+                        ),
                       ),
-                    ));
+                    );
                     Navigator.pop(context);
                   },
                   child: const Text('Record Meal Served'),
@@ -438,7 +501,10 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: const TextStyle(color: Colors.grey)),
-          Text(value, style: TextStyle(fontWeight: FontWeight.bold, color: color)),
+          Text(
+            value,
+            style: TextStyle(fontWeight: FontWeight.bold, color: color),
+          ),
         ],
       ),
     );
@@ -450,7 +516,11 @@ class _ActionChip extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
 
-  const _ActionChip({required this.icon, required this.label, required this.onTap});
+  const _ActionChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -493,24 +563,33 @@ class _CateringSkeleton extends StatelessWidget {
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
           childAspectRatio: 1.5,
-          children: List.generate(4, (index) => const Skeleton(borderRadius: 12)),
+          children: List.generate(
+            4,
+            (index) => const Skeleton(borderRadius: 12),
+          ),
         ),
         const SizedBox(height: 24),
         const Skeleton(width: 150, height: 20),
         const SizedBox(height: 12),
         Row(
-          children: List.generate(3, (index) => const Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: Skeleton(width: 80, height: 80, borderRadius: 12),
-          )),
+          children: List.generate(
+            3,
+            (index) => const Padding(
+              padding: EdgeInsets.only(right: 12),
+              child: Skeleton(width: 80, height: 80, borderRadius: 12),
+            ),
+          ),
         ),
         const SizedBox(height: 24),
         const Skeleton(width: 150, height: 20),
         const SizedBox(height: 12),
-        ...List.generate(2, (index) => const Padding(
-          padding: EdgeInsets.only(bottom: 12),
-          child: Skeleton(height: 80, borderRadius: 12),
-        )),
+        ...List.generate(
+          2,
+          (index) => const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: Skeleton(height: 80, borderRadius: 12),
+          ),
+        ),
       ],
     );
   }

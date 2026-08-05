@@ -53,7 +53,8 @@ class _LibraryDashboardScreenState extends State<LibraryDashboardScreen> {
                   borderSide: BorderSide.none,
                 ),
               ),
-              onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
+              onChanged: (value) =>
+                  setState(() => _searchQuery = value.toLowerCase()),
             ),
           ),
         ),
@@ -83,9 +84,11 @@ class _LibraryDashboardScreenState extends State<LibraryDashboardScreen> {
             borrowings = state.history
                 .cast<LibraryBorrowing>()
                 .where((b) => b.status != BorrowingStatus.returned)
-                .where((b) =>
-                    b.resourceTitle.toLowerCase().contains(_searchQuery) ||
-                    b.borrowerName.toLowerCase().contains(_searchQuery))
+                .where(
+                  (b) =>
+                      b.resourceTitle.toLowerCase().contains(_searchQuery) ||
+                      b.borrowerName.toLowerCase().contains(_searchQuery),
+                )
                 .toList();
           }
 
@@ -96,9 +99,15 @@ class _LibraryDashboardScreenState extends State<LibraryDashboardScreen> {
 
           return RefreshIndicator(
             onRefresh: () async {
-              context.read<LibraryBloc>().add(WatchLibraryResources(widget.schoolId));
-              context.read<LibraryBloc>().add(WatchBorrowingHistory(widget.schoolId));
-              context.read<LibraryBloc>().add(FetchLibraryStats(widget.schoolId));
+              context.read<LibraryBloc>().add(
+                WatchLibraryResources(widget.schoolId),
+              );
+              context.read<LibraryBloc>().add(
+                WatchBorrowingHistory(widget.schoolId),
+              );
+              context.read<LibraryBloc>().add(
+                FetchLibraryStats(widget.schoolId),
+              );
             },
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
@@ -113,7 +122,9 @@ class _LibraryDashboardScreenState extends State<LibraryDashboardScreen> {
                   const SectionHeader(title: 'Borrowing Trends'),
                   const SizedBox(height: 12),
                   ReadingTrendsChart(
-                    monthlyData: Map<String, int>.from(stats['monthlyTrends'] ?? {}),
+                    monthlyData: Map<String, int>.from(
+                      stats['monthlyTrends'] ?? {},
+                    ),
                   ),
                   const SizedBox(height: 24),
                 ],
@@ -130,10 +141,12 @@ class _LibraryDashboardScreenState extends State<LibraryDashboardScreen> {
                 ),
                 const SizedBox(height: 12),
                 if (borrowings.isNotEmpty)
-                  ...borrowings.map((borrowing) => _BorrowingCard(
-                        borrowing: borrowing,
-                        onReturn: () => _showReturnDialog(context, borrowing),
-                      ))
+                  ...borrowings.map(
+                    (borrowing) => _BorrowingCard(
+                      borrowing: borrowing,
+                      onReturn: () => _showReturnDialog(context, borrowing),
+                    ),
+                  )
                 else if (state is LibraryHistoryLoaded)
                   const EmptyState(
                     icon: Icons.library_books_outlined,
@@ -159,12 +172,14 @@ class _LibraryDashboardScreenState extends State<LibraryDashboardScreen> {
       builder: (context) => _ReturnResourceDialog(
         borrowing: borrowing,
         onConfirm: (condition, fine) {
-          context.read<LibraryBloc>().add(ReturnResourceRequested(
-                borrowingId: borrowing.id,
-                schoolId: widget.schoolId,
-                condition: condition,
-                fineAmount: fine,
-              ));
+          context.read<LibraryBloc>().add(
+            ReturnResourceRequested(
+              borrowingId: borrowing.id,
+              schoolId: widget.schoolId,
+              condition: condition,
+              fineAmount: fine,
+            ),
+          );
           Navigator.pop(context);
         },
       ),
@@ -201,7 +216,8 @@ class _ResourceInventorySheet extends StatefulWidget {
   const _ResourceInventorySheet({required this.schoolId});
 
   @override
-  State<_ResourceInventorySheet> createState() => _ResourceInventorySheetState();
+  State<_ResourceInventorySheet> createState() =>
+      _ResourceInventorySheetState();
 }
 
 class _ResourceInventorySheetState extends State<_ResourceInventorySheet> {
@@ -221,7 +237,9 @@ class _ResourceInventorySheetState extends State<_ResourceInventorySheet> {
               decoration: InputDecoration(
                 hintText: 'Filter resources...',
                 prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               onChanged: (val) => setState(() => _query = val.toLowerCase()),
             ),
@@ -231,7 +249,11 @@ class _ResourceInventorySheetState extends State<_ResourceInventorySheet> {
               builder: (context, state) {
                 if (state is LibraryResourcesLoaded) {
                   final filtered = state.resources
-                      .where((r) => r.title.toLowerCase().contains(_query) || r.barcode.contains(_query))
+                      .where(
+                        (r) =>
+                            r.title.toLowerCase().contains(_query) ||
+                            r.barcode.contains(_query),
+                      )
                       .toList();
 
                   return ListView.builder(
@@ -242,7 +264,9 @@ class _ResourceInventorySheetState extends State<_ResourceInventorySheet> {
                       return ListTile(
                         leading: const Icon(Icons.qr_code_2),
                         title: Text(resource.title),
-                        subtitle: Text('Barcode: ${resource.barcode} | Shelf: ${resource.shelf}'),
+                        subtitle: Text(
+                          'Barcode: ${resource.barcode} | Shelf: ${resource.shelf}',
+                        ),
                         trailing: IconButton(
                           icon: const Icon(Icons.print_outlined),
                           tooltip: 'Print QR Label',
@@ -261,7 +285,10 @@ class _ResourceInventorySheetState extends State<_ResourceInventorySheet> {
     );
   }
 
-  Future<void> _printLabel(BuildContext context, LibraryResource resource) async {
+  Future<void> _printLabel(
+    BuildContext context,
+    LibraryResource resource,
+  ) async {
     final printerService = di.sl<PrinterService>();
     final isConnected = await printerService.isConnected();
 
@@ -300,13 +327,20 @@ class _BorrowingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
-    final isOverdue = borrowing.dueDate.isBefore(DateTime.now()) && borrowing.status != BorrowingStatus.returned;
+    final isOverdue =
+        borrowing.dueDate.isBefore(DateTime.now()) &&
+        borrowing.status != BorrowingStatus.returned;
 
     return AppCard(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
-        title: Text(borrowing.resourceTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text('Borrower: ${borrowing.borrowerName} (${borrowing.borrowerType})'),
+        title: Text(
+          borrowing.resourceTitle,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(
+          'Borrower: ${borrowing.borrowerName} (${borrowing.borrowerType})',
+        ),
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
@@ -332,7 +366,10 @@ class _ReturnResourceDialog extends StatefulWidget {
   final LibraryBorrowing borrowing;
   final Function(ResourceCondition, double) onConfirm;
 
-  const _ReturnResourceDialog({required this.borrowing, required this.onConfirm});
+  const _ReturnResourceDialog({
+    required this.borrowing,
+    required this.onConfirm,
+  });
 
   @override
   State<_ReturnResourceDialog> createState() => _ReturnResourceDialogState();
@@ -347,9 +384,12 @@ class _ReturnResourceDialogState extends State<_ReturnResourceDialog> {
     super.initState();
     // Pre-calculate fine if overdue
     if (widget.borrowing.dueDate.isBefore(DateTime.now())) {
-      final daysOverdue = DateTime.now().difference(widget.borrowing.dueDate).inDays;
+      final daysOverdue = DateTime.now()
+          .difference(widget.borrowing.dueDate)
+          .inDays;
       if (daysOverdue > 0) {
-        _fineController.text = (daysOverdue * 500).toString(); // Example: 500 per day
+        _fineController.text = (daysOverdue * 500)
+            .toString(); // Example: 500 per day
       }
     }
   }
@@ -365,7 +405,12 @@ class _ReturnResourceDialogState extends State<_ReturnResourceDialog> {
             initialValue: _condition,
             decoration: const InputDecoration(labelText: 'Condition on Return'),
             items: ResourceCondition.values
-                .map((c) => DropdownMenuItem(value: c, child: Text(c.name.toUpperCase())))
+                .map(
+                  (c) => DropdownMenuItem(
+                    value: c,
+                    child: Text(c.name.toUpperCase()),
+                  ),
+                )
                 .toList(),
             onChanged: (val) => setState(() => _condition = val!),
           ),
@@ -378,20 +423,30 @@ class _ReturnResourceDialogState extends State<_ReturnResourceDialog> {
             ),
             keyboardType: TextInputType.number,
           ),
-          if (_condition == ResourceCondition.damaged || _condition == ResourceCondition.poor)
+          if (_condition == ResourceCondition.damaged ||
+              _condition == ResourceCondition.poor)
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
               child: Text(
                 'Note: Damaged condition will automatically trigger a repair request in Stores & Assets.',
-                style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                  fontSize: 12,
+                ),
               ),
             ),
         ],
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
         ElevatedButton(
-          onPressed: () => widget.onConfirm(_condition, double.tryParse(_fineController.text) ?? 0),
+          onPressed: () => widget.onConfirm(
+            _condition,
+            double.tryParse(_fineController.text) ?? 0,
+          ),
           child: const Text('Confirm Return'),
         ),
       ],

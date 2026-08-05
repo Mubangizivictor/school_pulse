@@ -33,23 +33,24 @@ class HomeworkRecord extends Equatable {
     required this.feedbackStatus,
   });
 
-  double get submissionRate => totalStudents > 0 ? (submittedCount / totalStudents) * 100 : 0.0;
+  double get submissionRate =>
+      totalStudents > 0 ? (submittedCount / totalStudents) * 100 : 0.0;
 
   @override
   List<Object?> get props => [
-        id,
-        subjectId,
-        subjectName,
-        classId,
-        className,
-        teacherId,
-        teacherName,
-        title,
-        assignedDate,
-        dueDate,
-        totalStudents,
-        submittedCount,
-        averageScore,
-        feedbackStatus,
-      ];
+    id,
+    subjectId,
+    subjectName,
+    classId,
+    className,
+    teacherId,
+    teacherName,
+    title,
+    assignedDate,
+    dueDate,
+    totalStudents,
+    submittedCount,
+    averageScore,
+    feedbackStatus,
+  ];
 }

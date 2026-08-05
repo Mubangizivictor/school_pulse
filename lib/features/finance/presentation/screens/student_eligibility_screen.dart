@@ -13,7 +13,8 @@ class StudentEligibilityScreen extends StatefulWidget {
   const StudentEligibilityScreen({super.key});
 
   @override
-  State<StudentEligibilityScreen> createState() => _StudentEligibilityScreenState();
+  State<StudentEligibilityScreen> createState() =>
+      _StudentEligibilityScreenState();
 }
 
 class _StudentEligibilityScreenState extends State<StudentEligibilityScreen> {
@@ -29,9 +30,7 @@ class _StudentEligibilityScreenState extends State<StudentEligibilityScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Access Eligibility'),
-        ),
+        appBar: AppBar(title: const Text('Access Eligibility')),
         body: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
@@ -43,7 +42,10 @@ class _StudentEligibilityScreenState extends State<StudentEligibilityScreen> {
                 style: TextStyle(color: Colors.grey),
               ),
               const SizedBox(height: 40),
-              const Text('Select Service Type', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text(
+                'Select Service Type',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
@@ -63,11 +65,18 @@ class _StudentEligibilityScreenState extends State<StudentEligibilityScreen> {
                 padding: const EdgeInsets.all(32),
                 child: Column(
                   children: [
-                    const Icon(Icons.qr_code_scanner, size: 80, color: Colors.blue),
+                    const Icon(
+                      Icons.qr_code_scanner,
+                      size: 80,
+                      color: Colors.blue,
+                    ),
                     const SizedBox(height: 24),
                     const Text(
                       'Scan Student ID Card',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     const Text(
@@ -81,7 +90,10 @@ class _StudentEligibilityScreenState extends State<StudentEligibilityScreen> {
                       icon: const Icon(Icons.camera_alt),
                       label: const Text('Start Scanner'),
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 16,
+                        ),
                       ),
                     ),
                   ],
@@ -102,12 +114,15 @@ class _StudentEligibilityScreenState extends State<StudentEligibilityScreen> {
         builder: (context) => QrScannerScreen(
           mode: ScannerMode.verification,
           onScan: (studentId) {
-            final authState = context.read<AuthBloc>().state as AuthAuthenticated;
-            context.read<FinanceBloc>().add(CheckStudentEligibility(
-                  studentId: studentId,
-                  schoolId: authState.user.schoolId,
-                  serviceType: _selectedService,
-                ));
+            final authState =
+                context.read<AuthBloc>().state as AuthAuthenticated;
+            context.read<FinanceBloc>().add(
+              CheckStudentEligibility(
+                studentId: studentId,
+                schoolId: authState.user.schoolId,
+                serviceType: _selectedService,
+              ),
+            );
           },
         ),
       ),
@@ -130,8 +145,8 @@ class _StudentEligibilityScreenState extends State<StudentEligibilityScreen> {
             Text('Service: ${state.serviceType}'),
             const SizedBox(height: 8),
             Text(
-              state.isEligible 
-                  ? 'Student is cleared for this service.' 
+              state.isEligible
+                  ? 'Student is cleared for this service.'
                   : state.reason ?? 'Student has outstanding arrears.',
               textAlign: TextAlign.center,
             ),

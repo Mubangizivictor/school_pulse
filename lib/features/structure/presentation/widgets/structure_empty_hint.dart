@@ -10,7 +10,11 @@ class StructureEmptyHint extends StatelessWidget {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
-        child: Text(message, textAlign: TextAlign.center, style: TextStyle(color: Colors.grey[600])),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.grey[600]),
+        ),
       ),
     );
   }

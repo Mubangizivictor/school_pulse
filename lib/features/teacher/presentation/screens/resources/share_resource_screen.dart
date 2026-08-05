@@ -10,9 +10,7 @@ class ShareResourceScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        title: const Text('Share Resource'),
-      ),
+      appBar: AppBar(title: const Text('Share Resource')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
@@ -41,7 +39,10 @@ class ShareResourceScreen extends StatelessWidget {
                         ),
                         Text(
                           'PDF • 2.4 MB',
-                          style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).hintColor,
+                          ),
                         ),
                       ],
                     ),
@@ -60,11 +61,32 @@ class ShareResourceScreen extends StatelessWidget {
               padding: EdgeInsets.zero,
               child: Column(
                 children: [
-                  _ShareOption(icon: Icons.people_outline, label: 'Primary 4 - Emerald', subtitle: 'All Students'),
-                  _ShareOption(icon: Icons.school_outlined, label: 'Teachers', subtitle: 'All Teachers'),
-                  _ShareOption(icon: Icons.person_outline, label: 'Specific Students', subtitle: 'Select from list'),
-                  _ShareOption(icon: Icons.family_restroom_outlined, label: 'Parents', subtitle: 'All Parents'),
-                  _ShareOption(icon: Icons.other_houses_outlined, label: 'Other Classes', subtitle: 'Select classes', isLast: true),
+                  _ShareOption(
+                    icon: Icons.people_outline,
+                    label: 'Primary 4 - Emerald',
+                    subtitle: 'All Students',
+                  ),
+                  _ShareOption(
+                    icon: Icons.school_outlined,
+                    label: 'Teachers',
+                    subtitle: 'All Teachers',
+                  ),
+                  _ShareOption(
+                    icon: Icons.person_outline,
+                    label: 'Specific Students',
+                    subtitle: 'Select from list',
+                  ),
+                  _ShareOption(
+                    icon: Icons.family_restroom_outlined,
+                    label: 'Parents',
+                    subtitle: 'All Parents',
+                  ),
+                  _ShareOption(
+                    icon: Icons.other_houses_outlined,
+                    label: 'Other Classes',
+                    subtitle: 'Select classes',
+                    isLast: true,
+                  ),
                 ],
               ),
             ),
@@ -81,7 +103,10 @@ class ShareResourceScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Allow Download', style: TextStyle(fontWeight: FontWeight.w500)),
+                      const Text(
+                        'Allow Download',
+                        style: TextStyle(fontWeight: FontWeight.w500),
+                      ),
                       Switch.adaptive(value: true, onChanged: (v) {}),
                     ],
                   ),
@@ -130,13 +155,25 @@ class _ShareOption extends StatelessWidget {
           leading: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+              color: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 20),
+            child: Icon(
+              icon,
+              color: Theme.of(context).colorScheme.primary,
+              size: 20,
+            ),
           ),
-          title: Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-          subtitle: Text(subtitle, style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor)),
+          title: Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+          ),
+          subtitle: Text(
+            subtitle,
+            style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
+          ),
           trailing: const Icon(Icons.chevron_right_rounded, size: 20),
           onTap: () {},
         ),

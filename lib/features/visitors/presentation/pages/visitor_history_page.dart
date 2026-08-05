@@ -45,9 +45,24 @@ class _VisitorHistoryPageState extends State<VisitorHistoryPage> {
     var result = visitors;
 
     if (_dateRange != null) {
-      final start = DateTime(_dateRange!.start.year, _dateRange!.start.month, _dateRange!.start.day);
-      final end = DateTime(_dateRange!.end.year, _dateRange!.end.month, _dateRange!.end.day, 23, 59, 59);
-      result = result.where((v) => v.arrivalTime.isAfter(start) && v.arrivalTime.isBefore(end)).toList();
+      final start = DateTime(
+        _dateRange!.start.year,
+        _dateRange!.start.month,
+        _dateRange!.start.day,
+      );
+      final end = DateTime(
+        _dateRange!.end.year,
+        _dateRange!.end.month,
+        _dateRange!.end.day,
+        23,
+        59,
+        59,
+      );
+      result = result
+          .where(
+            (v) => v.arrivalTime.isAfter(start) && v.arrivalTime.isBefore(end),
+          )
+          .toList();
     }
 
     if (_category != null) {
@@ -55,21 +70,30 @@ class _VisitorHistoryPageState extends State<VisitorHistoryPage> {
     }
 
     if (_status == _StatusFilter.checkedIn) {
-      result = result.where((v) => v.status == VisitorStatus.checkedIn).toList();
+      result = result
+          .where((v) => v.status == VisitorStatus.checkedIn)
+          .toList();
     } else if (_status == _StatusFilter.checkedOut) {
-      result = result.where((v) => v.status == VisitorStatus.checkedOut).toList();
+      result = result
+          .where((v) => v.status == VisitorStatus.checkedOut)
+          .toList();
     }
 
     final query = _searchController.text.trim().toLowerCase();
     if (query.isNotEmpty) {
-      result = result.where((v) =>
-          v.fullName.toLowerCase().contains(query) ||
-          v.phone.contains(query) ||
-          v.host.toLowerCase().contains(query) ||
-          (v.company?.toLowerCase().contains(query) ?? false)).toList();
+      result = result
+          .where(
+            (v) =>
+                v.fullName.toLowerCase().contains(query) ||
+                v.phone.contains(query) ||
+                v.host.toLowerCase().contains(query) ||
+                (v.company?.toLowerCase().contains(query) ?? false),
+          )
+          .toList();
     }
 
-    result = List<Visitor>.from(result)..sort((a, b) => b.arrivalTime.compareTo(a.arrivalTime));
+    result = List<Visitor>.from(result)
+      ..sort((a, b) => b.arrivalTime.compareTo(a.arrivalTime));
     return result;
   }
 
@@ -115,7 +139,9 @@ class _VisitorHistoryPageState extends State<VisitorHistoryPage> {
                   decoration: InputDecoration(
                     hintText: 'Search name, phone, host, company...',
                     prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     isDense: true,
                   ),
                   onChanged: (_) => setState(() {}),
@@ -128,9 +154,11 @@ class _VisitorHistoryPageState extends State<VisitorHistoryPage> {
                   child: Row(
                     children: [
                       ChoiceChip(
-                        label: Text(_dateRange == null
-                            ? 'Date Range'
-                            : '${DateFormat('MMM d').format(_dateRange!.start)} - ${DateFormat('MMM d').format(_dateRange!.end)}'),
+                        label: Text(
+                          _dateRange == null
+                              ? 'Date Range'
+                              : '${DateFormat('MMM d').format(_dateRange!.start)} - ${DateFormat('MMM d').format(_dateRange!.end)}',
+                        ),
                         selected: _dateRange != null,
                         avatar: const Icon(Icons.calendar_today, size: 16),
                         onSelected: (_) => _pickDateRange(),
@@ -141,9 +169,15 @@ class _VisitorHistoryPageState extends State<VisitorHistoryPage> {
                         hint: const Text('Category'),
                         underline: const SizedBox.shrink(),
                         items: [
-                          const DropdownMenuItem<VisitorCategory?>(value: null, child: Text('All Categories')),
+                          const DropdownMenuItem<VisitorCategory?>(
+                            value: null,
+                            child: Text('All Categories'),
+                          ),
                           ...VisitorCategory.values.map(
-                            (c) => DropdownMenuItem(value: c, child: Text(c.name.toUpperCase())),
+                            (c) => DropdownMenuItem(
+                              value: c,
+                              child: Text(c.name.toUpperCase()),
+                            ),
                           ),
                         ],
                         onChanged: (v) => setState(() => _category = v),
@@ -153,11 +187,21 @@ class _VisitorHistoryPageState extends State<VisitorHistoryPage> {
                         value: _status,
                         underline: const SizedBox.shrink(),
                         items: const [
-                          DropdownMenuItem(value: _StatusFilter.all, child: Text('All Statuses')),
-                          DropdownMenuItem(value: _StatusFilter.checkedIn, child: Text('Currently Inside')),
-                          DropdownMenuItem(value: _StatusFilter.checkedOut, child: Text('Checked Out')),
+                          DropdownMenuItem(
+                            value: _StatusFilter.all,
+                            child: Text('All Statuses'),
+                          ),
+                          DropdownMenuItem(
+                            value: _StatusFilter.checkedIn,
+                            child: Text('Currently Inside'),
+                          ),
+                          DropdownMenuItem(
+                            value: _StatusFilter.checkedOut,
+                            child: Text('Checked Out'),
+                          ),
                         ],
-                        onChanged: (v) => setState(() => _status = v ?? _StatusFilter.all),
+                        onChanged: (v) =>
+                            setState(() => _status = v ?? _StatusFilter.all),
                       ),
                     ],
                   ),
@@ -176,25 +220,41 @@ class _VisitorHistoryPageState extends State<VisitorHistoryPage> {
               const SizedBox(height: 8),
               Expanded(
                 child: filtered.isEmpty
-                    ? const Center(child: Text('No visitor records match these filters'))
+                    ? const Center(
+                        child: Text('No visitor records match these filters'),
+                      )
                     : ListView.separated(
                         padding: const EdgeInsets.all(16),
                         itemCount: filtered.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 8),
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 8),
                         itemBuilder: (context, index) {
                           final visitor = filtered[index];
                           return AppCard(
                             onTap: () => Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (_) => VisitorDetailsScreen(visitor: visitor)),
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    VisitorDetailsScreen(visitor: visitor),
+                              ),
                             ),
                             child: ListTile(
                               leading: CircleAvatar(
                                 backgroundColor:
-                                    visitor.status == VisitorStatus.checkedIn ? Colors.green : Colors.grey,
-                                child: const Icon(Icons.person, color: Colors.white),
+                                    visitor.status == VisitorStatus.checkedIn
+                                    ? Colors.green
+                                    : Colors.grey,
+                                child: const Icon(
+                                  Icons.person,
+                                  color: Colors.white,
+                                ),
                               ),
-                              title: Text(visitor.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                              title: Text(
+                                visitor.fullName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                               subtitle: Text(
                                 '${visitor.purpose} • ${visitor.host}\n'
                                 '${DateFormat('MMM dd, yyyy hh:mm a').format(visitor.arrivalTime)}'
@@ -202,8 +262,12 @@ class _VisitorHistoryPageState extends State<VisitorHistoryPage> {
                               ),
                               isThreeLine: true,
                               trailing: StatusBadge(
-                                label: visitor.status == VisitorStatus.checkedIn ? 'INSIDE' : 'OUT',
-                                color: visitor.status == VisitorStatus.checkedIn ? Colors.green : Colors.grey,
+                                label: visitor.status == VisitorStatus.checkedIn
+                                    ? 'INSIDE'
+                                    : 'OUT',
+                                color: visitor.status == VisitorStatus.checkedIn
+                                    ? Colors.green
+                                    : Colors.grey,
                               ),
                             ),
                           );

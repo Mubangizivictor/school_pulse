@@ -67,12 +67,17 @@ class StudentPortalConfig {
   }) {
     return StudentPortalConfig(
       enableStudentPortal: enableStudentPortal ?? this.enableStudentPortal,
-      allowStudentMobileLogin: allowStudentMobileLogin ?? this.allowStudentMobileLogin,
+      allowStudentMobileLogin:
+          allowStudentMobileLogin ?? this.allowStudentMobileLogin,
       allowStudentWebLogin: allowStudentWebLogin ?? this.allowStudentWebLogin,
-      allowReportCardDownloads: allowReportCardDownloads ?? this.allowReportCardDownloads,
-      allowSchoolFeeVisibility: allowSchoolFeeVisibility ?? this.allowSchoolFeeVisibility,
-      allowHomeworkSubmission: allowHomeworkSubmission ?? this.allowHomeworkSubmission,
-      allowAssignmentUploads: allowAssignmentUploads ?? this.allowAssignmentUploads,
+      allowReportCardDownloads:
+          allowReportCardDownloads ?? this.allowReportCardDownloads,
+      allowSchoolFeeVisibility:
+          allowSchoolFeeVisibility ?? this.allowSchoolFeeVisibility,
+      allowHomeworkSubmission:
+          allowHomeworkSubmission ?? this.allowHomeworkSubmission,
+      allowAssignmentUploads:
+          allowAssignmentUploads ?? this.allowAssignmentUploads,
       allowDigitalIdCard: allowDigitalIdCard ?? this.allowDigitalIdCard,
       allowQRAttendance: allowQRAttendance ?? this.allowQRAttendance,
       allowTimetableAccess: allowTimetableAccess ?? this.allowTimetableAccess,

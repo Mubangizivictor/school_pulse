@@ -22,7 +22,9 @@ class _ScheduledVisitsPageState extends State<ScheduledVisitsPage> {
     super.initState();
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
-      context.read<VisitorsBloc>().add(LoadScheduledVisits(authState.user.schoolId));
+      context.read<VisitorsBloc>().add(
+        LoadScheduledVisits(authState.user.schoolId),
+      );
     }
   }
 
@@ -32,10 +34,13 @@ class _ScheduledVisitsPageState extends State<ScheduledVisitsPage> {
       appBar: AppBar(title: const Text('Scheduled Visits')),
       body: BlocBuilder<VisitorsBloc, VisitorsState>(
         builder: (context, state) {
-          if (state is VisitorsLoading) return const Center(child: CircularProgressIndicator());
-          
+          if (state is VisitorsLoading)
+            return const Center(child: CircularProgressIndicator());
+
           if (state is VisitorsLoaded) {
-            final visits = state.scheduledVisits.where((v) => !v.isCheckedIn && !v.isRejected).toList();
+            final visits = state.scheduledVisits
+                .where((v) => !v.isCheckedIn && !v.isRejected)
+                .toList();
             if (visits.isEmpty) {
               return const Center(child: Text('No upcoming scheduled visits'));
             }
@@ -48,7 +53,10 @@ class _ScheduledVisitsPageState extends State<ScheduledVisitsPage> {
                 final visit = visits[index];
                 return AppCard(
                   child: ListTile(
-                    title: Text(visit.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    title: Text(
+                      visit.fullName,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -56,7 +64,10 @@ class _ScheduledVisitsPageState extends State<ScheduledVisitsPage> {
                         Text('Purpose: ${visit.purpose}'),
                         Text(
                           'Scheduled: ${DateFormat('MMM dd, hh:mm a').format(visit.scheduledTime)}',
-                          style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.w500),
+                          style: TextStyle(
+                            color: Theme.of(context).primaryColor,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ],
                     ),
@@ -65,14 +76,20 @@ class _ScheduledVisitsPageState extends State<ScheduledVisitsPage> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.check_circle, color: Colors.green),
+                                icon: const Icon(
+                                  Icons.check_circle,
+                                  color: Colors.green,
+                                ),
                                 tooltip: 'Approve',
                                 onPressed: () => context
                                     .read<VisitorsBloc>()
                                     .add(ApproveScheduledVisitEvent(visit.id)),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.cancel, color: Colors.red),
+                                icon: const Icon(
+                                  Icons.cancel,
+                                  color: Colors.red,
+                                ),
                                 tooltip: 'Reject',
                                 onPressed: () => context
                                     .read<VisitorsBloc>()
@@ -85,7 +102,9 @@ class _ScheduledVisitsPageState extends State<ScheduledVisitsPage> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => VisitorCheckInScreen(scheduledVisit: visit),
+                                  builder: (_) => VisitorCheckInScreen(
+                                    scheduledVisit: visit,
+                                  ),
                                 ),
                               );
                             },

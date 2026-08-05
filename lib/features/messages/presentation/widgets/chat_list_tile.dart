@@ -27,22 +27,29 @@ class ChatListTile extends StatelessWidget {
     return ListTile(
       onTap: onTap,
       onLongPress: onLongPress,
-      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: 4),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.m,
+        vertical: 4,
+      ),
       leading: Stack(
         children: [
           CircleAvatar(
             radius: 28,
-            backgroundColor: isDark ? AppColors.surfaceContainerHigh(context) : Colors.grey[200],
-            backgroundImage: chat.avatarUrl != null ? NetworkImage(chat.avatarUrl!) : null,
+            backgroundColor: isDark
+                ? AppColors.surfaceContainerHigh(context)
+                : Colors.grey[200],
+            backgroundImage: chat.avatarUrl != null
+                ? NetworkImage(chat.avatarUrl!)
+                : null,
             child: chat.avatarUrl != null
-              ? null
-              : Text(
-                  _avatarLabel(chat.title),
-                  style: TextStyle(
-                    color: isDark ? Colors.white : AppColors.deepNavy,
-                    fontWeight: FontWeight.bold,
+                ? null
+                : Text(
+                    _avatarLabel(chat.title),
+                    style: TextStyle(
+                      color: isDark ? Colors.white : AppColors.deepNavy,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
           ),
           if (chat.type == ChatType.group)
             Positioned(
@@ -53,7 +60,10 @@ class ChatListTile extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.electricBlue,
                   shape: BoxShape.circle,
-                  border: Border.all(color: isDark ? AppColors.bgDark : Colors.white, width: 2),
+                  border: Border.all(
+                    color: isDark ? AppColors.bgDark : Colors.white,
+                    width: 2,
+                  ),
                 ),
                 child: const Icon(Icons.group, size: 10, color: Colors.white),
               ),
@@ -66,7 +76,9 @@ class ChatListTile extends StatelessWidget {
             child: Text(
               chat.title,
               style: AppTypography.titleMedium.copyWith(
-                fontWeight: chat.unreadCount > 0 ? FontWeight.bold : FontWeight.w600,
+                fontWeight: chat.unreadCount > 0
+                    ? FontWeight.bold
+                    : FontWeight.w600,
                 color: isDark ? Colors.white : AppColors.textPrimaryLight,
               ),
               maxLines: 1,
@@ -76,7 +88,9 @@ class ChatListTile extends StatelessWidget {
           Text(
             chat.hasMessages ? _timeLabel(chat.lastMessage.timestamp) : '',
             style: AppTypography.labelSmall.copyWith(
-              color: chat.unreadCount > 0 ? AppColors.electricBlue : AppColors.textMuted(context),
+              color: chat.unreadCount > 0
+                  ? AppColors.electricBlue
+                  : AppColors.textMuted(context),
             ),
           ),
         ],
@@ -89,9 +103,9 @@ class ChatListTile extends StatelessWidget {
               child: Text(
                 chat.hasMessages ? chat.lastMessage.content : 'No messages yet',
                 style: AppTypography.bodySmall.copyWith(
-                  color: chat.unreadCount > 0 
-                    ? (isDark ? Colors.white : Colors.black87)
-                    : AppColors.textMuted(context),
+                  color: chat.unreadCount > 0
+                      ? (isDark ? Colors.white : Colors.black87)
+                      : AppColors.textMuted(context),
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -107,7 +121,11 @@ class ChatListTile extends StatelessWidget {
                 ),
                 child: Text(
                   chat.unreadCount.toString(),
-                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
           ],
@@ -130,11 +148,13 @@ class ChatListTile extends StatelessWidget {
   /// inbox reaches back further than a single day.
   String _timeLabel(DateTime timestamp) {
     final now = DateTime.now();
-    final sameDay = now.year == timestamp.year &&
+    final sameDay =
+        now.year == timestamp.year &&
         now.month == timestamp.month &&
         now.day == timestamp.day;
     if (sameDay) return DateFormat('HH:mm').format(timestamp);
-    if (now.difference(timestamp).inDays < 7) return DateFormat('EEE').format(timestamp);
+    if (now.difference(timestamp).inDays < 7)
+      return DateFormat('EEE').format(timestamp);
     return DateFormat('dd/MM/yy').format(timestamp);
   }
 }

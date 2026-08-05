@@ -7,11 +7,7 @@ class QrScannerScreen extends StatefulWidget {
   final ScannerMode mode;
   final Function(String code) onScan;
 
-  const QrScannerScreen({
-    super.key,
-    required this.mode,
-    required this.onScan,
-  });
+  const QrScannerScreen({super.key, required this.mode, required this.onScan});
 
   @override
   State<QrScannerScreen> createState() => _QrScannerScreenState();
@@ -109,7 +105,10 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
             right: 0,
             child: Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.black54,
                   borderRadius: BorderRadius.circular(30),

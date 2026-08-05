@@ -46,22 +46,24 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
   }
 
   void _fetchStudentData(String studentId) {
-    context
-        .read<AcademicBloc>()
-        .add(GetAcademicRecordsRequested(studentId: studentId));
-    context
-        .read<AcademicBloc>()
-        .add(GetAttendanceRecordsRequested(studentId: studentId));
+    context.read<AcademicBloc>().add(
+      GetAcademicRecordsRequested(studentId: studentId),
+    );
+    context.read<AcademicBloc>().add(
+      GetAttendanceRecordsRequested(studentId: studentId),
+    );
     context.read<FinanceBloc>().add(FetchFees(studentId));
   }
 
   Future<void> _refresh() async {
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
-      context.read<StudentsBloc>().add(FetchStudents(authState.user.studentIds));
-      context
-          .read<NotificationsBloc>()
-          .add(FetchAlerts(authState.user.studentIds));
+      context.read<StudentsBloc>().add(
+        FetchStudents(authState.user.studentIds),
+      );
+      context.read<NotificationsBloc>().add(
+        FetchAlerts(authState.user.studentIds),
+      );
     }
     final selected = context.read<SelectedStudentBloc>().state;
     if (selected is SelectedStudentLoaded) {
@@ -71,8 +73,6 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    
-
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
         if (authState is! AuthAuthenticated) {
@@ -99,9 +99,9 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                   title: 'Could not load students',
                   message: studentsState.message,
                   ctaLabel: 'Retry',
-                  onCtaPressed: () => context
-                      .read<StudentsBloc>()
-                      .add(FetchStudents(authState.user.studentIds)),
+                  onCtaPressed: () => context.read<StudentsBloc>().add(
+                    FetchStudents(authState.user.studentIds),
+                  ),
                 ),
               );
             }
@@ -141,9 +141,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                   final selectedStudent = studentState.student;
 
                   return Scaffold(
-                    appBar: const StudentAppBar(
-                      title: 'School Pulse',
-                    ),
+                    appBar: const StudentAppBar(title: 'School Pulse'),
                     body: RefreshIndicator(
                       onRefresh: _refresh,
                       child: ListView(
@@ -175,7 +173,8 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                                   label: 'Academics',
                                   icon: Icons.school_outlined,
                                   color: AppColors.primary(context),
-                                  onTap: () => context.push('/parent/academics'),
+                                  onTap: () =>
+                                      context.push('/parent/academics'),
                                 ),
                                 QuickActionItem(
                                   label: 'Fees',
@@ -193,7 +192,8 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                                   label: 'Transport',
                                   icon: Icons.directions_bus_outlined,
                                   color: AppColors.warning(context),
-                                  onTap: () => context.push('/parent/transport'),
+                                  onTap: () =>
+                                      context.push('/parent/transport'),
                                 ),
                                 QuickActionItem(
                                   label: 'Library',
@@ -205,7 +205,8 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                                   label: 'Discipline',
                                   icon: Icons.gavel_outlined,
                                   color: AppColors.danger(context),
-                                  onTap: () => context.push('/parent/discipline'),
+                                  onTap: () =>
+                                      context.push('/parent/discipline'),
                                 ),
                                 QuickActionItem(
                                   label: 'Boarding',
@@ -232,8 +233,9 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                           BlocBuilder<NotificationsBloc, NotificationsState>(
                             builder: (context, notificationsState) {
                               if (notificationsState is NotificationsInitial) {
-                                final ids =
-                                    myStudents.map((s) => s.id).toList();
+                                final ids = myStudents
+                                    .map((s) => s.id)
+                                    .toList();
                                 context.read<NotificationsBloc>().add(
                                   FetchAlerts(ids),
                                 );
@@ -262,10 +264,18 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                                           ),
                                           icon: _getAlertIcon(alert.severity),
                                           onDismiss: () {
-                                            final authState = context.read<AuthBloc>().state;
-                                            if (authState is! AuthAuthenticated) return;
-                                            context.read<NotificationsBloc>().add(
-                                                  DismissAlert(alert.id, authState.user.id),
+                                            final authState = context
+                                                .read<AuthBloc>()
+                                                .state;
+                                            if (authState is! AuthAuthenticated)
+                                              return;
+                                            context
+                                                .read<NotificationsBloc>()
+                                                .add(
+                                                  DismissAlert(
+                                                    alert.id,
+                                                    authState.user.id,
+                                                  ),
                                                 );
                                           },
                                         ),
@@ -340,9 +350,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
             },
             selectedColor: AppColors.primary(context),
             labelStyle: TextStyle(
-              color: isSelected
-                  ? Colors.white
-                  : AppColors.textPrimary(context),
+              color: isSelected ? Colors.white : AppColors.textPrimary(context),
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
           );
@@ -383,10 +391,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
     );
   }
 
-  Widget _buildStudentSummary(
-    BuildContext context,
-    Student student,
-  ) {
+  Widget _buildStudentSummary(BuildContext context, Student student) {
     return BlocBuilder<AcademicBloc, AcademicState>(
       builder: (context, academicState) {
         return BlocBuilder<FinanceBloc, FinanceState>(
@@ -402,9 +407,11 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
               // classifyStudentStatus, which would silently change this
               // screen's existing behaviour.
               final summary = AttendanceRateCalculator.summarize(
-                academicState.attendanceRecords.map((r) => r.status == StudentStatus.present
-                    ? MarkClassification.present
-                    : MarkClassification.unauthorisedAbsent),
+                academicState.attendanceRecords.map(
+                  (r) => r.status == StudentStatus.present
+                      ? MarkClassification.present
+                      : MarkClassification.unauthorisedAbsent,
+                ),
               );
               attendanceRate = summary.ratePercent ?? 0;
               attendanceTrend = attendanceRate >= 90 ? 'On track' : 'Watch';
@@ -440,7 +447,9 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                       title: 'Fee Balance (UGX)',
                       value: feeBalance,
                       icon: Icons.payments_outlined,
-                      color: feeBalance > 0 ? AppColors.warning(context) : AppColors.success(context),
+                      color: feeBalance > 0
+                          ? AppColors.warning(context)
+                          : AppColors.success(context),
                       trend: feeTrend,
                       isPositiveTrend: feeBalance <= 0,
                     ),
@@ -454,26 +463,27 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
     );
   }
 
-  Widget _buildRecentActivity(
-    BuildContext context,
-    Student student,
-  ) {
+  Widget _buildRecentActivity(BuildContext context, Student student) {
     return BlocBuilder<AcademicBloc, AcademicState>(
       builder: (context, state) {
         if (state is! AcademicLoaded ||
-            (state.attendanceRecords.isEmpty && state.academicRecords.isEmpty)) {
+            (state.attendanceRecords.isEmpty &&
+                state.academicRecords.isEmpty)) {
           return AppCard(
             child: Row(
               children: [
-                Icon(Icons.history,
-                    color: AppColors.disabled(context), size: 24),
+                Icon(
+                  Icons.history,
+                  color: AppColors.disabled(context),
+                  size: 24,
+                ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Text(
                     'No recent activity yet',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.textMuted(context),
-                        ),
+                      color: AppColors.textMuted(context),
+                    ),
                   ),
                 ),
               ],
@@ -484,40 +494,45 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
         final items = <Widget>[];
 
         if (state.attendanceRecords.isNotEmpty) {
-          final latest = state.attendanceRecords
-              .reduce((a, b) => a.date.isAfter(b.date) ? a : b);
+          final latest = state.attendanceRecords.reduce(
+            (a, b) => a.date.isAfter(b.date) ? a : b,
+          );
           final statusLabel = switch (latest.status) {
             StudentStatus.present => 'was present',
             StudentStatus.absent => 'was absent',
             StudentStatus.late => 'arrived late',
           };
-          items.add(_buildActivityItem(
-            context,
-            icon: latest.status == StudentStatus.present
-                ? Icons.check_circle_outline
-                : Icons.event_busy_outlined,
-            iconColor: latest.status == StudentStatus.present
-                ? AppColors.success(context)
-                : AppColors.warning(context),
-            title: 'Attendance',
-            subtitle: '${student.name.split(' ').first} $statusLabel',
-            time: DateFormat('d MMM').format(latest.date),
-          ));
+          items.add(
+            _buildActivityItem(
+              context,
+              icon: latest.status == StudentStatus.present
+                  ? Icons.check_circle_outline
+                  : Icons.event_busy_outlined,
+              iconColor: latest.status == StudentStatus.present
+                  ? AppColors.success(context)
+                  : AppColors.warning(context),
+              title: 'Attendance',
+              subtitle: '${student.name.split(' ').first} $statusLabel',
+              time: DateFormat('d MMM').format(latest.date),
+            ),
+          );
         }
 
         if (state.academicRecords.isNotEmpty) {
           final record = state.academicRecords.first;
-          items.add(Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: _buildActivityItem(
-              context,
-              icon: Icons.assignment_outlined,
-              iconColor: AppColors.secondary(context),
-              title: 'Marks Posted',
-              subtitle: '${record.subject}: ${record.score.round()}%',
-              time: '${record.term} ${record.year}',
+          items.add(
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: _buildActivityItem(
+                context,
+                icon: Icons.assignment_outlined,
+                iconColor: AppColors.secondary(context),
+                title: 'Marks Posted',
+                subtitle: '${record.subject}: ${record.score.round()}%',
+                time: '${record.term} ${record.year}',
+              ),
             ),
-          ));
+          );
         }
 
         return Column(children: items);

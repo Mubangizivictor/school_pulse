@@ -125,25 +125,29 @@ void main() {
     when(() => local.saveAttendance(any())).thenAnswer((_) async {});
     when(() => local.enqueueOperation(any())).thenAnswer((_) async {});
     when(() => remote.saveLessonAttendance(any())).thenAnswer((_) async {});
-    when(() => audit.record(
-          context: any(named: 'context'),
-          action: any(named: 'action'),
-          entityType: any(named: 'entityType'),
-          entityId: any(named: 'entityId'),
-          previousValue: any(named: 'previousValue'),
-          newValue: any(named: 'newValue'),
-          reason: any(named: 'reason'),
-          offlineOperationId: any(named: 'offlineOperationId'),
-        )).thenAnswer((_) async {});
+    when(
+      () => audit.record(
+        context: any(named: 'context'),
+        action: any(named: 'action'),
+        entityType: any(named: 'entityType'),
+        entityId: any(named: 'entityId'),
+        previousValue: any(named: 'previousValue'),
+        newValue: any(named: 'newValue'),
+        reason: any(named: 'reason'),
+        offlineOperationId: any(named: 'offlineOperationId'),
+      ),
+    ).thenAnswer((_) async {});
   });
 
   group('opening the register', () {
     test('seeds a row per enrolled student and nobody else', () async {
       when(() => local.getAttendance(any())).thenAnswer((_) async => null);
-      when(() => remote.getLessonAttendance(
-            schoolId: any(named: 'schoolId'),
-            lessonId: any(named: 'lessonId'),
-          )).thenAnswer((_) async => null);
+      when(
+        () => remote.getLessonAttendance(
+          schoolId: any(named: 'schoolId'),
+          lessonId: any(named: 'lessonId'),
+        ),
+      ).thenAnswer((_) async => null);
 
       final result = await repository.openRegister(
         context: _context(),
@@ -158,14 +162,17 @@ void main() {
 
     test('prefers the device draft over the server copy', () async {
       // Marks taken offline must not be thrown away by a re-open.
-      final localDraft = _register(entries: [
-        const LessonAttendanceEntry(
-          studentId: 's1',
-          status: LessonAttendanceStatus.present,
-        ),
-      ]);
-      when(() => local.getAttendance(any()))
-          .thenAnswer((_) async => LessonAttendanceIsar.fromEntity(localDraft));
+      final localDraft = _register(
+        entries: [
+          const LessonAttendanceEntry(
+            studentId: 's1',
+            status: LessonAttendanceStatus.present,
+          ),
+        ],
+      );
+      when(
+        () => local.getAttendance(any()),
+      ).thenAnswer((_) async => LessonAttendanceIsar.fromEntity(localDraft));
 
       final result = await repository.openRegister(
         context: _context(),
@@ -177,34 +184,44 @@ void main() {
         result.getOrElse(() => _register()).entryFor('s1')?.status,
         LessonAttendanceStatus.present,
       );
-      verifyNever(() => remote.getLessonAttendance(
-            schoolId: any(named: 'schoolId'),
-            lessonId: any(named: 'lessonId'),
-          ));
-    });
-
-    test('adds a row for a student enrolled after the draft was started',
-        () async {
-      final localDraft = _register(entries: [
-        const LessonAttendanceEntry(
-          studentId: 's1',
-          status: LessonAttendanceStatus.present,
+      verifyNever(
+        () => remote.getLessonAttendance(
+          schoolId: any(named: 'schoolId'),
+          lessonId: any(named: 'lessonId'),
         ),
-      ]);
-      when(() => local.getAttendance(any()))
-          .thenAnswer((_) async => LessonAttendanceIsar.fromEntity(localDraft));
-
-      final result = await repository.openRegister(
-        context: _context(),
-        lesson: _lesson,
-        enrolledStudents: [_student('s1'), _student('s2')],
       );
-
-      final register = result.getOrElse(() => _register());
-      expect(register.entries, hasLength(2));
-      expect(register.entryFor('s1')?.status, LessonAttendanceStatus.present);
-      expect(register.entryFor('s2')?.status, LessonAttendanceStatus.notMarked);
     });
+
+    test(
+      'adds a row for a student enrolled after the draft was started',
+      () async {
+        final localDraft = _register(
+          entries: [
+            const LessonAttendanceEntry(
+              studentId: 's1',
+              status: LessonAttendanceStatus.present,
+            ),
+          ],
+        );
+        when(
+          () => local.getAttendance(any()),
+        ).thenAnswer((_) async => LessonAttendanceIsar.fromEntity(localDraft));
+
+        final result = await repository.openRegister(
+          context: _context(),
+          lesson: _lesson,
+          enrolledStudents: [_student('s1'), _student('s2')],
+        );
+
+        final register = result.getOrElse(() => _register());
+        expect(register.entries, hasLength(2));
+        expect(register.entryFor('s1')?.status, LessonAttendanceStatus.present);
+        expect(
+          register.entryFor('s2')?.status,
+          LessonAttendanceStatus.notMarked,
+        );
+      },
+    );
 
     test('refuses a lesson belonging to another teacher', () async {
       final othersLesson = Lesson(
@@ -252,12 +269,14 @@ void main() {
 
       final result = await repository.saveDraft(
         context: _context(),
-        attendance: _register(entries: [
-          const LessonAttendanceEntry(
-            studentId: 's1',
-            status: LessonAttendanceStatus.present,
-          ),
-        ]),
+        attendance: _register(
+          entries: [
+            const LessonAttendanceEntry(
+              studentId: 's1',
+              status: LessonAttendanceStatus.present,
+            ),
+          ],
+        ),
       );
 
       expect(result.isRight(), isTrue);
@@ -266,8 +285,9 @@ void main() {
     });
 
     test('keeps the register when the network write throws', () async {
-      when(() => remote.saveLessonAttendance(any()))
-          .thenThrow(Exception('connection reset'));
+      when(
+        () => remote.saveLessonAttendance(any()),
+      ).thenThrow(Exception('connection reset'));
 
       final result = await repository.saveDraft(
         context: _context(),
@@ -296,13 +316,15 @@ void main() {
     test('refuses while any student is unmarked', () async {
       final result = await repository.submit(
         context: _context(),
-        attendance: _register(entries: [
-          const LessonAttendanceEntry(
-            studentId: 's1',
-            status: LessonAttendanceStatus.present,
-          ),
-          const LessonAttendanceEntry(studentId: 's2'),
-        ]),
+        attendance: _register(
+          entries: [
+            const LessonAttendanceEntry(
+              studentId: 's1',
+              status: LessonAttendanceStatus.present,
+            ),
+            const LessonAttendanceEntry(studentId: 's2'),
+          ],
+        ),
       );
 
       // Submitting with gaps would record an absence nobody marked.
@@ -316,16 +338,18 @@ void main() {
     test('submits a complete register and audits it', () async {
       final result = await repository.submit(
         context: _context(),
-        attendance: _register(entries: [
-          const LessonAttendanceEntry(
-            studentId: 's1',
-            status: LessonAttendanceStatus.present,
-          ),
-          const LessonAttendanceEntry(
-            studentId: 's2',
-            status: LessonAttendanceStatus.absent,
-          ),
-        ]),
+        attendance: _register(
+          entries: [
+            const LessonAttendanceEntry(
+              studentId: 's1',
+              status: LessonAttendanceStatus.present,
+            ),
+            const LessonAttendanceEntry(
+              studentId: 's2',
+              status: LessonAttendanceStatus.absent,
+            ),
+          ],
+        ),
       );
 
       final submitted = result.getOrElse(() => _register());
@@ -338,12 +362,14 @@ void main() {
     test('counts a late arrival as present', () async {
       final result = await repository.submit(
         context: _context(),
-        attendance: _register(entries: [
-          const LessonAttendanceEntry(
-            studentId: 's1',
-            status: LessonAttendanceStatus.late,
-          ),
-        ]),
+        attendance: _register(
+          entries: [
+            const LessonAttendanceEntry(
+              studentId: 's1',
+              status: LessonAttendanceStatus.late,
+            ),
+          ],
+        ),
       );
 
       expect(result.getOrElse(() => _register()).presentCount, 1);
@@ -354,16 +380,20 @@ void main() {
 
       final result = await repository.submit(
         context: _context(),
-        attendance: _register(entries: [
-          const LessonAttendanceEntry(
-            studentId: 's1',
-            status: LessonAttendanceStatus.present,
-          ),
-        ]),
+        attendance: _register(
+          entries: [
+            const LessonAttendanceEntry(
+              studentId: 's1',
+              status: LessonAttendanceStatus.present,
+            ),
+          ],
+        ),
       );
 
-      expect(result.getOrElse(() => _register()).status,
-          AttendanceRegisterStatus.submitted);
+      expect(
+        result.getOrElse(() => _register()).status,
+        AttendanceRegisterStatus.submitted,
+      );
       verify(() => local.enqueueOperation(any())).called(1);
     });
 
@@ -376,8 +406,10 @@ void main() {
     });
 
     test('refuses an empty register', () async {
-      final result =
-          await repository.submit(context: _context(), attendance: _register());
+      final result = await repository.submit(
+        context: _context(),
+        attendance: _register(),
+      );
       result.fold(
         (f) => expect(f.message, contains('No students')),
         (_) => fail('an empty register should not submit'),
@@ -420,16 +452,18 @@ void main() {
         reason: 'Arrived late, marked in error',
       );
 
-      final captured = verify(() => audit.record(
-            context: any(named: 'context'),
-            action: any(named: 'action'),
-            entityType: any(named: 'entityType'),
-            entityId: any(named: 'entityId'),
-            previousValue: captureAny(named: 'previousValue'),
-            newValue: captureAny(named: 'newValue'),
-            reason: any(named: 'reason'),
-            offlineOperationId: any(named: 'offlineOperationId'),
-          )).captured;
+      final captured = verify(
+        () => audit.record(
+          context: any(named: 'context'),
+          action: any(named: 'action'),
+          entityType: any(named: 'entityType'),
+          entityId: any(named: 'entityId'),
+          previousValue: captureAny(named: 'previousValue'),
+          newValue: captureAny(named: 'newValue'),
+          reason: any(named: 'reason'),
+          offlineOperationId: any(named: 'offlineOperationId'),
+        ),
+      ).captured;
 
       expect(captured[0], containsPair('status', 'absent'));
       expect(captured[1], containsPair('status', 'present'));
@@ -437,7 +471,9 @@ void main() {
 
     test('refuses without the edit permission', () async {
       final result = await repository.correct(
-        context: _context(permissions: const {Permission.subjectAttendanceTake}),
+        context: _context(
+          permissions: const {Permission.subjectAttendanceTake},
+        ),
         attendance: submitted,
         studentId: 's1',
         newStatus: LessonAttendanceStatus.present,
@@ -466,28 +502,30 @@ void main() {
       );
     });
 
-    test('needs the historical permission once the register is locked',
-        () async {
-      final result = await repository.correct(
-        context: _context(),
-        attendance: _register(
-          status: AttendanceRegisterStatus.locked,
-          entries: [
-            const LessonAttendanceEntry(
-              studentId: 's1',
-              status: LessonAttendanceStatus.absent,
-            ),
-          ],
-        ),
-        studentId: 's1',
-        newStatus: LessonAttendanceStatus.present,
-        reason: 'Marked in error',
-      );
+    test(
+      'needs the historical permission once the register is locked',
+      () async {
+        final result = await repository.correct(
+          context: _context(),
+          attendance: _register(
+            status: AttendanceRegisterStatus.locked,
+            entries: [
+              const LessonAttendanceEntry(
+                studentId: 's1',
+                status: LessonAttendanceStatus.absent,
+              ),
+            ],
+          ),
+          studentId: 's1',
+          newStatus: LessonAttendanceStatus.present,
+          reason: 'Marked in error',
+        );
 
-      result.fold(
-        (f) => expect(f.message, contains('locked')),
-        (_) => fail('a locked register needs the academic office'),
-      );
-    });
+        result.fold(
+          (f) => expect(f.message, contains('locked')),
+          (_) => fail('a locked register needs the academic office'),
+        );
+      },
+    );
   });
 }

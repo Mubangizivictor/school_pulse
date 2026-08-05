@@ -1,11 +1,11 @@
 import 'package:equatable/equatable.dart';
 
 enum ReleaseOption {
-  everyoneImmediate,          // Option 1
-  onlyFullyClearedFees,       // Option 2
+  everyoneImmediate, // Option 1
+  onlyFullyClearedFees, // Option 2
   viewEveryoneDownloadCleared, // Option 3
-  afterSpecificDate,          // Option 4
-  manualOverrideOnly          // Option 5
+  afterSpecificDate, // Option 4
+  manualOverrideOnly, // Option 5
 }
 
 class ReportReleasePolicy extends Equatable {
@@ -20,9 +20,16 @@ class ReportReleasePolicy extends Equatable {
     required this.schoolId,
     required this.option,
     this.releaseDate,
-    this.restrictionMessage = "Your report card has been published but cannot be downloaded because your school's fee clearance policy has not yet been met. Please contact the Bursar for assistance.",
+    this.restrictionMessage =
+        "Your report card has been published but cannot be downloaded because your school's fee clearance policy has not yet been met. Please contact the Bursar for assistance.",
   });
 
   @override
-  List<Object?> get props => [id, schoolId, option, releaseDate, restrictionMessage];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    option,
+    releaseDate,
+    restrictionMessage,
+  ];
 }

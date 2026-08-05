@@ -55,14 +55,14 @@ class StudentPerformanceSummary extends Equatable {
 
   @override
   List<Object?> get props => [
-        studentId,
-        studentName,
-        subjectPercentages,
-        missingSubjects,
-        attendanceRate,
-        openBehaviourFollowUps,
-        previousAverage,
-      ];
+    studentId,
+    studentName,
+    subjectPercentages,
+    missingSubjects,
+    attendanceRate,
+    openBehaviourFollowUps,
+    previousAverage,
+  ];
 }
 
 /// How one subject is going across the whole class.
@@ -97,14 +97,14 @@ class SubjectPerformanceSummary extends Equatable {
 
   @override
   List<Object?> get props => [
-        subjectId,
-        subjectName,
-        average,
-        studentsWithMarks,
-        studentsExpected,
-        highest,
-        lowest,
-      ];
+    subjectId,
+    subjectName,
+    average,
+    studentsWithMarks,
+    studentsExpected,
+    highest,
+    lowest,
+  ];
 }
 
 /// Why a student was surfaced for the teacher's attention.
@@ -120,12 +120,12 @@ enum AttentionReason {
   behaviourFollowUp;
 
   String get label => switch (this) {
-        AttentionReason.lowAverage => 'Needs academic support',
-        AttentionReason.decliningTrend => 'Marks have slipped',
-        AttentionReason.lowAttendance => 'Attendance concern',
-        AttentionReason.missingMarks => 'Incomplete data',
-        AttentionReason.behaviourFollowUp => 'Behaviour follow-up open',
-      };
+    AttentionReason.lowAverage => 'Needs academic support',
+    AttentionReason.decliningTrend => 'Marks have slipped',
+    AttentionReason.lowAttendance => 'Attendance concern',
+    AttentionReason.missingMarks => 'Incomplete data',
+    AttentionReason.behaviourFollowUp => 'Behaviour follow-up open',
+  };
 }
 
 /// A student the panel is surfacing, and why.
@@ -165,8 +165,10 @@ class ClassPerformanceSummary extends Equatable {
   /// Class mean across students who have any approved marks. Null when none
   /// do - the screen shows a dash rather than a zero.
   double? get classAverage {
-    final averages =
-        students.map((s) => s.average).whereType<double>().toList();
+    final averages = students
+        .map((s) => s.average)
+        .whereType<double>()
+        .toList();
     if (averages.isEmpty) return null;
     return averages.reduce((a, b) => a + b) / averages.length;
   }
@@ -174,8 +176,10 @@ class ClassPerformanceSummary extends Equatable {
   /// Share of students at or above the school's pass mark, among those with
   /// approved marks. Null when nothing is approved yet.
   double? get passRate {
-    final averages =
-        students.map((s) => s.average).whereType<double>().toList();
+    final averages = students
+        .map((s) => s.average)
+        .whereType<double>()
+        .toList();
     if (averages.isEmpty) return null;
     final passing = averages.where((a) => a >= passMark).length;
     return (passing / averages.length) * 100;
@@ -193,6 +197,5 @@ class ClassPerformanceSummary extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [students, subjects, needingAttention, passMark];
+  List<Object?> get props => [students, subjects, needingAttention, passMark];
 }

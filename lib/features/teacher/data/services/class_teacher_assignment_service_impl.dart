@@ -9,7 +9,8 @@ import '../../domain/repositories/staff_assignment_repository.dart';
 import '../../domain/services/active_responsibility_service.dart';
 import '../../domain/services/class_teacher_assignment_service.dart';
 
-class ClassTeacherAssignmentServiceImpl implements ClassTeacherAssignmentService {
+class ClassTeacherAssignmentServiceImpl
+    implements ClassTeacherAssignmentService {
   final StaffAssignmentRepository assignmentRepository;
   final ActiveResponsibilityService responsibilityService;
 
@@ -47,7 +48,8 @@ class ClassTeacherAssignmentServiceImpl implements ClassTeacherAssignmentService
   }
 
   @override
-  Future<Either<Failure, List<StaffRoleAssignment>>> getClassTeacherAssignments({
+  Future<Either<Failure, List<StaffRoleAssignment>>>
+  getClassTeacherAssignments({
     required String schoolId,
     required String userId,
     bool forceRefresh = false,
@@ -78,10 +80,12 @@ class ClassTeacherAssignmentServiceImpl implements ClassTeacherAssignmentService
     Set<String> assignerPermissions = const {},
   }) async {
     if (academicYearId.isEmpty) {
-      return const Left(ValidationFailure(
-        'An academic year is required before a class can be assigned.',
-        field: 'academicYearId',
-      ));
+      return const Left(
+        ValidationFailure(
+          'An academic year is required before a class can be assigned.',
+          field: 'academicYearId',
+        ),
+      );
     }
 
     final result = await assignmentRepository.getAssignments(
@@ -105,25 +109,27 @@ class ClassTeacherAssignmentServiceImpl implements ClassTeacherAssignmentService
 
       if (conflicting.isEmpty) return const ClassTeacherAssignability.allowed();
 
-      final held = conflicting
-          .map((a) => a.displayLabel)
-          .join(', ');
+      final held = conflicting.map((a) => a.displayLabel).join(', ');
 
       if (!overrideRequested) {
         return ClassTeacherAssignability(
           isAllowed: false,
           conflicting: conflicting,
           overrideWouldAllow: true,
-          reason: 'This staff member is already Class Teacher for $held '
+          reason:
+              'This staff member is already Class Teacher for $held '
               'in this academic year. A second class needs an override.',
         );
       }
 
-      if (!assignerPermissions.contains(Permission.classTeacherMultiAssignOverride)) {
+      if (!assignerPermissions.contains(
+        Permission.classTeacherMultiAssignOverride,
+      )) {
         return ClassTeacherAssignability(
           isAllowed: false,
           conflicting: conflicting,
-          reason: 'Assigning a second class needs the multi-class override '
+          reason:
+              'Assigning a second class needs the multi-class override '
               'permission, which your account does not hold.',
         );
       }
@@ -141,7 +147,8 @@ class ClassTeacherAssignmentServiceImpl implements ClassTeacherAssignmentService
         isAllowed: true,
         conflicting: conflicting,
         overrideWouldAllow: true,
-        reason: 'Override applied: this staff member will hold '
+        reason:
+            'Override applied: this staff member will hold '
             '${conflicting.length + 1} classes this year.',
       );
     });
@@ -157,16 +164,20 @@ class ClassTeacherAssignmentServiceImpl implements ClassTeacherAssignmentService
     String? termId,
   }) {
     if (context == null) {
-      return const Left(AssignmentInvalidFailure(
-        'No class responsibility is active. Switch to your class first.',
-      ));
+      return const Left(
+        AssignmentInvalidFailure(
+          'No class responsibility is active. Switch to your class first.',
+        ),
+      );
     }
 
     if (!context.isClassTeacher) {
-      return const Left(AssignmentInvalidFailure(
-        'This action belongs to your Class Teacher responsibility. '
-        'Switch to it to continue.',
-      ));
+      return const Left(
+        AssignmentInvalidFailure(
+          'This action belongs to your Class Teacher responsibility. '
+          'Switch to it to continue.',
+        ),
+      );
     }
 
     if (context.assignmentStatus != AssignmentStatus.active) {
@@ -181,9 +192,11 @@ class ClassTeacherAssignmentServiceImpl implements ClassTeacherAssignmentService
         context.classId != null &&
         context.classId!.isNotEmpty &&
         classId != context.classId) {
-      return const Left(PermissionDeniedFailure(
-        'That class is not the one you are Class Teacher for.',
-      ));
+      return const Left(
+        PermissionDeniedFailure(
+          'That class is not the one you are Class Teacher for.',
+        ),
+      );
     }
 
     if (streamId != null &&
@@ -191,9 +204,11 @@ class ClassTeacherAssignmentServiceImpl implements ClassTeacherAssignmentService
         context.streamId != null &&
         context.streamId!.isNotEmpty &&
         streamId != context.streamId) {
-      return const Left(PermissionDeniedFailure(
-        'That stream is not the one you are Class Teacher for.',
-      ));
+      return const Left(
+        PermissionDeniedFailure(
+          'That stream is not the one you are Class Teacher for.',
+        ),
+      );
     }
 
     if (!context.can(

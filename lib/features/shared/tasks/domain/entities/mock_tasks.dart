@@ -31,10 +31,19 @@ final mockTasks = [
     dueTime: const TimeOfDay(hour: 9, minute: 0),
     dormitory: 'Sunset House',
     assignedTo: 'Mrs. Akello Mary',
-    description: 'Conduct full hygiene inspection of Sunset House including all rooms, bathrooms and common areas.',
+    description:
+        'Conduct full hygiene inspection of Sunset House including all rooms, bathrooms and common areas.',
     checklist: [
-      TaskChecklistItem(id: 'c1', title: 'Bedrooms Cleanliness', isCompleted: true),
-      TaskChecklistItem(id: 'c2', title: 'Bathroom Sanitation', isCompleted: true),
+      TaskChecklistItem(
+        id: 'c1',
+        title: 'Bedrooms Cleanliness',
+        isCompleted: true,
+      ),
+      TaskChecklistItem(
+        id: 'c2',
+        title: 'Bathroom Sanitation',
+        isCompleted: true,
+      ),
       TaskChecklistItem(id: 'c3', title: 'Common Areas'),
       TaskChecklistItem(id: 'c4', title: 'Waste Management'),
       TaskChecklistItem(id: 'c5', title: 'Report & Submit'),

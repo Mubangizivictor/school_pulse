@@ -40,23 +40,23 @@ class AdmissionApplication extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        studentName,
-        dateOfBirth,
-        gender,
-        targetClassId,
-        targetStreamId,
-        academicYearId,
-        previousSchool,
-        applicantParentName,
-        applicantParentPhone,
-        status,
-        appliedAt,
-        reviewerId,
-        reviewComments,
-        attachedDocuments,
-      ];
+    id,
+    schoolId,
+    studentName,
+    dateOfBirth,
+    gender,
+    targetClassId,
+    targetStreamId,
+    academicYearId,
+    previousSchool,
+    applicantParentName,
+    applicantParentPhone,
+    status,
+    appliedAt,
+    reviewerId,
+    reviewComments,
+    attachedDocuments,
+  ];
 
   AdmissionApplication copyWith({
     AdmissionStatus? status,

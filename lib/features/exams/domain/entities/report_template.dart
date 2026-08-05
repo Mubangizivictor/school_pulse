@@ -7,7 +7,8 @@ class ReportTemplate extends Equatable {
   final String logoPosition; // 'left', 'center', 'right'
   final String photoPosition;
   final String tableLayout; // 'traditional', 'competency'
-  final List<String> enabledSections; // e.g., ['attendance', 'behaviour', 'comments']
+  final List<String>
+  enabledSections; // e.g., ['attendance', 'behaviour', 'comments']
   final String colorTheme;
   final String? backgroundWatermarkUrl;
   final bool showRanking;
@@ -33,18 +34,18 @@ class ReportTemplate extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        name,
-        logoPosition,
-        photoPosition,
-        tableLayout,
-        enabledSections,
-        colorTheme,
-        backgroundWatermarkUrl,
-        showRanking,
-        showSubjectPosition,
-        headerText,
-        footerText,
-      ];
+    id,
+    schoolId,
+    name,
+    logoPosition,
+    photoPosition,
+    tableLayout,
+    enabledSections,
+    colorTheme,
+    backgroundWatermarkUrl,
+    showRanking,
+    showSubjectPosition,
+    headerText,
+    footerText,
+  ];
 }

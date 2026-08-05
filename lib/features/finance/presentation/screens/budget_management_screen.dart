@@ -30,11 +30,13 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen> {
   void _loadBudgets() {
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
-      context.read<FinanceBloc>().add(LoadBudgets(
-            schoolId: authState.user.schoolId,
-            academicYear: _selectedYear,
-            term: _selectedTerm,
-          ));
+      context.read<FinanceBloc>().add(
+        LoadBudgets(
+          schoolId: authState.user.schoolId,
+          academicYear: _selectedYear,
+          term: _selectedTerm,
+        ),
+      );
     }
   }
 
@@ -100,8 +102,15 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen> {
           Expanded(
             child: DropdownButtonFormField<String>(
               initialValue: _selectedYear,
-              decoration: const InputDecoration(labelText: 'Year', border: OutlineInputBorder()),
-              items: ['2023', '2024', '2025'].map((y) => DropdownMenuItem(value: y, child: Text(y))).toList(),
+              decoration: const InputDecoration(
+                labelText: 'Year',
+                border: OutlineInputBorder(),
+              ),
+              items: [
+                '2023',
+                '2024',
+                '2025',
+              ].map((y) => DropdownMenuItem(value: y, child: Text(y))).toList(),
               onChanged: (val) {
                 if (val != null) {
                   setState(() => _selectedYear = val);
@@ -114,8 +123,15 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen> {
           Expanded(
             child: DropdownButtonFormField<String>(
               initialValue: _selectedTerm,
-              decoration: const InputDecoration(labelText: 'Term', border: OutlineInputBorder()),
-              items: ['Term 1', 'Term 2', 'Term 3'].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+              decoration: const InputDecoration(
+                labelText: 'Term',
+                border: OutlineInputBorder(),
+              ),
+              items: [
+                'Term 1',
+                'Term 2',
+                'Term 3',
+              ].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
               onChanged: (val) {
                 if (val != null) {
                   setState(() => _selectedTerm = val);
@@ -132,7 +148,11 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen> {
   Widget _buildBudgetItem(BuildContext context, Budget budget) {
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
     final utilization = budget.utilizationPercentage;
-    final color = utilization > 90 ? semanticColors.error : utilization > 70 ? Colors.orange : semanticColors.success;
+    final color = utilization > 90
+        ? semanticColors.error
+        : utilization > 70
+        ? Colors.orange
+        : semanticColors.success;
 
     return AppCard(
       margin: const EdgeInsets.only(bottom: 16),
@@ -142,8 +162,16 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(budget.name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-              StatusBadge(label: '${utilization.toStringAsFixed(1)}%', color: color),
+              Text(
+                budget.name,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              StatusBadge(
+                label: '${utilization.toStringAsFixed(1)}%',
+                color: color,
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -161,17 +189,31 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Allocated', style: Theme.of(context).textTheme.labelSmall),
-                  Text(CurrencyFormatter.ugx(budget.allocatedAmount), style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(
+                    'Allocated',
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                  Text(
+                    CurrencyFormatter.ugx(budget.allocatedAmount),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ],
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text('Remaining', style: Theme.of(context).textTheme.labelSmall),
+                  Text(
+                    'Remaining',
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
                   Text(
                     CurrencyFormatter.ugx(budget.remainingAmount),
-                    style: TextStyle(fontWeight: FontWeight.bold, color: budget.remainingAmount < 0 ? semanticColors.error : null),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: budget.remainingAmount < 0
+                          ? semanticColors.error
+                          : null,
+                    ),
                   ),
                 ],
               ),

@@ -5,7 +5,8 @@ import '../../domain/usecases/get_admin_dashboard_stats.dart';
 import 'admin_dashboard_event.dart';
 import 'admin_dashboard_state.dart';
 
-class AdminDashboardBloc extends Bloc<AdminDashboardEvent, AdminDashboardState> {
+class AdminDashboardBloc
+    extends Bloc<AdminDashboardEvent, AdminDashboardState> {
   final GetAdminDashboardStats getAdminDashboardStats;
   final AuditRepository auditRepository;
 
@@ -16,17 +17,16 @@ class AdminDashboardBloc extends Bloc<AdminDashboardEvent, AdminDashboardState> 
     on<LoadAdminDashboardStats>((event, emit) async {
       emit(AdminDashboardLoading());
       final result = await getAdminDashboardStats(NoParams());
-      result.fold(
-        (failure) => emit(AdminDashboardError(failure.message)),
-        (stats) {
-          if (state is AdminDashboardLoaded) {
-            emit((state as AdminDashboardLoaded).copyWith(stats: stats));
-          } else {
-            emit(AdminDashboardLoaded(stats: stats));
-          }
-          add(WatchAuditLogs());
-        },
-      );
+      result.fold((failure) => emit(AdminDashboardError(failure.message)), (
+        stats,
+      ) {
+        if (state is AdminDashboardLoaded) {
+          emit((state as AdminDashboardLoaded).copyWith(stats: stats));
+        } else {
+          emit(AdminDashboardLoaded(stats: stats));
+        }
+        add(WatchAuditLogs());
+      });
     });
 
     on<WatchAuditLogs>((event, emit) async {

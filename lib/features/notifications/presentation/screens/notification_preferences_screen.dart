@@ -14,10 +14,12 @@ class NotificationPreferencesScreen extends StatefulWidget {
   const NotificationPreferencesScreen({super.key});
 
   @override
-  State<NotificationPreferencesScreen> createState() => _NotificationPreferencesScreenState();
+  State<NotificationPreferencesScreen> createState() =>
+      _NotificationPreferencesScreenState();
 }
 
-class _NotificationPreferencesScreenState extends State<NotificationPreferencesScreen> {
+class _NotificationPreferencesScreenState
+    extends State<NotificationPreferencesScreen> {
   /// The categories offered as switches. Same seven the screen always showed,
   /// now backed by the real category enum rather than display strings.
   static const _categories = <NotificationCategory>[
@@ -90,15 +92,12 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
     if (!mounted) return;
     setState(() => _saving = false);
 
-    result.fold(
-      (failure) {
-        setState(() => _preferences = previous);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(failure.userMessage)),
-        );
-      },
-      (_) => null,
-    );
+    result.fold((failure) {
+      setState(() => _preferences = previous);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(failure.userMessage)));
+    }, (_) => null);
   }
 
   /// Whether [category] may be switched off at all.
@@ -121,7 +120,10 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => context.pop(),
         ),
-        title: const Text('Notification Preferences', style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'Notification Preferences',
+          style: TextStyle(color: Colors.white),
+        ),
         actions: [
           if (_saving)
             const Padding(
@@ -144,13 +146,13 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
               child: CircularProgressIndicator(color: Color(0xFF6366F1)),
             )
           : _preferences == null
-              ? const Center(
-                  child: Text(
-                    'Sign in to manage your notification preferences',
-                    style: TextStyle(color: Colors.white70),
-                  ),
-                )
-              : _buildBody(_preferences!),
+          ? const Center(
+              child: Text(
+                'Sign in to manage your notification preferences',
+                style: TextStyle(color: Colors.white70),
+              ),
+            )
+          : _buildBody(_preferences!),
     );
   }
 
@@ -185,7 +187,10 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
             );
           }),
           const SizedBox(height: 32),
-          const Text('Alert Settings', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          const Text(
+            'Alert Settings',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 16),
           _buildSwitchTile(
             'Sound',
@@ -284,7 +289,8 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
     if (!mounted) return;
     final start = await showTimePicker(
       context: context,
-      initialTime: prefs.quietHoursStart ?? const TimeOfDay(hour: 21, minute: 0),
+      initialTime:
+          prefs.quietHoursStart ?? const TimeOfDay(hour: 21, minute: 0),
       helpText: 'Quiet hours start',
     );
     if (start == null || !mounted) return;
@@ -367,8 +373,17 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
           ),
           child: Icon(icon, color: color, size: 20),
         ),
-        title: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
-        subtitle: Text(subtitle, style: const TextStyle(color: Colors.white60, fontSize: 12)),
+        title: Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: const TextStyle(color: Colors.white60, fontSize: 12),
+        ),
         // A locked category shows a padlock rather than a switch that would
         // spring back, so the reason is visible instead of feeling broken.
         trailing: locked
@@ -396,7 +411,10 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
       ),
       child: ListTile(
         title: Text(title, style: const TextStyle(color: Colors.white)),
-        subtitle: Text(subtitle, style: const TextStyle(color: Colors.white60, fontSize: 12)),
+        subtitle: Text(
+          subtitle,
+          style: const TextStyle(color: Colors.white60, fontSize: 12),
+        ),
         trailing: Switch(
           value: value,
           onChanged: _saving ? null : onChanged,

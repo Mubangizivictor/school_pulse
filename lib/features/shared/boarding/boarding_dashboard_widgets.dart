@@ -57,110 +57,109 @@ class BoardingDashboardHeader extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-        SizedBox(
-          width: 62,
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: CircleAvatar(
-                backgroundColor: theme.colorScheme.primary.withValues(
-                  alpha: 0.15,
+          SizedBox(
+            width: 62,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: CircleAvatar(
+                    backgroundColor: theme.colorScheme.primary.withValues(
+                      alpha: 0.15,
+                    ),
+                    backgroundImage: hasPhoto ? NetworkImage(photoUrl!) : null,
+                    child: hasPhoto
+                        ? null
+                        : Text(
+                            _initials,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                  ),
                 ),
-                backgroundImage: hasPhoto ? NetworkImage(photoUrl!) : null,
-                child: hasPhoto
-                    ? null
-                    : Text(
-                        _initials,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: theme.colorScheme.primary,
-                        ),
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: semanticColors.success,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: theme.scaffoldBackgroundColor,
+                        width: 2,
                       ),
-              ),
-              ),
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  width: 14,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    color: semanticColors.success,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: theme.scaffoldBackgroundColor,
-                      width: 2,
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(width: AppSpacing.l),
-        Expanded(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                greetingForNow(),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  fontSize: 13,
-                  color: theme.colorScheme.primary,
-                  fontWeight: FontWeight.w600,
+          const SizedBox(width: AppSpacing.l),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  greetingForNow(),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontSize: 13,
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                userName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.2,
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  userName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.2,
+                  ),
                 ),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                roleLabel,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  fontSize: 12.5,
-                  color: theme.colorScheme.outline,
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  roleLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontSize: 12.5,
+                    color: theme.colorScheme.outline,
+                  ),
                 ),
-              ),
-              if (schoolName != null && schoolName!.isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.m),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.verified_user_outlined,
-                      size: 16,
-                      color: theme.colorScheme.outline,
-                    ),
-                    const SizedBox(width: AppSpacing.s),
-                    Flexible(
-                      child: Text(
-                        schoolName!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
+                if (schoolName != null && schoolName!.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.m),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.verified_user_outlined,
+                        size: 16,
+                        color: theme.colorScheme.outline,
+                      ),
+                      const SizedBox(width: AppSpacing.s),
+                      Flexible(
+                        child: Text(
+                          schoolName!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
-        ),
-        if (trailing != null)
-          Center(child: trailing!),
+          if (trailing != null) Center(child: trailing!),
         ],
       ),
     );
@@ -647,10 +646,7 @@ class _BoardingAlertsCardState extends State<BoardingAlertsCard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _CardHeading(
-          title: 'Urgent Alerts',
-          onViewAll: widget.onViewAll,
-        ),
+        _CardHeading(title: 'Urgent Alerts', onViewAll: widget.onViewAll),
         const SizedBox(height: AppSpacing.l),
         AppCard(
           padding: const EdgeInsets.symmetric(
@@ -824,8 +820,13 @@ class BoardingSectionHeading extends StatelessWidget {
   final String title;
   final VoidCallback? onViewAll;
 
-  const BoardingSectionHeading({super.key, required this.title, this.onViewAll});
+  const BoardingSectionHeading({
+    super.key,
+    required this.title,
+    this.onViewAll,
+  });
 
   @override
-  Widget build(BuildContext context) => _CardHeading(title: title, onViewAll: onViewAll);
+  Widget build(BuildContext context) =>
+      _CardHeading(title: title, onViewAll: onViewAll);
 }

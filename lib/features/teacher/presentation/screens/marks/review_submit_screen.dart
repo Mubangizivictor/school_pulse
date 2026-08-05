@@ -20,8 +20,18 @@ class ReviewSubmitScreen extends StatelessWidget {
         ),
         title: Column(
           children: [
-            const Text('Review & Submit', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-            const Text('Mid Term Test • Section A', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+            const Text(
+              'Review & Submit',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const Text(
+              'Mid Term Test • Section A',
+              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+            ),
           ],
         ),
         centerTitle: true,
@@ -31,21 +41,38 @@ class ReviewSubmitScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Summary', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text(
+              'Summary',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 12),
             _buildSummaryRow('Total Students', '28'),
             _buildSummaryRow('Marks Entered', '8', valueColor: Colors.white),
             _buildSummaryRow('Marks Pending', '20', valueColor: Colors.orange),
             _buildSummaryRow('Maximum Mark', '20'),
             const SizedBox(height: 32),
-            const Text('Quick Preview', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text(
+              'Quick Preview',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 12),
             _buildPreviewItem('1', 'Akena Brian', '16/20'),
             _buildPreviewItem('2', 'Nanyonga Faith', '14/20'),
             _buildPreviewItem('3', 'Odhiambo James', '9/20'),
             const Padding(
               padding: EdgeInsets.only(left: 32, top: 8),
-              child: Text('... and 25 more students', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+              child: Text(
+                '... and 25 more students',
+                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+              ),
             ),
             const SizedBox(height: 40),
             Container(
@@ -74,17 +101,28 @@ class ReviewSubmitScreen extends StatelessWidget {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Marks submitted successfully!'), backgroundColor: Colors.green),
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Marks submitted successfully!'),
+                      backgroundColor: Colors.green,
+                    ),
                   );
                   context.go('/staff/marks');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF4338CA),
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child: const Text('Submit Marks', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Submit Marks',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
           ],
@@ -93,14 +131,28 @@ class ReviewSubmitScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSummaryRow(String label, String value, {Color valueColor = Colors.white}) {
+  Widget _buildSummaryRow(
+    String label,
+    String value, {
+    Color valueColor = Colors.white,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14)),
-          Text(value, style: TextStyle(color: valueColor, fontSize: 14, fontWeight: FontWeight.bold)),
+          Text(
+            label,
+            style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              color: valueColor,
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
@@ -111,10 +163,25 @@ class ReviewSubmitScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Text('$rank.', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+          Text(
+            '$rank.',
+            style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+          ),
           const SizedBox(width: 12),
-          Expanded(child: Text(name, style: const TextStyle(color: Colors.white, fontSize: 14))),
-          Text(score, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+          Expanded(
+            child: Text(
+              name,
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+            ),
+          ),
+          Text(
+            score,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );

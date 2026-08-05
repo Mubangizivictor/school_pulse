@@ -27,9 +27,9 @@ class _TeacherAttendanceHistoryScreenState
   void _load({HistoryRange range = HistoryRange.month}) {
     final active = context.read<ClassTeacherContextBloc>().state.active;
     if (active == null) return;
-    context
-        .read<ClassAttendanceHistoryBloc>()
-        .add(ClassAttendanceHistoryRequested(active, range: range));
+    context.read<ClassAttendanceHistoryBloc>().add(
+      ClassAttendanceHistoryRequested(active, range: range),
+    );
   }
 
   @override
@@ -51,13 +51,16 @@ class _TeacherAttendanceHistoryScreenState
             return const EmptyState(
               icon: Icons.class_outlined,
               title: 'No class assigned',
-              message: 'You are not currently the Class Teacher for any class, '
+              message:
+                  'You are not currently the Class Teacher for any class, '
                   'so there is no attendance history to show.',
             );
           }
 
-          return BlocBuilder<ClassAttendanceHistoryBloc,
-              ClassAttendanceHistoryState>(
+          return BlocBuilder<
+            ClassAttendanceHistoryBloc,
+            ClassAttendanceHistoryState
+          >(
             builder: (context, state) {
               if (state.isLoading) {
                 return Center(
@@ -81,7 +84,8 @@ class _TeacherAttendanceHistoryScreenState
                 return const EmptyState(
                   icon: Icons.event_note_outlined,
                   title: 'No attendance history',
-                  message: 'No registers have been submitted for your class in '
+                  message:
+                      'No registers have been submitted for your class in '
                       'this period.',
                 );
               }
@@ -135,7 +139,10 @@ class _TeacherAttendanceHistoryScreenState
   /// The window totals. Rate is omitted rather than shown as 0% when nothing
   /// has been marked - an empty period and a period of total absence are not
   /// the same claim.
-  Widget _buildSummary(BuildContext context, ClassAttendanceHistoryState state) {
+  Widget _buildSummary(
+    BuildContext context,
+    ClassAttendanceHistoryState state,
+  ) {
     final rate = state.attendanceRate;
 
     return Container(
@@ -247,8 +254,8 @@ class _HistoryCard extends StatelessWidget {
               status == 'Submitted'
                   ? Icons.check_circle_outline
                   : (status == 'Locked'
-                      ? Icons.lock_outline
-                      : Icons.edit_outlined),
+                        ? Icons.lock_outline
+                        : Icons.edit_outlined),
               color: color,
             ),
           ),
@@ -294,10 +301,7 @@ class _HistoryCard extends StatelessWidget {
                   color: AppColors.textPrimary(context),
                 ),
               ),
-              Text(
-                status,
-                style: TextStyle(fontSize: 12, color: color),
-              ),
+              Text(status, style: TextStyle(fontSize: 12, color: color)),
             ],
           ),
         ],

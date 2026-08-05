@@ -24,7 +24,7 @@ class _SchoolManagementScreenState extends State<SchoolManagementScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     final isWide = isSuperAdminWide(context);
     return Scaffold(
       appBar: AppBar(
@@ -61,9 +61,15 @@ class _SchoolManagementScreenState extends State<SchoolManagementScreen> {
                 }
 
                 final filteredSchools = state.schools.where((school) {
-                  final matchesSearch = school.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                      school.tenantId.toLowerCase().contains(_searchQuery.toLowerCase());
-                  final matchesStatus = _statusFilter == null || school.status == _statusFilter;
+                  final matchesSearch =
+                      school.name.toLowerCase().contains(
+                        _searchQuery.toLowerCase(),
+                      ) ||
+                      school.tenantId.toLowerCase().contains(
+                        _searchQuery.toLowerCase(),
+                      );
+                  final matchesStatus =
+                      _statusFilter == null || school.status == _statusFilter;
                   return matchesSearch && matchesStatus;
                 }).toList();
 
@@ -72,9 +78,16 @@ class _SchoolManagementScreenState extends State<SchoolManagementScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.school_outlined, size: 64, color: theme.colorScheme.outline),
+                        Icon(
+                          Icons.school_outlined,
+                          size: 64,
+                          color: theme.colorScheme.outline,
+                        ),
                         const SizedBox(height: 16),
-                        Text('No schools found', style: theme.textTheme.titleMedium),
+                        Text(
+                          'No schools found',
+                          style: theme.textTheme.titleMedium,
+                        ),
                       ],
                     ),
                   );
@@ -155,7 +168,9 @@ class _SchoolListTile extends StatelessWidget {
       child: ListTile(
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => SchoolDetailScreen(school: school)),
+          MaterialPageRoute(
+            builder: (context) => SchoolDetailScreen(school: school),
+          ),
         ),
         contentPadding: const EdgeInsets.all(16),
         leading: Container(
@@ -189,13 +204,27 @@ class _SchoolListTile extends StatelessWidget {
             runSpacing: 4,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Icon(Icons.fingerprint, size: 14, color: theme.colorScheme.onSurfaceVariant),
+              Icon(
+                Icons.fingerprint,
+                size: 14,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
               Text('ID: ${school.tenantId}'),
               const SizedBox(width: 20),
-              Icon(Icons.calendar_today, size: 14, color: theme.colorScheme.onSurfaceVariant),
-              Text('Expiry: ${DateFormat('MMM dd, yyyy').format(school.subscriptionExpiry)}'),
+              Icon(
+                Icons.calendar_today,
+                size: 14,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              Text(
+                'Expiry: ${DateFormat('MMM dd, yyyy').format(school.subscriptionExpiry)}',
+              ),
               const SizedBox(width: 20),
-              Icon(Icons.people, size: 14, color: theme.colorScheme.onSurfaceVariant),
+              Icon(
+                Icons.people,
+                size: 14,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
               Text('${school.metadata['studentCount'] ?? 0} Students'),
             ],
           ),
@@ -207,10 +236,14 @@ class _SchoolListTile extends StatelessWidget {
 
   Color _getStatusColor(SchoolStatus status) {
     switch (status) {
-      case SchoolStatus.active: return Colors.green;
-      case SchoolStatus.suspended: return Colors.red;
-      case SchoolStatus.trial: return Colors.orange;
-      case SchoolStatus.archived: return Colors.grey;
+      case SchoolStatus.active:
+        return Colors.green;
+      case SchoolStatus.suspended:
+        return Colors.red;
+      case SchoolStatus.trial:
+        return Colors.orange;
+      case SchoolStatus.archived:
+        return Colors.grey;
     }
   }
 }

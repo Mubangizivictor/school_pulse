@@ -14,7 +14,8 @@ class LibrarianDashboardScreen extends StatefulWidget {
   const LibrarianDashboardScreen({super.key});
 
   @override
-  State<LibrarianDashboardScreen> createState() => _LibrarianDashboardScreenState();
+  State<LibrarianDashboardScreen> createState() =>
+      _LibrarianDashboardScreenState();
 }
 
 class _LibrarianDashboardScreenState extends State<LibrarianDashboardScreen> {
@@ -23,8 +24,12 @@ class _LibrarianDashboardScreenState extends State<LibrarianDashboardScreen> {
     super.initState();
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
-      context.read<LibraryBloc>().add(WatchLibraryResources(authState.user.schoolId));
-      context.read<LibraryBloc>().add(FetchLibraryStats(authState.user.schoolId));
+      context.read<LibraryBloc>().add(
+        WatchLibraryResources(authState.user.schoolId),
+      );
+      context.read<LibraryBloc>().add(
+        FetchLibraryStats(authState.user.schoolId),
+      );
     }
   }
 
@@ -60,7 +65,9 @@ class _LibrarianDashboardScreenState extends State<LibrarianDashboardScreen> {
             onRefresh: () async {
               final authState = context.read<AuthBloc>().state;
               if (authState is AuthAuthenticated) {
-                context.read<LibraryBloc>().add(FetchLibraryStats(authState.user.schoolId));
+                context.read<LibraryBloc>().add(
+                  FetchLibraryStats(authState.user.schoolId),
+                );
               }
             },
             child: ListView(
@@ -173,7 +180,10 @@ class _LibrarianDashboardScreenState extends State<LibrarianDashboardScreen> {
           child: ListTile(
             leading: CircleAvatar(
               backgroundColor: Colors.purple.withValues(alpha: 0.1),
-              child: const Icon(Icons.shopping_cart_outlined, color: Colors.purple),
+              child: const Icon(
+                Icons.shopping_cart_outlined,
+                color: Colors.purple,
+              ),
             ),
             title: const Text('Procurement Request'),
             subtitle: const Text('Request new books or materials'),

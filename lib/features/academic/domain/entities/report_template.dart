@@ -11,7 +11,8 @@ class ReportTemplate extends Equatable {
   final String logoPosition; // 'left', 'center', 'right'
   final String photoPosition; // 'left', 'right', 'none'
   final String tableLayout; // 'traditional', 'competency'
-  final List<String> enabledSections; // e.g., ['attendance', 'behaviour', 'comments']
+  final List<String>
+  enabledSections; // e.g., ['attendance', 'behaviour', 'comments']
   final String colorTheme;
   final String? backgroundWatermarkUrl;
   final bool showRanking;
@@ -60,7 +61,8 @@ class ReportTemplate extends Equatable {
       tableLayout: tableLayout ?? this.tableLayout,
       enabledSections: enabledSections ?? this.enabledSections,
       colorTheme: colorTheme ?? this.colorTheme,
-      backgroundWatermarkUrl: backgroundWatermarkUrl ?? this.backgroundWatermarkUrl,
+      backgroundWatermarkUrl:
+          backgroundWatermarkUrl ?? this.backgroundWatermarkUrl,
       showRanking: showRanking ?? this.showRanking,
       showSubjectPosition: showSubjectPosition ?? this.showSubjectPosition,
       headerText: headerText ?? this.headerText,
@@ -71,19 +73,19 @@ class ReportTemplate extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        name,
-        logoPosition,
-        photoPosition,
-        tableLayout,
-        enabledSections,
-        colorTheme,
-        backgroundWatermarkUrl,
-        showRanking,
-        showSubjectPosition,
-        headerText,
-        footerText,
-        isDefault,
-      ];
+    id,
+    schoolId,
+    name,
+    logoPosition,
+    photoPosition,
+    tableLayout,
+    enabledSections,
+    colorTheme,
+    backgroundWatermarkUrl,
+    showRanking,
+    showSubjectPosition,
+    headerText,
+    footerText,
+    isDefault,
+  ];
 }

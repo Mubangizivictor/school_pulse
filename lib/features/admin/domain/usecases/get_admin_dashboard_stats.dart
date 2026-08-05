@@ -6,6 +6,7 @@ import 'package:school_pulse/core/usecases/usecase.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/repositories/auth_repository.dart';
 import 'package:school_pulse/features/student/domain/repositories/student_repository.dart';
+import 'package:school_pulse/features/admin/data/models/visitor.dart';
 import 'package:school_pulse/features/admin/data/repositories/visitor_repository.dart';
 
 /// One row of the dashboard's "Live Services" panel.
@@ -119,9 +120,11 @@ class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
 
       // For visitors, we use a Future instead of .first on a stream to avoid deadlocks
       // if the stream doesn't emit immediately.
-      final visitors = await visitorRepository.getVisitorsOnce().timeout(
-        const Duration(seconds: 10),
-      );
+      final visitors = schoolId != null && schoolId.isNotEmpty
+          ? await visitorRepository
+                .getVisitorsOnce(schoolId)
+                .timeout(const Duration(seconds: 10))
+          : const <Visitor>[];
 
       final now = DateTime.now();
       final todayVisitors = visitors.where((v) {

@@ -21,12 +21,19 @@ abstract class BiometricRepository {
 
   // Verification
   Future<void> logEvent(BiometricAuditLog log);
-  Stream<List<BiometricAuditLog>> getAuditLogs(String schoolId, {String? personId});
+  Stream<List<BiometricAuditLog>> getAuditLogs(
+    String schoolId, {
+    String? personId,
+  });
 
   // Device Management
   Future<List<BiometricDevice>> getRegisteredDevices(String schoolId);
   Future<void> registerDevice(String schoolId, BiometricDevice device);
-  Future<void> updateDeviceStatus(String schoolId, String deviceId, bool isActive);
+  Future<void> updateDeviceStatus(
+    String schoolId,
+    String deviceId,
+    bool isActive,
+  );
   Future<void> deleteDevice(String schoolId, String deviceId);
 
   // Offline Sync

@@ -67,7 +67,7 @@ class StaffDetailScreen extends StatelessWidget {
                             .map(
                               (r) => StatusBadge(
                                 label: UserRoleDisplay.name(r),
-                                color: AppColors.electricBlue,
+                                color: AppColors.primary(context),
                               ),
                             )
                             .toList(),

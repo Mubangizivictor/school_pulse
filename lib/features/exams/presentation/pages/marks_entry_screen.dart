@@ -27,13 +27,17 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
   }
 
   void _loadMarks() {
-    if (_selectedClass != null && _selectedSubject != null && _selectedAssessmentType != null) {
-      context.read<AssessmentBloc>().add(LoadMarksForEntry(
-            schoolId: widget.schoolId,
-            assessmentTypeId: _selectedAssessmentType!.id,
-            subjectId: _selectedSubject!,
-            classId: _selectedClass!,
-          ));
+    if (_selectedClass != null &&
+        _selectedSubject != null &&
+        _selectedAssessmentType != null) {
+      context.read<AssessmentBloc>().add(
+        LoadMarksForEntry(
+          schoolId: widget.schoolId,
+          assessmentTypeId: _selectedAssessmentType!.id,
+          subjectId: _selectedSubject!,
+          classId: _selectedClass!,
+        ),
+      );
     }
   }
 
@@ -49,20 +53,27 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.save),
-                    onPressed: state.status == AssessmentStatus.saving 
-                        ? null 
-                        : () => context.read<AssessmentBloc>().add(SaveMarksEvent(widget.schoolId)),
+                    onPressed: state.status == AssessmentStatus.saving
+                        ? null
+                        : () => context.read<AssessmentBloc>().add(
+                            SaveMarksEvent(widget.schoolId),
+                          ),
                   ),
                   if (state.marks.isNotEmpty)
                     TextButton(
                       onPressed: () {
                         // Logic to submit all marks currently in the list
-                        context.read<AssessmentBloc>().add(SubmitMarksEvent(
-                              widget.schoolId,
-                              state.marks.map((m) => m.id).toList(),
-                            ));
+                        context.read<AssessmentBloc>().add(
+                          SubmitMarksEvent(
+                            widget.schoolId,
+                            state.marks.map((m) => m.id).toList(),
+                          ),
+                        );
                       },
-                      child: const Text('SUBMIT', style: TextStyle(color: Colors.white)),
+                      child: const Text(
+                        'SUBMIT',
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ),
                 ],
               );
@@ -78,12 +89,18 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
               listener: (context, state) {
                 if (state.status == AssessmentStatus.success) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Marks saved successfully!'), backgroundColor: Colors.green),
+                    const SnackBar(
+                      content: Text('Marks saved successfully!'),
+                      backgroundColor: Colors.green,
+                    ),
                   );
                 }
                 if (state.status == AssessmentStatus.failure) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(state.errorMessage ?? 'An error occurred'), backgroundColor: Colors.red),
+                    SnackBar(
+                      content: Text(state.errorMessage ?? 'An error occurred'),
+                      backgroundColor: Colors.red,
+                    ),
                   );
                 }
               },
@@ -95,7 +112,8 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
                   return const EmptyState(
                     icon: Icons.person_search,
                     title: 'No Students Found',
-                    message: 'Select Class, Subject, and Assessment to enter marks.',
+                    message:
+                        'Select Class, Subject, and Assessment to enter marks.',
                   );
                 }
                 return ListView.builder(
@@ -113,16 +131,23 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
                           child: TextField(
                             keyboardType: TextInputType.number,
                             textAlign: TextAlign.center,
-                            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                RegExp(r'^\d*\.?\d*'),
+                              ),
+                            ],
                             decoration: InputDecoration(
-                              hintText: 'Max ${_selectedAssessmentType?.maxMark ?? 100}',
+                              hintText:
+                                  'Max ${_selectedAssessmentType?.maxMark ?? 100}',
                               border: const OutlineInputBorder(),
                             ),
                             onChanged: (value) {
-                              context.read<AssessmentBloc>().add(UpdateMarkLocal(
-                                    studentId: mark.studentId,
-                                    score: double.tryParse(value),
-                                  ));
+                              context.read<AssessmentBloc>().add(
+                                UpdateMarkLocal(
+                                  studentId: mark.studentId,
+                                  score: double.tryParse(value),
+                                ),
+                              );
                             },
                           ),
                         ),
@@ -166,7 +191,10 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
                     child: DropdownButtonFormField<String>(
                       decoration: const InputDecoration(labelText: 'Subject'),
                       items: const [
-                        DropdownMenuItem(value: 'MAT', child: Text('Mathematics')),
+                        DropdownMenuItem(
+                          value: 'MAT',
+                          child: Text('Mathematics'),
+                        ),
                         DropdownMenuItem(value: 'ENG', child: Text('English')),
                       ],
                       onChanged: (v) {
@@ -180,7 +208,14 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
               const SizedBox(height: 12),
               DropdownButtonFormField<AssessmentType>(
                 decoration: const InputDecoration(labelText: 'Assessment Type'),
-                items: state.assessmentTypes.map((t) => DropdownMenuItem(value: t, child: Text('${t.name} (${t.weight}%)'))).toList(),
+                items: state.assessmentTypes
+                    .map(
+                      (t) => DropdownMenuItem(
+                        value: t,
+                        child: Text('${t.name} (${t.weight}%)'),
+                      ),
+                    )
+                    .toList(),
                 onChanged: (v) {
                   setState(() => _selectedAssessmentType = v);
                   _loadMarks();

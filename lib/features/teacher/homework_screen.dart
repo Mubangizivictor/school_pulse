@@ -52,7 +52,8 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
             return const EmptyState(
               icon: Icons.class_outlined,
               title: 'No class assigned',
-              message: 'You are not currently the Class Teacher for any class, '
+              message:
+                  'You are not currently the Class Teacher for any class, '
                   'so there is no class work to set.',
             );
           }
@@ -66,13 +67,17 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
               if (message == null) return;
               ScaffoldMessenger.of(context)
                 ..hideCurrentSnackBar()
-                ..showSnackBar(SnackBar(
-                  content: Text(message),
-                  backgroundColor: state.successMessage != null
-                      ? AppColors.success(context)
-                      : AppColors.danger(context),
-                ));
-              context.read<ClassWorkBloc>().add(const ClassWorkFeedbackCleared());
+                ..showSnackBar(
+                  SnackBar(
+                    content: Text(message),
+                    backgroundColor: state.successMessage != null
+                        ? AppColors.success(context)
+                        : AppColors.danger(context),
+                  ),
+                );
+              context.read<ClassWorkBloc>().add(
+                const ClassWorkFeedbackCleared(),
+              );
             },
             builder: (context, state) {
               if (state.isLoading) {
@@ -103,11 +108,14 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
                     return _HomeworkCard(
                       homework: homework,
                       canPublish: state.canPublish,
-                      onEdit: () =>
-                          _showHomeworkSheet(context, state, homework: homework),
-                      onPublish: () => context
-                          .read<ClassWorkBloc>()
-                          .add(ClassHomeworkPublished(homework)),
+                      onEdit: () => _showHomeworkSheet(
+                        context,
+                        state,
+                        homework: homework,
+                      ),
+                      onPublish: () => context.read<ClassWorkBloc>().add(
+                        ClassHomeworkPublished(homework),
+                      ),
                     );
                   },
                 ),
@@ -116,15 +124,16 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
           );
         },
       ),
-      floatingActionButton:
-          BlocBuilder<ClassWorkBloc, ClassWorkState>(builder: (context, state) {
-        if (state.context == null) return const SizedBox.shrink();
-        return FloatingActionButton(
-          onPressed: () => _showHomeworkSheet(context, state),
-          backgroundColor: AppColors.primary(context),
-          child: const Icon(Icons.add, color: Colors.white),
-        );
-      }),
+      floatingActionButton: BlocBuilder<ClassWorkBloc, ClassWorkState>(
+        builder: (context, state) {
+          if (state.context == null) return const SizedBox.shrink();
+          return FloatingActionButton(
+            onPressed: () => _showHomeworkSheet(context, state),
+            backgroundColor: AppColors.primary(context),
+            child: const Icon(Icons.add, color: Colors.white),
+          );
+        },
+      ),
     );
   }
 
@@ -139,7 +148,9 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
       isScrollControlled: true,
       backgroundColor: AppColors.surfaceElevated(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.xl)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppSpacing.xl),
+        ),
       ),
       builder: (sheetContext) => BlocProvider.value(
         value: bloc,
@@ -172,8 +183,9 @@ class _HomeworkSheetState extends State<_HomeworkSheet> {
     super.initState();
     _titleController = TextEditingController(text: widget.homework?.title);
     _descController = TextEditingController(text: widget.homework?.description);
-    _subjectController =
-        TextEditingController(text: widget.homework?.subjectName);
+    _subjectController = TextEditingController(
+      text: widget.homework?.subjectName,
+    );
     _dueDate =
         widget.homework?.dueDate ?? DateTime.now().add(const Duration(days: 1));
     _attachments.addAll(widget.homework?.attachments ?? const []);
@@ -216,7 +228,9 @@ class _HomeworkSheetState extends State<_HomeworkSheet> {
                 controller: _titleController,
                 decoration: InputDecoration(
                   labelText: 'Title',
-                  labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                  labelStyle: TextStyle(
+                    color: AppColors.textSecondary(context),
+                  ),
                 ),
                 style: TextStyle(color: AppColors.textPrimary(context)),
                 validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
@@ -226,7 +240,9 @@ class _HomeworkSheetState extends State<_HomeworkSheet> {
                 controller: _subjectController,
                 decoration: InputDecoration(
                   labelText: 'Subject',
-                  labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                  labelStyle: TextStyle(
+                    color: AppColors.textSecondary(context),
+                  ),
                 ),
                 style: TextStyle(color: AppColors.textPrimary(context)),
                 validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
@@ -236,7 +252,9 @@ class _HomeworkSheetState extends State<_HomeworkSheet> {
                 controller: _descController,
                 decoration: InputDecoration(
                   labelText: 'Instructions',
-                  labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                  labelStyle: TextStyle(
+                    color: AppColors.textSecondary(context),
+                  ),
                 ),
                 style: TextStyle(color: AppColors.textPrimary(context)),
                 maxLines: 3,
@@ -253,8 +271,10 @@ class _HomeworkSheetState extends State<_HomeworkSheet> {
                   DateFormat('MMM dd, yyyy').format(_dueDate),
                   style: TextStyle(color: AppColors.textSecondary(context)),
                 ),
-                trailing:
-                    Icon(Icons.calendar_today, color: AppColors.primary(context)),
+                trailing: Icon(
+                  Icons.calendar_today,
+                  color: AppColors.primary(context),
+                ),
                 onTap: () async {
                   final picked = await showDatePicker(
                     context: context,
@@ -275,26 +295,34 @@ class _HomeworkSheetState extends State<_HomeworkSheet> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              ..._attachments.map((a) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(
-                      a,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: AppColors.textPrimary(context)),
+              ..._attachments.map(
+                (a) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    a,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: AppColors.textPrimary(context)),
+                  ),
+                  trailing: IconButton(
+                    icon: Icon(
+                      Icons.close,
+                      size: 20,
+                      color: AppColors.danger(context),
                     ),
-                    trailing: IconButton(
-                      icon: Icon(Icons.close,
-                          size: 20, color: AppColors.danger(context)),
-                      onPressed: () => setState(() => _attachments.remove(a)),
-                    ),
-                  )),
+                    onPressed: () => setState(() => _attachments.remove(a)),
+                  ),
+                ),
+              ),
               // File upload lands with the Resources phase, which owns storage
               // and its validation; linking one here instead of inventing a
               // filename keeps this honest in the meantime.
               TextButton.icon(
                 onPressed: _addLink,
-                icon: Icon(Icons.attach_file, color: AppColors.primary(context)),
+                icon: Icon(
+                  Icons.attach_file,
+                  color: AppColors.primary(context),
+                ),
                 label: Text(
                   'Add Link',
                   style: TextStyle(color: AppColors.primary(context)),
@@ -385,9 +413,9 @@ class _HomeworkSheetState extends State<_HomeworkSheet> {
             attachments: _attachments,
           );
 
-    context
-        .read<ClassWorkBloc>()
-        .add(ClassHomeworkSaved(homework, publish: publish));
+    context.read<ClassWorkBloc>().add(
+      ClassHomeworkSaved(homework, publish: publish),
+    );
     Navigator.of(context).pop();
   }
 }
@@ -454,8 +482,11 @@ class _HomeworkCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.m),
           Row(
             children: [
-              Icon(Icons.event_outlined,
-                  size: 16, color: AppColors.textMuted(context)),
+              Icon(
+                Icons.event_outlined,
+                size: 16,
+                color: AppColors.textMuted(context),
+              ),
               const SizedBox(width: 4),
               Text(
                 'Due ${DateFormat('MMM dd, yyyy').format(homework.dueDate)}',
@@ -487,8 +518,7 @@ class _HomeworkCard extends StatelessWidget {
         ClassHomeworkStatus.overdue => AppColors.danger(context),
         ClassHomeworkStatus.dueSoon => AppColors.warning(context),
         ClassHomeworkStatus.active ||
-        ClassHomeworkStatus.published =>
-          AppColors.success(context),
+        ClassHomeworkStatus.published => AppColors.success(context),
         ClassHomeworkStatus.completed => AppColors.information(context),
         ClassHomeworkStatus.cancelled => AppColors.danger(context),
         _ => AppColors.textMuted(context),

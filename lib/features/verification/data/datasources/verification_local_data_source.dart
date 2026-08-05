@@ -2,20 +2,31 @@ import 'package:isar/isar.dart';
 import 'package:school_pulse/features/verification/data/models/verification_isar_models.dart';
 
 abstract class VerificationLocalDataSource {
-  Future<CachedCredentialIsar?> findCredential(String credentialValue, String schoolId);
+  Future<CachedCredentialIsar?> findCredential(
+    String credentialValue,
+    String schoolId,
+  );
   Future<void> cacheCredential(CachedCredentialIsar credential);
 
   // Reverse lookup: "what card (if any) is/was bound to this identity" -
   // needed so a lost/stolen card can be revoked without the physical card
   // being available to scan. Returns the most recently updated mapping
   // regardless of status (active or revoked), not just active ones.
-  Future<CachedCredentialIsar?> findCredentialByIdentity(String identityId, String schoolId);
+  Future<CachedCredentialIsar?> findCredentialByIdentity(
+    String identityId,
+    String schoolId,
+  );
 
-  Future<RevokedCredentialIsar?> findRevocation(String credentialValue, String schoolId);
+  Future<RevokedCredentialIsar?> findRevocation(
+    String credentialValue,
+    String schoolId,
+  );
   Future<void> saveRevocation(RevokedCredentialIsar revocation);
   Future<void> deleteRevocation(String credentialValue, String schoolId);
 
-  Future<OperatorPermissionSnapshotIsar?> getPermissionSnapshot(String operatorId);
+  Future<OperatorPermissionSnapshotIsar?> getPermissionSnapshot(
+    String operatorId,
+  );
   Future<void> savePermissionSnapshot(OperatorPermissionSnapshotIsar snapshot);
 
   Future<AuthorizedDeviceIsar?> findDevice(String deviceId, String schoolId);
@@ -23,7 +34,10 @@ abstract class VerificationLocalDataSource {
   Future<void> saveVerificationEvent(VerificationEventIsar event);
   Future<List<VerificationEventIsar>> getUnsyncedEvents();
   Future<void> markEventSynced(String eventId);
-  Future<List<VerificationEventIsar>> getTodayEventsForGate(String gateId, String schoolId);
+  Future<List<VerificationEventIsar>> getTodayEventsForGate(
+    String gateId,
+    String schoolId,
+  );
 }
 
 class VerificationLocalDataSourceImpl implements VerificationLocalDataSource {
@@ -32,7 +46,10 @@ class VerificationLocalDataSourceImpl implements VerificationLocalDataSource {
   VerificationLocalDataSourceImpl(this.isar);
 
   @override
-  Future<CachedCredentialIsar?> findCredential(String credentialValue, String schoolId) async {
+  Future<CachedCredentialIsar?> findCredential(
+    String credentialValue,
+    String schoolId,
+  ) async {
     return isar.cachedCredentialIsars
         .filter()
         .credentialValueEqualTo(credentialValue)
@@ -48,7 +65,10 @@ class VerificationLocalDataSourceImpl implements VerificationLocalDataSource {
   }
 
   @override
-  Future<CachedCredentialIsar?> findCredentialByIdentity(String identityId, String schoolId) async {
+  Future<CachedCredentialIsar?> findCredentialByIdentity(
+    String identityId,
+    String schoolId,
+  ) async {
     return isar.cachedCredentialIsars
         .filter()
         .identityIdEqualTo(identityId)
@@ -58,7 +78,10 @@ class VerificationLocalDataSourceImpl implements VerificationLocalDataSource {
   }
 
   @override
-  Future<RevokedCredentialIsar?> findRevocation(String credentialValue, String schoolId) async {
+  Future<RevokedCredentialIsar?> findRevocation(
+    String credentialValue,
+    String schoolId,
+  ) async {
     return isar.revokedCredentialIsars
         .filter()
         .credentialValueEqualTo(credentialValue)
@@ -83,20 +106,34 @@ class VerificationLocalDataSourceImpl implements VerificationLocalDataSource {
   }
 
   @override
-  Future<OperatorPermissionSnapshotIsar?> getPermissionSnapshot(String operatorId) async {
-    return isar.operatorPermissionSnapshotIsars.filter().operatorIdEqualTo(operatorId).findFirst();
+  Future<OperatorPermissionSnapshotIsar?> getPermissionSnapshot(
+    String operatorId,
+  ) async {
+    return isar.operatorPermissionSnapshotIsars
+        .filter()
+        .operatorIdEqualTo(operatorId)
+        .findFirst();
   }
 
   @override
-  Future<void> savePermissionSnapshot(OperatorPermissionSnapshotIsar snapshot) async {
+  Future<void> savePermissionSnapshot(
+    OperatorPermissionSnapshotIsar snapshot,
+  ) async {
     await isar.writeTxn(() async {
       await isar.operatorPermissionSnapshotIsars.put(snapshot);
     });
   }
 
   @override
-  Future<AuthorizedDeviceIsar?> findDevice(String deviceId, String schoolId) async {
-    return isar.authorizedDeviceIsars.filter().deviceIdEqualTo(deviceId).schoolIdEqualTo(schoolId).findFirst();
+  Future<AuthorizedDeviceIsar?> findDevice(
+    String deviceId,
+    String schoolId,
+  ) async {
+    return isar.authorizedDeviceIsars
+        .filter()
+        .deviceIdEqualTo(deviceId)
+        .schoolIdEqualTo(schoolId)
+        .findFirst();
   }
 
   @override
@@ -108,12 +145,18 @@ class VerificationLocalDataSourceImpl implements VerificationLocalDataSource {
 
   @override
   Future<List<VerificationEventIsar>> getUnsyncedEvents() async {
-    return isar.verificationEventIsars.filter().isSyncedEqualTo(false).findAll();
+    return isar.verificationEventIsars
+        .filter()
+        .isSyncedEqualTo(false)
+        .findAll();
   }
 
   @override
   Future<void> markEventSynced(String eventId) async {
-    final event = await isar.verificationEventIsars.filter().eventIdEqualTo(eventId).findFirst();
+    final event = await isar.verificationEventIsars
+        .filter()
+        .eventIdEqualTo(eventId)
+        .findFirst();
     if (event == null) return;
     event.isSynced = true;
     await isar.writeTxn(() async {
@@ -122,7 +165,10 @@ class VerificationLocalDataSourceImpl implements VerificationLocalDataSource {
   }
 
   @override
-  Future<List<VerificationEventIsar>> getTodayEventsForGate(String gateId, String schoolId) async {
+  Future<List<VerificationEventIsar>> getTodayEventsForGate(
+    String gateId,
+    String schoolId,
+  ) async {
     final now = DateTime.now();
     final startOfDay = DateTime(now.year, now.month, now.day);
     return isar.verificationEventIsars

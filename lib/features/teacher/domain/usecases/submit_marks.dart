@@ -42,6 +42,12 @@ class MarksParams extends Equatable {
   });
 
   @override
-  List<Object?> get props =>
-      [className, subject, assessment, term, year, marks];
+  List<Object?> get props => [
+    className,
+    subject,
+    assessment,
+    term,
+    year,
+    marks,
+  ];
 }
