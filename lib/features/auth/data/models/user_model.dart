@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 
 class UserModel extends UserEntity {
@@ -18,6 +19,13 @@ class UserModel extends UserEntity {
     super.isActive = true,
     super.deactivationReason,
     super.mfaEnabled = false,
+    super.departmentId,
+    super.designationId,
+    super.campusId,
+    super.employmentType,
+    super.dateJoined,
+    super.address,
+    super.emergencyContact,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -64,7 +72,25 @@ class UserModel extends UserEntity {
       isActive: json['isActive'] ?? true,
       deactivationReason: json['deactivationReason'] as String?,
       mfaEnabled: json['mfaEnabled'] ?? false,
+      departmentId: json['departmentId'] as String?,
+      designationId: json['designationId'] as String?,
+      campusId: json['campusId'] as String?,
+      employmentType: json['employmentType'] as String?,
+      dateJoined: _parseDate(json['dateJoined']),
+      address: json['address'] as String?,
+      emergencyContact: json['emergencyContact'] != null
+          ? StaffEmergencyContact.fromJson(
+              json['emergencyContact'] as Map<String, dynamic>,
+            )
+          : null,
     );
+  }
+
+  static DateTime? _parseDate(dynamic value) {
+    if (value == null) return null;
+    if (value is Timestamp) return value.toDate();
+    if (value is String) return DateTime.tryParse(value);
+    return null;
   }
 
   Map<String, dynamic> toJson() {
@@ -88,6 +114,13 @@ class UserModel extends UserEntity {
       'isActive': isActive,
       'deactivationReason': deactivationReason,
       'mfaEnabled': mfaEnabled,
+      'departmentId': departmentId,
+      'designationId': designationId,
+      'campusId': campusId,
+      'employmentType': employmentType,
+      'dateJoined': dateJoined != null ? Timestamp.fromDate(dateJoined!) : null,
+      'address': address,
+      'emergencyContact': emergencyContact?.toJson(),
     };
   }
 
@@ -109,6 +142,13 @@ class UserModel extends UserEntity {
       isActive: entity.isActive,
       deactivationReason: entity.deactivationReason,
       mfaEnabled: entity.mfaEnabled,
+      departmentId: entity.departmentId,
+      designationId: entity.designationId,
+      campusId: entity.campusId,
+      employmentType: entity.employmentType,
+      dateJoined: entity.dateJoined,
+      address: entity.address,
+      emergencyContact: entity.emergencyContact,
     );
   }
 }

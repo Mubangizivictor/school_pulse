@@ -22,6 +22,17 @@ class UserEntity extends Equatable {
   final bool mustChangePassword;
   final bool mfaEnabled;
 
+  // Staff profile fields, all optional so parent/student UserEntity
+  // construction is unaffected. IDs reference the Structure module
+  // (Department/StaffDesignation/Campus) rather than free text.
+  final String? departmentId;
+  final String? designationId;
+  final String? campusId;
+  final String? employmentType;
+  final DateTime? dateJoined;
+  final String? address;
+  final StaffEmergencyContact? emergencyContact;
+
   const UserEntity({
     required this.id,
     this.staffCode,
@@ -40,10 +51,67 @@ class UserEntity extends Equatable {
     this.deactivationReason,
     this.mustChangePassword = false,
     this.mfaEnabled = false,
+    this.departmentId,
+    this.designationId,
+    this.campusId,
+    this.employmentType,
+    this.dateJoined,
+    this.address,
+    this.emergencyContact,
   });
 
   UserRole get role =>
       roles.first; // Temporary helper for backward compatibility
+
+  UserEntity copyWith({
+    String? staffCode,
+    String? name,
+    String? email,
+    String? phoneNumber,
+    List<UserRole>? roles,
+    String? photoUrl,
+    List<String>? studentIds,
+    String? assignedClass,
+    List<SubjectAssignment>? subjects,
+    bool? isActive,
+    String? deactivationReason,
+    bool? mustChangePassword,
+    bool? mfaEnabled,
+    String? departmentId,
+    String? designationId,
+    String? campusId,
+    String? employmentType,
+    DateTime? dateJoined,
+    String? address,
+    StaffEmergencyContact? emergencyContact,
+  }) {
+    return UserEntity(
+      id: id,
+      staffCode: staffCode ?? this.staffCode,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      schoolId: schoolId,
+      schoolName: schoolName,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      roles: roles ?? this.roles,
+      photoUrl: photoUrl ?? this.photoUrl,
+      studentIds: studentIds ?? this.studentIds,
+      studentId: studentId,
+      assignedClass: assignedClass ?? this.assignedClass,
+      subjects: subjects ?? this.subjects,
+      isActive: isActive ?? this.isActive,
+      deactivationReason: deactivationReason ?? this.deactivationReason,
+      mustChangePassword: mustChangePassword ?? this.mustChangePassword,
+      mfaEnabled: mfaEnabled ?? this.mfaEnabled,
+      departmentId: departmentId ?? this.departmentId,
+      designationId: designationId ?? this.designationId,
+      campusId: campusId ?? this.campusId,
+      employmentType: employmentType ?? this.employmentType,
+      dateJoined: dateJoined ?? this.dateJoined,
+      address: address ?? this.address,
+      emergencyContact: emergencyContact ?? this.emergencyContact,
+    );
+  }
 
   @override
   List<Object?> get props => [
@@ -64,7 +132,42 @@ class UserEntity extends Equatable {
     isActive,
     deactivationReason,
     mfaEnabled,
+    departmentId,
+    designationId,
+    campusId,
+    employmentType,
+    dateJoined,
+    address,
+    emergencyContact,
   ];
+}
+
+class StaffEmergencyContact extends Equatable {
+  final String name;
+  final String relationship;
+  final String phoneNumber;
+
+  const StaffEmergencyContact({
+    required this.name,
+    required this.relationship,
+    required this.phoneNumber,
+  });
+
+  @override
+  List<Object?> get props => [name, relationship, phoneNumber];
+
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'relationship': relationship,
+    'phoneNumber': phoneNumber,
+  };
+
+  factory StaffEmergencyContact.fromJson(Map<String, dynamic> json) =>
+      StaffEmergencyContact(
+        name: json['name'] ?? '',
+        relationship: json['relationship'] ?? '',
+        phoneNumber: json['phoneNumber'] ?? '',
+      );
 }
 
 class SubjectAssignment extends Equatable {
