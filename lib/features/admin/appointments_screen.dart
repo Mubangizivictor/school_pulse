@@ -4,7 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/admin/data/models/appointment.dart';
-import 'package:school_pulse/features/admin/data/repositories/visitor_repository.dart';
+import 'package:school_pulse/features/admin/data/repositories/appointment_repository.dart'
+    as admin_appointment;
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/injection_container.dart' as di;
@@ -17,7 +18,7 @@ class AppointmentsScreen extends StatefulWidget {
 }
 
 class _AppointmentsScreenState extends State<AppointmentsScreen> {
-  final _repository = di.sl<VisitorRepository>();
+  final _repository = di.sl<admin_appointment.AppointmentRepository>();
 
   @override
   Widget build(BuildContext context) {
