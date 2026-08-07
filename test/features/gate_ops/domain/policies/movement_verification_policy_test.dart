@@ -3,9 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:school_pulse/core/permissions/permission.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
-import 'package:school_pulse/features/security/domain/entities/security_entities.dart';
-import 'package:school_pulse/features/security/domain/policies/gate_verification_policy.dart';
-import 'package:school_pulse/features/security/domain/repositories/security_repository.dart';
+import 'package:school_pulse/features/gate_ops/domain/entities/gate.dart';
+import 'package:school_pulse/features/gate_ops/domain/entities/movement_event.dart';
+import 'package:school_pulse/features/gate_ops/domain/policies/movement_verification_policy.dart';
+import 'package:school_pulse/features/gate_ops/domain/repositories/gate_ops_repository.dart';
 import 'package:school_pulse/features/verification/domain/entities/resolved_identity.dart';
 import 'package:school_pulse/features/verification/domain/entities/verification_context.dart';
 import 'package:school_pulse/features/verification/domain/entities/verification_decision.dart';
@@ -13,12 +14,12 @@ import 'package:school_pulse/features/verification/domain/repositories/permissio
 
 class MockPermissionEvaluator extends Mock implements PermissionEvaluator {}
 
-class MockSecurityRepository extends Mock implements SecurityRepository {}
+class MockGateOpsRepository extends Mock implements GateOpsRepository {}
 
 void main() {
-  late GateVerificationPolicy policy;
+  late MovementVerificationPolicy policy;
   late MockPermissionEvaluator permissionEvaluator;
-  late MockSecurityRepository securityRepository;
+  late MockGateOpsRepository gateOpsRepository;
 
   const gate = Gate(
     id: 'gate-1',
@@ -62,10 +63,10 @@ void main() {
 
   setUp(() {
     permissionEvaluator = MockPermissionEvaluator();
-    securityRepository = MockSecurityRepository();
-    policy = GateVerificationPolicy(
+    gateOpsRepository = MockGateOpsRepository();
+    policy = MovementVerificationPolicy(
       permissionEvaluator: permissionEvaluator,
-      securityRepository: securityRepository,
+      gateOpsRepository: gateOpsRepository,
     );
   });
 
@@ -157,10 +158,11 @@ void main() {
         ),
       ).thenAnswer((_) async => const Right(true));
       when(
-        () => securityRepository.watchStudentMovements(
+        () => gateOpsRepository.watchMovementEvents(
           'school-1',
-          date: any(named: 'date'),
+          personType: PersonType.student,
           gateId: 'gate-1',
+          date: any(named: 'date'),
         ),
       ).thenAnswer((_) => Stream.value(const []));
 
@@ -183,26 +185,31 @@ void main() {
         ),
       ).thenAnswer((_) async => const Right(true));
       when(
-        () => securityRepository.watchStudentMovements(
+        () => gateOpsRepository.watchMovementEvents(
           'school-1',
-          date: any(named: 'date'),
+          personType: PersonType.student,
           gateId: 'gate-1',
+          date: any(named: 'date'),
         ),
       ).thenAnswer(
         (_) => Stream.value([
-          StudentMovement(
+          MovementEvent(
             id: 'm1',
-            studentId: 'student-1',
-            studentName: 'Jane Student',
-            className: 'class-1',
-            timestamp: DateTime(2026, 1, 1, 7),
-            gateId: 'gate-1',
-            direction: 'In',
-            movementType: 'Arrival',
-            verificationMethod: 'QR Student ID',
-            officerId: 'op-1',
-            deviceId: 'device-1',
             schoolId: 'school-1',
+            gateId: 'gate-1',
+            personType: PersonType.student,
+            personId: 'student-1',
+            personName: 'Jane Student',
+            direction: MovementDirection.in_,
+            movementType: 'Arrival',
+            verificationMethod: VerificationMethod.qr,
+            officerId: 'op-1',
+            officerRole: 'gatekeeper',
+            deviceId: 'device-1',
+            platform: 'ios',
+            appVersion: '',
+            actionTimestamp: DateTime(2026, 1, 1, 7),
+            syncStatus: SyncStatus.pending,
           ),
         ]),
       );

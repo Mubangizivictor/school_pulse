@@ -10,7 +10,7 @@ import 'package:school_pulse/features/student_identity/domain/repositories/stude
 import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source.dart';
 import 'package:school_pulse/features/verification/domain/entities/scan_credential.dart';
 import 'package:school_pulse/features/verification/domain/entities/verification_context.dart';
-import 'package:school_pulse/features/security/domain/entities/security_entities.dart';
+import 'package:school_pulse/features/gate_ops/domain/entities/gate.dart';
 import 'package:school_pulse/core/services/nfc/nfc_credential_reader_adapter.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 import '../../data/datasources/device_id_provider.dart';

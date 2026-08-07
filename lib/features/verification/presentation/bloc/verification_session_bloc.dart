@@ -1,9 +1,11 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import 'package:school_pulse/core/error/failures.dart';
-import 'package:school_pulse/features/security/domain/entities/security_entities.dart';
-import 'package:school_pulse/features/security/domain/usecases/security_usecases.dart';
-import 'package:school_pulse/features/security/presentation/gatekeeper/gatekeeper_shared.dart';
+import 'package:school_pulse/features/gate_ops/domain/entities/movement_event.dart';
+import 'package:school_pulse/features/gate_ops/domain/policies/movement_direction_heuristics.dart';
+import 'package:school_pulse/features/gate_ops/domain/usecases/record_movement_event.dart';
 import 'package:school_pulse/features/verification/domain/entities/resolved_identity.dart';
 import 'package:school_pulse/features/verification/domain/entities/scan_credential.dart';
 import 'package:school_pulse/features/verification/domain/entities/verification_decision.dart';
@@ -16,28 +18,25 @@ import 'package:school_pulse/features/verification/presentation/bloc/verificatio
 
 /// Owns scan -> resolve -> decide -> record -> feedback for one
 /// verification attempt. On an `allowed` outcome that the operator
-/// confirms a direction for, this also calls the EXISTING
-/// `RecordStudentMovement`/`RecordStaffMovement` usecases so gate
-/// movement-log behavior (dashboard stats, reports, everything
-/// downstream) stays exactly as it is today - this bloc adds an audit
-/// trail and permission/duplicate policy on top, it doesn't replace
-/// movement recording.
+/// confirms a direction for, this also calls [RecordMovementEvent] so
+/// gate movement-log behavior (dashboard stats, reports, everything
+/// downstream) stays consistent regardless of person type - this bloc
+/// adds an audit trail and permission/duplicate policy on top, it
+/// doesn't replace movement recording.
 class VerificationSessionBloc
     extends Bloc<VerificationSessionEvent, VerificationSessionState> {
   final IdentityResolver identityResolver;
   final VerificationPolicyEvaluator policyEvaluator;
   final VerificationEventRecorder eventRecorder;
   final VerificationFeedbackService feedbackService;
-  final RecordStudentMovement recordStudentMovement;
-  final RecordStaffMovement recordStaffMovement;
+  final RecordMovementEvent recordMovementEvent;
 
   VerificationSessionBloc({
     required this.identityResolver,
     required this.policyEvaluator,
     required this.eventRecorder,
     required this.feedbackService,
-    required this.recordStudentMovement,
-    required this.recordStaffMovement,
+    required this.recordMovementEvent,
   }) : super(const VerificationIdle()) {
     on<VerificationCredentialCaptured>(_onCredentialCaptured);
     on<VerificationDirectionConfirmed>(_onDirectionConfirmed);
@@ -127,68 +126,83 @@ class VerificationSessionBloc
     final gate = current.context.gate;
     final movementType = computeMovementType(gate, event.direction);
     final operatorId = current.context.operatorUser.id;
+    final operatorRole = current.context.operatorUser.role.name;
     final deviceId = current.context.deviceId;
     final schoolId = gate.schoolId;
     final identity = current.decision.identity;
+    final direction = event.direction == 'Out'
+        ? MovementDirection.out
+        : MovementDirection.in_;
+    final verificationMethod = _verificationMethod(current.credential);
+    final now = DateTime.now();
+    final platform = Platform.isIOS ? 'ios' : 'android';
 
-    final movementResult = switch (identity) {
-      StaffResolvedIdentity() => await recordStaffMovement(
-        StaffMovement(
-          id: const Uuid().v4(),
-          staffId: identity.id,
-          staffName: identity.name,
-          timestamp: DateTime.now(),
-          gateId: gate.id,
-          direction: event.direction,
-          verificationMethod: _verificationMethodLabel(current.credential),
-          officerId: operatorId,
-          schoolId: schoolId,
-        ),
+    final movementEvent = switch (identity) {
+      StaffResolvedIdentity() => MovementEvent(
+        id: const Uuid().v4(),
+        schoolId: schoolId,
+        gateId: gate.id,
+        personType: PersonType.staff,
+        personId: identity.id,
+        personName: identity.name,
+        direction: direction,
+        movementType: movementType,
+        verificationMethod: verificationMethod,
+        officerId: operatorId,
+        officerRole: operatorRole,
+        deviceId: deviceId,
+        platform: platform,
+        appVersion: '',
+        actionTimestamp: now,
+        syncStatus: SyncStatus.pending,
       ),
-      StudentResolvedIdentity() => await recordStudentMovement(
-        StudentMovement(
-          id: const Uuid().v4(),
-          studentId: identity.id,
-          studentName: identity.name,
-          className: identity.classId,
-          timestamp: DateTime.now(),
-          gateId: gate.id,
-          direction: event.direction,
-          movementType: movementType,
-          verificationMethod: _verificationMethodLabel(current.credential),
-          officerId: operatorId,
-          deviceId: deviceId,
-          schoolId: schoolId,
-        ),
+      StudentResolvedIdentity() => MovementEvent(
+        id: const Uuid().v4(),
+        schoolId: schoolId,
+        gateId: gate.id,
+        personType: PersonType.student,
+        personId: identity.id,
+        personName: identity.name,
+        direction: direction,
+        movementType: movementType,
+        verificationMethod: verificationMethod,
+        officerId: operatorId,
+        officerRole: operatorRole,
+        deviceId: deviceId,
+        platform: platform,
+        appVersion: '',
+        actionTimestamp: now,
+        syncStatus: SyncStatus.pending,
       ),
-      ParentPickupResolvedIdentity() => await recordStudentMovement(
-        StudentMovement(
-          id: const Uuid().v4(),
-          studentId: identity.childId,
-          studentName: identity.childName,
-          className: '',
-          timestamp: DateTime.now(),
-          gateId: gate.id,
-          direction: event.direction,
-          movementType: event.direction == 'Out'
-              ? 'Authorized Pickup'
-              : movementType,
-          verificationMethod: 'Parent Code Verification',
-          officerId: operatorId,
-          deviceId: deviceId,
-          schoolId: schoolId,
-          pickupDetails: {
-            'parentCode': identity.parentCode,
-            if (identity.parentName != null) 'parentName': identity.parentName,
-            if (identity.phoneNumber != null)
-              'phoneNumber': identity.phoneNumber,
-          },
-        ),
+      ParentPickupResolvedIdentity() => MovementEvent(
+        id: const Uuid().v4(),
+        schoolId: schoolId,
+        gateId: gate.id,
+        personType: PersonType.pickup,
+        personId: identity.childId,
+        personName: identity.childName,
+        direction: direction,
+        movementType: event.direction == 'Out'
+            ? 'Authorized Pickup'
+            : movementType,
+        verificationMethod: VerificationMethod.parentCode,
+        officerId: operatorId,
+        officerRole: operatorRole,
+        deviceId: deviceId,
+        platform: platform,
+        appVersion: '',
+        actionTimestamp: now,
+        syncStatus: SyncStatus.pending,
+        pickupParentCode: identity.parentCode,
+        pickupParentName: identity.parentName,
+        pickupPhoneNumber: identity.phoneNumber,
       ),
       UnresolvedResolvedIdentity() => throw StateError(
         'unreachable: allowed outcome implies a resolved identity',
       ),
     };
+
+    final movementResult = await recordMovementEvent(movementEvent);
 
     if (movementResult.isLeft()) {
       await feedbackService.playError();
@@ -219,13 +233,13 @@ class VerificationSessionBloc
     );
   }
 
-  String _verificationMethodLabel(ScanCredential credential) =>
+  VerificationMethod _verificationMethod(ScanCredential credential) =>
       switch (credential) {
-        QrScanCredential() => 'QR Student ID',
-        NfcScanCredential() => 'NFC Card',
-        ManualCodeScanCredential() => 'Manual Search',
-        StaffLookupScanCredential() => 'Staff ID',
-        ParentCodeScanCredential() => 'Parent Code Verification',
-        FingerprintScanCredential() => 'Fingerprint',
+        QrScanCredential() => VerificationMethod.qr,
+        NfcScanCredential() => VerificationMethod.nfc,
+        ManualCodeScanCredential() => VerificationMethod.manualCode,
+        StaffLookupScanCredential() => VerificationMethod.staffLookup,
+        ParentCodeScanCredential() => VerificationMethod.parentCode,
+        FingerprintScanCredential() => VerificationMethod.fingerprint,
       };
 }

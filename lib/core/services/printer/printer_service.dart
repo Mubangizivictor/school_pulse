@@ -1,21 +1,20 @@
-import 'dart:typed_data';
 import 'package:blue_thermal_printer/blue_thermal_printer.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/features/finance/domain/entities/payment_record.dart';
 import 'package:school_pulse/features/library/domain/entities/library_resource.dart';
-import 'package:school_pulse/features/visitors/domain/entities/visitor.dart';
 
 /// Abstract interface for Printer Services to allow swapping between different
 /// SDKs (Zebra, Brother, Sunmi, etc.) or network printers.
+///
+/// Visitor badge printing was removed with the deleted `visitors` module -
+/// it's out of scope for the gate_ops rebuild's first phase and will be
+/// reintroduced against the new minimal Visitor entity in a later phase.
 abstract class PrinterService {
   Future<bool> isConnected();
   Future<List<PrinterDevice>> discoverPrinters();
   Future<bool> connect(PrinterDevice device);
   Future<bool> disconnect();
-
-  /// Prints a visitor badge using raw data or a generated image
-  Future<bool> printVisitorBadge(Visitor visitor, {Uint8List? badgeImage});
 
   /// Prints a fee payment receipt
   Future<bool> printFeeReceipt(
@@ -97,99 +96,6 @@ class ThermalPrinterService implements PrinterService {
       return true;
     } catch (e) {
       debugPrint('Error disconnecting: $e');
-      return false;
-    }
-  }
-
-  @override
-  Future<bool> printVisitorBadge(
-    Visitor visitor, {
-    Uint8List? badgeImage,
-  }) async {
-    bool? connected = await bluetooth.isConnected;
-    if (connected != true) return false;
-
-    try {
-      // Print Header
-      bluetooth.printNewLine();
-      bluetooth.printCustom("VISITOR PASS", 3, 1); // Size 3, Center
-      bluetooth.printCustom("--------------------------------", 1, 1);
-
-      // Visitor Name
-      bluetooth.printCustom(visitor.fullName.toUpperCase(), 2, 1);
-      bluetooth.printNewLine();
-
-      // Badge Details
-      bluetooth.printLeftRight(
-        "Category:",
-        visitor.category.name.toUpperCase(),
-        1,
-      );
-      bluetooth.printLeftRight("Phone:", visitor.phone, 1);
-      if (visitor.company != null) {
-        bluetooth.printLeftRight("Company:", visitor.company!, 1);
-      }
-
-      bluetooth.printCustom("--------------------------------", 1, 1);
-
-      // Host and Department
-      bluetooth.printLeftRight("Visiting:", visitor.host, 1);
-      bluetooth.printLeftRight("Dept:", visitor.department, 1);
-
-      // Time In
-      final timeFormatter = DateFormat('dd MMM yyyy, HH:mm');
-      bluetooth.printLeftRight(
-        "In:",
-        timeFormatter.format(visitor.arrivalTime),
-        1,
-      );
-
-      final expiry =
-          visitor.expectedDepartureTime ??
-          DateTime(
-            visitor.arrivalTime.year,
-            visitor.arrivalTime.month,
-            visitor.arrivalTime.day,
-            23,
-            59,
-          );
-      bluetooth.printLeftRight("Expires:", timeFormatter.format(expiry), 1);
-
-      if (visitor.gateId != null) {
-        bluetooth.printLeftRight("Gate:", visitor.gateId!, 1);
-      }
-
-      if (visitor.vehicleNumber != null) {
-        bluetooth.printLeftRight("Vehicle:", visitor.vehicleNumber!, 1);
-      }
-      if (visitor.parkingSlot != null) {
-        bluetooth.printLeftRight("Parking:", visitor.parkingSlot!, 1);
-      }
-      if (visitor.badgeNumber.isNotEmpty) {
-        bluetooth.printLeftRight("Badge #:", visitor.badgeNumber, 1);
-      }
-
-      bluetooth.printNewLine();
-
-      // Purpose
-      bluetooth.printCustom("Purpose: ${visitor.purpose}", 1, 0);
-
-      bluetooth.printNewLine();
-      bluetooth.printCustom("VALID UNTIL EXPIRY ABOVE", 1, 1);
-
-      // QR Code (Visitor ID for checkout)
-      bluetooth.printQRcode(visitor.id, 200, 200, 1);
-
-      bluetooth.printNewLine();
-      bluetooth.printNewLine();
-      bluetooth.printNewLine();
-
-      // Cut paper (if supported)
-      bluetooth.paperCut();
-
-      return true;
-    } catch (e) {
-      debugPrint('Error printing badge: $e');
       return false;
     }
   }

@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
-import 'package:school_pulse/features/security/domain/entities/security_entities.dart';
+import 'package:school_pulse/features/gate_ops/domain/entities/gate.dart';
 
 /// Everything a verification attempt needs before a single credential is
 /// scanned. The module that opens the scan session (Security/Gate, in

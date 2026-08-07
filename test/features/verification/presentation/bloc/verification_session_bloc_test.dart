@@ -4,8 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
-import 'package:school_pulse/features/security/domain/entities/security_entities.dart';
-import 'package:school_pulse/features/security/domain/usecases/security_usecases.dart';
+import 'package:school_pulse/features/gate_ops/domain/entities/gate.dart';
+import 'package:school_pulse/features/gate_ops/domain/entities/movement_event.dart';
+import 'package:school_pulse/features/gate_ops/domain/usecases/record_movement_event.dart';
 import 'package:school_pulse/features/verification/domain/entities/resolved_identity.dart';
 import 'package:school_pulse/features/verification/domain/entities/scan_credential.dart';
 import 'package:school_pulse/features/verification/domain/entities/verification_context.dart';
@@ -29,17 +30,14 @@ class MockVerificationEventRecorder extends Mock
 class MockVerificationFeedbackService extends Mock
     implements VerificationFeedbackService {}
 
-class MockRecordStudentMovement extends Mock implements RecordStudentMovement {}
-
-class MockRecordStaffMovement extends Mock implements RecordStaffMovement {}
+class MockRecordMovementEvent extends Mock implements RecordMovementEvent {}
 
 void main() {
   late MockIdentityResolver identityResolver;
   late MockVerificationPolicyEvaluator policyEvaluator;
   late MockVerificationEventRecorder eventRecorder;
   late MockVerificationFeedbackService feedbackService;
-  late MockRecordStudentMovement recordStudentMovement;
-  late MockRecordStaffMovement recordStaffMovement;
+  late MockRecordMovementEvent recordMovementEvent;
 
   const gate = Gate(
     id: 'gate-1',
@@ -86,8 +84,7 @@ void main() {
     policyEvaluator: policyEvaluator,
     eventRecorder: eventRecorder,
     feedbackService: feedbackService,
-    recordStudentMovement: recordStudentMovement,
-    recordStaffMovement: recordStaffMovement,
+    recordMovementEvent: recordMovementEvent,
   );
 
   setUpAll(() {
@@ -102,19 +99,23 @@ void main() {
       ),
     );
     registerFallbackValue(
-      StudentMovement(
+      MovementEvent(
         id: 'fallback',
-        studentId: 'fallback',
-        studentName: 'fallback',
-        className: 'fallback',
-        timestamp: DateTime.now(),
-        gateId: 'fallback',
-        direction: 'In',
-        movementType: 'Arrival',
-        verificationMethod: 'fallback',
-        officerId: 'fallback',
-        deviceId: 'fallback',
         schoolId: 'fallback',
+        gateId: 'fallback',
+        personType: PersonType.student,
+        personId: 'fallback',
+        personName: 'fallback',
+        direction: MovementDirection.in_,
+        movementType: 'Arrival',
+        verificationMethod: VerificationMethod.qr,
+        officerId: 'fallback',
+        officerRole: 'fallback',
+        deviceId: 'fallback',
+        platform: 'ios',
+        appVersion: '',
+        actionTimestamp: DateTime.now(),
+        syncStatus: SyncStatus.pending,
       ),
     );
   });
@@ -124,15 +125,14 @@ void main() {
     policyEvaluator = MockVerificationPolicyEvaluator();
     eventRecorder = MockVerificationEventRecorder();
     feedbackService = MockVerificationFeedbackService();
-    recordStudentMovement = MockRecordStudentMovement();
-    recordStaffMovement = MockRecordStaffMovement();
+    recordMovementEvent = MockRecordMovementEvent();
 
     when(() => feedbackService.playApproved()).thenAnswer((_) async {});
     when(() => feedbackService.playDenied()).thenAnswer((_) async {});
     when(() => feedbackService.playDuplicate()).thenAnswer((_) async {});
     when(() => feedbackService.playError()).thenAnswer((_) async {});
     when(
-      () => recordStudentMovement(any()),
+      () => recordMovementEvent(any()),
     ).thenAnswer((_) async => const Right(null));
     when(
       () => eventRecorder.record(
@@ -219,12 +219,12 @@ void main() {
     ],
     verify: (_) {
       verify(() => feedbackService.playDenied()).called(1);
-      verifyNever(() => recordStudentMovement(any()));
+      verifyNever(() => recordMovementEvent(any()));
     },
   );
 
   blocTest<VerificationSessionBloc, VerificationSessionState>(
-    'records the student movement and the audit event once the operator confirms a direction',
+    'records the movement event and the audit event once the operator confirms a direction',
     build: () {
       when(
         () => identityResolver.resolve(any(), any()),
@@ -263,7 +263,7 @@ void main() {
     ],
     verify: (_) {
       verify(
-        () => recordStudentMovement(any(that: isA<StudentMovement>())),
+        () => recordMovementEvent(any(that: isA<MovementEvent>())),
       ).called(1);
       verify(
         () => eventRecorder.record(
@@ -298,7 +298,7 @@ void main() {
         ),
       );
       when(
-        () => recordStudentMovement(any()),
+        () => recordMovementEvent(any()),
       ).thenAnswer((_) async => const Left(ServerFailure('write failed')));
       return buildBloc();
     },

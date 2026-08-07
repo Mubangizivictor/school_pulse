@@ -5,6 +5,8 @@ import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/login_flow/welcome_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/parent_login_screens.dart';
 import 'package:school_pulse/features/auth/login_flow/staff_login_screens.dart';
+import 'package:school_pulse/features/auth/login_flow/mfa_challenge_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:school_pulse/features/auth/login_flow/student_login_screen.dart';
 import 'package:school_pulse/features/shared/boarding/dorm_screens.dart';
 import 'package:school_pulse/features/matron/presentation/screens/dormitory_management_screen.dart'
@@ -157,13 +159,9 @@ import 'package:school_pulse/features/patron/presentation/screens/reports_screen
     as patron_scr;
 import 'package:school_pulse/features/catering/presentation/catering_dashboard_screen.dart';
 import 'package:school_pulse/features/catering/presentation/screens/catering_student_lookup_screen.dart';
-import 'package:school_pulse/features/security/presentation/security_dashboard_screen.dart';
-import 'package:school_pulse/features/security/presentation/gatekeeper/gatekeeper_home_screen.dart';
-import 'package:school_pulse/features/security/presentation/screens/gate_management_screen.dart';
-import 'package:school_pulse/features/security/presentation/screens/lost_and_found_screen.dart';
-import 'package:school_pulse/features/security/presentation/screens/patrol_log_screen.dart';
-import 'package:school_pulse/features/security/presentation/screens/admin_security_settings_screen.dart';
-import 'package:school_pulse/features/security/presentation/screens/security_reports_screen.dart';
+import 'package:school_pulse/features/gate_ops/presentation/home/gatekeeper_home_screen.dart';
+import 'package:school_pulse/features/gate_ops/presentation/home/gate_ops_minimal_dashboard_screen.dart';
+import 'package:school_pulse/features/gate_ops/presentation/pickup/pickup_release_screen.dart';
 import 'package:school_pulse/features/transport/presentation/transport_coordinator_dashboard_screen.dart';
 import 'package:school_pulse/features/transport/presentation/screens/transport_student_lookup_screen.dart';
 import 'package:school_pulse/features/discipline/presentation/discipline_dashboard_screen.dart';
@@ -185,14 +183,6 @@ import 'package:school_pulse/features/student_identity/presentation/screens/stud
 import 'package:school_pulse/features/student_identity/presentation/screens/batch_id_card_screen.dart';
 import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/super_admin_dashboard.dart';
-import 'package:school_pulse/features/visitors/domain/entities/visitor.dart';
-import 'package:school_pulse/features/visitors/domain/entities/pre_approved_visitor.dart';
-import 'package:school_pulse/features/visitors/presentation/pages/visitor_dashboard_screen.dart';
-import 'package:school_pulse/features/visitors/presentation/pages/visitor_check_in_screen.dart';
-import 'package:school_pulse/features/visitors/presentation/pages/visitor_scanner_screen.dart';
-import 'package:school_pulse/features/visitors/presentation/pages/visitor_details_screen.dart';
-import 'package:school_pulse/features/visitors/presentation/pages/student_pickup_page.dart';
-import 'package:school_pulse/features/security/presentation/screens/pickup_authorizations_screen.dart';
 import 'package:school_pulse/features/games/presentation/screens/games_dashboard_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/dean_dashboard_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/approvals/report_approval_screen.dart';
@@ -482,6 +472,11 @@ final router = GoRouter(
     GoRoute(
       path: '/staff/login',
       builder: (context, state) => const StaffCredentialsScreen(),
+    ),
+    GoRoute(
+      path: '/auth/mfa-challenge',
+      builder: (context, state) =>
+          MfaChallengeScreen(resolver: state.extra as MultiFactorResolver),
     ),
     GoRoute(
       path: '/student/login',
@@ -956,60 +951,17 @@ final router = GoRouter(
                 );
             return isGatekeeper
                 ? const GatekeeperHomeScreen()
-                : const SecurityDashboardScreen();
+                : const GateOpsMinimalDashboardScreen();
           },
           routes: [
             GoRoute(
-              path: 'gates',
-              builder: (context, state) => const GateManagementScreen(),
-            ),
-            GoRoute(
               path: 'pickup',
-              builder: (context, state) => const StudentPickupPage(),
+              builder: (context, state) => const PickupReleaseScreen(),
             ),
-            GoRoute(
-              path: 'pickup-authorizations',
-              builder: (context, state) => const PickupAuthorizationsScreen(),
-            ),
-            GoRoute(
-              path: 'lost-and-found',
-              builder: (context, state) => const LostAndFoundScreen(),
-            ),
-            GoRoute(
-              path: 'patrols',
-              builder: (context, state) => const PatrolLogScreen(),
-            ),
-            GoRoute(
-              path: 'settings',
-              builder: (context, state) => const AdminSecuritySettingsScreen(),
-            ),
-            GoRoute(
-              path: 'reports',
-              builder: (context, state) => const SecurityReportsScreen(),
-            ),
-            GoRoute(
-              path: 'visitors',
-              builder: (context, state) => const VisitorDashboardScreen(),
-              routes: [
-                GoRoute(
-                  path: 'new',
-                  builder: (context, state) => VisitorCheckInScreen(
-                    preApprovedVisitor: state.extra as PreApprovedVisitor?,
-                  ),
-                ),
-                GoRoute(
-                  path: 'scan',
-                  builder: (context, state) => const VisitorScannerScreen(),
-                ),
-                GoRoute(
-                  path: 'details/:id',
-                  builder: (context, state) {
-                    final visitor = state.extra as Visitor;
-                    return VisitorDetailsScreen(visitor: visitor);
-                  },
-                ),
-              ],
-            ),
+            // gates, pickup-authorizations, lost-and-found, patrols,
+            // settings, reports, visitors/* are out of scope for the
+            // Gatekeeper Simple Mode rebuild's first phase and are
+            // reintroduced in later phases.
           ],
         ),
         GoRoute(

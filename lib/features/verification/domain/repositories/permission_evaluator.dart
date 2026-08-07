@@ -1,7 +1,7 @@
 import 'package:dartz/dartz.dart';
 import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
-import 'package:school_pulse/features/security/domain/entities/security_entities.dart';
+import 'package:school_pulse/features/gate_ops/domain/entities/gate.dart';
 
 /// Checks whether an operator holds a given permission, optionally scoped
 /// to a specific [Gate] (or, in later phases, any other assignable

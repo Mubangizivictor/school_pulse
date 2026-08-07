@@ -26,24 +26,32 @@ import 'package:school_pulse/features/appointments/data/repositories/appointment
 import 'package:school_pulse/features/appointments/data/datasources/appointment_remote_data_source.dart';
 import 'package:school_pulse/features/appointments/presentation/bloc/appointment_settings_bloc.dart';
 import 'package:school_pulse/features/appointments/presentation/bloc/appointment_action_bloc.dart';
-import 'package:school_pulse/features/visitors/domain/usecases/visitor_usecases.dart';
-import 'package:school_pulse/features/visitors/domain/repositories/visitor_repository.dart'
-    as visitor_domain;
-import 'package:school_pulse/features/visitors/data/repositories/visitor_repository_impl.dart';
-import 'package:school_pulse/features/visitors/data/datasources/visitor_local_data_source.dart';
-import 'package:school_pulse/features/visitors/data/datasources/visitor_remote_data_source.dart';
-import 'package:school_pulse/features/visitors/presentation/bloc/visitors_bloc.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:school_pulse/core/access/effective_access_resolver.dart';
 import 'package:school_pulse/core/utils/device_id_service.dart';
-import 'package:school_pulse/features/visitors/data/models/visitor_isar.dart';
-import 'package:school_pulse/features/visitors/data/models/visitor_blacklist_isar.dart';
-import 'package:school_pulse/features/visitors/data/models/pre_approved_visitor_isar.dart';
-import 'package:school_pulse/features/visitors/data/models/scheduled_visit_isar.dart';
-import 'package:school_pulse/features/visitors/data/models/package_delivery_isar.dart';
 import 'package:school_pulse/core/services/printer/printer_service.dart';
+import 'package:school_pulse/features/gate_ops/domain/repositories/gate_ops_repository.dart';
+import 'package:school_pulse/features/gate_ops/domain/usecases/watch_gates.dart';
+import 'package:school_pulse/features/gate_ops/domain/usecases/record_movement_event.dart';
+import 'package:school_pulse/features/gate_ops/domain/usecases/watch_movement_events.dart';
+import 'package:school_pulse/features/gate_ops/domain/usecases/check_in_visitor.dart';
+import 'package:school_pulse/features/gate_ops/domain/usecases/check_out_visitor.dart';
+import 'package:school_pulse/features/gate_ops/domain/usecases/watch_visitors.dart';
+import 'package:school_pulse/features/gate_ops/domain/usecases/report_incident.dart';
+import 'package:school_pulse/features/gate_ops/domain/usecases/trigger_emergency.dart';
+import 'package:school_pulse/features/gate_ops/domain/usecases/resolve_emergency.dart';
+import 'package:school_pulse/features/gate_ops/domain/usecases/watch_active_emergencies.dart';
+import 'package:school_pulse/features/gate_ops/domain/usecases/get_gate_ops_dashboard_stats.dart';
+import 'package:school_pulse/features/gate_ops/domain/usecases/get_pickup_authorizations.dart';
+import 'package:school_pulse/features/gate_ops/domain/usecases/add_pickup_authorization.dart';
+import 'package:school_pulse/features/gate_ops/data/sync/movement_sync_engine.dart';
+import 'package:school_pulse/features/gate_ops/data/repositories/gate_ops_repository_impl.dart';
+import 'package:school_pulse/features/gate_ops/data/datasources/gate_ops_remote_data_source.dart';
+import 'package:school_pulse/features/gate_ops/data/datasources/gate_ops_local_data_source.dart';
+import 'package:school_pulse/features/gate_ops/data/models/gate_ops_isar_models.dart';
+import 'package:school_pulse/features/gate_ops/domain/policies/movement_verification_policy.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -146,7 +154,6 @@ import 'package:school_pulse/features/student_identity/data/repositories/student
 import 'package:school_pulse/features/student_identity/presentation/bloc/student_identity_bloc.dart';
 import 'package:school_pulse/features/student_identity/domain/services/id_card_service.dart';
 import 'package:school_pulse/features/auth/domain/services/staff_id_card_service.dart';
-import 'package:school_pulse/features/visitors/domain/services/visitor_id_card_service.dart';
 import 'package:school_pulse/features/student_identity/domain/services/id_generator_service.dart';
 import 'package:school_pulse/features/student_identity/domain/services/nfc_credential_service.dart';
 
@@ -288,15 +295,6 @@ import 'package:school_pulse/features/religion/domain/repositories/religion_repo
 import 'package:school_pulse/features/religion/data/repositories/religion_repository_impl.dart';
 import 'package:school_pulse/features/religion/data/datasources/religion_remote_data_source.dart';
 import 'package:school_pulse/features/religion/presentation/bloc/religion_bloc.dart';
-
-// Security
-import 'package:school_pulse/features/security/domain/repositories/security_repository.dart';
-import 'package:school_pulse/features/security/domain/usecases/security_usecases.dart';
-import 'package:school_pulse/features/security/data/repositories/security_repository_impl.dart';
-import 'package:school_pulse/features/security/data/datasources/security_remote_data_source.dart';
-import 'package:school_pulse/features/security/data/datasources/security_local_data_source.dart';
-import 'package:school_pulse/features/security/presentation/bloc/security_bloc.dart';
-import 'package:school_pulse/features/security/data/models/security_isar_models.dart';
 
 // Teacher
 import 'package:school_pulse/features/teacher/domain/repositories/teacher_repository.dart';
@@ -470,7 +468,6 @@ import 'package:school_pulse/features/verification/presentation/bloc/verificatio
 import 'package:school_pulse/features/verification/presentation/bloc/credential_scan_bloc.dart';
 import 'package:school_pulse/features/verification/domain/repositories/credential_reader_adapter.dart';
 import 'package:school_pulse/core/services/nfc/nfc_credential_reader_adapter.dart';
-import 'package:school_pulse/features/security/domain/policies/gate_verification_policy.dart';
 
 final sl = GetIt.instance;
 
@@ -511,73 +508,41 @@ Future<void> init() async {
     () => AssessmentLocalDataSourceImpl(isar: sl()),
   );
 
-  // Features - Visitors
-  sl.registerFactory(
-    () => VisitorsBloc(
-      getVisitors: sl(),
-      watchVisitors: sl(),
-      checkInVisitor: sl(),
-      checkOutVisitor: sl(),
-      searchVisitors: sl(),
-      getVisitorBlacklist: sl(),
-      addToBlacklist: sl(),
-      getPreApprovedVisitors: sl(),
-      markPreApprovedAsUsed: sl(),
-      syncVisitors: sl(),
-      getActiveVisitors: sl(),
-      getOverstayedVisitors: sl(),
-      getScheduledVisits: sl(),
-      approveScheduledVisit: sl(),
-      rejectScheduledVisit: sl(),
-      checkInScheduledVisit: sl(),
-      logPackageDelivery: sl(),
-      getPackageDeliveries: sl(),
-      markPackageAsCollected: sl(),
-      exportVisitorsToSheets: sl(),
-      reissueBadge: sl(),
-    ),
-  );
-
-  // Use cases
-  sl.registerLazySingleton(() => GetVisitors(sl()));
-  sl.registerLazySingleton(() => WatchVisitors(sl()));
+  // Features - Gate Operations (Gatekeeper Simple Mode rebuild)
+  // Note: GateOpsBloc itself is registered once the presentation layer
+  // lands in a later commit - these usecases/repository are needed now
+  // because MovementVerificationPolicy and VerificationSessionBloc
+  // already depend on them.
+  sl.registerLazySingleton(() => WatchGates(sl()));
+  sl.registerLazySingleton(() => RecordMovementEvent(sl()));
+  sl.registerLazySingleton(() => WatchMovementEvents(sl()));
   sl.registerLazySingleton(() => CheckInVisitor(sl()));
   sl.registerLazySingleton(() => CheckOutVisitor(sl()));
-  sl.registerLazySingleton(() => SearchVisitors(sl()));
-  sl.registerLazySingleton(() => GetVisitorBlacklist(sl()));
-  sl.registerLazySingleton(() => AddToBlacklist(sl()));
-  sl.registerLazySingleton(() => GetPreApprovedVisitors(sl()));
-  sl.registerLazySingleton(() => MarkPreApprovedAsUsed(sl()));
-  sl.registerLazySingleton(() => SyncVisitors(sl()));
-  sl.registerLazySingleton(() => GetActiveVisitors(sl()));
-  sl.registerLazySingleton(() => GetOverstayedVisitors(sl()));
-  sl.registerLazySingleton(() => GetScheduledVisits(sl()));
-  sl.registerLazySingleton(() => ApproveScheduledVisit(sl()));
-  sl.registerLazySingleton(() => RejectScheduledVisit(sl()));
-  sl.registerLazySingleton(() => CheckInScheduledVisit(sl()));
-  sl.registerLazySingleton(() => LogPackageDelivery(sl()));
-  sl.registerLazySingleton(() => GetPackageDeliveries(sl()));
-  sl.registerLazySingleton(() => MarkPackageAsCollected(sl()));
-  sl.registerLazySingleton(() => ExportVisitorsToSheets(sl()));
-  sl.registerLazySingleton(() => ReissueBadge(sl()));
+  sl.registerLazySingleton(() => WatchVisitors(sl()));
+  sl.registerLazySingleton(() => ReportIncident(sl()));
+  sl.registerLazySingleton(() => TriggerEmergency(sl()));
+  sl.registerLazySingleton(() => ResolveEmergency(sl()));
+  sl.registerLazySingleton(() => WatchActiveEmergencies(sl()));
+  sl.registerLazySingleton(() => GetGateOpsDashboardStats(sl()));
+  sl.registerLazySingleton(() => GetPickupAuthorizations(sl()));
+  sl.registerLazySingleton(() => AddPickupAuthorization(sl()));
 
-  // Repository
-  sl.registerLazySingleton<visitor_domain.VisitorRepository>(
-    () => VisitorRepositoryImpl(
-      localDataSource: sl(),
+  sl.registerLazySingleton(
+    () => MovementSyncEngine(networkInfo: sl(), firestore: sl(), storage: sl()),
+  );
+  sl.registerLazySingleton<GateOpsRepository>(
+    () => GateOpsRepositoryImpl(
       remoteDataSource: sl(),
+      localDataSource: sl(),
       networkInfo: sl(),
-      storage: sl(),
-      googleSheetsService: sl(),
+      syncEngine: sl(),
     ),
   );
-
-  // Data sources
-  sl.registerLazySingleton<VisitorLocalDataSource>(
-    () => VisitorLocalDataSourceImpl(sl()),
+  sl.registerLazySingleton<GateOpsRemoteDataSource>(
+    () => GateOpsRemoteDataSourceImpl(firestore: sl()),
   );
-  sl.registerLazySingleton<VisitorRemoteDataSource>(
-    () => VisitorRemoteDataSourceImpl(sl()),
+  sl.registerLazySingleton<GateOpsLocalDataSource>(
+    () => GateOpsLocalDataSourceImpl(sl()),
   );
 
   // Features - Appointments & Meeting Management
@@ -718,7 +683,6 @@ Future<void> init() async {
   // "type IdCardService is not registered" the moment anyone pressed it.
   sl.registerLazySingleton(() => IdCardService());
   sl.registerLazySingleton(() => StaffIdCardService());
-  sl.registerLazySingleton(() => VisitorIdCardService());
 
   sl.registerLazySingleton<StudentIdentityRepository>(
     () => StudentIdentityRepositoryImpl(
@@ -1259,70 +1223,6 @@ Future<void> init() async {
     () => ReligionRemoteDataSourceImpl(firestore: sl()),
   );
 
-  // Features - Security
-  sl.registerFactory(
-    () => SecurityBloc(
-      watchGates: sl(),
-      createGate: sl(),
-      updateGate: sl(),
-      recordStudentMovement: sl(),
-      watchStudentMovements: sl(),
-      recordStaffMovement: sl(),
-      watchStaffMovements: sl(),
-      reportIncident: sl(),
-      watchIncidents: sl(),
-      updateIncidentStatus: sl(),
-      triggerEmergency: sl(),
-      watchActiveEmergencies: sl(),
-      resolveEmergency: sl(),
-      recordPatrol: sl(),
-      watchPatrols: sl(),
-      getSecurityDashboardStats: sl(),
-      reportFoundItem: sl(),
-      claimItem: sl(),
-      watchLostAndFound: sl(),
-    ),
-  );
-
-  sl.registerLazySingleton(() => WatchGates(sl()));
-  sl.registerLazySingleton(() => CreateGate(sl()));
-  sl.registerLazySingleton(() => UpdateGate(sl()));
-  sl.registerLazySingleton(() => RecordStudentMovement(sl()));
-  sl.registerLazySingleton(() => WatchStudentMovements(sl()));
-  sl.registerLazySingleton(() => RecordStaffMovement(sl()));
-  sl.registerLazySingleton(() => WatchStaffMovements(sl()));
-  sl.registerLazySingleton(() => ReportIncident(sl()));
-  sl.registerLazySingleton(() => WatchIncidents(sl()));
-  sl.registerLazySingleton(() => UpdateIncidentStatus(sl()));
-  sl.registerLazySingleton(() => TriggerEmergency(sl()));
-  sl.registerLazySingleton(() => WatchActiveEmergencies(sl()));
-  sl.registerLazySingleton(() => ResolveEmergency(sl()));
-  sl.registerLazySingleton(() => RecordPatrol(sl()));
-  sl.registerLazySingleton(() => WatchPatrols(sl()));
-  sl.registerLazySingleton(() => GetSecurityDashboardStats(sl()));
-  sl.registerLazySingleton(() => ReportFoundItem(sl()));
-  sl.registerLazySingleton(() => ClaimItem(sl()));
-  sl.registerLazySingleton(() => WatchLostAndFound(sl()));
-  sl.registerLazySingleton(() => GetPickupAuthorizations(sl()));
-  sl.registerLazySingleton(() => AddPickupAuthorization(sl()));
-  sl.registerLazySingleton(() => SyncSecurityData(sl()));
-
-  sl.registerLazySingleton<SecurityRepository>(
-    () => SecurityRepositoryImpl(
-      remoteDataSource: sl(),
-      localDataSource: sl(),
-      networkInfo: sl(),
-    ),
-  );
-
-  sl.registerLazySingleton<SecurityRemoteDataSource>(
-    () => SecurityRemoteDataSourceImpl(firestore: sl()),
-  );
-
-  sl.registerLazySingleton<SecurityLocalDataSource>(
-    () => SecurityLocalDataSourceImpl(isar: sl()),
-  );
-
   // Features - Teacher
   sl.registerFactory(
     () => TeacherBloc(
@@ -1796,8 +1696,7 @@ Future<void> init() async {
       policyEvaluator: sl(),
       eventRecorder: sl(),
       feedbackService: sl(),
-      recordStudentMovement: sl(),
-      recordStaffMovement: sl(),
+      recordMovementEvent: sl(),
     ),
   );
 
@@ -1838,9 +1737,9 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<VerificationPolicyEvaluator>(
-    () => GateVerificationPolicy(
+    () => MovementVerificationPolicy(
       permissionEvaluator: sl(),
-      securityRepository: sl(),
+      gateOpsRepository: sl(),
     ),
   );
 
@@ -1886,11 +1785,6 @@ Future<void> init() async {
   final preferences = await SharedPreferences.getInstance();
   final dir = await getApplicationDocumentsDirectory();
   final isar = await Isar.open([
-    VisitorIsarSchema,
-    VisitorBlacklistIsarSchema,
-    PreApprovedVisitorIsarSchema,
-    ScheduledVisitIsarSchema,
-    PackageDeliveryIsarSchema,
     StudentCacheIsarSchema,
     AttendanceLogIsarSchema,
     AssetIsarSchema,
@@ -1904,13 +1798,10 @@ Future<void> init() async {
     SchoolBrandingIsarSchema,
     BiometricTemplateIsarSchema,
     GateIsarSchema,
+    MovementEventIsarSchema,
+    VisitorIsarSchema,
     SecurityIncidentIsarSchema,
-    StudentMovementIsarSchema,
-    StaffMovementIsarSchema,
     EmergencyEventIsarSchema,
-    SecurityPatrolIsarSchema,
-    LostAndFoundItemIsarSchema,
-    PickupAuthorizationIsarSchema,
     EducationalLevelIsarSchema,
     AcademicYearIsarSchema,
     AcademicTermIsarSchema,

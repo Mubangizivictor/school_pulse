@@ -43,7 +43,6 @@ import 'package:school_pulse/features/inventory/presentation/bloc/stores_assets_
 import 'package:school_pulse/features/structure/presentation/bloc/structure_bloc.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/structure_event.dart';
 import 'package:school_pulse/features/hr/presentation/bloc/hr_bloc.dart';
-import 'package:school_pulse/features/security/presentation/bloc/security_bloc.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
 import 'package:school_pulse/features/religion/presentation/bloc/religion_bloc.dart';
 import 'package:school_pulse/features/exams/presentation/bloc/exams_bloc.dart';
@@ -55,7 +54,6 @@ import 'package:school_pulse/features/admin/presentation/bloc/system_config_bloc
 import 'package:school_pulse/features/admin/presentation/bloc/system_config_event.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/system_config_state.dart';
 import 'package:school_pulse/core/notification/notification_service.dart';
-import 'package:school_pulse/features/visitors/presentation/bloc/visitors_bloc.dart';
 import 'package:school_pulse/features/biometrics/presentation/bloc/biometrics_bloc.dart';
 import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.dart';
 import 'package:school_pulse/features/super_admin/presentation/bloc/super_admin_bloc.dart';
@@ -147,7 +145,6 @@ class SchoolPulseApp extends StatelessWidget {
         ),
         BlocProvider(create: (_) => di.sl<StoresAssetsBloc>()),
         BlocProvider(create: (_) => di.sl<StructureBloc>()),
-        BlocProvider(create: (_) => di.sl<SecurityBloc>()),
         BlocProvider(create: (_) => di.sl<DeanBloc>()),
         BlocProvider(create: (_) => di.sl<ReligionBloc>()),
         BlocProvider(create: (_) => di.sl<ExamsBloc>()),
@@ -159,7 +156,6 @@ class SchoolPulseApp extends StatelessWidget {
         BlocProvider(
           create: (_) => di.sl<SystemConfigBloc>()..add(WatchSystemConfig()),
         ),
-        BlocProvider(create: (_) => di.sl<VisitorsBloc>()),
         BlocProvider(create: (_) => di.sl<BiometricsBloc>()),
         BlocProvider(create: (_) => di.sl<SuperAdminBloc>()),
       ],

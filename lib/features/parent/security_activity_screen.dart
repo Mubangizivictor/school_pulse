@@ -3,30 +3,33 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/gate_ops/domain/entities/movement_event.dart';
+import 'package:school_pulse/features/gate_ops/domain/entities/pickup_authorization.dart';
+import 'package:school_pulse/features/gate_ops/domain/usecases/get_pickup_authorizations.dart';
+import 'package:school_pulse/features/gate_ops/domain/usecases/watch_movement_events.dart';
 import 'package:school_pulse/features/notifications/domain/entities/alert.dart';
 import 'package:school_pulse/features/notifications/domain/usecases/get_alerts.dart';
-import 'package:school_pulse/features/security/domain/entities/security_entities.dart';
-import 'package:school_pulse/features/security/domain/usecases/security_usecases.dart';
-import 'package:school_pulse/features/security/presentation/bloc/security_bloc.dart';
-import 'package:school_pulse/features/security/presentation/bloc/security_event.dart';
-import 'package:school_pulse/features/security/presentation/bloc/security_state.dart';
 import 'package:school_pulse/features/student/presentation/bloc/selected_student_bloc.dart';
 import 'package:school_pulse/features/student/presentation/bloc/selected_student_state.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 import 'widgets/student_app_bar.dart';
 
 /// Parent-facing view of their child's security activity - arrival/
-/// departure log, pickup history, authorized pickup persons, and security
-/// alerts scoped to that child only. Never touches WatchIncidents or any
-/// other cross-student security data.
+/// departure log (including authorized pickups, since those are recorded
+/// as `MovementEvent`s with `personId == studentId` too), pickup history,
+/// authorized pickup persons, and security alerts scoped to that child
+/// only. Never touches cross-student movement/incident data.
 class SecurityActivityScreen extends StatefulWidget {
   const SecurityActivityScreen({super.key});
 
   @override
-  State<SecurityActivityScreen> createState() => _SecurityActivityScreenState();
+  State<SecurityActivityScreen> createState() =>
+      _SecurityActivityScreenState();
 }
 
 class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
+  String? _schoolId;
+  String? _studentId;
   List<PickupAuthorization> _authorizations = [];
   List<Alert> _alerts = [];
   bool _isLoadingExtras = true;
@@ -41,17 +44,15 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
     final studentState = context.read<SelectedStudentBloc>().state;
     final authState = context.read<AuthBloc>().state;
     if (studentState is! SelectedStudentLoaded ||
-        authState is! AuthAuthenticated)
+        authState is! AuthAuthenticated) {
       return;
+    }
 
-    final studentId = studentState.student.id;
-    context.read<SecurityBloc>().add(
-      WatchStudentMovementsRequested(
-        authState.user.schoolId,
-        studentId: studentId,
-      ),
-    );
-    _loadExtras(authState.user.schoolId, studentId);
+    setState(() {
+      _schoolId = authState.user.schoolId;
+      _studentId = studentState.student.id;
+    });
+    _loadExtras(authState.user.schoolId, studentState.student.id);
   }
 
   Future<void> _loadExtras(String schoolId, String studentId) async {
@@ -71,6 +72,8 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final schoolId = _schoolId;
+    final studentId = _studentId;
     return Scaffold(
       appBar: const StudentAppBar(title: 'Security & Safety'),
       body: RefreshIndicator(
@@ -80,21 +83,32 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
           children: [
             const SectionHeader(title: 'Arrival & Departure'),
             const SizedBox(height: 8),
-            BlocBuilder<SecurityBloc, SecurityState>(
-              builder: (context, state) {
-                if (state.studentMovements.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Text('No movement records yet.'),
+            if (schoolId == null || studentId == null)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Text('No movement records yet.'),
+              )
+            else
+              StreamBuilder<List<MovementEvent>>(
+                stream: di.sl<WatchMovementEvents>()(
+                  schoolId,
+                  personId: studentId,
+                ),
+                builder: (context, snapshot) {
+                  final movements = snapshot.data ?? const [];
+                  if (movements.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Text('No movement records yet.'),
+                    );
+                  }
+                  return Column(
+                    children: movements
+                        .map((m) => _MovementTile(movement: m))
+                        .toList(),
                   );
-                }
-                return Column(
-                  children: state.studentMovements
-                      .map((m) => _MovementTile(movement: m))
-                      .toList(),
-                );
-              },
-            ),
+                },
+              ),
             const SizedBox(height: 24),
             const SectionHeader(title: 'Authorized Pickup Persons'),
             const SizedBox(height: 8),
@@ -158,12 +172,12 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
 }
 
 class _MovementTile extends StatelessWidget {
-  final StudentMovement movement;
+  final MovementEvent movement;
   const _MovementTile({required this.movement});
 
   @override
   Widget build(BuildContext context) {
-    final isIn = movement.direction.toLowerCase() == 'in';
+    final isIn = movement.direction == MovementDirection.in_;
     return AppCard(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
@@ -176,7 +190,7 @@ class _MovementTile extends StatelessWidget {
         ),
         title: Text(movement.movementType),
         subtitle: Text(
-          movement.timestamp.toLocal().toString().split('.').first,
+          movement.actionTimestamp.toLocal().toString().split('.').first,
         ),
       ),
     );

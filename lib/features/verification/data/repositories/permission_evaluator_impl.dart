@@ -4,7 +4,7 @@ import 'package:school_pulse/core/permissions/permission.dart';
 import 'package:school_pulse/core/permissions/role_permission_defaults.dart';
 import 'package:school_pulse/features/admin/domain/repositories/role_permission_override_repository.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
-import 'package:school_pulse/features/security/domain/entities/security_entities.dart';
+import 'package:school_pulse/features/gate_ops/domain/entities/gate.dart';
 import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source.dart';
 import 'package:school_pulse/features/verification/data/models/verification_isar_models.dart';
 import 'package:school_pulse/features/verification/domain/repositories/permission_evaluator.dart';
