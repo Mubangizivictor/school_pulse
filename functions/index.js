@@ -110,7 +110,10 @@ exports.createStaffAccount = onCall(async (request) => {
     throw new HttpsError("unauthenticated", "You must be signed in.");
   }
 
-  const { name, email, assignedClass, subjects, academicYearId } = request.data || {};
+  const {
+    name, email, assignedClass, subjects, academicYearId,
+    departmentId, designationId, campusId, employmentType, dateJoined,
+  } = request.data || {};
   // Accept the current multi-role `roles` array, falling back to a legacy
   // singular `role` from any older client build still calling this.
   const roles = Array.isArray(request.data?.roles)
@@ -184,6 +187,11 @@ exports.createStaffAccount = onCall(async (request) => {
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       ...(assignedClass ? { assignedClass } : {}),
       ...(Array.isArray(subjects) ? { subjects } : {}),
+      ...(departmentId ? { departmentId } : {}),
+      ...(designationId ? { designationId } : {}),
+      ...(campusId ? { campusId } : {}),
+      ...(employmentType ? { employmentType } : {}),
+      ...(dateJoined ? { dateJoined: new Date(dateJoined) } : {}),
     };
     const batch = db.batch();
     batch.set(db.collection("users").doc(userRecord.uid), userData);
