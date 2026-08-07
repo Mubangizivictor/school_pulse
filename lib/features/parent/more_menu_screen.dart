@@ -5,108 +5,127 @@ import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/parent/widgets/student_app_bar.dart';
+import 'package:school_pulse/features/parent_access/domain/entities/parent_module_visibility.dart';
+import 'package:school_pulse/features/parent_access/presentation/bloc/parent_access_cubit.dart';
+import 'package:school_pulse/features/parent_access/presentation/bloc/parent_access_state.dart';
 
 class MoreMenuScreen extends StatelessWidget {
   const MoreMenuScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const StudentAppBar(title: 'More'),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _buildMenuSection(context, 'Services', [
-            _MenuTile(
-              icon: Icons.calendar_month_outlined,
-              title: 'School Calendar',
-              onTap: () => context.push('/parent/calendar'),
-            ),
-            _MenuTile(
-              icon: Icons.health_and_safety_outlined,
-              title: 'Health',
-              onTap: () => context.push('/parent/health'),
-            ),
-            _MenuTile(
-              icon: Icons.library_books_outlined,
-              title: 'Library',
-              onTap: () => context.push('/parent/library'),
-            ),
-            _MenuTile(
-              icon: Icons.gavel_outlined,
-              title: 'Discipline',
-              onTap: () => context.push('/parent/discipline'),
-            ),
-            _MenuTile(
-              icon: Icons.directions_bus_outlined,
-              title: 'Transport',
-              onTap: () => context.push('/parent/transport'),
-            ),
-            _MenuTile(
-              icon: Icons.bed_outlined,
-              title: 'Boarding',
-              onTap: () => context.push('/parent/boarding'),
-            ),
-            _MenuTile(
-              icon: Icons.security_outlined,
-              title: 'Security & Safety',
-              onTap: () => context.push('/parent/security'),
-            ),
-          ]),
-          const SizedBox(height: 24),
-          _buildMenuSection(context, 'Account', [
-            _MenuTile(
-              icon: Icons.person_outline,
-              title: 'Profile',
-              onTap: () => context.push('/parent/profile'),
-            ),
-            _MenuTile(
-              icon: Icons.notifications_outlined,
-              title: 'Notifications',
-              onTap: () => context.push('/parent/notifications'),
-            ),
-            _MenuTile(
-              icon: Icons.settings_outlined,
-              title: 'Settings',
-              onTap: () => context.push('/parent/profile'),
-            ),
-          ]),
-          const SizedBox(height: 24),
-          _buildMenuSection(context, 'Support', [
-            _MenuTile(
-              icon: Icons.help_outline,
-              title: 'Help Center',
-              onTap: () => _showHelpDialog(context),
-            ),
-            _MenuTile(
-              icon: Icons.info_outline,
-              title: 'About School Pulse',
-              onTap: () => showAboutDialog(
-                context: context,
-                applicationName: 'School Pulse',
-                applicationVersion: '1.0.0',
-                applicationLegalese: 'A school management platform for Uganda.',
+    return BlocBuilder<ParentAccessCubit, ParentAccessState>(
+      builder: (context, accessState) {
+        final visibility = accessState is ParentAccessResolved
+            ? accessState.visibility
+            : ParentModuleVisibility.none;
+
+        return Scaffold(
+          appBar: const StudentAppBar(title: 'More'),
+          body: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _buildMenuSection(context, 'Services', [
+                if (visibility.academics)
+                  _MenuTile(
+                    icon: Icons.calendar_month_outlined,
+                    title: 'School Calendar',
+                    onTap: () => context.push('/parent/calendar'),
+                  ),
+                if (visibility.health)
+                  _MenuTile(
+                    icon: Icons.health_and_safety_outlined,
+                    title: 'Health',
+                    onTap: () => context.push('/parent/health'),
+                  ),
+                if (visibility.library)
+                  _MenuTile(
+                    icon: Icons.library_books_outlined,
+                    title: 'Library',
+                    onTap: () => context.push('/parent/library'),
+                  ),
+                if (visibility.discipline)
+                  _MenuTile(
+                    icon: Icons.gavel_outlined,
+                    title: 'Discipline',
+                    onTap: () => context.push('/parent/discipline'),
+                  ),
+                if (visibility.transport)
+                  _MenuTile(
+                    icon: Icons.directions_bus_outlined,
+                    title: 'Transport',
+                    onTap: () => context.push('/parent/transport'),
+                  ),
+                if (visibility.boarding)
+                  _MenuTile(
+                    icon: Icons.bed_outlined,
+                    title: 'Boarding',
+                    onTap: () => context.push('/parent/boarding'),
+                  ),
+                if (visibility.security)
+                  _MenuTile(
+                    icon: Icons.security_outlined,
+                    title: 'Security & Safety',
+                    onTap: () => context.push('/parent/security'),
+                  ),
+              ]),
+              const SizedBox(height: 24),
+              _buildMenuSection(context, 'Account', [
+                _MenuTile(
+                  icon: Icons.person_outline,
+                  title: 'Profile',
+                  onTap: () => context.push('/parent/profile'),
+                ),
+                _MenuTile(
+                  icon: Icons.notifications_outlined,
+                  title: 'Notifications',
+                  onTap: () => context.push('/parent/notifications'),
+                ),
+                _MenuTile(
+                  icon: Icons.settings_outlined,
+                  title: 'Settings',
+                  onTap: () => context.push('/parent/profile'),
+                ),
+              ]),
+              const SizedBox(height: 24),
+              _buildMenuSection(context, 'Support', [
+                _MenuTile(
+                  icon: Icons.help_outline,
+                  title: 'Help Center',
+                  onTap: () => _showHelpDialog(context),
+                ),
+                _MenuTile(
+                  icon: Icons.info_outline,
+                  title: 'About School Pulse',
+                  onTap: () => showAboutDialog(
+                    context: context,
+                    applicationName: 'School Pulse',
+                    applicationVersion: '1.0.0',
+                    applicationLegalese:
+                        'A school management platform for Uganda.',
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 32),
+              SecondaryButton(
+                label: 'Logout',
+                onPressed: () {
+                  context.read<AuthBloc>().add(LogoutPressed());
+                  context.go('/welcome');
+                },
+                icon: Icons.logout,
               ),
-            ),
-          ]),
-          const SizedBox(height: 32),
-          SecondaryButton(
-            label: 'Logout',
-            onPressed: () {
-              context.read<AuthBloc>().add(LogoutPressed());
-              context.go('/welcome');
-            },
-            icon: Icons.logout,
+              const SizedBox(height: 16),
+              Center(
+                child: Text(
+                  'Version 1.0.0',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          Center(
-            child: Text(
-              'Version 1.0.0',
-              style: Theme.of(context).textTheme.labelSmall,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

@@ -28,6 +28,9 @@ import 'package:school_pulse/features/auth/login_flow/force_set_password_screen.
 import 'package:school_pulse/features/auth/login_flow/onboarding/onboarding_flow_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/school_splash_screen.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/parent_access/presentation/bloc/parent_access_cubit.dart';
+import 'package:school_pulse/features/parent_access/presentation/widgets/parent_module_guard.dart';
+import 'package:school_pulse/features/student/presentation/bloc/selected_student_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/staff_panel_host.dart';
@@ -504,35 +507,56 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/parent/academics',
-          builder: (context, state) => const AcademicsScreen(),
+          builder: (context, state) => ParentModuleGuard(
+            isAllowed: (v) => v.academics,
+            child: const AcademicsScreen(),
+          ),
           routes: [
             GoRoute(
               path: 'report-card',
-              builder: (context, state) => const ReportCardScreen(),
+              builder: (context, state) => ParentModuleGuard(
+                isAllowed: (v) => v.reportCard,
+                child: const ReportCardScreen(),
+              ),
             ),
             GoRoute(
               path: 'attendance',
-              builder: (context, state) => const AttendanceDetailScreen(),
+              builder: (context, state) => ParentModuleGuard(
+                isAllowed: (v) => v.attendance,
+                child: const AttendanceDetailScreen(),
+              ),
             ),
           ],
         ),
         GoRoute(
           path: '/parent/fees',
-          builder: (context, state) => const FeesScreen(),
+          builder: (context, state) => ParentModuleGuard(
+            isAllowed: (v) => v.fees,
+            child: const FeesScreen(),
+          ),
           routes: [
             GoRoute(
               path: 'pay',
-              builder: (context, state) => const PayNowScreen(),
+              builder: (context, state) => ParentModuleGuard(
+                isAllowed: (v) => v.fees,
+                child: const PayNowScreen(),
+              ),
             ),
             GoRoute(
               path: 'history',
-              builder: (context, state) => const PaymentHistoryScreen(),
+              builder: (context, state) => ParentModuleGuard(
+                isAllowed: (v) => v.fees,
+                child: const PaymentHistoryScreen(),
+              ),
             ),
           ],
         ),
         GoRoute(
           path: '/parent/messages',
-          builder: (context, state) => const MessagesListScreen(),
+          builder: (context, state) => ParentModuleGuard(
+            isAllowed: (v) => v.messages,
+            child: const MessagesListScreen(),
+          ),
         ),
         GoRoute(
           path: '/parent/more',
@@ -540,19 +564,31 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/parent/health',
-          builder: (context, state) => const HealthScreen(),
+          builder: (context, state) => ParentModuleGuard(
+            isAllowed: (v) => v.health,
+            child: const HealthScreen(),
+          ),
         ),
         GoRoute(
           path: '/parent/library',
-          builder: (context, state) => const LibraryScreen(),
+          builder: (context, state) => ParentModuleGuard(
+            isAllowed: (v) => v.library,
+            child: const LibraryScreen(),
+          ),
         ),
         GoRoute(
           path: '/parent/discipline',
-          builder: (context, state) => const DisciplineScreen(),
+          builder: (context, state) => ParentModuleGuard(
+            isAllowed: (v) => v.discipline,
+            child: const DisciplineScreen(),
+          ),
         ),
         GoRoute(
           path: '/parent/transport',
-          builder: (context, state) => const TransportScreen(),
+          builder: (context, state) => ParentModuleGuard(
+            isAllowed: (v) => v.transport,
+            child: const TransportScreen(),
+          ),
         ),
         GoRoute(
           path: '/parent/profile',
@@ -587,7 +623,10 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/parent/boarding',
-          builder: (context, state) => const ParentBoardingScreen(),
+          builder: (context, state) => ParentModuleGuard(
+            isAllowed: (v) => v.boarding,
+            child: const ParentBoardingScreen(),
+          ),
         ),
         GoRoute(
           path: '/parent/security',
@@ -1790,8 +1829,7 @@ final router = GoRouter(
               routes: [
                 GoRoute(
                   path: 'new',
-                  builder: (context, state) =>
-                      const AnnouncementEditorScreen(),
+                  builder: (context, state) => const AnnouncementEditorScreen(),
                 ),
                 GoRoute(
                   path: ':id',
@@ -2158,6 +2196,28 @@ class ParentShell extends StatelessWidget {
       ),
     ];
 
+    return BlocProvider(
+      create: (_) {
+        final authState = context.read<AuthBloc>().state;
+        return ParentAccessCubit(
+          getRelationshipsForParent: di.sl(),
+          getPeoplePolicy: di.sl(),
+          structureRepository: di.sl(),
+          parentUserId: authState is AuthAuthenticated ? authState.user.id : '',
+          selectedStudentBloc: context.read<SelectedStudentBloc>(),
+          resolver: di.sl(),
+        );
+      },
+      child: _buildScaffold(context, isMobile, isDark, destinations),
+    );
+  }
+
+  Widget _buildScaffold(
+    BuildContext context,
+    bool isMobile,
+    bool isDark,
+    List<NavigationDestination> destinations,
+  ) {
     return Scaffold(
       body: Row(
         children: [

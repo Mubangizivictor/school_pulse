@@ -25,6 +25,9 @@ import 'package:school_pulse/features/notifications/presentation/bloc/notificati
 import 'package:school_pulse/features/notifications/presentation/bloc/notifications_event.dart';
 import 'package:school_pulse/features/notifications/presentation/bloc/notifications_state.dart';
 import 'package:school_pulse/features/notifications/domain/entities/alert.dart';
+import 'package:school_pulse/features/parent_access/domain/entities/parent_module_visibility.dart';
+import 'package:school_pulse/features/parent_access/presentation/bloc/parent_access_cubit.dart';
+import 'package:school_pulse/features/parent_access/presentation/bloc/parent_access_state.dart';
 
 class ParentHomeScreen extends StatefulWidget {
   const ParentHomeScreen({super.key});
@@ -167,67 +170,24 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                           ],
                           FadeInSlide(
                             delay: const Duration(milliseconds: 300),
-                            child: QuickActionGrid(
-                              items: [
-                                QuickActionItem(
-                                  label: 'Academics',
-                                  icon: Icons.school_outlined,
-                                  color: AppColors.primary(context),
-                                  onTap: () =>
-                                      context.push('/parent/academics'),
+                            child:
+                                BlocBuilder<
+                                  ParentAccessCubit,
+                                  ParentAccessState
+                                >(
+                                  builder: (context, accessState) {
+                                    final visibility =
+                                        accessState is ParentAccessResolved
+                                        ? accessState.visibility
+                                        : ParentModuleVisibility.none;
+                                    return QuickActionGrid(
+                                      items: _buildQuickActions(
+                                        context,
+                                        visibility,
+                                      ),
+                                    );
+                                  },
                                 ),
-                                QuickActionItem(
-                                  label: 'Fees',
-                                  icon: Icons.account_balance_wallet_outlined,
-                                  color: AppColors.secondary(context),
-                                  onTap: () => context.push('/parent/fees'),
-                                ),
-                                QuickActionItem(
-                                  label: 'Health',
-                                  icon: Icons.health_and_safety_outlined,
-                                  color: AppColors.information(context),
-                                  onTap: () => context.push('/parent/health'),
-                                ),
-                                QuickActionItem(
-                                  label: 'Transport',
-                                  icon: Icons.directions_bus_outlined,
-                                  color: AppColors.warning(context),
-                                  onTap: () =>
-                                      context.push('/parent/transport'),
-                                ),
-                                QuickActionItem(
-                                  label: 'Library',
-                                  icon: Icons.library_books_outlined,
-                                  color: AppColors.primaryStrong(context),
-                                  onTap: () => context.push('/parent/library'),
-                                ),
-                                QuickActionItem(
-                                  label: 'Discipline',
-                                  icon: Icons.gavel_outlined,
-                                  color: AppColors.danger(context),
-                                  onTap: () =>
-                                      context.push('/parent/discipline'),
-                                ),
-                                QuickActionItem(
-                                  label: 'Boarding',
-                                  icon: Icons.bed_outlined,
-                                  color: AppColors.primary(context),
-                                  onTap: () => context.push('/parent/boarding'),
-                                ),
-                                QuickActionItem(
-                                  label: 'Messages',
-                                  icon: Icons.chat_bubble_outline,
-                                  color: AppColors.information(context),
-                                  onTap: () => context.push('/parent/messages'),
-                                ),
-                                QuickActionItem(
-                                  label: 'Profile',
-                                  icon: Icons.person_outline,
-                                  color: AppColors.textMuted(context),
-                                  onTap: () => context.push('/parent/profile'),
-                                ),
-                              ],
-                            ),
                           ),
                           const SizedBox(height: 16),
                           BlocBuilder<NotificationsBloc, NotificationsState>(
@@ -324,6 +284,77 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
         );
       },
     );
+  }
+
+  List<QuickActionItem> _buildQuickActions(
+    BuildContext context,
+    ParentModuleVisibility visibility,
+  ) {
+    return [
+      if (visibility.academics)
+        QuickActionItem(
+          label: 'Academics',
+          icon: Icons.school_outlined,
+          color: AppColors.primary(context),
+          onTap: () => context.push('/parent/academics'),
+        ),
+      if (visibility.fees)
+        QuickActionItem(
+          label: 'Fees',
+          icon: Icons.account_balance_wallet_outlined,
+          color: AppColors.secondary(context),
+          onTap: () => context.push('/parent/fees'),
+        ),
+      if (visibility.health)
+        QuickActionItem(
+          label: 'Health',
+          icon: Icons.health_and_safety_outlined,
+          color: AppColors.information(context),
+          onTap: () => context.push('/parent/health'),
+        ),
+      if (visibility.transport)
+        QuickActionItem(
+          label: 'Transport',
+          icon: Icons.directions_bus_outlined,
+          color: AppColors.warning(context),
+          onTap: () => context.push('/parent/transport'),
+        ),
+      if (visibility.library)
+        QuickActionItem(
+          label: 'Library',
+          icon: Icons.library_books_outlined,
+          color: AppColors.primaryStrong(context),
+          onTap: () => context.push('/parent/library'),
+        ),
+      if (visibility.discipline)
+        QuickActionItem(
+          label: 'Discipline',
+          icon: Icons.gavel_outlined,
+          color: AppColors.danger(context),
+          onTap: () => context.push('/parent/discipline'),
+        ),
+      if (visibility.boarding)
+        QuickActionItem(
+          label: 'Boarding',
+          icon: Icons.bed_outlined,
+          color: AppColors.primary(context),
+          onTap: () => context.push('/parent/boarding'),
+        ),
+      if (visibility.messages)
+        QuickActionItem(
+          label: 'Messages',
+          icon: Icons.chat_bubble_outline,
+          color: AppColors.information(context),
+          onTap: () => context.push('/parent/messages'),
+        ),
+      if (visibility.profile)
+        QuickActionItem(
+          label: 'Profile',
+          icon: Icons.person_outline,
+          color: AppColors.textMuted(context),
+          onTap: () => context.push('/parent/profile'),
+        ),
+    ];
   }
 
   Widget _buildStudentTabs(

@@ -9,6 +9,7 @@ import 'package:school_pulse/features/relationships/domain/usecases/get_relation
 import 'package:school_pulse/features/relationships/domain/usecases/reallocate_relationship.dart';
 import 'package:school_pulse/features/relationships/domain/usecases/record_enrolment_change.dart';
 import 'package:school_pulse/features/relationships/domain/usecases/update_people_policy.dart';
+import 'package:school_pulse/features/parent_access/domain/services/parent_module_resolver.dart';
 import 'package:school_pulse/features/admin/data/repositories/role_permission_override_repository_impl.dart';
 import 'package:school_pulse/features/admin/domain/usecases/get_role_permission_overrides.dart';
 import 'package:school_pulse/features/admin/domain/usecases/save_role_permission_override.dart';
@@ -1613,6 +1614,13 @@ Future<void> init() async {
   sl.registerLazySingleton(() => GetPeoplePolicy(sl()));
   sl.registerLazySingleton(() => UpdatePeoplePolicy(sl()));
   sl.registerLazySingleton(() => RecordEnrolmentChange(sl()));
+
+  // Features - Parent Access (module visibility resolver, consumes
+  // relationship access flags + structure feature toggles + people policy).
+  // ParentAccessCubit itself is built in ParentShell, not registered here -
+  // it needs the signed-in parent's userId and the app-wide
+  // SelectedStudentBloc instance, neither of which sl() can supply.
+  sl.registerLazySingleton(() => const ParentModuleResolver());
 
   // Features - Structure
   sl.registerFactory(() => StructureBloc(repository: sl()));
