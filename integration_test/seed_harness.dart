@@ -212,4 +212,43 @@ void main() {
     },
     timeout: const Timeout(Duration(minutes: 2)),
   );
+
+  testWidgets(
+    'Batch Print ID Cards can resolve a class and its roster identities',
+    (tester) async {
+      final db = FirebaseFirestore.instance;
+
+      // watchClasses(schoolId) is what populates the "Select a class"
+      // dropdown - without schoolId on the class doc this returns empty.
+      final classes = await db
+          .collection('classes')
+          .where('schoolId', isEqualTo: AdminSeeder.demoSchoolId)
+          .get();
+      expect(classes.docs, isNotEmpty, reason: 'class dropdown would be empty');
+
+      final p7 = classes.docs.where((d) => d.data()['name'] == AdminSeeder.classTeacherClassId);
+      expect(p7, hasLength(1));
+
+      final roster = await db
+          .collection('students')
+          .where('schoolId', isEqualTo: AdminSeeder.demoSchoolId)
+          .where('classId', isEqualTo: AdminSeeder.classTeacherClassId)
+          .get();
+      expect(roster.docs, isNotEmpty, reason: 'P7 roster is empty');
+
+      // Every roster student must have a student_identities doc, or the
+      // batch print screen silently skips them.
+      final identities = await db
+          .collection('student_identities')
+          .where('studentId', isEqualTo: roster.docs.first.id)
+          .get();
+      expect(
+        identities.docs,
+        isNotEmpty,
+        reason: 'student has no printable identity',
+      );
+      expect(identities.docs.first.data()['uniqueSystemId'], isNotEmpty);
+    },
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
 }

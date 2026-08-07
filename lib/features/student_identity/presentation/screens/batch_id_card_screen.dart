@@ -66,7 +66,7 @@ class _BatchIdCardScreenState extends State<BatchIdCardScreen> {
     setState(() => _loadingStudents = true);
     final result = await _studentRepository.searchStudents(
       schoolId: authState.user.schoolId,
-      classId: schoolClass.id,
+      classId: schoolClass.name,
     );
     result.fold(
       (failure) {

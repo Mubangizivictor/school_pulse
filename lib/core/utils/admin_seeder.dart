@@ -34,7 +34,7 @@ class AdminSeeder {
       // 'audit_logs' is also excluded - it's an append-only audit trail
       // (`allow update, delete: if false`), so a reseed accumulates on top
       // of prior history instead of erasing it.
-      'students', 'parent_access_codes', 'attendance',
+      'students', 'student_identities', 'parent_access_codes', 'attendance',
       'academic_records', 'report_cards', 'report_comments', 'fees', 'payments',
       'health_visits', 'health_profiles', 'clinic_visits',
       'emergency_incidents', 'medical_inventory', 'medical_supply_requests',
@@ -84,6 +84,7 @@ class AdminSeeder {
       // before staff accounts can be assigned to them - do that here first.
       await _seedSchoolStructure();
       await _seedStudents();
+      await _seedStudentIdentities();
       await _seedParentAccessCodes();
       final staffUids = await _seedStaff();
 
@@ -201,6 +202,7 @@ class AdminSeeder {
     // teacher panels before.
     for (final className in _classNames) {
       await _db.collection('classes').doc(_classSlug(className)).set({
+        'schoolId': demoSchoolId,
         'name': className,
         'code': className.replaceAll('Primary ', 'P'),
         'levelId': 'level-primary',
@@ -416,6 +418,26 @@ class AdminSeeder {
         // modules that already read it.
         'residency': (s['isBoarder'] as bool) ? 'boarding' : 'day',
         'hasHealthAlert': false,
+      });
+    }
+  }
+
+  /// Batch Print ID Cards (and every per-student ID card screen) resolves a
+  /// student's card through `student_identities`, keyed by `studentId` - a
+  /// student with no doc here is silently skipped rather than printed, so
+  /// every seeded student needs one to be usable as test data.
+  static Future<void> _seedStudentIdentities() async {
+    for (var s in _students) {
+      final studentId = s['id'] as String;
+      final className = s['className'] as String;
+      final prefix = className.replaceAll('Primary ', 'P').toUpperCase();
+      final uniqueSystemId = 'SP-$studentId';
+      await _db.collection('student_identities').doc(studentId).set({
+        'studentId': studentId,
+        'uniqueSystemId': uniqueSystemId,
+        'schoolStudentId': '$prefix-$currentAcademicYearId-${s['studentId']}',
+        'qrCodeData': uniqueSystemId,
+        'nfcStatus': 'unassigned',
       });
     }
   }
