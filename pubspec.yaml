@@ -72,12 +72,29 @@ dev_dependencies:
   isar_generator: ^3.1.0+1
   fake_cloud_firestore: ^3.1.0
   flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.3
+
+flutter_native_splash:
+  color: "#ffffff"
+  image: assets/logos/logo_for_light_mode.png
+  color_dark: "#121212"
+  image_dark: assets/logos/logo_for_dark_mode.png
+
+  android_12:
+    image: assets/logos/logo_for_light_mode.png
+    icon_background_color: "#ffffff"
+    image_dark: assets/logos/logo_for_dark_mode.png
+    icon_background_color_dark: "#121212"
 
 flutter_launcher_icons:
-  android: "launcher_icon"
+  android: "ic_launcher"
   ios: true
-  image_path: "assets/logos/vertical_logo_school_pulse.png"
+  image_path_android: "assets/launcher_icons/ios_launcher_master.png"
+  image_path_ios: "assets/launcher_icons/ios_launcher_master.png"
+  adaptive_icon_background: "#03113B"
+  adaptive_icon_foreground: "assets/launcher_icons/ios_launcher_master.png"
   min_sdk_android: 21
+  remove_alpha_ios: true
 
 dependency_overrides:
   analyzer: 5.13.0
@@ -88,4 +105,6 @@ flutter:
 
   assets:
     - assets/animations/
+    - assets/loading_icon/loading_icon.png
     - assets/logos/
+    - assets/launcher_icons/
