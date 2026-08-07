@@ -191,8 +191,9 @@ class AddStaffWizardController extends ChangeNotifier {
         _step = rolesNeedingConfig.isNotEmpty
             ? WizardStep.configureRole
             : WizardStep.selectRoles;
-        if (_step == WizardStep.configureRole)
+        if (_step == WizardStep.configureRole) {
           _configureRoleIndex = rolesNeedingConfig.length - 1;
+        }
         break;
       case WizardStep.accessPreview:
         _step = WizardStep.rolesSummary;
@@ -269,7 +270,10 @@ class AddStaffWizardController extends ChangeNotifier {
         ..nationality = restored.nationality
         ..employmentType = restored.employmentType
         ..department = restored.department
+        ..departmentId = restored.departmentId
         ..designation = restored.designation
+        ..designationId = restored.designationId
+        ..campusId = restored.campusId
         ..dateJoined = restored.dateJoined
         ..selectedRoles = restored.selectedRoles
         ..roleConfigs = restored.roleConfigs
@@ -320,6 +324,11 @@ class AddStaffWizardController extends ChangeNotifier {
         assignedClass: classTeacherConfig?.className,
         subjects: subjectTeacherConfig?.subjectAssignments,
         academicYearId: currentAcademicYearId,
+        departmentId: draft.departmentId,
+        designationId: draft.designationId,
+        campusId: draft.campusId,
+        employmentType: draft.employmentType,
+        dateJoined: draft.dateJoined,
       ),
     );
 

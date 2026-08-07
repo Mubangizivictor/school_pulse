@@ -24,6 +24,11 @@ class CreateStaffAccount implements UseCase<String, CreateStaffAccountParams> {
       assignedClass: params.assignedClass,
       subjects: params.subjects,
       academicYearId: params.academicYearId,
+      departmentId: params.departmentId,
+      designationId: params.designationId,
+      campusId: params.campusId,
+      employmentType: params.employmentType,
+      dateJoined: params.dateJoined,
     );
   }
 }
@@ -37,6 +42,11 @@ class CreateStaffAccountParams extends Equatable {
   final String? assignedClass;
   final List<SubjectAssignment>? subjects;
   final String? academicYearId;
+  final String? departmentId;
+  final String? designationId;
+  final String? campusId;
+  final String? employmentType;
+  final DateTime? dateJoined;
 
   const CreateStaffAccountParams({
     required this.name,
@@ -47,6 +57,11 @@ class CreateStaffAccountParams extends Equatable {
     this.assignedClass,
     this.subjects,
     this.academicYearId,
+    this.departmentId,
+    this.designationId,
+    this.campusId,
+    this.employmentType,
+    this.dateJoined,
   });
 
   @override
@@ -59,5 +74,10 @@ class CreateStaffAccountParams extends Equatable {
     assignedClass,
     subjects,
     academicYearId,
+    departmentId,
+    designationId,
+    campusId,
+    employmentType,
+    dateJoined,
   ];
 }

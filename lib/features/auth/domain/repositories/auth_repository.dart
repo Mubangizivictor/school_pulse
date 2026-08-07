@@ -35,6 +35,11 @@ abstract class AuthRepository {
     String? assignedClass,
     List<SubjectAssignment>? subjects,
     String? academicYearId,
+    String? departmentId,
+    String? designationId,
+    String? campusId,
+    String? employmentType,
+    DateTime? dateJoined,
   });
   Future<Either<Failure, void>> completePasswordReset(String newPassword);
   Future<Either<Failure, List<UserEntity>>> getStaffMembers(String schoolId);

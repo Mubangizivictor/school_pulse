@@ -91,6 +91,11 @@ class AuthRepositoryImpl implements AuthRepository {
     String? assignedClass,
     List<SubjectAssignment>? subjects,
     String? academicYearId,
+    String? departmentId,
+    String? designationId,
+    String? campusId,
+    String? employmentType,
+    DateTime? dateJoined,
   }) async {
     try {
       final temporaryPassword = await remoteDataSource.createStaffAccount(
@@ -102,6 +107,11 @@ class AuthRepositoryImpl implements AuthRepository {
         assignedClass: assignedClass,
         subjects: subjects,
         academicYearId: academicYearId,
+        departmentId: departmentId,
+        designationId: designationId,
+        campusId: campusId,
+        employmentType: employmentType,
+        dateJoined: dateJoined,
       );
       return Right(temporaryPassword);
     } on AuthFailure catch (e) {

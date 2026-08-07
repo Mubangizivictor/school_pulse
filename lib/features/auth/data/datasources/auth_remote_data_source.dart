@@ -44,6 +44,11 @@ abstract class AuthRemoteDataSource {
     String? assignedClass,
     List<SubjectAssignment>? subjects,
     String? academicYearId,
+    String? departmentId,
+    String? designationId,
+    String? campusId,
+    String? employmentType,
+    DateTime? dateJoined,
   });
 
   /// Sets a new password for the currently signed-in user and clears their
@@ -299,6 +304,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     String? assignedClass,
     List<SubjectAssignment>? subjects,
     String? academicYearId,
+    String? departmentId,
+    String? designationId,
+    String? campusId,
+    String? employmentType,
+    DateTime? dateJoined,
   }) async {
     try {
       final callable = functions.httpsCallable('createStaffAccount');
@@ -311,6 +321,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'assignedClass': assignedClass,
         'subjects': subjects?.map((e) => e.toJson()).toList(),
         'academicYearId': academicYearId,
+        'departmentId': departmentId,
+        'designationId': designationId,
+        'campusId': campusId,
+        'employmentType': employmentType,
+        'dateJoined': dateJoined?.toIso8601String(),
       });
       return result.data['temporaryPassword'] as String;
     } catch (e) {
@@ -366,6 +381,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           mustChangePassword: true,
           assignedClass: assignedClass,
           subjects: subjects,
+          departmentId: departmentId,
+          designationId: designationId,
+          campusId: campusId,
+          employmentType: employmentType,
+          dateJoined: dateJoined,
         );
         final batch = firestore.batch();
         batch.set(
