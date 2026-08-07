@@ -57,8 +57,15 @@ class AddStaffDraft {
 
   // Step 5: Employment Information
   String employmentType = 'Permanent';
+  // department/designation hold the Structure entity's display name (for
+  // the Review step and for the Firestore write); departmentId/designationId
+  // hold the Structure entity id the name was picked from. Both are set
+  // together by the Step 4 picker - never edited as free text.
   String department = '';
-  String designation = 'Teacher';
+  String? departmentId;
+  String designation = '';
+  String? designationId;
+  String? campusId;
   DateTime dateJoined = DateTime.now();
 
   // Step 6: Roles
@@ -85,7 +92,8 @@ class AddStaffDraft {
       email.trim().isNotEmpty && phoneNumber.trim().isNotEmpty;
 
   bool get employmentInfoComplete =>
-      department.trim().isNotEmpty && designation.trim().isNotEmpty;
+      (departmentId?.trim().isNotEmpty ?? false) &&
+      (designationId?.trim().isNotEmpty ?? false);
 
   bool get rolesSelected => selectedRoles.isNotEmpty;
 
@@ -101,7 +109,10 @@ class AddStaffDraft {
     'nationality': nationality,
     'employmentType': employmentType,
     'department': department,
+    'departmentId': departmentId,
     'designation': designation,
+    'designationId': designationId,
+    'campusId': campusId,
     'dateJoined': dateJoined.toIso8601String(),
     'selectedRoles': selectedRoles.map((r) => r.name).toList(),
     'roleConfigs': roleConfigs.map((k, v) => MapEntry(k.name, v.toJson())),
@@ -122,7 +133,10 @@ class AddStaffDraft {
       ..nationality = json['nationality'] as String? ?? ''
       ..employmentType = json['employmentType'] as String? ?? 'Permanent'
       ..department = json['department'] as String? ?? ''
-      ..designation = json['designation'] as String? ?? 'Teacher'
+      ..departmentId = json['departmentId'] as String?
+      ..designation = json['designation'] as String? ?? ''
+      ..designationId = json['designationId'] as String?
+      ..campusId = json['campusId'] as String?
       ..dateJoined = json['dateJoined'] != null
           ? DateTime.tryParse(json['dateJoined'] as String) ?? DateTime.now()
           : DateTime.now()
