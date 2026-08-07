@@ -752,7 +752,7 @@ Future<void> init() async {
     () => GetAdminDashboardStats(
       authRepository: sl(),
       studentRepository: sl(),
-      visitorRepository: sl(),
+      gateOpsRepository: sl(),
       firestore: sl(),
     ),
   );

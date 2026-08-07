@@ -6,8 +6,8 @@ import 'package:school_pulse/core/usecases/usecase.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/repositories/auth_repository.dart';
 import 'package:school_pulse/features/student/domain/repositories/student_repository.dart';
-import 'package:school_pulse/features/admin/data/models/visitor.dart';
-import 'package:school_pulse/features/admin/data/repositories/visitor_repository.dart';
+import 'package:school_pulse/features/gate_ops/domain/entities/visitor.dart';
+import 'package:school_pulse/features/gate_ops/domain/repositories/gate_ops_repository.dart';
 
 /// One row of the dashboard's "Live Services" panel.
 class ServiceStatusItem extends Equatable {
@@ -93,13 +93,13 @@ class AdminDashboardStats extends Equatable {
 class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
   final AuthRepository authRepository;
   final StudentRepository studentRepository;
-  final VisitorRepository visitorRepository;
+  final GateOpsRepository gateOpsRepository;
   final FirebaseFirestore firestore;
 
   GetAdminDashboardStats({
     required this.authRepository,
     required this.studentRepository,
-    required this.visitorRepository,
+    required this.gateOpsRepository,
     required this.firestore,
   });
 
@@ -121,22 +121,24 @@ class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
       // For visitors, we use a Future instead of .first on a stream to avoid deadlocks
       // if the stream doesn't emit immediately.
       final visitors = schoolId != null && schoolId.isNotEmpty
-          ? await visitorRepository
+          ? await gateOpsRepository
                 .getVisitorsOnce(schoolId)
                 .timeout(const Duration(seconds: 10))
           : const <Visitor>[];
 
       final now = DateTime.now();
       final todayVisitors = visitors.where((v) {
-        final checkIn = v.checkIn;
-        return checkIn.year == now.year &&
-            checkIn.month == now.month &&
-            checkIn.day == now.day;
+        final arrival = v.arrivalTime;
+        return arrival.year == now.year &&
+            arrival.month == now.month &&
+            arrival.day == now.day;
       }).toList();
 
-      final activeVisitors = visitors.where((v) => v.checkOut == null).toList();
+      final activeVisitors = visitors
+          .where((v) => v.status == VisitorStatus.checkedIn)
+          .toList();
       final overdueVisitors = activeVisitors
-          .where((v) => now.difference(v.checkIn) > const Duration(hours: 2))
+          .where((v) => now.difference(v.arrivalTime) > const Duration(hours: 2))
           .length;
 
       int activeStaff = 0;
