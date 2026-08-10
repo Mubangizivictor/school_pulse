@@ -116,22 +116,29 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
       ),
     );
     try {
-      final results = await Future.wait([
-        repository.getAllSchools(),
-        repository.getSchoolApplications(),
-        repository.getSubscriptionPlans(),
-        repository.getPlatformStats(),
-        billingRepository.getInvoices(),
-      ]);
+      // Start the independent owner-console reads together, but keep the
+      // returned values strongly typed rather than casting a heterogeneous
+      // Future.wait result.
+      final schoolsFuture = repository.getAllSchools();
+      final applicationsFuture = repository.getSchoolApplications();
+      final plansFuture = repository.getSubscriptionPlans();
+      final statsFuture = repository.getPlatformStats();
+      final invoicesFuture = billingRepository.getInvoices();
+
+      final schools = await schoolsFuture;
+      final applications = await applicationsFuture;
+      final plans = await plansFuture;
+      final stats = await statsFuture;
+      final invoices = await invoicesFuture;
 
       emit(
         state.copyWith(
           status: SuperAdminStatus.success,
-          schools: results[0] as List<School>,
-          applications: results[1] as dynamic,
-          plans: results[2] as dynamic,
-          stats: results[3] as Map<String, dynamic>,
-          invoices: results[4] as dynamic,
+          schools: schools,
+          applications: applications,
+          plans: plans,
+          stats: stats,
+          invoices: invoices,
           clearErrorMessage: true,
         ),
       );
@@ -161,9 +168,12 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
       final schoolId = await repository.approveSchoolApplication(
         event.applicationId,
       );
-      final schools = await repository.getAllSchools();
-      final applications = await repository.getSchoolApplications();
-      final stats = await repository.getPlatformStats();
+      final schoolsFuture = repository.getAllSchools();
+      final applicationsFuture = repository.getSchoolApplications();
+      final statsFuture = repository.getPlatformStats();
+      final schools = await schoolsFuture;
+      final applications = await applicationsFuture;
+      final stats = await statsFuture;
       emit(
         state.copyWith(
           schools: schools,
@@ -198,8 +208,10 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
     );
     try {
       await repository.rejectSchoolApplication(event.applicationId, event.reason);
-      final applications = await repository.getSchoolApplications();
-      final stats = await repository.getPlatformStats();
+      final applicationsFuture = repository.getSchoolApplications();
+      final statsFuture = repository.getPlatformStats();
+      final applications = await applicationsFuture;
+      final stats = await statsFuture;
       emit(
         state.copyWith(
           applications: applications,
