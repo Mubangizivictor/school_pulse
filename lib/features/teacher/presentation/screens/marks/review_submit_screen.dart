@@ -7,7 +7,6 @@ class ReviewSubmitScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bgColor = const Color(0xFF0F172A);
-    final surfaceColor = const Color(0xFF1E293B);
 
     return Scaffold(
       backgroundColor: bgColor,

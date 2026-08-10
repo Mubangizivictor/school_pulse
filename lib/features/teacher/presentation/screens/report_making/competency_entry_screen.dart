@@ -11,7 +11,6 @@ import 'package:school_pulse/features/teacher/presentation/bloc/teacher_state.da
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/report_wizard/report_wizard_bloc.dart';
-import 'package:school_pulse/features/teacher/presentation/bloc/report_wizard/report_wizard_state.dart';
 
 class CompetencyEntryScreen extends StatefulWidget {
   final String className;

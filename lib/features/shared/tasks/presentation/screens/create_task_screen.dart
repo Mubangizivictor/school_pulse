@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/app_components.dart';
-import 'package:school_pulse/design_system/app_theme.dart';
 import 'task_type_selection_screen.dart';
 
 class CreateTaskScreen extends StatefulWidget {

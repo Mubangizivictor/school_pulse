@@ -176,7 +176,6 @@ class _SidebarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final color = isDestructive
         ? AppColors.deepOrange
         : (isSelected

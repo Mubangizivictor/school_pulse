@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:school_pulse/design_system/app_components.dart';
 
 class TaskTypeSelectionScreen extends StatelessWidget {
   const TaskTypeSelectionScreen({super.key});

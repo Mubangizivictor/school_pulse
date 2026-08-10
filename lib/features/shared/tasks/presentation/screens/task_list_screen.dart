@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/app_components.dart';
-import 'package:school_pulse/design_system/app_theme.dart';
 import '../../domain/entities/mock_tasks.dart';
 import '../../domain/entities/task_entity.dart';
 import '../widgets/task_card.dart';

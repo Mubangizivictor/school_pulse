@@ -15,9 +15,6 @@ class GenerateReportsScreen extends StatefulWidget {
 }
 
 class _GenerateReportsScreenState extends State<GenerateReportsScreen> {
-  double _progress = 0.0;
-  String _status = 'Initializing...';
-
   @override
   void initState() {
     super.initState();
@@ -40,23 +37,9 @@ class _GenerateReportsScreenState extends State<GenerateReportsScreen> {
         }
       },
       builder: (context, state) {
-        final steps = [
-          'Compiling student data...',
-          'Calculating averages...',
-          'Generating PDF layouts...',
-          'Applying school branding...',
-          'Finalizing reports...',
-        ];
-
-        // Derived progress from status and steps
-        double progress = 0.0;
         String statusText = 'Initializing...';
 
         if (state.status == ReportWizardStatus.loading) {
-          // Since it's a batch firestore write, it might be fast.
-          // We'll keep the visual simulation if we want, or just show a spinner.
-          // For now let's just show a simple progress based on "loading"
-          progress = 0.5;
           statusText = 'Saving reports to Firestore...';
         }
 
