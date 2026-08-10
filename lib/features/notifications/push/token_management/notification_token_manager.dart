@@ -9,16 +9,10 @@ import '../../data/models/notification_token_isar.dart';
 
 /// Owns this device's FCM registration token.
 ///
-/// Responsibilities:
-///  - publish the token under the signed-in user so server-side fan-out can
-///    target them,
-///  - keep it fresh across token rotation,
-///  - support several devices per user and several users per device,
-///  - revoke it on sign-out so the next person on a shared device does not
-///    receive the previous user's notifications.
-///
-/// Tokens live at `users/{uid}/tokens/{token}`, matching where the existing
-/// Cloud Functions already look them up.
+/// Tokens live at `users/{uid}/tokens/{token}`. Registration intentionally
+/// performs a cheap merge on every authenticated session: an old version
+/// trusted the Isar cache and could skip the Firestore write even when the
+/// server token document had been deleted, leaving push permanently broken.
 class NotificationTokenManager {
   final FirebaseMessaging messaging;
   final FirebaseFirestore firestore;
@@ -32,9 +26,6 @@ class NotificationTokenManager {
     required this.isar,
   });
 
-  /// Starts listening for token rotation. FCM rotates tokens on reinstall,
-  /// restore and periodically; without this the server keeps pushing to a
-  /// token the device no longer answers to.
   void startListening({
     required String Function() currentUserId,
     required String Function() currentSchoolId,
@@ -47,16 +38,13 @@ class NotificationTokenManager {
     });
   }
 
-  /// Requests notification permission from the OS.
-  ///
-  /// Returns whether push may be used. A denial is a normal outcome, not an
-  /// error - the in-app notification centre still works without it.
   Future<bool> requestPermission() async {
     try {
       final settings = await messaging.requestPermission(
         alert: true,
         badge: true,
         sound: true,
+        provisional: true,
       );
       return settings.authorizationStatus == AuthorizationStatus.authorized ||
           settings.authorizationStatus == AuthorizationStatus.provisional;
@@ -66,11 +54,6 @@ class NotificationTokenManager {
     }
   }
 
-  /// Registers the current device for [userId].
-  ///
-  /// Skips the Firestore write when this exact token is already published for
-  /// this user - otherwise every cold start costs a write per user for no
-  /// change.
   Future<bool> registerDevice({
     required String userId,
     required String schoolId,
@@ -79,30 +62,13 @@ class NotificationTokenManager {
     try {
       token = await messaging.getToken();
     } catch (e) {
-      // Expected on iOS simulators, which have no APNs token. Not a failure
-      // worth surfacing - the rest of the app works fine without push.
-      _log('token unavailable (expected on simulators)', e);
+      _log('FCM token unavailable', e);
       return false;
     }
-
     if (token == null || token.isEmpty) return false;
 
-    final cached = await isar.notificationTokenIsars
-        .filter()
-        .tokenEqualTo(token)
-        .and()
-        .userIdEqualTo(userId)
-        .findFirst();
-
-    if (cached != null && !cached.needsPublishing) {
-      // Already published; just record that it is still live.
-      await isar.writeTxn(() async {
-        cached.lastSeenAt = DateTime.now();
-        await isar.notificationTokenIsars.put(cached);
-      });
-      return true;
-    }
-
+    // Always refresh the server registration on sign-in/session restore.
+    // This is deliberately self-healing if a server token doc was cleaned up.
     return _publish(token: token, userId: userId, schoolId: schoolId);
   }
 
@@ -111,12 +77,13 @@ class NotificationTokenManager {
     required String userId,
     required String schoolId,
   }) async {
+    final now = DateTime.now();
     final row = NotificationTokenIsar.create(
       token: token,
       userId: userId,
       schoolId: schoolId,
       platform: _platformName,
-      lastSeenAt: DateTime.now(),
+      lastSeenAt: now,
     );
 
     try {
@@ -129,31 +96,38 @@ class NotificationTokenManager {
             'token': token,
             'schoolId': schoolId,
             'platform': _platformName,
+            'app': 'school_pulse',
+            'enabled': true,
+            'lastSeenAt': FieldValue.serverTimestamp(),
             'updatedAt': FieldValue.serverTimestamp(),
-            // Written on first publish only, so the server can age out tokens that
-            // have not been seen for a long time.
             'createdAt': FieldValue.serverTimestamp(),
           }, SetOptions(merge: true));
-
-      row.publishedAt = DateTime.now();
+      row.publishedAt = now;
+      _log('FCM token registered', '$userId / $_platformName');
     } catch (e) {
-      // Leave publishedAt null so the next registerDevice retries.
-      _log('token publish failed, will retry', e);
+      _log('FCM token publish failed', e);
     }
 
     await isar.writeTxn(() async {
-      await isar.notificationTokenIsars.put(row);
+      final existing = await isar.notificationTokenIsars
+          .filter()
+          .tokenEqualTo(token)
+          .and()
+          .userIdEqualTo(userId)
+          .findFirst();
+      if (existing != null) {
+        existing.lastSeenAt = now;
+        existing.publishedAt = row.publishedAt ?? existing.publishedAt;
+        existing.pendingRevocation = false;
+        await isar.notificationTokenIsars.put(existing);
+      } else {
+        await isar.notificationTokenIsars.put(row);
+      }
     });
 
     return row.publishedAt != null;
   }
 
-  /// Removes this device's token for [userId] on sign-out.
-  ///
-  /// Deleting the server document is what actually stops delivery. If that
-  /// write fails (offline sign-out), the row is flagged so
-  /// [drainPendingRevocations] finishes the job once connectivity returns -
-  /// otherwise a signed-out user keeps receiving another tenant's alerts.
   Future<void> revokeForUser(String userId) async {
     final rows = await isar.notificationTokenIsars
         .filter()
@@ -185,7 +159,6 @@ class NotificationTokenManager {
       });
     }
 
-    // Unsubscribe from topics so broadcasts stop reaching this device too.
     for (final row in rows) {
       for (final topic in row.subscribedTopics) {
         try {
@@ -197,7 +170,6 @@ class NotificationTokenManager {
     }
   }
 
-  /// Completes revocations that could not reach the server earlier.
   Future<int> drainPendingRevocations() async {
     final pending = await isar.notificationTokenIsars
         .filter()
@@ -224,10 +196,6 @@ class NotificationTokenManager {
     return drained;
   }
 
-  /// Applies the difference between current and desired topic subscriptions.
-  ///
-  /// Only the delta is applied, so a cold start does not re-subscribe to every
-  /// topic - each subscribe is a network round trip.
   Future<void> syncTopics({
     required String userId,
     required Set<String> desiredTopics,
@@ -242,7 +210,6 @@ class NotificationTokenManager {
     final current = row.subscribedTopics.toSet();
     final toAdd = desiredTopics.difference(current);
     final toRemove = current.difference(desiredTopics);
-
     final applied = <String>{...current};
 
     for (final topic in toAdd) {
@@ -291,7 +258,7 @@ class NotificationTokenManager {
     }
   }
 
-  static void _log(String message, Object error) {
-    if (kDebugMode) debugPrint('[notifications] $message: $error');
+  static void _log(String message, Object detail) {
+    if (kDebugMode) debugPrint('[notifications] $message: $detail');
   }
 }
