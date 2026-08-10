@@ -9,6 +9,23 @@ enum SchoolApplicationStatus {
   unknown,
 }
 
+SchoolApplicationStatus schoolApplicationStatusFromWire(String? value) {
+  switch (value) {
+    case 'email_verification_pending':
+      return SchoolApplicationStatus.emailVerificationPending;
+    case 'email_verified':
+      return SchoolApplicationStatus.emailVerified;
+    case 'pending_review':
+      return SchoolApplicationStatus.pendingReview;
+    case 'approved':
+      return SchoolApplicationStatus.approved;
+    case 'rejected':
+      return SchoolApplicationStatus.rejected;
+    default:
+      return SchoolApplicationStatus.unknown;
+  }
+}
+
 extension SchoolApplicationStatusX on SchoolApplicationStatus {
   String get wireValue {
     switch (this) {
@@ -41,23 +58,6 @@ extension SchoolApplicationStatusX on SchoolApplicationStatus {
         return 'Rejected';
       case SchoolApplicationStatus.unknown:
         return 'Unknown';
-    }
-  }
-
-  static SchoolApplicationStatus fromWire(String? value) {
-    switch (value) {
-      case 'email_verification_pending':
-        return SchoolApplicationStatus.emailVerificationPending;
-      case 'email_verified':
-        return SchoolApplicationStatus.emailVerified;
-      case 'pending_review':
-        return SchoolApplicationStatus.pendingReview;
-      case 'approved':
-        return SchoolApplicationStatus.approved;
-      case 'rejected':
-        return SchoolApplicationStatus.rejected;
-      default:
-        return SchoolApplicationStatus.unknown;
     }
   }
 }
