@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
+import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/super_admin/data/services/manual_payment_service.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/subscription_plan.dart';
 import '../bloc/super_admin_bloc.dart';
@@ -39,97 +44,133 @@ class SubscriptionPlansScreen extends StatelessWidget {
           }
 
           final isWide = isSuperAdminWide(context);
-          if (state.plans.isEmpty) {
-            return const Center(
-              child: Text(
-                'No plans found. Deploy the manual billing backend once to seed the School Pulse plans.',
-                textAlign: TextAlign.center,
-              ),
-            );
-          }
 
-          return GridView.builder(
-            padding: const EdgeInsets.all(24),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: isWide ? 3 : 1,
-              crossAxisSpacing: 24,
-              mainAxisSpacing: 24,
-              childAspectRatio: isWide ? 0.78 : 1.15,
-            ),
-            itemCount: state.plans.length,
-            itemBuilder: (context, index) {
-              final plan = state.plans[index];
-              final customPrice = plan.customPricing && plan.price <= 0;
-              final storageLabel = plan.storageLimitGb % 1 == 0
-                  ? plan.storageLimitGb.toStringAsFixed(0)
-                  : plan.storageLimitGb.toStringAsFixed(1);
-              return Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(22),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              plan.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          if (plan.isDefault)
-                            const Chip(
-                              label: Text(
-                                'DEFAULT',
-                                style: TextStyle(fontSize: 10),
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        customPrice ? 'Custom price' : money.format(plan.price),
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      Text(
-                        '${_cycleLabel(plan.billingCycle)} • ${plan.termLengthDays} days',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      const Divider(),
-                      const SizedBox(height: 12),
-                      if (plan.maxStudents > 0)
-                        _PlanFeature(label: '${plan.maxStudents} Students'),
-                      if (plan.maxStaff > 0)
-                        _PlanFeature(label: '${plan.maxStaff} Staff'),
-                      if (plan.storageLimitGb > 0)
-                        _PlanFeature(label: '$storageLabel GB Storage'),
-                      ...plan.includedFeatures.map(
-                        (feature) => _PlanFeature(label: feature),
-                      ),
-                      const Spacer(),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () => _editPlan(context, plan),
-                          icon: const Icon(Icons.edit_outlined, size: 18),
-                          label: const Text('Edit Price & Billing'),
-                        ),
-                      ),
-                    ],
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.x2l,
+                  AppSpacing.xl,
+                  AppSpacing.x2l,
+                  AppSpacing.l,
+                ),
+                child: Text(
+                  'Manage plan pricing and billing cycles for every school.',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.textSecondary(context),
                   ),
                 ),
-              );
-            },
+              ),
+              Expanded(
+                child: state.plans.isEmpty
+                    ? const EmptyState(
+                        icon: Icons.subscriptions_outlined,
+                        title: 'No plans found',
+                        message:
+                            'Deploy the manual billing backend once to seed the School Pulse plans.',
+                      )
+                    : GridView.builder(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.x2l,
+                          0,
+                          AppSpacing.x2l,
+                          AppSpacing.x2l,
+                        ),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: isWide ? 3 : 1,
+                          crossAxisSpacing: AppSpacing.xl,
+                          mainAxisSpacing: AppSpacing.xl,
+                          childAspectRatio: isWide ? 0.78 : 1.15,
+                        ),
+                        itemCount: state.plans.length,
+                        itemBuilder: (context, index) {
+                          final plan = state.plans[index];
+                          final customPrice =
+                              plan.customPricing && plan.price <= 0;
+                          final storageLabel = plan.storageLimitGb % 1 == 0
+                              ? plan.storageLimitGb.toStringAsFixed(0)
+                              : plan.storageLimitGb.toStringAsFixed(1);
+                          return AppCard(
+                            padding: const EdgeInsets.all(22),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        plan.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: AppTypography.titleLarge
+                                            .copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.textPrimary(
+                                                context,
+                                              ),
+                                            ),
+                                      ),
+                                    ),
+                                    if (plan.isDefault)
+                                      StatusBadge(
+                                        label: 'Default',
+                                        color: AppColors.primary(context),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  customPrice
+                                      ? 'Custom price'
+                                      : money.format(plan.price),
+                                  style: theme.textTheme.headlineSmall
+                                      ?.copyWith(
+                                        color: AppColors.primary(context),
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                ),
+                                Text(
+                                  '${_cycleLabel(plan.billingCycle)} • ${plan.termLengthDays} days',
+                                  style: AppTypography.bodySmall.copyWith(
+                                    color: AppColors.textSecondary(context),
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.l),
+                                const Divider(),
+                                const SizedBox(height: AppSpacing.m),
+                                if (plan.maxStudents > 0)
+                                  _PlanFeature(
+                                    label: '${plan.maxStudents} Students',
+                                  ),
+                                if (plan.maxStaff > 0)
+                                  _PlanFeature(label: '${plan.maxStaff} Staff'),
+                                if (plan.storageLimitGb > 0)
+                                  _PlanFeature(
+                                    label: '$storageLabel GB Storage',
+                                  ),
+                                ...plan.includedFeatures.map(
+                                  (feature) => _PlanFeature(label: feature),
+                                ),
+                                const Spacer(),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    onPressed: () => _editPlan(context, plan),
+                                    icon: const Icon(
+                                      Icons.edit_outlined,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Edit Price & Billing'),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
           );
         },
       ),
@@ -137,10 +178,10 @@ class SubscriptionPlansScreen extends StatelessWidget {
   }
 
   static String _cycleLabel(BillingCycle cycle) => switch (cycle) {
-        BillingCycle.monthly => 'Monthly',
-        BillingCycle.termly => 'Per term',
-        BillingCycle.yearly => 'Yearly',
-      };
+    BillingCycle.monthly => 'Monthly',
+    BillingCycle.termly => 'Per term',
+    BillingCycle.yearly => 'Yearly',
+  };
 
   Future<void> _editPlan(BuildContext context, SubscriptionPlan plan) async {
     final updated = await showDialog<bool>(
@@ -272,7 +313,9 @@ class _EditPlanPricingDialogState extends State<_EditPlanPricingDialog> {
   }
 
   Future<void> _save() async {
-    final price = int.tryParse(_priceController.text.replaceAll(',', '').trim());
+    final price = int.tryParse(
+      _priceController.text.replaceAll(',', '').trim(),
+    );
     final days = int.tryParse(_daysController.text.trim());
     final enterprise = widget.plan.id.toLowerCase() == 'enterprise';
     if (price == null || price < 0 || (!enterprise && price == 0)) {
@@ -280,7 +323,9 @@ class _EditPlanPricingDialogState extends State<_EditPlanPricingDialog> {
       return;
     }
     if (days == null || days < 1 || days > 730) {
-      setState(() => _error = 'Paid period length must be between 1 and 730 days.');
+      setState(
+        () => _error = 'Paid period length must be between 1 and 730 days.',
+      );
       return;
     }
 
@@ -312,13 +357,21 @@ class _PlanFeature extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final semantic = Theme.of(context).extension<SemanticColors>()!;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          const Icon(Icons.check_circle, size: 16, color: Colors.green),
+          Icon(Icons.check_circle, size: 16, color: semantic.success),
           const SizedBox(width: 8),
-          Expanded(child: Text(label)),
+          Expanded(
+            child: Text(
+              label,
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textPrimary(context),
+              ),
+            ),
+          ),
         ],
       ),
     );

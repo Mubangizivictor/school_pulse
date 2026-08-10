@@ -8,6 +8,7 @@ import '../widgets/super_admin_logout_button.dart';
 import 'audit_logs_screen.dart';
 import 'subscription_plans_screen.dart';
 import 'super_admin_placeholder_screen.dart';
+import 'super_admin_settings_screen.dart';
 
 /// Mobile "More" screen for the SaaS owner console. Lists the sections that
 /// don't have a dedicated bottom-nav tab: Subscription Plans, Audit Logs,
@@ -64,15 +65,11 @@ class SuperAdminMoreScreen extends StatelessWidget {
           _MoreTile(
             icon: Icons.settings_outlined,
             title: 'Settings',
-            subtitle: 'Platform configuration',
+            subtitle: 'Account, billing and security',
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => const SuperAdminPlaceholderScreen(
-                  title: 'Settings',
-                  icon: Icons.settings_outlined,
-                  message: 'Platform settings are coming in a later phase.',
-                ),
+                builder: (_) => const SuperAdminSettingsScreen(),
               ),
             ),
           ),

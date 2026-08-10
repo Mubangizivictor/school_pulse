@@ -19,6 +19,7 @@ import 'subscription_plans_screen.dart';
 import 'super_admin_more_screen.dart';
 import 'super_admin_overview_screen.dart';
 import 'super_admin_placeholder_screen.dart';
+import 'super_admin_settings_screen.dart';
 
 /// Top-level sections shown in the desktop sidebar. Schools also hosts
 /// Applications internally (`SchoolManagementScreen`'s `_ApplicationList`),
@@ -123,11 +124,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           message: 'Notification management is coming in a later phase.',
         ),
         const AuditLogsScreen(),
-        const SuperAdminPlaceholderScreen(
-          title: 'Settings',
-          icon: Icons.settings_outlined,
-          message: 'Platform settings are coming in a later phase.',
-        ),
+        const SuperAdminSettingsScreen(),
       ],
     );
 
