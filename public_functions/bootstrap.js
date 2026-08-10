@@ -4,6 +4,7 @@ const owner = require('./owner');
 const payments = require('./payments');
 const paymentNotifications = require('./payment_notifications');
 const applicationNotifications = require('./application_notifications');
+const publicBilling = require('./billing_public');
 
 // payments is intentionally spread after owner: it replaces the old
 // approval/status exports with the payment-gated onboarding lifecycle while
@@ -15,4 +16,5 @@ module.exports = {
   ...payments,
   ...paymentNotifications,
   ...applicationNotifications,
+  ...publicBilling,
 };
