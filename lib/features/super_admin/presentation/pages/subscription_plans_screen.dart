@@ -60,6 +60,9 @@ class SubscriptionPlansScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final plan = state.plans[index];
               final customPrice = plan.customPricing && plan.price <= 0;
+              final storageLabel = plan.storageLimitGb % 1 == 0
+                  ? plan.storageLimitGb.toStringAsFixed(0)
+                  : plan.storageLimitGb.toStringAsFixed(1);
               return Card(
                 child: Padding(
                   padding: const EdgeInsets.all(22),
@@ -109,7 +112,7 @@ class SubscriptionPlansScreen extends StatelessWidget {
                       if (plan.maxStaff > 0)
                         _PlanFeature(label: '${plan.maxStaff} Staff'),
                       if (plan.storageLimitGb > 0)
-                        _PlanFeature(label: '${plan.storageLimitGb:g} GB Storage'),
+                        _PlanFeature(label: '$storageLabel GB Storage'),
                       ...plan.includedFeatures.map(
                         (feature) => _PlanFeature(label: feature),
                       ),
