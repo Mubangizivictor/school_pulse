@@ -518,11 +518,29 @@ class _AnimatedNumberTextState extends State<AnimatedNumberText>
       animation: _animation,
       builder: (context, child) {
         return Text(
-          '${widget.prefix}${_animation.value.toStringAsFixed(widget.decimalPlaces)}${widget.suffix}',
+          '${widget.prefix}${_groupThousands(_animation.value.toStringAsFixed(widget.decimalPlaces))}${widget.suffix}',
           style: widget.style,
         );
       },
     );
+  }
+
+  /// Inserts thousands separators into the integer part of a formatted
+  /// number string (e.g. "350000" -> "350,000", "1234.50" -> "1,234.50").
+  static String _groupThousands(String formatted) {
+    final negative = formatted.startsWith('-');
+    final unsigned = negative ? formatted.substring(1) : formatted;
+    final dotIndex = unsigned.indexOf('.');
+    final wholePart = dotIndex == -1
+        ? unsigned
+        : unsigned.substring(0, dotIndex);
+    final fractionPart = dotIndex == -1 ? '' : unsigned.substring(dotIndex);
+    final buffer = StringBuffer();
+    for (int i = 0; i < wholePart.length; i++) {
+      if (i > 0 && (wholePart.length - i) % 3 == 0) buffer.write(',');
+      buffer.write(wholePart[i]);
+    }
+    return '${negative ? '-' : ''}$buffer$fractionPart';
   }
 }
 
