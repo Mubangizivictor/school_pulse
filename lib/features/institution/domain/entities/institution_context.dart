@@ -14,6 +14,13 @@ class InstitutionContext extends Equatable {
   final DateTime loadedAt;
   final bool isOfflineCached;
 
+  /// Subscription access is tenant-level state. It lives here so every role
+  /// sees the same activation/renewal gate instead of each feature inventing
+  /// its own billing check.
+  final DateTime? subscriptionExpiry;
+  final String subscriptionStatus;
+  final bool hasEverActivated;
+
   const InstitutionContext({
     required this.institutionId,
     required this.displayLabel,
@@ -23,12 +30,19 @@ class InstitutionContext extends Equatable {
     required this.enabledFeatures,
     required this.loadedAt,
     this.isOfflineCached = false,
+    this.subscriptionExpiry,
+    this.subscriptionStatus = 'active',
+    this.hasEverActivated = true,
   });
 
   factory InstitutionContext.fromSchool(
     School school, {
     bool isOfflineCached = false,
   }) {
+    final metadata = school.metadata;
+    final hasExplicitActivationFlag = metadata.containsKey('hasEverActivated');
+    final source = metadata['source']?.toString() ?? '';
+
     return InstitutionContext(
       institutionId: school.id,
       displayLabel: school.displayLabel ?? school.name,
@@ -38,6 +52,17 @@ class InstitutionContext extends Equatable {
       enabledFeatures: school.enabledFeatures,
       loadedAt: DateTime.now(),
       isOfflineCached: isOfflineCached,
+      subscriptionExpiry: school.subscriptionExpiry,
+      subscriptionStatus:
+          metadata['subscriptionStatus']?.toString() ??
+          (school.status == SchoolStatus.trial ? 'awaiting_payment' : 'active'),
+      // Older non-public tenants pre-date manual billing and must not become
+      // locked merely because they have no new metadata field. Public-site
+      // tenants are treated as unpaid until the manual lifecycle writes the
+      // explicit activation flag.
+      hasEverActivated: hasExplicitActivationFlag
+          ? metadata['hasEverActivated'] == true
+          : source != 'public_website_application',
     );
   }
 
@@ -45,6 +70,32 @@ class InstitutionContext extends Equatable {
       status == SchoolStatus.suspended || status == SchoolStatus.archived;
 
   bool get requiresMfa => enabledFeatures.contains('mfa_required');
+
+  bool get isPaymentUnderReview => subscriptionStatus == 'payment_review';
+
+  /// First subscription payment: the school has been accepted/provisioned,
+  /// but no paid subscription has ever been verified. The dashboard must be
+  /// completely inaccessible until the SaaS Owner approves the payment.
+  bool get isInitialPaymentRequired {
+    if (hasEverActivated) return false;
+    return subscriptionStatus == 'awaiting_payment' ||
+        subscriptionStatus == 'payment_review' ||
+        subscriptionStatus == 'payment_due' ||
+        subscriptionStatus == 'rejected' ||
+        status == SchoolStatus.trial;
+  }
+
+  /// Renewal: after at least one successful activation the dashboard may stay
+  /// visible, but all interaction is blocked once the paid period has ended
+  /// (or while a renewal proof is waiting for verification).
+  bool get isRenewalLocked {
+    if (!hasEverActivated || isSuspended) return false;
+    final expired = subscriptionExpiry != null &&
+        !subscriptionExpiry!.isAfter(DateTime.now());
+    return expired ||
+        subscriptionStatus == 'payment_due' ||
+        subscriptionStatus == 'payment_review';
+  }
 
   @override
   List<Object?> get props => [
@@ -56,5 +107,8 @@ class InstitutionContext extends Equatable {
     enabledFeatures,
     loadedAt,
     isOfflineCached,
+    subscriptionExpiry,
+    subscriptionStatus,
+    hasEverActivated,
   ];
 }
