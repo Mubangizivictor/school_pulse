@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/design_system/components/pulse_logo.dart';
 import 'package:school_pulse/design_system/components/pulse_card.dart';
+import '../../domain/entities/school_application.dart';
 import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
 import '../bloc/super_admin_state.dart';
@@ -226,12 +228,27 @@ class SuperAdminOverview extends StatelessWidget {
         }
 
         final stats = state.stats;
+        final recentApplications = List<SchoolApplication>.from(
+          state.applications,
+        )..sort((a, b) {
+            final aDate = a.updatedAt ?? a.createdAt ?? DateTime(1970);
+            final bDate = b.updatedAt ?? b.createdAt ?? DateTime(1970);
+            return bDate.compareTo(aDate);
+          });
+
         return Scaffold(
           appBar: AppBar(
             title: const Text('Platform Overview'),
-            actions: isSuperAdminWide(context)
-                ? null
-                : const [SuperAdminLogoutButton()],
+            actions: [
+              IconButton(
+                onPressed: () => context.read<SuperAdminBloc>().add(
+                      LoadSuperAdminDashboard(),
+                    ),
+                tooltip: 'Refresh',
+                icon: const Icon(Icons.refresh_rounded),
+              ),
+              if (!isSuperAdminWide(context)) const SuperAdminLogoutButton(),
+            ],
           ),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
@@ -241,6 +258,13 @@ class SuperAdminOverview extends StatelessWidget {
                 Text(
                   'Welcome back, Owner',
                   style: theme.textTheme.headlineMedium,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Live platform data from School Pulse and public school registrations.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 24),
                 GridView.count(
@@ -257,42 +281,83 @@ class SuperAdminOverview extends StatelessWidget {
                       color: Colors.blue,
                     ),
                     _StatCard(
-                      label: 'Active Students',
-                      value: '${stats['totalStudents'] ?? 0}',
-                      icon: Icons.people,
+                      label: 'Active Schools',
+                      value: '${stats['activeSchools'] ?? 0}',
+                      icon: Icons.verified_outlined,
                       color: Colors.green,
                     ),
                     _StatCard(
-                      label: 'Monthly Revenue',
-                      value: 'UGX ${stats['monthlyRevenue'] ?? 0}',
-                      icon: Icons.payments,
+                      label: 'Pending Reviews',
+                      value: '${stats['pendingApplications'] ?? 0}',
+                      icon: Icons.rate_review_outlined,
                       color: Colors.orange,
                     ),
                     _StatCard(
-                      label: 'System Health',
-                      value: '99.9%',
-                      icon: Icons.speed,
+                      label: 'Total Students',
+                      value: '${stats['totalStudents'] ?? 0}',
+                      icon: Icons.people_outline,
                       color: Colors.purple,
                     ),
                   ],
                 ),
                 const SizedBox(height: 32),
-                Text('Recent Activity', style: theme.textTheme.titleLarge),
+                Text('Recent Applications', style: theme.textTheme.titleLarge),
                 const SizedBox(height: 16),
                 Card(
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: 5,
-                    separatorBuilder: (_, _) => const Divider(),
-                    itemBuilder: (context, index) {
-                      return const ListTile(
-                        leading: CircleAvatar(child: Icon(Icons.info_outline)),
-                        title: Text('New school registered: Mary Hill Academy'),
-                        subtitle: Text('2 hours ago'),
-                      );
-                    },
-                  ),
+                  child: recentApplications.isEmpty
+                      ? Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.inbox_outlined,
+                                color: theme.colorScheme.outline,
+                              ),
+                              const SizedBox(width: 12),
+                              const Expanded(
+                                child: Text(
+                                  'No public school applications have been submitted yet.',
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: recentApplications.length > 5
+                              ? 5
+                              : recentApplications.length,
+                          separatorBuilder: (_, _) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final application = recentApplications[index];
+                            final date = application.updatedAt ?? application.createdAt;
+                            return ListTile(
+                              leading: CircleAvatar(
+                                child: Icon(
+                                  application.status ==
+                                          SchoolApplicationStatus.pendingReview
+                                      ? Icons.pending_actions_outlined
+                                      : application.status ==
+                                              SchoolApplicationStatus.approved
+                                          ? Icons.check_rounded
+                                          : application.status ==
+                                                  SchoolApplicationStatus.rejected
+                                              ? Icons.close_rounded
+                                              : Icons.edit_note_outlined,
+                                ),
+                              ),
+                              title: Text(
+                                application.schoolName.isEmpty
+                                    ? 'School registration'
+                                    : application.schoolName,
+                              ),
+                              subtitle: Text(
+                                '${application.status.label}${date == null ? '' : ' • ${DateFormat('dd MMM, h:mm a').format(date.toLocal())}'}',
+                              ),
+                            );
+                          },
+                        ),
                 ),
               ],
             ),
