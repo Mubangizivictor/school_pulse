@@ -72,6 +72,21 @@ service firebase.storage {
       allow delete: if request.auth != null;
     }
 
+    // Subscription payment proof is private to the submitting administrator.
+    // The SaaS Owner gets temporary access only through an owner-authorized
+    // Cloud Function; there is no public proof URL stored in Firestore.
+    match /payment_proofs/{uid}/{fileName} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.size < 10 * 1024 * 1024
+        && (
+          request.resource.contentType.matches('image/.*')
+          || request.resource.contentType == 'application/pdf'
+        );
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }
