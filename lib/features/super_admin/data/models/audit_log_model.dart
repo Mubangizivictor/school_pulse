@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/entities/audit_log.dart';
 
 class AuditLogModel extends AuditLog {
@@ -20,13 +21,22 @@ class AuditLogModel extends AuditLog {
       action: json['action'] ?? '',
       schoolId: json['schoolId'],
       affectedUserId: json['affectedUserId'],
-      timestamp: json['timestamp'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(json['timestamp'])
-          : DateTime.now(),
+      timestamp: _parseDate(json['timestamp']) ?? DateTime.now(),
       device: json['device'] ?? '',
       reason: json['reason'],
       metadata: Map<String, dynamic>.from(json['metadata'] ?? {}),
     );
+  }
+
+  static DateTime? _parseDate(dynamic value) {
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
+    if (value is num) {
+      return DateTime.fromMillisecondsSinceEpoch(value.toInt());
+    }
+    if (value is String) return DateTime.tryParse(value);
+    return null;
   }
 
   Map<String, dynamic> toJson() {
