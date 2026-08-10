@@ -5,6 +5,15 @@ function text(value, max = 180) {
   return String(value ?? '').trim().slice(0, max);
 }
 
+const EMAIL_SECRETS = [
+  'SMTP_HOST',
+  'SMTP_PORT',
+  'SMTP_USER',
+  'SMTP_PASS',
+  'SMTP_FROM',
+  'OWNER_NOTIFICATION_EMAIL',
+];
+
 function reviewable(payment) {
   const status = String(payment?.status || '').toLowerCase();
   const proof = text(
@@ -14,18 +23,12 @@ function reviewable(payment) {
   return ['pending', 'under_review', 'pending_review'].includes(status) && Boolean(proof);
 }
 
-/**
- * Notify the SaaS Owner when a manual payment becomes ready for review.
- *
- * onDocumentWritten is required because the payment document can be created
- * before the proof upload finishes. We notify on the transition into a
- * reviewable state rather than assuming creation == submission.
- */
+/** Notify the SaaS Owner exactly once when a payment becomes reviewable. */
 exports.notifyOwnerOfManualPayment = onDocumentWritten(
   {
     region: 'europe-west1',
     document: 'manual_subscription_payments/{paymentId}',
-    secrets: ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM', 'OWNER_NOTIFICATION_EMAIL'],
+    secrets: EMAIL_SECRETS,
   },
   async (event) => {
     const after = event.data?.after;
@@ -38,24 +41,28 @@ exports.notifyOwnerOfManualPayment = onDocumentWritten(
     const paymentId = event.params.paymentId;
     const schoolName = text(payment.schoolName, 160) || 'A school';
     const amount = Math.max(0, Math.round(Number(payment.submittedAmount || payment.amount || 0)));
-    const method = String(payment.method || '').toLowerCase() === 'bank'
-      ? 'Centenary Bank'
-      : 'MTN Mobile Money';
+    const method = String(payment.method || '').toLowerCase() === 'bank' ? 'bank' : 'mtn';
+    const methodLabel = method === 'bank' ? 'Centenary Bank' : 'MTN Mobile Money';
     const amountLabel = `UGX ${amount.toLocaleString('en-US')}`;
 
     await notifyOwners({
-      eventId: `manual_payment_${paymentId}_${text(event.id, 120)}`,
+      eventId: `manual_payment_${paymentId}_submitted`,
       eventType: 'Payment proof submitted',
       title: 'Payment verification required',
-      body: `${schoolName} submitted ${amountLabel} via ${method}. Confirm the money was received before activating access.`,
+      body: `${schoolName} submitted ${amountLabel} via ${methodLabel}. Confirm the money was received before activating access.`,
       schoolName,
       data: {
         type: 'manual_subscription_payment',
+        notificationType: 'custom',
+        priority: 'high',
+        sourceModule: 'super_admin',
+        sourceEntityId: paymentId,
         paymentId,
         schoolId: text(payment.schoolId, 180),
         schoolName,
         amount: String(amount),
-        method: String(payment.method || '').toLowerCase() === 'bank' ? 'bank' : 'mtn',
+        amountUgx: String(amount),
+        method,
       },
     });
   },
