@@ -42,7 +42,7 @@ exports.notifyOwnerOfSchoolApplication = onDocumentWritten(
     const body = `${schoolName} submitted a ${plan} application${district ? ` from ${district}` : ''}. Review the school before requesting payment.`;
 
     await notifyOwners({
-      eventId: `school_application_${applicationId}_${text(application.updatedAt?.toMillis?.() || Date.now(), 40)}`,
+      eventId: `school_application_${applicationId}_${text(event.id, 120)}`,
       eventType: 'New school application',
       title: 'New school application',
       body,
