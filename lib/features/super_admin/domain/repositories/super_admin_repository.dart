@@ -1,6 +1,7 @@
 import '../entities/school.dart';
 import '../entities/subscription_plan.dart';
 import '../entities/audit_log.dart';
+import '../entities/school_application.dart';
 
 abstract class SuperAdminRepository {
   // School Management
@@ -14,6 +15,14 @@ abstract class SuperAdminRepository {
   Future<void> updateSchool(School school);
   Future<void> suspendSchool(String schoolId, String reason);
   Future<void> activateSchool(String schoolId);
+
+  // Public website onboarding / owner review
+  Future<List<SchoolApplication>> getSchoolApplications();
+  Future<String> approveSchoolApplication(String applicationId);
+  Future<void> rejectSchoolApplication(
+    String applicationId,
+    String reason,
+  );
 
   // Subscription Management
   Future<List<SubscriptionPlan>> getSubscriptionPlans();
