@@ -242,7 +242,7 @@ class _EnterScoresScreenState extends State<EnterScoresScreen> {
     if (state is TeacherMarksEntryLoaded) {
       return ListView.separated(
         itemCount: state.students.length,
-        separatorBuilder: (_, __) => Divider(
+        separatorBuilder: (_, _) => Divider(
           height: 1,
           color: AppColors.border(context).withValues(alpha: 0.5),
         ),

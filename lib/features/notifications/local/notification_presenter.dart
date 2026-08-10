@@ -186,8 +186,9 @@ class NotificationPresenter {
   Future<String?> _localImagePath(NotificationItem item) async {
     final url = item.bannerImageUrl ?? item.thumbnailUrl;
     if (url == null || url.isEmpty) return null;
-    if (!NotificationCategoryCatalog.of(item.category).allowsImages)
+    if (!NotificationCategoryCatalog.of(item.category).allowsImages) {
       return null;
+    }
 
     // An already-downloaded file is usable regardless of connection.
     final local = item.localImagePath;

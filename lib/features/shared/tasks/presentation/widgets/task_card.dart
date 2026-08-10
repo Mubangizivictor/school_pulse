@@ -11,19 +11,23 @@ class TaskCard extends StatelessWidget {
 
   Color _getCategoryColor(String category) {
     if (category.contains('Attendance')) return Colors.green;
-    if (category.contains('Hygiene') || category.contains('Inspection'))
+    if (category.contains('Hygiene') || category.contains('Inspection')) {
       return Colors.purple;
-    if (category.contains('Welfare') || category.contains('Sarah'))
+    }
+    if (category.contains('Welfare') || category.contains('Sarah')) {
       return Colors.orange;
+    }
     return Colors.blue;
   }
 
   IconData _getCategoryIcon(String category) {
     if (category.contains('Attendance')) return Icons.verified_user_outlined;
-    if (category.contains('Hygiene') || category.contains('Inspection'))
+    if (category.contains('Hygiene') || category.contains('Inspection')) {
       return Icons.cleaning_services_outlined;
-    if (category.contains('Welfare') || category.contains('Sarah'))
+    }
+    if (category.contains('Welfare') || category.contains('Sarah')) {
       return Icons.favorite_border;
+    }
     return Icons.assignment_outlined;
   }
 

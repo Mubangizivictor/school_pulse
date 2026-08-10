@@ -207,7 +207,7 @@ class LibraryRepositoryImpl implements LibraryRepository {
     await remoteDataSource.updateBorrowingStatus(schoolId, borrowingId, {
       'status': BorrowingStatus.returned.name,
       'returnDate': DateTime.now(),
-      if (fineAmount != null) 'fineAmount': fineAmount,
+      'fineAmount': ?fineAmount,
     });
 
     // 2. Integration: Finance (Fines)

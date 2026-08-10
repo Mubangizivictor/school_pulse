@@ -39,14 +39,16 @@ class _Step06ConfigureRoleState extends State<Step06ConfigureRole> {
         ? authState.user.schoolId
         : '';
     _classesSub = _structureRepository.watchClasses(schoolId).listen((classes) {
-      if (mounted)
+      if (mounted) {
         setState(() => _classNames = classes.map((c) => c.name).toList());
+      }
     });
     _subjectsSub = _structureRepository.watchSubjects(schoolId).listen((
       subjects,
     ) {
-      if (mounted)
+      if (mounted) {
         setState(() => _subjectNames = subjects.map((s) => s.name).toList());
+      }
     });
   }
 

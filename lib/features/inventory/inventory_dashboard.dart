@@ -352,8 +352,9 @@ class InventoryDashboardScreen extends StatelessWidget {
                 final item = items.firstWhere((i) => i.id == selectedItemId);
                 if (quantity == null ||
                     quantity <= 0 ||
-                    quantity > item.quantity)
+                    quantity > item.quantity) {
                   return;
+                }
                 context.read<InventoryBloc>().add(
                   IssueItemRequested(
                     itemId: selectedItemId,

@@ -86,8 +86,9 @@ class MediaLinksDocsScreen extends StatelessWidget {
   }
 
   Widget _buildMediaGrid(BuildContext context, List<ChatMessage> media) {
-    if (media.isEmpty)
+    if (media.isEmpty) {
       return _buildEmpty(context, 'No photos or videos shared yet.');
+    }
 
     // Grouped the way the chat itself reads - newest month first.
     final byMonth = <String, List<ChatMessage>>{};

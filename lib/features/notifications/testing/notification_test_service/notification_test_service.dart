@@ -166,7 +166,7 @@ class NotificationTestService {
         'priority': priority.name,
         'title': title ?? '[TEST] ${_defaultTitleFor(category)}',
         'body': body ?? 'Test push from School Pulse.',
-        if (imageUrl != null) 'imageUrl': imageUrl,
+        'imageUrl': ?imageUrl,
       });
 
       final data = response.data;

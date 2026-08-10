@@ -144,7 +144,7 @@ class _NotificationPreferencesScreenState
       ),
       body: _loading
           ? const Center(
-              child: const SchoolPulseLoader(),
+              child: SchoolPulseLoader(),
             )
           : _preferences == null
           ? const Center(

@@ -26,7 +26,7 @@ class AuditRepository {
     String? userId,
   }) async {
     await _firestore.collection('audit_logs').add({
-      if (schoolId != null) 'schoolId': schoolId,
+      'schoolId': ?schoolId,
       'title': title,
       'description': description,
       'iconName': iconName,

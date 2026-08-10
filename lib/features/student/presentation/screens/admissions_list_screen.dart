@@ -142,7 +142,7 @@ class _AdmissionsListViewState extends State<_AdmissionsListView> {
                     : ListView.separated(
                         padding: const EdgeInsets.fromLTRB(12, 0, 12, 88),
                         itemCount: visible.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        separatorBuilder: (_, _) => const SizedBox(height: 8),
                         itemBuilder: (context, index) {
                           final application = visible[index];
                           return Card(

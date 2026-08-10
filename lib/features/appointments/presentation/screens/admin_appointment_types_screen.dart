@@ -280,8 +280,9 @@ class _AdminAppointmentTypesView extends StatelessWidget {
             FilledButton(
               onPressed: () {
                 if (nameController.text.trim().isEmpty ||
-                    departmentController.text.trim().isEmpty)
+                    departmentController.text.trim().isEmpty) {
                   return;
+                }
                 bloc.add(
                   SaveAppointmentTypeEvent(
                     AppointmentType(

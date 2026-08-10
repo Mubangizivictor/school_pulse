@@ -399,8 +399,9 @@ class _WelfareLogTab extends StatelessWidget {
       buildWhen: (_, current) =>
           current is WelfareRecordsLoaded || current is PatronLoading,
       builder: (context, state) {
-        if (state is PatronLoading)
+        if (state is PatronLoading) {
           return const Center(child: SchoolPulseLoader());
+        }
         if (state is! WelfareRecordsLoaded) return const SizedBox.shrink();
         final records = state.records;
         if (records.isEmpty) {
@@ -484,8 +485,9 @@ class _ReferralsTab extends StatelessWidget {
     return BlocBuilder<PatronBloc, PatronState>(
       buildWhen: (_, current) => current is CounselingReferralsLoaded,
       builder: (context, state) {
-        if (state is! CounselingReferralsLoaded)
+        if (state is! CounselingReferralsLoaded) {
           return const Center(child: SchoolPulseLoader());
+        }
         if (state.referrals.isEmpty) {
           return const EmptyState(
             icon: Icons.psychology_outlined,
@@ -538,8 +540,9 @@ class _BehaviourTab extends StatelessWidget {
     return BlocBuilder<PatronBloc, PatronState>(
       buildWhen: (_, current) => current is BehaviourObservationsLoaded,
       builder: (context, state) {
-        if (state is! BehaviourObservationsLoaded)
+        if (state is! BehaviourObservationsLoaded) {
           return const Center(child: SchoolPulseLoader());
+        }
         if (state.observations.isEmpty) {
           return const EmptyState(
             icon: Icons.visibility_outlined,

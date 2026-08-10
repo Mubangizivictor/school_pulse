@@ -347,7 +347,7 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Center(
-                          child: const SchoolPulseLoader(),
+                          child: SchoolPulseLoader(),
                         ),
                       ),
                   ],

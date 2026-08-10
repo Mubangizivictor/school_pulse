@@ -200,7 +200,7 @@ class _QRScannerViewState extends State<_QRScannerView> {
 class _ScannerFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: 280,
       height: 280,
       child: Stack(

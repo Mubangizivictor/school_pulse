@@ -477,8 +477,9 @@ class ChatInfoScreen extends StatelessWidget {
       if (!context.mounted) return;
       await context.messages.updateGroupInfo(conversation.id, avatarUrl: url);
     } catch (e) {
-      if (context.mounted)
+      if (context.mounted) {
         context.showMessagingSnack('Could not update the photo: $e');
+      }
     }
   }
 

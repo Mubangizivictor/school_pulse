@@ -161,8 +161,9 @@ class _RecordClinicVisitScreenState extends State<RecordClinicVisitScreen> {
                         if (v == null || v.isEmpty) return null;
                         final temp = double.tryParse(v);
                         if (temp == null) return 'Invalid number';
-                        if (temp < 30 || temp > 45)
+                        if (temp < 30 || temp > 45) {
                           return 'Out of range (30-45)';
+                        }
                         return null;
                       },
                     ),

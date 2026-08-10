@@ -721,7 +721,7 @@ class MessageBubble extends StatelessWidget {
                     width: 220,
                     height: 160,
                     child: Center(
-                      child: const SchoolPulseLoader(),
+                      child: SchoolPulseLoader(),
                     ),
                   ),
             errorBuilder: (context, error, stack) => const SizedBox(

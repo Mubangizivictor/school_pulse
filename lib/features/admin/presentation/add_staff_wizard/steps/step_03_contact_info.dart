@@ -83,8 +83,9 @@ class _Step03ContactInfoState extends State<Step03ContactInfo> {
               ),
               validator: (v) {
                 if (v == null || v.trim().isEmpty) return 'Required';
-                if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim()))
+                if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim())) {
                   return 'Enter a valid email';
+                }
                 return null;
               },
             ),

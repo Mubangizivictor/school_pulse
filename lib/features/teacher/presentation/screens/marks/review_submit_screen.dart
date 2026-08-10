@@ -85,7 +85,7 @@ class ReviewSubmitScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Icon(Icons.info_outline, color: Color(0xFF818CF8), size: 20),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'Once submitted, marks will be locked for editing.',

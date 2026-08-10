@@ -368,8 +368,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
                           ? null
                           : () async {
                               if (titleController.text.trim().isEmpty ||
-                                  bodyController.text.trim().isEmpty)
+                                  bodyController.text.trim().isEmpty) {
                                 return;
+                              }
                               setDialogState(() => isSending = true);
                               try {
                                 // Capped so a hung write can never leave the
@@ -381,8 +382,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                       body: bodyController.text.trim(),
                                     )
                                     .timeout(const Duration(seconds: 15));
-                                if (dialogContext.mounted)
+                                if (dialogContext.mounted) {
                                   Navigator.pop(dialogContext);
+                                }
                               } catch (e) {
                                 setDialogState(() => isSending = false);
                                 if (dialogContext.mounted) {

@@ -328,11 +328,13 @@ class _FeeCategoriesList extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<FinanceBloc, FinanceState>(
       builder: (context, state) {
-        if (state is FinanceLoading)
+        if (state is FinanceLoading) {
           return const Center(child: SchoolPulseLoader());
+        }
         if (state is FeeConfigurationLoaded) {
-          if (state.categories.isEmpty)
+          if (state.categories.isEmpty) {
             return const Center(child: Text('No categories defined.'));
+          }
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: state.categories.length,
@@ -371,11 +373,13 @@ class _FeeStructuresList extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<FinanceBloc, FinanceState>(
       builder: (context, state) {
-        if (state is FinanceLoading)
+        if (state is FinanceLoading) {
           return const Center(child: SchoolPulseLoader());
+        }
         if (state is FeeConfigurationLoaded) {
-          if (state.structures.isEmpty)
+          if (state.structures.isEmpty) {
             return const Center(child: Text('No structures defined.'));
+          }
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: state.structures.length,

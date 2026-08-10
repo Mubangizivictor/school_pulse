@@ -139,7 +139,7 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 48),
                       child: Center(
-                        child: const SchoolPulseLoader(),
+                        child: SchoolPulseLoader(),
                       ),
                     )
                   else if (grouped.isEmpty)

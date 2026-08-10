@@ -45,7 +45,7 @@ class _EventTypePickerScreenState extends State<EventTypePickerScreen> {
         child: ListView.separated(
           padding: const EdgeInsets.all(AppSpacing.xl),
           itemCount: CalendarEventType.values.length,
-          separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.m),
+          separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.m),
           itemBuilder: (context, index) {
             final type = CalendarEventType.values[index];
             final selected = type == _selected;

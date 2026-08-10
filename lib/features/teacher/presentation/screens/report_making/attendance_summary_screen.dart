@@ -164,6 +164,7 @@ class _AttendanceMetricItem extends StatelessWidget {
 
   const _AttendanceMetricItem({required this.label, required this.value});
 
+  @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12.0),

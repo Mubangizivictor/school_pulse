@@ -49,8 +49,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
         listener: (context, state) {
           setState(() {
             if (state is DormitoriesLoaded) _dormitories = state.dormitories;
-            if (state is DisciplineIncidentsLoaded)
+            if (state is DisciplineIncidentsLoaded) {
               _discipline = state.incidents;
+            }
             if (state is WelfareRecordsLoaded) _welfare = state.records;
             if (state is LeaveRequestsLoaded) _leave = state.requests;
           });
@@ -255,8 +256,9 @@ class _BarChartCard extends StatelessWidget {
                   showTitles: true,
                   getTitlesWidget: (value, meta) {
                     final index = value.toInt();
-                    if (index < 0 || index >= entries.length)
+                    if (index < 0 || index >= entries.length) {
                       return const SizedBox.shrink();
+                    }
                     return SideTitleWidget(
                       axisSide: meta.axisSide,
                       child: Padding(

@@ -49,8 +49,9 @@ class _IssueStockDialogState extends State<IssueStockDialog> {
                 ),
                 keyboardType: TextInputType.number,
                 validator: (value) {
-                  if (value == null || int.tryParse(value) == null)
+                  if (value == null || int.tryParse(value) == null) {
                     return 'Invalid';
+                  }
                   final qty = int.parse(value);
                   if (qty <= 0) return 'Must be > 0';
                   if (qty > widget.item.quantity) return 'Insufficient stock';

@@ -83,8 +83,9 @@ class PerformanceAnalyticsScreen extends StatelessWidget {
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (value, meta) {
-                        if (value.toInt() >= grades.length)
+                        if (value.toInt() >= grades.length) {
                           return const SizedBox.shrink();
+                        }
                         return SideTitleWidget(
                           axisSide: meta.axisSide,
                           child: Text(

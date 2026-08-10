@@ -179,7 +179,7 @@ class BrandingSettingsScreen extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Text(
-            '#${color.value.toRadixString(16).substring(2).toUpperCase()}',
+            '#${color.toARGB32().toRadixString(16).substring(2).toUpperCase()}',
             style: const TextStyle(
               color: Color(0x66FFFFFF),
               fontSize: 11,

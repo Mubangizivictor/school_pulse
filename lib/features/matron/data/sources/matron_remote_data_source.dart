@@ -1357,8 +1357,9 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
   }) async {
     Query<Map<String, dynamic>> query = firestore.collection('welfare_records');
     if (schoolId != null) query = query.where('schoolId', isEqualTo: schoolId);
-    if (studentId != null)
+    if (studentId != null) {
       query = query.where('studentId', isEqualTo: studentId);
+    }
     if (publicOnly) query = query.where('isPrivate', isEqualTo: false);
     final snapshot = await query.get();
     final records = snapshot.docs.map((doc) {
@@ -1385,8 +1386,9 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
     Query<Map<String, dynamic>> query = firestore.collection(
       'boarding_discipline',
     );
-    if (studentId != null)
+    if (studentId != null) {
       query = query.where('studentId', isEqualTo: studentId);
+    }
     final snapshot = await query.get();
     final cases = snapshot.docs.map((doc) {
       final data = doc.data();

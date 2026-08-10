@@ -925,8 +925,9 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
         longitude: position.longitude,
       );
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         context.showMessagingSnack('Could not get your location: $e');
+      }
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
@@ -936,10 +937,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   /// never at launch - so a denial has to be explained here.
   Future<bool> _ensureLocationPermission() async {
     if (!await Geolocator.isLocationServiceEnabled()) {
-      if (mounted)
+      if (mounted) {
         context.showMessagingSnack(
           'Turn on location services to share your location',
         );
+      }
       return false;
     }
     var permission = await Geolocator.checkPermission();
@@ -948,10 +950,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     }
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
-      if (mounted)
+      if (mounted) {
         context.showMessagingSnack(
           'Location permission is needed to share where you are',
         );
+      }
       return false;
     }
     return true;
@@ -1030,10 +1033,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     if (contactId == user.id) return;
     final contact = await context.messages.getContact(contactId);
     if (contact == null || !mounted) {
-      if (mounted)
+      if (mounted) {
         context.showMessagingSnack(
           'That contact is no longer in the directory',
         );
+      }
       return;
     }
     final id = await context.messages.startDirectConversation(
@@ -1107,10 +1111,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
 
   Future<void> _startRecording() async {
     if (!await _recorder.hasPermission()) {
-      if (mounted)
+      if (mounted) {
         context.showMessagingSnack(
           'Microphone permission is needed to record a voice note',
         );
+      }
       return;
     }
 
@@ -1150,8 +1155,9 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
 
     // Cancelled, or a mis-tap too short to be a message.
     if (!send || duration < const Duration(seconds: 1)) {
-      if (send)
+      if (send) {
         context.showMessagingSnack('Hold longer to record a voice note');
+      }
       if (await file.exists()) await file.delete();
       return;
     }

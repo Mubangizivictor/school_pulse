@@ -78,8 +78,9 @@ class VerificationEventRecorderImpl implements VerificationEventRecorder {
   @override
   Future<Either<Failure, void>> syncPendingEvents() async {
     try {
-      if (!(await networkInfo.isConnected))
+      if (!(await networkInfo.isConnected)) {
         return const Left(NetworkFailure('No internet connection'));
+      }
 
       final unsynced = await localDataSource.getUnsyncedEvents();
       for (final event in unsynced) {

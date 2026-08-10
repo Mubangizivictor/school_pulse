@@ -255,8 +255,9 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
       final school = state.schools.firstWhere((s) => s.id == event.schoolId);
       final updatedFeatures = List<String>.from(school.enabledFeatures);
       if (event.enabled) {
-        if (!updatedFeatures.contains(event.feature))
+        if (!updatedFeatures.contains(event.feature)) {
           updatedFeatures.add(event.feature);
+        }
       } else {
         updatedFeatures.remove(event.feature);
       }

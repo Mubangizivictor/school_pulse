@@ -424,7 +424,7 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
       // In a real app, this might trigger a Cloud Function or
       // create a 'report_card' doc that the PDF generator listens to.
       // For now, we'll create the shell record that makes it visible to parents/deans.
-      final docId = '${studentId}_${term}_${year}';
+      final docId = '${studentId}_${term}_$year';
       final docRef = firestore.collection('report_cards').doc(docId);
 
       batch.set(docRef, {

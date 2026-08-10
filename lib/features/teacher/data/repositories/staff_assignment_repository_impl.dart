@@ -161,8 +161,9 @@ class StaffAssignmentRepositoryImpl implements StaffAssignmentRepository {
           ),
         );
       }
-      if (!match.isCurrentlyValid())
+      if (!match.isCurrentlyValid()) {
         return const Left(AssignmentInvalidFailure());
+      }
       return Right(match);
     }
 

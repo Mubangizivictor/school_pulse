@@ -164,7 +164,7 @@ class _SchoolNotificationSettingsScreenState
       return const _SettingsScaffold(
         saving: false,
         child: Center(
-          child: const SchoolPulseLoader(),
+          child: SchoolPulseLoader(),
         ),
       );
     }

@@ -146,7 +146,7 @@ class _NotificationListViewState extends State<_NotificationListView>
               Expanded(
                 child: state.status == NotificationCenterStatus.loading
                     ? const Center(
-                        child: const SchoolPulseLoader(),
+                        child: SchoolPulseLoader(),
                       )
                     : TabBarView(
                         controller: _tabController,

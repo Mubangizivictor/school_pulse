@@ -76,8 +76,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
-        if (authState is! AuthAuthenticated)
+        if (authState is! AuthAuthenticated) {
           return const Scaffold(body: Center(child: SchoolPulseLoader()));
+        }
 
         return BlocConsumer<StudentsBloc, StudentsState>(
           listener: (context, state) {
@@ -88,8 +89,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             }
           },
           builder: (context, studentsState) {
-            if (studentsState is StudentsLoading)
+            if (studentsState is StudentsLoading) {
               return const Scaffold(body: Center(child: SchoolPulseLoader()));
+            }
 
             return BlocBuilder<SelectedStudentBloc, SelectedStudentState>(
               builder: (context, selectedState) {

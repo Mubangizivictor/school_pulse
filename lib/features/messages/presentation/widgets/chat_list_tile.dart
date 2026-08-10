@@ -153,8 +153,9 @@ class ChatListTile extends StatelessWidget {
         now.month == timestamp.month &&
         now.day == timestamp.day;
     if (sameDay) return DateFormat('HH:mm').format(timestamp);
-    if (now.difference(timestamp).inDays < 7)
+    if (now.difference(timestamp).inDays < 7) {
       return DateFormat('EEE').format(timestamp);
+    }
     return DateFormat('dd/MM/yy').format(timestamp);
   }
 }

@@ -311,8 +311,9 @@ class _RequestLeaveSheetState extends State<_RequestLeaveSheet> {
                               const Duration(days: 90),
                             ),
                           );
-                          if (date != null)
+                          if (date != null) {
                             setState(() => _departureDate = date);
+                          }
                         },
                       ),
                     ),
@@ -332,8 +333,9 @@ class _RequestLeaveSheetState extends State<_RequestLeaveSheet> {
                               const Duration(days: 120),
                             ),
                           );
-                          if (date != null)
+                          if (date != null) {
                             setState(() => _expectedReturnDate = date);
+                          }
                         },
                       ),
                     ),

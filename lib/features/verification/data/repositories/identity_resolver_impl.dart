@@ -95,10 +95,11 @@ class IdentityResolverImpl implements IdentityResolver {
     final staffResult = await getStaffMembers(NoParams());
     return staffResult.fold(Left.new, (staff) {
       final match = staff.where((s) => s.staffCode == code).toList();
-      if (match.isEmpty)
+      if (match.isEmpty) {
         return const Right(
           UnresolvedResolvedIdentity(reason: 'unknown_credential'),
         );
+      }
       return Right(
         StaffResolvedIdentity(
           id: match.first.id,
@@ -119,10 +120,11 @@ class IdentityResolverImpl implements IdentityResolver {
       final match = staff
           .where((s) => s.id == staffId && s.schoolId == context.gate.schoolId)
           .toList();
-      if (match.isEmpty)
+      if (match.isEmpty) {
         return const Right(
           UnresolvedResolvedIdentity(reason: 'unknown_credential'),
         );
+      }
       return Right(
         StaffResolvedIdentity(
           id: match.first.id,

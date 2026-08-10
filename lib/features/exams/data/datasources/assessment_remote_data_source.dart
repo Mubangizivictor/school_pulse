@@ -81,12 +81,15 @@ class AssessmentRemoteDataSourceImpl implements AssessmentRemoteDataSource {
         .doc(schoolId)
         .collection('assessment_marks');
 
-    if (assessmentTypeId != null)
+    if (assessmentTypeId != null) {
       query = query.where('assessmentTypeId', isEqualTo: assessmentTypeId);
-    if (subjectId != null)
+    }
+    if (subjectId != null) {
       query = query.where('subjectId', isEqualTo: subjectId);
-    if (studentId != null)
+    }
+    if (studentId != null) {
       query = query.where('studentId', isEqualTo: studentId);
+    }
 
     final snapshot = await query.get();
     return snapshot.docs

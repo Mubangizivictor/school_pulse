@@ -46,8 +46,9 @@ class _ReceiveGoodsDialogState extends State<ReceiveGoodsDialog> {
                 ),
                 keyboardType: TextInputType.number,
                 validator: (value) {
-                  if (value == null || int.tryParse(value) == null)
+                  if (value == null || int.tryParse(value) == null) {
                     return 'Invalid';
+                  }
                   if (int.parse(value) <= 0) return 'Must be > 0';
                   return null;
                 },

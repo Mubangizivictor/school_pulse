@@ -98,7 +98,7 @@ class _SelectTermProfileScreenState extends State<SelectTermProfileScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Icon(Icons.info_outline, size: 20, color: Colors.blue),
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,

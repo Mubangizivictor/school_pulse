@@ -218,8 +218,9 @@ class NotificationService {
         );
         await subscribeToGroups(groups);
       } catch (e) {
-        if (kDebugMode)
+        if (kDebugMode) {
           debugPrint('Error resolving parent groups for $uid: $e');
+        }
         await subscribeToGroups(const ['Parents']);
       }
     } else {
@@ -244,7 +245,7 @@ class NotificationService {
 
     // 1. Create the 'alert' document in Firestore (for the in-app "Audit Log")
     await _firestore.collection('alerts').add({
-      if (schoolId != null) 'schoolId': schoolId,
+      'schoolId': ?schoolId,
       'title': title,
       'body': body,
       'targets': targetGroups,
@@ -329,7 +330,7 @@ class NotificationService {
     Map<String, dynamic>? data,
   }) async {
     await _firestore.collection('alerts').add({
-      if (schoolId != null) 'schoolId': schoolId,
+      'schoolId': ?schoolId,
       'studentId': studentId,
       'title': title,
       'body': body,

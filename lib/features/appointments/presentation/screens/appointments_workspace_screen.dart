@@ -68,9 +68,10 @@ class _AppointmentsWorkspaceScreenState
         child: StreamBuilder<List<Appointment>>(
           stream: _repo.watchForSchool(user.schoolId),
           builder: (context, snap) {
-            if (snap.connectionState == ConnectionState.waiting)
+            if (snap.connectionState == ConnectionState.waiting) {
               return const Center(child: SchoolPulseLoader());
-            if (snap.hasError)
+            }
+            if (snap.hasError) {
               return _StatePanel(
                 icon: Icons.cloud_off_outlined,
                 title: 'Appointments are unavailable',
@@ -78,6 +79,7 @@ class _AppointmentsWorkspaceScreenState
                 action: 'Retry',
                 onAction: () => setState(() {}),
               );
+            }
             final all = snap.data ?? const <Appointment>[];
             final visible = _filter(all);
             return RefreshIndicator(
@@ -201,12 +203,13 @@ class _AppointmentsWorkspaceScreenState
       ),
       builder: (_) => _AppointmentEditor(user: user, repo: _repo),
     );
-    if (result != null && mounted)
+    if (result != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Appointment scheduled and reminders queued.'),
         ),
       );
+    }
   }
 
   Future<void> _openDetails(Appointment a, dynamic user, bool canManage) async {
@@ -436,8 +439,9 @@ class _AppointmentEditorState extends State<_AppointmentEditor> {
       notes,
       visitorId,
       attachments,
-    ])
+    ]) {
       c.dispose();
+    }
     super.dispose();
   }
 
@@ -1029,7 +1033,7 @@ class _AppointmentDetails extends StatelessWidget {
       AppointmentStatus.cancelled,
       AppointmentStatus.completed,
       AppointmentStatus.rejected,
-    ].contains(appointment.status))
+    ].contains(appointment.status)) {
       buttons.add(
         OutlinedButton(
           onPressed: () => repo
@@ -1038,6 +1042,7 @@ class _AppointmentDetails extends StatelessWidget {
           child: const Text('Cancel'),
         ),
       );
+    }
     buttons.add(
       OutlinedButton.icon(
         onPressed: () => _delete(context),
@@ -1114,7 +1119,7 @@ class _AppointmentDetails extends StatelessWidget {
         createdAt: DateTime.now(),
       ),
     );
-    if (context.mounted)
+    if (context.mounted) {
       result.fold(
         (f) => ScaffoldMessenger.of(
           context,
@@ -1123,6 +1128,7 @@ class _AppointmentDetails extends StatelessWidget {
           context,
         ).showSnackBar(const SnackBar(content: Text('Appointment note added'))),
       );
+    }
   }
 }
 

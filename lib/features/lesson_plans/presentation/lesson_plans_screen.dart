@@ -145,8 +145,9 @@ class _LessonPlansScreenState extends State<LessonPlansScreen> {
                       ),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
                     );
-                    if (picked != null)
+                    if (picked != null) {
                       setDialogState(() => selectedDate = picked);
+                    }
                   },
                 ),
                 const SizedBox(height: 16),
@@ -169,8 +170,9 @@ class _LessonPlansScreenState extends State<LessonPlansScreen> {
             FilledButton(
               onPressed: () async {
                 if (subjectController.text.trim().isEmpty ||
-                    classController.text.trim().isEmpty)
+                    classController.text.trim().isEmpty) {
                   return;
+                }
                 await di.sl<AddLessonPlan>()(
                   LessonPlan(
                     id: '',
