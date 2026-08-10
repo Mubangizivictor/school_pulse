@@ -49,7 +49,7 @@ class SchoolApplicationModel extends SchoolApplication {
     return SchoolApplicationModel(
       id: (json['id'] ?? documentId).toString(),
       authUid: (json['authUid'] ?? documentId).toString(),
-      status: SchoolApplicationStatusX.fromWire(json['status']?.toString()),
+      status: schoolApplicationStatusFromWire(json['status']?.toString()),
       schoolName: (school['name'] ?? '').toString(),
       shortName: (school['shortName'] ?? '').toString(),
       schoolEmail: (school['email'] ?? '').toString(),
