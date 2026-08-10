@@ -8,6 +8,19 @@ function text(value, max = 180) {
   return String(value ?? '').trim().slice(0, max);
 }
 
+async function getOwnerDocs() {
+  const owners = new Map();
+
+  const byRole = await db.collection('users').where('role', '==', 'superAdmin').get();
+  byRole.docs.forEach((doc) => owners.set(doc.id, doc));
+
+  // Some owner records use a multi-role array instead of a single role field.
+  const byRoles = await db.collection('users').where('roles', 'array-contains', 'superAdmin').get();
+  byRoles.docs.forEach((doc) => owners.set(doc.id, doc));
+
+  return [...owners.values()];
+}
+
 /**
  * Push/in-app alert for the SaaS Owner when payment proof arrives.
  *
@@ -30,14 +43,14 @@ exports.notifyOwnerOfManualPayment = onDocumentCreated(
     const method = payment.method === 'bank' ? 'Centenary Bank' : 'MTN Mobile Money';
     const amountLabel = `UGX ${amount.toLocaleString('en-US')}`;
 
-    const owners = await db.collection('users').where('role', '==', 'superAdmin').get();
-    if (owners.empty) {
+    const owners = await getOwnerDocs();
+    if (owners.length === 0) {
       console.warn('Manual payment submitted but no superAdmin user document was found.', paymentId);
       return;
     }
 
     await Promise.all(
-      owners.docs.map(async (ownerDoc) => {
+      owners.map(async (ownerDoc) => {
         const owner = ownerDoc.data() || {};
         if (owner.isActive === false) return;
 
@@ -45,12 +58,15 @@ exports.notifyOwnerOfManualPayment = onDocumentCreated(
         await alertRef.set(
           {
             userId: ownerDoc.id,
-            title: 'Subscription payment awaiting verification',
+            title: 'Payment verification required',
             body: `${schoolName} submitted ${amountLabel} via ${method}. Open Payments & Billing to verify the money received.`,
             data: {
               type: 'manual_subscription_payment',
               paymentId,
               schoolId: text(payment.schoolId, 180),
+              schoolName,
+              amount: String(amount),
+              method: payment.method === 'bank' ? 'bank' : 'mtn',
             },
             timestamp: admin.firestore.FieldValue.serverTimestamp(),
             readBy: [],
@@ -60,16 +76,19 @@ exports.notifyOwnerOfManualPayment = onDocumentCreated(
         );
 
         const tokensSnapshot = await ownerDoc.ref.collection('tokens').get();
-        const tokens = tokensSnapshot.docs
-          .map((doc) => text(doc.data()?.token || doc.id, 4096))
-          .filter(Boolean);
-        if (tokens.length === 0) return;
+        const tokenEntries = tokensSnapshot.docs
+          .map((doc) => ({
+            doc,
+            token: text(doc.data()?.token || doc.id, 4096),
+          }))
+          .filter((entry) => Boolean(entry.token));
+        if (tokenEntries.length === 0) return;
 
         try {
           const response = await admin.messaging().sendEachForMulticast({
-            tokens: tokens.slice(0, 500),
+            tokens: tokenEntries.slice(0, 500).map((entry) => entry.token),
             notification: {
-              title: 'Payment awaiting verification',
+              title: 'Payment verification required',
               body: `${schoolName} • ${amountLabel} • ${method}`,
             },
             data: {
@@ -89,8 +108,8 @@ exports.notifyOwnerOfManualPayment = onDocumentCreated(
               code === 'messaging/registration-token-not-registered' ||
               code === 'messaging/invalid-registration-token'
             ) {
-              const token = tokens[index];
-              if (token) removals.push(ownerDoc.ref.collection('tokens').doc(token).delete());
+              const entry = tokenEntries[index];
+              if (entry) removals.push(entry.doc.ref.delete());
             }
           });
           await Promise.all(removals);
