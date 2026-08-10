@@ -9,6 +9,11 @@ import 'super_admin_state.dart';
 
 class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
   final SuperAdminRepository repository;
+
+  /// Retained temporarily for constructor compatibility with the existing
+  /// dependency-injection graph. Gateway actions are intentionally disabled;
+  /// manual subscription payments are handled by ManualPaymentService and the
+  /// owner-only payment Cloud Functions.
   final BillingRepository billingRepository;
   final FirebaseAuth auth;
 
@@ -91,17 +96,14 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
     InitiatePaymentEvent event,
     Emitter<SuperAdminState> emit,
   ) async {
-    try {
-      await billingRepository.initiateSubscriptionPayment(
-        schoolId: event.schoolId,
-        amount: event.amount,
-        email: event.email,
-        phoneNumber: event.phoneNumber,
-        planId: event.planId,
-      );
-    } catch (e) {
-      emit(state.copyWith(errorMessage: e.toString()));
-    }
+    // Defensive dead-end for any stale screen/event that survived a hot
+    // restart. School Pulse no longer initiates gateway charges.
+    emit(
+      state.copyWith(
+        errorMessage:
+            'Automatic gateway charges are disabled. Use the manual payment verification flow.',
+      ),
+    );
   }
 
   Future<void> _onLoadDashboard(
@@ -116,20 +118,15 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
       ),
     );
     try {
-      // Start the independent owner-console reads together, but keep the
-      // returned values strongly typed rather than casting a heterogeneous
-      // Future.wait result.
       final schoolsFuture = repository.getAllSchools();
       final applicationsFuture = repository.getSchoolApplications();
       final plansFuture = repository.getSubscriptionPlans();
       final statsFuture = repository.getPlatformStats();
-      final invoicesFuture = billingRepository.getInvoices();
 
       final schools = await schoolsFuture;
       final applications = await applicationsFuture;
       final plans = await plansFuture;
       final stats = await statsFuture;
-      final invoices = await invoicesFuture;
 
       emit(
         state.copyWith(
@@ -138,7 +135,6 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
           applications: applications,
           plans: plans,
           stats: stats,
-          invoices: invoices,
           clearErrorMessage: true,
         ),
       );
@@ -180,7 +176,8 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
           applications: applications,
           stats: stats,
           clearReviewingApplicationId: true,
-          actionMessage: 'School approved and activated. School ID: $schoolId',
+          actionMessage:
+              'School approved. Subscription payment is now required. School ID: $schoolId',
           clearErrorMessage: true,
         ),
       );
@@ -207,7 +204,10 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
       ),
     );
     try {
-      await repository.rejectSchoolApplication(event.applicationId, event.reason);
+      await repository.rejectSchoolApplication(
+        event.applicationId,
+        event.reason,
+      );
       final applicationsFuture = repository.getSchoolApplications();
       final statsFuture = repository.getPlatformStats();
       final applications = await applicationsFuture;
@@ -235,14 +235,10 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
     LoadInvoicesEvent event,
     Emitter<SuperAdminState> emit,
   ) async {
-    try {
-      final invoices = await billingRepository.getInvoices(
-        schoolId: event.schoolId,
-      );
-      emit(state.copyWith(invoices: invoices));
-    } catch (e) {
-      emit(state.copyWith(errorMessage: e.toString()));
-    }
+    // Legacy gateway invoices are deliberately not loaded into the new manual
+    // payment console. Kept as a no-op until the old event/repository types are
+    // removed from DI in a dedicated cleanup pass.
+    emit(state.copyWith(clearErrorMessage: true));
   }
 
   Future<void> _onCreateSchool(
