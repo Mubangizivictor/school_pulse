@@ -7,6 +7,19 @@ const db = admin.firestore();
 const WEBSITE_ORIGIN = "https://schoolpulse.victorbee.com";
 const APP_URL = "https://app.schoolpulse.victorbee.com";
 const ALLOWED_PLANS = ["Starter", "Growth", "Pro", "Enterprise"];
+const ALLOWED_MODULES = [
+  "Students",
+  "Attendance",
+  "Academics",
+  "Administration",
+  "Finance",
+  "Boarding",
+  "Health",
+  "Library",
+  "Transport",
+  "Messaging",
+];
+const CORE_MODULES = ["Students", "Attendance", "Academics", "Administration"];
 
 function cors(req, res) {
   const origin = req.get("origin");
@@ -32,6 +45,16 @@ function normalizePhone(value) {
   if (/^07\d{8}$/.test(digits)) return `256${digits.slice(1)}`;
   if (/^2567\d{8}$/.test(digits)) return digits;
   return null;
+}
+
+function sanitizeModules(value) {
+  const requested = Array.isArray(value) ? value : [];
+  const modules = new Set(CORE_MODULES);
+  for (const module of requested) {
+    const cleaned = text(module, 50);
+    if (ALLOWED_MODULES.includes(cleaned)) modules.add(cleaned);
+  }
+  return [...modules];
 }
 
 async function rateLimit(req, bucket, limit = 5) {
@@ -84,6 +107,7 @@ exports.submitSchoolApplication = onRequest({ region: "europe-west1" }, async (r
   const location = req.body?.location ?? {};
   const administrator = req.body?.administrator ?? {};
   const plan = text(req.body?.plan, 40);
+  const selectedModules = sanitizeModules(req.body?.selectedModules);
 
   const schoolName = text(school.name, 160);
   const schoolEmail = text(school.email, 160).toLowerCase();
@@ -136,6 +160,7 @@ exports.submitSchoolApplication = onRequest({ region: "europe-west1" }, async (r
     status: "pending_review",
     source: "public_website",
     plan,
+    selectedModules,
     school: {
       name: schoolName,
       shortName: text(school.shortName, 40),
