@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
+import 'package:school_pulse/features/teacher/presentation/widgets/tab_button.dart';
 
 class TeacherStudentBehaviourScreen extends StatelessWidget {
   final String studentId;
@@ -83,59 +84,23 @@ class TeacherStudentBehaviourScreen extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: _TabButton(label: 'All', isSelected: true, isDark: isDark),
+            child: TabButton(label: 'All', isSelected: true, isDark: isDark),
           ),
           Expanded(
-            child: _TabButton(
+            child: TabButton(
               label: 'Positive',
               isSelected: false,
               isDark: isDark,
             ),
           ),
           Expanded(
-            child: _TabButton(
+            child: TabButton(
               label: 'Negative',
               isSelected: false,
               isDark: isDark,
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _TabButton extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final bool isDark;
-
-  const _TabButton({
-    required this.label,
-    required this.isSelected,
-    required this.isDark,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        color: isSelected
-            ? (isDark ? AppColors.bgDark : Colors.white)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(AppSpacing.s),
-      ),
-      child: Center(
-        child: Text(
-          label,
-          style: AppTypography.labelMedium.copyWith(
-            color: isSelected
-                ? AppColors.royalBlue
-                : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
       ),
     );
   }

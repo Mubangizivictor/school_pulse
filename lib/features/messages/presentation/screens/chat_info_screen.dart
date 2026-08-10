@@ -11,6 +11,7 @@ import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/messages/domain/entities/message_models.dart';
 import 'package:school_pulse/features/messages/presentation/messaging_context.dart';
+import 'package:school_pulse/features/messages/presentation/widgets/action_button.dart';
 
 class ChatInfoScreen extends StatelessWidget {
   final String chatId;
@@ -152,22 +153,22 @@ class ChatInfoScreen extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _ActionButton(
+              ActionButton(
                 icon: Icons.add_moderator_outlined,
                 label: 'Manage',
                 onTap: () => _manage(context, user, conversation, amAdmin),
               ),
-              _ActionButton(
+              ActionButton(
                 icon: Icons.person_add_outlined,
                 label: 'Add',
                 onTap: () => _addMembers(context, user, conversation, amAdmin),
               ),
-              _ActionButton(
+              ActionButton(
                 icon: Icons.search,
                 label: 'Search',
                 onTap: () => context.push('/messages/search'),
               ),
-              _ActionButton(
+              ActionButton(
                 icon: conversation.isMuted
                     ? Icons.notifications_active_outlined
                     : Icons.notifications_off_outlined,
@@ -821,38 +822,3 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
   }
 }
 
-class _ActionButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _ActionButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.electricBlue.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: AppColors.electricBlue),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 12, color: AppColors.electricBlue),
-          ),
-        ],
-      ),
-    );
-  }
-}

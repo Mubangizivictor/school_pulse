@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
+import 'package:school_pulse/features/teacher/presentation/widgets/tab_button.dart';
 
 class TeacherStudentCommunicationsScreen extends StatelessWidget {
   final String studentId;
@@ -109,14 +110,14 @@ class TeacherStudentCommunicationsScreen extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: _TabButton(
+            child: TabButton(
               label: 'Messages',
               isSelected: true,
               isDark: isDark,
             ),
           ),
           Expanded(
-            child: _TabButton(
+            child: TabButton(
               label: 'Announcements',
               isSelected: false,
               isDark: isDark,
@@ -128,41 +129,6 @@ class TeacherStudentCommunicationsScreen extends StatelessWidget {
   }
 }
 
-class _TabButton extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final bool isDark;
-
-  const _TabButton({
-    required this.label,
-    required this.isSelected,
-    required this.isDark,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        color: isSelected
-            ? (isDark ? AppColors.bgDark : Colors.white)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(AppSpacing.s),
-      ),
-      child: Center(
-        child: Text(
-          label,
-          style: AppTypography.labelMedium.copyWith(
-            color: isSelected
-                ? AppColors.royalBlue
-                : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _MessageTile extends StatelessWidget {
   final String name;

@@ -8,6 +8,7 @@ import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/messages/domain/entities/message_models.dart';
 import 'package:school_pulse/features/messages/presentation/messaging_context.dart';
+import 'package:school_pulse/features/messages/presentation/widgets/action_button.dart';
 import 'package:share_plus/share_plus.dart';
 
 /// Reached from a 1:1 chat, so [contactId] is the *conversation* id - the
@@ -138,26 +139,26 @@ class ContactProfileScreen extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _ActionButton(
+                ActionButton(
                   icon: Icons.message_outlined,
                   label: 'Message',
                   onTap: () => _openChat(context, user, data),
                 ),
-                _ActionButton(
+                ActionButton(
                   icon: Icons.phone_outlined,
                   label: 'Call',
                   onTap: () => context.showMessagingSnack(
                     'Phone numbers are not shared through the school directory',
                   ),
                 ),
-                _ActionButton(
+                ActionButton(
                   icon: Icons.videocam_outlined,
                   label: 'Video',
                   onTap: () => context.showMessagingSnack(
                     'Video calls are not available yet',
                   ),
                 ),
-                _ActionButton(
+                ActionButton(
                   icon: Icons.share_outlined,
                   label: 'Share',
                   onTap: () => Share.share('${contact.name} — $roleLabel'),
@@ -426,38 +427,3 @@ class _ProfileData {
   const _ProfileData({required this.contact, this.conversationId});
 }
 
-class _ActionButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _ActionButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.electricBlue.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: AppColors.electricBlue),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 12, color: AppColors.electricBlue),
-          ),
-        ],
-      ),
-    );
-  }
-}
