@@ -1,4 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -16,7 +15,6 @@ import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
 import '../bloc/super_admin_state.dart';
 import '../responsive.dart';
-import '../widgets/super_admin_logout_button.dart';
 
 /// Platform Overview / Dashboard tab of the SaaS owner console.
 ///
@@ -94,13 +92,6 @@ class _SuperAdminOverviewScreenState extends State<SuperAdminOverviewScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final user = FirebaseAuth.instance.currentUser;
-    final ownerLabel = (user?.displayName?.trim().isNotEmpty ?? false)
-        ? user!.displayName!.trim()
-        : (user?.email?.trim().isNotEmpty ?? false)
-        ? user!.email!.trim()
-        : 'SaaS Owner';
-    final initials = _initialsOf(ownerLabel);
 
     return BlocBuilder<SuperAdminBloc, SuperAdminState>(
       builder: (context, state) {
@@ -127,37 +118,6 @@ class _SuperAdminOverviewScreenState extends State<SuperAdminOverviewScreen> {
                 onPressed: _refresh,
                 tooltip: 'Refresh',
                 icon: const Icon(Icons.refresh_rounded),
-              ),
-              PopupMenuButton<String>(
-                tooltip: ownerLabel,
-                icon: CircleAvatar(
-                  radius: 16,
-                  backgroundColor: AppColors.primary(context),
-                  child: Text(
-                    initials,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-                itemBuilder: (context) => [
-                  PopupMenuItem(
-                    enabled: false,
-                    child: Text(
-                      ownerLabel,
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.textSecondary(context),
-                      ),
-                    ),
-                  ),
-                  const PopupMenuDivider(),
-                  const PopupMenuItem(value: 'logout', child: Text('Logout')),
-                ],
-                onSelected: (value) {
-                  if (value == 'logout') handleSuperAdminLogout(context);
-                },
               ),
               const SizedBox(width: AppSpacing.s),
             ],
@@ -265,20 +225,6 @@ class _SuperAdminOverviewScreenState extends State<SuperAdminOverviewScreen> {
         );
       },
     );
-  }
-
-  String _initialsOf(String label) {
-    final parts = label
-        .split(RegExp(r'[\s@.]+'))
-        .where((p) => p.isNotEmpty)
-        .toList();
-    if (parts.isEmpty) return 'SO';
-    if (parts.length == 1) {
-      return parts.first
-          .substring(0, parts.first.length.clamp(0, 2))
-          .toUpperCase();
-    }
-    return (parts[0][0] + parts[1][0]).toUpperCase();
   }
 }
 

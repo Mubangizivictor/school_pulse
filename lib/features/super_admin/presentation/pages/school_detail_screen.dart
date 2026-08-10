@@ -78,34 +78,6 @@ class SchoolDetailScreen extends StatelessWidget {
                 ),
               ),
             ),
-          if (school.status != SchoolStatus.archived)
-            PopupMenuButton<String>(
-              tooltip: 'More actions',
-              onSelected: (value) {
-                if (value == 'archive') _archiveSchool(context, school);
-              },
-              itemBuilder: (menuContext) => [
-                PopupMenuItem(
-                  value: 'archive',
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.archive_outlined,
-                        size: 18,
-                        color: Theme.of(menuContext).colorScheme.error,
-                      ),
-                      const SizedBox(width: AppSpacing.m),
-                      Text(
-                        'Archive School',
-                        style: TextStyle(
-                          color: Theme.of(menuContext).colorScheme.error,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
         ],
       ),
       body: SingleChildScrollView(
@@ -491,10 +463,6 @@ class SchoolDetailScreen extends StatelessWidget {
     );
   }
 
-  void _archiveSchool(BuildContext context, School school) {
-    archiveSchoolDialog(context, school);
-  }
-
   Widget _statusBadge(SchoolStatus status, BuildContext context) {
     final (label, color) = switch (status) {
       SchoolStatus.active => ('Active', AppColors.success(context)),
@@ -542,26 +510,33 @@ void confirmSchoolStatusChange(
 /// Shared archive confirmation dialog — reused by [SchoolDetailScreen] and
 /// the Schools list quick actions. Archiving reuses the same Firestore
 /// write and access-lockout logic as suspending; it never deletes data.
-void archiveSchoolDialog(BuildContext context, School school) {
+/// Marks a school as deleted (Firestore-backed, via [SchoolStatus.archived]
+/// under the hood). This intentionally stays reversible rather than being a
+/// true destructive delete: a school's data likely spans many Firestore
+/// collections that haven't been audited, so a naive hard-delete risks
+/// orphaned data. Reactivating an archived school (from School Details)
+/// undoes this.
+void deleteSchoolDialog(BuildContext context, School school) {
   final bloc = context.read<SuperAdminBloc>();
   final reasonController = TextEditingController();
   showDialog(
     context: context,
     builder: (dialogContext) => AlertDialog(
       icon: Icon(
-        Icons.archive_outlined,
+        Icons.delete_outline_rounded,
         color: Theme.of(dialogContext).colorScheme.error,
       ),
-      title: const Text('Archive School?'),
+      title: const Text('Delete School?'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Archiving ${school.name} immediately blocks all staff and '
-            'admin access, the same as suspending. This does NOT delete '
-            'any school data — it stays fully recoverable. Use this for '
-            'schools that are permanently leaving the platform.',
+            'Deleting ${school.name} immediately blocks all staff and '
+            'admin access. This does NOT permanently erase any school '
+            'data — it stays recoverable by reactivating the school from '
+            'School Details. Use this for schools that are permanently '
+            'leaving the platform.',
           ),
           const SizedBox(height: AppSpacing.m),
           TextField(
@@ -598,10 +573,10 @@ void archiveSchoolDialog(BuildContext context, School school) {
             );
             Navigator.pop(dialogContext);
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('${school.name} has been archived.')),
+              SnackBar(content: Text('${school.name} has been deleted.')),
             );
           },
-          child: const Text('Archive School'),
+          child: const Text('Delete School'),
         ),
       ],
     ),

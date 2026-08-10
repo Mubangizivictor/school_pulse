@@ -636,10 +636,10 @@ class _SchoolTableRow extends StatelessWidget {
   }
 }
 
-/// Suspend/Reactivate/Archive shortcut menu shown on each Schools list row,
-/// so lifecycle actions don't require opening School Details first. Reuses
+/// Suspend/Reactivate shortcut menu shown on each Schools list row, so
+/// lifecycle actions don't require opening School Details first. Reuses
 /// the exact same confirmation dialogs and Firestore-backed events as the
-/// School Details screen.
+/// School Details screen. Deleting a school lives only in the More page.
 class _SchoolQuickActions extends StatelessWidget {
   const _SchoolQuickActions({required this.school, this.compact = false});
 
@@ -692,8 +692,6 @@ class _SchoolQuickActions extends StatelessWidget {
                 ),
               ),
             );
-          case 'archive':
-            archiveSchoolDialog(context, school);
         }
       },
       itemBuilder: (menuContext) => [
@@ -748,26 +746,6 @@ class _SchoolQuickActions extends StatelessWidget {
                 Text(
                   'Reactivate',
                   style: TextStyle(color: AppColors.success(menuContext)),
-                ),
-              ],
-            ),
-          ),
-        if (school.status != SchoolStatus.archived)
-          PopupMenuItem(
-            value: 'archive',
-            child: Row(
-              children: [
-                Icon(
-                  Icons.archive_outlined,
-                  size: 18,
-                  color: Theme.of(menuContext).colorScheme.error,
-                ),
-                const SizedBox(width: AppSpacing.m),
-                Text(
-                  'Archive',
-                  style: TextStyle(
-                    color: Theme.of(menuContext).colorScheme.error,
-                  ),
                 ),
               ],
             ),
