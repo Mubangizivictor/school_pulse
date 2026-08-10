@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/school_model.dart';
 import '../models/subscription_plan_model.dart';
 import '../models/audit_log_model.dart';
+import '../models/school_application_model.dart';
 
 abstract class SuperAdminRemoteDataSource {
   Future<List<SchoolModel>> getAllSchools();
@@ -13,6 +15,9 @@ abstract class SuperAdminRemoteDataSource {
     String adminPassword,
   );
   Future<void> updateSchool(SchoolModel school);
+  Future<List<SchoolApplicationModel>> getSchoolApplications();
+  Future<String> approveSchoolApplication(String applicationId);
+  Future<void> rejectSchoolApplication(String applicationId, String reason);
   Future<List<SubscriptionPlanModel>> getSubscriptionPlans();
   Future<void> logAction(AuditLogModel log);
   Future<List<AuditLogModel>> getAuditLogs({String? schoolId});
@@ -24,6 +29,9 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
   final FirebaseAuth auth;
 
   SuperAdminRemoteDataSourceImpl({required this.firestore, required this.auth});
+
+  FirebaseFunctions get _ownerFunctions =>
+      FirebaseFunctions.instanceFor(region: 'europe-west1');
 
   @override
   Future<List<AuditLogModel>> getAuditLogs({String? schoolId}) async {
@@ -47,7 +55,7 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
   Future<List<SchoolModel>> getAllSchools() async {
     final snapshot = await firestore.collection('schools').get();
     return snapshot.docs
-        .map((doc) => SchoolModel.fromJson(doc.data()))
+        .map((doc) => SchoolModel.fromJson({...doc.data(), 'id': doc.id}))
         .toList();
   }
 
@@ -55,7 +63,7 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
   Stream<List<SchoolModel>> watchSchools() {
     return firestore.collection('schools').snapshots().map((snapshot) {
       return snapshot.docs
-          .map((doc) => SchoolModel.fromJson(doc.data()))
+          .map((doc) => SchoolModel.fromJson({...doc.data(), 'id': doc.id}))
           .toList();
     });
   }
@@ -77,7 +85,6 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
     // For this implementation, we assume a Cloud Function will handle
     // the actual Firebase Auth user creation and assigning the 'schoolAdmin' role
     // when a new 'school_admin_invitation' document is created.
-
     await firestore.collection('school_admin_invitations').add({
       'email': adminEmail,
       'schoolId': school.id,
@@ -98,6 +105,51 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
   }
 
   @override
+  Future<List<SchoolApplicationModel>> getSchoolApplications() async {
+    final snapshot = await firestore
+        .collection('public_school_applications')
+        .orderBy('createdAt', descending: true)
+        .limit(250)
+        .get();
+    return snapshot.docs
+        .map((doc) => SchoolApplicationModel.fromFirestore(doc.id, doc.data()))
+        .toList();
+  }
+
+  @override
+  Future<String> approveSchoolApplication(String applicationId) async {
+    try {
+      final callable = _ownerFunctions.httpsCallable('approveSchoolApplication');
+      final result = await callable.call<Map<String, dynamic>>({
+        'applicationId': applicationId,
+      });
+      final schoolId = result.data['schoolId']?.toString();
+      if (schoolId == null || schoolId.isEmpty) {
+        throw StateError('Approval completed without a school ID.');
+      }
+      return schoolId;
+    } on FirebaseFunctionsException catch (e) {
+      throw StateError(e.message ?? 'Unable to approve this school application.');
+    }
+  }
+
+  @override
+  Future<void> rejectSchoolApplication(
+    String applicationId,
+    String reason,
+  ) async {
+    try {
+      final callable = _ownerFunctions.httpsCallable('rejectSchoolApplication');
+      await callable.call<Map<String, dynamic>>({
+        'applicationId': applicationId,
+        'reason': reason,
+      });
+    } on FirebaseFunctionsException catch (e) {
+      throw StateError(e.message ?? 'Unable to reject this school application.');
+    }
+  }
+
+  @override
   Future<List<SubscriptionPlanModel>> getSubscriptionPlans() async {
     final snapshot = await firestore.collection('subscription_plans').get();
     return snapshot.docs
@@ -112,18 +164,25 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
 
   @override
   Future<Map<String, dynamic>> getPlatformStats() async {
-    final schools = await firestore.collection('schools').get();
+    final schoolsFuture = firestore.collection('schools').get();
+    final pendingFuture = firestore
+        .collection('public_school_applications')
+        .where('status', isEqualTo: 'pending_review')
+        .get();
+    final results = await Future.wait([schoolsFuture, pendingFuture]);
+    final schools = results[0] as QuerySnapshot<Map<String, dynamic>>;
+    final pending = results[1] as QuerySnapshot<Map<String, dynamic>>;
 
-    // In a real app, these would be aggregated or retrieved from a summary document
-    // For now, we calculate them from the schools collection
     int totalStudents = 0;
     int totalStaff = 0;
-
-    // This is a bit expensive for a real production app without aggregation
-    for (var doc in schools.docs) {
+    for (final doc in schools.docs) {
       final schoolData = doc.data();
-      totalStudents += (schoolData['studentCount'] ?? 0) as int;
-      totalStaff += (schoolData['staffCount'] ?? 0) as int;
+      totalStudents += (schoolData['studentCount'] ??
+              (schoolData['metadata'] as Map<String, dynamic>?)?['studentCount'] ??
+              0) as int;
+      totalStaff += (schoolData['staffCount'] ??
+              (schoolData['metadata'] as Map<String, dynamic>?)?['staffCount'] ??
+              0) as int;
     }
 
     return {
@@ -133,6 +192,7 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
           .length,
       'totalStudents': totalStudents,
       'totalStaff': totalStaff,
+      'pendingApplications': pending.size,
     };
   }
 }
