@@ -16,6 +16,7 @@ import '../widgets/super_admin_logout_button.dart';
 import 'create_school_dialog.dart';
 import 'school_detail_screen.dart';
 import 'school_application_review_screen.dart';
+import 'subscriptions_overview_screen.dart';
 
 class SchoolManagementScreen extends StatefulWidget {
   const SchoolManagementScreen({super.key});
@@ -36,6 +37,19 @@ class _SchoolManagementScreenState extends State<SchoolManagementScreen> {
         appBar: AppBar(
           title: const Text('Schools'),
           actions: [
+            IconButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BlocProvider.value(
+                    value: context.read<SuperAdminBloc>(),
+                    child: const SubscriptionsOverviewScreen(),
+                  ),
+                ),
+              ),
+              tooltip: 'Subscriptions Overview',
+              icon: const Icon(Icons.subscriptions_outlined),
+            ),
             IconButton(
               onPressed: () =>
                   context.read<SuperAdminBloc>().add(LoadSuperAdminDashboard()),

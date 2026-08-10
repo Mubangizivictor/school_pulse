@@ -17,8 +17,8 @@ import 'billing_page.dart';
 import 'school_management_screen.dart';
 import 'subscription_plans_screen.dart';
 import 'super_admin_more_screen.dart';
+import 'super_admin_notifications_screen.dart';
 import 'super_admin_overview_screen.dart';
-import 'super_admin_placeholder_screen.dart';
 import 'super_admin_settings_screen.dart';
 
 /// Top-level sections shown in the desktop sidebar. Schools also hosts
@@ -118,11 +118,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           initialFilter: _billingInitialFilter,
         ),
         const SubscriptionPlansScreen(),
-        const SuperAdminPlaceholderScreen(
-          title: 'Notifications',
-          icon: Icons.notifications_outlined,
-          message: 'Notification management is coming in a later phase.',
-        ),
+        const SuperAdminNotificationsScreen(),
         const AuditLogsScreen(),
         const SuperAdminSettingsScreen(),
       ],

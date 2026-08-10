@@ -1451,6 +1451,15 @@ service cloud.firestore {
       allow read, create: if isSuperAdmin();
       allow update, delete: if false;
     }
+    match /super_admin_notifications/{id} {
+      // Server-written only (manual payment submission/approval/rejection
+      // Cloud Functions via the Admin SDK, which bypasses these rules). The
+      // owner console reads this collection directly, same trust model as
+      // super_admin_audit_logs above; the client never creates, updates or
+      // deletes a notification doc.
+      allow read: if isSuperAdmin();
+      allow create, update, delete: if false;
+    }
     match /invoices/{id} {
       allow read, write: if isSuperAdmin();
     }

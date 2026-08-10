@@ -103,12 +103,16 @@ class _PlanDetailScreenState extends State<PlanDetailScreen>
                   children: [
                     Row(
                       children: [
-                        Text(
-                          widget.planName,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
+                        Flexible(
+                          child: Text(
+                            widget.planName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),

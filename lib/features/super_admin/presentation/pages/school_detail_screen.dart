@@ -58,7 +58,7 @@ class SchoolDetailScreen extends StatelessWidget {
                 onPressed: () => _confirmStatusChange(
                   context,
                   action: 'Reactivate',
-                  color: Colors.green,
+                  color: AppColors.success(context),
                   onConfirm: () => context.read<SuperAdminBloc>().add(
                     UpdateSchoolStatusEvent(
                       schoolId: school.id,
@@ -66,7 +66,9 @@ class SchoolDetailScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                style: FilledButton.styleFrom(backgroundColor: Colors.green),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.success(context),
+                ),
                 icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
                 label: const Text('Reactivate'),
               ),
@@ -153,7 +155,7 @@ class SchoolDetailScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.m),
-          _statusBadge(school.status),
+          _statusBadge(school.status, context),
         ],
       ),
     );
@@ -318,10 +320,14 @@ class SchoolDetailScreen extends StatelessWidget {
 
   Widget _buildSupportModeAction(ThemeData theme, BuildContext context) {
     return AppCard(
-      color: Colors.orange.withValues(alpha: 0.08),
+      color: AppColors.warning(context).withValues(alpha: 0.08),
       child: Row(
         children: [
-          const Icon(Icons.support_agent, color: Colors.orange, size: 32),
+          Icon(
+            Icons.support_agent,
+            color: AppColors.warning(context),
+            size: 32,
+          ),
           const SizedBox(width: AppSpacing.m),
           Expanded(
             child: Column(
@@ -342,7 +348,7 @@ class SchoolDetailScreen extends StatelessWidget {
           const SizedBox(width: AppSpacing.m),
           FilledButton.icon(
             style: FilledButton.styleFrom(
-              backgroundColor: Colors.orange,
+              backgroundColor: AppColors.warning(context),
               foregroundColor: Colors.white,
             ),
             onPressed: () => _promptSupportModeReason(context, school),
@@ -407,7 +413,7 @@ class SchoolDetailScreen extends StatelessWidget {
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: Colors.orange,
+              backgroundColor: AppColors.warning(context),
               foregroundColor: Colors.white,
             ),
             onPressed: () {
@@ -432,12 +438,12 @@ class SchoolDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _statusBadge(SchoolStatus status) {
+  Widget _statusBadge(SchoolStatus status, BuildContext context) {
     final (label, color) = switch (status) {
-      SchoolStatus.active => ('Active', Colors.green),
-      SchoolStatus.suspended => ('Suspended', Colors.red),
-      SchoolStatus.trial => ('Trial', Colors.orange),
-      SchoolStatus.archived => ('Archived', Colors.grey),
+      SchoolStatus.active => ('Active', AppColors.success(context)),
+      SchoolStatus.suspended => ('Suspended', AppColors.danger(context)),
+      SchoolStatus.trial => ('Trial', AppColors.warning(context)),
+      SchoolStatus.archived => ('Archived', AppColors.textSecondary(context)),
     };
     return StatusBadge(label: label, color: color);
   }

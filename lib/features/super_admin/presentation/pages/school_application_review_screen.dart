@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import '../../domain/entities/school_application.dart';
 import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
@@ -120,7 +121,7 @@ class SchoolApplicationReviewScreen extends StatelessWidget {
                               ? 'Verified'
                               : 'Not verified',
                           valueColor: application.administratorEmailVerified
-                              ? Colors.green
+                              ? AppColors.success(context)
                               : theme.colorScheme.error,
                         ),
                         _InfoRow(
@@ -138,7 +139,7 @@ class SchoolApplicationReviewScreen extends StatelessWidget {
                           'Terms accepted',
                           application.termsAccepted ? 'Yes' : 'No',
                           valueColor: application.termsAccepted
-                              ? Colors.green
+                              ? AppColors.success(context)
                               : theme.colorScheme.error,
                         ),
                         _InfoRow('Submitted', _date(application.createdAt)),
@@ -328,7 +329,7 @@ class _ApplicationHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final statusColor = _statusColor(application.status, theme);
+    final statusColor = _statusColor(application.status, context);
     final initial = application.schoolName.trim().isEmpty
         ? 'S'
         : application.schoolName.trim()[0].toUpperCase();
@@ -478,19 +479,19 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-Color _statusColor(SchoolApplicationStatus status, ThemeData theme) {
+Color _statusColor(SchoolApplicationStatus status, BuildContext context) {
   switch (status) {
     case SchoolApplicationStatus.pendingReview:
-      return Colors.orange.shade800;
+      return AppColors.warning(context);
     case SchoolApplicationStatus.approved:
-      return Colors.green.shade700;
+      return AppColors.success(context);
     case SchoolApplicationStatus.rejected:
-      return theme.colorScheme.error;
+      return Theme.of(context).colorScheme.error;
     case SchoolApplicationStatus.emailVerified:
-      return Colors.blue.shade700;
+      return AppColors.information(context);
     case SchoolApplicationStatus.emailVerificationPending:
-      return Colors.amber.shade900;
+      return AppColors.warning(context);
     case SchoolApplicationStatus.unknown:
-      return theme.colorScheme.outline;
+      return Theme.of(context).colorScheme.outline;
   }
 }

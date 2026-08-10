@@ -7,7 +7,7 @@ import 'package:school_pulse/design_system/theme/app_typography.dart';
 import '../widgets/super_admin_logout_button.dart';
 import 'audit_logs_screen.dart';
 import 'subscription_plans_screen.dart';
-import 'super_admin_placeholder_screen.dart';
+import 'super_admin_notifications_screen.dart';
 import 'super_admin_settings_screen.dart';
 
 /// Mobile "More" screen for the SaaS owner console. Lists the sections that
@@ -49,16 +49,11 @@ class SuperAdminMoreScreen extends StatelessWidget {
           _MoreTile(
             icon: Icons.notifications_outlined,
             title: 'Notifications',
-            subtitle: 'Platform notification settings',
+            subtitle: 'Payment submissions and platform activity',
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => const SuperAdminPlaceholderScreen(
-                  title: 'Notifications',
-                  icon: Icons.notifications_outlined,
-                  message:
-                      'Notification management is coming in a later phase.',
-                ),
+                builder: (_) => const SuperAdminNotificationsScreen(),
               ),
             ),
           ),

@@ -194,7 +194,7 @@ class _SuperAdminOverviewScreenState extends State<SuperAdminOverviewScreen> {
                         title: 'Total Schools',
                         value: ((stats['totalSchools'] ?? 0) as num).toDouble(),
                         icon: Icons.school_rounded,
-                        color: Colors.blue,
+                        color: AppColors.information(context),
                       ),
                       DashboardStatCard(
                         title: 'Active Schools',
