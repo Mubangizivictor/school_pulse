@@ -3,6 +3,7 @@ const draft = require('./draft');
 const owner = require('./owner');
 const payments = require('./payments');
 const paymentNotifications = require('./payment_notifications');
+const applicationNotifications = require('./application_notifications');
 
 // payments is intentionally spread after owner: it replaces the old
 // approval/status exports with the payment-gated onboarding lifecycle while
@@ -13,4 +14,5 @@ module.exports = {
   ...owner,
   ...payments,
   ...paymentNotifications,
+  ...applicationNotifications,
 };
