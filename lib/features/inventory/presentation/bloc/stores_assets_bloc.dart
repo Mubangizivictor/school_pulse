@@ -27,8 +27,10 @@ class StoresAssetsBloc extends Bloc<StoresAssetsEvent, StoresAssetsState> {
     on<ScanAssetQR>(_onScanAssetQR);
     on<DisposeAssetRequested>(_onDisposeAsset);
     on<LoadSuppliers>(_onLoadSuppliers);
+    on<AddSupplierRequested>(_onAddSupplier);
     on<LoadPurchaseOrders>(_onLoadPurchaseOrders);
     on<CreatePurchaseOrderRequested>(_onCreatePurchaseOrder);
+    on<UpdatePurchaseOrderStatusRequested>(_onUpdatePurchaseOrderStatus);
     on<LoadRepairs>(_onLoadRepairs);
     on<LoadMaintenanceSchedule>(_onLoadMaintenanceSchedule);
     on<RequestRepairRequested>(_onRequestRepair);
@@ -232,6 +234,17 @@ class StoresAssetsBloc extends Bloc<StoresAssetsEvent, StoresAssetsState> {
     );
   }
 
+  Future<void> _onAddSupplier(
+    AddSupplierRequested event,
+    Emitter<StoresAssetsState> emit,
+  ) async {
+    final result = await repository.addSupplier(event.supplier);
+    result.fold(
+      (failure) => emit(const StoresAssetsError('Failed to add supplier')),
+      (_) => add(LoadDashboardData()),
+    );
+  }
+
   Future<void> _onCreatePurchaseOrder(
     CreatePurchaseOrderRequested event,
     Emitter<StoresAssetsState> emit,
@@ -239,6 +252,20 @@ class StoresAssetsBloc extends Bloc<StoresAssetsEvent, StoresAssetsState> {
     final result = await repository.createPurchaseOrder(event.order);
     result.fold(
       (failure) => emit(const StoresAssetsError('Failed to create order')),
+      (_) => add(LoadDashboardData()),
+    );
+  }
+
+  Future<void> _onUpdatePurchaseOrderStatus(
+    UpdatePurchaseOrderStatusRequested event,
+    Emitter<StoresAssetsState> emit,
+  ) async {
+    final result = await repository.updatePurchaseOrderStatus(
+      event.orderId,
+      event.status,
+    );
+    result.fold(
+      (failure) => emit(const StoresAssetsError('Failed to update order')),
       (_) => add(LoadDashboardData()),
     );
   }

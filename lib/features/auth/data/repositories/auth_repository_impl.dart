@@ -1,4 +1,5 @@
 import 'package:dartz/dartz.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/features/auth/data/datasources/auth_remote_data_source.dart';
 import 'package:school_pulse/features/auth/data/models/user_model.dart';
@@ -18,6 +19,8 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       final userModel = await remoteDataSource.loginWithEmail(email, password);
       return Right(userModel);
+    } on FirebaseAuthMultiFactorException {
+      rethrow;
     } on AuthFailure catch (e) {
       return Left(e);
     } catch (e) {

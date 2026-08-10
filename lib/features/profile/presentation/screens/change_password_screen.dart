@@ -14,6 +14,7 @@ class ChangePasswordScreen extends StatefulWidget {
 }
 
 class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _currentController = TextEditingController();
   final _newController = TextEditingController();
   final _confirmController = TextEditingController();
@@ -31,32 +32,35 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   Future<void> _submit() async {
     setState(() => _error = null);
 
-    if (_newController.text.length < 6) {
-      setState(() => _error = 'New password must be at least 6 characters.');
-      return;
-    }
-    if (_newController.text != _confirmController.text) {
-      setState(() => _error = 'New passwords do not match.');
+    if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
 
     setState(() => _saving = true);
-    final result = await sl<AuthRepository>().changePassword(
-      _currentController.text,
-      _newController.text,
-    );
+    late final dynamic result;
+    try {
+      result = await sl<AuthRepository>().changePassword(
+        _currentController.text,
+        _newController.text,
+      );
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _error = 'Unable to change your password. Please try again.';
+        });
+      }
+      return;
+    }
     if (!mounted) return;
     setState(() => _saving = false);
 
-    result.fold(
-      (failure) => setState(() => _error = failure.message),
-      (_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Password changed successfully')),
-        );
-        context.pop();
-      },
-    );
+    result.fold((failure) => setState(() => _error = failure.message), (_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password changed successfully')),
+      );
+      context.pop();
+    });
   }
 
   @override
@@ -68,45 +72,75 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          if (_error != null) ...[
-            AlertBanner(
-              title: 'Error',
-              message: _error!,
-              color: AppColors.danger(context),
-              icon: Icons.error_outline,
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            if (_error != null) ...[
+              AlertBanner(
+                title: 'Error',
+                message: _error!,
+                color: AppColors.danger(context),
+                icon: Icons.error_outline,
+              ),
+              const SizedBox(height: 8),
+            ],
+            PulseTextField(
+              label: 'Current Password',
+              controller: _currentController,
+              isPassword: true,
+              prefixIcon: Icons.lock_outline,
+              isRequired: true,
+              validator: (value) => value == null || value.isEmpty
+                  ? 'Enter your current password.'
+                  : null,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
+            PulseTextField(
+              label: 'New Password',
+              controller: _newController,
+              isPassword: true,
+              prefixIcon: Icons.lock_reset_outlined,
+              isRequired: true,
+              helperText: 'Use at least 6 characters.',
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Enter a new password.';
+                }
+                if (value.length < 6) {
+                  return 'New password must be at least 6 characters.';
+                }
+                if (value == _currentController.text) {
+                  return 'Your new password must be different.';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            PulseTextField(
+              label: 'Confirm New Password',
+              controller: _confirmController,
+              isPassword: true,
+              prefixIcon: Icons.lock_reset_outlined,
+              isRequired: true,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Confirm your new password.';
+                }
+                return value == _newController.text
+                    ? null
+                    : 'New passwords do not match.';
+              },
+            ),
+            const SizedBox(height: 24),
+            PrimaryButton(
+              label: 'Update Password',
+              isLoading: _saving,
+              onPressed: _submit,
+            ),
           ],
-          PulseTextField(
-            label: 'Current Password',
-            controller: _currentController,
-            isPassword: true,
-            prefixIcon: Icons.lock_outline,
-          ),
-          const SizedBox(height: 16),
-          PulseTextField(
-            label: 'New Password',
-            controller: _newController,
-            isPassword: true,
-            prefixIcon: Icons.lock_reset_outlined,
-          ),
-          const SizedBox(height: 16),
-          PulseTextField(
-            label: 'Confirm New Password',
-            controller: _confirmController,
-            isPassword: true,
-            prefixIcon: Icons.lock_reset_outlined,
-          ),
-          const SizedBox(height: 24),
-          PrimaryButton(
-            label: 'Update Password',
-            isLoading: _saving,
-            onPressed: _submit,
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
@@ -151,7 +152,7 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
                   ),
                 const SizedBox(height: 24),
                 if (enrolling) ...[
-                  const Center(child: CircularProgressIndicator()),
+                  const Center(child: SchoolPulseLoader()),
                   const SizedBox(height: 12),
                   Center(child: Text(state.step)),
                 ] else

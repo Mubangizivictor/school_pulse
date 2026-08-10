@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
@@ -40,7 +41,7 @@ class MessagingUserBuilder extends StatelessWidget {
           current is AuthAuthenticated || current is AuthUnauthenticated,
       builder: (context, state) {
         if (state is! AuthAuthenticated) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: SchoolPulseLoader());
         }
         return builder(context, state.user);
       },

@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 
@@ -27,6 +26,8 @@ class AuthHeroScene extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return SizedBox(
       height: height,
       width: double.infinity,
@@ -42,7 +43,7 @@ class AuthHeroScene extends StatelessWidget {
             height: 104,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.bgDark,
+              color: colorScheme.surface,
               border: Border.all(color: accent, width: 2.5),
               boxShadow: [
                 BoxShadow(
@@ -57,7 +58,7 @@ class AuthHeroScene extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(badgeIcon, size: 46, color: Colors.white),
+            child: Icon(badgeIcon, size: 46, color: colorScheme.onSurface),
           ),
         ],
       ),
@@ -226,6 +227,8 @@ class AuthTrustStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.l),
       decoration: BoxDecoration(
@@ -251,7 +254,7 @@ class AuthTrustStrip extends StatelessWidget {
                     Text(
                       _items[i].label,
                       style: AppTypography.labelLarge.copyWith(
-                        color: AppColors.textPrimaryDark,
+                        color: colorScheme.onSurface,
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
                       ),
@@ -261,8 +264,8 @@ class AuthTrustStrip extends StatelessWidget {
                       _items[i].desc,
                       textAlign: TextAlign.center,
                       style: AppTypography.labelSmall.copyWith(
-                        color: AppColors.textSecondaryDark.withValues(
-                          alpha: 0.7,
+                        color: colorScheme.onSurfaceVariant.withValues(
+                          alpha: 0.8,
                         ),
                         fontSize: 9,
                         height: 1.3,
@@ -286,6 +289,8 @@ class AuthPrivacyNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -299,7 +304,7 @@ class AuthPrivacyNote extends StatelessWidget {
               Text(
                 'Your data is secure with us',
                 style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textPrimaryDark,
+                  color: colorScheme.onSurface,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -307,7 +312,7 @@ class AuthPrivacyNote extends StatelessWidget {
               Text(
                 'We value your privacy and protect your information.',
                 style: AppTypography.labelSmall.copyWith(
-                  color: AppColors.textSecondaryDark.withValues(alpha: 0.7),
+                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
                   fontSize: 11,
                 ),
               ),
@@ -424,13 +429,15 @@ class AuthField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: AppTypography.titleSmall.copyWith(
-            color: AppColors.textPrimaryDark,
+            color: colorScheme.onSurface,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -440,12 +447,12 @@ class AuthField extends StatelessWidget {
           obscureText: isPassword,
           keyboardType: keyboardType,
           textCapitalization: textCapitalization,
-          style: AppTypography.bodyLarge.copyWith(color: Colors.white),
+          style: AppTypography.bodyLarge.copyWith(color: colorScheme.onSurface),
           decoration: InputDecoration(
             hintText: hint,
             errorText: errorText,
             hintStyle: AppTypography.bodyLarge.copyWith(
-              color: AppColors.textSecondaryDark.withValues(alpha: 0.55),
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
             ),
             prefixIcon: Icon(icon, color: accent.withValues(alpha: 0.85)),
             suffixIcon: suffix,
@@ -488,15 +495,15 @@ class AuthPortalScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgDark,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(
+          icon: Icon(
             Icons.arrow_back_ios_new_rounded,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
           onPressed: () =>
               context.canPop() ? context.pop() : context.go('/welcome'),

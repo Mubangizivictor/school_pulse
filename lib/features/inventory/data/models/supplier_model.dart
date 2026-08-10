@@ -27,7 +27,7 @@ class SupplierModel extends Supplier {
       phone: data['phone'] ?? '',
       address: data['address'],
       rating: (data['rating'] as num?)?.toDouble() ?? 0.0,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 

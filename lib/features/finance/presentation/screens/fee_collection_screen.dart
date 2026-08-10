@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
@@ -80,7 +81,7 @@ class _FeeCollectionScreenState extends State<FeeCollectionScreen> {
     return BlocBuilder<StudentsBloc, StudentsState>(
       builder: (context, state) {
         if (state is StudentsLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: SchoolPulseLoader());
         }
         if (state is StudentsLoaded) {
           if (state.students.isEmpty) {
@@ -122,7 +123,7 @@ class _FeeCollectionScreenState extends State<FeeCollectionScreen> {
     return BlocBuilder<FinanceBloc, FinanceState>(
       builder: (context, state) {
         if (state is FinanceLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: SchoolPulseLoader());
         }
 
         if (state is StudentFinancialProfileLoaded) {

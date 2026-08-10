@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
@@ -40,7 +41,7 @@ class PulseTable<T> extends StatelessWidget {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(AppSpacing.x4l),
-          child: CircularProgressIndicator(),
+          child: SchoolPulseLoader(),
         ),
       );
     }

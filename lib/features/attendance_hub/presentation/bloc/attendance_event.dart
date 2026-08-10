@@ -13,26 +13,33 @@ abstract class AttendanceEvent extends Equatable {
 class LoadScopesRequested extends AttendanceEvent {
   final String schoolId;
   final AttendanceCategory category;
+  final UserEntity operatorUser;
 
-  const LoadScopesRequested({required this.schoolId, required this.category});
+  const LoadScopesRequested({
+    required this.schoolId,
+    required this.category,
+    required this.operatorUser,
+  });
 
   @override
-  List<Object?> get props => [schoolId, category];
+  List<Object?> get props => [schoolId, category, operatorUser];
 }
 
 class LoadRosterRequested extends AttendanceEvent {
   final String schoolId;
   final AttendanceCategory category;
   final String scopeId;
+  final UserEntity operatorUser;
 
   const LoadRosterRequested({
     required this.schoolId,
     required this.category,
     required this.scopeId,
+    required this.operatorUser,
   });
 
   @override
-  List<Object?> get props => [schoolId, category, scopeId];
+  List<Object?> get props => [schoolId, category, scopeId, operatorUser];
 }
 
 class MarkAttendanceRequested extends AttendanceEvent {
@@ -63,6 +70,7 @@ class MarkBatchAttendanceRequested extends AttendanceEvent {
 
 class LoadRecordsRequested extends AttendanceEvent {
   final String schoolId;
+  final UserEntity operatorUser;
   final AttendanceCategory? category;
   final DateTime? from;
   final DateTime? to;
@@ -70,6 +78,7 @@ class LoadRecordsRequested extends AttendanceEvent {
 
   const LoadRecordsRequested({
     required this.schoolId,
+    required this.operatorUser,
     this.category,
     this.from,
     this.to,
@@ -77,5 +86,6 @@ class LoadRecordsRequested extends AttendanceEvent {
   });
 
   @override
-  List<Object?> get props => [schoolId, category, from, to, scopeId];
+  List<Object?> get props =>
+      [schoolId, operatorUser, category, from, to, scopeId];
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/features/shared/boarding/dorm_screens.dart';
@@ -71,7 +72,7 @@ class _DormitoryManagementScreenState extends State<DormitoryManagementScreen> {
             current is DormitoriesLoaded || current is MatronLoading,
         builder: (context, state) {
           if (state is! DormitoriesLoaded) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: SchoolPulseLoader());
           }
 
           final all = state.dormitories;

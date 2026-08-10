@@ -1,13 +1,41 @@
 enum StudentStatus {
+  applicant,
+  pendingAdmission,
+  admitted,
+  enrolled,
   active,
+  deferred,
+  onLeave,
   suspended,
-  transferred,
+  transferredIn,
+  transferredOut,
+  withdrawn,
+  completed,
   graduated,
   alumni,
-  withdrawn,
+  expelled,
+  deceased,
+  archived,
 }
 
 enum AdmissionStatus { application, review, approved, admitted, rejected }
+
+/// Maps the narrower application-review lifecycle to the broader student
+/// lifecycle so both can be tracked without merging the two enums outright.
+StudentStatus studentStatusFromAdmissionStatus(AdmissionStatus status) {
+  switch (status) {
+    case AdmissionStatus.application:
+      return StudentStatus.applicant;
+    case AdmissionStatus.review:
+      return StudentStatus.pendingAdmission;
+    case AdmissionStatus.approved:
+      return StudentStatus.pendingAdmission;
+    case AdmissionStatus.admitted:
+      return StudentStatus.admitted;
+    case AdmissionStatus.rejected:
+      return StudentStatus.withdrawn;
+  }
+}
 
 enum Gender { male, female, other }
 

@@ -67,6 +67,7 @@ void main() {
     registerFallbackValue(application);
     registerFallbackValue(Student.empty());
     registerFallbackValue(AdmissionStatus.approved);
+    registerFallbackValue(StudentStatus.active);
   });
 
   setUp(() {
@@ -272,6 +273,27 @@ void main() {
             qrReference: any(named: 'qrReference'),
           ),
         ).thenAnswer((_) async => const Right('student-1'));
+        when(() => repository.getStudentById('student-1')).thenAnswer(
+          (_) async => Right(
+            Student(
+              id: 'student-1',
+              schoolId: schoolId,
+              name: 'Jane Doe',
+              studentCode: 'MH-2026-000001',
+              admissionNumber: 'SP-2026-0001',
+              qrReference: 'SP-STUDENT-xyz',
+              dateOfBirth: DateTime(2015, 1, 1),
+              gender: Gender.female,
+              classId: 'class-1',
+              academicYearId: 'ay-2026',
+              status: StudentStatus.admitted,
+              level: EducationLevel.primary,
+            ),
+          ),
+        );
+        when(
+          () => repository.updateStudentStatus(any(), any()),
+        ).thenAnswer((_) async => const Right(null));
         when(
           () => identityRepository.generateStudentIdentity(
             any(),
@@ -282,6 +304,7 @@ void main() {
           (_) async => const Right(
             StudentIdentity(
               studentId: 'student-1',
+              schoolId: schoolId,
               uniqueSystemId: 'SP-STUDENT-xyz',
               schoolStudentId: 'MH-2026-000001',
               qrCodeData: 'SP-STUDENT-xyz',

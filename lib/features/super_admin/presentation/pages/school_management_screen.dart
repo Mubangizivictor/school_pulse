@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../../../design_system/app_components.dart';
@@ -57,7 +58,7 @@ class _SchoolManagementScreenState extends State<SchoolManagementScreen> {
             child: BlocBuilder<SuperAdminBloc, SuperAdminState>(
               builder: (context, state) {
                 if (state.status == SuperAdminStatus.loading) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(child: SchoolPulseLoader());
                 }
 
                 final filteredSchools = state.schools.where((school) {

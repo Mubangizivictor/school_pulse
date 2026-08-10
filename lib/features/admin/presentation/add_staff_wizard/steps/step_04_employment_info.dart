@@ -65,7 +65,7 @@ class _Step04EmploymentInfoState extends State<Step04EmploymentInfo> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const WizardStepCaption(
-              number: 5,
+              number: 3,
               title: 'Employment Information',
               subtitle: 'Add employment details',
             ),

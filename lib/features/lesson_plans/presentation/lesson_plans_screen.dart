@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
@@ -56,7 +57,7 @@ class _LessonPlansScreenState extends State<LessonPlansScreen> {
         future: _plansFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: SchoolPulseLoader());
           }
           final plans = snapshot.data ?? const [];
           if (plans.isEmpty) {

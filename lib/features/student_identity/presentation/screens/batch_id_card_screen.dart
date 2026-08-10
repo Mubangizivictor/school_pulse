@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
@@ -111,6 +112,9 @@ class _BatchIdCardScreenState extends State<BatchIdCardScreen> {
             className: student.className,
             stream: '',
             uniqueSystemId: identity.uniqueSystemId,
+            qrCodeData: identity.qrCodeData.isNotEmpty
+                ? identity.qrCodeData
+                : identity.uniqueSystemId,
           ),
         ),
       );
@@ -180,7 +184,7 @@ class _BatchIdCardScreenState extends State<BatchIdCardScreen> {
             ),
           ),
           if (_loadingStudents)
-            const Expanded(child: Center(child: CircularProgressIndicator())),
+            const Expanded(child: Center(child: SchoolPulseLoader())),
           if (!_loadingStudents && _selectedClass != null && _students.isEmpty)
             const Expanded(
               child: Center(child: Text('No students in this class')),

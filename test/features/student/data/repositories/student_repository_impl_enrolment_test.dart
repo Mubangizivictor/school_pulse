@@ -2,9 +2,12 @@ import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:school_pulse/core/error/failures.dart';
+import 'package:school_pulse/core/network/network_info.dart';
 import 'package:school_pulse/features/matron/data/sources/matron_remote_data_source.dart';
 import 'package:school_pulse/features/relationships/domain/repositories/relationship_repository.dart';
+import 'package:school_pulse/features/student/data/datasources/student_local_data_source.dart';
 import 'package:school_pulse/features/student/data/datasources/student_remote_data_source.dart';
+import 'package:school_pulse/features/student/data/models/student_isar_models.dart';
 import 'package:school_pulse/features/student/data/models/student_model.dart';
 import 'package:school_pulse/features/student/data/repositories/student_repository_impl.dart';
 import 'package:school_pulse/features/student/domain/entities/student_enums.dart';
@@ -12,17 +15,24 @@ import 'package:school_pulse/features/student/domain/entities/student_enums.dart
 class MockStudentRemoteDataSource extends Mock
     implements StudentRemoteDataSource {}
 
+class MockStudentLocalDataSource extends Mock
+    implements StudentLocalDataSource {}
+
 class MockMatronRemoteDataSource extends Mock
     implements MatronRemoteDataSource {}
 
 class MockRelationshipRepository extends Mock
     implements RelationshipRepository {}
 
+class MockNetworkInfo extends Mock implements NetworkInfo {}
+
 void main() {
   late StudentRepositoryImpl repository;
   late MockStudentRemoteDataSource remoteDataSource;
+  late MockStudentLocalDataSource localDataSource;
   late MockMatronRemoteDataSource matronRemoteDataSource;
   late MockRelationshipRepository relationshipRepository;
+  late MockNetworkInfo networkInfo;
 
   const schoolId = 'school-1';
   const studentId = 'student-1';
@@ -50,16 +60,27 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(buildStudent(classId: 'p6', academicYearId: '2026'));
+    registerFallbackValue(
+      StudentProfileIsar.fromEntity(
+        buildStudent(classId: 'p6', academicYearId: '2026'),
+      ),
+    );
   });
 
   setUp(() {
     remoteDataSource = MockStudentRemoteDataSource();
+    localDataSource = MockStudentLocalDataSource();
     matronRemoteDataSource = MockMatronRemoteDataSource();
     relationshipRepository = MockRelationshipRepository();
+    networkInfo = MockNetworkInfo();
+    when(() => networkInfo.isConnected).thenAnswer((_) async => true);
+    when(() => localDataSource.cacheStudent(any())).thenAnswer((_) async {});
     repository = StudentRepositoryImpl(
       remoteDataSource: remoteDataSource,
+      localDataSource: localDataSource,
       matronRemoteDataSource: matronRemoteDataSource,
       relationshipRepository: relationshipRepository,
+      networkInfo: networkInfo,
     );
   });
 

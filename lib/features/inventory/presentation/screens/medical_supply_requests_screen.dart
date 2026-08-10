@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/core/utils.dart';
 import 'package:school_pulse/design_system/app_components.dart';
@@ -154,7 +155,7 @@ class _MedicalSupplyRequestsScreenState
       future: _requests,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: SchoolPulseLoader());
         }
         if (_error != null) {
           return EmptyState(

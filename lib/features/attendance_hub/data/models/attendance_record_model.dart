@@ -22,6 +22,7 @@ class AttendanceRecordModel extends AttendanceRecord {
     required super.createdAt,
     super.correctedAt,
     super.correctionOf,
+    super.roleAssignmentId,
   });
 
   factory AttendanceRecordModel.fromFirestore(DocumentSnapshot doc) {
@@ -57,6 +58,7 @@ class AttendanceRecordModel extends AttendanceRecord {
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       correctedAt: (data['correctedAt'] as Timestamp?)?.toDate(),
       correctionOf: data['correctionOf'] as String?,
+      roleAssignmentId: data['roleAssignmentId'] as String?,
     );
   }
 
@@ -79,6 +81,7 @@ class AttendanceRecordModel extends AttendanceRecord {
       'createdAt': Timestamp.fromDate(createdAt),
       'correctedAt': correctedAt != null ? Timestamp.fromDate(correctedAt!) : null,
       'correctionOf': correctionOf,
+      'roleAssignmentId': roleAssignmentId,
     };
   }
 
@@ -102,6 +105,7 @@ class AttendanceRecordModel extends AttendanceRecord {
       createdAt: r.createdAt,
       correctedAt: r.correctedAt,
       correctionOf: r.correctionOf,
+      roleAssignmentId: r.roleAssignmentId,
     );
   }
 }

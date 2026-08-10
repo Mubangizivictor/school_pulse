@@ -77,6 +77,15 @@ class AdminSeeder {
 
       await _seedAdmin();
       await _seedSuperAdmin();
+      // _seedSuperAdmin leaves FirebaseAuth.instance signed in as the
+      // platform-scoped superAdmin (schoolId: 'platform'), which every
+      // school-scoped write below would fail isSameSchool(demoSchoolId)
+      // against - isSameSchool has no superAdmin bypass. Restore the school
+      // admin session before any of that runs.
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: "admin@gmail.com",
+        password: defaultPassword,
+      );
       // The calendar comes before everything academic: no year and term means
       // no scope, and every teacher-facing query resolves through them.
       await _seedAcademicCalendar();
@@ -141,6 +150,7 @@ class AdminSeeder {
   /// the `academicYearId` already stamped on every seeded student.
   static Future<void> _seedAcademicCalendar() async {
     await _db.collection('academic_years').doc(currentAcademicYearId).set({
+      'schoolId': demoSchoolId,
       'name': '2026',
       'startDate': Timestamp.fromDate(DateTime(2026, 2, 1)),
       'endDate': Timestamp.fromDate(DateTime(2026, 12, 4)),
@@ -177,6 +187,7 @@ class AdminSeeder {
 
     for (final (id, name, order, start, end, isCurrent) in terms) {
       await _db.collection('academic_terms').doc(id).set({
+        'schoolId': demoSchoolId,
         'academicYearId': currentAcademicYearId,
         'name': name,
         'order': order,
@@ -189,6 +200,7 @@ class AdminSeeder {
 
   static Future<void> _seedSchoolStructure() async {
     await _db.collection('educational_levels').doc('level-primary').set({
+      'schoolId': demoSchoolId,
       'name': 'Primary',
       'code': 'PRI',
       'order': 1,
@@ -220,6 +232,7 @@ class AdminSeeder {
       for (final stream in ['East', 'West']) {
         final slug = '${_classSlug(className)}-${stream.toLowerCase()}';
         await _db.collection('class_streams').doc(slug).set({
+          'schoolId': demoSchoolId,
           'name': stream,
           'code': stream[0],
           'classId': className,
@@ -230,7 +243,10 @@ class AdminSeeder {
     }
 
     for (var s in _subjectNames) {
-      await _db.collection('subjects').doc(_subjectSlug(s)).set({'name': s});
+      await _db.collection('subjects').doc(_subjectSlug(s)).set({
+        'schoolId': demoSchoolId,
+        'name': s,
+      });
     }
   }
 
@@ -1242,6 +1258,14 @@ class AdminSeeder {
         .toIso8601String()
         .split('T')[0];
     final boarderIds = allocations.keys.toList();
+    // The attendance/{date}/students/{id} rule looks up schoolId on this
+    // parent doc via get() - without it existing first, every subdocument
+    // write is denied regardless of the caller's own tenancy.
+    await _db.collection('attendance').doc(yesterday).set({
+      'schoolId': demoSchoolId,
+      'date': yesterday,
+      'type': 'night',
+    }, SetOptions(merge: true));
     final batch = _db.batch();
     for (var i = 0; i < boarderIds.length; i++) {
       final studentId = boarderIds[i];
@@ -1293,6 +1317,7 @@ class AdminSeeder {
           'reference': 'RCT-${1000 + i}',
         });
         await _db.collection('alerts').add({
+          'schoolId': demoSchoolId,
           'studentId': studentId,
           'title': 'Payment Received',
           'message':
@@ -1302,6 +1327,7 @@ class AdminSeeder {
         });
       } else if (status == 'overdue') {
         await _db.collection('alerts').add({
+          'schoolId': demoSchoolId,
           'studentId': studentId,
           'title': 'Fee Overdue',
           'message':
@@ -1333,6 +1359,7 @@ class AdminSeeder {
             'reference': 'RCT-B${1000 + i}',
           });
           await _db.collection('alerts').add({
+            'schoolId': demoSchoolId,
             'studentId': studentId,
             'title': 'Payment Received',
             'message':
@@ -1393,8 +1420,16 @@ class AdminSeeder {
       },
     ];
 
+    // 'school_events' (top-level) is retired - schools/{schoolId}/
+    // calendar_events is the current, tenant-scoped collection (see
+    // firestore.rules); writing to the old path is silently denied.
+    final calendarEvents = _db
+        .collection('schools')
+        .doc(demoSchoolId)
+        .collection('calendar_events');
     for (var e in events) {
-      await _db.collection('school_events').add({
+      await calendarEvents.add({
+        'schoolId': demoSchoolId,
         'title': e['title'],
         'description': e['description'],
         'date': Timestamp.fromDate(e['date'] as DateTime),
@@ -2498,6 +2533,7 @@ class AdminSeeder {
     ];
     for (var n in notices) {
       await _db.collection('alerts').add({
+        'schoolId': demoSchoolId,
         'title': n['title'],
         'body': n['body'],
         'targets': ['All Staff'],
@@ -2535,6 +2571,7 @@ class AdminSeeder {
     ];
     for (var l in logs) {
       await _db.collection('audit_logs').add({
+        'schoolId': demoSchoolId,
         'title': l['title'],
         'description': l['description'],
         'iconName': l['iconName'],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
@@ -22,6 +23,7 @@ class PulseTextField extends StatefulWidget {
   final void Function()? onTap;
   final bool isRequired;
   final TextCapitalization textCapitalization;
+  final List<TextInputFormatter>? inputFormatters;
 
   const PulseTextField({
     super.key,
@@ -42,6 +44,7 @@ class PulseTextField extends StatefulWidget {
     this.onTap,
     this.isRequired = false,
     this.textCapitalization = TextCapitalization.none,
+    this.inputFormatters,
   });
 
   @override
@@ -100,6 +103,7 @@ class _PulseTextFieldState extends State<PulseTextField> {
             onChanged: widget.onChanged,
             onTap: widget.onTap,
             textCapitalization: widget.textCapitalization,
+            inputFormatters: widget.inputFormatters,
             style: AppTypography.bodyLarge.copyWith(
               color: isDark
                   ? AppColors.textPrimaryDark

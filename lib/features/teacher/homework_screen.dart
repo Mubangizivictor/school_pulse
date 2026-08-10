@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -82,9 +83,7 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
             builder: (context, state) {
               if (state.isLoading) {
                 return Center(
-                  child: CircularProgressIndicator(
-                    color: AppColors.primary(context),
-                  ),
+                  child: const SchoolPulseLoader(),
                 );
               }
 

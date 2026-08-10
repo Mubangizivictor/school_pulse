@@ -38,6 +38,7 @@ class _AttendanceStatisticsScreenState
       context.read<AttendanceBloc>().add(
         LoadRecordsRequested(
           schoolId: authState.user.schoolId,
+          operatorUser: authState.user,
           from: _from,
           to: _to,
         ),

@@ -41,6 +41,7 @@ void main() {
 
   final identity = const StudentIdentity(
     studentId: studentId,
+    schoolId: schoolId,
     uniqueSystemId: uniqueSystemId,
     schoolStudentId: studentCode,
     qrCodeData: uniqueSystemId,
@@ -48,6 +49,7 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(Student.empty());
+    registerFallbackValue(StudentStatus.active);
   });
 
   setUp(() {
@@ -89,6 +91,9 @@ void main() {
         schoolStudentId: any(named: 'schoolStudentId'),
       ),
     ).thenAnswer((_) async => Right(identity));
+    when(
+      () => repository.updateStudentStatus(any(), any()),
+    ).thenAnswer((_) async => const Right(null));
   });
 
   group('admitStudent', () {
@@ -141,7 +146,105 @@ void main() {
     );
 
     test(
-      'generates the StudentIdentity using the same codes just written to the student record',
+      'returns Right(studentId) and does not generate an identity yet',
+      () async {
+        final result = await call();
+
+        expect(result, const Right<Failure, String>(studentId));
+        verifyNever(
+          () => identityRepository.generateStudentIdentity(
+            any(),
+            uniqueSystemId: any(named: 'uniqueSystemId'),
+            schoolStudentId: any(named: 'schoolStudentId'),
+          ),
+        );
+      },
+    );
+
+    test(
+      'does not initialize financials - that is enrollStudent\'s job now',
+      () async {
+        await call(term: 'Term 1', feeStructureId: 'fee-1', totalBilled: 500);
+
+        verifyNever(
+          () => initializeFinancials(
+            studentId: any(named: 'studentId'),
+            schoolId: any(named: 'schoolId'),
+            academicYear: any(named: 'academicYear'),
+            term: any(named: 'term'),
+            feeStructureId: any(named: 'feeStructureId'),
+            totalBilled: any(named: 'totalBilled'),
+          ),
+        );
+      },
+    );
+
+    test(
+      'short-circuits and never finalizes admission when the admission number fails to generate',
+      () async {
+        when(
+          () => repository.generateAdmissionNumber(schoolId, academicYearId),
+        ).thenAnswer((_) async => Left(ServerFailure('boom')));
+
+        final result = await call();
+
+        expect(result, Left(ServerFailure('boom')));
+        verifyNever(
+          () => repository.finalizeAdmission(
+            any(),
+            studentCode: any(named: 'studentCode'),
+            admissionNumber: any(named: 'admissionNumber'),
+            qrReference: any(named: 'qrReference'),
+          ),
+        );
+      },
+    );
+
+    test('propagates finalizeAdmission failure', () async {
+      when(
+        () => repository.finalizeAdmission(
+          any(),
+          studentCode: any(named: 'studentCode'),
+          admissionNumber: any(named: 'admissionNumber'),
+          qrReference: any(named: 'qrReference'),
+        ),
+      ).thenAnswer((_) async => Left(ServerFailure('finalize failed')));
+
+      final result = await call();
+
+      expect(result, Left(ServerFailure('finalize failed')));
+    });
+  });
+
+  group('enrollStudent', () {
+    Future<Either<Failure, String>> call({
+      String? academicYear,
+      String? term,
+      String? feeStructureId,
+      double? totalBilled,
+    }) {
+      return service.enrollStudent(
+        studentId,
+        schoolId: schoolId,
+        uniqueSystemId: uniqueSystemId,
+        studentCode: studentCode,
+        academicYear: academicYear,
+        term: term,
+        feeStructureId: feeStructureId,
+        totalBilled: totalBilled,
+      );
+    }
+
+    test('transitions the student to StudentStatus.active', () async {
+      await call();
+
+      verify(
+        () => repository.updateStudentStatus(studentId, StudentStatus.active),
+      ).called(1);
+    });
+
+    test(
+      'generates the StudentIdentity using the same codes admitStudent wrote',
       () async {
         await call();
 
@@ -153,7 +256,9 @@ void main() {
           ),
         ).captured;
 
-        expect((captured.single as Student).id, studentId);
+        final passedStudent = captured.single as Student;
+        expect(passedStudent.id, studentId);
+        expect(passedStudent.schoolId, schoolId);
       },
     );
 
@@ -177,7 +282,7 @@ void main() {
     );
 
     test(
-      'initializes financials when term/feeStructureId/totalBilled are supplied',
+      'initializes financials when academicYear/term/feeStructureId/totalBilled are supplied',
       () async {
         when(
           () => initializeFinancials(
@@ -191,6 +296,7 @@ void main() {
         ).thenAnswer((_) async => const Right(null));
 
         final result = await call(
+          academicYear: academicYear,
           term: 'Term 1',
           feeStructureId: 'fee-1',
           totalBilled: 500,
@@ -211,48 +317,15 @@ void main() {
     );
 
     test(
-      'short-circuits and never finalizes admission when the admission number fails to generate',
+      'short-circuits and never generates an identity when the status update fails',
       () async {
         when(
-          () => repository.generateAdmissionNumber(schoolId, academicYearId),
+          () => repository.updateStudentStatus(any(), any()),
         ).thenAnswer((_) async => Left(ServerFailure('boom')));
 
         final result = await call();
 
         expect(result, Left(ServerFailure('boom')));
-        verifyNever(
-          () => repository.finalizeAdmission(
-            any(),
-            studentCode: any(named: 'studentCode'),
-            admissionNumber: any(named: 'admissionNumber'),
-            qrReference: any(named: 'qrReference'),
-          ),
-        );
-        verifyNever(
-          () => identityRepository.generateStudentIdentity(
-            any(),
-            uniqueSystemId: any(named: 'uniqueSystemId'),
-            schoolStudentId: any(named: 'schoolStudentId'),
-          ),
-        );
-      },
-    );
-
-    test(
-      'propagates finalizeAdmission failure without generating an identity',
-      () async {
-        when(
-          () => repository.finalizeAdmission(
-            any(),
-            studentCode: any(named: 'studentCode'),
-            admissionNumber: any(named: 'admissionNumber'),
-            qrReference: any(named: 'qrReference'),
-          ),
-        ).thenAnswer((_) async => Left(ServerFailure('finalize failed')));
-
-        final result = await call();
-
-        expect(result, Left(ServerFailure('finalize failed')));
         verifyNever(
           () => identityRepository.generateStudentIdentity(
             any(),
@@ -275,6 +348,7 @@ void main() {
         ).thenAnswer((_) async => Left(ServerFailure('identity failed')));
 
         final result = await call(
+          academicYear: academicYear,
           term: 'Term 1',
           feeStructureId: 'fee-1',
           totalBilled: 500,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -76,9 +77,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
         if (authState is! AuthAuthenticated)
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          return const Scaffold(body: Center(child: SchoolPulseLoader()));
 
         return BlocConsumer<StudentsBloc, StudentsState>(
           listener: (context, state) {
@@ -90,9 +89,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           },
           builder: (context, studentsState) {
             if (studentsState is StudentsLoading)
-              return const Scaffold(
-                body: Center(child: CircularProgressIndicator()),
-              );
+              return const Scaffold(body: Center(child: SchoolPulseLoader()));
 
             return BlocBuilder<SelectedStudentBloc, SelectedStudentState>(
               builder: (context, selectedState) {

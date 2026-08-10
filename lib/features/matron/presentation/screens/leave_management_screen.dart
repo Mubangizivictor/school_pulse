@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
@@ -53,7 +54,7 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
             current is LeaveRequestsLoaded || current is MatronLoading,
         builder: (context, state) {
           if (state is! LeaveRequestsLoaded) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: SchoolPulseLoader());
           }
           if (state.requests.isEmpty) {
             return const EmptyState(

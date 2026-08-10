@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/core/utils.dart';
 import 'package:school_pulse/design_system/app_components.dart';
@@ -42,7 +43,7 @@ class _PaymentHistoryScreenState extends State<PaymentHistoryScreen> {
       body: BlocBuilder<FinanceBloc, FinanceState>(
         builder: (context, state) {
           if (state is FinanceLoading || state is FinanceInitial) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: SchoolPulseLoader());
           } else if (state is FinanceError) {
             return EmptyState(
               icon: Icons.cloud_off,

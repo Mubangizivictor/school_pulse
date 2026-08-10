@@ -59,6 +59,8 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
           } else {
             context.go('/school-splash', extra: state.user);
           }
+        } else if (state is AuthMfaChallengeRequired) {
+          context.go('/auth/mfa-challenge', extra: state.resolver);
         } else if (state is AuthFailureState) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -71,6 +73,7 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
       },
       builder: (context, state) {
         final isLoading = state is AuthLoading;
+        final colorScheme = Theme.of(context).colorScheme;
 
         return AuthPortalScaffold(
           accent: _accent,
@@ -84,7 +87,7 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
               'Staff Portal',
               textAlign: TextAlign.center,
               style: AppTypography.headlineMedium.copyWith(
-                color: Colors.white,
+                color: colorScheme.onSurface,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -93,7 +96,7 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
               'Enter your credentials to continue\naccessing the staff portal.',
               textAlign: TextAlign.center,
               style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.textSecondaryDark,
+                color: colorScheme.onSurfaceVariant,
                 height: 1.4,
               ),
             ),
@@ -119,7 +122,7 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
                   _obscure
                       ? Icons.visibility_outlined
                       : Icons.visibility_off_outlined,
-                  color: AppColors.textSecondaryDark,
+                  color: colorScheme.onSurfaceVariant,
                 ),
                 onPressed: () => setState(() => _obscure = !_obscure),
               ),
@@ -143,7 +146,9 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
                 const SizedBox(width: AppSpacing.m),
                 Text(
                   'Remember me',
-                  style: AppTypography.bodyMedium.copyWith(color: Colors.white),
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: colorScheme.onSurface,
+                  ),
                 ),
                 const Spacer(),
                 GestureDetector(

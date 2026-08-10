@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
@@ -143,7 +144,7 @@ class _NotificationPreferencesScreenState
       ),
       body: _loading
           ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF6366F1)),
+              child: const SchoolPulseLoader(),
             )
           : _preferences == null
           ? const Center(

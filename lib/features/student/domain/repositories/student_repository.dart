@@ -12,7 +12,14 @@ abstract class StudentRepository {
   Future<Either<Failure, Student>> getStudentById(String studentId);
   Future<Either<Failure, List<Student>>> getAllStudents({String? schoolId});
   Future<Either<Failure, List<Student>>> getStudentsByIds(List<String> ids);
-  Future<Either<Failure, void>> createStudent(Student student);
+
+  /// Direct-create path (e.g. bulk import, manual entry) that bypasses the
+  /// admission-application workflow. [recordedBy] attributes the initial
+  /// student_enrolments placement record, same as updateStudent.
+  Future<Either<Failure, String>> createStudent(
+    Student student, {
+    required String recordedBy,
+  });
   Future<Either<Failure, List<Student>>> searchStudents({
     required String schoolId,
     String? query,

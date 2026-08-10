@@ -50,6 +50,12 @@ class MoreMenuScreen extends StatelessWidget {
                     title: 'Discipline',
                     onTap: () => context.push('/parent/discipline'),
                   ),
+                if (visibility.appointments)
+                  _MenuTile(
+                    icon: Icons.event_available_outlined,
+                    title: 'Appointments',
+                    onTap: () => context.push('/parent/appointments'),
+                  ),
                 if (visibility.transport)
                   _MenuTile(
                     icon: Icons.directions_bus_outlined,

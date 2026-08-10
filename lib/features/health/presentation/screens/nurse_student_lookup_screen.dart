@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/student/domain/entities/student.dart';
@@ -152,7 +153,7 @@ class _NurseStudentLookupScreenState extends State<NurseStudentLookupScreen> {
                 label: const Text('Back to results'),
               ),
               if (_loadingView)
-                const Center(child: CircularProgressIndicator()),
+                const Center(child: SchoolPulseLoader()),
               if (_error != null)
                 Card(
                   color: Colors.red.shade50,

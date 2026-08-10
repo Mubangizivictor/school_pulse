@@ -1,6 +1,7 @@
 // dartz also exports `State`, which collides with Flutter's.
 import 'package:dartz/dartz.dart' hide State;
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
@@ -65,9 +66,7 @@ class _NotificationDetailsLoaderScreenState
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const _LoaderScaffold(
-            child: CircularProgressIndicator(color: Color(0xFF6366F1)),
-          );
+          return const _LoaderScaffold(child: SchoolPulseLoader());
         }
 
         final result = snapshot.data;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/components/pulse_card.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -48,7 +49,7 @@ class _CalendarHomeBody extends StatelessWidget {
       body: BlocBuilder<SchoolCalendarBloc, SchoolCalendarState>(
         builder: (context, state) {
           if (state is SchoolCalendarLoading || state is SchoolCalendarInitial) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: SchoolPulseLoader());
           }
           if (state is SchoolCalendarError) {
             return Center(child: Text(state.message));

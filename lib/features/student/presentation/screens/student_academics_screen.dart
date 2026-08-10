@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/academic/presentation/bloc/academic_bloc.dart';
@@ -15,13 +16,13 @@ class StudentAcademicsScreen extends StatelessWidget {
       body: BlocBuilder<SelectedStudentBloc, SelectedStudentState>(
         builder: (context, state) {
           if (state is! SelectedStudentLoaded) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: SchoolPulseLoader());
           }
 
           return BlocBuilder<AcademicBloc, AcademicState>(
             builder: (context, academicState) {
               if (academicState is AcademicLoading) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: SchoolPulseLoader());
               }
 
               if (academicState is AcademicLoaded) {

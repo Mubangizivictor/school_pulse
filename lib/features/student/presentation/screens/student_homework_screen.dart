@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../../../design_system/app_components.dart';
@@ -36,9 +37,7 @@ class StudentHomeworkScreen extends StatelessWidget {
           ),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          return const Scaffold(body: Center(child: SchoolPulseLoader()));
         }
 
         if (snapshot.hasError || !snapshot.hasData) {
@@ -62,7 +61,7 @@ class StudentHomeworkScreen extends StatelessWidget {
             body: BlocBuilder<StudentHomeworkBloc, StudentHomeworkState>(
               builder: (context, state) {
                 if (state is StudentHomeworkLoading) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(child: SchoolPulseLoader());
                 } else if (state is StudentHomeworkLoaded) {
                   if (state.homeworkList.isEmpty) {
                     return EmptyState(

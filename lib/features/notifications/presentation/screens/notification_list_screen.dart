@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -145,9 +146,7 @@ class _NotificationListViewState extends State<_NotificationListView>
               Expanded(
                 child: state.status == NotificationCenterStatus.loading
                     ? const Center(
-                        child: CircularProgressIndicator(
-                          color: Color(0xFF6366F1),
-                        ),
+                        child: const SchoolPulseLoader(),
                       )
                     : TabBarView(
                         controller: _tabController,

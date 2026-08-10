@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
@@ -42,7 +43,7 @@ class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
       body: BlocBuilder<AcademicBloc, AcademicState>(
         builder: (context, state) {
           if (state is AcademicLoading || state is AcademicInitial) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: SchoolPulseLoader());
           } else if (state is AcademicError) {
             return EmptyState(
               icon: Icons.cloud_off,

@@ -21,27 +21,26 @@ class SecurityPrivacyScreen extends StatelessWidget {
           _Tile(
             icon: Icons.lock_outline,
             title: 'Change Password',
-            onTap: () => context.push('/staff/more/security-privacy/change-password'),
+            onTap: () =>
+                context.push('/staff/more/security-privacy/change-password'),
           ),
           _Tile(
             icon: Icons.verified_user_outlined,
             title: 'Two-Factor Authentication',
-            onTap: () => context.push('/staff/more/security-privacy/two-factor'),
+            onTap: () =>
+                context.push('/staff/more/security-privacy/two-factor'),
           ),
           _Tile(
             icon: Icons.devices_outlined,
             title: 'Active Sessions',
-            onTap: () => context.push('/staff/more/security-privacy/active-sessions'),
-          ),
-          _Tile(
-            icon: Icons.history,
-            title: 'Login History',
-            onTap: () => context.push('/staff/more/security-privacy/login-history'),
+            onTap: () =>
+                context.push('/staff/more/security-privacy/active-sessions'),
           ),
           _Tile(
             icon: Icons.timeline_outlined,
             title: 'Account Activity',
-            onTap: () => context.push('/staff/more/security-privacy/account-activity'),
+            onTap: () =>
+                context.push('/staff/more/security-privacy/account-activity'),
           ),
         ],
       ),
@@ -66,8 +65,14 @@ class _Tile extends StatelessWidget {
         child: ListTile(
           contentPadding: EdgeInsets.zero,
           leading: Icon(icon, color: AppColors.primary(context)),
-          title: Text(title, style: TextStyle(color: AppColors.textPrimary(context))),
-          trailing: Icon(Icons.chevron_right, color: AppColors.textMuted(context)),
+          title: Text(
+            title,
+            style: TextStyle(color: AppColors.textPrimary(context)),
+          ),
+          trailing: Icon(
+            Icons.chevron_right,
+            color: AppColors.textMuted(context),
+          ),
           onTap: onTap,
         ),
       ),

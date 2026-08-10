@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../design_system/app_components.dart';
 import '../../../library/domain/entities/library_policy.dart';
@@ -77,7 +78,7 @@ class _LibrarySettingsScreenState extends State<LibrarySettingsScreen> {
               },
             );
           }
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: SchoolPulseLoader());
         },
       ),
       floatingActionButton: FloatingActionButton(

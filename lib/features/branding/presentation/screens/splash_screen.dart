@@ -5,6 +5,7 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_gradients.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/design_system/components/pulse_logo.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
@@ -77,9 +78,18 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDark ? AppColors.bgDark : AppColors.bgLight;
+    final taglineColor = isDark
+        ? AppColors.iceBlue.withValues(alpha: 0.7)
+        : AppColors.textSecondaryLight;
+
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(gradient: AppGradients.premiumDark),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          gradient: isDark ? AppGradients.premiumDark : null,
+        ),
         child: Stack(
           children: [
             // Background Pulse Effect (Subtle)
@@ -115,22 +125,13 @@ class _SplashScreenState extends State<SplashScreen>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const PulseLogo(
+                      PulseLogo(
                         variant: PulseLogoVariant.vertical,
                         width: 240,
+                        isDark: isDark,
                       ),
                       const SizedBox(height: 48),
-                      // Loading indicator
-                      const SizedBox(
-                        width: 40,
-                        height: 40,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            AppColors.brightCyan,
-                          ),
-                        ),
-                      ),
+                      const SchoolPulseLoader.small(),
                     ],
                   ),
                 ),
@@ -148,7 +149,7 @@ class _SplashScreenState extends State<SplashScreen>
                   child: Text(
                     'Modern Education Innovation',
                     style: AppTypography.labelMedium.copyWith(
-                      color: AppColors.iceBlue.withValues(alpha: 0.7),
+                      color: taglineColor,
                       letterSpacing: 2.0,
                     ),
                   ),

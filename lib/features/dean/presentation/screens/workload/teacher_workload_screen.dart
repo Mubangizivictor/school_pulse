@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
@@ -115,7 +116,7 @@ class TeacherWorkloadScreen extends StatelessWidget {
               );
             }
             if (state is DeanLoading) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: SchoolPulseLoader());
             }
             return const Center(child: Text('No workload data available.'));
           },

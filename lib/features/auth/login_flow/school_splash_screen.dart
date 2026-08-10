@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/core/user_roles.dart';
@@ -200,7 +201,7 @@ class _SchoolSplashScreenState extends State<SchoolSplashScreen>
                         ),
                       )
                     else
-                      const CircularProgressIndicator(),
+                      const SchoolPulseLoader(),
                   ],
                 ),
               ),

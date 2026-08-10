@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
@@ -43,7 +44,7 @@ class _PayrollManagementScreenState extends State<PayrollManagementScreen> {
       body: BlocBuilder<HrBloc, HrState>(
         builder: (context, state) {
           if (state is HrLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: SchoolPulseLoader());
           } else if (state is PayrollRecordsLoaded) {
             if (state.records.isEmpty) {
               return _buildEmptyState();

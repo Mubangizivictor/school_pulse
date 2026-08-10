@@ -41,7 +41,7 @@ class Step11ReviewConfirm extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const WizardStepCaption(
-            number: 11,
+            number: 10,
             title: 'Review & Confirm',
             subtitle: 'Please review all details before adding',
           ),

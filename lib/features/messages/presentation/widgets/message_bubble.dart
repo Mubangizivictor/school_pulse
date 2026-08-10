@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -720,7 +721,7 @@ class MessageBubble extends StatelessWidget {
                     width: 220,
                     height: 160,
                     child: Center(
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: const SchoolPulseLoader(),
                     ),
                   ),
             errorBuilder: (context, error, stack) => const SizedBox(

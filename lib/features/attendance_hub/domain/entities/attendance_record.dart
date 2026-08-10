@@ -31,6 +31,15 @@ class AttendanceRecord extends Equatable {
   final DateTime? correctedAt;
   final String? correctionOf;
 
+  /// The staff_role_assignments doc this write is claimed under - null for
+  /// an institution-wide operator (schoolAdmin/director/headTeacher/
+  /// deputyHead, or anyone holding attendance.override) who has no single
+  /// assignment to name. Firestore rules verify this specific assignment
+  /// both belongs to the writer and covers [scopeId] before allowing the
+  /// write - the same holdsAssignment() pattern already used by
+  /// lesson_attendance/class_attendance_sessions/subject_enrollments.
+  final String? roleAssignmentId;
+
   const AttendanceRecord({
     required this.id,
     required this.schoolId,
@@ -50,12 +59,14 @@ class AttendanceRecord extends Equatable {
     required this.createdAt,
     this.correctedAt,
     this.correctionOf,
+    this.roleAssignmentId,
   });
 
   AttendanceRecord copyWith({
     AttendanceStatus? status,
     AttendanceSyncStatus? syncStatus,
     DateTime? correctedAt,
+    String? roleAssignmentId,
   }) {
     return AttendanceRecord(
       id: id,
@@ -76,6 +87,7 @@ class AttendanceRecord extends Equatable {
       createdAt: createdAt,
       correctedAt: correctedAt ?? this.correctedAt,
       correctionOf: correctionOf,
+      roleAssignmentId: roleAssignmentId ?? this.roleAssignmentId,
     );
   }
 
@@ -99,5 +111,6 @@ class AttendanceRecord extends Equatable {
     createdAt,
     correctedAt,
     correctionOf,
+    roleAssignmentId,
   ];
 }

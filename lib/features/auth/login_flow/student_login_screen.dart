@@ -68,17 +68,19 @@ class _StudentHubScreenState extends State<StudentHubScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return AuthPortalScaffold(
       accent: _accent,
       children: [
         const _StudentBadge(),
         const SizedBox(height: AppSpacing.l),
-        // "Student" in white, "Hub" in the portal accent.
+        // Keep the portal mark legible against either app theme.
         RichText(
           textAlign: TextAlign.center,
           text: TextSpan(
             style: AppTypography.headlineMedium.copyWith(
-              color: Colors.white,
+              color: colors.onSurface,
               fontWeight: FontWeight.w800,
             ),
             children: const [
@@ -95,7 +97,7 @@ class _StudentHubScreenState extends State<StudentHubScreen> {
           'Enter the code and PIN issued by\nyour school to get started.',
           textAlign: TextAlign.center,
           style: AppTypography.bodyMedium.copyWith(
-            color: AppColors.textSecondaryDark,
+            color: colors.onSurfaceVariant,
             height: 1.4,
           ),
         ),
@@ -112,15 +114,19 @@ class _StudentHubScreenState extends State<StudentHubScreen> {
               TextField(
                 controller: _codeController,
                 textCapitalization: TextCapitalization.characters,
-                style: AppTypography.bodyLarge.copyWith(color: Colors.white),
+                style: AppTypography.bodyLarge.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
                 decoration: InputDecoration(
                   hintText: 'e.g. STU12345',
                   hintStyle: AppTypography.bodyLarge.copyWith(
-                    color: AppColors.textSecondaryDark.withValues(alpha: 0.55),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurfaceVariant.withValues(alpha: 0.65),
                   ),
-                  prefixIcon: const Icon(
+                  prefixIcon: Icon(
                     Icons.vpn_key_outlined,
-                    color: AppColors.textSecondaryDark,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.l,
@@ -129,7 +135,9 @@ class _StudentHubScreenState extends State<StudentHubScreen> {
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.14),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white.withValues(alpha: 0.14)
+                          : AppColors.borderLight,
                     ),
                   ),
                   focusedBorder: OutlineInputBorder(
@@ -142,7 +150,9 @@ class _StudentHubScreenState extends State<StudentHubScreen> {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.14),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white.withValues(alpha: 0.14)
+                          : AppColors.borderLight,
                     ),
                   ),
                 ),
@@ -160,7 +170,7 @@ class _StudentHubScreenState extends State<StudentHubScreen> {
                     child: Text(
                       'Use the code provided by your school office.',
                       style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.textSecondaryDark,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
@@ -182,7 +192,7 @@ class _StudentHubScreenState extends State<StudentHubScreen> {
               Text(
                 'Enter the 4-digit PIN issued with your access code.',
                 style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.textSecondaryDark,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: AppSpacing.l),
@@ -213,6 +223,8 @@ class _StudentHubScreenState extends State<StudentHubScreen> {
   }
 
   Widget _pinBox(int index) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = Theme.of(context).colorScheme;
     final filled = _pinControllers[index].text.isNotEmpty;
     final focused = _pinFocus[index].hasFocus;
 
@@ -222,14 +234,20 @@ class _StudentHubScreenState extends State<StudentHubScreen> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: focused ? 0.08 : 0.04),
+          color: isDark
+              ? Colors.white.withValues(alpha: focused ? 0.08 : 0.04)
+              : colors.surfaceContainerHighest.withValues(
+                  alpha: focused ? 0.8 : 0.55,
+                ),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: focused
                 ? _accent
                 : filled
                 ? _accent.withValues(alpha: 0.6)
-                : Colors.white.withValues(alpha: 0.22),
+                : (isDark
+                      ? Colors.white.withValues(alpha: 0.22)
+                      : AppColors.borderLight),
             width: focused ? 2 : 1.2,
           ),
           boxShadow: focused
@@ -253,7 +271,7 @@ class _StudentHubScreenState extends State<StudentHubScreen> {
           obscuringCharacter: '•',
           showCursor: false,
           style: AppTypography.headlineSmall.copyWith(
-            color: Colors.white,
+            color: colors.onSurface,
             fontWeight: FontWeight.w700,
             height: 1,
           ),
@@ -370,12 +388,17 @@ class _StepCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = Theme.of(context).colorScheme;
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.l),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
+        color: isDark ? Colors.white.withValues(alpha: 0.03) : colors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.08) : colors.outline,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -404,7 +427,7 @@ class _StepCard extends StatelessWidget {
                 child: Text(
                   title,
                   style: AppTypography.titleMedium.copyWith(
-                    color: Colors.white,
+                    color: colors.onSurface,
                     fontWeight: FontWeight.w700,
                   ),
                 ),

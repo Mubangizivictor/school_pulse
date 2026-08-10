@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
@@ -70,7 +71,7 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
         ),
       ),
       body: !_loaded
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: SchoolPulseLoader())
           : MessagingUserBuilder(
               builder: (context, user) => ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 16),

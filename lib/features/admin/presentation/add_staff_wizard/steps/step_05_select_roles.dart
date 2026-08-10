@@ -39,7 +39,7 @@ class Step05SelectRoles extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const WizardStepCaption(
-            number: 6,
+            number: 4,
             title: 'Select Roles',
             subtitle: 'Choose all roles applicable',
           ),

@@ -51,7 +51,7 @@ class Step10Documents extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const WizardStepCaption(
-            number: 10,
+            number: 9,
             title: 'Documents (Optional)',
             subtitle: 'Upload supporting documents',
           ),

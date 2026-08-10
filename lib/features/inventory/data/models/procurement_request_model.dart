@@ -27,7 +27,7 @@ class ProcurementRequestModel extends ProcurementRequest {
         (e) => e.name == data['status'],
         orElse: () => ProcurementStatus.pending,
       ),
-      date: (data['date'] as Timestamp).toDate(),
+      date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
       directorNote: data['directorNote'],
     );
   }

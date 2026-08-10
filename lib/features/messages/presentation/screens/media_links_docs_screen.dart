@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
@@ -49,7 +50,7 @@ class MediaLinksDocsScreen extends StatelessWidget {
             stream: context.messages.watchAttachments(chatId, user.id),
             builder: (context, snapshot) {
               if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: SchoolPulseLoader());
               }
               final attachments = snapshot.data!;
               return TabBarView(

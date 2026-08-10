@@ -31,7 +31,7 @@ class Step07RolesSummary extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const WizardStepCaption(
-            number: 8,
+            number: 6,
             title: 'Assigned Roles Summary',
             subtitle: 'Review all assigned roles',
           ),

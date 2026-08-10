@@ -60,7 +60,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get_it/get_it.dart';
 import 'package:school_pulse/core/network/network_info.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
-import 'package:school_pulse/features/attendance_qr_integration/domain/services/google_sheets_service.dart';
 import 'package:school_pulse/features/attendance_qr_integration/data/models/attendance_log_isar.dart';
 import 'package:school_pulse/features/attendance_qr_integration/domain/repositories/attendance_qr_repository.dart';
 import 'package:school_pulse/features/attendance_qr_integration/data/repositories/attendance_qr_repository_impl.dart';
@@ -85,7 +84,10 @@ import 'package:school_pulse/features/teacher/presentation/bloc/report_wizard/re
 import 'package:school_pulse/features/teacher/domain/usecases/generate_reports.dart';
 import 'package:school_pulse/features/finance/domain/services/finance_service.dart';
 import 'package:school_pulse/features/student/domain/services/admission_service.dart';
+import 'package:school_pulse/features/student/domain/services/document_service.dart';
 import 'package:school_pulse/features/student/domain/services/parent_linking_service.dart';
+import 'package:school_pulse/features/student/domain/services/promotion_service.dart';
+import 'package:school_pulse/features/student/domain/services/student_service.dart';
 import 'package:school_pulse/features/finance/domain/usecases/initialize_student_financials.dart';
 
 import 'package:school_pulse/features/admin/domain/repositories/admin_attendance_repository.dart';
@@ -142,6 +144,9 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/student/domain/repositories/student_repository.dart';
 import 'package:school_pulse/features/student/data/repositories/student_repository_impl.dart';
 import 'package:school_pulse/features/student/data/datasources/student_remote_data_source.dart';
+import 'package:school_pulse/features/student/data/datasources/student_local_data_source.dart';
+import 'package:school_pulse/features/student/data/models/student_isar_models.dart';
+import 'package:school_pulse/features/student/domain/usecases/create_student.dart';
 import 'package:school_pulse/features/student/domain/usecases/get_students_by_ids.dart';
 import 'package:school_pulse/features/student/domain/usecases/get_all_students.dart';
 import 'package:school_pulse/features/student/domain/usecases/resolve_parent_access_code.dart';
@@ -186,6 +191,8 @@ import 'package:school_pulse/features/attendance_hub/presentation/bloc/attendanc
 import 'package:school_pulse/features/attendance_hub/domain/repositories/attendance_repository.dart';
 import 'package:school_pulse/features/attendance_hub/data/repositories/attendance_repository_impl.dart';
 import 'package:school_pulse/features/attendance_hub/data/datasources/attendance_remote_data_source.dart';
+import 'package:school_pulse/features/attendance_hub/domain/services/attendance_participant_resolver.dart';
+import 'package:school_pulse/features/attendance_hub/domain/services/attendance_participant_resolver_impl.dart';
 import 'package:school_pulse/features/attendance_hub/domain/repositories/sheets_integration_repository.dart';
 import 'package:school_pulse/features/attendance_hub/data/repositories/sheets_integration_repository_impl.dart';
 import 'package:school_pulse/features/attendance_hub/data/datasources/sheets_integration_remote_data_source.dart';
@@ -647,17 +654,24 @@ Future<void> init() async {
   sl.registerLazySingleton(() => ResolveParentAccessCode(sl()));
   sl.registerLazySingleton(() => GetHomeworkForStudent(sl()));
   sl.registerLazySingleton(() => SearchStudents(sl()));
+  sl.registerLazySingleton(() => CreateStudent(sl()));
 
   sl.registerLazySingleton<StudentRepository>(
     () => StudentRepositoryImpl(
       remoteDataSource: sl(),
+      localDataSource: sl(),
       matronRemoteDataSource: sl(),
       relationshipRepository: sl(),
+      networkInfo: sl(),
     ),
   );
 
   sl.registerLazySingleton<StudentRemoteDataSource>(
     () => StudentRemoteDataSourceImpl(firestore: sl(), storage: sl()),
+  );
+
+  sl.registerLazySingleton<StudentLocalDataSource>(
+    () => StudentLocalDataSourceImpl(sl()),
   );
 
   sl.registerLazySingleton(
@@ -668,6 +682,9 @@ Future<void> init() async {
       initializeFinancials: sl(),
     ),
   );
+  sl.registerLazySingleton(() => StudentService(sl()));
+  sl.registerLazySingleton(() => DocumentService(sl()));
+  sl.registerLazySingleton(() => PromotionService(sl()));
 
   sl.registerLazySingleton(() => ParentLinkingService(sl(), sl()));
 
@@ -690,6 +707,7 @@ Future<void> init() async {
       firestore: sl(),
       isar: sl(),
       idGenerator: sl(),
+      functions: sl(),
     ),
   );
 
@@ -762,9 +780,7 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton(() => AuditRepository());
-  sl.registerLazySingleton(
-    () => admin_appointment.AppointmentRepository(),
-  );
+  sl.registerLazySingleton(() => admin_appointment.AppointmentRepository());
 
   // Features - School Calendar
   sl.registerFactory(
@@ -801,7 +817,11 @@ Future<void> init() async {
 
   // Features - Attendance Hub
   sl.registerFactory(
-    () => AttendanceBloc(repository: sl(), permissionEvaluator: sl()),
+    () => AttendanceBloc(
+      repository: sl(),
+      permissionEvaluator: sl(),
+      participantResolver: sl(),
+    ),
   );
 
   sl.registerLazySingleton<AttendanceRepository>(
@@ -817,8 +837,23 @@ Future<void> init() async {
     () => AttendanceRemoteDataSourceImpl(firestore: sl()),
   );
 
+  // Central attendance access resolver - see the class doc comment for why
+  // every attendance surface (dropdown, scopes, roster, NFC/QR, Previous
+  // Attendance, Sheets export) must go through this instead of deriving its
+  // own participant list from a role check.
+  sl.registerLazySingleton<AttendanceParticipantResolver>(
+    () => AttendanceParticipantResolverImpl(
+      assignmentRepository: sl(),
+      calendarService: sl(),
+      permissionEvaluator: sl(),
+    ),
+  );
+
   sl.registerLazySingleton<SheetsIntegrationRepository>(
-    () => SheetsIntegrationRepositoryImpl(remoteDataSource: sl()),
+    () => SheetsIntegrationRepositoryImpl(
+      remoteDataSource: sl(),
+      functions: sl(),
+    ),
   );
 
   sl.registerLazySingleton<SheetsIntegrationRemoteDataSource>(
@@ -1794,6 +1829,7 @@ Future<void> init() async {
   final dir = await getApplicationDocumentsDirectory();
   final isar = await Isar.open([
     StudentCacheIsarSchema,
+    StudentProfileIsarSchema,
     AttendanceLogIsarSchema,
     AssetIsarSchema,
     InventoryItemIsarSchema,
@@ -1870,7 +1906,6 @@ Future<void> init() async {
   sl.registerLazySingleton(() => FirebaseFunctions.instance);
   sl.registerLazySingleton(() => InternetConnectionChecker());
   sl.registerLazySingleton<NetworkInfo>(() => NetworkInfoImpl(sl()));
-  sl.registerLazySingleton(() => GoogleSheetsService());
 
   sl.registerLazySingleton<InstitutionContextRemoteDataSource>(
     () => InstitutionContextRemoteDataSourceImpl(firestore: sl()),

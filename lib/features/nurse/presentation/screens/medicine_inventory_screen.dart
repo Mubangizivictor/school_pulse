@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
@@ -107,7 +108,7 @@ class _MedicineInventoryScreenState extends State<MedicineInventoryScreen>
     return BlocBuilder<HealthBloc, HealthState>(
       builder: (context, state) {
         if (state is HealthLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: SchoolPulseLoader());
         }
         if (state is InventoryLoaded) {
           if (state.items.isEmpty) {
@@ -202,7 +203,7 @@ class _MedicineInventoryScreenState extends State<MedicineInventoryScreen>
                 context.read<HealthBloc>().add(FetchInventory(_schoolId)),
           );
         }
-        return const Center(child: CircularProgressIndicator());
+        return const Center(child: SchoolPulseLoader());
       },
     );
   }
@@ -211,7 +212,7 @@ class _MedicineInventoryScreenState extends State<MedicineInventoryScreen>
     return BlocBuilder<HealthBloc, HealthState>(
       builder: (context, state) {
         if (state is HealthLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: SchoolPulseLoader());
         }
         if (state is SupplyRequestsLoaded) {
           if (state.requests.isEmpty) {
@@ -257,7 +258,7 @@ class _MedicineInventoryScreenState extends State<MedicineInventoryScreen>
                 context.read<HealthBloc>().add(FetchSupplyRequests(_schoolId)),
           );
         }
-        return const Center(child: CircularProgressIndicator());
+        return const Center(child: SchoolPulseLoader());
       },
     );
   }

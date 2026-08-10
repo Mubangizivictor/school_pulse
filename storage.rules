@@ -5,6 +5,14 @@ service firebase.storage {
       allow read: if true;
       allow write: if request.auth != null;
     }
+    match /profile_photos/{uid}/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
     // Photos and group avatars shared through the /messages module. Storage
     // rules can't read Firestore, so membership can't be checked here - the
     // gate is that the download URL only ever reaches participants (it is
@@ -39,6 +47,27 @@ service firebase.storage {
           || request.resource.contentType == 'application/vnd.ms-excel'
           || request.resource.contentType == 'application/vnd.ms-powerpoint'
           || request.resource.contentType == 'text/csv'
+        );
+      allow delete: if request.auth != null;
+    }
+
+    // Student admission/profile documents (birth certificates, prior
+    // reports, IDs). Storage rules can't read Firestore to check the
+    // caller's schoolId against the student's, so - same reasoning as
+    // class_resources above - this layer enforces size/type only; the
+    // download URL is only reachable via the students/{studentId} document,
+    // which firestore.rules already scopes to staff of the same school (or
+    // the student's own linked parent/self).
+    match /schools/students/{studentId}/documents/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && request.resource.size < 25 * 1024 * 1024
+        && (
+          request.resource.contentType.matches('image/.*')
+          || request.resource.contentType == 'application/pdf'
+          || request.resource.contentType.matches('application/vnd.openxmlformats-officedocument.*')
+          || request.resource.contentType.matches('application/vnd.oasis.opendocument.*')
+          || request.resource.contentType == 'application/msword'
         );
       allow delete: if request.auth != null;
     }

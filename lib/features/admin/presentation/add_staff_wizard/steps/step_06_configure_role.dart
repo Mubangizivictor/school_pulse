@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 
@@ -64,7 +65,7 @@ class _Step06ConfigureRoleState extends State<Step06ConfigureRole> {
     if (roles.isEmpty) {
       // Guard against reaching this step with nothing to configure.
       WidgetsBinding.instance.addPostFrameCallback((_) => controller.next());
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: Center(child: SchoolPulseLoader()));
     }
 
     final index = controller.configureRoleIndex.clamp(0, roles.length - 1);
@@ -89,7 +90,7 @@ class _Step06ConfigureRoleState extends State<Step06ConfigureRole> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           WizardStepCaption(
-            number: 7,
+            number: 5,
             title: 'Configure Role: ${UserRoleDisplay.name(role)}',
             subtitle:
                 'Assign details for this role (${index + 1} of ${roles.length})',

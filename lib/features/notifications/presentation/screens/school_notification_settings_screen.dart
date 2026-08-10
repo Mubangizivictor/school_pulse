@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/core/permissions/permission.dart';
@@ -163,7 +164,7 @@ class _SchoolNotificationSettingsScreenState
       return const _SettingsScaffold(
         saving: false,
         child: Center(
-          child: CircularProgressIndicator(color: Color(0xFF6366F1)),
+          child: const SchoolPulseLoader(),
         ),
       );
     }

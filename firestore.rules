@@ -133,7 +133,11 @@ service cloud.firestore {
            request.resource.data.studentIds.size() > resource.data.studentIds.size()) ||
           // Two-Factor Auth toggle in Security & Privacy - a user may only
           // flip their own mfaEnabled flag, nothing else in the same write.
-          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mfaEnabled']))
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mfaEnabled'])) ||
+          // Self-service profile edits cannot alter identity, role, or school.
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'name', 'phoneNumber', 'photoUrl'
+          ]))
         )) ||
         // Admin console (User Management: edit details, toggle active/
         // inactive, reassign roles) manages OTHER staff profiles - staff
@@ -164,7 +168,13 @@ service cloud.firestore {
         ]) && isSameSchool(request.resource.data.schoolId) &&
         request.resource.data.keys().hasOnly([
           'name', 'role', 'roles', 'schoolId', 'isActive', 'phone'
-        ]);
+        ]) ||
+        (isSignedIn() && request.auth.uid == uid &&
+          isSameSchool(resource.data.schoolId) &&
+          request.resource.data.schoolId == resource.data.schoolId &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'name', 'phone'
+          ]));
       allow update: if hasAnyRole([
           'schoolAdmin', 'headTeacher', 'director'
         ]) && isSameSchool(resource.data.schoolId) &&
@@ -214,7 +224,10 @@ service cloud.firestore {
     }
 
     match /students/{studentId} {
-      allow read: if isStaff() || isParentOf(studentId) || isMe(studentId);
+      // Every read is tenant-scoped. A staff member from school A must not
+      // be able to fetch a guessed student id from school B.
+      allow read: if isSameSchool(resource.data.schoolId) &&
+        (isStaff() || isParentOf(studentId) || isMe(studentId));
       // Phase 4 security gate: previously any staff account from any
       // school could write any other school's student doc if they knew
       // or guessed the id - isStaff() alone never checked tenancy. create
@@ -229,15 +242,16 @@ service cloud.firestore {
 
     // QR/NFC identity lookup for ID cards - StudentIdentityRepository
     // queries this by uniqueSystemId before reading the /students/{id} doc
-    // it references. No rule previously existed for this collection, which
-    // silently denied every QR/NFC scan (Attendance and elsewhere) with a
-    // permission-denied error. No schoolId field exists on this entity yet,
-    // so read stays staff-broad like /students/{studentId} above rather
-    // than a tenancy check that has nothing to check against; write is
-    // limited to the identity-generation flow (staff only).
+    // it references. Now carries schoolId (backfilled going forward as
+    // records are regenerated) so it can use the same isSameSchool +
+    // immutable-tenant pattern as /students/{studentId} above, closing the
+    // cross-tenant read/write hole that existed while this had no tenancy
+    // check at all.
     match /student_identities/{identityId} {
-      allow read: if isStaff();
-      allow create, update: if isStaff();
+      allow read: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId;
       allow delete: if false;
     }
 
@@ -1215,6 +1229,21 @@ service cloud.firestore {
     match /inventory_movements/{id} {
       allow read, write: if isStaff();
     }
+    // Stores and procurement records are used by the inventory team and
+    // approving staff.  They must be explicitly matched; otherwise Firestore
+    // denies every request to these top-level collections.
+    match /assets/{id} {
+      allow read, write: if isStaff();
+    }
+    match /suppliers/{id} {
+      allow read, write: if isStaff();
+    }
+    match /purchase_orders/{id} {
+      allow read, write: if isStaff();
+    }
+    match /procurement_requests/{id} {
+      allow read, write: if isStaff();
+    }
     // Retired: replaced by schools/{schoolId}/calendar_events/{eventId}
     // (schoolId-scoped, permission-gated) - see School Calendar rules above.
 
@@ -1605,10 +1634,37 @@ service cloud.firestore {
         'attendance.custom.scan';
     }
 
+    // Scope check for the two categories AttendanceParticipantResolver
+    // (lib/features/attendance_hub/domain/services) resolves real assignment
+    // data for: 'students' (Class/Subject Teacher -> classId) and 'hostel'
+    // (Matron/Patron -> houseId). hasAttendancePermission already lets an
+    // admin-tier role (schoolAdmin/director/headTeacher/deputyHead) or
+    // anyone holding attendance.override bypass unconditionally - those
+    // callers never carry a roleAssignmentId, so this only runs for callers
+    // who do. Every other category is scoped by permission alone this pass,
+    // same as before, since no assignment data exists yet to check against.
+    function hasAttendanceScopeAccess(schoolId, data) {
+      return !(data.category in ['students', 'hostel'])
+        || hasAnyRole(['schoolAdmin', 'director', 'headTeacher', 'deputyHead'])
+        || (
+          data.roleAssignmentId is string
+          && assignmentExists(schoolId, data.roleAssignmentId)
+          && assignment(schoolId, data.roleAssignmentId).userId == request.auth.uid
+          && assignment(schoolId, data.roleAssignmentId).status == 'active'
+          && (
+            (data.category == 'students'
+              && assignment(schoolId, data.roleAssignmentId).classId == data.scopeId)
+            || (data.category == 'hostel'
+              && assignment(schoolId, data.roleAssignmentId).houseId == data.scopeId)
+          )
+        );
+    }
+
     match /schools/{schoolId}/attendance_records/{recordId} {
       allow read: if isSameSchool(schoolId) && isStaff();
       allow create: if isSameSchool(schoolId) &&
         hasAttendancePermission(schoolId, attendanceCategoryPermission(request.resource.data.category)) &&
+        hasAttendanceScopeAccess(schoolId, request.resource.data) &&
         request.resource.data.schoolId == schoolId;
       // Records are corrected via a separate attendance_corrections trail,
       // never overwritten in place - see AttendanceCorrectionRequest in the

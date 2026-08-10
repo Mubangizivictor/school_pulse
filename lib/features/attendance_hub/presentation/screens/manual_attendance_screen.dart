@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
@@ -40,6 +41,7 @@ class _ManualAttendanceScreenState extends State<ManualAttendanceScreen> {
         LoadScopesRequested(
           schoolId: authState.user.schoolId,
           category: widget.category,
+          operatorUser: authState.user,
         ),
       );
     }
@@ -57,6 +59,7 @@ class _ManualAttendanceScreenState extends State<ManualAttendanceScreen> {
           schoolId: authState.user.schoolId,
           category: widget.category,
           scopeId: scope.id,
+          operatorUser: authState.user,
         ),
       );
     }
@@ -194,7 +197,7 @@ class _ManualAttendanceScreenState extends State<ManualAttendanceScreen> {
         return BlocBuilder<AttendanceBloc, AttendanceState>(
           builder: (context, state) {
             if (state is AttendanceLoading || state is AttendanceInitial) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: SchoolPulseLoader());
             }
             if (state is! ScopesLoaded) return const SizedBox.shrink();
             return ListView.builder(
@@ -242,7 +245,7 @@ class _ManualAttendanceScreenState extends State<ManualAttendanceScreen> {
               child: BlocBuilder<AttendanceBloc, AttendanceState>(
                 builder: (context, state) {
                   if (state is AttendanceLoading) {
-                    return const Center(child: CircularProgressIndicator());
+                    return const Center(child: SchoolPulseLoader());
                   }
                   if (_roster.isEmpty) {
                     return Center(

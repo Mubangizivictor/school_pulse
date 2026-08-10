@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/core/notification/notification_service.dart';
@@ -373,7 +374,7 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
       barrierDismissible: false,
       builder: (dialogContext) {
         loadingDialogContext = dialogContext;
-        return const Center(child: CircularProgressIndicator());
+        return const Center(child: SchoolPulseLoader());
       },
     );
     var dialogClosed = false;
@@ -665,7 +666,7 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Padding(
                   padding: EdgeInsets.all(24),
-                  child: Center(child: CircularProgressIndicator()),
+                  child: Center(child: SchoolPulseLoader()),
                 );
               }
               final docs = snapshot.data?.docs ?? const [];

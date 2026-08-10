@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/core/user_roles.dart';
@@ -54,7 +55,7 @@ class _BroadcastDetailsScreenState extends State<BroadcastDetailsScreen> {
             if (conversation == null) {
               return Center(
                 child: snapshot.connectionState == ConnectionState.waiting
-                    ? const CircularProgressIndicator()
+                    ? const SchoolPulseLoader()
                     : Text(
                         'Broadcast not found',
                         style: AppTypography.bodyMedium.copyWith(

@@ -31,6 +31,7 @@ void main() {
 
   const identity = StudentIdentity(
     studentId: studentId,
+    schoolId: schoolId,
     uniqueSystemId: uniqueSystemId,
     schoolStudentId: 'MH-2026-000001',
     qrCodeData: uniqueSystemId,

@@ -13,6 +13,11 @@ class IdCardBatchEntry {
   final String className;
   final String stream;
   final String uniqueSystemId;
+
+  /// Server-signed credential envelope to encode in the QR. Falls back to
+  /// [uniqueSystemId] at the call site for identities issued before signing
+  /// existed - this service always just encodes whatever it's given.
+  final String qrCodeData;
   final Uint8List? studentPhotoBytes;
 
   const IdCardBatchEntry({
@@ -22,6 +27,7 @@ class IdCardBatchEntry {
     required this.className,
     required this.stream,
     required this.uniqueSystemId,
+    required this.qrCodeData,
     this.studentPhotoBytes,
   });
 }
@@ -35,6 +41,7 @@ class IdCardService {
     required String className,
     required String stream,
     required String uniqueSystemId,
+    required String qrCodeData,
     Uint8List? schoolLogoBytes,
     Uint8List? studentPhotoBytes,
   }) async {
@@ -47,6 +54,7 @@ class IdCardService {
       className: className,
       stream: stream,
       uniqueSystemId: uniqueSystemId,
+      qrCodeData: qrCodeData,
       studentPhotoBytes: studentPhotoBytes,
     );
     pdf.addPage(page);
@@ -69,6 +77,7 @@ class IdCardService {
         className: entry.className,
         stream: entry.stream,
         uniqueSystemId: entry.uniqueSystemId,
+        qrCodeData: entry.qrCodeData,
         studentPhotoBytes: entry.studentPhotoBytes,
       );
       pdf.addPage(page);
@@ -84,10 +93,11 @@ class IdCardService {
     required String className,
     required String stream,
     required String uniqueSystemId,
+    required String qrCodeData,
     Uint8List? studentPhotoBytes,
   }) async {
     final qrValidationResult = QrValidator.validate(
-      data: uniqueSystemId,
+      data: qrCodeData,
       version: QrVersions.auto,
       errorCorrectionLevel: QrErrorCorrectLevel.L,
     );

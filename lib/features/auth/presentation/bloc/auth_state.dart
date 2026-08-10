@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/student/domain/entities/parent_access_code.dart';
 
@@ -40,6 +41,14 @@ class AuthFailureState extends AuthState {
 
   @override
   List<Object?> get props => [message];
+}
+
+/// Firebase has accepted the password and is waiting for the enrolled
+/// authenticator-app code. The resolver is intentionally short lived.
+class AuthMfaChallengeRequired extends AuthState {
+  final MultiFactorResolver resolver;
+
+  const AuthMfaChallengeRequired(this.resolver);
 }
 
 class AuthAccessCodeResolved extends AuthState {

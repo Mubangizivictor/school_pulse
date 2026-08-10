@@ -72,6 +72,7 @@ import 'package:school_pulse/features/parent/health_screen.dart';
 import 'package:school_pulse/features/parent/library_screen.dart';
 import 'package:school_pulse/features/parent/discipline_screen.dart';
 import 'package:school_pulse/features/parent/transport_screen.dart';
+import 'package:school_pulse/features/parent/appointments_screen.dart';
 import 'package:school_pulse/features/messages/domain/entities/message_models.dart';
 import 'package:school_pulse/features/messages/presentation/screens/messages_list_screen.dart';
 import 'package:school_pulse/features/messages/presentation/screens/chat_conversation_screen.dart';
@@ -106,7 +107,6 @@ import 'package:school_pulse/features/profile/presentation/screens/security_priv
 import 'package:school_pulse/features/profile/presentation/screens/change_password_screen.dart';
 import 'package:school_pulse/features/profile/presentation/screens/two_factor_auth_screen.dart';
 import 'package:school_pulse/features/profile/presentation/screens/active_sessions_screen.dart';
-import 'package:school_pulse/features/profile/presentation/screens/login_history_screen.dart';
 import 'package:school_pulse/features/profile/presentation/screens/account_activity_screen.dart';
 import 'package:school_pulse/features/profile/presentation/screens/help_center_screen.dart';
 import 'package:school_pulse/features/profile/presentation/screens/terms_of_service_screen.dart';
@@ -588,6 +588,13 @@ final router = GoRouter(
           builder: (context, state) => ParentModuleGuard(
             isAllowed: (v) => v.transport,
             child: const TransportScreen(),
+          ),
+        ),
+        GoRoute(
+          path: '/parent/appointments',
+          builder: (context, state) => ParentModuleGuard(
+            isAllowed: (v) => v.appointments,
+            child: const ParentAppointmentsScreen(),
           ),
         ),
         GoRoute(
@@ -1808,10 +1815,6 @@ final router = GoRouter(
                 GoRoute(
                   path: 'active-sessions',
                   builder: (context, state) => const ActiveSessionsScreen(),
-                ),
-                GoRoute(
-                  path: 'login-history',
-                  builder: (context, state) => const LoginHistoryScreen(),
                 ),
                 GoRoute(
                   path: 'account-activity',

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/core/utils.dart';
@@ -62,7 +63,7 @@ class _IncidentDetailsScreenState extends State<IncidentDetailsScreen> {
       body: BlocBuilder<HealthBloc, HealthState>(
         builder: (context, state) {
           if (state is HealthLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: SchoolPulseLoader());
           }
 
           if (state is EmergencyIncidentsLoaded) {

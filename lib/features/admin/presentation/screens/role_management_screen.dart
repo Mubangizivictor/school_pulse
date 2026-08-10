@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/core/permissions/permission.dart';
 import 'package:school_pulse/core/permissions/role_permission_defaults.dart';
@@ -98,7 +99,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
         elevation: 0,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: SchoolPulseLoader())
           : Row(
               children: [
                 if (MediaQuery.of(context).size.width > 800)

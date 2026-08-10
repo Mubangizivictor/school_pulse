@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 
 class SheetsIntegration extends Equatable {
   final bool linked;
+  final String spreadsheetId;
   final String spreadsheetName;
   final String worksheetName;
   final bool autoSync;
@@ -11,6 +12,7 @@ class SheetsIntegration extends Equatable {
 
   const SheetsIntegration({
     this.linked = false,
+    this.spreadsheetId = '',
     this.spreadsheetName = '',
     this.worksheetName = '',
     this.autoSync = true,
@@ -21,6 +23,7 @@ class SheetsIntegration extends Equatable {
 
   SheetsIntegration copyWith({
     bool? linked,
+    String? spreadsheetId,
     String? spreadsheetName,
     String? worksheetName,
     bool? autoSync,
@@ -30,6 +33,7 @@ class SheetsIntegration extends Equatable {
   }) {
     return SheetsIntegration(
       linked: linked ?? this.linked,
+      spreadsheetId: spreadsheetId ?? this.spreadsheetId,
       spreadsheetName: spreadsheetName ?? this.spreadsheetName,
       worksheetName: worksheetName ?? this.worksheetName,
       autoSync: autoSync ?? this.autoSync,
@@ -42,6 +46,7 @@ class SheetsIntegration extends Equatable {
   @override
   List<Object?> get props => [
     linked,
+    spreadsheetId,
     spreadsheetName,
     worksheetName,
     autoSync,

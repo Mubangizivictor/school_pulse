@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../bloc/catering_bloc.dart';
@@ -59,7 +60,7 @@ class _WastageTrackingScreenState extends State<WastageTrackingScreen> {
       body: BlocBuilder<CateringBloc, CateringState>(
         builder: (context, state) {
           if (state is CateringLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: SchoolPulseLoader());
           } else if (state is WastageRecordsLoaded) {
             final records = state.records;
             if (records.isEmpty) {

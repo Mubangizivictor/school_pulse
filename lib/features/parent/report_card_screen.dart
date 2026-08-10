@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/design_system/app_components.dart';
@@ -111,7 +112,7 @@ class _ReportCardScreenState extends State<ReportCardScreen>
       body: BlocBuilder<AcademicBloc, AcademicState>(
         builder: (context, state) {
           if (state is AcademicLoading || state is AcademicInitial) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: SchoolPulseLoader());
           } else if (state is AcademicError) {
             return EmptyState(
               icon: Icons.cloud_off,
@@ -137,7 +138,7 @@ class _ReportCardScreenState extends State<ReportCardScreen>
             return _buildReportContent(context, state.reportCard!);
           } else if (state is AcademicLoaded) {
             // Fallback or handle combined state
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: SchoolPulseLoader());
           }
           return const SizedBox.shrink();
         },
@@ -255,7 +256,7 @@ class _ReportCardScreenState extends State<ReportCardScreen>
                 },
               );
             }
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: SchoolPulseLoader());
           },
         ),
       ],

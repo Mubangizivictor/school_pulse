@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
@@ -399,7 +400,7 @@ class _WelfareLogTab extends StatelessWidget {
           current is WelfareRecordsLoaded || current is MatronLoading,
       builder: (context, state) {
         if (state is MatronLoading)
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: SchoolPulseLoader());
         if (state is! WelfareRecordsLoaded) return const SizedBox.shrink();
         final records = state.records;
         if (records.isEmpty) {
@@ -484,7 +485,7 @@ class _ReferralsTab extends StatelessWidget {
       buildWhen: (_, current) => current is CounselingReferralsLoaded,
       builder: (context, state) {
         if (state is! CounselingReferralsLoaded)
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: SchoolPulseLoader());
         if (state.referrals.isEmpty) {
           return const EmptyState(
             icon: Icons.psychology_outlined,
@@ -538,7 +539,7 @@ class _BehaviourTab extends StatelessWidget {
       buildWhen: (_, current) => current is BehaviourObservationsLoaded,
       builder: (context, state) {
         if (state is! BehaviourObservationsLoaded)
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: SchoolPulseLoader());
         if (state.observations.isEmpty) {
           return const EmptyState(
             icon: Icons.visibility_outlined,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -45,7 +46,7 @@ class MessageRequestsScreen extends StatelessWidget {
             stream: context.messages.watchConversations(user.id),
             builder: (context, snapshot) {
               if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: SchoolPulseLoader());
               }
               final pending = snapshot.data!
                   .where((c) => c.type == ChatType.direct && !c.isAccepted)

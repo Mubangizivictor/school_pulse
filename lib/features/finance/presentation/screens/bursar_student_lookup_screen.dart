@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
@@ -146,7 +147,7 @@ class _BursarStudentLookupScreenState extends State<BursarStudentLookupScreen> {
                 label: const Text('Back to results'),
               ),
               if (_loadingView)
-                const Center(child: CircularProgressIndicator()),
+                const Center(child: SchoolPulseLoader()),
               if (_error != null)
                 Card(
                   color: Colors.red.shade50,

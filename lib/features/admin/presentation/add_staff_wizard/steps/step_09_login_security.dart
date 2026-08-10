@@ -53,7 +53,7 @@ class _Step09LoginSecurityState extends State<Step09LoginSecurity> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const WizardStepCaption(
-            number: 9,
+            number: 8,
             title: 'Login & Security',
             subtitle: 'Set login credentials',
           ),

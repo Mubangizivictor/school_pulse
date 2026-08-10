@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../bloc/assessment_bloc.dart';
@@ -45,7 +46,7 @@ class _AssessmentConfigScreenState extends State<AssessmentConfigScreen>
       body: BlocBuilder<AssessmentBloc, AssessmentState>(
         builder: (context, state) {
           if (state.status == AssessmentStatus.loading) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: SchoolPulseLoader());
           }
           return TabBarView(
             controller: _tabController,

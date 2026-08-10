@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
@@ -101,7 +102,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
               appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
               body: Center(
                 child: snapshot.connectionState == ConnectionState.waiting
-                    ? const CircularProgressIndicator()
+                    ? const SchoolPulseLoader()
                     : Text(
                         'This conversation is no longer available',
                         style: AppTypography.bodyMedium.copyWith(
@@ -319,7 +320,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
             ),
             builder: (context, snapshot) {
               if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: SchoolPulseLoader());
               }
               final messages = snapshot.data!;
               _visibleMessages = messages;

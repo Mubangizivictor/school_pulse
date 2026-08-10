@@ -1,5 +1,6 @@
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
@@ -803,7 +804,7 @@ class _BrandImagePicker extends StatelessWidget {
                   if (isUploading)
                     const ColoredBox(
                       color: Color(0x99000000),
-                      child: Center(child: CircularProgressIndicator()),
+                      child: Center(child: SchoolPulseLoader()),
                     ),
                   Positioned(
                     left: 0,

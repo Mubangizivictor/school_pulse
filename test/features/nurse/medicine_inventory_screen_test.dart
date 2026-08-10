@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
@@ -65,7 +66,7 @@ void main() {
   ) async {
     await pumpScreen(tester, HealthLoading());
 
-    expect(find.byType(CircularProgressIndicator), findsWidgets);
+    expect(find.byType(SchoolPulseLoader), findsWidgets);
     verify(() => healthBloc.add(const FetchInventory('school-1'))).called(1);
   });
 

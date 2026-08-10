@@ -35,6 +35,7 @@ class SheetsIntegrationRemoteDataSourceImpl
     final data = doc.data()!;
     return SheetsIntegration(
       linked: data['linked'] as bool? ?? false,
+      spreadsheetId: data['spreadsheetId'] as String? ?? '',
       spreadsheetName: data['spreadsheetName'] as String? ?? '',
       worksheetName: data['worksheetName'] as String? ?? '',
       autoSync: data['autoSync'] as bool? ?? true,
@@ -51,6 +52,7 @@ class SheetsIntegrationRemoteDataSourceImpl
   ) async {
     await _integrationDoc(schoolId).set({
       'linked': integration.linked,
+      'spreadsheetId': integration.spreadsheetId,
       'spreadsheetName': integration.spreadsheetName,
       'worksheetName': integration.worksheetName,
       'autoSync': integration.autoSync,
@@ -66,6 +68,7 @@ class SheetsIntegrationRemoteDataSourceImpl
   Future<void> disconnect(String schoolId) async {
     await _integrationDoc(schoolId).set({
       'linked': false,
+      'spreadsheetId': '',
       'spreadsheetName': '',
       'worksheetName': '',
     }, SetOptions(merge: true));

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:school_pulse/design_system/app_components.dart';
@@ -33,8 +34,9 @@ class SchoolDirectoryScreen extends StatelessWidget {
     final schoolId = authState.user.schoolId;
 
     return BlocProvider(
-      create: (_) => sl<SchoolDirectoryBloc>()
-        ..add(LoadDirectoryRequested(schoolId: schoolId)),
+      create: (_) =>
+          sl<SchoolDirectoryBloc>()
+            ..add(LoadDirectoryRequested(schoolId: schoolId)),
       child: const _SchoolDirectoryBody(),
     );
   }
@@ -69,24 +71,99 @@ class _SchoolDirectoryBodyState extends State<_SchoolDirectoryBody>
     int tabIndex,
   ) {
     Iterable<DirectoryContactEntity> result = contacts;
+    bool hasRole(DirectoryContactEntity contact, Set<String> roles) =>
+        roles.contains(contact.role) || contact.roles.any(roles.contains);
+
     switch (tabIndex) {
       case 1:
-        result = result.where((c) => _teachingRoles.contains(c.role));
+        result = result.where((c) => hasRole(c, _teachingRoles));
         break;
       case 2:
         result = result.where(
-          (c) => !_teachingRoles.contains(c.role) && !_adminRoles.contains(c.role),
+          (c) => !hasRole(c, _teachingRoles) && !hasRole(c, _adminRoles),
         );
         break;
       case 3:
-        result = result.where((c) => _adminRoles.contains(c.role));
+        result = result.where((c) => hasRole(c, _adminRoles));
         break;
     }
     if (_query.trim().isNotEmpty) {
       final q = _query.trim().toLowerCase();
-      result = result.where((c) => c.name.toLowerCase().contains(q));
+      result = result.where(
+        (c) =>
+            c.name.toLowerCase().contains(q) ||
+            c.role.toLowerCase().contains(q) ||
+            c.roles.any((role) => role.toLowerCase().contains(q)) ||
+            (c.phone?.toLowerCase().contains(q) ?? false),
+      );
     }
-    return result.toList();
+    final sortedContacts = result.toList()
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    return sortedContacts;
+  }
+
+  Future<void> _call(String phone) async {
+    final uri = Uri(scheme: 'tel', path: phone);
+    if (!await launchUrl(uri) && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Calling is not available on this device.'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _showContact(DirectoryContactEntity contact) async {
+    final phone = contact.phone?.trim();
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                AvatarInitials(name: contact.name),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        contact.name,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      Text(
+                        contact.roles.isEmpty
+                            ? contact.role
+                            : contact.roles.join(' • '),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            if (phone != null && phone.isNotEmpty)
+              PrimaryButton(
+                label: 'Call ${contact.name.split(' ').first}',
+                icon: Icons.call_outlined,
+                onPressed: () {
+                  Navigator.pop(sheetContext);
+                  _call(phone);
+                },
+              )
+            else
+              const Text(
+                'No phone number has been shared for this staff member.',
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -122,10 +199,34 @@ class _SchoolDirectoryBodyState extends State<_SchoolDirectoryBody>
               builder: (context, state) {
                 if (state is SchoolDirectoryLoading ||
                     state is SchoolDirectoryInitial) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(child: SchoolPulseLoader());
                 }
                 if (state is SchoolDirectoryError) {
-                  return Center(child: Text(state.message));
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(state.message, textAlign: TextAlign.center),
+                          const SizedBox(height: 12),
+                          PrimaryButton(
+                            label: 'Try Again',
+                            onPressed: () {
+                              final user = context.read<AuthBloc>().state;
+                              if (user is AuthAuthenticated) {
+                                context.read<SchoolDirectoryBloc>().add(
+                                  LoadDirectoryRequested(
+                                    schoolId: user.user.schoolId,
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
                 }
                 if (state is! SchoolDirectoryLoaded) {
                   return const SizedBox.shrink();
@@ -152,6 +253,7 @@ class _SchoolDirectoryBodyState extends State<_SchoolDirectoryBody>
                       itemBuilder: (context, index) {
                         final contact = contacts[index];
                         return AppCard(
+                          onTap: () => _showContact(contact),
                           child: Row(
                             children: [
                               AvatarInitials(name: contact.name),
@@ -184,9 +286,7 @@ class _SchoolDirectoryBodyState extends State<_SchoolDirectoryBody>
                                     Icons.call_outlined,
                                     color: AppColors.primary(context),
                                   ),
-                                  onPressed: () => launchUrl(
-                                    Uri.parse('tel:${contact.phone}'),
-                                  ),
+                                  onPressed: () => _call(contact.phone!),
                                 ),
                             ],
                           ),

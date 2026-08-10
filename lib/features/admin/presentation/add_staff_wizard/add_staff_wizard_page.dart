@@ -7,7 +7,6 @@ import 'package:school_pulse/features/structure/domain/repositories/structure_re
 import 'package:school_pulse/injection_container.dart' as di;
 
 import 'add_staff_wizard_controller.dart';
-import 'steps/step_01_select_method.dart';
 import 'steps/step_02_personal_info.dart';
 import 'steps/step_03_contact_info.dart';
 import 'steps/step_04_employment_info.dart';
@@ -95,7 +94,7 @@ class _AddStaffWizardPageState extends State<AddStaffWizardPage> {
 
   void _handleBack(BuildContext context) {
     final controller = context.read<AddStaffWizardController>();
-    if (controller.step == WizardStep.selectMethod) {
+    if (controller.step == WizardStep.personalInfo) {
       Navigator.of(context).maybePop();
     } else {
       controller.back();
@@ -104,8 +103,6 @@ class _AddStaffWizardPageState extends State<AddStaffWizardPage> {
 
   Widget _buildStep(WizardStep step) {
     switch (step) {
-      case WizardStep.selectMethod:
-        return const Step01SelectMethod();
       case WizardStep.personalInfo:
         return const Step02PersonalInfo();
       case WizardStep.contactInfo:

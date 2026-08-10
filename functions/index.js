@@ -358,6 +358,26 @@ exports.adminResetStaffPassword = onCall(async (request) => {
   return { temporaryPassword };
 });
 
+// Revokes every refresh token for the caller. Firebase Auth does not expose
+// individual-device sessions to clients, so a server-side revoke is the only
+// reliable way to remove access from a lost or untrusted device. The caller is
+// signed out locally immediately afterwards by ActiveSessionsScreen.
+exports.revokeAllSessions = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "You must be signed in.");
+  }
+
+  try {
+    await admin.auth().revokeRefreshTokens(request.auth.uid);
+    return { revoked: true };
+  } catch (err) {
+    throw new HttpsError(
+      "internal",
+      err.message || "Unable to revoke active sessions.",
+    );
+  }
+});
+
 // ============================================================================
 // School Admin provisioning
 //
@@ -1080,6 +1100,114 @@ exports.completeStudentPinSetup = onCall(async (request) => {
   return { success: true };
 });
 
+/**
+ * Signs a student's digital-identity QR payload server-side, so the
+ * credential can be verified as authentic (not just decoded) by any future
+ * scanner. The QR never encodes PII - only the identity's opaque
+ * uniqueSystemId, its tenant scope, and an issue timestamp, HMAC-signed
+ * with a server-only secret so it can't be forged client-side. Envelope
+ * format: "<base64(uniqueSystemId|schoolId|issuedAtMillis)>.<hmacHex>".
+ */
+const { createHmac } = require("crypto");
+
+function studentCredentialSecret() {
+  const secret = process.env.STUDENT_CREDENTIAL_HMAC_SECRET;
+  if (!secret) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Student credential signing secret is not configured.",
+    );
+  }
+  return secret;
+}
+
+function signStudentCredentialPayload(uniqueSystemId, schoolId, issuedAtMillis) {
+  const payload = `${uniqueSystemId}|${schoolId}|${issuedAtMillis}`;
+  const payloadB64 = Buffer.from(payload, "utf8").toString("base64url");
+  const hmac = createHmac("sha256", studentCredentialSecret())
+    .update(payload)
+    .digest("hex");
+  return `${payloadB64}.${hmac}`;
+}
+
+exports.signStudentCredential = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Sign-in required.");
+  }
+  const { studentId } = request.data || {};
+  if (!studentId) {
+    throw new HttpsError("invalid-argument", "studentId is required.");
+  }
+
+  const identitySnap = await admin
+    .firestore()
+    .collection("student_identities")
+    .where("studentId", "==", studentId)
+    .limit(1)
+    .get();
+  if (identitySnap.empty) {
+    throw new HttpsError("not-found", "No identity found for this student.");
+  }
+  const identityDoc = identitySnap.docs[0];
+  const identity = identityDoc.data();
+
+  const callerSnap = await admin.firestore().collection("users").doc(request.auth.uid).get();
+  const callerSchoolId = callerSnap.exists ? callerSnap.data().schoolId : null;
+  if (!callerSchoolId || callerSchoolId !== identity.schoolId) {
+    throw new HttpsError("permission-denied", "Cannot sign a credential outside your school.");
+  }
+
+  const issuedAtMillis = Date.now();
+  const qrCodeData = signStudentCredentialPayload(
+    identity.uniqueSystemId,
+    identity.schoolId,
+    issuedAtMillis,
+  );
+
+  await identityDoc.ref.update({ qrCodeData, credentialIssuedAt: issuedAtMillis });
+  return { qrCodeData, issuedAtMillis };
+});
+
+/**
+ * Verifies a scanned QR envelope's signature and returns the identity it
+ * refers to, without ever trusting the client-decoded payload directly.
+ * Future modules (attendance, library, transport, etc.) should call this
+ * rather than re-implementing verification against the raw Firestore data.
+ */
+exports.verifyStudentCredential = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Sign-in required.");
+  }
+  const { qrCodeData } = request.data || {};
+  if (!qrCodeData || !qrCodeData.includes(".")) {
+    throw new HttpsError("invalid-argument", "qrCodeData is required.");
+  }
+
+  const [payloadB64, providedHmac] = qrCodeData.split(".");
+  let payload;
+  try {
+    payload = Buffer.from(payloadB64, "base64url").toString("utf8");
+  } catch (err) {
+    throw new HttpsError("invalid-argument", "Malformed credential.");
+  }
+  const expectedHmac = createHmac("sha256", studentCredentialSecret())
+    .update(payload)
+    .digest("hex");
+  if (expectedHmac !== providedHmac) {
+    throw new HttpsError("permission-denied", "Credential signature is invalid.");
+  }
+
+  const [uniqueSystemId, schoolId] = payload.split("|");
+
+  const callerSnap = await admin.firestore().collection("users").doc(request.auth.uid).get();
+  const callerSchoolId = callerSnap.exists ? callerSnap.data().schoolId : null;
+  if (!callerSchoolId || callerSchoolId !== schoolId) {
+    throw new HttpsError("permission-denied", "Credential belongs to a different school.");
+  }
+
+  return { valid: true, uniqueSystemId, schoolId };
+});
+
 // ============================================================================
 // Notification Delivery Triggers
 // ============================================================================
@@ -1387,6 +1515,14 @@ exports.sendTestNotification = notificationFunctions.sendTestNotification;
 
 const appointmentFunctions = require('./appointments');
 exports.queueAppointmentNotifications = appointmentFunctions.queueAppointmentNotifications;
+
+/**
+ * Attendance -> Google Sheets export. Kept in its own file for the same
+ * reason as notifications.js above.
+ */
+const attendanceSheetsFunctions = require("./attendance_sheets");
+exports.exportAttendanceRecordToSheets = attendanceSheetsFunctions.exportAttendanceRecordToSheets;
+exports.syncAttendanceToSheetsNow = attendanceSheetsFunctions.syncAttendanceToSheetsNow;
 
 // ---------------------------------------------------------------------------
 // Class Teacher panel - the three actions that must not be a client write.

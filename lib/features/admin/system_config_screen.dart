@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:go_router/go_router.dart';
@@ -148,7 +149,7 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
         },
         builder: (context, state) {
           if (state is SystemConfigLoading || state is SystemConfigInitial) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: SchoolPulseLoader());
           }
 
           final config = state is SystemConfigLoaded
@@ -346,7 +347,7 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Center(
-                          child: CircularProgressIndicator(color: Colors.white),
+                          child: const SchoolPulseLoader(),
                         ),
                       ),
                   ],
@@ -726,7 +727,7 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
             builder: (context, snapshot) {
               final sessions = snapshot.data ?? const [];
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: SchoolPulseLoader());
               }
               if (sessions.isEmpty) {
                 return const Center(

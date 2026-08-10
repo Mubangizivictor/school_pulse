@@ -15,6 +15,7 @@ void main() {
       className: 'Primary 4',
       stream: 'Blue',
       uniqueSystemId: 'SP-STUDENT-abc',
+      qrCodeData: 'SP-STUDENT-abc',
     );
 
     expect(pdfData, isNotEmpty);
@@ -33,6 +34,7 @@ void main() {
           className: 'Primary 4',
           stream: 'Blue',
           uniqueSystemId: 'SP-STUDENT-$i',
+          qrCodeData: 'SP-STUDENT-$i',
         ),
       );
 
@@ -44,6 +46,7 @@ void main() {
         className: entries.first.className,
         stream: entries.first.stream,
         uniqueSystemId: entries.first.uniqueSystemId,
+        qrCodeData: entries.first.qrCodeData,
       );
 
       final batchPdf = await service.generateBatchIdCardsPdf(

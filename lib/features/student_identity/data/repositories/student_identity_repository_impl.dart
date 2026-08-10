@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:dartz/dartz.dart';
 import 'package:isar/isar.dart';
 import '../../../../core/error/failures.dart';
@@ -15,11 +16,13 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
   final FirebaseFirestore firestore;
   final Isar isar;
   final IdGeneratorService idGenerator;
+  final FirebaseFunctions functions;
 
   StudentIdentityRepositoryImpl({
     required this.firestore,
     required this.isar,
     required this.idGenerator,
+    required this.functions,
   });
 
   @override
@@ -80,6 +83,7 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
 
       final model = StudentIdentityModel(
         studentId: student.id,
+        schoolId: student.schoolId,
         uniqueSystemId: resolvedUniqueSystemId,
         schoolStudentId: resolvedSchoolStudentId,
         qrCodeData: resolvedUniqueSystemId,
@@ -87,9 +91,33 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
 
       await firestore.collection('student_identities').add(model.toFirestore());
 
-      return Right(model);
+      // Best-effort: sign the credential server-side so the QR carries a
+      // verifiable envelope, not just the bare id. If this fails (offline,
+      // secret not configured yet, etc.) the identity record still exists
+      // with qrCodeData == uniqueSystemId, and can be re-signed later.
+      final signed = await _trySignCredential(student.id);
+      return Right(signed ?? model);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  Future<StudentIdentityModel?> _trySignCredential(String studentId) async {
+    try {
+      final callable = functions.httpsCallable('signStudentCredential');
+      final result = await callable.call({'studentId': studentId});
+      final qrCodeData = result.data['qrCodeData'] as String?;
+      if (qrCodeData == null) return null;
+
+      final refreshed = await firestore
+          .collection('student_identities')
+          .where('studentId', isEqualTo: studentId)
+          .limit(1)
+          .get();
+      if (refreshed.docs.isEmpty) return null;
+      return StudentIdentityModel.fromFirestore(refreshed.docs.first.data());
+    } catch (_) {
+      return null;
     }
   }
 

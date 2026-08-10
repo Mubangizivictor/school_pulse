@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/core/theme_provider.dart';
@@ -62,7 +63,7 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
     final authState = context.watch<AuthBloc>().state;
 
     if (authState is! AuthAuthenticated) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: Center(child: SchoolPulseLoader()));
     }
 
     final user = authState.user;
@@ -109,7 +110,7 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
 
                 if (contextState.isLoading)
                   const SliverFillRemaining(
-                    child: Center(child: CircularProgressIndicator()),
+                    child: Center(child: SchoolPulseLoader()),
                   )
                 else if (contextState.unavailableReason != null)
                   SliverFillRemaining(child: _buildUnavailable(contextState))

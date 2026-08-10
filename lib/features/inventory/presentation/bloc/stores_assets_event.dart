@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import '../../domain/entities/inventory_item.dart';
 import '../../domain/entities/asset.dart';
 import '../../domain/entities/purchase_order.dart';
+import '../../domain/entities/supplier.dart';
 import '../../domain/entities/repair.dart';
 import '../../domain/entities/maintenance.dart';
 import '../../domain/entities/stock_issue.dart';
@@ -67,11 +68,22 @@ class DisposeAssetRequested extends StoresAssetsEvent {
 // Procurement Events
 class LoadSuppliers extends StoresAssetsEvent {}
 
+class AddSupplierRequested extends StoresAssetsEvent {
+  final Supplier supplier;
+  const AddSupplierRequested(this.supplier);
+}
+
 class LoadPurchaseOrders extends StoresAssetsEvent {}
 
 class CreatePurchaseOrderRequested extends StoresAssetsEvent {
   final PurchaseOrder order;
   const CreatePurchaseOrderRequested(this.order);
+}
+
+class UpdatePurchaseOrderStatusRequested extends StoresAssetsEvent {
+  final String orderId;
+  final PurchaseOrderStatus status;
+  const UpdatePurchaseOrderStatusRequested(this.orderId, this.status);
 }
 
 // Procurement Request Events

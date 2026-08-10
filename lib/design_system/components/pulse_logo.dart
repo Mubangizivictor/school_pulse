@@ -45,19 +45,25 @@ class PulseLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     String assetPath;
+    final useDarkLogo =
+        isDark || Theme.of(context).brightness == Brightness.dark;
 
     switch (variant) {
       case PulseLogoVariant.full:
       case PulseLogoVariant.splash:
       case PulseLogoVariant.auth:
       case PulseLogoVariant.header:
-        assetPath = 'assets/logos/horizontal_logo_school_pulse.png';
+        assetPath = useDarkLogo
+            ? 'assets/logos/logo_for_dark_mode.png'
+            : 'assets/logos/logo_for_light_mode.png';
         break;
       case PulseLogoVariant.vertical:
       case PulseLogoVariant.shield:
       case PulseLogoVariant.compact:
       case PulseLogoVariant.sidebar:
-        assetPath = 'assets/logos/vertical_logo_school_pulse.png';
+        assetPath = useDarkLogo
+            ? 'assets/logos/logo_for_dark_mode.png'
+            : 'assets/logos/logo_for_light_mode.png';
         break;
     }
 

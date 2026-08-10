@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/core/utils.dart';
 import 'package:school_pulse/design_system/app_components.dart';
@@ -29,7 +30,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         stream: _repository.watchSubscription(),
         builder: (context, subSnapshot) {
           if (subSnapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: SchoolPulseLoader());
           }
           final subscription =
               subSnapshot.data ??
@@ -127,7 +128,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           return const Center(
             child: Padding(
               padding: EdgeInsets.all(24),
-              child: CircularProgressIndicator(),
+              child: SchoolPulseLoader(),
             ),
           );
         }

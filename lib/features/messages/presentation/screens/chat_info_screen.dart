@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:school_pulse/core/user_roles.dart';
@@ -43,7 +44,7 @@ class ChatInfoScreen extends StatelessWidget {
             if (conversation == null) {
               return Center(
                 child: snapshot.connectionState == ConnectionState.waiting
-                    ? const CircularProgressIndicator()
+                    ? const SchoolPulseLoader()
                     : const Text('Conversation not found'),
               );
             }

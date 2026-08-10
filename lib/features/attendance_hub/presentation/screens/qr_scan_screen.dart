@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -22,7 +23,15 @@ class QrScanScreen extends StatefulWidget {
   State<QrScanScreen> createState() => _QrScanScreenState();
 }
 
-enum _ScanState { scanning, resolving, success, duplicate, invalid, failed }
+enum _ScanState {
+  scanning,
+  resolving,
+  success,
+  duplicate,
+  invalid,
+  denied,
+  failed,
+}
 
 class _QrScanScreenState extends State<QrScanScreen> {
   late final MobileScannerController _controller;
@@ -31,6 +40,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
   String _subtitle = '';
   String? _photoUrl;
   DateTime? _scannedAt;
+  String _deniedMessage = '';
 
   @override
   void initState() {
@@ -117,8 +127,12 @@ class _QrScanScreenState extends State<QrScanScreen> {
           setState(() => _state = _ScanState.success);
         } else if (state is AttendanceDuplicate) {
           setState(() => _state = _ScanState.duplicate);
-        } else if (state is AttendanceActionDenied ||
-            state is AttendanceError) {
+        } else if (state is AttendanceActionDenied) {
+          setState(() {
+            _deniedMessage = state.message;
+            _state = _ScanState.denied;
+          });
+        } else if (state is AttendanceError) {
           setState(() => _state = _ScanState.failed);
         }
       },
@@ -178,7 +192,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
             if (_state == _ScanState.resolving)
               Container(
                 color: Colors.black54,
-                child: const Center(child: CircularProgressIndicator()),
+                child: const Center(child: SchoolPulseLoader()),
               ),
             Positioned(
               bottom: AppSpacing.xl,
@@ -227,6 +241,37 @@ class _QrScanScreenState extends State<QrScanScreen> {
           statusLabel: '',
           onScanAnother: _reset,
           onDone: () => Navigator.of(context).pop(),
+        );
+      case _ScanState.denied:
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.block,
+                  color: AppColors.danger(context),
+                  size: 64,
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                Text(
+                  _deniedMessage.isEmpty
+                      ? 'This person is not part of your assigned attendance group.'
+                      : _deniedMessage,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSpacing.s),
+                Text(
+                  'Ask your administrator if this assignment looks incorrect.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.textMuted(context)),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                FilledButton(onPressed: _reset, child: const Text('Scan Another')),
+              ],
+            ),
+          ),
         );
       case _ScanState.failed:
         return Center(

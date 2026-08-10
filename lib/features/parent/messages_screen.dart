@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:school_pulse/core/notification/notification_service.dart';
@@ -98,7 +99,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: SchoolPulseLoader());
           }
 
           final docs = snapshot.data?.docs ?? const [];
@@ -264,7 +265,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
             return const AlertDialog(
               content: SizedBox(
                 height: 100,
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(child: SchoolPulseLoader()),
               ),
             );
           }

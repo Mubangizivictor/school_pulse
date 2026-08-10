@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
@@ -165,7 +166,7 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                     return _buildError(snapshot.error!);
                   }
                   if (!snapshot.hasData) {
-                    return const Center(child: CircularProgressIndicator());
+                    return const Center(child: SchoolPulseLoader());
                   }
 
                   _reconcileArchived(snapshot.data!, user.id);

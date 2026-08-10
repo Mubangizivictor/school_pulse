@@ -123,11 +123,27 @@ class StudentModel extends Student {
       'academicYearId': academicYearId,
       'previousSchool': previousSchool,
       'status': status.name,
-      'medicalInfo': medicalInfo != null
-          ? (medicalInfo as MedicalInfoModel).toMap()
-          : null,
+      // Domain entities are intentionally accepted here. UI and integration
+      // callers should not have to know about data-layer model subclasses.
+      'medicalInfo': medicalInfo == null
+          ? null
+          : {
+              'bloodGroup': medicalInfo!.bloodGroup,
+              'allergies': medicalInfo!.allergies,
+              'chronicConditions': medicalInfo!.chronicConditions,
+              'medications': medicalInfo!.medications,
+              'disabilities': medicalInfo!.disabilities,
+            },
       'emergencyContacts': emergencyContacts
-          .map((e) => (e as EmergencyContactModel).toMap())
+          .map(
+            (contact) => {
+              'name': contact.name,
+              'relationship': contact.relationship,
+              'phoneNumber': contact.phoneNumber,
+              'email': contact.email,
+              'linkedUserId': contact.linkedUserId,
+            },
+          )
           .toList(),
       'parentIds': parentIds,
       'documents': documents,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/admin/domain/usecases/get_admin_dashboard_stats.dart';
@@ -215,7 +216,7 @@ class AdminDashboardScreen extends StatelessWidget {
     return BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
       builder: (context, state) {
         if (state is AdminDashboardLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: SchoolPulseLoader());
         }
         if (state is AdminDashboardError) {
           return AlertBanner(
@@ -354,14 +355,6 @@ class AdminDashboardScreen extends StatelessWidget {
               _buildSystemAlerts(context),
               const SizedBox(height: 24),
               _buildServiceStatus(context),
-              const SizedBox(height: 24),
-              _buildUpcomingDeadlines(context),
-              const SizedBox(height: 24),
-              _buildRecentActivityLog(context),
-              const SizedBox(height: 24),
-              _buildDataHealth(context),
-              const SizedBox(height: 24),
-              _buildSchoolAnnouncements(context),
             ],
           );
         }
@@ -381,25 +374,13 @@ class AdminDashboardScreen extends StatelessWidget {
                   else ...[
                     _buildServiceStatus(context),
                   ],
-                  const SizedBox(height: 24),
-                  _buildRecentActivityLog(context),
                 ],
               ),
             ),
             const SizedBox(width: 24),
             Expanded(
               flex: 2,
-              child: Column(
-                children: [
-                  _buildSystemAlerts(context),
-                  const SizedBox(height: 24),
-                  _buildUpcomingDeadlines(context),
-                  const SizedBox(height: 24),
-                  _buildDataHealth(context),
-                  const SizedBox(height: 24),
-                  _buildSchoolAnnouncements(context),
-                ],
-              ),
+              child: Column(children: [_buildSystemAlerts(context)]),
             ),
           ],
         );
@@ -499,12 +480,6 @@ class AdminDashboardScreen extends StatelessWidget {
           onTap: () => context.go('/staff/security/visitors'),
         ),
         _AdminShortcut(
-          icon: Icons.calendar_month_rounded,
-          label: 'Schedule',
-          color: Colors.blue,
-          onTap: () => context.go('/staff/calendar'),
-        ),
-        _AdminShortcut(
           icon: Icons.fact_check_rounded,
           label: 'Take Attendance',
           color: Colors.teal,
@@ -517,24 +492,6 @@ class AdminDashboardScreen extends StatelessWidget {
           onTap: () => context.go('/staff/admin/appointments'),
         ),
         _AdminShortcut(
-          icon: Icons.checklist_rtl_rounded,
-          label: 'Attendance',
-          color: Colors.cyan,
-          onTap: () => context.go('/staff/admin/staff-attendance'),
-        ),
-        _AdminShortcut(
-          icon: Icons.hub_rounded,
-          label: 'Structure',
-          color: Colors.indigo,
-          onTap: () => context.go('/staff/admin/structure'),
-        ),
-        _AdminShortcut(
-          icon: Icons.how_to_reg_rounded,
-          label: 'Admissions',
-          color: Colors.green,
-          onTap: () => context.go('/staff/admin/admissions'),
-        ),
-        _AdminShortcut(
           icon: Icons.badge_rounded,
           label: 'Batch ID Cards',
           color: Colors.teal,
@@ -545,12 +502,6 @@ class AdminDashboardScreen extends StatelessWidget {
           label: 'Broadcast',
           color: Colors.red,
           onTap: () => context.go('/staff/admin/broadcast-sms'),
-        ),
-        _AdminShortcut(
-          icon: Icons.settings_suggest_rounded,
-          label: 'Settings',
-          color: Colors.grey,
-          onTap: () => context.go('/staff/admin/config'),
         ),
         _AdminShortcut(
           icon: Icons.warehouse_rounded,

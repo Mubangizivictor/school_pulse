@@ -69,7 +69,7 @@ class _Step03ContactInfoState extends State<Step03ContactInfo> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const WizardStepCaption(
-              number: 4,
+              number: 2,
               title: 'Contact Information',
               subtitle: 'Enter contact details',
             ),

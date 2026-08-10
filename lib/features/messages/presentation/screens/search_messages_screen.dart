@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -270,7 +271,7 @@ class _SearchMessagesScreenState extends State<SearchMessagesScreen> {
   }
 
   Widget _buildResults(List<ChatMessageRef> results) {
-    if (_searching) return const Center(child: CircularProgressIndicator());
+    if (_searching) return const Center(child: SchoolPulseLoader());
     if (results.isEmpty) {
       return Center(
         child: Padding(

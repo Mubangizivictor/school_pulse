@@ -108,6 +108,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       // Staff accounts are provisioned ahead of time (with their real role)
       // by an admin, never auto-created here.
       return await _getUser(credential.user!.uid);
+    } on FirebaseAuthMultiFactorException {
+      // The caller needs the resolver to complete the authenticator challenge.
+      rethrow;
     } on FirebaseAuthException catch (e) {
       throw AuthFailure(e.message ?? 'Authentication failed');
     }

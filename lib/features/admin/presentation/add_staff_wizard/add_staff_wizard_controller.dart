@@ -12,11 +12,9 @@ import 'package:school_pulse/features/admin/presentation/add_staff_wizard/models
 import 'package:school_pulse/features/auth/domain/usecases/create_staff_account.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
-/// Internal wizard steps, in order. "Select Method" and "Success" bookend
-/// the 10 numbered steps shown in the progress bar (WizardScaffold shows
-/// `stepNumberFor(step)` of 10, not the raw index into this list).
+/// Internal wizard steps, in order. The wizard begins directly with the
+/// new-staff form; importing and rehiring are not available in this flow.
 enum WizardStep {
-  selectMethod,
   personalInfo,
   contactInfo,
   employmentInfo,
@@ -67,7 +65,7 @@ class AddStaffWizardController extends ChangeNotifier {
   });
 
   final AddStaffDraft draft = AddStaffDraft();
-  WizardStep _step = WizardStep.selectMethod;
+  WizardStep _step = WizardStep.personalInfo;
   WizardStep get step => _step;
 
   /// When configuring roles one at a time (Step 6), this is the role
@@ -117,9 +115,6 @@ class AddStaffWizardController extends ChangeNotifier {
 
   void next() {
     switch (_step) {
-      case WizardStep.selectMethod:
-        _step = WizardStep.personalInfo;
-        break;
       case WizardStep.personalInfo:
         _step = WizardStep.contactInfo;
         break;
@@ -166,10 +161,7 @@ class AddStaffWizardController extends ChangeNotifier {
 
   void back() {
     switch (_step) {
-      case WizardStep.selectMethod:
-        break;
       case WizardStep.personalInfo:
-        _step = WizardStep.selectMethod;
         break;
       case WizardStep.contactInfo:
         _step = WizardStep.personalInfo;

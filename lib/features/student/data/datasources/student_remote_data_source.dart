@@ -16,6 +16,7 @@ abstract class StudentRemoteDataSource {
     String? parentPhone,
     String? classId,
   });
+  Future<String> createStudent(StudentModel student, {String? recordedBy});
   Future<void> updateStudent(StudentModel student);
   Future<void> updateStudentStatus(String studentId, String status);
   Future<void> batchUpdateStudents(List<StudentModel> students);
@@ -25,6 +26,7 @@ abstract class StudentRemoteDataSource {
     AdmissionApplicationModel application,
   );
   Future<List<AdmissionApplicationModel>> getApplications(String schoolId);
+  Future<AdmissionApplicationModel> getApplicationById(String applicationId);
   Future<void> updateApplicationStatus(
     String applicationId,
     String status, {
@@ -142,6 +144,40 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
   }
 
   @override
+  Future<String> createStudent(
+    StudentModel student, {
+    String? recordedBy,
+  }) async {
+    final batch = firestore.batch();
+
+    final studentRef = student.id.isEmpty
+        ? firestore.collection('students').doc()
+        : firestore.collection('students').doc(student.id);
+    final studentWithId = student.copyWithModelId(studentRef.id);
+    batch.set(studentRef, studentWithId.toMap());
+
+    // Same convention as finalizeAdmission: a direct create still opens an
+    // initial placement record, so enrolment history has a starting point
+    // regardless of which path created the student.
+    final enrolmentRef = firestore.collection('student_enrolments').doc();
+    batch.set(enrolmentRef, {
+      'schoolId': student.schoolId,
+      'studentId': studentRef.id,
+      'classId': student.classId,
+      'streamId': student.streamId,
+      'academicYearId': student.academicYearId,
+      'status': 'active',
+      'startDate': Timestamp.now(),
+      'reason': 'direct creation',
+      'recordedBy': recordedBy ?? '',
+      'createdAt': Timestamp.now(),
+    });
+
+    await batch.commit();
+    return studentRef.id;
+  }
+
+  @override
   Future<void> updateStudent(StudentModel student) async {
     await firestore
         .collection('students')
@@ -151,7 +187,12 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
 
   @override
   Future<void> updateStudentStatus(String studentId, String status) async {
-    await firestore.collection('students').doc(studentId).update({
+    final reference = firestore.collection('students').doc(studentId);
+    final snapshot = await reference.get();
+    if (!snapshot.exists) {
+      throw StateError('Student not found.');
+    }
+    await reference.update({
       'status': status,
       'updatedAt': FieldValue.serverTimestamp(),
     });
@@ -192,6 +233,20 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
     return snapshot.docs
         .map((doc) => AdmissionApplicationModel.fromMap(doc.data(), doc.id))
         .toList();
+  }
+
+  @override
+  Future<AdmissionApplicationModel> getApplicationById(
+    String applicationId,
+  ) async {
+    final snapshot = await firestore
+        .collection('admission_applications')
+        .doc(applicationId)
+        .get();
+    if (!snapshot.exists) {
+      throw StateError('Admission application not found.');
+    }
+    return AdmissionApplicationModel.fromMap(snapshot.data()!, snapshot.id);
   }
 
   @override
@@ -371,7 +426,28 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
   }
 
   @override
-  Future<String> regenerateAccessCode(String oldCode) async => oldCode; // Placeholder
+  Future<String> regenerateAccessCode(String oldCode) async {
+    final normalizedOldCode = oldCode.trim().toUpperCase();
+    final oldRef = firestore
+        .collection('parent_access_codes')
+        .doc(normalizedOldCode);
+    final oldSnapshot = await oldRef.get();
+    if (!oldSnapshot.exists) {
+      throw Exception('No access code found: $oldCode');
+    }
+    final oldData = oldSnapshot.data()!;
+
+    final newCode =
+        'P${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+    final newRef = firestore.collection('parent_access_codes').doc(newCode);
+
+    final batch = firestore.batch();
+    batch.set(newRef, {...oldData, 'parentCode': newCode});
+    batch.delete(oldRef);
+    await batch.commit();
+
+    return newCode;
+  }
 
   @override
   Future<void> toggleAccessCodeStatus(

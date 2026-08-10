@@ -75,6 +75,11 @@ class AdmissionService {
     );
   }
 
+  /// Steps 1-3 of admission: mint the admission number and identity codes,
+  /// then finalize the application into a Student record with status
+  /// [StudentStatus.admitted]. Does not create the StudentIdentity or
+  /// initialize finances - call [enrollStudent] next to complete those and
+  /// transition the student to [StudentStatus.active].
   Future<Either<Failure, String>> admitStudent(
     String applicationId,
     String schoolId,
@@ -105,7 +110,8 @@ class AdmissionService {
       );
       final uniqueSystemId = idGenerator.generateUniqueSystemId();
 
-      // 3. Finalize admission with both codes.
+      // 3. Finalize admission with both codes. finalizeAdmission sets the
+      // new Student's status to StudentStatus.admitted.
       final finalizeResult = await repository.finalizeAdmission(
         applicationId,
         studentCode: studentCode,
@@ -113,35 +119,75 @@ class AdmissionService {
         qrReference: uniqueSystemId,
       );
 
-      return finalizeResult.fold((failure) => Left(failure), (studentId) async {
-        // 4. Persist the StudentIdentity record (QR data + NFC
-        // placeholder) using the same codes just written to the student
-        // record, so the two never drift apart.
-        final identityResult = await identityRepository.generateStudentIdentity(
-          Student.empty(studentId),
-          uniqueSystemId: uniqueSystemId,
-          schoolStudentId: studentCode,
-        );
+      return finalizeResult.fold(
+        (failure) => Left(failure),
+        (studentId) => Right(studentId),
+      );
+    });
+  }
 
-        return identityResult.fold((failure) => Left(failure), (_) async {
-          // 5. Initialize the financial account if financial
-          // parameters were provided.
-          if (initializeFinancials != null &&
-              term != null &&
-              feeStructureId != null &&
-              totalBilled != null) {
-            final financeResult = await initializeFinancials!(
-              studentId: studentId,
-              schoolId: schoolId,
-              academicYear: academicYear,
-              term: term,
-              feeStructureId: feeStructureId,
-              totalBilled: totalBilled,
-            );
-            return financeResult.fold(Left.new, (_) => Right(studentId));
-          }
-          return Right(studentId);
-        });
+  /// Steps 4-5 of admission: transitions an already-[StudentStatus.admitted]
+  /// student to [StudentStatus.active], issues their StudentIdentity (QR
+  /// data + NFC placeholder), and initializes finances if parameters are
+  /// given. [uniqueSystemId] and [studentCode] must be the same codes
+  /// [admitStudent] wrote to the student record, so identity and student
+  /// data never drift apart.
+  Future<Either<Failure, String>> enrollStudent(
+    String studentId, {
+    required String schoolId,
+    required String uniqueSystemId,
+    required String studentCode,
+    String? academicYear,
+    String? term,
+    String? feeStructureId,
+    double? totalBilled,
+  }) async {
+    final statusResult = await repository.updateStudentStatus(
+      studentId,
+      StudentStatus.active,
+    );
+
+    return statusResult.fold((failure) => Left(failure), (_) async {
+      // generateStudentIdentity only reads id/schoolId off the student it's
+      // given (codes are passed explicitly below) but needs the real
+      // schoolId - Student.empty() would write an empty tenant scope onto
+      // the identity record, breaking Firestore tenant isolation.
+      final placeholderForIdentity = Student(
+        id: studentId,
+        schoolId: schoolId,
+        name: '',
+        studentCode: studentCode,
+        admissionNumber: '',
+        dateOfBirth: DateTime(2000),
+        gender: Gender.male,
+        classId: '',
+        academicYearId: '',
+        status: StudentStatus.active,
+        level: EducationLevel.primary,
+      );
+      final identityResult = await identityRepository.generateStudentIdentity(
+        placeholderForIdentity,
+        uniqueSystemId: uniqueSystemId,
+        schoolStudentId: studentCode,
+      );
+
+      return identityResult.fold((failure) => Left(failure), (_) async {
+        if (initializeFinancials != null &&
+            academicYear != null &&
+            term != null &&
+            feeStructureId != null &&
+            totalBilled != null) {
+          final financeResult = await initializeFinancials!(
+            studentId: studentId,
+            schoolId: schoolId,
+            academicYear: academicYear,
+            term: term,
+            feeStructureId: feeStructureId,
+            totalBilled: totalBilled,
+          );
+          return financeResult.fold(Left.new, (_) => Right(studentId));
+        }
+        return Right(studentId);
       });
     });
   }

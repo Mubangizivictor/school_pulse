@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
@@ -78,7 +79,7 @@ class _BedManagementScreenState extends State<BedManagementScreen> {
               current is BedsLoaded || current is MatronLoading,
           builder: (context, state) {
             if (state is! BedsLoaded) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: SchoolPulseLoader());
             }
 
             final beds = state.beds;
@@ -392,7 +393,7 @@ class _TransferHistoryScreenState extends State<_TransferHistoryScreen> {
         buildWhen: (previous, current) => current is TransferHistoryLoaded,
         builder: (context, state) {
           if (state is! TransferHistoryLoaded) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: SchoolPulseLoader());
           }
           if (state.transfers.isEmpty) {
             return const EmptyState(

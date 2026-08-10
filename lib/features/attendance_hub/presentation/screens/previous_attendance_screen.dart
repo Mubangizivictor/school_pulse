@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
@@ -31,7 +32,10 @@ class _PreviousAttendanceScreenState extends State<PreviousAttendanceScreen> {
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
       context.read<AttendanceBloc>().add(
-        LoadRecordsRequested(schoolId: authState.user.schoolId),
+        LoadRecordsRequested(
+          schoolId: authState.user.schoolId,
+          operatorUser: authState.user,
+        ),
       );
     }
   }
@@ -80,7 +84,7 @@ class _PreviousAttendanceScreenState extends State<PreviousAttendanceScreen> {
       body: BlocBuilder<AttendanceBloc, AttendanceState>(
         builder: (context, state) {
           if (state is AttendanceLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: SchoolPulseLoader());
           }
           if (state is! RecordsLoaded) return const SizedBox.shrink();
 

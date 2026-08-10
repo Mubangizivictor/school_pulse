@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
@@ -48,14 +49,64 @@ class _SheetsIntegrationScreenState extends State<SheetsIntegrationScreen> {
   }
 
   Future<void> _connect() async {
-    final controller = TextEditingController();
-    final name = await showDialog<String>(
+    final nameController = TextEditingController();
+    final idController = TextEditingController();
+    final result = await showDialog<(String, String)>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Choose Spreadsheet'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(hintText: 'Spreadsheet name'),
+        title: const Text('Connect Spreadsheet'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: 'Spreadsheet name'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: idController,
+              decoration: const InputDecoration(
+                labelText: 'Spreadsheet ID',
+                hintText: 'From the sheet URL: .../d/<this part>/edit',
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.s),
+              decoration: BoxDecoration(
+                color: AppColors.warning(dialogContext).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: AppColors.warning(dialogContext).withValues(alpha: 0.4),
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    size: 18,
+                    color: AppColors.warning(dialogContext),
+                  ),
+                  const SizedBox(width: AppSpacing.s),
+                  Expanded(
+                    child: Text(
+                      'Before connecting: share this spreadsheet with the '
+                      'school\'s Sheets export service account (Editor '
+                      'access - ask your administrator for its email). '
+                      'Every sync will silently fail until it\'s shared.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textPrimary(dialogContext),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -63,17 +114,21 @@ class _SheetsIntegrationScreenState extends State<SheetsIntegrationScreen> {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
-            child: const Text('Select'),
+            onPressed: () => Navigator.pop(
+              dialogContext,
+              (nameController.text.trim(), idController.text.trim()),
+            ),
+            child: const Text('Connect'),
           ),
         ],
       ),
     );
-    if (name == null || name.isEmpty) return;
+    if (result == null || result.$1.isEmpty || result.$2.isEmpty) return;
 
     final updated = _integration.copyWith(
       linked: true,
-      spreadsheetName: name,
+      spreadsheetName: result.$1,
+      spreadsheetId: result.$2,
       worksheetName: 'Attendance Records',
     );
     await _repo.saveIntegration(_schoolId, updated);
@@ -87,9 +142,18 @@ class _SheetsIntegrationScreenState extends State<SheetsIntegrationScreen> {
 
   Future<void> _syncNow() async {
     setState(() => _syncing = true);
-    await _repo.triggerSync(_schoolId, 0);
+    final result = await _repo.triggerSync(_schoolId, 0);
     await _load();
     setState(() => _syncing = false);
+    if (!mounted) return;
+    result.fold(
+      (failure) => ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(failure.message)),
+      ),
+      (_) => ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Synced to Google Sheets')),
+      ),
+    );
   }
 
   @override
@@ -102,7 +166,7 @@ class _SheetsIntegrationScreenState extends State<SheetsIntegrationScreen> {
         elevation: 0,
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: SchoolPulseLoader())
           : ListView(
               padding: const EdgeInsets.all(AppSpacing.xl),
               children: [

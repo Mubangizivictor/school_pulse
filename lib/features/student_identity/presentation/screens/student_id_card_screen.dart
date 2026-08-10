@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:school_pulse/core/services/nfc/nfc_credential_reader_adapter.dart';
@@ -73,7 +74,7 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
         },
         builder: (context, state) {
           if (state is StudentIdentityLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: SchoolPulseLoader());
           } else if (state is StudentIdentityLoaded) {
             return SingleChildScrollView(
               padding: const EdgeInsets.all(24.0),
@@ -173,6 +174,9 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
         className: widget.student.className,
         stream: '', // Assuming stream is part of className or not available yet
         uniqueSystemId: identity.uniqueSystemId,
+        qrCodeData: identity.qrCodeData.isNotEmpty
+            ? identity.qrCodeData
+            : identity.uniqueSystemId,
       );
       await idCardService.printIdCard(pdfData);
     } catch (e) {
@@ -253,7 +257,12 @@ class _IdCardPreview extends StatelessWidget {
               ),
             const SizedBox(height: 24),
             QrImageView(
-              data: identity.uniqueSystemId,
+              // qrCodeData holds the server-signed envelope once
+              // signStudentCredential has run; falls back to the bare
+              // uniqueSystemId for identities issued before signing existed.
+              data: identity.qrCodeData.isNotEmpty
+                  ? identity.qrCodeData
+                  : identity.uniqueSystemId,
               version: QrVersions.auto,
               size: 120.0,
             ),
@@ -492,7 +501,7 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
         ),
         const SizedBox(height: 12),
         if (_scanning)
-          const Center(child: CircularProgressIndicator())
+          const Center(child: SchoolPulseLoader())
         else
           Wrap(
             spacing: 12,

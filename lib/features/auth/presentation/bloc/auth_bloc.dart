@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:school_pulse/core/notification/notification_service.dart';
 import 'package:school_pulse/core/usecases/usecase.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
@@ -58,13 +59,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     emit(AuthLoading());
-    final result = await loginWithEmail(
-      LoginParams(email: event.email, password: event.password),
-    );
-    result.fold((failure) => emit(AuthFailureState(failure.message)), (user) {
-      _syncNotifications(user);
-      emit(AuthAuthenticated(user));
-    });
+    try {
+      final result = await loginWithEmail(
+        LoginParams(email: event.email, password: event.password),
+      );
+      result.fold((failure) => emit(AuthFailureState(failure.message)), (user) {
+        _syncNotifications(user);
+        emit(AuthAuthenticated(user));
+      });
+    } on FirebaseAuthMultiFactorException catch (e) {
+      emit(AuthMfaChallengeRequired(e.resolver));
+    }
   }
 
   Future<void> _onLoginParent(

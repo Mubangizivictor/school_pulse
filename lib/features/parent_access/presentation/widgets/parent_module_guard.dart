@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import '../../domain/entities/parent_module_visibility.dart';
@@ -27,7 +28,7 @@ class ParentModuleGuard extends StatelessWidget {
       builder: (context, state) {
         if (state is ParentAccessLoading || state is ParentAccessInitial) {
           return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+            body: Center(child: SchoolPulseLoader()),
           );
         }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/injection_container.dart';
@@ -102,7 +103,7 @@ class _AdmissionsListViewState extends State<_AdmissionsListView> {
         },
         builder: (context, state) {
           if (state is AdmissionLoading || state is AdmissionInitial) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: SchoolPulseLoader());
           }
           final applications = state is AdmissionApplicationsLoaded
               ? state.applications

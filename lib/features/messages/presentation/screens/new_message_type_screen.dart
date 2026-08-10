@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -76,7 +77,7 @@ class NewMessageTypeScreen extends StatelessWidget {
                 if (!snapshot.hasData) {
                   return const Padding(
                     padding: EdgeInsets.all(AppSpacing.l),
-                    child: Center(child: CircularProgressIndicator()),
+                    child: Center(child: SchoolPulseLoader()),
                   );
                 }
                 final contacts = snapshot.data!;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:school_pulse/core/theme_provider.dart';
@@ -20,7 +21,7 @@ class ProfileScreen extends StatelessWidget {
       builder: (context, state) {
         if (state is! AuthAuthenticated) {
           return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+            body: Center(child: SchoolPulseLoader()),
           );
         }
         final parentName = state.user.name;

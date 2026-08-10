@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/core/usecases/usecase.dart';
 import '../../data/models/audit_log.dart';
@@ -7,8 +7,8 @@ import '../../data/repositories/audit_repository.dart';
 import 'package:school_pulse/features/admin/domain/usecases/get_admin_dashboard_stats.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
-import '../screens/role_management_screen.dart';
 import 'package:school_pulse/injection_container.dart' as di;
+import '../screens/access_codes_screen.dart';
 
 class UserManagementPage extends StatefulWidget {
   const UserManagementPage({super.key});
@@ -71,31 +71,13 @@ class UsersOverviewView extends StatelessWidget {
               onTap: () {},
             ),
             QuickActionItem(
-              label: 'Access Codes',
-              icon: Icons.vpn_key_outlined,
+              label: 'Add Parents',
+              icon: Icons.person_add_outlined,
               color: AppColors.success(context),
-              onTap: () {},
-            ),
-            QuickActionItem(
-              label: 'Roles',
-              icon: Icons.admin_panel_settings_outlined,
-              color: AppColors.warning(context),
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const RoleManagementScreen()),
+                MaterialPageRoute(builder: (_) => const AccessCodesScreen()),
               ),
-            ),
-            QuickActionItem(
-              label: 'Security',
-              icon: Icons.security_outlined,
-              color: AppColors.danger(context),
-              onTap: () {},
-            ),
-            QuickActionItem(
-              label: 'Audit Logs',
-              icon: Icons.history_outlined,
-              color: Colors.purple,
-              onTap: () {},
             ),
           ],
         ),
@@ -113,7 +95,7 @@ class UsersOverviewView extends StatelessWidget {
               return const Center(
                 child: Padding(
                   padding: EdgeInsets.all(32.0),
-                  child: CircularProgressIndicator(),
+                  child: SchoolPulseLoader(),
                 ),
               );
             }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -83,7 +84,7 @@ class _MyBorrowingsTab extends StatelessWidget {
     return BlocBuilder<LibraryBloc, LibraryState>(
       builder: (context, state) {
         if (state is LibraryLoading && state is! LibraryHistoryLoaded) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: SchoolPulseLoader());
         } else if (state is LibraryHistoryLoaded) {
           final activeBorrowings = state.history
               .where((b) => b.status != BorrowingStatus.returned)
@@ -175,7 +176,7 @@ class _ResourceCatalogTab extends StatelessWidget {
             },
           );
         }
-        return const Center(child: CircularProgressIndicator());
+        return const Center(child: SchoolPulseLoader());
       },
     );
   }

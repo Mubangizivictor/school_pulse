@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_state.dart';
@@ -30,7 +31,7 @@ class SubscriptionPlansScreen extends StatelessWidget {
       body: BlocBuilder<SuperAdminBloc, SuperAdminState>(
         builder: (context, state) {
           if (state.status == SuperAdminStatus.loading) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: SchoolPulseLoader());
           }
 
           final isWide = isSuperAdminWide(context);

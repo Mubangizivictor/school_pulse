@@ -25,15 +25,16 @@ class PurchaseOrderModel extends PurchaseOrder {
       orderNumber: data['orderNumber'] ?? '',
       supplierId: data['supplierId'] ?? '',
       supplierName: data['supplierName'] ?? '',
-      items: (data['items'] as List)
-          .map((i) => OrderItemModel.fromMap(i))
+      items: ((data['items'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((i) => OrderItemModel.fromMap(Map<String, dynamic>.from(i)))
           .toList(),
-      totalAmount: (data['totalAmount'] as num).toDouble(),
+      totalAmount: (data['totalAmount'] as num?)?.toDouble() ?? 0,
       status: PurchaseOrderStatus.values.firstWhere(
         (e) => e.name == data['status'],
         orElse: () => PurchaseOrderStatus.pending,
       ),
-      date: (data['date'] as Timestamp).toDate(),
+      date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
       notes: data['notes'],
       createdBy: data['createdBy'] ?? '',
       approvedBy: data['approvedBy'],
@@ -85,7 +86,7 @@ class OrderItemModel extends OrderItem {
     return OrderItemModel(
       itemName: map['itemName'] ?? '',
       quantity: map['quantity'] ?? 0,
-      unitPrice: (map['unitPrice'] as num).toDouble(),
+      unitPrice: (map['unitPrice'] as num?)?.toDouble() ?? 0,
     );
   }
 

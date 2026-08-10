@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/core/utils.dart';
 import 'package:school_pulse/design_system/app_components.dart';
@@ -61,7 +62,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
         child: BlocBuilder<LibraryBloc, LibraryState>(
           builder: (context, state) {
             if (state is LibraryLoading || state is LibraryInitial) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: SchoolPulseLoader());
             } else if (state is LibraryError) {
               return EmptyState(
                 icon: Icons.cloud_off,

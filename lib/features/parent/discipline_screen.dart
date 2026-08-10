@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/utils.dart';
 import '../../design_system/app_components.dart';
@@ -57,7 +58,7 @@ class _DisciplineScreenState extends State<DisciplineScreen> {
               return BlocBuilder<DisciplineBloc, DisciplineState>(
                 builder: (context, state) {
                   if (state is DisciplineLoading) {
-                    return const Center(child: CircularProgressIndicator());
+                    return const Center(child: SchoolPulseLoader());
                   } else if (state is DisciplineLoaded) {
                     final incidents = state.incidents;
                     final boardingCases = state.boardingCases;
@@ -119,11 +120,11 @@ class _DisciplineScreenState extends State<DisciplineScreen> {
                       onCtaPressed: _fetchData,
                     );
                   }
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(child: SchoolPulseLoader());
                 },
               );
             }
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: SchoolPulseLoader());
           },
         ),
       ),

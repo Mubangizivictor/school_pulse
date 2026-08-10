@@ -33,7 +33,7 @@ class Step08AccessPreview extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const WizardStepCaption(
-            number: 9,
+            number: 7,
             title: 'Access Preview',
             subtitle: 'This staff member will have access to:',
           ),

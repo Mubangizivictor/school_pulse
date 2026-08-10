@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:school_pulse/design_system/app_components.dart';
@@ -21,7 +22,7 @@ class PerformanceAnalyticsScreen extends StatelessWidget {
         body: BlocBuilder<DeanBloc, DeanState>(
           builder: (context, state) {
             if (state is DeanLoading) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: SchoolPulseLoader());
             } else if (state is PerformanceAnalyticsLoaded) {
               return ListView(
                 padding: const EdgeInsets.all(16),

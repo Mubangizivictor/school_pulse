@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/admin/data/models/audit_log.dart';
 import 'package:school_pulse/features/admin/data/repositories/audit_repository.dart';
@@ -25,7 +26,7 @@ class AuditLogScreen extends StatelessWidget {
         stream: repository.watchRecentLogs(limit: 200),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: SchoolPulseLoader());
           }
           if (snapshot.hasError) {
             return const EmptyState(

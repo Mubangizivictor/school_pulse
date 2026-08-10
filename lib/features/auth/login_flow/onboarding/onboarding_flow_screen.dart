@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
@@ -66,7 +67,7 @@ class OnboardingFlowScreen extends StatelessWidget {
                 case OnboardingStep.institutionConfirm:
                   if (institutionState is! InstitutionContextLoaded) {
                     return const Scaffold(
-                      body: Center(child: CircularProgressIndicator()),
+                      body: Center(child: SchoolPulseLoader()),
                     );
                   }
                   return InstitutionConfirmScreen(
@@ -76,7 +77,7 @@ class OnboardingFlowScreen extends StatelessWidget {
                 case OnboardingStep.profileSummary:
                   if (institutionState is! InstitutionContextLoaded) {
                     return const Scaffold(
-                      body: Center(child: CircularProgressIndicator()),
+                      body: Center(child: SchoolPulseLoader()),
                     );
                   }
                   return ProfileSummaryScreen(
@@ -89,7 +90,7 @@ class OnboardingFlowScreen extends StatelessWidget {
                     context.go('/school-splash', extra: user);
                   });
                   return const Scaffold(
-                    body: Center(child: CircularProgressIndicator()),
+                    body: Center(child: SchoolPulseLoader()),
                   );
               }
             },

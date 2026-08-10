@@ -8,7 +8,10 @@ class CreateStudent {
 
   CreateStudent(this.repository);
 
-  Future<Either<Failure, void>> call(Student student) async {
-    return await repository.createStudent(student);
+  Future<Either<Failure, String>> call(
+    Student student, {
+    required String recordedBy,
+  }) async {
+    return await repository.createStudent(student, recordedBy: recordedBy);
   }
 }

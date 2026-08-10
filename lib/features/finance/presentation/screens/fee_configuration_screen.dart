@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
@@ -328,7 +329,7 @@ class _FeeCategoriesList extends StatelessWidget {
     return BlocBuilder<FinanceBloc, FinanceState>(
       builder: (context, state) {
         if (state is FinanceLoading)
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: SchoolPulseLoader());
         if (state is FeeConfigurationLoaded) {
           if (state.categories.isEmpty)
             return const Center(child: Text('No categories defined.'));
@@ -371,7 +372,7 @@ class _FeeStructuresList extends StatelessWidget {
     return BlocBuilder<FinanceBloc, FinanceState>(
       builder: (context, state) {
         if (state is FinanceLoading)
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: SchoolPulseLoader());
         if (state is FeeConfigurationLoaded) {
           if (state.structures.isEmpty)
             return const Center(child: Text('No structures defined.'));

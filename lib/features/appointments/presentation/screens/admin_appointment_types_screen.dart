@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/app_components.dart';
@@ -58,7 +59,7 @@ class _AdminAppointmentTypesView extends StatelessWidget {
           },
           builder: (context, state) {
             if (state is! AppointmentSettingsLoaded) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: SchoolPulseLoader());
             }
             if (state.types.isEmpty) {
               return EmptyState(

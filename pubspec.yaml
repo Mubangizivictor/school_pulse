@@ -76,23 +76,23 @@ dev_dependencies:
 
 flutter_native_splash:
   color: "#ffffff"
-  image: assets/logos/logo_for_light_mode.png
+  image: assets/splash/splash_light_mode.png
   color_dark: "#121212"
-  image_dark: assets/logos/logo_for_dark_mode.png
+  image_dark: assets/splash/splash_dark_mode.png
 
   android_12:
-    image: assets/logos/logo_for_light_mode.png
+    image: assets/splash/android12/splash_light_mode.png
     icon_background_color: "#ffffff"
-    image_dark: assets/logos/logo_for_dark_mode.png
+    image_dark: assets/splash/android12/splash_dark_mode.png
     icon_background_color_dark: "#121212"
 
 flutter_launcher_icons:
   android: "ic_launcher"
   ios: true
-  image_path_android: "assets/launcher_icons/ios_launcher_master.png"
-  image_path_ios: "assets/launcher_icons/ios_launcher_master.png"
+  image_path_android: "assets/launcher_icons/launcher_icon.png"
+  image_path_ios: "assets/launcher_icons/launcher_icon.png"
   adaptive_icon_background: "#03113B"
-  adaptive_icon_foreground: "assets/launcher_icons/ios_launcher_master.png"
+  adaptive_icon_foreground: "assets/launcher_icons/launcher_icon.png"
   min_sdk_android: 21
   remove_alpha_ios: true
 

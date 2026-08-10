@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/features/dean/domain/entities/report_card_approval.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
@@ -48,7 +49,7 @@ class _HeadTeacherApprovalScreenState extends State<HeadTeacherApprovalScreen> {
     return BlocBuilder<DeanBloc, DeanState>(
       builder: (context, state) {
         if (state is DeanLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: SchoolPulseLoader());
         }
         if (state is PendingReportApprovalsLoaded) {
           if (state.approvals.isEmpty) {

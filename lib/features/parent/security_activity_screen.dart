@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
@@ -113,7 +114,7 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
             const SectionHeader(title: 'Authorized Pickup Persons'),
             const SizedBox(height: 8),
             if (_isLoadingExtras)
-              const Center(child: CircularProgressIndicator())
+              const Center(child: SchoolPulseLoader())
             else if (_authorizations.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 12),
@@ -143,7 +144,7 @@ class _SecurityActivityScreenState extends State<SecurityActivityScreen> {
             const SectionHeader(title: 'Security Alerts'),
             const SizedBox(height: 8),
             if (_isLoadingExtras)
-              const Center(child: CircularProgressIndicator())
+              const Center(child: SchoolPulseLoader())
             else if (_alerts.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 12),

@@ -1,3 +1,4 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:dartz/dartz.dart';
 import 'package:school_pulse/core/error/failures.dart';
 import '../../domain/entities/sheets_integration.dart';
@@ -6,8 +7,12 @@ import '../datasources/sheets_integration_remote_data_source.dart';
 
 class SheetsIntegrationRepositoryImpl implements SheetsIntegrationRepository {
   final SheetsIntegrationRemoteDataSource remoteDataSource;
+  final FirebaseFunctions functions;
 
-  SheetsIntegrationRepositoryImpl({required this.remoteDataSource});
+  SheetsIntegrationRepositoryImpl({
+    required this.remoteDataSource,
+    required this.functions,
+  });
 
   @override
   Future<Either<Failure, SheetsIntegration>> getIntegration(
@@ -59,26 +64,20 @@ class SheetsIntegrationRepositoryImpl implements SheetsIntegrationRepository {
     String schoolId,
     int recordCount,
   ) async {
+    // The real export runs server-side: syncAttendanceToSheetsNow (Cloud
+    // Function) re-appends today's attendance_records rows to the linked
+    // spreadsheet using a service account, and writes its own
+    // SheetsSyncLogEntry/lastSyncAt - the same trigger that fires
+    // automatically on every new attendance mark when autoSync is on. This
+    // call is just the manual "Sync Now" catch-up path.
     try {
-      // No real Google Sheets API call yet (needs a Cloud Function proxy +
-      // service account, or an Apps Script webhook - an explicit open
-      // decision, see the plan). This records a successful sync attempt so
-      // the settings/history UI is fully functional now and swaps in a real
-      // write later without changing this contract.
-      final entry = SheetsSyncLogEntry(
-        id: '',
-        startedAt: DateTime.now(),
-        success: true,
-        recordCount: recordCount,
-      );
-      await remoteDataSource.appendSyncLog(schoolId, entry);
-      await remoteDataSource.saveIntegration(
-        schoolId,
-        SheetsIntegration(lastSyncAt: DateTime.now(), lastSyncStatus: 'success'),
-      );
+      final callable = functions.httpsCallable('syncAttendanceToSheetsNow');
+      await callable.call();
       return const Right(null);
+    } on FirebaseFunctionsException catch (e) {
+      return Left(ServerFailure(e.message ?? 'Google Sheets sync failed.'));
     } catch (_) {
-      return Left(ServerFailure());
+      return Left(ServerFailure('Google Sheets sync failed.'));
     }
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/director/domain/entities/director_approval.dart';
@@ -16,7 +17,7 @@ class DirectorApprovalCenterScreen extends StatelessWidget {
       body: BlocBuilder<DirectorBloc, DirectorState>(
         builder: (context, state) {
           if (state is DirectorApprovalsLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: SchoolPulseLoader());
           } else if (state is DirectorApprovalsLoaded) {
             return _buildApprovalList(context, state.approvals);
           } else if (state is DirectorApprovalsError) {
@@ -25,7 +26,7 @@ class DirectorApprovalCenterScreen extends StatelessWidget {
 
           // Trigger load if not loaded
           context.read<DirectorBloc>().add(DirectorApprovalsRequested());
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: SchoolPulseLoader());
         },
       ),
     );

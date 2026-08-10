@@ -76,7 +76,7 @@ class _Step02PersonalInfoState extends State<Step02PersonalInfo> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             WizardStepCaption(
-              number: 3,
+              number: 1,
               title: 'Personal Information',
               subtitle: 'Enter staff personal details',
             ),

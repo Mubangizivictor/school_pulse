@@ -104,7 +104,7 @@ class AdmissionBloc extends Bloc<AdmissionEvent, AdmissionState> {
       return;
     }
 
-    final result = await admissionService.admitStudent(
+    final admitResult = await admissionService.admitStudent(
       event.applicationId,
       event.schoolId,
       event.schoolCode,
@@ -114,10 +114,45 @@ class AdmissionBloc extends Bloc<AdmissionEvent, AdmissionState> {
       feeStructureId: event.feeStructureId,
       totalBilled: event.totalBilled,
     );
-    result.fold(
-      (failure) => emit(AdmissionError(failure.message)),
-      (studentId) =>
-          emit(AdmissionEnrollSuccess('Student enrolled', studentId)),
+
+    await admitResult.fold(
+      (failure) async => emit(AdmissionError(failure.message)),
+      (studentId) async {
+        final studentResult = await admissionService.repository.getStudentById(
+          studentId,
+        );
+        final codes = studentResult.fold(
+          (failure) => null,
+          (student) => (
+            uniqueSystemId: student.qrReference ?? '',
+            studentCode: student.studentCode,
+          ),
+        );
+        if (codes == null) {
+          emit(
+            AdmissionError(
+              'Student was admitted but could not be loaded to finish enrollment.',
+            ),
+          );
+          return;
+        }
+
+        final enrollResult = await admissionService.enrollStudent(
+          studentId,
+          schoolId: event.schoolId,
+          uniqueSystemId: codes.uniqueSystemId,
+          studentCode: codes.studentCode,
+          academicYear: event.academicYear,
+          term: event.term,
+          feeStructureId: event.feeStructureId,
+          totalBilled: event.totalBilled,
+        );
+        enrollResult.fold(
+          (failure) => emit(AdmissionError(failure.message)),
+          (enrolledId) =>
+              emit(AdmissionEnrollSuccess('Student enrolled', enrolledId)),
+        );
+      },
     );
   }
 }
