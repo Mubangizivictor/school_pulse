@@ -46,7 +46,10 @@ exports.notifyOwnerOfManualPayment = onDocumentWritten(
     const amountLabel = `UGX ${amount.toLocaleString('en-US')}`;
 
     await notifyOwners({
-      eventId: `manual_payment_${paymentId}_submitted`,
+      // payments.js already creates payment_<id> in the owner feed. Reusing
+      // that id makes the durable in-app record and push/email delivery one
+      // event instead of two nearly identical notification cards.
+      eventId: `payment_${paymentId}`,
       eventType: 'Payment proof submitted',
       title: 'Payment verification required',
       body: `${schoolName} submitted ${amountLabel} via ${methodLabel}. Confirm the money was received before activating access.`,
