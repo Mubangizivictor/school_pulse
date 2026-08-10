@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/design_system/theme/app_typography.dart';
 import '../../domain/entities/school.dart';
 import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
@@ -14,77 +18,91 @@ class SchoolDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final dateFormat = DateFormat('MMM dd, yyyy');
+    final daysRemaining = school.subscriptionExpiry
+        .difference(DateTime.now())
+        .inDays;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(school.name),
+        title: Text(school.name, overflow: TextOverflow.ellipsis),
         actions: [
           if (school.status == SchoolStatus.active)
-            TextButton.icon(
-              onPressed: () =>
-                  _confirmAction(context, 'Suspend', Colors.red, () {
-                    context.read<SuperAdminBloc>().add(
-                      UpdateSchoolStatusEvent(
-                        schoolId: school.id,
-                        status: SchoolStatus.suspended,
-                        reason: 'Suspended by Owner',
-                      ),
-                    );
-                  }),
-              icon: const Icon(Icons.block, color: Colors.red),
-              label: const Text(
-                'Suspend School',
-                style: TextStyle(color: Colors.red),
+            Padding(
+              padding: const EdgeInsets.only(right: AppSpacing.m),
+              child: OutlinedButton.icon(
+                onPressed: () => _confirmStatusChange(
+                  context,
+                  action: 'Suspend',
+                  color: theme.colorScheme.error,
+                  onConfirm: () => context.read<SuperAdminBloc>().add(
+                    UpdateSchoolStatusEvent(
+                      schoolId: school.id,
+                      status: SchoolStatus.suspended,
+                      reason: 'Suspended by Owner',
+                    ),
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: theme.colorScheme.error,
+                  side: BorderSide(color: theme.colorScheme.error),
+                ),
+                icon: const Icon(Icons.block_rounded, size: 18),
+                label: const Text('Suspend'),
               ),
             )
           else if (school.status == SchoolStatus.suspended)
-            TextButton.icon(
-              onPressed: () =>
-                  _confirmAction(context, 'Activate', Colors.green, () {
-                    context.read<SuperAdminBloc>().add(
-                      UpdateSchoolStatusEvent(
-                        schoolId: school.id,
-                        status: SchoolStatus.active,
-                      ),
-                    );
-                  }),
-              icon: const Icon(Icons.check_circle, color: Colors.green),
-              label: const Text(
-                'Activate School',
-                style: TextStyle(color: Colors.green),
+            Padding(
+              padding: const EdgeInsets.only(right: AppSpacing.m),
+              child: FilledButton.icon(
+                onPressed: () => _confirmStatusChange(
+                  context,
+                  action: 'Reactivate',
+                  color: Colors.green,
+                  onConfirm: () => context.read<SuperAdminBloc>().add(
+                    UpdateSchoolStatusEvent(
+                      schoolId: school.id,
+                      status: SchoolStatus.active,
+                    ),
+                  ),
+                ),
+                style: FilledButton.styleFrom(backgroundColor: Colors.green),
+                icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
+                label: const Text('Reactivate'),
               ),
             ),
-          const SizedBox(width: 16),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(theme),
-            const SizedBox(height: 32),
+            _buildHeader(context, theme),
+            const SizedBox(height: AppSpacing.x4l),
             if (isSuperAdminWide(context))
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(flex: 2, child: _buildSchoolInfo(theme)),
-                  const SizedBox(width: 24),
-                  Expanded(child: _buildSubscriptionCard(theme, context)),
+                  Expanded(flex: 2, child: _buildOverview(theme)),
+                  const SizedBox(width: AppSpacing.xl),
+                  Expanded(
+                    child: _buildSubscription(theme, dateFormat, daysRemaining),
+                  ),
                 ],
               )
             else
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSchoolInfo(theme),
-                  const SizedBox(height: 32),
-                  _buildSubscriptionCard(theme, context),
+                  _buildOverview(theme),
+                  const SizedBox(height: AppSpacing.x4l),
+                  _buildSubscription(theme, dateFormat, daysRemaining),
                 ],
               ),
-            const SizedBox(height: 32),
+            const SizedBox(height: AppSpacing.x4l),
             _buildFeatureControl(theme, context),
-            const SizedBox(height: 32),
+            const SizedBox(height: AppSpacing.x4l),
             _buildSupportModeAction(theme, context),
           ],
         ),
@@ -92,67 +110,95 @@ class SchoolDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(ThemeData theme) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 40,
-              backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
-              child: Text(
-                school.name.substring(0, 1).toUpperCase(),
-                style: theme.textTheme.headlineLarge?.copyWith(
-                  color: theme.colorScheme.primary,
-                ),
+  Widget _buildHeader(BuildContext context, ThemeData theme) {
+    return AppCard(
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 32,
+            backgroundColor: AppColors.primary(context).withValues(alpha: 0.1),
+            child: Text(
+              school.name.isEmpty
+                  ? '?'
+                  : school.name.substring(0, 1).toUpperCase(),
+              style: theme.textTheme.headlineSmall?.copyWith(
+                color: AppColors.primary(context),
+                fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(width: 24),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(school.name, style: theme.textTheme.headlineSmall),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Tenant ID: ${school.tenantId} • Created ${DateFormat('MMM dd, yyyy').format(school.createdAt)}',
+          ),
+          const SizedBox(width: AppSpacing.xl),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  school.name,
+                  style: AppTypography.headlineSmall.copyWith(
+                    color: AppColors.textPrimary(context),
                   ),
-                ],
-              ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Tenant ID: ${school.tenantId} • Created ${DateFormat('MMM dd, yyyy').format(school.createdAt)}',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.textSecondary(context),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-            _SupportBadge(status: school.status),
-          ],
-        ),
+          ),
+          const SizedBox(width: AppSpacing.m),
+          _statusBadge(school.status),
+        ],
       ),
     );
   }
 
-  Widget _buildSchoolInfo(ThemeData theme) {
+  Widget _buildOverview(ThemeData theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Contact Information', style: theme.textTheme.titleLarge),
-        const SizedBox(height: 16),
-        Card(
+        const SectionHeader(title: 'Overview'),
+        const SizedBox(height: AppSpacing.m),
+        AppCard(
+          padding: EdgeInsets.zero,
           child: Column(
             children: [
               ListTile(
-                leading: const Icon(Icons.email_outlined),
-                title: const Text('Email'),
-                subtitle: Text(school.contactEmail),
+                leading: const Icon(Icons.category_outlined),
+                title: const Text('Category'),
+                subtitle: Text(
+                  school.classificationOther?.isNotEmpty == true
+                      ? school.classificationOther!
+                      : school.classification.name,
+                ),
               ),
-              const Divider(),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.email_outlined),
+                title: const Text('Contact email'),
+                subtitle: Text(
+                  school.contactEmail.isEmpty ? '—' : school.contactEmail,
+                ),
+              ),
+              const Divider(height: 1),
               ListTile(
                 leading: const Icon(Icons.phone_outlined),
-                title: const Text('Phone'),
-                subtitle: Text(school.contactPhone),
+                title: const Text('Contact phone'),
+                subtitle: Text(
+                  school.contactPhone.isEmpty ? '—' : school.contactPhone,
+                ),
               ),
-              const Divider(),
+              const Divider(height: 1),
               ListTile(
                 leading: const Icon(Icons.location_on_outlined),
                 title: const Text('Address'),
-                subtitle: Text(school.address),
+                subtitle: Text(school.address.isEmpty ? '—' : school.address),
               ),
             ],
           ),
@@ -161,36 +207,46 @@ class SchoolDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSubscriptionCard(ThemeData theme, BuildContext context) {
+  Widget _buildSubscription(
+    ThemeData theme,
+    DateFormat dateFormat,
+    int daysRemaining,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Subscription', style: theme.textTheme.titleLarge),
-        const SizedBox(height: 16),
-        Card(
-          color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  school.subscriptionPlanId.toUpperCase(),
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+        const SectionHeader(title: 'Subscription'),
+        const SizedBox(height: AppSpacing.m),
+        AppCard(
+          color: theme.colorScheme.primaryContainer.withValues(alpha: 0.25),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                school.subscriptionPlanId.isEmpty
+                    ? 'No plan assigned'
+                    : school.subscriptionPlanId.toUpperCase(),
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Expires on ${DateFormat('MMM dd, yyyy').format(school.subscriptionExpiry)}',
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Expires on ${dateFormat.format(school.subscriptionExpiry)}',
+              ),
+              const SizedBox(height: 4),
+              Text(
+                daysRemaining >= 0
+                    ? '$daysRemaining days remaining'
+                    : 'Expired ${-daysRemaining} days ago',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: daysRemaining < 0
+                      ? theme.colorScheme.error
+                      : theme.colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
                 ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () => _showPlanSelector(context),
-                  child: const Text('Change Plan'),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ],
@@ -198,7 +254,7 @@ class SchoolDetailScreen extends StatelessWidget {
   }
 
   Widget _buildFeatureControl(ThemeData theme, BuildContext context) {
-    final allFeatures = [
+    const allFeatures = [
       {
         'id': 'attendance',
         'name': 'Attendance Management',
@@ -227,14 +283,15 @@ class SchoolDetailScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Enabled Features', style: theme.textTheme.titleLarge),
-        const SizedBox(height: 16),
-        Card(
+        const SectionHeader(title: 'Features & Modules'),
+        const SizedBox(height: AppSpacing.m),
+        AppCard(
+          padding: EdgeInsets.zero,
           child: ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: allFeatures.length,
-            separatorBuilder: (_, _) => const Divider(),
+            separatorBuilder: (_, _) => const Divider(height: 1),
             itemBuilder: (context, index) {
               final feature = allFeatures[index];
               final isEnabled = school.enabledFeatures.contains(feature['id']);
@@ -260,77 +317,72 @@ class SchoolDetailScreen extends StatelessWidget {
   }
 
   Widget _buildSupportModeAction(ThemeData theme, BuildContext context) {
-    return Card(
-      color: Colors.orange.withValues(alpha: 0.1),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            const Icon(Icons.support_agent, color: Colors.orange, size: 32),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Owner Support Mode',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+    return AppCard(
+      color: Colors.orange.withValues(alpha: 0.08),
+      child: Row(
+        children: [
+          const Icon(Icons.support_agent, color: Colors.orange, size: 32),
+          const SizedBox(width: AppSpacing.m),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Owner Support Mode',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
                   ),
-                  const Text(
-                    'Temporarily access this school\'s dashboard to assist the administrator.',
-                  ),
-                ],
-              ),
+                ),
+                const Text(
+                  "Temporarily access this school's dashboard to assist the administrator.",
+                ),
+              ],
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () => _promptSupportModeReason(context, school),
-              child: const Text('Enter Support Mode'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _confirmAction(
-    BuildContext context,
-    String action,
-    Color color,
-    VoidCallback onConfirm,
-  ) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('$action School?'),
-        content: Text(
-          'Are you sure you want to $action ${school.name}? This action will be logged.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: color),
-            onPressed: () {
-              onConfirm();
-              Navigator.pop(context);
-            },
-            child: Text(action),
+          const SizedBox(width: AppSpacing.m),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => _promptSupportModeReason(context, school),
+            icon: const Icon(Icons.login_rounded, size: 18),
+            label: const Text('Enter'),
           ),
         ],
       ),
     );
   }
 
-  void _showPlanSelector(BuildContext context) {
-    // Show a dialog with plan options
+  void _confirmStatusChange(
+    BuildContext context, {
+    required String action,
+    required Color color,
+    required VoidCallback onConfirm,
+  }) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('$action School?'),
+        content: Text(
+          'Are you sure you want to $action ${school.name}? This action will be logged.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: color),
+            onPressed: () {
+              onConfirm();
+              Navigator.pop(dialogContext);
+            },
+            child: Text(action),
+          ),
+        ],
+      ),
+    );
   }
 
   void _promptSupportModeReason(BuildContext context, School school) {
@@ -353,8 +405,8 @@ class SchoolDetailScreen extends StatelessWidget {
             onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
+          FilledButton(
+            style: FilledButton.styleFrom(
               backgroundColor: Colors.orange,
               foregroundColor: Colors.white,
             ),
@@ -368,7 +420,7 @@ class SchoolDetailScreen extends StatelessWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    'Entering Support Mode for ${school.name}... (Logged)',
+                    'Entering Support Mode for ${school.name}… (Logged)',
                   ),
                 ),
               );
@@ -379,34 +431,14 @@ class SchoolDetailScreen extends StatelessWidget {
       ),
     );
   }
-}
 
-class _SupportBadge extends StatelessWidget {
-  final SchoolStatus status;
-  const _SupportBadge({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    Color color = Colors.grey;
-    if (status == SchoolStatus.active) color = Colors.green;
-    if (status == SchoolStatus.suspended) color = Colors.red;
-    if (status == SchoolStatus.trial) color = Colors.orange;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color),
-      ),
-      child: Text(
-        status.name.toUpperCase(),
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
-        ),
-      ),
-    );
+  Widget _statusBadge(SchoolStatus status) {
+    final (label, color) = switch (status) {
+      SchoolStatus.active => ('Active', Colors.green),
+      SchoolStatus.suspended => ('Suspended', Colors.red),
+      SchoolStatus.trial => ('Trial', Colors.orange),
+      SchoolStatus.archived => ('Archived', Colors.grey),
+    };
+    return StatusBadge(label: label, color: color);
   }
 }

@@ -1,44 +1,61 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl/intl.dart';
+
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/design_system/components/pulse_logo.dart';
-import 'package:school_pulse/design_system/components/pulse_card.dart';
-import '../../domain/entities/school_application.dart';
+import 'package:school_pulse/features/super_admin/domain/entities/manual_subscription_payment.dart';
+
 import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
-import '../bloc/super_admin_state.dart';
 import '../responsive.dart';
 import '../widgets/super_admin_logout_button.dart';
-import 'school_management_screen.dart';
-import 'subscription_plans_screen.dart';
 import 'audit_logs_screen.dart';
 import 'billing_page.dart';
+import 'school_management_screen.dart';
+import 'subscription_plans_screen.dart';
+import 'super_admin_more_screen.dart';
+import 'super_admin_overview_screen.dart';
+import 'super_admin_placeholder_screen.dart';
 
+/// Top-level sections shown in the desktop sidebar. Schools also hosts
+/// Applications internally (`SchoolManagementScreen`'s `_ApplicationList`),
+/// so Applications is not broken out as its own top-level tab this phase —
+/// it stays reachable via Schools, which keeps the sidebar from growing an
+/// item that would just be a thin proxy to the same screen.
 const _kSections = [
   (
     icon: Icons.dashboard_outlined,
     selectedIcon: Icons.dashboard,
-    label: 'Overview',
+    label: 'Dashboard',
   ),
   (icon: Icons.school_outlined, selectedIcon: Icons.school, label: 'Schools'),
   (
-    icon: Icons.subscriptions_outlined,
-    selectedIcon: Icons.subscriptions,
-    label: 'Plans',
-  ),
-  (
     icon: Icons.receipt_long_outlined,
     selectedIcon: Icons.receipt_long,
-    label: 'Billing',
+    label: 'Payments & Billing',
+  ),
+  (
+    icon: Icons.subscriptions_outlined,
+    selectedIcon: Icons.subscriptions,
+    label: 'Subscription Plans',
+  ),
+  (
+    icon: Icons.notifications_outlined,
+    selectedIcon: Icons.notifications,
+    label: 'Notifications',
   ),
   (
     icon: Icons.history_outlined,
     selectedIcon: Icons.history,
     label: 'Audit Logs',
+  ),
+  (
+    icon: Icons.settings_outlined,
+    selectedIcon: Icons.settings,
+    label: 'Settings',
   ),
 ];
 
@@ -50,7 +67,17 @@ class SuperAdminDashboard extends StatefulWidget {
 }
 
 class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
+  // Index into `_kSections` — drives the desktop sidebar / IndexedStack.
   int _selectedIndex = 0;
+
+  // Index into the 4-item mobile bottom nav (Home, Schools, Payments, More).
+  int _mobileNavIndex = 0;
+
+  // Bumping this key forces BillingPage to rebuild with a fresh
+  // `initialFilter` when navigated to from the Dashboard's
+  // "Payments to Verify" shortcut.
+  ManualPaymentStatus? _billingInitialFilter;
+  int _billingPageKey = 0;
 
   @override
   void initState() {
@@ -58,16 +85,49 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     context.read<SuperAdminBloc>().add(LoadSuperAdminDashboard());
   }
 
+  void _goToBilling({ManualPaymentStatus? filter}) {
+    setState(() {
+      _billingInitialFilter = filter;
+      _billingPageKey++;
+      _selectedIndex = 2;
+      _mobileNavIndex = 2;
+    });
+  }
+
+  void _goToSchools() {
+    setState(() {
+      _selectedIndex = 1;
+      _mobileNavIndex = 1;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final content = IndexedStack(
       index: _selectedIndex,
-      children: const [
-        SuperAdminOverview(),
-        SchoolManagementScreen(),
-        SubscriptionPlansScreen(),
-        BillingPage(),
-        AuditLogsScreen(),
+      children: [
+        SuperAdminOverviewScreen(
+          onOpenBilling: () =>
+              _goToBilling(filter: ManualPaymentStatus.pendingVerification),
+          onOpenSchools: _goToSchools,
+        ),
+        const SchoolManagementScreen(),
+        BillingPage(
+          key: ValueKey(_billingPageKey),
+          initialFilter: _billingInitialFilter,
+        ),
+        const SubscriptionPlansScreen(),
+        const SuperAdminPlaceholderScreen(
+          title: 'Notifications',
+          icon: Icons.notifications_outlined,
+          message: 'Notification management is coming in a later phase.',
+        ),
+        const AuditLogsScreen(),
+        const SuperAdminPlaceholderScreen(
+          title: 'Settings',
+          icon: Icons.settings_outlined,
+          message: 'Platform settings are coming in a later phase.',
+        ),
       ],
     );
 
@@ -83,18 +143,51 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     }
 
     return Scaffold(
-      body: content,
+      body: IndexedStack(
+        index: _mobileNavIndex,
+        children: [
+          SuperAdminOverviewScreen(
+            onOpenBilling: () =>
+                _goToBilling(filter: ManualPaymentStatus.pendingVerification),
+            onOpenSchools: _goToSchools,
+          ),
+          const SchoolManagementScreen(),
+          BillingPage(
+            key: ValueKey('mobile-$_billingPageKey'),
+            initialFilter: _billingInitialFilter,
+          ),
+          const SuperAdminMoreScreen(),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) =>
-            setState(() => _selectedIndex = index),
-        destinations: [
-          for (final section in _kSections)
-            NavigationDestination(
-              icon: Icon(section.icon),
-              selectedIcon: Icon(section.selectedIcon),
-              label: section.label,
-            ),
+        selectedIndex: _mobileNavIndex,
+        onDestinationSelected: (index) {
+          setState(() {
+            _mobileNavIndex = index;
+            if (index <= 2) _selectedIndex = index;
+          });
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.dashboard_outlined),
+            selectedIcon: Icon(Icons.dashboard),
+            label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.school_outlined),
+            selectedIcon: Icon(Icons.school),
+            label: 'Schools',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.receipt_long_outlined),
+            selectedIcon: Icon(Icons.receipt_long),
+            label: 'Payments',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.more_horiz_rounded),
+            selectedIcon: Icon(Icons.more_horiz_rounded),
+            label: 'More',
+          ),
         ],
       ),
     );
@@ -102,6 +195,12 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
 
   Widget _buildSidebar() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final user = FirebaseAuth.instance.currentUser;
+    final ownerLabel = (user?.displayName?.trim().isNotEmpty ?? false)
+        ? user!.displayName!.trim()
+        : (user?.email?.trim().isNotEmpty ?? false)
+        ? user!.email!.trim()
+        : 'SaaS Owner';
 
     return Container(
       width: 280,
@@ -145,6 +244,53 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
             ),
           ),
           const Divider(),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.l,
+              vertical: AppSpacing.s,
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: AppColors.primary(context),
+                  child: Text(
+                    _initialsOf(ownerLabel),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.m),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          ownerLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.labelLarge.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary(context),
+                          ),
+                        ),
+                      ),
+                      Text(
+                        'SaaS Owner',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.textSecondary(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
           _SidebarItem(
             icon: Icons.logout_rounded,
             label: 'Sign Out',
@@ -156,6 +302,20 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
         ],
       ),
     );
+  }
+
+  String _initialsOf(String label) {
+    final parts = label
+        .split(RegExp(r'[\s@.]+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) return 'SO';
+    if (parts.length == 1) {
+      return parts.first
+          .substring(0, parts.first.length.clamp(0, 2))
+          .toUpperCase();
+    }
+    return (parts[0][0] + parts[1][0]).toUpperCase();
   }
 }
 
@@ -210,210 +370,6 @@ class _SidebarItem extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class SuperAdminOverview extends StatelessWidget {
-  const SuperAdminOverview({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return BlocBuilder<SuperAdminBloc, SuperAdminState>(
-      builder: (context, state) {
-        if (state.status == SuperAdminStatus.loading) {
-          return const Center(child: SchoolPulseLoader());
-        }
-
-        final stats = state.stats;
-        final recentApplications = List<SchoolApplication>.from(
-          state.applications,
-        )..sort((a, b) {
-            final aDate = a.updatedAt ?? a.createdAt ?? DateTime(1970);
-            final bDate = b.updatedAt ?? b.createdAt ?? DateTime(1970);
-            return bDate.compareTo(aDate);
-          });
-
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Platform Overview'),
-            actions: [
-              IconButton(
-                onPressed: () => context.read<SuperAdminBloc>().add(
-                      LoadSuperAdminDashboard(),
-                    ),
-                tooltip: 'Refresh',
-                icon: const Icon(Icons.refresh_rounded),
-              ),
-              if (!isSuperAdminWide(context)) const SuperAdminLogoutButton(),
-            ],
-          ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Welcome back, Owner',
-                  style: theme.textTheme.headlineMedium,
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Live platform data from School Pulse and public school registrations.',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                GridView.count(
-                  crossAxisCount: isSuperAdminWide(context) ? 4 : 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  children: [
-                    _StatCard(
-                      label: 'Total Schools',
-                      value: '${stats['totalSchools'] ?? 0}',
-                      icon: Icons.school,
-                      color: Colors.blue,
-                    ),
-                    _StatCard(
-                      label: 'Active Schools',
-                      value: '${stats['activeSchools'] ?? 0}',
-                      icon: Icons.verified_outlined,
-                      color: Colors.green,
-                    ),
-                    _StatCard(
-                      label: 'Pending Reviews',
-                      value: '${stats['pendingApplications'] ?? 0}',
-                      icon: Icons.rate_review_outlined,
-                      color: Colors.orange,
-                    ),
-                    _StatCard(
-                      label: 'Total Students',
-                      value: '${stats['totalStudents'] ?? 0}',
-                      icon: Icons.people_outline,
-                      color: Colors.purple,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 32),
-                Text('Recent Applications', style: theme.textTheme.titleLarge),
-                const SizedBox(height: 16),
-                Card(
-                  child: recentApplications.isEmpty
-                      ? Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.inbox_outlined,
-                                color: theme.colorScheme.outline,
-                              ),
-                              const SizedBox(width: 12),
-                              const Expanded(
-                                child: Text(
-                                  'No public school applications have been submitted yet.',
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: recentApplications.length > 5
-                              ? 5
-                              : recentApplications.length,
-                          separatorBuilder: (_, _) => const Divider(height: 1),
-                          itemBuilder: (context, index) {
-                            final application = recentApplications[index];
-                            final date = application.updatedAt ?? application.createdAt;
-                            return ListTile(
-                              leading: CircleAvatar(
-                                child: Icon(
-                                  application.status ==
-                                          SchoolApplicationStatus.pendingReview
-                                      ? Icons.pending_actions_outlined
-                                      : application.status ==
-                                              SchoolApplicationStatus.approved
-                                          ? Icons.check_rounded
-                                          : application.status ==
-                                                  SchoolApplicationStatus.rejected
-                                              ? Icons.close_rounded
-                                              : Icons.edit_note_outlined,
-                                ),
-                              ),
-                              title: Text(
-                                application.schoolName.isEmpty
-                                    ? 'School registration'
-                                    : application.schoolName,
-                              ),
-                              subtitle: Text(
-                                '${application.status.label}${date == null ? '' : ' • ${DateFormat('dd MMM, h:mm a').format(date.toLocal())}'}',
-                              ),
-                            );
-                          },
-                        ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  const _StatCard({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return PulseCard(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            value,
-            style: AppTypography.headlineSmall.copyWith(
-              fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary(context),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: AppTypography.bodySmall.copyWith(
-              color: AppColors.textSecondary(context),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
       ),
     );
   }
