@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
+
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
+import 'package:school_pulse/features/super_admin/data/services/manual_payment_service.dart';
+import 'package:school_pulse/features/super_admin/domain/entities/subscription_plan.dart';
 import '../bloc/super_admin_bloc.dart';
+import '../bloc/super_admin_event.dart';
 import '../bloc/super_admin_state.dart';
 import '../responsive.dart';
 import '../widgets/super_admin_logout_button.dart';
@@ -12,18 +17,17 @@ class SubscriptionPlansScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final money = NumberFormat.currency(symbol: 'UGX ', decimalDigits: 0);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Subscription Plans'),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 24),
-            child: ElevatedButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.add),
-              label: const Text('New Plan'),
-            ),
+          IconButton(
+            tooltip: 'Refresh plans',
+            onPressed: () =>
+                context.read<SuperAdminBloc>().add(LoadSuperAdminDashboard()),
+            icon: const Icon(Icons.refresh_rounded),
           ),
           if (!isSuperAdminWide(context)) const SuperAdminLogoutButton(),
         ],
@@ -35,30 +39,43 @@ class SubscriptionPlansScreen extends StatelessWidget {
           }
 
           final isWide = isSuperAdminWide(context);
+          if (state.plans.isEmpty) {
+            return const Center(
+              child: Text(
+                'No plans found. Deploy the manual billing backend once to seed the School Pulse plans.',
+                textAlign: TextAlign.center,
+              ),
+            );
+          }
+
           return GridView.builder(
             padding: const EdgeInsets.all(24),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: isWide ? 3 : 1,
               crossAxisSpacing: 24,
               mainAxisSpacing: 24,
-              childAspectRatio: isWide ? 0.8 : 1.3,
+              childAspectRatio: isWide ? 0.78 : 1.15,
             ),
             itemCount: state.plans.length,
             itemBuilder: (context, index) {
               final plan = state.plans[index];
+              final customPrice = plan.customPricing && plan.price <= 0;
               return Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(22),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            plan.name,
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
+                          Expanded(
+                            child: Text(
+                              plan.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                           if (plan.isDefault)
@@ -72,26 +89,38 @@ class SubscriptionPlansScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'UGX ${plan.price}',
+                        customPrice ? 'Custom price' : money.format(plan.price),
                         style: theme.textTheme.headlineSmall?.copyWith(
                           color: theme.colorScheme.primary,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
-                      Text('per ${plan.billingCycle.name}'),
-                      const SizedBox(height: 24),
+                      Text(
+                        '${_cycleLabel(plan.billingCycle)} • ${plan.termLengthDays} days',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
                       const Divider(),
-                      const SizedBox(height: 16),
-                      _PlanFeature(label: '${plan.maxStudents} Students'),
-                      _PlanFeature(label: '${plan.maxStaff} Staff'),
-                      _PlanFeature(label: '${plan.storageLimitGb} GB Storage'),
+                      const SizedBox(height: 12),
+                      if (plan.maxStudents > 0)
+                        _PlanFeature(label: '${plan.maxStudents} Students'),
+                      if (plan.maxStaff > 0)
+                        _PlanFeature(label: '${plan.maxStaff} Staff'),
+                      if (plan.storageLimitGb > 0)
+                        _PlanFeature(label: '${plan.storageLimitGb:g} GB Storage'),
                       ...plan.includedFeatures.map(
-                        (f) => _PlanFeature(label: f),
+                        (feature) => _PlanFeature(label: feature),
                       ),
                       const Spacer(),
-                      OutlinedButton(
-                        onPressed: () {},
-                        child: const Text('Edit Plan'),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () => _editPlan(context, plan),
+                          icon: const Icon(Icons.edit_outlined, size: 18),
+                          label: const Text('Edit Price & Billing'),
+                        ),
                       ),
                     ],
                   ),
@@ -103,11 +132,180 @@ class SubscriptionPlansScreen extends StatelessWidget {
       ),
     );
   }
+
+  static String _cycleLabel(BillingCycle cycle) => switch (cycle) {
+        BillingCycle.monthly => 'Monthly',
+        BillingCycle.termly => 'Per term',
+        BillingCycle.yearly => 'Yearly',
+      };
+
+  Future<void> _editPlan(BuildContext context, SubscriptionPlan plan) async {
+    final updated = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _EditPlanPricingDialog(plan: plan),
+    );
+    if (updated == true && context.mounted) {
+      context.read<SuperAdminBloc>().add(LoadSuperAdminDashboard());
+    }
+  }
+}
+
+class _EditPlanPricingDialog extends StatefulWidget {
+  const _EditPlanPricingDialog({required this.plan});
+  final SubscriptionPlan plan;
+
+  @override
+  State<_EditPlanPricingDialog> createState() => _EditPlanPricingDialogState();
+}
+
+class _EditPlanPricingDialogState extends State<_EditPlanPricingDialog> {
+  final ManualPaymentService _service = ManualPaymentService();
+  late final TextEditingController _priceController;
+  late final TextEditingController _daysController;
+  late BillingCycle _cycle;
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _priceController = TextEditingController(
+      text: widget.plan.price.round().toString(),
+    );
+    _daysController = TextEditingController(
+      text: widget.plan.termLengthDays.toString(),
+    );
+    _cycle = widget.plan.billingCycle;
+  }
+
+  @override
+  void dispose() {
+    _priceController.dispose();
+    _daysController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Edit ${widget.plan.name}'),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'These values are stored in Firestore. Future payment screens read them automatically, so changing a price does not require a code deployment.',
+            ),
+            const SizedBox(height: 18),
+            TextField(
+              controller: _priceController,
+              enabled: !_saving,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Price (UGX)',
+                helperText: widget.plan.id.toLowerCase() == 'enterprise'
+                    ? 'Use 0 to keep Enterprise as custom pricing.'
+                    : 'Full payment is required; partial payments are disabled.',
+              ),
+            ),
+            const SizedBox(height: 14),
+            DropdownButtonFormField<BillingCycle>(
+              initialValue: _cycle,
+              decoration: const InputDecoration(labelText: 'Billing cycle'),
+              items: BillingCycle.values
+                  .map(
+                    (cycle) => DropdownMenuItem(
+                      value: cycle,
+                      child: Text(SubscriptionPlansScreen._cycleLabel(cycle)),
+                    ),
+                  )
+                  .toList(),
+              onChanged: _saving
+                  ? null
+                  : (value) {
+                      if (value != null) setState(() => _cycle = value);
+                    },
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _daysController,
+              enabled: !_saving,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Paid period length (days)',
+                helperText: 'Currently 120 days by default for a school term.',
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _saving ? null : _save,
+          child: _saving
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Save Pricing'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _save() async {
+    final price = int.tryParse(_priceController.text.replaceAll(',', '').trim());
+    final days = int.tryParse(_daysController.text.trim());
+    final enterprise = widget.plan.id.toLowerCase() == 'enterprise';
+    if (price == null || price < 0 || (!enterprise && price == 0)) {
+      setState(() => _error = 'Enter a valid plan price in Uganda shillings.');
+      return;
+    }
+    if (days == null || days < 1 || days > 730) {
+      setState(() => _error = 'Paid period length must be between 1 and 730 days.');
+      return;
+    }
+
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await _service.updatePlanPricing(
+        plan: widget.plan,
+        priceUgx: price,
+        billingCycle: _cycle,
+        termLengthDays: days,
+      );
+      if (mounted) Navigator.pop(context, true);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _error = error.toString();
+      });
+    }
+  }
 }
 
 class _PlanFeature extends StatelessWidget {
-  final String label;
   const _PlanFeature({required this.label});
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -117,7 +315,7 @@ class _PlanFeature extends StatelessWidget {
         children: [
           const Icon(Icons.check_circle, size: 16, color: Colors.green),
           const SizedBox(width: 8),
-          Text(label),
+          Expanded(child: Text(label)),
         ],
       ),
     );
