@@ -958,8 +958,8 @@ exports.loginParent = onCall(async (request) => {
       ...studentIds.map((id) => admin.firestore().collection("students").doc(id))
     );
     for (const sDoc of studentDocs) {
-      const className = sDoc.exists ? sDoc.data().className : null;
-      if (className) groups.add(`Class:${className}`);
+      const classId = sDoc.exists ? (sDoc.data().classId || sDoc.data().className) : null;
+      if (classId) groups.add(`Class:${classId}`);
     }
   }
 

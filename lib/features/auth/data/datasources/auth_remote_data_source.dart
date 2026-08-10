@@ -8,7 +8,6 @@ import 'package:flutter/foundation.dart';
 import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/features/auth/data/models/user_model.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
-import 'package:school_pulse/features/student/data/models/parent_access_code_model.dart';
 
 abstract class AuthRemoteDataSource {
   Future<UserModel> loginWithEmail(String email, String password);
@@ -135,81 +134,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       final credential = await firebaseAuth.signInWithCustomToken(token);
       return await _getUser(credential.user!.uid);
     } on FirebaseFunctionsException catch (e) {
-      if (_isUndeployedFunctionError(e)) {
-        return _loginParentFallback(
-          code: code,
-          phoneNumber: phoneNumber,
-          pin: pin,
-        );
-      }
       throw AuthFailure(e.message ?? 'Login failed.');
-    } catch (e) {
-      final errStr = e.toString().toLowerCase();
-      if (errStr.contains('cors') || errStr.contains('failed to load')) {
-        return _loginParentFallback(
-          code: code,
-          phoneNumber: phoneNumber,
-          pin: pin,
-        );
-      }
-      rethrow;
     }
-  }
-
-  bool _isUndeployedFunctionError(FirebaseFunctionsException e) {
-    return [
-      'not-found',
-      'unimplemented',
-      'internal',
-      'unavailable',
-    ].contains(e.code);
-  }
-
-  /// Pre-Cloud-Function behavior, kept only so parent login still works
-  /// (without real push notifications) if loginParent hasn't been deployed
-  /// yet. Once deployed, this path is never reached.
-  Future<UserModel> _loginParentFallback({
-    required String code,
-    required String phoneNumber,
-    required String pin,
-  }) async {
-    final doc = await firestore
-        .collection('parent_access_codes')
-        .doc(code.trim().toUpperCase())
-        .get();
-
-    if (!doc.exists) {
-      throw const AuthFailure('Invalid access code.');
-    }
-
-    final accessCode = ParentAccessCodeModel.fromFirestore(doc.data()!, doc.id);
-
-    if (!accessCode.isActive) {
-      final reason = accessCode.deactivationReason != null
-          ? '\nReason: ${accessCode.deactivationReason}'
-          : '';
-      throw AuthFailure(
-        'This access code has been deactivated.$reason\nPlease contact the school office for more info.',
-      );
-    }
-    if (accessCode.phoneNumber != phoneNumber) {
-      throw const AuthFailure('Phone number does not match this access code.');
-    }
-    if (accessCode.pin != pin) {
-      throw const AuthFailure('Incorrect PIN.');
-    }
-
-    return UserModel(
-      id: 'parent_${accessCode.parentCode}',
-      name: accessCode.parentName ?? 'Parent',
-      email: '',
-      schoolId: accessCode.schoolId,
-      phoneNumber: accessCode.phoneNumber,
-      roles: const [UserRole.parent],
-      studentIds: accessCode.studentIds,
-      isActive: true,
-      mustChangePassword: accessCode.mustChangePin,
-    );
   }
 
   @override
@@ -226,32 +152,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'newPin': newPin,
       });
     } on FirebaseFunctionsException catch (e) {
-      if (_isUndeployedFunctionError(e)) {
-        final doc = await firestore
-            .collection('parent_access_codes')
-            .doc(code.trim().toUpperCase())
-            .get();
-
-        if (doc.exists) {
-          await doc.reference.update({'pin': newPin, 'mustChangePin': false});
-        }
-        return;
-      }
       throw AuthFailure(e.message ?? 'Could not set PIN.');
-    } catch (e) {
-      final errStr = e.toString().toLowerCase();
-      if (errStr.contains('cors') || errStr.contains('failed to load')) {
-        final doc = await firestore
-            .collection('parent_access_codes')
-            .doc(code.trim().toUpperCase())
-            .get();
-
-        if (doc.exists) {
-          await doc.reference.update({'pin': newPin, 'mustChangePin': false});
-        }
-        return;
-      }
-      rethrow;
     }
   }
 
