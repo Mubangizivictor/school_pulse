@@ -4,7 +4,10 @@ const admin = require('firebase-admin');
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
 
-const APP_URL = 'https://app.schoolpulse.victorbee.com';
+// Use the Firebase Hosting URL as the reliable app fallback. Once the
+// app.schoolpulse.victorbee.com custom domain is verified on this same
+// Hosting site, we can switch this constant without changing tenant data.
+const APP_URL = 'https://school-pulse-3d95b.web.app';
 const CORE_MODULES = ['Students', 'Attendance', 'Academics', 'Administration'];
 const MODULE_MAP = {
   Students: 'students',
@@ -172,6 +175,17 @@ exports.approveSchoolApplication = onCall(
       .join(', ');
 
     const schoolRef = db.collection('schools').doc(schoolId);
+    const existingSchool = await schoolRef.get();
+    if (existingSchool.exists) {
+      const sourceApplicationId = text(existingSchool.data()?.metadata?.applicationId, 160);
+      if (sourceApplicationId !== applicationId) {
+        throw new HttpsError(
+          'already-exists',
+          'The generated school identity is already used by a different tenant. Review the school prefix before approving.',
+        );
+      }
+    }
+
     const userRef = db.collection('users').doc(applicantUid);
     const contactRef = db.collection('school_contacts').doc(applicantUid);
     const membershipRef = db.collection('institution_memberships').doc(`${applicantUid}_${schoolId}`);
