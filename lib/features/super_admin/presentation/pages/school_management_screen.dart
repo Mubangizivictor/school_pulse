@@ -3,6 +3,9 @@ import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../../../design_system/app_components.dart';
+import '../../../../design_system/theme/app_colors.dart';
+import '../../../../design_system/theme/app_spacing.dart';
+import '../../../../design_system/theme/app_typography.dart';
 import '../../domain/entities/school.dart';
 import '../../domain/entities/school_application.dart';
 import '../bloc/super_admin_bloc.dart';
@@ -34,27 +37,28 @@ class _SchoolManagementScreenState extends State<SchoolManagementScreen> {
           title: const Text('Schools'),
           actions: [
             IconButton(
-              onPressed: () => context.read<SuperAdminBloc>().add(
-                    LoadSuperAdminDashboard(),
-                  ),
+              onPressed: () =>
+                  context.read<SuperAdminBloc>().add(LoadSuperAdminDashboard()),
               tooltip: 'Refresh',
               icon: const Icon(Icons.refresh_rounded),
             ),
             Padding(
-              padding: EdgeInsets.only(right: isWide ? 24 : 8),
+              padding: EdgeInsets.only(
+                right: isWide ? AppSpacing.x3l : AppSpacing.m,
+              ),
               child: isWide
-                  ? ElevatedButton.icon(
+                  ? FilledButton.icon(
                       onPressed: () => _showCreateSchoolDialog(context),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add School Manually'),
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(190, 46),
+                      icon: const Icon(Icons.add_rounded),
+                      label: const Text('Add School'),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(160, 44),
                       ),
                     )
                   : IconButton.filled(
                       onPressed: () => _showCreateSchoolDialog(context),
-                      icon: const Icon(Icons.add),
-                      tooltip: 'Add School Manually',
+                      icon: const Icon(Icons.add_rounded),
+                      tooltip: 'Add School',
                     ),
             ),
             if (!isWide) const SuperAdminLogoutButton(),
@@ -70,10 +74,28 @@ class _SchoolManagementScreenState extends State<SchoolManagementScreen> {
         body: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
-              child: AppSearchField(
-                hintText: 'Search schools, applicants, email or school ID…',
-                onChanged: (value) => setState(() => _searchQuery = value),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.x2l,
+                AppSpacing.xl,
+                AppSpacing.x2l,
+                AppSpacing.l,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Manage every institution using School Pulse.',
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.textSecondary(context),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.l),
+                  AppSearchField(
+                    hintText:
+                        'Search by name, prefix, email, district or tenant ID…',
+                    onChanged: (value) => setState(() => _searchQuery = value),
+                  ),
+                ],
               ),
             ),
             Expanded(
@@ -88,8 +110,8 @@ class _SchoolManagementScreenState extends State<SchoolManagementScreen> {
                     return _ErrorState(
                       message: state.errorMessage ?? 'Unable to load schools.',
                       onRetry: () => context.read<SuperAdminBloc>().add(
-                            LoadSuperAdminDashboard(),
-                          ),
+                        LoadSuperAdminDashboard(),
+                      ),
                     );
                   }
 
@@ -98,16 +120,24 @@ class _SchoolManagementScreenState extends State<SchoolManagementScreen> {
                     if (query.isEmpty) return true;
                     return school.name.toLowerCase().contains(query) ||
                         school.tenantId.toLowerCase().contains(query) ||
-                        school.contactEmail.toLowerCase().contains(query);
+                        school.contactEmail.toLowerCase().contains(query) ||
+                        school.address.toLowerCase().contains(query);
                   }
 
                   bool applicationMatches(SchoolApplication application) {
                     if (query.isEmpty) return true;
-                    return application.schoolName.toLowerCase().contains(query) ||
+                    return application.schoolName.toLowerCase().contains(
+                          query,
+                        ) ||
                         application.prefix.toLowerCase().contains(query) ||
-                        application.administratorName.toLowerCase().contains(query) ||
-                        application.administratorEmail.toLowerCase().contains(query) ||
-                        application.schoolEmail.toLowerCase().contains(query);
+                        application.administratorName.toLowerCase().contains(
+                          query,
+                        ) ||
+                        application.administratorEmail.toLowerCase().contains(
+                          query,
+                        ) ||
+                        application.schoolEmail.toLowerCase().contains(query) ||
+                        application.district.toLowerCase().contains(query);
                   }
 
                   final activeSchools = state.schools
@@ -126,19 +156,18 @@ class _SchoolManagementScreenState extends State<SchoolManagementScreen> {
                                 school.status == SchoolStatus.archived),
                       )
                       .toList();
-                  final applications = state.applications
-                      .where(applicationMatches)
-                      .toList()
-                    ..sort((a, b) {
-                      final aPending = a.status ==
-                          SchoolApplicationStatus.pendingReview;
-                      final bPending = b.status ==
-                          SchoolApplicationStatus.pendingReview;
-                      if (aPending != bPending) return aPending ? -1 : 1;
-                      final aDate = a.createdAt ?? DateTime(1970);
-                      final bDate = b.createdAt ?? DateTime(1970);
-                      return bDate.compareTo(aDate);
-                    });
+                  final applications =
+                      state.applications.where(applicationMatches).toList()
+                        ..sort((a, b) {
+                          final aPending =
+                              a.status == SchoolApplicationStatus.pendingReview;
+                          final bPending =
+                              b.status == SchoolApplicationStatus.pendingReview;
+                          if (aPending != bPending) return aPending ? -1 : 1;
+                          final aDate = a.createdAt ?? DateTime(1970);
+                          final bDate = b.createdAt ?? DateTime(1970);
+                          return bDate.compareTo(aDate);
+                        });
 
                   return TabBarView(
                     children: [
@@ -188,22 +217,84 @@ class _SchoolList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (schools.isEmpty) {
-      return _EmptyState(
+      return EmptyState(
         icon: Icons.school_outlined,
         title: emptyTitle,
-        copy: emptyCopy,
+        message: emptyCopy,
       );
     }
+    final wide = isSuperAdminWide(context);
     return RefreshIndicator(
       onRefresh: () async {
         context.read<SuperAdminBloc>().add(LoadSuperAdminDashboard());
         await Future<void>.delayed(const Duration(milliseconds: 500));
       },
-      child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-        itemCount: schools.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemBuilder: (context, index) => _SchoolListTile(school: schools[index]),
+      child: wide ? _schoolTable(context) : _schoolCards(context),
+    );
+  }
+
+  Widget _schoolCards(BuildContext context) {
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.x2l,
+        AppSpacing.s,
+        AppSpacing.x2l,
+        AppSpacing.x3l,
+      ),
+      itemCount: schools.length,
+      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.l),
+      itemBuilder: (context, index) => _SchoolCard(school: schools[index]),
+    );
+  }
+
+  Widget _schoolTable(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.x2l,
+        AppSpacing.s,
+        AppSpacing.x2l,
+        AppSpacing.x3l,
+      ),
+      children: [
+        AppCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xl,
+                  vertical: AppSpacing.m,
+                ),
+                child: Row(
+                  children: [
+                    _headCell(context, 'School', flex: 3),
+                    _headCell(context, 'Tenant ID', flex: 2),
+                    _headCell(context, 'Plan', flex: 2),
+                    _headCell(context, 'Status', flex: 2),
+                    _headCell(context, 'Expiry', flex: 2),
+                    _headCell(context, 'Contact', flex: 3),
+                    const SizedBox(width: 32),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              for (final school in schools) _SchoolTableRow(school: school),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _headCell(BuildContext context, String label, {required int flex}) {
+    return Expanded(
+      flex: flex,
+      child: Text(
+        label,
+        style: AppTypography.labelSmall.copyWith(
+          fontWeight: FontWeight.w700,
+          color: AppColors.textSecondary(context),
+        ),
       ),
     );
   }
@@ -217,10 +308,10 @@ class _ApplicationList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (applications.isEmpty) {
-      return const _EmptyState(
+      return const EmptyState(
         icon: Icons.inbox_outlined,
         title: 'No school applications',
-        copy:
+        message:
             'Applications submitted from schoolpulse.victorbee.com will appear here automatically.',
       );
     }
@@ -230,9 +321,14 @@ class _ApplicationList extends StatelessWidget {
         await Future<void>.delayed(const Duration(milliseconds: 500));
       },
       child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.x2l,
+          AppSpacing.s,
+          AppSpacing.x2l,
+          AppSpacing.x3l,
+        ),
         itemCount: applications.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 12),
+        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.l),
         itemBuilder: (context, index) =>
             _ApplicationTile(application: applications[index]),
       ),
@@ -249,123 +345,116 @@ class _ApplicationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final pending = application.status == SchoolApplicationStatus.pendingReview;
-    final statusColor = _applicationStatusColor(application.status, theme);
+    final statusColor = _applicationStatusColor(context, application.status);
     final initial = application.schoolName.trim().isEmpty
         ? 'S'
         : application.schoolName.trim()[0].toUpperCase();
 
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => BlocProvider.value(
-              value: context.read<SuperAdminBloc>(),
-              child: SchoolApplicationReviewScreen(application: application),
-            ),
+    return AppCard(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => BlocProvider.value(
+            value: context.read<SuperAdminBloc>(),
+            child: SchoolApplicationReviewScreen(application: application),
           ),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CircleAvatar(
-                radius: 25,
-                backgroundColor: theme.colorScheme.primaryContainer,
-                child: Text(
-                  initial,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: theme.colorScheme.onPrimaryContainer,
-                  ),
-                ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 25,
+            backgroundColor: theme.colorScheme.primaryContainer,
+            child: Text(
+              initial,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: theme.colorScheme.onPrimaryContainer,
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.l),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            application.schoolName.isEmpty
-                                ? 'Unnamed school'
-                                : application.schoolName,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
+                    Expanded(
+                      child: Text(
+                        application.schoolName.isEmpty
+                            ? 'Unnamed school'
+                            : application.schoolName,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 9,
-                            vertical: 5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: statusColor.withValues(alpha: .12),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            application.status.label,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: statusColor,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 7),
-                    Text(
-                      '${application.plan.isEmpty ? 'Plan pending' : '${application.plan} plan'} • ${application.district.isEmpty ? application.region : application.district}',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
-                    const SizedBox(height: 5),
-                    Text(
-                      '${application.administratorName.isEmpty ? 'Administrator' : application.administratorName} • ${application.administratorEmail}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: [
-                        _MiniLabel(
-                          icon: application.administratorEmailVerified
-                              ? Icons.verified_outlined
-                              : Icons.mark_email_unread_outlined,
-                          label: application.administratorEmailVerified
-                              ? 'Email verified'
-                              : 'Email not verified',
-                        ),
-                        if (application.createdAt != null)
-                          _MiniLabel(
-                            icon: Icons.schedule_outlined,
-                            label: DateFormat('dd MMM, h:mm a')
-                                .format(application.createdAt!.toLocal()),
-                          ),
-                        if (pending)
-                          const _MiniLabel(
-                            icon: Icons.rate_review_outlined,
-                            label: 'Needs your review',
-                          ),
-                      ],
+                    StatusBadge(
+                      label: application.status.label,
+                      color: statusColor,
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right_rounded),
-            ],
+                const SizedBox(height: 7),
+                Text(
+                  '${application.prefix.isEmpty ? 'No prefix' : application.prefix} • '
+                  '${application.category.isEmpty ? 'School type pending' : application.category} • '
+                  '${application.district.isEmpty ? application.region : application.district}',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  '${application.plan.isEmpty ? 'Plan pending' : '${application.plan} plan'} • '
+                  '${application.administratorName.isEmpty ? 'Administrator' : application.administratorName} • '
+                  '${application.administratorEmail}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: [
+                    _MiniLabel(
+                      icon: application.administratorEmailVerified
+                          ? Icons.verified_outlined
+                          : Icons.mark_email_unread_outlined,
+                      label: application.administratorEmailVerified
+                          ? 'Email verified'
+                          : 'Email not verified',
+                    ),
+                    _MiniLabel(
+                      icon: application.termsAccepted
+                          ? Icons.task_alt_outlined
+                          : Icons.remove_circle_outline,
+                      label: application.termsAccepted
+                          ? 'Terms accepted'
+                          : 'Terms not accepted',
+                    ),
+                    if (application.createdAt != null)
+                      _MiniLabel(
+                        icon: Icons.schedule_outlined,
+                        label:
+                            'Submitted ${DateFormat('dd MMM, h:mm a').format(application.createdAt!.toLocal())}',
+                      ),
+                    if (pending)
+                      const _MiniLabel(
+                        icon: Icons.rate_review_outlined,
+                        label: 'Needs your review',
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
+          const SizedBox(width: AppSpacing.m),
+          const Icon(Icons.chevron_right_rounded),
+        ],
       ),
     );
   }
@@ -396,121 +485,169 @@ class _MiniLabel extends StatelessWidget {
   }
 }
 
-class _SchoolListTile extends StatelessWidget {
+class _SchoolCard extends StatelessWidget {
   final School school;
 
-  const _SchoolListTile({required this.school});
+  const _SchoolCard({required this.school});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final statusColor = _getStatusColor(school.status);
+    final statusColor = _schoolStatusColor(context, school.status);
     final initial = school.name.trim().isEmpty
         ? 'S'
         : school.name.trim()[0].toUpperCase();
 
-    return Card(
-      child: ListTile(
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => SchoolDetailScreen(school: school),
-          ),
+    return AppCard(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SchoolDetailScreen(school: school),
         ),
-        contentPadding: const EdgeInsets.all(16),
-        leading: Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Center(
-            child: Text(
-              initial,
-              style: theme.textTheme.headlineSmall?.copyWith(
-                color: theme.colorScheme.onPrimaryContainer,
-                fontWeight: FontWeight.bold,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Center(
+              child: Text(
+                initial,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: theme.colorScheme.onPrimaryContainer,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
-        ),
-        title: Wrap(
-          spacing: 10,
-          runSpacing: 6,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Text(school.name, style: theme.textTheme.titleMedium),
-            StatusBadge(label: school.status.name, color: statusColor),
-          ],
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Wrap(
-            spacing: 18,
-            runSpacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Text('ID: ${school.tenantId}'),
-              Text(
-                'Expiry: ${DateFormat('MMM dd, yyyy').format(school.subscriptionExpiry)}',
-              ),
-              Text('${school.metadata['studentCount'] ?? 0} Students'),
-            ],
+          const SizedBox(width: AppSpacing.l),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        school.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    StatusBadge(label: school.status.name, color: statusColor),
+                  ],
+                ),
+                const SizedBox(height: 7),
+                Text(
+                  'ID: ${school.tenantId}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Wrap(
+                  spacing: 14,
+                  runSpacing: 4,
+                  children: [
+                    Text(
+                      'Expiry: ${DateFormat('MMM dd, yyyy').format(school.subscriptionExpiry)}',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    Text(school.contactEmail, style: theme.textTheme.bodySmall),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-        trailing: const Icon(Icons.chevron_right),
+          const SizedBox(width: AppSpacing.m),
+          const Icon(Icons.chevron_right_rounded),
+        ],
       ),
     );
   }
-
-  Color _getStatusColor(SchoolStatus status) {
-    switch (status) {
-      case SchoolStatus.active:
-        return Colors.green;
-      case SchoolStatus.suspended:
-        return Colors.red;
-      case SchoolStatus.trial:
-        return Colors.orange;
-      case SchoolStatus.archived:
-        return Colors.grey;
-    }
-  }
 }
 
-class _EmptyState extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String copy;
+class _SchoolTableRow extends StatelessWidget {
+  final School school;
 
-  const _EmptyState({
-    required this.icon,
-    required this.title,
-    required this.copy,
-  });
+  const _SchoolTableRow({required this.school});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Center(
+    final statusColor = _schoolStatusColor(context, school.status);
+    return InkWell(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SchoolDetailScreen(school: school),
+        ),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xl,
+          vertical: AppSpacing.m,
+        ),
+        child: Row(
           children: [
-            Icon(icon, size: 58, color: theme.colorScheme.outline),
-            const SizedBox(height: 14),
-            Text(title, style: theme.textTheme.titleMedium),
-            const SizedBox(height: 6),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 430),
+            Expanded(
+              flex: 3,
               child: Text(
-                copy,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
+                school.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Text(
+                school.tenantId,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Text(
+                school.subscriptionPlanId.isEmpty
+                    ? '—'
+                    : school.subscriptionPlanId,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: StatusBadge(label: school.status.name, color: statusColor),
+            ),
+            Expanded(
+              flex: 2,
+              child: Text(
+                DateFormat('MMM dd, yyyy').format(school.subscriptionExpiry),
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
+            Expanded(
+              flex: 3,
+              child: Text(
+                school.contactEmail,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
+            const SizedBox(
+              width: 32,
+              child: Icon(Icons.chevron_right_rounded, size: 18),
             ),
           ],
         ),
@@ -554,21 +691,32 @@ class _ErrorState extends StatelessWidget {
 }
 
 Color _applicationStatusColor(
+  BuildContext context,
   SchoolApplicationStatus status,
-  ThemeData theme,
 ) {
   switch (status) {
     case SchoolApplicationStatus.pendingReview:
-      return Colors.orange.shade800;
-    case SchoolApplicationStatus.approved:
-      return Colors.green.shade700;
-    case SchoolApplicationStatus.rejected:
-      return theme.colorScheme.error;
-    case SchoolApplicationStatus.emailVerified:
-      return Colors.blue.shade700;
     case SchoolApplicationStatus.emailVerificationPending:
-      return Colors.amber.shade900;
+    case SchoolApplicationStatus.emailVerified:
+      return AppColors.warning(context);
+    case SchoolApplicationStatus.approved:
+      return AppColors.success(context);
+    case SchoolApplicationStatus.rejected:
+      return AppColors.danger(context);
     case SchoolApplicationStatus.unknown:
-      return theme.colorScheme.outline;
+      return AppColors.textSecondary(context);
+  }
+}
+
+Color _schoolStatusColor(BuildContext context, SchoolStatus status) {
+  switch (status) {
+    case SchoolStatus.active:
+      return AppColors.success(context);
+    case SchoolStatus.suspended:
+      return AppColors.danger(context);
+    case SchoolStatus.trial:
+      return AppColors.warning(context);
+    case SchoolStatus.archived:
+      return AppColors.textSecondary(context);
   }
 }

@@ -9,10 +9,7 @@ import '../bloc/super_admin_state.dart';
 class SchoolApplicationReviewScreen extends StatelessWidget {
   final SchoolApplication application;
 
-  const SchoolApplicationReviewScreen({
-    super.key,
-    required this.application,
-  });
+  const SchoolApplicationReviewScreen({super.key, required this.application});
 
   @override
   Widget build(BuildContext context) {
@@ -44,9 +41,7 @@ class SchoolApplicationReviewScreen extends StatelessWidget {
         final theme = Theme.of(context);
         final busy = state.reviewingApplicationId == application.id;
         return Scaffold(
-          appBar: AppBar(
-            title: const Text('Review School Application'),
-          ),
+          appBar: AppBar(title: const Text('Review School Application')),
           body: SafeArea(
             child: Center(
               child: ConstrainedBox(
@@ -65,7 +60,10 @@ class SchoolApplicationReviewScreen extends StatelessWidget {
                         _InfoRow('School prefix', application.prefix),
                         _InfoRow('Category', application.category),
                         _InfoRow('School email', application.schoolEmail),
-                        _InfoRow('School phone', _phone(application.schoolPhone)),
+                        _InfoRow(
+                          'School phone',
+                          _phone(application.schoolPhone),
+                        ),
                         _InfoRow('Motto', application.motto),
                       ],
                     ),
@@ -87,10 +85,7 @@ class SchoolApplicationReviewScreen extends StatelessWidget {
                       children: [
                         _InfoRow('Selected plan', application.plan),
                         if (application.selectedModules.isEmpty)
-                          const _InfoRow(
-                            'Modules',
-                            'Core School Pulse modules',
-                          )
+                          const _InfoRow('Modules', 'Core School Pulse modules')
                         else
                           Padding(
                             padding: const EdgeInsets.only(top: 8),
@@ -146,19 +141,10 @@ class SchoolApplicationReviewScreen extends StatelessWidget {
                               ? Colors.green
                               : theme.colorScheme.error,
                         ),
-                        _InfoRow(
-                          'Submitted',
-                          _date(application.createdAt),
-                        ),
-                        _InfoRow(
-                          'Last updated',
-                          _date(application.updatedAt),
-                        ),
+                        _InfoRow('Submitted', _date(application.createdAt)),
+                        _InfoRow('Last updated', _date(application.updatedAt)),
                         if (application.reviewedAt != null)
-                          _InfoRow(
-                            'Reviewed',
-                            _date(application.reviewedAt),
-                          ),
+                          _InfoRow('Reviewed', _date(application.reviewedAt)),
                         if ((application.rejectionReason ?? '').isNotEmpty)
                           _InfoRow(
                             'Rejection reason',
@@ -189,9 +175,7 @@ class SchoolApplicationReviewScreen extends StatelessWidget {
                           children: [
                             Expanded(
                               child: OutlinedButton.icon(
-                                onPressed: busy
-                                    ? null
-                                    : () => _reject(context),
+                                onPressed: busy ? null : () => _reject(context),
                                 icon: const Icon(Icons.close_rounded),
                                 label: const Text('Reject'),
                                 style: OutlinedButton.styleFrom(
@@ -217,7 +201,9 @@ class SchoolApplicationReviewScreen extends StatelessWidget {
                                       )
                                     : const Icon(Icons.check_rounded),
                                 label: Text(
-                                  busy ? 'Processing…' : 'Approve School',
+                                  busy
+                                      ? 'Processing…'
+                                      : 'Approve & Request Payment',
                                 ),
                                 style: FilledButton.styleFrom(
                                   minimumSize: const Size.fromHeight(52),
@@ -243,7 +229,8 @@ class SchoolApplicationReviewScreen extends StatelessWidget {
         icon: const Icon(Icons.verified_outlined),
         title: Text('Approve ${application.schoolName}?'),
         content: const Text(
-          'This creates the live school tenant, activates the submitted plan and modules, links the verified applicant as the first School Admin, and records the approval in the platform audit trail.',
+          'Approving this application provisions the school account but does not activate paid School Pulse access. The school must complete subscription payment first.\n\n'
+          'This creates the school tenant, links the verified applicant as the first School Admin, and records the approval in the platform audit trail.',
         ),
         actions: [
           TextButton(
@@ -252,7 +239,7 @@ class SchoolApplicationReviewScreen extends StatelessWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Approve School'),
+            child: const Text('Approve & Request Payment'),
           ),
         ],
       ),
@@ -289,7 +276,8 @@ class SchoolApplicationReviewScreen extends StatelessWidget {
               maxLines: 5,
               decoration: const InputDecoration(
                 labelText: 'Reason',
-                hintText: 'e.g. We could not verify the submitted school details.',
+                hintText:
+                    'e.g. We could not verify the submitted school details.',
               ),
             ),
           ],
