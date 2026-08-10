@@ -1,6 +1,7 @@
 import '../../domain/entities/school.dart';
 import '../../domain/entities/subscription_plan.dart';
 import '../../domain/entities/audit_log.dart';
+import '../../domain/entities/school_application.dart';
 import '../../domain/repositories/super_admin_repository.dart';
 import '../datasources/super_admin_remote_datasource.dart';
 import '../models/school_model.dart';
@@ -40,6 +41,10 @@ class SuperAdminRepositoryImpl implements SuperAdminRepository {
       subscriptionExpiry: school.subscriptionExpiry,
       enabledFeatures: school.enabledFeatures,
       metadata: school.metadata,
+      classification: school.classification,
+      classificationOther: school.classificationOther,
+      divisions: school.divisions,
+      displayLabel: school.displayLabel,
     );
     await remoteDataSource.createSchool(model, adminEmail, adminPassword);
   }
@@ -59,8 +64,27 @@ class SuperAdminRepositoryImpl implements SuperAdminRepository {
       subscriptionExpiry: school.subscriptionExpiry,
       enabledFeatures: school.enabledFeatures,
       metadata: school.metadata,
+      classification: school.classification,
+      classificationOther: school.classificationOther,
+      divisions: school.divisions,
+      displayLabel: school.displayLabel,
     );
     await remoteDataSource.updateSchool(model);
+  }
+
+  @override
+  Future<List<SchoolApplication>> getSchoolApplications() async {
+    return remoteDataSource.getSchoolApplications();
+  }
+
+  @override
+  Future<String> approveSchoolApplication(String applicationId) {
+    return remoteDataSource.approveSchoolApplication(applicationId);
+  }
+
+  @override
+  Future<void> rejectSchoolApplication(String applicationId, String reason) {
+    return remoteDataSource.rejectSchoolApplication(applicationId, reason);
   }
 
   @override
@@ -81,6 +105,10 @@ class SuperAdminRepositoryImpl implements SuperAdminRepository {
         subscriptionExpiry: school.subscriptionExpiry,
         enabledFeatures: school.enabledFeatures,
         metadata: {...school.metadata, 'suspensionReason': reason},
+        classification: school.classification,
+        classificationOther: school.classificationOther,
+        divisions: school.divisions,
+        displayLabel: school.displayLabel,
       ),
     );
   }
@@ -103,6 +131,10 @@ class SuperAdminRepositoryImpl implements SuperAdminRepository {
         subscriptionExpiry: school.subscriptionExpiry,
         enabledFeatures: school.enabledFeatures,
         metadata: school.metadata,
+        classification: school.classification,
+        classificationOther: school.classificationOther,
+        divisions: school.divisions,
+        displayLabel: school.displayLabel,
       ),
     );
   }
@@ -134,6 +166,10 @@ class SuperAdminRepositoryImpl implements SuperAdminRepository {
         subscriptionExpiry: expiry,
         enabledFeatures: school.enabledFeatures,
         metadata: school.metadata,
+        classification: school.classification,
+        classificationOther: school.classificationOther,
+        divisions: school.divisions,
+        displayLabel: school.displayLabel,
       ),
     );
   }
