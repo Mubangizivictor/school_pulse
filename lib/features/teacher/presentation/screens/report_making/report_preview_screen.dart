@@ -155,7 +155,7 @@ class _ReportCardPreviewHeader extends StatelessWidget {
       children: [
         CircleAvatar(
           radius: 30,
-          backgroundColor: AppColors.primary(context).withOpacity(0.1),
+          backgroundColor: AppColors.primary(context).withValues(alpha: 0.1),
           child: Icon(
             Icons.school,
             color: AppColors.primary(context),

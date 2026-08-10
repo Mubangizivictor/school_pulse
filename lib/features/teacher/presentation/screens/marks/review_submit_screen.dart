@@ -77,7 +77,7 @@ class ReviewSubmitScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF334155).withOpacity(0.3),
+                color: const Color(0xFF334155).withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.white10),
               ),

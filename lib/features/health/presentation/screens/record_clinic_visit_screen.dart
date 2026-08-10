@@ -265,7 +265,7 @@ class _RecordClinicVisitScreenState extends State<RecordClinicVisitScreen> {
                 ),
                 value: _followUp,
                 onChanged: (v) => setState(() => _followUp = v),
-                activeColor: AppColors.deepOrange,
+                activeThumbColor: AppColors.deepOrange,
                 contentPadding: EdgeInsets.zero,
               ),
               const SizedBox(height: 40),

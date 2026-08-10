@@ -118,7 +118,7 @@ class LessonNotesScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.primary(context).withOpacity(0.1),
+              color: AppColors.primary(context).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(

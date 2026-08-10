@@ -219,7 +219,7 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF103ECF).withOpacity(0.15),
+                        color: const Color(0xFF103ECF).withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(Icons.people_alt_rounded,
@@ -363,7 +363,7 @@ class _MethodCard extends StatelessWidget {
                         height: 36,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: accentColor.withOpacity(0.15),
+                          color: accentColor.withValues(alpha: 0.15),
                         ),
                         child: Icon(icon, color: accentColor, size: 18),
                       ),
@@ -425,7 +425,7 @@ class _IntegrationCard extends StatelessWidget {
               height: 36,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: statusColor.withOpacity(0.15),
+                color: statusColor.withValues(alpha: 0.15),
               ),
               child: Icon(Icons.description_rounded,
                   color: statusColor, size: 18),

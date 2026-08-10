@@ -168,7 +168,7 @@ class _NotificationFilterScreenState extends State<NotificationFilterScreen> {
                 Switch(
                   value: _hasAttachments,
                   onChanged: (val) => setState(() => _hasAttachments = val),
-                  activeColor: const Color(0xFF6366F1),
+                  activeThumbColor: const Color(0xFF6366F1),
                 ),
               ],
             ),
@@ -278,7 +278,7 @@ class _NotificationFilterScreenState extends State<NotificationFilterScreen> {
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? color.withOpacity(0.2)
+                          ? color.withValues(alpha: 0.2)
                           : Colors.white12,
                       borderRadius: BorderRadius.circular(12),
                       border: isSelected

@@ -823,7 +823,7 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: _getAttachmentColor(attachment.type).withOpacity(0.2),
+                color: _getAttachmentColor(attachment.type).withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(

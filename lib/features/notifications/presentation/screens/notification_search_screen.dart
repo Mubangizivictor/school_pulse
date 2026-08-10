@@ -321,7 +321,7 @@ class _SearchTile extends StatelessWidget {
               decoration: BoxDecoration(
                 color: _getCategoryColor(
                   notification.category,
-                ).withOpacity(0.2),
+                ).withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
               child: Icon(

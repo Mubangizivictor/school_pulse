@@ -373,7 +373,7 @@ class _NotificationTile extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE11D48).withOpacity(0.2),
+                            color: const Color(0xFFE11D48).withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: const Text(

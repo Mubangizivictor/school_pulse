@@ -286,8 +286,8 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? color.withOpacity(0.2)
-                      : Colors.white.withOpacity(0.05),
+                      ? color.withValues(alpha: 0.2)
+                      : Colors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
                   border: isSelected
                       ? Border.all(color: color, width: 2)
@@ -476,7 +476,7 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE11D48).withOpacity(0.2),
+                        color: const Color(0xFFE11D48).withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: const Text(

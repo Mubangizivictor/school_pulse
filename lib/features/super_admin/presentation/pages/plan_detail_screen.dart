@@ -579,7 +579,7 @@ class _PlanDetailScreenState extends State<PlanDetailScreen>
           Switch(
             value: enabled,
             onChanged: (v) {},
-            activeColor: const Color(0xFF6366F1),
+            activeThumbColor: const Color(0xFF6366F1),
             activeTrackColor: const Color(0xFF6366F1).withValues(alpha: 0.3),
             inactiveThumbColor: Colors.white.withValues(alpha: 0.5),
             inactiveTrackColor: Colors.white.withValues(alpha: 0.1),

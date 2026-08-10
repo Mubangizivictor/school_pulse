@@ -229,7 +229,7 @@ class PlatformSettingsScreen extends StatelessWidget {
           Switch(
             value: false,
             onChanged: (val) {},
-            activeColor: const Color(0xFF6366F1),
+            activeThumbColor: const Color(0xFF6366F1),
             activeTrackColor: const Color(0xFF6366F1).withValues(alpha: 0.3),
           ),
         ],

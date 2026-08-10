@@ -459,7 +459,7 @@ class _CreatePlanWizardState extends State<CreatePlanWizard> {
         Switch(
           value: value,
           onChanged: (v) {},
-          activeColor: const Color(0xFF6366F1),
+          activeThumbColor: const Color(0xFF6366F1),
         ),
       ],
     );

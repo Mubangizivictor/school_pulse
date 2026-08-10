@@ -171,7 +171,7 @@ class _TaskRemindersScreenState extends State<TaskRemindersScreen> {
     return SwitchListTile.adaptive(
       value: value,
       onChanged: onChanged,
-      activeColor: AppColors.primary(context),
+      activeThumbColor: AppColors.primary(context),
       title: Text(
         title,
         style: TextStyle(
