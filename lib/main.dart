@@ -13,6 +13,7 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/institution/presentation/bloc/institution_context_cubit.dart';
+import 'package:school_pulse/features/institution/presentation/widgets/subscription_access_gate.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/academic/presentation/bloc/academic_bloc.dart';
 import 'package:school_pulse/features/finance/presentation/bloc/finance_bloc.dart';
@@ -218,6 +219,9 @@ class SchoolPulseAppView extends StatelessWidget {
             darkTheme: themeProvider.darkTheme,
             themeMode: themeProvider.themeMode,
             routerConfig: router,
+            builder: (context, child) => SubscriptionAccessGate(
+              child: child ?? const SizedBox.shrink(),
+            ),
             debugShowCheckedModeBanner: false,
           );
         },
