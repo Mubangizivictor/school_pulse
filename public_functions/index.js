@@ -234,5 +234,6 @@ exports.getSchoolApplicationStatus = onRequest({ region: "europe-west1" }, async
     plan: text(data.plan, 40),
     appReady: data.appReady === true,
     appUrl: text(data.appUrl, 300) || APP_URL,
+    rejectionReason: text(data.rejectionReason, 500),
   });
 });
