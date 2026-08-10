@@ -80,11 +80,9 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
     // go there; existing docs are left untouched, not migrated.
     await firestore.collection('schools').doc(school.id).set(school.toJson());
 
-    // Note: Creating the Admin user usually happens via a Cloud Function
-    // to avoid logging out the Super Admin from the current app session.
-    // For this implementation, we assume a Cloud Function will handle
-    // the actual Firebase Auth user creation and assigning the 'schoolAdmin' role
-    // when a new 'school_admin_invitation' document is created.
+    // Manual owner provisioning remains available for schools that did not
+    // start on the public website. The invitation is consumed server-side;
+    // the plaintext temporary password is never readable from the client.
     await firestore.collection('school_admin_invitations').add({
       'email': adminEmail,
       'schoolId': school.id,
@@ -106,14 +104,24 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
 
   @override
   Future<List<SchoolApplicationModel>> getSchoolApplications() async {
-    final snapshot = await firestore
-        .collection('public_school_applications')
-        .orderBy('createdAt', descending: true)
-        .limit(250)
-        .get();
-    return snapshot.docs
-        .map((doc) => SchoolApplicationModel.fromFirestore(doc.id, doc.data()))
-        .toList();
+    try {
+      final callable = _ownerFunctions.httpsCallable(
+        'getSchoolApplicationsForOwner',
+      );
+      final result = await callable.call<Map<String, dynamic>>();
+      final raw = result.data['applications'];
+      if (raw is! List) return const [];
+
+      return raw.map((item) {
+        final map = Map<String, dynamic>.from(item as Map);
+        final id = (map['id'] ?? map['authUid'] ?? '').toString();
+        return SchoolApplicationModel.fromFirestore(id, map);
+      }).toList();
+    } on FirebaseFunctionsException catch (e) {
+      throw StateError(
+        e.message ?? 'Unable to load school registration applications.',
+      );
+    }
   }
 
   @override
@@ -164,25 +172,18 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
 
   @override
   Future<Map<String, dynamic>> getPlatformStats() async {
-    final schoolsFuture = firestore.collection('schools').get();
-    final pendingFuture = firestore
-        .collection('public_school_applications')
-        .where('status', isEqualTo: 'pending_review')
-        .get();
-    final results = await Future.wait([schoolsFuture, pendingFuture]);
-    final schools = results[0] as QuerySnapshot<Map<String, dynamic>>;
-    final pending = results[1] as QuerySnapshot<Map<String, dynamic>>;
+    final schools = await firestore.collection('schools').get();
+    final applications = await getSchoolApplications();
 
     int totalStudents = 0;
     int totalStaff = 0;
     for (final doc in schools.docs) {
       final schoolData = doc.data();
-      totalStudents += (schoolData['studentCount'] ??
-              (schoolData['metadata'] as Map<String, dynamic>?)?['studentCount'] ??
-              0) as int;
-      totalStaff += (schoolData['staffCount'] ??
-              (schoolData['metadata'] as Map<String, dynamic>?)?['staffCount'] ??
-              0) as int;
+      final metadata = schoolData['metadata'] is Map
+          ? Map<String, dynamic>.from(schoolData['metadata'] as Map)
+          : const <String, dynamic>{};
+      totalStudents += ((schoolData['studentCount'] ?? metadata['studentCount'] ?? 0) as num).toInt();
+      totalStaff += ((schoolData['staffCount'] ?? metadata['staffCount'] ?? 0) as num).toInt();
     }
 
     return {
@@ -192,7 +193,9 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
           .length,
       'totalStudents': totalStudents,
       'totalStaff': totalStaff,
-      'pendingApplications': pending.size,
+      'pendingApplications': applications
+          .where((application) => application.status.name == 'pendingReview')
+          .length,
     };
   }
 }
