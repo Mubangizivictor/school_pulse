@@ -10,7 +10,6 @@ import 'package:school_pulse/features/super_admin/data/services/manual_payment_s
 import 'package:school_pulse/features/super_admin/domain/entities/manual_subscription_payment.dart';
 
 import '../responsive.dart';
-import '../widgets/super_admin_logout_button.dart';
 import 'payment_review_screen.dart';
 
 class BillingPage extends StatefulWidget {
@@ -44,7 +43,7 @@ class _BillingPageState extends State<BillingPage> {
   @override
   void initState() {
     super.initState();
-    _filter = widget.initialFilter ?? ManualPaymentStatus.pendingVerification;
+    _filter = widget.initialFilter;
     _reload();
   }
 
@@ -111,7 +110,6 @@ class _BillingPageState extends State<BillingPage> {
             onPressed: _loading ? null : _reload,
             icon: const Icon(Icons.refresh_rounded),
           ),
-          if (!wide) const SuperAdminLogoutButton(),
         ],
       ),
       body: RefreshIndicator(
@@ -270,10 +268,10 @@ class _BillingPageState extends State<BillingPage> {
           scrollDirection: Axis.horizontal,
           child: SegmentedButton<String>(
             segments: const [
+              ButtonSegment(value: 'all', label: Text('All')),
               ButtonSegment(value: 'pending', label: Text('Pending')),
               ButtonSegment(value: 'approved', label: Text('Approved')),
               ButtonSegment(value: 'rejected', label: Text('Rejected')),
-              ButtonSegment(value: 'all', label: Text('All')),
             ],
             selected: {
               switch (_filter) {

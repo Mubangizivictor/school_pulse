@@ -8,8 +8,8 @@ import '../../domain/entities/subscription_plan.dart';
 /// server-side; this service never writes payment or school records directly.
 class ManualPaymentService {
   ManualPaymentService({FirebaseFunctions? functions})
-      : _functions = functions ??
-            FirebaseFunctions.instanceFor(region: 'europe-west1');
+    : _functions =
+          functions ?? FirebaseFunctions.instanceFor(region: 'europe-west1');
 
   final FirebaseFunctions _functions;
 
@@ -19,8 +19,8 @@ class ManualPaymentService {
     final result = await _functions
         .httpsCallable('getManualPaymentsForOwner')
         .call<Map<String, dynamic>>({
-      'status': status == null ? 'all' : _statusWire(status),
-    });
+          'status': status == null ? 'all' : _statusWire(status),
+        });
     final raw = result.data['payments'] as List<dynamic>? ?? const [];
     return raw
         .map(
@@ -53,9 +53,9 @@ class ManualPaymentService {
     await _functions
         .httpsCallable('rejectManualPayment')
         .call<Map<String, dynamic>>({
-      'paymentId': paymentId,
-      'reason': reason.trim(),
-    });
+          'paymentId': paymentId,
+          'reason': reason.trim(),
+        });
   }
 
   Future<void> updatePlanPricing({
@@ -67,16 +67,16 @@ class ManualPaymentService {
     await _functions
         .httpsCallable('updateSubscriptionPlanPricing')
         .call<Map<String, dynamic>>({
-      'planId': plan.id,
-      'price': priceUgx,
-      'billingCycle': billingCycle.name,
-      'termLengthDays': termLengthDays,
-    });
+          'planId': plan.id,
+          'price': priceUgx,
+          'billingCycle': billingCycle.name,
+          'termLengthDays': termLengthDays,
+        });
   }
 
   static String _statusWire(ManualPaymentStatus status) => switch (status) {
-        ManualPaymentStatus.pendingVerification => 'pending_verification',
-        ManualPaymentStatus.approved => 'approved',
-        ManualPaymentStatus.rejected => 'rejected',
-      };
+    ManualPaymentStatus.pendingVerification => 'pending_verification',
+    ManualPaymentStatus.approved => 'approved',
+    ManualPaymentStatus.rejected => 'rejected',
+  };
 }

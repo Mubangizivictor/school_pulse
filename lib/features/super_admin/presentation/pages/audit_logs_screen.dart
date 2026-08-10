@@ -9,8 +9,6 @@ import 'package:intl/intl.dart';
 import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
 import '../bloc/super_admin_state.dart';
-import '../responsive.dart';
-import '../widgets/super_admin_logout_button.dart';
 import '../../domain/entities/audit_log.dart';
 
 /// Client-side categories bucketed heuristically from [AuditLog.action]
@@ -72,7 +70,6 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
                 context.read<SuperAdminBloc>().add(const LoadAuditLogsEvent()),
           ),
           const SizedBox(width: AppSpacing.m),
-          if (!isSuperAdminWide(context)) const SuperAdminLogoutButton(),
         ],
       ),
       body: BlocBuilder<SuperAdminBloc, SuperAdminState>(

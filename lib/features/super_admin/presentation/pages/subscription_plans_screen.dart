@@ -14,7 +14,6 @@ import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
 import '../bloc/super_admin_state.dart';
 import '../responsive.dart';
-import '../widgets/super_admin_logout_button.dart';
 
 class SubscriptionPlansScreen extends StatelessWidget {
   const SubscriptionPlansScreen({super.key});
@@ -34,7 +33,6 @@ class SubscriptionPlansScreen extends StatelessWidget {
                 context.read<SuperAdminBloc>().add(LoadSuperAdminDashboard()),
             icon: const Icon(Icons.refresh_rounded),
           ),
-          if (!isSuperAdminWide(context)) const SuperAdminLogoutButton(),
         ],
       ),
       body: BlocBuilder<SuperAdminBloc, SuperAdminState>(
@@ -44,6 +42,11 @@ class SubscriptionPlansScreen extends StatelessWidget {
           }
 
           final isWide = isSuperAdminWide(context);
+          // Enterprise uses custom, off-platform pricing negotiated directly
+          // with the school, so it isn't a self-service plan card here.
+          final visiblePlans = state.plans
+              .where((plan) => plan.id.toLowerCase() != 'enterprise')
+              .toList();
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,7 +66,7 @@ class SubscriptionPlansScreen extends StatelessWidget {
                 ),
               ),
               Expanded(
-                child: state.plans.isEmpty
+                child: visiblePlans.isEmpty
                     ? const EmptyState(
                         icon: Icons.subscriptions_outlined,
                         title: 'No plans found',
@@ -83,14 +86,19 @@ class SubscriptionPlansScreen extends StatelessWidget {
                           mainAxisSpacing: AppSpacing.xl,
                           childAspectRatio: isWide ? 0.78 : 1.15,
                         ),
-                        itemCount: state.plans.length,
+                        itemCount: visiblePlans.length,
                         itemBuilder: (context, index) {
-                          final plan = state.plans[index];
+                          final plan = visiblePlans[index];
                           final customPrice =
                               plan.customPricing && plan.price <= 0;
                           final storageLabel = plan.storageLimitGb % 1 == 0
                               ? plan.storageLimitGb.toStringAsFixed(0)
                               : plan.storageLimitGb.toStringAsFixed(1);
+                          final hasLimitsOrFeatures =
+                              plan.maxStudents > 0 ||
+                              plan.maxStaff > 0 ||
+                              plan.storageLimitGb > 0 ||
+                              plan.includedFeatures.isNotEmpty;
                           return AppCard(
                             padding: const EdgeInsets.all(22),
                             child: Column(
@@ -136,22 +144,26 @@ class SubscriptionPlansScreen extends StatelessWidget {
                                     color: AppColors.textSecondary(context),
                                   ),
                                 ),
-                                const SizedBox(height: AppSpacing.l),
-                                const Divider(),
-                                const SizedBox(height: AppSpacing.m),
-                                if (plan.maxStudents > 0)
-                                  _PlanFeature(
-                                    label: '${plan.maxStudents} Students',
+                                if (hasLimitsOrFeatures) ...[
+                                  const SizedBox(height: AppSpacing.l),
+                                  const Divider(),
+                                  const SizedBox(height: AppSpacing.m),
+                                  if (plan.maxStudents > 0)
+                                    _PlanFeature(
+                                      label: '${plan.maxStudents} Students',
+                                    ),
+                                  if (plan.maxStaff > 0)
+                                    _PlanFeature(
+                                      label: '${plan.maxStaff} Staff',
+                                    ),
+                                  if (plan.storageLimitGb > 0)
+                                    _PlanFeature(
+                                      label: '$storageLabel GB Storage',
+                                    ),
+                                  ...plan.includedFeatures.map(
+                                    (feature) => _PlanFeature(label: feature),
                                   ),
-                                if (plan.maxStaff > 0)
-                                  _PlanFeature(label: '${plan.maxStaff} Staff'),
-                                if (plan.storageLimitGb > 0)
-                                  _PlanFeature(
-                                    label: '$storageLabel GB Storage',
-                                  ),
-                                ...plan.includedFeatures.map(
-                                  (feature) => _PlanFeature(label: feature),
-                                ),
+                                ],
                                 const Spacer(),
                                 SizedBox(
                                   width: double.infinity,

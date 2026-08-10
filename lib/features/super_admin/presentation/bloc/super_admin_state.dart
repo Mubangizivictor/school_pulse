@@ -79,14 +79,18 @@ class SuperAdminState extends Equatable {
       transactions: transactions ?? this.transactions,
       auditLogs: auditLogs ?? this.auditLogs,
       stats: stats ?? this.stats,
-      errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
+      errorMessage: clearErrorMessage
+          ? null
+          : (errorMessage ?? this.errorMessage),
       supportModeSchoolId: clearSupportModeSchoolId
           ? null
           : (supportModeSchoolId ?? this.supportModeSchoolId),
       reviewingApplicationId: clearReviewingApplicationId
           ? null
           : (reviewingApplicationId ?? this.reviewingApplicationId),
-      actionMessage: clearActionMessage ? null : (actionMessage ?? this.actionMessage),
+      actionMessage: clearActionMessage
+          ? null
+          : (actionMessage ?? this.actionMessage),
     );
   }
 }

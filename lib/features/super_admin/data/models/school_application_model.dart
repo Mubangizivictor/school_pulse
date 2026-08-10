@@ -37,8 +37,12 @@ class SchoolApplicationModel extends SchoolApplication {
     String documentId,
     Map<String, dynamic> json,
   ) {
-    final school = Map<String, dynamic>.from(json['school'] as Map? ?? const {});
-    final location = Map<String, dynamic>.from(json['location'] as Map? ?? const {});
+    final school = Map<String, dynamic>.from(
+      json['school'] as Map? ?? const {},
+    );
+    final location = Map<String, dynamic>.from(
+      json['location'] as Map? ?? const {},
+    );
     final administrator = Map<String, dynamic>.from(
       json['administrator'] as Map? ?? const {},
     );
@@ -62,7 +66,9 @@ class SchoolApplicationModel extends SchoolApplication {
       address: (location['address'] ?? '').toString(),
       website: (location['website'] ?? '').toString(),
       plan: (json['plan'] ?? '').toString(),
-      selectedModules: List<String>.from(json['selectedModules'] as List? ?? const []),
+      selectedModules: List<String>.from(
+        json['selectedModules'] as List? ?? const [],
+      ),
       administratorName: '$firstName $lastName'.trim(),
       administratorEmail: (administrator['email'] ?? '').toString(),
       administratorPhone: (administrator['phone'] ?? '').toString(),

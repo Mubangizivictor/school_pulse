@@ -10,8 +10,6 @@ import 'package:school_pulse/features/super_admin/data/services/manual_payment_s
 import 'package:school_pulse/features/super_admin/data/services/owner_notification_service.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/owner_notification.dart';
 
-import '../responsive.dart';
-import '../widgets/super_admin_logout_button.dart';
 import 'payment_review_screen.dart';
 
 /// Real notifications feed for the SaaS owner console. Currently shows
@@ -113,8 +111,6 @@ class _SuperAdminNotificationsScreenState
 
   @override
   Widget build(BuildContext context) {
-    final wide = isSuperAdminWide(context);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Notifications'),
@@ -124,7 +120,6 @@ class _SuperAdminNotificationsScreenState
             onPressed: _loading ? null : _reload,
             icon: const Icon(Icons.refresh_rounded),
           ),
-          if (!wide) const SuperAdminLogoutButton(),
         ],
       ),
       body: RefreshIndicator(

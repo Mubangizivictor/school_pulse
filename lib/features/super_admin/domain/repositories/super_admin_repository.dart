@@ -15,14 +15,12 @@ abstract class SuperAdminRepository {
   Future<void> updateSchool(School school);
   Future<void> suspendSchool(String schoolId, String reason);
   Future<void> activateSchool(String schoolId);
+  Future<void> archiveSchool(String schoolId, String reason);
 
   // Public website onboarding / owner review
   Future<List<SchoolApplication>> getSchoolApplications();
   Future<String> approveSchoolApplication(String applicationId);
-  Future<void> rejectSchoolApplication(
-    String applicationId,
-    String reason,
-  );
+  Future<void> rejectSchoolApplication(String applicationId, String reason);
 
   // Subscription Management
   Future<List<SubscriptionPlan>> getSubscriptionPlans();

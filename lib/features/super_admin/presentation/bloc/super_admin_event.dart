@@ -62,6 +62,15 @@ class UpdateSchoolStatusEvent extends SuperAdminEvent {
   List<Object?> get props => [schoolId, status, reason];
 }
 
+class UpdateSchoolInfoEvent extends SuperAdminEvent {
+  final School school;
+
+  const UpdateSchoolInfoEvent(this.school);
+
+  @override
+  List<Object?> get props => [school];
+}
+
 class UpdateSubscriptionEvent extends SuperAdminEvent {
   final String schoolId;
   final String planId;

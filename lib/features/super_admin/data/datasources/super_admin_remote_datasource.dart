@@ -127,7 +127,9 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
   @override
   Future<String> approveSchoolApplication(String applicationId) async {
     try {
-      final callable = _ownerFunctions.httpsCallable('approveSchoolApplication');
+      final callable = _ownerFunctions.httpsCallable(
+        'approveSchoolApplication',
+      );
       final result = await callable.call<Map<String, dynamic>>({
         'applicationId': applicationId,
       });
@@ -137,7 +139,9 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
       }
       return schoolId;
     } on FirebaseFunctionsException catch (e) {
-      throw StateError(e.message ?? 'Unable to approve this school application.');
+      throw StateError(
+        e.message ?? 'Unable to approve this school application.',
+      );
     }
   }
 
@@ -153,7 +157,9 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
         'reason': reason,
       });
     } on FirebaseFunctionsException catch (e) {
-      throw StateError(e.message ?? 'Unable to reject this school application.');
+      throw StateError(
+        e.message ?? 'Unable to reject this school application.',
+      );
     }
   }
 
@@ -182,8 +188,12 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
       final metadata = schoolData['metadata'] is Map
           ? Map<String, dynamic>.from(schoolData['metadata'] as Map)
           : const <String, dynamic>{};
-      totalStudents += ((schoolData['studentCount'] ?? metadata['studentCount'] ?? 0) as num).toInt();
-      totalStaff += ((schoolData['staffCount'] ?? metadata['staffCount'] ?? 0) as num).toInt();
+      totalStudents +=
+          ((schoolData['studentCount'] ?? metadata['studentCount'] ?? 0) as num)
+              .toInt();
+      totalStaff +=
+          ((schoolData['staffCount'] ?? metadata['staffCount'] ?? 0) as num)
+              .toInt();
     }
 
     return {

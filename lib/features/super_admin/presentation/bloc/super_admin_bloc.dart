@@ -27,6 +27,7 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
     on<ApproveSchoolApplicationEvent>(_onApproveSchoolApplication);
     on<RejectSchoolApplicationEvent>(_onRejectSchoolApplication);
     on<UpdateSchoolStatusEvent>(_onUpdateSchoolStatus);
+    on<UpdateSchoolInfoEvent>(_onUpdateSchoolInfo);
     on<UpdateSubscriptionEvent>(_onUpdateSubscription);
     on<ToggleFeatureEvent>(_onToggleFeature);
     on<LoadInvoicesEvent>(_onLoadInvoices);
@@ -282,6 +283,11 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
         );
       } else if (event.status == SchoolStatus.active) {
         await repository.activateSchool(event.schoolId);
+      } else if (event.status == SchoolStatus.archived) {
+        await repository.archiveSchool(
+          event.schoolId,
+          event.reason ?? 'No reason provided',
+        );
       }
 
       await repository.logAction(
@@ -294,6 +300,30 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
           device: 'Platform Dashboard',
           reason: event.reason,
           metadata: {'newStatus': event.status.name},
+        ),
+      );
+
+      add(LoadSuperAdminDashboard());
+    } catch (e) {
+      emit(state.copyWith(errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onUpdateSchoolInfo(
+    UpdateSchoolInfoEvent event,
+    Emitter<SuperAdminState> emit,
+  ) async {
+    try {
+      await repository.updateSchool(event.school);
+
+      await repository.logAction(
+        AuditLog(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          ownerId: _ownerId,
+          action: 'UPDATE_SCHOOL_INFO',
+          schoolId: event.school.id,
+          timestamp: DateTime.now(),
+          device: 'Platform Dashboard',
         ),
       );
 

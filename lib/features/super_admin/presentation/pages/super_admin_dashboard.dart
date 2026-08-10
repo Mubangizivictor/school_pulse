@@ -12,6 +12,7 @@ import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
 import '../responsive.dart';
 import '../widgets/super_admin_logout_button.dart';
+import '../widgets/super_admin_tab_navigator.dart';
 import 'audit_logs_screen.dart';
 import 'billing_page.dart';
 import 'school_management_screen.dart';
@@ -80,10 +81,29 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
   ManualPaymentStatus? _billingInitialFilter;
   int _billingPageKey = 0;
 
+  // One nested Navigator per desktop sidebar section, so pushed screens
+  // (School Details, Payment Review, Application Review, …) stay inside
+  // that section instead of covering the sidebar.
+  final List<GlobalKey<NavigatorState>> _desktopNavigatorKeys = List.generate(
+    _kSections.length,
+    (_) => GlobalKey<NavigatorState>(),
+  );
+
+  // One nested Navigator per mobile bottom-nav destination (Home, Schools,
+  // Payments, More), so the bottom bar stays visible on pushed screens.
+  final List<GlobalKey<NavigatorState>> _mobileNavigatorKeys = List.generate(
+    4,
+    (_) => GlobalKey<NavigatorState>(),
+  );
+
   @override
   void initState() {
     super.initState();
     context.read<SuperAdminBloc>().add(LoadSuperAdminDashboard());
+  }
+
+  void _popToRoot(GlobalKey<NavigatorState> key) {
+    key.currentState?.popUntil((route) => route.isFirst);
   }
 
   void _goToBilling({ManualPaymentStatus? filter}) {
@@ -93,6 +113,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       _selectedIndex = 2;
       _mobileNavIndex = 2;
     });
+    _popToRoot(_desktopNavigatorKeys[2]);
+    _popToRoot(_mobileNavigatorKeys[2]);
   }
 
   void _goToSchools() {
@@ -100,27 +122,37 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       _selectedIndex = 1;
       _mobileNavIndex = 1;
     });
+    _popToRoot(_desktopNavigatorKeys[1]);
+    _popToRoot(_mobileNavigatorKeys[1]);
   }
 
   @override
   Widget build(BuildContext context) {
+    final desktopBranches = [
+      SuperAdminOverviewScreen(
+        onOpenBilling: () =>
+            _goToBilling(filter: ManualPaymentStatus.pendingVerification),
+        onOpenSchools: _goToSchools,
+      ),
+      const SchoolManagementScreen(),
+      BillingPage(
+        key: ValueKey(_billingPageKey),
+        initialFilter: _billingInitialFilter,
+      ),
+      const SubscriptionPlansScreen(),
+      const SuperAdminNotificationsScreen(),
+      const AuditLogsScreen(),
+      const SuperAdminSettingsScreen(),
+    ];
+
     final content = IndexedStack(
       index: _selectedIndex,
       children: [
-        SuperAdminOverviewScreen(
-          onOpenBilling: () =>
-              _goToBilling(filter: ManualPaymentStatus.pendingVerification),
-          onOpenSchools: _goToSchools,
-        ),
-        const SchoolManagementScreen(),
-        BillingPage(
-          key: ValueKey(_billingPageKey),
-          initialFilter: _billingInitialFilter,
-        ),
-        const SubscriptionPlansScreen(),
-        const SuperAdminNotificationsScreen(),
-        const AuditLogsScreen(),
-        const SuperAdminSettingsScreen(),
+        for (final (index, branch) in desktopBranches.indexed)
+          SuperAdminTabNavigator(
+            navigatorKey: _desktopNavigatorKeys[index],
+            child: branch,
+          ),
       ],
     );
 
@@ -135,26 +167,40 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       );
     }
 
+    final mobileBranches = [
+      SuperAdminOverviewScreen(
+        onOpenBilling: () =>
+            _goToBilling(filter: ManualPaymentStatus.pendingVerification),
+        onOpenSchools: _goToSchools,
+      ),
+      const SchoolManagementScreen(),
+      BillingPage(
+        key: ValueKey('mobile-$_billingPageKey'),
+        initialFilter: _billingInitialFilter,
+      ),
+      const SuperAdminMoreScreen(),
+    ];
+
     return Scaffold(
       body: IndexedStack(
         index: _mobileNavIndex,
         children: [
-          SuperAdminOverviewScreen(
-            onOpenBilling: () =>
-                _goToBilling(filter: ManualPaymentStatus.pendingVerification),
-            onOpenSchools: _goToSchools,
-          ),
-          const SchoolManagementScreen(),
-          BillingPage(
-            key: ValueKey('mobile-$_billingPageKey'),
-            initialFilter: _billingInitialFilter,
-          ),
-          const SuperAdminMoreScreen(),
+          for (final (index, branch) in mobileBranches.indexed)
+            SuperAdminTabNavigator(
+              navigatorKey: _mobileNavigatorKeys[index],
+              child: branch,
+            ),
         ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _mobileNavIndex,
         onDestinationSelected: (index) {
+          if (index == _mobileNavIndex) {
+            // Re-tapping the active tab returns it to its root screen,
+            // matching standard tab-bar behavior.
+            _popToRoot(_mobileNavigatorKeys[index]);
+            return;
+          }
           setState(() {
             _mobileNavIndex = index;
             if (index <= 2) _selectedIndex = index;
@@ -231,7 +277,15 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                     selectedIcon: section.selectedIcon,
                     label: section.label,
                     isSelected: _selectedIndex == index,
-                    onTap: () => setState(() => _selectedIndex = index),
+                    onTap: () {
+                      if (index == _selectedIndex) {
+                        // Re-selecting the active section returns it to
+                        // its root screen, matching the mobile tab bar.
+                        _popToRoot(_desktopNavigatorKeys[index]);
+                        return;
+                      }
+                      setState(() => _selectedIndex = index);
+                    },
                   ),
               ],
             ),

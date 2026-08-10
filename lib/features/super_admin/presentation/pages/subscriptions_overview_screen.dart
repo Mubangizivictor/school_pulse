@@ -15,8 +15,6 @@ import 'package:school_pulse/features/super_admin/domain/entities/subscription_p
 import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
 import '../bloc/super_admin_state.dart';
-import '../responsive.dart';
-import '../widgets/super_admin_logout_button.dart';
 import 'billing_page.dart';
 import 'school_detail_screen.dart';
 
@@ -88,7 +86,6 @@ class _SubscriptionsOverviewScreenState
 
   @override
   Widget build(BuildContext context) {
-    final wide = isSuperAdminWide(context);
     final now = DateTime.now();
 
     return Scaffold(
@@ -100,7 +97,6 @@ class _SubscriptionsOverviewScreenState
             onPressed: _refresh,
             icon: const Icon(Icons.refresh_rounded),
           ),
-          if (!wide) const SuperAdminLogoutButton(),
         ],
       ),
       body: BlocBuilder<SuperAdminBloc, SuperAdminState>(

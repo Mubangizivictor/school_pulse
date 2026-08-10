@@ -935,3 +935,81 @@ exports.updateSubscriptionPlanPricing = onCall({ region: 'europe-west1' }, async
   await batch.commit();
   return { ok: true, planId, price, billingCycle, termLengthDays };
 });
+
+// Owner-scoped read/write for the manual payment method configuration
+// (MTN MoMo / bank details schools use to pay). Distinct from
+// getManualPaymentContext, which is gated to a school-admin subscriber
+// identity and cannot be called by the SaaS owner.
+exports.getManualPaymentConfig = onCall({ region: 'europe-west1' }, async (request) => {
+  await requireOwner(request);
+  const config = await getManualConfig();
+  return {
+    ok: true,
+    currency: text(config.currency || 'UGX', 10),
+    mobileMoney: {
+      enabled: config.mobileMoney?.enabled !== false,
+      network: text(config.mobileMoney?.network || 'MTN', 20),
+      number: text(config.mobileMoney?.number, 30),
+      accountName: text(config.mobileMoney?.accountName, 120),
+    },
+    bank: {
+      enabled: config.bank?.enabled !== false,
+      bankName: text(config.bank?.bankName, 120),
+      branch: text(config.bank?.branch, 120),
+      accountName: text(config.bank?.accountName, 120),
+      accountNumber: text(config.bank?.accountNumber, 40),
+    },
+  };
+});
+
+exports.updateManualPaymentConfig = onCall({ region: 'europe-west1' }, async (request) => {
+  const owner = await requireOwner(request);
+  await ensureBillingDefaults();
+
+  const mobileMoneyNumber = text(request.data?.mobileMoney?.number, 30);
+  const mobileMoneyName = text(request.data?.mobileMoney?.accountName, 120);
+  const bankName = text(request.data?.bank?.bankName, 120);
+  const bankBranch = text(request.data?.bank?.branch, 120);
+  const bankAccountName = text(request.data?.bank?.accountName, 120);
+  const bankAccountNumber = text(request.data?.bank?.accountNumber, 40);
+
+  if (!mobileMoneyNumber || !mobileMoneyName) {
+    throw new HttpsError('invalid-argument', 'MTN Mobile Money number and account name are required.');
+  }
+  if (!bankName || !bankAccountName || !bankAccountNumber) {
+    throw new HttpsError('invalid-argument', 'Bank name, account name and account number are required.');
+  }
+
+  const configRef = db.collection('platform_billing_config').doc('manual');
+  const serverTime = admin.firestore.FieldValue.serverTimestamp();
+  const auditRef = db.collection('super_admin_audit_logs').doc();
+  const batch = db.batch();
+  batch.set(configRef, {
+    mobileMoney: {
+      enabled: true,
+      network: 'MTN',
+      number: mobileMoneyNumber,
+      accountName: mobileMoneyName,
+    },
+    bank: {
+      enabled: true,
+      bankName,
+      branch: bankBranch,
+      accountName: bankAccountName,
+      accountNumber: bankAccountNumber,
+    },
+    updatedAt: serverTime,
+    updatedBy: owner.uid,
+  }, { merge: true });
+  batch.set(auditRef, {
+    id: auditRef.id,
+    ownerId: owner.uid,
+    action: 'UPDATE_MANUAL_PAYMENT_CONFIG',
+    schoolId: null,
+    timestamp: serverTime,
+    device: 'Platform Dashboard',
+    metadata: { mobileMoneyNumber, bankAccountNumber },
+  });
+  await batch.commit();
+  return { ok: true };
+});

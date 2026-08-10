@@ -12,11 +12,9 @@ import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
 import '../bloc/super_admin_state.dart';
 import '../responsive.dart';
-import '../widgets/super_admin_logout_button.dart';
 import 'create_school_dialog.dart';
 import 'school_detail_screen.dart';
 import 'school_application_review_screen.dart';
-import 'subscriptions_overview_screen.dart';
 
 class SchoolManagementScreen extends StatefulWidget {
   const SchoolManagementScreen({super.key});
@@ -30,7 +28,6 @@ class _SchoolManagementScreenState extends State<SchoolManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isWide = isSuperAdminWide(context);
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -38,44 +35,11 @@ class _SchoolManagementScreenState extends State<SchoolManagementScreen> {
           title: const Text('Schools'),
           actions: [
             IconButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => BlocProvider.value(
-                    value: context.read<SuperAdminBloc>(),
-                    child: const SubscriptionsOverviewScreen(),
-                  ),
-                ),
-              ),
-              tooltip: 'Subscriptions Overview',
-              icon: const Icon(Icons.subscriptions_outlined),
-            ),
-            IconButton(
               onPressed: () =>
                   context.read<SuperAdminBloc>().add(LoadSuperAdminDashboard()),
               tooltip: 'Refresh',
               icon: const Icon(Icons.refresh_rounded),
             ),
-            Padding(
-              padding: EdgeInsets.only(
-                right: isWide ? AppSpacing.x3l : AppSpacing.m,
-              ),
-              child: isWide
-                  ? FilledButton.icon(
-                      onPressed: () => _showCreateSchoolDialog(context),
-                      icon: const Icon(Icons.add_rounded),
-                      label: const Text('Add School'),
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size(160, 44),
-                      ),
-                    )
-                  : IconButton.filled(
-                      onPressed: () => _showCreateSchoolDialog(context),
-                      icon: const Icon(Icons.add_rounded),
-                      tooltip: 'Add School',
-                    ),
-            ),
-            if (!isWide) const SuperAdminLogoutButton(),
           ],
           bottom: const TabBar(
             tabs: [
@@ -84,6 +48,11 @@ class _SchoolManagementScreenState extends State<SchoolManagementScreen> {
               Tab(text: 'Suspended'),
             ],
           ),
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => _showCreateSchoolDialog(context),
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('Add School'),
         ),
         body: Column(
           children: [
@@ -582,7 +551,7 @@ class _SchoolCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.m),
-          const Icon(Icons.chevron_right_rounded),
+          _SchoolQuickActions(school: school),
         ],
       ),
     );
@@ -659,13 +628,151 @@ class _SchoolTableRow extends StatelessWidget {
                 style: theme.textTheme.bodySmall,
               ),
             ),
-            const SizedBox(
-              width: 32,
-              child: Icon(Icons.chevron_right_rounded, size: 18),
-            ),
+            _SchoolQuickActions(school: school, compact: true),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Suspend/Reactivate/Archive shortcut menu shown on each Schools list row,
+/// so lifecycle actions don't require opening School Details first. Reuses
+/// the exact same confirmation dialogs and Firestore-backed events as the
+/// School Details screen.
+class _SchoolQuickActions extends StatelessWidget {
+  const _SchoolQuickActions({required this.school, this.compact = false});
+
+  final School school;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return PopupMenuButton<String>(
+      tooltip: 'Quick actions',
+      icon: Icon(
+        Icons.more_vert_rounded,
+        size: compact ? 18 : 22,
+        color: theme.colorScheme.onSurfaceVariant,
+      ),
+      onSelected: (value) {
+        switch (value) {
+          case 'suspend':
+            confirmSchoolStatusChange(
+              context,
+              action: 'Suspend',
+              message:
+                  'Are you sure you want to suspend ${school.name}? Staff '
+                  'and admins will immediately lose access to the '
+                  'dashboard. You can reactivate at any time. This action '
+                  'will be logged.',
+              color: theme.colorScheme.error,
+              onConfirm: () => context.read<SuperAdminBloc>().add(
+                UpdateSchoolStatusEvent(
+                  schoolId: school.id,
+                  status: SchoolStatus.suspended,
+                  reason: 'Suspended by Owner',
+                ),
+              ),
+            );
+          case 'reactivate':
+            confirmSchoolStatusChange(
+              context,
+              action: 'Reactivate',
+              message:
+                  'Are you sure you want to reactivate ${school.name}? '
+                  'Staff and admins will regain access immediately. This '
+                  'action will be logged.',
+              color: AppColors.success(context),
+              onConfirm: () => context.read<SuperAdminBloc>().add(
+                UpdateSchoolStatusEvent(
+                  schoolId: school.id,
+                  status: SchoolStatus.active,
+                ),
+              ),
+            );
+          case 'archive':
+            archiveSchoolDialog(context, school);
+        }
+      },
+      itemBuilder: (menuContext) => [
+        PopupMenuItem(
+          value: 'view',
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SchoolDetailScreen(school: school),
+            ),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.visibility_outlined, size: 18),
+              SizedBox(width: AppSpacing.m),
+              Text('View Details'),
+            ],
+          ),
+        ),
+        if (school.status == SchoolStatus.active)
+          PopupMenuItem(
+            value: 'suspend',
+            child: Row(
+              children: [
+                Icon(
+                  Icons.block_rounded,
+                  size: 18,
+                  color: Theme.of(menuContext).colorScheme.error,
+                ),
+                const SizedBox(width: AppSpacing.m),
+                Text(
+                  'Suspend',
+                  style: TextStyle(
+                    color: Theme.of(menuContext).colorScheme.error,
+                  ),
+                ),
+              ],
+            ),
+          )
+        else if (school.status == SchoolStatus.suspended ||
+            school.status == SchoolStatus.archived)
+          PopupMenuItem(
+            value: 'reactivate',
+            child: Row(
+              children: [
+                Icon(
+                  Icons.check_circle_outline_rounded,
+                  size: 18,
+                  color: AppColors.success(menuContext),
+                ),
+                const SizedBox(width: AppSpacing.m),
+                Text(
+                  'Reactivate',
+                  style: TextStyle(color: AppColors.success(menuContext)),
+                ),
+              ],
+            ),
+          ),
+        if (school.status != SchoolStatus.archived)
+          PopupMenuItem(
+            value: 'archive',
+            child: Row(
+              children: [
+                Icon(
+                  Icons.archive_outlined,
+                  size: 18,
+                  color: Theme.of(menuContext).colorScheme.error,
+                ),
+                const SizedBox(width: AppSpacing.m),
+                Text(
+                  'Archive',
+                  style: TextStyle(
+                    color: Theme.of(menuContext).colorScheme.error,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

@@ -1,7 +1,9 @@
 import 'package:equatable/equatable.dart';
 
 enum ManualPaymentStatus { pendingVerification, approved, rejected }
+
 enum ManualPaymentMethod { mtn, bank }
+
 enum ManualPaymentType { activation, renewal }
 
 class ManualSubscriptionPayment extends Equatable {
@@ -92,24 +94,24 @@ class ManualSubscriptionPayment extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        schoolName,
-        planId,
-        planName,
-        paymentType,
-        expectedAmount,
-        submittedAmount,
-        currency,
-        method,
-        payerName,
-        reference,
-        paidAt,
-        submittedAt,
-        status,
-        hasProof,
-        note,
-        rejectionReason,
-        reviewedAt,
-      ];
+    id,
+    schoolId,
+    schoolName,
+    planId,
+    planName,
+    paymentType,
+    expectedAmount,
+    submittedAmount,
+    currency,
+    method,
+    payerName,
+    reference,
+    paidAt,
+    submittedAt,
+    status,
+    hasProof,
+    note,
+    rejectionReason,
+    reviewedAt,
+  ];
 }

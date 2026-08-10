@@ -300,9 +300,11 @@ class _PaymentReviewScreenState extends State<PaymentReviewScreen> {
             ),
           ),
           const SizedBox(width: AppSpacing.m),
-          OutlinedButton(
-            onPressed: _isWorking ? null : _openProof,
-            child: const Text('Open'),
+          Flexible(
+            child: OutlinedButton(
+              onPressed: _isWorking ? null : _openProof,
+              child: const Text('Open'),
+            ),
           ),
         ],
       ),

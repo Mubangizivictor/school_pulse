@@ -44,7 +44,7 @@ class SuperAdminSettingsScreen extends StatelessWidget {
           _SettingsTile(
             icon: Icons.account_balance_wallet_outlined,
             title: 'Manual Payment Methods',
-            subtitle: 'View how the manual payment configuration is managed',
+            subtitle: 'Edit the MTN MoMo and bank details schools pay to',
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
