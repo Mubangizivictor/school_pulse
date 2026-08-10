@@ -39,60 +39,60 @@ class _EventTypePickerScreenState extends State<EventTypePickerScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: ListView.separated(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        itemCount: CalendarEventType.values.length,
-        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.m),
-        itemBuilder: (context, index) {
-          final type = CalendarEventType.values[index];
-          final selected = type == _selected;
-          return InkWell(
-            onTap: () => setState(() => _selected = type),
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: const EdgeInsets.all(AppSpacing.l),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceElevated(context),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: selected
-                      ? AppColors.primary(context)
-                      : AppColors.border(context),
-                  width: selected ? 2 : 1,
+      body: RadioGroup<CalendarEventType>(
+        groupValue: _selected,
+        onChanged: (v) => setState(() => _selected = v!),
+        child: ListView.separated(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          itemCount: CalendarEventType.values.length,
+          separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.m),
+          itemBuilder: (context, index) {
+            final type = CalendarEventType.values[index];
+            final selected = type == _selected;
+            return InkWell(
+              onTap: () => setState(() => _selected = type),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(AppSpacing.l),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceElevated(context),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: selected
+                        ? AppColors.primary(context)
+                        : AppColors.border(context),
+                    width: selected ? 2 : 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(_icons[type], color: calendarEventTypeColor(type)),
+                    const SizedBox(width: AppSpacing.m),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            type.label,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          Text(
+                            type.description,
+                            style: TextStyle(
+                              color: AppColors.textMuted(context),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Radio<CalendarEventType>(value: type),
+                  ],
                 ),
               ),
-              child: Row(
-                children: [
-                  Icon(_icons[type], color: calendarEventTypeColor(type)),
-                  const SizedBox(width: AppSpacing.m),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          type.label,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        Text(
-                          type.description,
-                          style: TextStyle(
-                            color: AppColors.textMuted(context),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Radio<CalendarEventType>(
-                    value: type,
-                    groupValue: _selected,
-                    onChanged: (v) => setState(() => _selected = v!),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(

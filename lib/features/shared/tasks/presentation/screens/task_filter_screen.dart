@@ -103,12 +103,14 @@ class _TaskFilterScreenState extends State<TaskFilterScreen> {
   }
 
   Widget _buildDateOption(String label) {
-    return RadioListTile(
-      value: label,
+    return RadioGroup<String>(
       groupValue: 'Today',
       onChanged: (val) {},
-      title: Text(label),
-      contentPadding: EdgeInsets.zero,
+      child: RadioListTile(
+        value: label,
+        title: Text(label),
+        contentPadding: EdgeInsets.zero,
+      ),
     );
   }
 }

@@ -89,57 +89,63 @@ class _Step2RecurrenceState extends State<Step2Recurrence> {
           ),
           const SizedBox(height: AppSpacing.xl),
           Text('Ends', style: TextStyle(color: AppColors.textSecondary(context))),
-          RadioListTile<RecurrenceEndType>(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Never'),
-            value: RecurrenceEndType.never,
+          RadioGroup<RecurrenceEndType>(
             groupValue: draft.endType,
             onChanged: (v) => setState(() => draft.endType = v!),
-          ),
-          RadioListTile<RecurrenceEndType>(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('On date'),
-            value: RecurrenceEndType.onDate,
-            groupValue: draft.endType,
-            onChanged: (v) => setState(() => draft.endType = v!),
-          ),
-          if (draft.endType == RecurrenceEndType.onDate)
-            OutlinedButton(
-              onPressed: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: DateTime.now(),
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime(2100),
-                );
-                if (picked != null) {
-                  setState(() => draft.recurrenceEndDate = picked);
-                }
-              },
-              child: Text(
-                draft.recurrenceEndDate == null
-                    ? 'Select date'
-                    : '${draft.recurrenceEndDate!.day}/${draft.recurrenceEndDate!.month}/${draft.recurrenceEndDate!.year}',
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                RadioListTile<RecurrenceEndType>(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Never'),
+                  value: RecurrenceEndType.never,
+                ),
+                RadioListTile<RecurrenceEndType>(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('On date'),
+                  value: RecurrenceEndType.onDate,
+                ),
+                if (draft.endType == RecurrenceEndType.onDate)
+                  OutlinedButton(
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.now(),
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2100),
+                      );
+                      if (picked != null) {
+                        setState(() => draft.recurrenceEndDate = picked);
+                      }
+                    },
+                    child: Text(
+                      draft.recurrenceEndDate == null
+                          ? 'Select date'
+                          : '${draft.recurrenceEndDate!.day}/${draft.recurrenceEndDate!.month}/${draft.recurrenceEndDate!.year}',
+                    ),
+                  ),
+                RadioListTile<RecurrenceEndType>(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('After'),
+                  value: RecurrenceEndType.afterOccurrences,
+                ),
+                if (draft.endType == RecurrenceEndType.afterOccurrences)
+                  TextFormField(
+                    initialValue: draft.occurrences > 0
+                        ? '${draft.occurrences}'
+                        : '',
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      suffixText: 'occurrences',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (v) => setState(
+                      () => draft.occurrences = int.tryParse(v) ?? 0,
+                    ),
+                  ),
+              ],
             ),
-          RadioListTile<RecurrenceEndType>(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('After'),
-            value: RecurrenceEndType.afterOccurrences,
-            groupValue: draft.endType,
-            onChanged: (v) => setState(() => draft.endType = v!),
           ),
-          if (draft.endType == RecurrenceEndType.afterOccurrences)
-            TextFormField(
-              initialValue: draft.occurrences > 0 ? '${draft.occurrences}' : '',
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                suffixText: 'occurrences',
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (v) =>
-                  setState(() => draft.occurrences = int.tryParse(v) ?? 0),
-            ),
         ],
         const SizedBox(height: AppSpacing.x3l),
         Row(
