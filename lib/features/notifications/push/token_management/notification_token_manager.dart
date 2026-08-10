@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:isar/isar.dart';
@@ -9,10 +10,10 @@ import '../../data/models/notification_token_isar.dart';
 
 /// Owns this device's FCM registration token.
 ///
-/// Tokens live at `users/{uid}/tokens/{token}`. Registration intentionally
-/// performs a cheap merge on every authenticated session: an old version
-/// trusted the Isar cache and could skip the Firestore write even when the
-/// server token document had been deleted, leaving push permanently broken.
+/// Every authenticated device is mirrored at `users/{uid}/tokens/{token}`.
+/// SaaS Owner devices are ALSO registered through an authenticated Cloud
+/// Function into `platform_owner_device_tokens`; this removes Firestore-rule
+/// drift from the critical application/payment push path.
 class NotificationTokenManager {
   final FirebaseMessaging messaging;
   final FirebaseFirestore firestore;
@@ -29,12 +30,18 @@ class NotificationTokenManager {
   void startListening({
     required String Function() currentUserId,
     required String Function() currentSchoolId,
+    bool Function()? isPlatformOwner,
   }) {
     _refreshSub?.cancel();
     _refreshSub = messaging.onTokenRefresh.listen((token) async {
       final uid = currentUserId();
       if (uid.isEmpty) return;
-      await _publish(token: token, userId: uid, schoolId: currentSchoolId());
+      await _publish(
+        token: token,
+        userId: uid,
+        schoolId: currentSchoolId(),
+        platformOwner: isPlatformOwner?.call() ?? false,
+      );
     });
   }
 
@@ -44,10 +51,16 @@ class NotificationTokenManager {
         alert: true,
         badge: true,
         sound: true,
-        provisional: true,
+        announcement: false,
+        carPlay: false,
+        criticalAlert: false,
+        provisional: false,
       );
-      return settings.authorizationStatus == AuthorizationStatus.authorized ||
+      final granted =
+          settings.authorizationStatus == AuthorizationStatus.authorized ||
           settings.authorizationStatus == AuthorizationStatus.provisional;
+      _log('notification permission', settings.authorizationStatus.name);
+      return granted;
     } catch (e) {
       _log('permission request failed', e);
       return false;
@@ -57,7 +70,19 @@ class NotificationTokenManager {
   Future<bool> registerDevice({
     required String userId,
     required String schoolId,
+    bool platformOwner = false,
   }) async {
+    // On Apple platforms Firebase cannot mint an FCM token until APNs has
+    // assigned one. A one-shot getToken() during startup races that handshake
+    // and was a frequent reason owner devices never registered at all.
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+      final apnsReady = await _waitForApnsToken();
+      if (!apnsReady) {
+        _log('APNs token unavailable', 'push registration deferred');
+        return false;
+      }
+    }
+
     String? token;
     try {
       token = await messaging.getToken();
@@ -67,15 +92,35 @@ class NotificationTokenManager {
     }
     if (token == null || token.isEmpty) return false;
 
-    // Always refresh the server registration on sign-in/session restore.
-    // This is deliberately self-healing if a server token doc was cleaned up.
-    return _publish(token: token, userId: userId, schoolId: schoolId);
+    return _publish(
+      token: token,
+      userId: userId,
+      schoolId: schoolId,
+      platformOwner: platformOwner,
+    );
+  }
+
+  Future<bool> _waitForApnsToken() async {
+    for (var attempt = 0; attempt < 12; attempt++) {
+      try {
+        final token = await messaging.getAPNSToken();
+        if (token != null && token.isNotEmpty) {
+          _log('APNs token ready', 'attempt ${attempt + 1}');
+          return true;
+        }
+      } catch (e) {
+        if (attempt == 11) _log('APNs token lookup failed', e);
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 750));
+    }
+    return false;
   }
 
   Future<bool> _publish({
     required String token,
     required String userId,
     required String schoolId,
+    required bool platformOwner,
   }) async {
     final now = DateTime.now();
     final row = NotificationTokenIsar.create(
@@ -86,6 +131,7 @@ class NotificationTokenManager {
       lastSeenAt: now,
     );
 
+    var normalPublished = false;
     try {
       await firestore
           .collection('users')
@@ -96,17 +142,24 @@ class NotificationTokenManager {
             'token': token,
             'schoolId': schoolId,
             'platform': _platformName,
-            'app': 'school_pulse',
+            'app': platformOwner ? 'school_pulse_owner' : 'school_pulse',
             'enabled': true,
             'lastSeenAt': FieldValue.serverTimestamp(),
             'updatedAt': FieldValue.serverTimestamp(),
             'createdAt': FieldValue.serverTimestamp(),
           }, SetOptions(merge: true));
-      row.publishedAt = now;
+      normalPublished = true;
       _log('FCM token registered', '$userId / $_platformName');
     } catch (e) {
-      _log('FCM token publish failed', e);
+      _log('FCM token Firestore publish failed', e);
     }
+
+    var ownerPublished = !platformOwner;
+    if (platformOwner) {
+      ownerPublished = await _registerOwnerToken(token);
+    }
+
+    if (normalPublished || ownerPublished) row.publishedAt = now;
 
     await isar.writeTxn(() async {
       final existing = await isar.notificationTokenIsars
@@ -125,7 +178,24 @@ class NotificationTokenManager {
       }
     });
 
-    return row.publishedAt != null;
+    return platformOwner ? ownerPublished : normalPublished;
+  }
+
+  Future<bool> _registerOwnerToken(String token) async {
+    try {
+      final callable = FirebaseFunctions.instanceFor(region: 'europe-west1')
+          .httpsCallable('registerOwnerNotificationDevice');
+      final result = await callable.call<Map<String, dynamic>>({
+        'token': token,
+        'platform': _platformName,
+      });
+      final ok = result.data['ok'] == true;
+      _log('SaaS Owner token registry', ok ? 'registered' : result.data);
+      return ok;
+    } catch (e) {
+      _log('SaaS Owner token registry failed', e);
+      return false;
+    }
   }
 
   Future<void> revokeForUser(String userId) async {
@@ -148,6 +218,15 @@ class NotificationTokenManager {
       } catch (e) {
         _log('token revocation deferred for $userId', e);
       }
+
+      // This call only succeeds while Firebase Auth is still valid. If logout
+      // has already completed, the invalid/expired FCM token cleanup in the
+      // server fan-out remains the final safety net.
+      try {
+        final callable = FirebaseFunctions.instanceFor(region: 'europe-west1')
+            .httpsCallable('unregisterOwnerNotificationDevice');
+        await callable.call<Map<String, dynamic>>({'token': row.token});
+      } catch (_) {}
 
       await isar.writeTxn(() async {
         if (revoked) {
