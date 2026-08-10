@@ -25,6 +25,28 @@ class CreateSchoolEvent extends SuperAdminEvent {
   List<Object?> get props => [school, adminEmail, adminPassword];
 }
 
+class ApproveSchoolApplicationEvent extends SuperAdminEvent {
+  final String applicationId;
+
+  const ApproveSchoolApplicationEvent(this.applicationId);
+
+  @override
+  List<Object?> get props => [applicationId];
+}
+
+class RejectSchoolApplicationEvent extends SuperAdminEvent {
+  final String applicationId;
+  final String reason;
+
+  const RejectSchoolApplicationEvent({
+    required this.applicationId,
+    required this.reason,
+  });
+
+  @override
+  List<Object?> get props => [applicationId, reason];
+}
+
 class UpdateSchoolStatusEvent extends SuperAdminEvent {
   final String schoolId;
   final SchoolStatus status;
