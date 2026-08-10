@@ -382,7 +382,7 @@ class _DetailCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [Icon(icon, size: 20, color: theme.colorScheme.primary), const SizedBox(width: 9), Text(title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w850))]),
+          Row(children: [Icon(icon, size: 20, color: theme.colorScheme.primary), const SizedBox(width: 9), Text(title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800))]),
           const SizedBox(height: 12),
           ...rows.map((row) => Padding(
             padding: const EdgeInsets.symmetric(vertical: 7),
@@ -391,7 +391,7 @@ class _DetailCard extends StatelessWidget {
               children: [
                 SizedBox(width: 118, child: Text(row.label, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant))),
                 const SizedBox(width: 10),
-                Expanded(child: Text(row.value.trim().isEmpty ? '—' : row.value, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w650, color: row.valueColor))),
+                Expanded(child: Text(row.value.trim().isEmpty ? '—' : row.value, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: row.valueColor))),
               ],
             ),
           )),
