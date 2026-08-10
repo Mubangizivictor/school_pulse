@@ -76,10 +76,10 @@ class _SubscriptionAccessGateState extends State<SubscriptionAccessGate> {
         }
         if (institution.isRenewalLocked) {
           return _RenewalGate(
-            child: widget.child,
             institution: institution,
             isSchoolAdmin: authState.user.role == UserRole.schoolAdmin,
             onPay: () => _openPaymentPortal(context),
+            child: widget.child,
           );
         }
         return widget.child;
