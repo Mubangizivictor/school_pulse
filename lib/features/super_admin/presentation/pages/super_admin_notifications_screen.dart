@@ -11,11 +11,14 @@ import 'package:school_pulse/features/super_admin/data/services/owner_notificati
 import 'package:school_pulse/features/super_admin/domain/entities/owner_notification.dart';
 
 import 'payment_review_screen.dart';
+import 'school_management_screen.dart';
 
-/// Real notifications feed for the SaaS owner console. Currently shows
-/// manual-payment-submission events written server-side to
-/// `super_admin_notifications`; tapping one loads the full payment and opens
-/// [PaymentReviewScreen].
+/// Realtime SaaS Owner notification center.
+///
+/// New school applications and payment proofs are written by the Cloud
+/// notification engine to `super_admin_notifications`. Push/email delivery is
+/// secondary: this feed remains the durable source of truth even if an
+/// external channel is unavailable.
 class SuperAdminNotificationsScreen extends StatefulWidget {
   const SuperAdminNotificationsScreen({super.key});
 
@@ -34,39 +37,18 @@ class _SuperAdminNotificationsScreenState
   );
   final DateFormat _dateTime = DateFormat('MMM d, yyyy • h:mm a');
 
-  List<OwnerNotification> _items = const [];
-  bool _loading = true;
-  String? _error;
   String? _openingNotificationId;
-
-  @override
-  void initState() {
-    super.initState();
-    _reload();
-  }
-
-  Future<void> _reload() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final items = await _notifications.getNotifications();
-      if (!mounted) return;
-      setState(() {
-        _items = items;
-        _loading = false;
-      });
-    } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _error = _friendlyError(error);
-      });
-    }
-  }
+  bool _diagnosing = false;
 
   Future<void> _openNotification(OwnerNotification notification) async {
+    if (notification.isApplication) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const SchoolManagementScreen()),
+      );
+      return;
+    }
+
+    if (!notification.isPayment || notification.paymentId.isEmpty) return;
     setState(() => _openingNotificationId = notification.id);
     try {
       final payments = await _payments.getPayments();
@@ -76,7 +58,7 @@ class _SuperAdminNotificationsScreenState
       if (!mounted) return;
       if (match.isEmpty) {
         _showSnack(
-          'This payment could no longer be found. It may have been removed.',
+          'This payment could no longer be found. It may already have been resolved.',
           isError: true,
         );
         return;
@@ -86,6 +68,54 @@ class _SuperAdminNotificationsScreenState
       if (mounted) _showSnack(_friendlyError(error), isError: true);
     } finally {
       if (mounted) setState(() => _openingNotificationId = null);
+    }
+  }
+
+  Future<void> _showDiagnostics() async {
+    if (_diagnosing) return;
+    setState(() => _diagnosing = true);
+    try {
+      final health = await _notifications.getHealth();
+      if (!mounted) return;
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: true,
+        builder: (sheetContext) => _NotificationHealthSheet(
+          health: health,
+          onSendTest: () async {
+            Navigator.of(sheetContext).pop();
+            await _sendTest();
+          },
+        ),
+      );
+    } catch (error) {
+      if (mounted) _showSnack(_friendlyError(error), isError: true);
+    } finally {
+      if (mounted) setState(() => _diagnosing = false);
+    }
+  }
+
+  Future<void> _sendTest() async {
+    _showSnack('Sending test through in-app, push and email…');
+    try {
+      final result = await _notifications.sendTest();
+      if (!mounted) return;
+      final push = result['push'] is Map
+          ? Map<String, dynamic>.from(result['push'] as Map)
+          : const <String, dynamic>{};
+      final email = result['email'] is Map
+          ? Map<String, dynamic>.from(result['email'] as Map)
+          : const <String, dynamic>{};
+      final inApp = result['inApp'] is Map
+          ? Map<String, dynamic>.from(result['inApp'] as Map)
+          : const <String, dynamic>{};
+      _showSnack(
+        'In-app: ${inApp['status'] ?? 'unknown'} • Push: ${push['status'] ?? 'unknown'} • Email: ${email['status'] ?? 'unknown'}',
+        isError: push['status'] == 'failed' || email['status'] == 'failed',
+      );
+    } catch (error) {
+      if (mounted) _showSnack(_friendlyError(error), isError: true);
     }
   }
 
@@ -99,14 +129,17 @@ class _SuperAdminNotificationsScreenState
   }
 
   String _friendlyError(Object error) {
-    final text = error.toString();
-    if (text.contains('permission-denied')) {
+    final value = error.toString();
+    if (value.contains('permission-denied')) {
       return 'Only the seeded School Pulse SaaS Owner can perform this action.';
     }
-    if (text.contains('unauthenticated')) {
+    if (value.contains('unauthenticated')) {
       return 'Your owner session expired. Sign in again.';
     }
-    return text.replaceFirst(RegExp(r'^Exception:\s*'), '');
+    if (value.contains('not-found')) {
+      return 'The notification backend has not been deployed yet.';
+    }
+    return value.replaceFirst(RegExp(r'^Exception:\s*'), '');
   }
 
   @override
@@ -116,89 +149,113 @@ class _SuperAdminNotificationsScreenState
         title: const Text('Notifications'),
         actions: [
           IconButton(
-            tooltip: 'Refresh notifications',
-            onPressed: _loading ? null : _reload,
-            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Notification health',
+            onPressed: _diagnosing ? null : _showDiagnostics,
+            icon: _diagnosing
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.monitor_heart_outlined),
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _reload,
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.xl,
-                AppSpacing.xl,
-                AppSpacing.xl,
-                AppSpacing.s,
-              ),
-              sliver: SliverToBoxAdapter(child: _header(context)),
-            ),
-            if (_loading)
-              const SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(child: SchoolPulseLoader()),
-              )
-            else if (_error != null)
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: _ErrorState(message: _error!, onRetry: _reload),
-              )
-            else if (_items.isEmpty)
-              const SliverFillRemaining(
-                hasScrollBody: false,
-                child: EmptyState(
-                  icon: Icons.notifications_none_rounded,
-                  title: 'No notifications yet',
-                  message:
-                      'Payment submissions and platform activity that need your attention will appear here.',
-                ),
-              )
-            else
+      body: StreamBuilder<List<OwnerNotification>>(
+        stream: _notifications.watchNotifications(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !snapshot.hasData) {
+            return const Center(child: SchoolPulseLoader());
+          }
+          if (snapshot.hasError) {
+            return _ErrorState(
+              message: _friendlyError(snapshot.error!),
+              onRetry: () => setState(() {}),
+            );
+          }
+
+          final items = snapshot.data ?? const <OwnerNotification>[];
+          return CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.xl,
-                  AppSpacing.s,
                   AppSpacing.xl,
-                  AppSpacing.x3l,
+                  AppSpacing.xl,
+                  AppSpacing.s,
                 ),
-                sliver: SliverList.separated(
-                  itemCount: _items.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) {
-                    final notification = _items[index];
-                    return _NotificationCard(
-                      notification: notification,
-                      amount: _money.format(notification.amountUgx),
-                      createdAt: _dateTime.format(notification.createdAt),
-                      isOpening: _openingNotificationId == notification.id,
-                      onTap: () => _openNotification(notification),
-                    );
-                  },
-                ),
+                sliver: SliverToBoxAdapter(child: _header(context, items)),
               ),
-          ],
-        ),
+              if (items.isEmpty)
+                const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: EmptyState(
+                    icon: Icons.notifications_none_rounded,
+                    title: 'No notifications yet',
+                    message:
+                        'New school applications and payment proofs that need your attention will appear here in real time.',
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.xl,
+                    AppSpacing.s,
+                    AppSpacing.xl,
+                    AppSpacing.x3l,
+                  ),
+                  sliver: SliverList.separated(
+                    itemCount: items.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      final notification = items[index];
+                      return _NotificationCard(
+                        notification: notification,
+                        amount: notification.amountUgx > 0
+                            ? _money.format(notification.amountUgx)
+                            : null,
+                        createdAt: _dateTime.format(notification.createdAt),
+                        isOpening:
+                            _openingNotificationId == notification.id,
+                        onTap: () => _openNotification(notification),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _header(BuildContext context) {
-    final theme = Theme.of(context);
+  Widget _header(BuildContext context, List<OwnerNotification> items) {
+    final unread = items.where((item) => item.isUnread).length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Notifications',
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Owner alerts',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            if (unread > 0)
+              StatusBadge(
+                label: '$unread new',
+                color: AppColors.warning(context),
+              ),
+          ],
         ),
         const SizedBox(height: AppSpacing.s),
         Text(
-          'Payment submissions and platform activity that need your attention.',
+          'Applications, payments and critical School Pulse platform activity. Use the health button to test push and email delivery.',
           style: AppTypography.bodyMedium.copyWith(
             color: AppColors.textSecondary(context),
           ),
@@ -218,7 +275,7 @@ class _NotificationCard extends StatelessWidget {
   });
 
   final OwnerNotification notification;
-  final String amount;
+  final String? amount;
   final String createdAt;
   final bool isOpening;
   final VoidCallback onTap;
@@ -226,24 +283,25 @@ class _NotificationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final icon = notification.isApplication
+        ? Icons.school_outlined
+        : notification.method == 'bank'
+        ? Icons.account_balance_rounded
+        : Icons.payments_outlined;
+
     return AppCard(
       onTap: isOpening ? null : onTap,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 46,
+            height: 46,
             decoration: BoxDecoration(
               color: theme.colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(13),
             ),
-            child: Icon(
-              notification.method == 'bank'
-                  ? Icons.account_balance_rounded
-                  : Icons.phone_android_rounded,
-              color: theme.colorScheme.onPrimaryContainer,
-            ),
+            child: Icon(icon, color: theme.colorScheme.onPrimaryContainer),
           ),
           const SizedBox(width: AppSpacing.l),
           Expanded(
@@ -254,12 +312,13 @@ class _NotificationCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        notification.schoolName,
+                        notification.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
                     ),
+                    const SizedBox(width: 8),
                     StatusBadge(
                       label: notification.isUnread ? 'New' : 'Resolved',
                       color: notification.isUnread
@@ -270,32 +329,43 @@ class _NotificationCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Submitted a manual subscription payment',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                  notification.schoolName,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 7),
+                if (notification.body.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    notification.body,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
                 Wrap(
-                  spacing: 12,
-                  runSpacing: 4,
+                  spacing: 10,
+                  runSpacing: 5,
                   children: [
-                    Text(
-                      amount,
-                      style: const TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                    Text(
-                      notification.method == 'bank'
-                          ? 'Centenary Bank'
-                          : 'MTN MoMo',
-                      style: theme.textTheme.bodySmall,
-                    ),
-                    Text(
-                      createdAt,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                    if (amount != null)
+                      Text(
+                        amount!,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
-                    ),
+                    Text(createdAt, style: theme.textTheme.bodySmall),
+                    if (notification.pushStatus != null)
+                      _DeliveryChip(
+                        icon: Icons.notifications_active_outlined,
+                        label: 'Push ${notification.pushStatus}',
+                      ),
+                    if (notification.emailStatus != null)
+                      _DeliveryChip(
+                        icon: Icons.email_outlined,
+                        label: 'Email ${notification.emailStatus}',
+                      ),
                   ],
                 ),
               ],
@@ -309,6 +379,134 @@ class _NotificationCard extends StatelessWidget {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.chevron_right_rounded),
+        ],
+      ),
+    );
+  }
+}
+
+class _DeliveryChip extends StatelessWidget {
+  const _DeliveryChip({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: AppColors.textSecondary(context)),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: AppColors.textSecondary(context),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NotificationHealthSheet extends StatelessWidget {
+  const _NotificationHealthSheet({
+    required this.health,
+    required this.onSendTest,
+  });
+
+  final Map<String, dynamic> health;
+  final Future<void> Function() onSendTest;
+
+  @override
+  Widget build(BuildContext context) {
+    final ownerCount = health['ownerCount'] ?? 0;
+    final tokenCount = health['pushTokenCount'] ?? 0;
+    final smtpReady = health['smtpConfigured'] == true;
+    final recipients = health['emailRecipients'] is List
+        ? (health['emailRecipients'] as List).join(', ')
+        : 'None';
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(22, 4, 22, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Notification health',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Live backend checks for the SaaS Owner notification pipeline.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.textSecondary(context),
+              ),
+            ),
+            const SizedBox(height: 20),
+            _HealthRow(
+              label: 'Owner account',
+              value: '$ownerCount found',
+              ok: ownerCount is num && ownerCount > 0,
+            ),
+            _HealthRow(
+              label: 'Push devices',
+              value: '$tokenCount registered',
+              ok: tokenCount is num && tokenCount > 0,
+            ),
+            _HealthRow(
+              label: 'Email transport',
+              value: smtpReady ? 'SMTP configured' : 'SMTP not configured',
+              ok: smtpReady,
+            ),
+            _HealthRow(
+              label: 'Email recipient',
+              value: recipients,
+              ok: recipients != 'None' && recipients.isNotEmpty,
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: onSendTest,
+                icon: const Icon(Icons.send_rounded),
+                label: const Text('Send test notification'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HealthRow extends StatelessWidget {
+  const _HealthRow({required this.label, required this.value, required this.ok});
+  final String label;
+  final String value;
+  final bool ok;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            ok ? Icons.check_circle_rounded : Icons.error_outline_rounded,
+            size: 20,
+            color: ok ? Colors.green : Theme.of(context).colorScheme.error,
+          ),
+          const SizedBox(width: 10),
+          SizedBox(
+            width: 120,
+            child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+          ),
+          Expanded(child: Text(value)),
         ],
       ),
     );
@@ -336,10 +534,7 @@ class _ErrorState extends StatelessWidget {
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
-            FilledButton.tonal(
-              onPressed: onRetry,
-              child: const Text('Try Again'),
-            ),
+            FilledButton.tonal(onPressed: onRetry, child: const Text('Try Again')),
           ],
         ),
       ),
