@@ -34,7 +34,7 @@ class _SelectTermProfileScreenState extends State<SelectTermProfileScreen> {
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value: selectedYear,
+                  initialValue: selectedYear,
                   decoration: const InputDecoration(hintText: 'Select Year'),
                   items: ['2024/2025', '2023/2024']
                       .map((e) => DropdownMenuItem(value: e, child: Text(e)))
@@ -50,7 +50,7 @@ class _SelectTermProfileScreenState extends State<SelectTermProfileScreen> {
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value: selectedTerm,
+                  initialValue: selectedTerm,
                   decoration: const InputDecoration(hintText: 'Select Term'),
                   items:
                       [
@@ -73,7 +73,7 @@ class _SelectTermProfileScreenState extends State<SelectTermProfileScreen> {
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value: selectedProfile,
+                  initialValue: selectedProfile,
                   decoration: const InputDecoration(hintText: 'Select Profile'),
                   items:
                       [

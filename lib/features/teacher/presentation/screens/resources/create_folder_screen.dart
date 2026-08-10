@@ -54,7 +54,7 @@ class CreateFolderScreen extends StatelessWidget {
               decoration: const InputDecoration(
                 labelText: 'Select Parent Folder',
               ),
-              value: 'General Resources',
+              initialValue: 'General Resources',
               items: [
                 'General Resources',
                 'Mathematics',

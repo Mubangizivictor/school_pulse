@@ -245,7 +245,7 @@ class _NewApplicationViewState extends State<_NewApplicationView> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<Gender>(
-                value: _gender,
+                initialValue: _gender,
                 style: TextStyle(color: AppColors.textPrimary(context)),
                 decoration: InputDecoration(
                   labelText: 'Gender',
@@ -264,7 +264,7 @@ class _NewApplicationViewState extends State<_NewApplicationView> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<SchoolClass>(
-                value: _selectedClass,
+                initialValue: _selectedClass,
                 style: TextStyle(color: AppColors.textPrimary(context)),
                 decoration: InputDecoration(
                   labelText: 'Target class',
@@ -288,7 +288,7 @@ class _NewApplicationViewState extends State<_NewApplicationView> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<AcademicYear>(
-                value: _selectedYear,
+                initialValue: _selectedYear,
                 style: TextStyle(color: AppColors.textPrimary(context)),
                 decoration: InputDecoration(
                   labelText: 'Academic year',

@@ -186,7 +186,7 @@ class InventoryDashboardScreen extends StatelessWidget {
                   ),
                 if (!isNewItem && items.isNotEmpty)
                   DropdownButtonFormField<String>(
-                    value: selectedItemId,
+                    initialValue: selectedItemId,
                     decoration: const InputDecoration(labelText: 'Item'),
                     items: items
                         .map(
@@ -310,7 +310,7 @@ class InventoryDashboardScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<String>(
-                value: selectedItemId,
+                initialValue: selectedItemId,
                 decoration: const InputDecoration(labelText: 'Item'),
                 items: items
                     .map(

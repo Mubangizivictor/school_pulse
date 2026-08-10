@@ -539,7 +539,7 @@ class _AddMedicationDialogState extends State<_AddMedicationDialog> {
                         .where((i) => i.type == MedicalItemType.medication)
                         .toList();
                     return DropdownButtonFormField<MedicalInventoryItem>(
-                      value: _selectedItem,
+                      initialValue: _selectedItem,
                       dropdownColor: const Color(0xFF151929),
                       decoration: const InputDecoration(
                         labelText: 'Select Medication',

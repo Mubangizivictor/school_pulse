@@ -59,7 +59,7 @@ class AddLinkScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.xl),
             DropdownButtonFormField<String>(
               decoration: const InputDecoration(labelText: 'Class *'),
-              value: 'Primary 4 - Emerald',
+              initialValue: 'Primary 4 - Emerald',
               items: [
                 'Primary 4 - Emerald',
                 'Primary 4 - Ruby',

@@ -522,7 +522,7 @@ class _Step4StudentBasicInfoState extends State<_Step4StudentBasicInfo> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<Gender>(
-              value: state.gender,
+              initialValue: state.gender,
               decoration: const InputDecoration(
                 labelText: 'Gender',
                 border: OutlineInputBorder(),
@@ -689,7 +689,7 @@ class _Step7AcademicPlacement extends StatelessWidget {
               builder: (context, snapshot) {
                 final classes = snapshot.data ?? [];
                 return DropdownButtonFormField<String>(
-                  value: state.targetClassId,
+                  initialValue: state.targetClassId,
                   decoration: const InputDecoration(
                     labelText: 'Target Class',
                     border: OutlineInputBorder(),
@@ -723,7 +723,7 @@ class _Step7AcademicPlacement extends StatelessWidget {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 16.0),
                     child: DropdownButtonFormField<String>(
-                      value: state.targetStreamId,
+                      initialValue: state.targetStreamId,
                       decoration: const InputDecoration(
                         labelText: 'Stream / Section (Optional)',
                         border: OutlineInputBorder(),
@@ -750,7 +750,7 @@ class _Step7AcademicPlacement extends StatelessWidget {
               builder: (context, snapshot) {
                 final years = snapshot.data ?? [];
                 return DropdownButtonFormField<String>(
-                  value: state.academicYearId,
+                  initialValue: state.academicYearId,
                   decoration: const InputDecoration(
                     labelText: 'Academic Year',
                     border: OutlineInputBorder(),
