@@ -113,6 +113,7 @@ exports.submitSchoolApplication = onRequest({ region: "europe-west1" }, async (r
   const schoolEmail = text(school.email, 160).toLowerCase();
   const schoolPhone = normalizePhone(school.phone);
   const prefix = text(school.prefix, 12).toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const studentCapacity = Math.max(0, Math.min(1000000, Math.round(Number(school.studentCapacity || 0))));
   const adminEmail = text(administrator.email, 160).toLowerCase();
   const adminPhone = normalizePhone(administrator.phone);
 
@@ -122,6 +123,7 @@ exports.submitSchoolApplication = onRequest({ region: "europe-west1" }, async (r
     !schoolPhone ||
     !prefix ||
     !text(school.category, 80) ||
+    studentCapacity < 1 ||
     !text(location.region, 40) ||
     !text(location.district, 100) ||
     !text(location.address, 240) ||
@@ -170,6 +172,7 @@ exports.submitSchoolApplication = onRequest({ region: "europe-west1" }, async (r
       poBox: text(school.poBox, 80),
       prefix,
       motto: text(school.motto, 180),
+      studentCapacity,
     },
     location: {
       region: text(location.region, 40),
