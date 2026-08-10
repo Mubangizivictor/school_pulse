@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -18,26 +20,50 @@ import 'package:school_pulse/features/institution/presentation/bloc/institution_
 /// Renewal: leaves the already-configured dashboard visible behind a modal
 /// barrier, but consumes every pointer event until renewal is approved. The
 /// school never loses its data or context merely because a subscription ended.
-class SubscriptionAccessGate extends StatelessWidget {
+class SubscriptionAccessGate extends StatefulWidget {
   const SubscriptionAccessGate({required this.child, super.key});
 
+  final Widget child;
+
+  @override
+  State<SubscriptionAccessGate> createState() => _SubscriptionAccessGateState();
+}
+
+class _SubscriptionAccessGateState extends State<SubscriptionAccessGate> {
   static final Uri _paymentPortal = Uri.parse(
     'https://schoolpulse.victorbee.com/payment',
   );
 
-  final Widget child;
+  Timer? _clock;
+
+  @override
+  void initState() {
+    super.initState();
+    // The institution stream handles server changes immediately. This small
+    // local ticker exists for the one case where nothing changes in Firestore:
+    // an app remains open while the subscriptionExpiry clock passes.
+    _clock = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _clock?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthBloc>().state;
     if (authState is! AuthAuthenticated ||
         authState.user.role == UserRole.superAdmin) {
-      return child;
+      return widget.child;
     }
 
     return BlocBuilder<InstitutionContextCubit, InstitutionContextState>(
       builder: (context, institutionState) {
-        if (institutionState is! InstitutionContextLoaded) return child;
+        if (institutionState is! InstitutionContextLoaded) return widget.child;
 
         final institution = institutionState.context;
         if (institution.isInitialPaymentRequired) {
@@ -50,13 +76,13 @@ class SubscriptionAccessGate extends StatelessWidget {
         }
         if (institution.isRenewalLocked) {
           return _RenewalGate(
-            child: child,
+            child: widget.child,
             institution: institution,
             isSchoolAdmin: authState.user.role == UserRole.schoolAdmin,
             onPay: () => _openPaymentPortal(context),
           );
         }
-        return child;
+        return widget.child;
       },
     );
   }
