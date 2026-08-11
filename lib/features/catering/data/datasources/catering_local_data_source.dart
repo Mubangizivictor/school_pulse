@@ -1,53 +1,18 @@
-import 'package:isar/isar.dart';
-import '../models/meal_record_isar.dart';
-import '../models/meal_record_model.dart';
+import '../../domain/entities/meal_record.dart';
 
+/// No Isar/isar-model import here on purpose - see
+/// catering_local_data_source_mobile.dart for why. Mobile and web
+/// implementations are selected at compile time via
+/// catering_local_data_source_factory.dart's conditional import.
+///
+/// Mobile is a local-first write queue for dining-hall meal scans done
+/// without connectivity - cacheMealRecord always writes locally first
+/// (isSynced = false); getUnsyncedRecords/markAsSynced exist for a future
+/// sync flusher (not yet wired up anywhere in the app - confirmed no
+/// current caller). Web has no offline dining-hall scanning use case -
+/// writes go straight to Firestore, so nothing is ever pending.
 abstract class CateringLocalDataSource {
-  Future<void> cacheMealRecord(MealRecordModel record);
-  Future<List<MealRecordIsar>> getUnsyncedRecords();
-  Future<void> markAsSynced(List<int> ids);
-}
-
-class CateringLocalDataSourceImpl implements CateringLocalDataSource {
-  final Isar isar;
-
-  CateringLocalDataSourceImpl({required this.isar});
-
-  @override
-  Future<void> cacheMealRecord(MealRecordModel record) async {
-    final isarRecord = MealRecordIsar()
-      ..studentId = record.studentId
-      ..studentName = record.studentName
-      ..classId = record.classId
-      ..mealCategoryId = record.mealCategoryId
-      ..mealCategoryName = record.mealCategoryName
-      ..servedAt = record.servedAt
-      ..servedBy = record.servedBy
-      ..schoolId = record.schoolId
-      ..academicYear = record.academicYear
-      ..term = record.term
-      ..isSynced = false;
-
-    await isar.writeTxn(() async {
-      await isar.mealRecordIsars.put(isarRecord);
-    });
-  }
-
-  @override
-  Future<List<MealRecordIsar>> getUnsyncedRecords() async {
-    return await isar.mealRecordIsars.filter().isSyncedEqualTo(false).findAll();
-  }
-
-  @override
-  Future<void> markAsSynced(List<int> ids) async {
-    await isar.writeTxn(() async {
-      for (final id in ids) {
-        final record = await isar.mealRecordIsars.get(id);
-        if (record != null) {
-          record.isSynced = true;
-          await isar.mealRecordIsars.put(record);
-        }
-      }
-    });
-  }
+  Future<void> cacheMealRecord(MealRecord record);
+  Future<List<MealRecord>> getUnsyncedRecords();
+  Future<void> markAsSynced(List<String> ids);
 }

@@ -2,7 +2,7 @@ import 'package:school_pulse/features/biometrics/data/datasources/biometric_loca
 import 'package:school_pulse/features/biometrics/data/datasources/biometric_remote_data_source.dart';
 import 'package:school_pulse/features/biometrics/data/models/biometric_audit_log_model.dart';
 import 'package:school_pulse/features/biometrics/data/models/biometric_settings_model.dart';
-import 'package:school_pulse/features/biometrics/data/models/biometric_template_isar.dart';
+import 'package:school_pulse/features/biometrics/domain/entities/biometric_template.dart';
 import 'package:school_pulse/features/biometrics/domain/entities/biometric_audit_log.dart';
 import 'package:school_pulse/features/biometrics/domain/entities/biometric_device.dart';
 import 'package:school_pulse/features/biometrics/domain/entities/biometric_settings.dart';
@@ -48,15 +48,16 @@ class BiometricRepositoryImpl implements BiometricRepository {
     required String operatorId,
   }) async {
     // 1. Save to local storage for offline use
-    final isarTemplate = BiometricTemplateIsar()
-      ..personId = personId
-      ..schoolId = schoolId
-      ..personType = personType
-      ..encryptedTemplate = template
-      ..updatedAt = DateTime.now()
-      ..isSynced = false;
+    final localTemplate = BiometricTemplate(
+      personId: personId,
+      schoolId: schoolId,
+      personType: personType,
+      encryptedTemplate: template,
+      updatedAt: DateTime.now(),
+      isSynced: false,
+    );
 
-    await localDataSource.saveTemplate(isarTemplate);
+    await localDataSource.saveTemplate(localTemplate);
 
     // 2. Try to save to remote
     try {
@@ -99,14 +100,14 @@ class BiometricRepositoryImpl implements BiometricRepository {
       if (remote != null) {
         // Cache it locally
         await localDataSource.saveTemplate(
-          BiometricTemplateIsar()
-            ..personId = personId
-            ..schoolId = schoolId
-            ..personType =
-                'unknown' // Would be better to know this
-            ..encryptedTemplate = remote
-            ..updatedAt = DateTime.now()
-            ..isSynced = true,
+          BiometricTemplate(
+            personId: personId,
+            schoolId: schoolId,
+            personType: 'unknown', // Would be better to know this
+            encryptedTemplate: remote,
+            updatedAt: DateTime.now(),
+            isSynced: true,
+          ),
         );
       }
       return remote;

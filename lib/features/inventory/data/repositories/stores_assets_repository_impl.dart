@@ -15,20 +15,12 @@ import '../../domain/repositories/stores_assets_repository.dart';
 import '../datasources/stores_assets_remote_data_source.dart';
 import '../datasources/stores_assets_local_data_source.dart';
 import '../models/inventory_item_model.dart';
-import '../models/inventory_item_isar.dart';
-import '../models/asset_isar.dart';
 import '../models/asset_model.dart';
 import '../models/supplier_model.dart';
-import '../models/supplier_isar.dart';
 import '../models/purchase_order_model.dart';
-import '../models/purchase_order_isar.dart';
 import '../models/repair_model.dart';
-import '../models/repair_isar.dart';
 import '../models/maintenance_model.dart';
-import '../models/maintenance_isar.dart';
-import '../models/stock_movement_isar.dart';
 import '../models/procurement_request_model.dart';
-import '../models/procurement_request_isar.dart';
 
 class StoresAssetsRepositoryImpl implements StoresAssetsRepository {
   final StoresAssetsRemoteDataSource remoteDataSource;
@@ -46,16 +38,14 @@ class StoresAssetsRepositoryImpl implements StoresAssetsRepository {
     if (await networkInfo.isConnected) {
       try {
         final remoteItems = await remoteDataSource.getInventoryItems();
-        await localDataSource.cacheInventoryItems(
-          remoteItems.map((i) => InventoryItemIsar.fromEntity(i)).toList(),
-        );
+        await localDataSource.cacheInventoryItems(remoteItems);
         return Right(remoteItems);
       } catch (e) {
         return Left(ServerFailure());
       }
     } else {
       final localItems = await localDataSource.getInventoryItems();
-      return Right(localItems.map((i) => i.toEntity()).toList());
+      return Right(localItems);
     }
   }
 
@@ -85,10 +75,8 @@ class StoresAssetsRepositoryImpl implements StoresAssetsRepository {
         );
       }
       await localDataSource.saveInventoryItem(
-        InventoryItemIsar.fromEntity(
-          item,
-          isSynced: await networkInfo.isConnected,
-        ),
+        item,
+        isSynced: await networkInfo.isConnected,
       );
       return const Right(null);
     } catch (e) {
@@ -106,29 +94,29 @@ class StoresAssetsRepositoryImpl implements StoresAssetsRepository {
         return Left(ServerFailure());
       }
     } else {
-      final localMovements = await localDataSource.getRecentMovements();
-      return Right(localMovements.map((m) => m.toEntity()).toList());
+      return Right(await localDataSource.getRecentMovements());
     }
   }
 
   @override
   Future<Either<Failure, void>> adjustStock(StockAdjustment adjustment) async {
     try {
-      if (await networkInfo.isConnected) {
+      final isConnected = await networkInfo.isConnected;
+      if (isConnected) {
         await remoteDataSource.adjustStock(adjustment);
       }
       // Log movement locally
       await localDataSource.saveStockMovement(
-        StockMovementIsar(
-          movementId: '',
+        StockMovement(
+          id: '',
           itemId: adjustment.itemId,
           itemName: adjustment.itemName,
           type: StockMovementType.restock, // or dynamic based on adjustment
           quantity: adjustment.quantityAdjusted,
           date: adjustment.date,
           note: adjustment.notes,
-          isSynced: await networkInfo.isConnected,
         ),
+        isSynced: isConnected,
       );
       return const Right(null);
     } catch (e) {
@@ -139,20 +127,21 @@ class StoresAssetsRepositoryImpl implements StoresAssetsRepository {
   @override
   Future<Either<Failure, void>> issueStock(StockIssue issue) async {
     try {
-      if (await networkInfo.isConnected) {
+      final isConnected = await networkInfo.isConnected;
+      if (isConnected) {
         await remoteDataSource.issueStock(issue);
       }
       await localDataSource.saveStockMovement(
-        StockMovementIsar(
-          movementId: '',
+        StockMovement(
+          id: '',
           itemId: issue.itemId,
           itemName: issue.itemName,
           type: StockMovementType.issue,
           quantity: issue.quantity,
           date: issue.date,
           note: issue.purpose,
-          isSynced: await networkInfo.isConnected,
         ),
+        isSynced: isConnected,
       );
       return const Right(null);
     } catch (e) {
@@ -165,16 +154,13 @@ class StoresAssetsRepositoryImpl implements StoresAssetsRepository {
     if (await networkInfo.isConnected) {
       try {
         final assets = await remoteDataSource.getAssets();
-        await localDataSource.cacheAssets(
-          assets.map((a) => AssetIsar.fromEntity(a)).toList(),
-        );
+        await localDataSource.cacheAssets(assets);
         return Right(assets);
       } catch (e) {
         return Left(ServerFailure());
       }
     } else {
-      final localAssets = await localDataSource.getAssets();
-      return Right(localAssets.map((a) => a.toEntity()).toList());
+      return Right(await localDataSource.getAssets());
     }
   }
 
@@ -182,7 +168,7 @@ class StoresAssetsRepositoryImpl implements StoresAssetsRepository {
   Future<Either<Failure, Asset>> getAssetByQr(String qrCode) async {
     try {
       final asset = await localDataSource.getAssetByQr(qrCode);
-      if (asset != null) return Right(asset.toEntity());
+      if (asset != null) return Right(asset);
       return Left(CacheFailure());
     } catch (e) {
       return Left(ServerFailure());
@@ -192,12 +178,11 @@ class StoresAssetsRepositoryImpl implements StoresAssetsRepository {
   @override
   Future<Either<Failure, void>> addAsset(Asset asset) async {
     try {
-      if (await networkInfo.isConnected) {
+      final isConnected = await networkInfo.isConnected;
+      if (isConnected) {
         await remoteDataSource.addAsset(AssetModel.fromEntity(asset));
       }
-      await localDataSource.saveAsset(
-        AssetIsar.fromEntity(asset, isSynced: await networkInfo.isConnected),
-      );
+      await localDataSource.saveAsset(asset, isSynced: isConnected);
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure());
@@ -207,12 +192,11 @@ class StoresAssetsRepositoryImpl implements StoresAssetsRepository {
   @override
   Future<Either<Failure, void>> updateAsset(Asset asset) async {
     try {
-      if (await networkInfo.isConnected) {
+      final isConnected = await networkInfo.isConnected;
+      if (isConnected) {
         await remoteDataSource.updateAsset(AssetModel.fromEntity(asset));
       }
-      await localDataSource.saveAsset(
-        AssetIsar.fromEntity(asset, isSynced: await networkInfo.isConnected),
-      );
+      await localDataSource.saveAsset(asset, isSynced: isConnected);
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure());
@@ -225,15 +209,39 @@ class StoresAssetsRepositoryImpl implements StoresAssetsRepository {
     String reason,
   ) async {
     try {
-      if (await networkInfo.isConnected) {
+      final isConnected = await networkInfo.isConnected;
+      if (isConnected) {
         await remoteDataSource.disposeAsset(assetId, reason);
       }
       // Update local asset status
       final asset = await localDataSource.getAssetById(assetId);
       if (asset != null) {
-        asset.status = AssetStatus.disposed;
-        asset.isSynced = await networkInfo.isConnected;
-        await localDataSource.saveAsset(asset);
+        final updated = Asset(
+          id: asset.id,
+          schoolId: asset.schoolId,
+          assetNumber: asset.assetNumber,
+          qrCode: asset.qrCode,
+          name: asset.name,
+          category: asset.category,
+          brand: asset.brand,
+          model: asset.model,
+          serialNumber: asset.serialNumber,
+          purchaseDate: asset.purchaseDate,
+          purchasePrice: asset.purchasePrice,
+          supplierId: asset.supplierId,
+          warrantyExpiry: asset.warrantyExpiry,
+          assignedDepartment: asset.assignedDepartment,
+          assignedStaffId: asset.assignedStaffId,
+          assignedRoom: asset.assignedRoom,
+          condition: asset.condition,
+          status: AssetStatus.disposed,
+          photoUrl: asset.photoUrl,
+          documentUrls: asset.documentUrls,
+          notes: asset.notes,
+          createdAt: asset.createdAt,
+          updatedAt: asset.updatedAt,
+        );
+        await localDataSource.saveAsset(updated, isSynced: isConnected);
       }
       return const Right(null);
     } catch (e) {
@@ -246,16 +254,13 @@ class StoresAssetsRepositoryImpl implements StoresAssetsRepository {
     if (await networkInfo.isConnected) {
       try {
         final suppliers = await remoteDataSource.getSuppliers();
-        await localDataSource.cacheSuppliers(
-          suppliers.map((s) => SupplierIsar.fromEntity(s)).toList(),
-        );
+        await localDataSource.cacheSuppliers(suppliers);
         return Right(suppliers);
       } catch (e) {
         return Left(ServerFailure());
       }
     } else {
-      final localSuppliers = await localDataSource.getSuppliers();
-      return Right(localSuppliers.map((s) => s.toEntity()).toList());
+      return Right(await localDataSource.getSuppliers());
     }
   }
 
@@ -276,16 +281,13 @@ class StoresAssetsRepositoryImpl implements StoresAssetsRepository {
     if (await networkInfo.isConnected) {
       try {
         final orders = await remoteDataSource.getPurchaseOrders();
-        await localDataSource.cachePurchaseOrders(
-          orders.map((o) => PurchaseOrderIsar.fromEntity(o)).toList(),
-        );
+        await localDataSource.cachePurchaseOrders(orders);
         return Right(orders);
       } catch (e) {
         return Left(ServerFailure());
       }
     } else {
-      final localOrders = await localDataSource.getPurchaseOrders();
-      return Right(localOrders.map((o) => o.toEntity()).toList());
+      return Right(await localDataSource.getPurchaseOrders());
     }
   }
 
@@ -324,16 +326,13 @@ class StoresAssetsRepositoryImpl implements StoresAssetsRepository {
     if (await networkInfo.isConnected) {
       try {
         final requests = await remoteDataSource.getProcurementRequests();
-        await localDataSource.cacheProcurementRequests(
-          requests.map((r) => ProcurementRequestIsar.fromEntity(r)).toList(),
-        );
+        await localDataSource.cacheProcurementRequests(requests);
         return Right(requests);
       } catch (e) {
         return Left(ServerFailure());
       }
     } else {
-      final localRequests = await localDataSource.getProcurementRequests();
-      return Right(localRequests.map((r) => r.toEntity()).toList());
+      return Right(await localDataSource.getProcurementRequests());
     }
   }
 
@@ -342,16 +341,15 @@ class StoresAssetsRepositoryImpl implements StoresAssetsRepository {
     ProcurementRequest request,
   ) async {
     try {
-      if (await networkInfo.isConnected) {
+      final isConnected = await networkInfo.isConnected;
+      if (isConnected) {
         await remoteDataSource.createProcurementRequest(
           ProcurementRequestModel.fromEntity(request),
         );
       }
       await localDataSource.saveProcurementRequest(
-        ProcurementRequestIsar.fromEntity(
-          request,
-          isSynced: await networkInfo.isConnected,
-        ),
+        request,
+        isSynced: isConnected,
       );
       return const Right(null);
     } catch (e) {
@@ -366,7 +364,8 @@ class StoresAssetsRepositoryImpl implements StoresAssetsRepository {
     String? directorNote,
   }) async {
     try {
-      if (await networkInfo.isConnected) {
+      final isConnected = await networkInfo.isConnected;
+      if (isConnected) {
         await remoteDataSource.updateProcurementRequestStatus(
           requestId,
           status,
@@ -375,10 +374,14 @@ class StoresAssetsRepositoryImpl implements StoresAssetsRepository {
       }
       final local = await localDataSource.getProcurementRequestById(requestId);
       if (local != null) {
-        local.status = status;
-        if (directorNote != null) local.directorNote = directorNote;
-        local.isSynced = await networkInfo.isConnected;
-        await localDataSource.saveProcurementRequest(local);
+        final updated = local.copyWith(
+          status: status,
+          directorNote: directorNote ?? local.directorNote,
+        );
+        await localDataSource.saveProcurementRequest(
+          updated,
+          isSynced: isConnected,
+        );
       }
       return const Right(null);
     } catch (e) {
@@ -391,16 +394,13 @@ class StoresAssetsRepositoryImpl implements StoresAssetsRepository {
     if (await networkInfo.isConnected) {
       try {
         final records = await remoteDataSource.getRepairRecords();
-        await localDataSource.cacheRepairRecords(
-          records.map((r) => RepairIsar.fromEntity(r)).toList(),
-        );
+        await localDataSource.cacheRepairRecords(records);
         return Right(records);
       } catch (e) {
         return Left(ServerFailure());
       }
     } else {
-      final localRecords = await localDataSource.getRepairRecords();
-      return Right(localRecords.map((r) => r.toEntity()).toList());
+      return Right(await localDataSource.getRepairRecords());
     }
   }
 
@@ -424,16 +424,13 @@ class StoresAssetsRepositoryImpl implements StoresAssetsRepository {
     if (await networkInfo.isConnected) {
       try {
         final schedule = await remoteDataSource.getMaintenanceSchedule();
-        await localDataSource.cacheMaintenanceSchedule(
-          schedule.map((m) => MaintenanceIsar.fromEntity(m)).toList(),
-        );
+        await localDataSource.cacheMaintenanceSchedule(schedule);
         return Right(schedule);
       } catch (e) {
         return Left(ServerFailure());
       }
     } else {
-      final localSchedule = await localDataSource.getMaintenanceSchedule();
-      return Right(localSchedule.map((m) => m.toEntity()).toList());
+      return Right(await localDataSource.getMaintenanceSchedule());
     }
   }
 
@@ -459,11 +456,8 @@ class StoresAssetsRepositoryImpl implements StoresAssetsRepository {
       final unsyncedAssets = await localDataSource.getUnsyncedAssets();
       for (var asset in unsyncedAssets) {
         try {
-          await remoteDataSource.updateAsset(
-            AssetModel.fromEntity(asset.toEntity()),
-          );
-          asset.isSynced = true;
-          await localDataSource.saveAsset(asset);
+          await remoteDataSource.updateAsset(AssetModel.fromEntity(asset));
+          await localDataSource.saveAsset(asset, isSynced: true);
         } catch (_) {}
       }
 
@@ -500,8 +494,7 @@ class StoresAssetsRepositoryImpl implements StoresAssetsRepository {
               ),
             );
           }
-          movement.isSynced = true;
-          await localDataSource.saveStockMovement(movement);
+          await localDataSource.saveStockMovement(movement, isSynced: true);
         } catch (_) {}
       }
       final unsyncedRequests = await localDataSource
@@ -509,10 +502,12 @@ class StoresAssetsRepositoryImpl implements StoresAssetsRepository {
       for (var request in unsyncedRequests) {
         try {
           await remoteDataSource.createProcurementRequest(
-            ProcurementRequestModel.fromEntity(request.toEntity()),
+            ProcurementRequestModel.fromEntity(request),
           );
-          request.isSynced = true;
-          await localDataSource.saveProcurementRequest(request);
+          await localDataSource.saveProcurementRequest(
+            request,
+            isSynced: true,
+          );
         } catch (_) {}
       }
     }
