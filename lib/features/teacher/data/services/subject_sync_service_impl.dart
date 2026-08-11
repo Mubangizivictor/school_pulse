@@ -8,7 +8,6 @@ import '../../domain/services/subject_audit_service.dart';
 import '../../domain/services/subject_sync_service.dart';
 import '../datasources/subject_teacher_local_data_source.dart';
 import '../datasources/subject_teacher_remote_data_source.dart';
-import '../models/subject_teacher_isar_models.dart';
 
 class SubjectSyncServiceImpl implements SubjectSyncService {
   final SubjectTeacherRemoteDataSource remoteDataSource;
@@ -55,8 +54,7 @@ class SubjectSyncServiceImpl implements SubjectSyncService {
         schoolId: schoolId,
       );
 
-      for (final row in pending) {
-        final operation = row.toEntity();
+      for (final operation in pending) {
         try {
           final outcome = await _replay(operation);
           switch (outcome) {
@@ -122,10 +120,8 @@ class SubjectSyncServiceImpl implements SubjectSyncService {
     // The queue holds only the lesson id; the register itself is read back
     // from the device, so the replay always pushes the newest local state
     // rather than a snapshot taken when the operation was queued.
-    final local = await localDataSource.getAttendance(operation.entityId);
-    if (local == null) return _ReplayOutcome.gone;
-
-    final register = local.toEntity();
+    final register = await localDataSource.getAttendance(operation.entityId);
+    if (register == null) return _ReplayOutcome.gone;
 
     final server = await remoteDataSource.getLessonAttendance(
       schoolId: register.schoolId,
@@ -180,22 +176,19 @@ class SubjectSyncServiceImpl implements SubjectSyncService {
     // write is still the teacher's work and has to remain visible on the
     // device rather than disappearing.
     await localDataSource.updateOperation(
-      SubjectTeacherOfflineOperationIsar.fromEntity(
-        operation.copyWith(
-          status: status,
-          lastError: message,
-          retryCount: incrementRetry
-              ? operation.retryCount + 1
-              : operation.retryCount,
-        ),
+      operation.copyWith(
+        status: status,
+        lastError: message,
+        retryCount: incrementRetry
+            ? operation.retryCount + 1
+            : operation.retryCount,
       ),
     );
   }
 
   @override
   Future<List<OfflineOperation>> pending({String? schoolId}) async {
-    final rows = await localDataSource.getPendingOperations(schoolId: schoolId);
-    return rows.map((r) => r.toEntity()).toList();
+    return localDataSource.getPendingOperations(schoolId: schoolId);
   }
 
   @override

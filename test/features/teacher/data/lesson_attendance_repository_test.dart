@@ -6,11 +6,11 @@ import 'package:school_pulse/core/permissions/permission.dart';
 import 'package:school_pulse/core/utils/device_id_service.dart';
 import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_local_data_source.dart';
 import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_remote_data_source.dart';
-import 'package:school_pulse/features/teacher/data/models/subject_teacher_isar_models.dart';
 import 'package:school_pulse/features/teacher/data/repositories/lesson_attendance_repository_impl.dart';
 import 'package:school_pulse/features/teacher/domain/entities/active_responsibility_context.dart';
 import 'package:school_pulse/features/teacher/domain/entities/lesson.dart';
 import 'package:school_pulse/features/teacher/domain/entities/lesson_attendance.dart';
+import 'package:school_pulse/features/teacher/domain/entities/offline_operation.dart';
 import 'package:school_pulse/features/teacher/domain/entities/staff_role_assignment.dart';
 import 'package:school_pulse/features/teacher/domain/entities/subject_enrollment.dart';
 import 'package:school_pulse/features/teacher/domain/services/subject_audit_service.dart';
@@ -25,10 +25,9 @@ class _MockNetwork extends Mock implements NetworkInfo {}
 
 class _MockDeviceId extends Mock implements DeviceIdService {}
 
-class _FakeAttendanceIsar extends Fake implements LessonAttendanceIsar {}
+class _FakeAttendanceIsar extends Fake implements LessonAttendance {}
 
-class _FakeOperationIsar extends Fake
-    implements SubjectTeacherOfflineOperationIsar {}
+class _FakeOperationIsar extends Fake implements OfflineOperation {}
 
 ActiveResponsibilityContext _context({
   Set<String> permissions = const {
@@ -172,7 +171,7 @@ void main() {
       );
       when(
         () => local.getAttendance(any()),
-      ).thenAnswer((_) async => LessonAttendanceIsar.fromEntity(localDraft));
+      ).thenAnswer((_) async => localDraft);
 
       final result = await repository.openRegister(
         context: _context(),
@@ -205,7 +204,7 @@ void main() {
         );
         when(
           () => local.getAttendance(any()),
-        ).thenAnswer((_) async => LessonAttendanceIsar.fromEntity(localDraft));
+        ).thenAnswer((_) async => localDraft);
 
         final result = await repository.openRegister(
           context: _context(),

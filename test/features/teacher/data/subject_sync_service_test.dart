@@ -3,7 +3,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:school_pulse/core/network/network_info.dart';
 import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_local_data_source.dart';
 import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_remote_data_source.dart';
-import 'package:school_pulse/features/teacher/data/models/subject_teacher_isar_models.dart';
 import 'package:school_pulse/features/teacher/data/services/subject_sync_service_impl.dart';
 import 'package:school_pulse/features/teacher/domain/entities/lesson_attendance.dart';
 import 'package:school_pulse/features/teacher/domain/entities/offline_operation.dart';
@@ -19,8 +18,7 @@ class _MockNetwork extends Mock implements NetworkInfo {}
 
 class _FakeAttendance extends Fake implements LessonAttendance {}
 
-class _FakeOperationIsar extends Fake
-    implements SubjectTeacherOfflineOperationIsar {}
+class _FakeOperationIsar extends Fake implements OfflineOperation {}
 
 LessonAttendance _register({
   AttendanceRegisterStatus status = AttendanceRegisterStatus.submitted,
@@ -47,21 +45,19 @@ LessonAttendance _register({
   );
 }
 
-SubjectTeacherOfflineOperationIsar _queued({
+OfflineOperation _queued({
   String type = OfflineOperationType.attendanceSubmit,
   String entityId = 'l1',
 }) {
-  return SubjectTeacherOfflineOperationIsar.fromEntity(
-    OfflineOperation(
-      operationId: 'attendance_$entityId',
-      entityType: type,
-      entityId: entityId,
-      action: type,
-      createdAt: DateTime(2026, 6, 1, 10),
-      schoolId: 'school1',
-      userId: 'user1',
-      roleAssignmentId: 'a1',
-    ),
+  return OfflineOperation(
+    operationId: 'attendance_$entityId',
+    entityType: type,
+    entityId: entityId,
+    action: type,
+    createdAt: DateTime(2026, 6, 1, 10),
+    schoolId: 'school1',
+    userId: 'user1',
+    roleAssignmentId: 'a1',
   );
 }
 
@@ -97,8 +93,8 @@ void main() {
   });
 
   void queueContains(
-    List<SubjectTeacherOfflineOperationIsar> first, {
-    List<SubjectTeacherOfflineOperationIsar> then = const [],
+    List<OfflineOperation> first, {
+    List<OfflineOperation> then = const [],
   }) {
     var call = 0;
     when(
@@ -123,7 +119,7 @@ void main() {
     queueContains([_queued()]);
     when(
       () => local.getAttendance('l1'),
-    ).thenAnswer((_) async => LessonAttendanceIsar.fromEntity(_register()));
+    ).thenAnswer((_) async => _register());
     when(
       () => remote.getLessonAttendance(
         schoolId: any(named: 'schoolId'),
@@ -147,7 +143,7 @@ void main() {
       queueContains([_queued()]);
       when(
         () => local.getAttendance('l1'),
-      ).thenAnswer((_) async => LessonAttendanceIsar.fromEntity(_register()));
+      ).thenAnswer((_) async => _register());
       when(
         () => remote.getLessonAttendance(
           schoolId: any(named: 'schoolId'),
@@ -165,7 +161,7 @@ void main() {
     queueContains([_queued()]);
     when(
       () => local.getAttendance('l1'),
-    ).thenAnswer((_) async => LessonAttendanceIsar.fromEntity(_register()));
+    ).thenAnswer((_) async => _register());
     when(
       () => remote.getLessonAttendance(
         schoolId: any(named: 'schoolId'),
@@ -187,9 +183,7 @@ void main() {
   test('will not let an offline draft undo a submitted register', () async {
     queueContains([_queued(type: OfflineOperationType.attendanceDraft)]);
     when(() => local.getAttendance('l1')).thenAnswer(
-      (_) async => LessonAttendanceIsar.fromEntity(
-        _register(status: AttendanceRegisterStatus.draft),
-      ),
+      (_) async => _register(status: AttendanceRegisterStatus.draft),
     );
     when(
       () => remote.getLessonAttendance(
@@ -209,8 +203,7 @@ void main() {
   test('flags two devices submitting the same register', () async {
     queueContains([_queued()]);
     when(() => local.getAttendance('l1')).thenAnswer(
-      (_) async => LessonAttendanceIsar.fromEntity(
-        _register(submittedAt: DateTime(2026, 6, 1, 10, 5)),
+      (_) async => _register(submittedAt: DateTime(2026, 6, 1, 10, 5),
       ),
     );
     when(
@@ -241,7 +234,7 @@ void main() {
     queueContains([_queued()]);
     when(
       () => local.getAttendance('l1'),
-    ).thenAnswer((_) async => LessonAttendanceIsar.fromEntity(_register()));
+    ).thenAnswer((_) async => _register());
     when(
       () => remote.getLessonAttendance(
         schoolId: any(named: 'schoolId'),
@@ -263,7 +256,7 @@ void main() {
     queueContains([_queued()]);
     when(
       () => local.getAttendance('l1'),
-    ).thenAnswer((_) async => LessonAttendanceIsar.fromEntity(_register()));
+    ).thenAnswer((_) async => _register());
     when(
       () => remote.getLessonAttendance(
         schoolId: any(named: 'schoolId'),

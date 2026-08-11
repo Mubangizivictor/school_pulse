@@ -16,7 +16,6 @@ import '../../domain/repositories/lesson_attendance_repository.dart';
 import '../../domain/services/subject_audit_service.dart';
 import '../datasources/subject_teacher_local_data_source.dart';
 import '../datasources/subject_teacher_remote_data_source.dart';
-import '../models/subject_teacher_isar_models.dart';
 
 class LessonAttendanceRepositoryImpl implements LessonAttendanceRepository {
   final SubjectTeacherRemoteDataSource remoteDataSource;
@@ -56,9 +55,7 @@ class LessonAttendanceRepositoryImpl implements LessonAttendanceRepository {
       // marks taken offline that the server has never seen.
       final cached = await localDataSource.getAttendance(lesson.id);
       if (cached != null) {
-        return Right(
-          _reconcileWithEnrollment(cached.toEntity(), enrolledStudents),
-        );
+        return Right(_reconcileWithEnrollment(cached, enrolledStudents));
       }
 
       if (await networkInfo.isConnected) {
@@ -67,9 +64,7 @@ class LessonAttendanceRepositoryImpl implements LessonAttendanceRepository {
           lessonId: lesson.id,
         );
         if (remote != null) {
-          await localDataSource.saveAttendance(
-            LessonAttendanceIsar.fromEntity(remote),
-          );
+          await localDataSource.saveAttendance(remote);
           return Right(_reconcileWithEnrollment(remote, enrolledStudents));
         }
       }
@@ -128,9 +123,7 @@ class LessonAttendanceRepositoryImpl implements LessonAttendanceRepository {
     try {
       // Local first, always. The teacher's marks are safe on the device
       // before any network call is attempted.
-      await localDataSource.saveAttendance(
-        LessonAttendanceIsar.fromEntity(draft),
-      );
+      await localDataSource.saveAttendance(draft);
 
       if (await networkInfo.isConnected) {
         await remoteDataSource.saveLessonAttendance(draft);
@@ -203,9 +196,7 @@ class LessonAttendanceRepositoryImpl implements LessonAttendanceRepository {
     );
 
     try {
-      await localDataSource.saveAttendance(
-        LessonAttendanceIsar.fromEntity(submitted),
-      );
+      await localDataSource.saveAttendance(submitted);
 
       if (await networkInfo.isConnected) {
         await remoteDataSource.saveLessonAttendance(submitted);
@@ -296,9 +287,7 @@ class LessonAttendanceRepositoryImpl implements LessonAttendanceRepository {
 
     try {
       await remoteDataSource.saveLessonAttendance(corrected);
-      await localDataSource.saveAttendance(
-        LessonAttendanceIsar.fromEntity(corrected),
-      );
+      await localDataSource.saveAttendance(corrected);
 
       // Both values recorded: an attendance history that only shows the
       // current mark cannot be reviewed.
@@ -379,9 +368,7 @@ class LessonAttendanceRepositoryImpl implements LessonAttendanceRepository {
       roleAssignmentId: context.roleAssignmentId,
       deviceId: await _deviceId(),
     );
-    await localDataSource.enqueueOperation(
-      SubjectTeacherOfflineOperationIsar.fromEntity(operation),
-    );
+    await localDataSource.enqueueOperation(operation);
   }
 
   Future<String> _deviceId() async {

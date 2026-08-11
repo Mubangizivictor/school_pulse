@@ -15,7 +15,6 @@ import '../../domain/repositories/lesson_repository.dart';
 import '../../domain/services/subject_audit_service.dart';
 import '../datasources/subject_teacher_local_data_source.dart';
 import '../datasources/subject_teacher_remote_data_source.dart';
-import '../models/subject_teacher_isar_models.dart';
 
 class LessonRepositoryImpl implements LessonRepository {
   final SubjectTeacherRemoteDataSource remoteDataSource;
@@ -71,9 +70,7 @@ class LessonRepositoryImpl implements LessonRepository {
           from: from,
           to: to,
         );
-        await localDataSource.cacheLessons(
-          remote.map(LessonIsar.fromEntity).toList(),
-        );
+        await localDataSource.cacheLessons(remote);
         return Right(_mine(remote, context));
       }
 
@@ -92,7 +89,7 @@ class LessonRepositoryImpl implements LessonRepository {
         from: from,
         to: to,
       );
-      return Right(_mine(cached.map((e) => e.toEntity()).toList(), context));
+      return Right(_mine(cached, context));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -147,12 +144,11 @@ class LessonRepositoryImpl implements LessonRepository {
           lessonId: lessonId,
         );
         if (lesson != null) {
-          await localDataSource.cacheLessons([LessonIsar.fromEntity(lesson)]);
+          await localDataSource.cacheLessons([lesson]);
         }
         return Right(lesson);
       }
-      final cached = await localDataSource.getLesson(lessonId);
-      return Right(cached?.toEntity());
+      return Right(await localDataSource.getLesson(lessonId));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -182,7 +178,7 @@ class LessonRepositoryImpl implements LessonRepository {
     );
 
     try {
-      await localDataSource.cacheLessons([LessonIsar.fromEntity(started)]);
+      await localDataSource.cacheLessons([started]);
 
       if (await networkInfo.isConnected) {
         await remoteDataSource.updateLesson(
@@ -245,7 +241,7 @@ class LessonRepositoryImpl implements LessonRepository {
     );
 
     try {
-      await localDataSource.cacheLessons([LessonIsar.fromEntity(completed)]);
+      await localDataSource.cacheLessons([completed]);
 
       if (await networkInfo.isConnected) {
         await remoteDataSource.updateLesson(
@@ -296,9 +292,7 @@ class LessonRepositoryImpl implements LessonRepository {
       roleAssignmentId: context.roleAssignmentId,
       deviceId: await _deviceId(),
     );
-    await localDataSource.enqueueOperation(
-      SubjectTeacherOfflineOperationIsar.fromEntity(operation),
-    );
+    await localDataSource.enqueueOperation(operation);
   }
 
   Future<String> _deviceId() async {

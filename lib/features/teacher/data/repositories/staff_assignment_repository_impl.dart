@@ -8,7 +8,6 @@ import '../../domain/entities/staff_role_assignment.dart';
 import '../../domain/repositories/staff_assignment_repository.dart';
 import '../datasources/subject_teacher_local_data_source.dart';
 import '../datasources/subject_teacher_remote_data_source.dart';
-import '../models/subject_teacher_isar_models.dart';
 
 /// Key holding the last responsibility the teacher picked. Namespaced per
 /// user so a shared device does not restore one teacher's selection into
@@ -52,9 +51,7 @@ class StaffAssignmentRepositoryImpl implements StaffAssignmentRepository {
         // absent from the server response, and merging would leave the stale
         // row on the device granting access it no longer has.
         await localDataSource.clearAssignments(schoolId: schoolId);
-        await localDataSource.cacheAssignments(
-          remote.map(StaffRoleAssignmentIsar.fromEntity).toList(),
-        );
+        await localDataSource.cacheAssignments(remote);
         return Right(remote);
       } catch (e) {
         if (forceRefresh) return Left(ServerFailure(e.toString()));
@@ -70,7 +67,7 @@ class StaffAssignmentRepositoryImpl implements StaffAssignmentRepository {
         userId: userId,
         schoolId: schoolId,
       );
-      return Right(cached.map((e) => e.toEntity()).toList());
+      return Right(cached);
     } catch (e) {
       return Left(CacheFailure(e.toString()));
     }
@@ -129,9 +126,7 @@ class StaffAssignmentRepositoryImpl implements StaffAssignmentRepository {
         .watchAssignmentsForUser(schoolId: schoolId, userId: userId)
         .asyncMap((assignments) async {
           await localDataSource.clearAssignments(schoolId: schoolId);
-          await localDataSource.cacheAssignments(
-            assignments.map(StaffRoleAssignmentIsar.fromEntity).toList(),
-          );
+          await localDataSource.cacheAssignments(assignments);
           return assignments..sort(_byResponsibilityOrder);
         });
   }
@@ -150,10 +145,7 @@ class StaffAssignmentRepositoryImpl implements StaffAssignmentRepository {
         userId: userId,
         schoolId: schoolId,
       );
-      final match = cached
-          .map((e) => e.toEntity())
-          .where((a) => a.id == assignmentId)
-          .firstOrNull;
+      final match = cached.where((a) => a.id == assignmentId).firstOrNull;
       if (match == null) {
         return const Left(
           AssignmentInvalidFailure(

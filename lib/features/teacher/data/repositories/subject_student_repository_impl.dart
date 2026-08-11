@@ -12,7 +12,6 @@ import '../../domain/repositories/subject_student_repository.dart';
 import '../../domain/services/subject_audit_service.dart';
 import '../datasources/subject_teacher_local_data_source.dart';
 import '../datasources/subject_teacher_remote_data_source.dart';
-import '../models/subject_teacher_isar_models.dart';
 
 class SubjectStudentRepositoryImpl implements SubjectStudentRepository {
   final SubjectTeacherRemoteDataSource remoteDataSource;
@@ -233,9 +232,7 @@ class SubjectStudentRepositoryImpl implements SubjectStudentRepository {
           .toList();
 
       await remoteDataSource.createEnrollments(enrollments);
-      await localDataSource.cacheEnrollments(
-        enrollments.map(SubjectEnrollmentIsar.fromEntity).toList(),
-      );
+      await localDataSource.cacheEnrollments(enrollments);
 
       for (final studentId in studentIds) {
         await auditService.record(
@@ -326,9 +323,7 @@ class SubjectStudentRepositoryImpl implements SubjectStudentRepository {
 
       try {
         await remoteDataSource.updateEnrollment(updated);
-        await localDataSource.cacheEnrollments([
-          SubjectEnrollmentIsar.fromEntity(updated),
-        ]);
+        await localDataSource.cacheEnrollments([updated]);
 
         await auditService.record(
           context: context,
@@ -391,9 +386,7 @@ class SubjectStudentRepositoryImpl implements SubjectStudentRepository {
         academicYearId: context.academicYearId,
         streamId: context.streamId,
       );
-      await localDataSource.cacheEnrollments(
-        remote.map(SubjectEnrollmentIsar.fromEntity).toList(),
-      );
+      await localDataSource.cacheEnrollments(remote);
       return remote;
     }
 
@@ -406,7 +399,7 @@ class SubjectStudentRepositoryImpl implements SubjectStudentRepository {
       academicYearId: context.academicYearId,
       streamId: context.streamId,
     );
-    return cached.map((e) => e.toEntity()).toList();
+    return cached;
   }
 }
 

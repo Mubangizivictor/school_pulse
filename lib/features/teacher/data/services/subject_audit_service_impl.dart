@@ -14,7 +14,6 @@ import '../../domain/entities/subject_audit_log.dart';
 import '../../domain/services/subject_audit_service.dart';
 import '../datasources/subject_teacher_local_data_source.dart';
 import '../datasources/subject_teacher_remote_data_source.dart';
-import '../models/subject_teacher_isar_models.dart';
 
 class SubjectAuditServiceImpl implements SubjectAuditService {
   final SubjectTeacherRemoteDataSource remoteDataSource;
@@ -96,16 +95,13 @@ class SubjectAuditServiceImpl implements SubjectAuditService {
         await remoteDataSource.writeAuditLog(_logFromPayload(op));
         await localDataSource.deleteOperation(op.operationId);
       } catch (e) {
-        final entity = op.toEntity();
         await localDataSource.updateOperation(
-          SubjectTeacherOfflineOperationIsar.fromEntity(
-            entity.copyWith(
-              retryCount: entity.retryCount + 1,
-              lastError: e.toString(),
-              status: entity.canRetry
-                  ? OfflineSyncStatus.pending
-                  : OfflineSyncStatus.failed,
-            ),
+          op.copyWith(
+            retryCount: op.retryCount + 1,
+            lastError: e.toString(),
+            status: op.canRetry
+                ? OfflineSyncStatus.pending
+                : OfflineSyncStatus.failed,
           ),
         );
       }
@@ -125,9 +121,7 @@ class SubjectAuditServiceImpl implements SubjectAuditService {
       roleAssignmentId: log.roleAssignmentId,
       deviceId: log.deviceId,
     );
-    await localDataSource.enqueueOperation(
-      SubjectTeacherOfflineOperationIsar.fromEntity(operation),
-    );
+    await localDataSource.enqueueOperation(operation);
   }
 
   Map<String, dynamic> _toPayload(SubjectAuditLog log) => {
@@ -156,8 +150,8 @@ class SubjectAuditServiceImpl implements SubjectAuditService {
     'platform': log.platform,
   };
 
-  SubjectAuditLog _logFromPayload(SubjectTeacherOfflineOperationIsar op) {
-    final p = op.toEntity().payload;
+  SubjectAuditLog _logFromPayload(OfflineOperation op) {
+    final p = op.payload;
     return SubjectAuditLog(
       auditId: p['auditId'] as String? ?? op.operationId,
       schoolId: p['schoolId'] as String? ?? op.schoolId,
