@@ -4,9 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
-import 'package:isar/isar.dart';
 
-import '../../data/models/notification_token_isar.dart';
+import 'token_local_cache.dart';
 
 /// Owns this device's FCM registration token.
 ///
@@ -17,14 +16,14 @@ import '../../data/models/notification_token_isar.dart';
 class NotificationTokenManager {
   final FirebaseMessaging messaging;
   final FirebaseFirestore firestore;
-  final Isar isar;
+  final TokenLocalCache localCache;
 
   StreamSubscription<String>? _refreshSub;
 
   NotificationTokenManager({
     required this.messaging,
     required this.firestore,
-    required this.isar,
+    required this.localCache,
   });
 
   void startListening({
@@ -123,13 +122,6 @@ class NotificationTokenManager {
     required bool platformOwner,
   }) async {
     final now = DateTime.now();
-    final row = NotificationTokenIsar.create(
-      token: token,
-      userId: userId,
-      schoolId: schoolId,
-      platform: _platformName,
-      lastSeenAt: now,
-    );
 
     var normalPublished = false;
     try {
@@ -159,24 +151,26 @@ class NotificationTokenManager {
       ownerPublished = await _registerOwnerToken(token);
     }
 
-    if (normalPublished || ownerPublished) row.publishedAt = now;
+    final publishedAt = (normalPublished || ownerPublished) ? now : null;
 
-    await isar.writeTxn(() async {
-      final existing = await isar.notificationTokenIsars
-          .filter()
-          .tokenEqualTo(token)
-          .and()
-          .userIdEqualTo(userId)
-          .findFirst();
-      if (existing != null) {
-        existing.lastSeenAt = now;
-        existing.publishedAt = row.publishedAt ?? existing.publishedAt;
-        existing.pendingRevocation = false;
-        await isar.notificationTokenIsars.put(existing);
-      } else {
-        await isar.notificationTokenIsars.put(row);
-      }
-    });
+    final existing = await localCache.findByTokenAndUser(token, userId);
+    if (existing != null) {
+      existing.lastSeenAt = now;
+      existing.publishedAt = publishedAt ?? existing.publishedAt;
+      existing.pendingRevocation = false;
+      await localCache.upsert(existing);
+    } else {
+      await localCache.upsert(
+        TokenRecord(
+          token: token,
+          userId: userId,
+          schoolId: schoolId,
+          platform: _platformName,
+          lastSeenAt: now,
+          publishedAt: publishedAt,
+        ),
+      );
+    }
 
     return platformOwner ? ownerPublished : normalPublished;
   }
@@ -200,10 +194,7 @@ class NotificationTokenManager {
   }
 
   Future<void> revokeForUser(String userId) async {
-    final rows = await isar.notificationTokenIsars
-        .filter()
-        .userIdEqualTo(userId)
-        .findAll();
+    final rows = await localCache.findByUser(userId);
     if (rows.isEmpty) return;
 
     for (final row in rows) {
@@ -230,14 +221,12 @@ class NotificationTokenManager {
         await callable.call<Map<String, dynamic>>({'token': row.token});
       } catch (_) {}
 
-      await isar.writeTxn(() async {
-        if (revoked) {
-          await isar.notificationTokenIsars.delete(row.id);
-        } else {
-          row.pendingRevocation = true;
-          await isar.notificationTokenIsars.put(row);
-        }
-      });
+      if (revoked) {
+        await localCache.deleteByToken(row.token, userId);
+      } else {
+        row.pendingRevocation = true;
+        await localCache.upsert(row);
+      }
     }
 
     for (final row in rows) {
@@ -252,10 +241,7 @@ class NotificationTokenManager {
   }
 
   Future<int> drainPendingRevocations() async {
-    final pending = await isar.notificationTokenIsars
-        .filter()
-        .pendingRevocationEqualTo(true)
-        .findAll();
+    final pending = await localCache.findPendingRevocations();
 
     var drained = 0;
     for (final row in pending) {
@@ -266,9 +252,7 @@ class NotificationTokenManager {
             .collection('tokens')
             .doc(row.token)
             .delete();
-        await isar.writeTxn(() async {
-          await isar.notificationTokenIsars.delete(row.id);
-        });
+        await localCache.deleteByToken(row.token, row.userId);
         drained++;
       } catch (e) {
         _log('revocation retry failed', e);
@@ -281,11 +265,7 @@ class NotificationTokenManager {
     required String userId,
     required Set<String> desiredTopics,
   }) async {
-    final row = await isar.notificationTokenIsars
-        .filter()
-        .userIdEqualTo(userId)
-        .sortByLastSeenAtDesc()
-        .findFirst();
+    final row = await localCache.mostRecentForUser(userId);
     if (row == null) return;
 
     final current = row.subscribedTopics.toSet();
@@ -310,10 +290,8 @@ class NotificationTokenManager {
       }
     }
 
-    await isar.writeTxn(() async {
-      row.subscribedTopics = applied.toList();
-      await isar.notificationTokenIsars.put(row);
-    });
+    row.subscribedTopics = applied.toList();
+    await localCache.upsert(row);
   }
 
   Future<void> dispose() async {

@@ -8,9 +8,9 @@ import '../../domain/entities/notification_preferences.dart';
 import '../../domain/failures/notification_failure.dart';
 import '../../domain/policies/notification_delivery_policy.dart';
 import '../../domain/repositories/notification_repository.dart';
+import '../../domain/entities/pending_notification_change.dart';
 import '../datasources/notification_local_data_source.dart';
 import '../datasources/notification_remote_data_source.dart';
-import '../models/notification_isar.dart';
 
 /// Offline-first notification repository.
 ///
@@ -90,8 +90,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
     required bool fromCache,
   }) async {
     try {
-      final rows = await localDataSource.query(query);
-      final items = rows.map((r) => r.toEntity()).toList();
+      final items = await localDataSource.query(query);
       return _pageFrom(items, query, fromCache: fromCache);
     } catch (e, stack) {
       _log('cache read failed', e, stack);
@@ -147,14 +146,14 @@ class NotificationRepositoryImpl implements NotificationRepository {
           cached.recipientUserId != recipientUserId) {
         return const Left(NotificationTenantMismatchFailure());
       }
-      return Right(cached.toEntity());
+      return Right(cached);
     } catch (e, stack) {
       _log('getById failed', e, stack);
       final cached = await localDataSource.getById(notificationId);
       if (cached != null &&
           cached.schoolId == schoolId &&
           cached.recipientUserId == recipientUserId) {
-        return Right(cached.toEntity());
+        return Right(cached);
       }
       return Left(NotificationServerFailure(debugDetail: '$e'));
     }
@@ -424,7 +423,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
 
   /// Recovers the boolean a pending pin/archive change was set to, so a queued
   /// un-pin is not replayed as a pin.
-  static bool _valueForField(NotificationIsar row, String field) {
+  static bool _valueForField(PendingNotificationChange row, String field) {
     switch (field) {
       case PendingField.pinned:
         return row.status == NotificationStatus.pinned;
