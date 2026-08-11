@@ -10,7 +10,6 @@ import '../../domain/repositories/class_student_repository.dart';
 import '../../domain/services/class_teacher_assignment_service.dart';
 import '../datasources/class_teacher_local_data_source.dart';
 import '../datasources/class_teacher_remote_data_source.dart';
-import '../models/class_teacher_isar_models.dart';
 
 class ClassStudentRepositoryImpl implements ClassStudentRepository {
   final ClassTeacherRemoteDataSource remoteDataSource;
@@ -61,7 +60,7 @@ class ClassStudentRepositoryImpl implements ClassStudentRepository {
       );
 
       await localDataSource.cacheClassStudents(
-        students.map(ClassStudentIsar.fromEntity).toList(),
+        students,
         schoolId: context.schoolId,
         classId: classId,
         academicYearId: context.academicYearId,
@@ -110,7 +109,7 @@ class ClassStudentRepositoryImpl implements ClassStudentRepository {
       if (cached != null &&
           cached.schoolId == context.schoolId &&
           cached.classId == classId) {
-        return Right(cached.toEntity());
+        return Right(cached);
       }
       return const Left(
         NetworkFailure(
@@ -175,14 +174,13 @@ class ClassStudentRepositoryImpl implements ClassStudentRepository {
     ActiveResponsibilityContext context,
     String classId,
   ) async {
-    final rows = await localDataSource.getClassStudents(
+    final students = await localDataSource.getClassStudents(
       schoolId: context.schoolId,
       classId: classId,
       academicYearId: context.academicYearId,
       streamId: context.streamId,
     );
-    final students = rows.map((r) => r.toEntity()).toList()
+    return students
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-    return students;
   }
 }

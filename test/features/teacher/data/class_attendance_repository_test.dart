@@ -10,7 +10,6 @@ import 'package:school_pulse/features/structure/domain/repositories/structure_re
 import 'package:school_pulse/features/teacher/data/datasources/class_teacher_local_data_source.dart';
 import 'package:school_pulse/features/teacher/data/datasources/class_teacher_remote_data_source.dart';
 import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_local_data_source.dart';
-import 'package:school_pulse/features/teacher/data/models/subject_teacher_isar_models.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_attendance_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/services/class_teacher_assignment_service_impl.dart';
 import 'package:school_pulse/features/teacher/domain/entities/active_responsibility_context.dart';
@@ -102,17 +101,15 @@ void main() {
     registerFallbackValue(_session());
     registerFallbackValue(_context());
     registerFallbackValue(
-      SubjectTeacherOfflineOperationIsar.fromEntity(
-        OfflineOperation(
-          operationId: 'op1',
-          entityType: OfflineOperationType.classAttendanceDraft,
-          entityId: 'e1',
-          action: 'a',
-          createdAt: DateTime(2026, 6, 15),
-          schoolId: 'school1',
-          userId: 'user1',
-          roleAssignmentId: 'ct1',
-        ),
+      OfflineOperation(
+        operationId: 'op1',
+        entityType: OfflineOperationType.classAttendanceDraft,
+        entityId: 'e1',
+        action: 'a',
+        createdAt: DateTime(2026, 6, 15),
+        schoolId: 'school1',
+        userId: 'user1',
+        roleAssignmentId: 'ct1',
       ),
     );
     registerFallbackValue(

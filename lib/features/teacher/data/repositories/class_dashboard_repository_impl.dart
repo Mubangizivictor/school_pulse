@@ -12,7 +12,6 @@ import '../../domain/repositories/class_student_repository.dart';
 import '../../domain/services/class_teacher_assignment_service.dart';
 import '../datasources/class_teacher_local_data_source.dart';
 import '../datasources/class_teacher_remote_data_source.dart';
-import '../models/class_teacher_isar_models.dart';
 
 class ClassDashboardRepositoryImpl implements ClassDashboardRepository {
   final ClassTeacherRemoteDataSource remoteDataSource;
@@ -132,13 +131,11 @@ class ClassDashboardRepositoryImpl implements ClassDashboardRepository {
       );
 
       await localDataSource.cacheDashboard(
-        ClassDashboardCacheIsar.fromEntity(
-          summary,
-          schoolId: context.schoolId,
-          classId: classId,
-          streamId: context.streamId,
-          academicYearId: context.academicYearId,
-        ),
+        summary,
+        schoolId: context.schoolId,
+        classId: classId,
+        streamId: context.streamId,
+        academicYearId: context.academicYearId,
       );
 
       return Right(summary);
@@ -202,12 +199,11 @@ class ClassDashboardRepositoryImpl implements ClassDashboardRepository {
     ActiveResponsibilityContext context,
     String classId,
   ) async {
-    final row = await localDataSource.getDashboard(
+    return localDataSource.getDashboard(
+      schoolId: context.schoolId,
       classId: classId,
       academicYearId: context.academicYearId,
       streamId: context.streamId,
     );
-    if (row == null || row.schoolId != context.schoolId) return null;
-    return row.toEntity();
   }
 }

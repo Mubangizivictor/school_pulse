@@ -21,7 +21,6 @@ import '../../domain/services/subject_audit_service.dart';
 import '../datasources/class_teacher_local_data_source.dart';
 import '../datasources/class_teacher_remote_data_source.dart';
 import '../datasources/subject_teacher_local_data_source.dart';
-import '../models/subject_teacher_isar_models.dart';
 
 class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
   final ClassTeacherRemoteDataSource remoteDataSource;
@@ -553,8 +552,7 @@ class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
   }
 
   Future<ClassAttendanceSession?> _cachedDraft(String sessionId) async {
-    final row = await localDataSource.getAttendanceDraft(sessionId);
-    return row?.toEntity();
+    return localDataSource.getAttendanceDraft(sessionId);
   }
 
   Future<void> _cacheDraft(ClassAttendanceSession session) async {
@@ -582,9 +580,7 @@ class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
       deviceId: session.deviceId,
     );
 
-    await queueDataSource.enqueueOperation(
-      SubjectTeacherOfflineOperationIsar.fromEntity(operation),
-    );
+    await queueDataSource.enqueueOperation(operation);
   }
 
   static Map<String, dynamic> _sessionPayload(ClassAttendanceSession session) =>
