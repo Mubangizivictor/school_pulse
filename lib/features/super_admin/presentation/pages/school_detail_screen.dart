@@ -2,18 +2,77 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
+import 'package:school_pulse/features/super_admin/data/services/manual_payment_service.dart';
+import 'package:school_pulse/features/super_admin/domain/entities/manual_subscription_payment.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import '../../domain/entities/school.dart';
 import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
 import '../responsive.dart';
 
-class SchoolDetailScreen extends StatelessWidget {
+class SchoolDetailScreen extends StatefulWidget {
   final School school;
 
   const SchoolDetailScreen({super.key, required this.school});
+
+  @override
+  State<SchoolDetailScreen> createState() => _SchoolDetailScreenState();
+}
+
+class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
+  School get school => widget.school;
+
+  final ManualPaymentService _paymentsService = ManualPaymentService();
+  final NumberFormat _money = NumberFormat.currency(
+    symbol: 'UGX ',
+    decimalDigits: 0,
+  );
+  final DateFormat _paymentDate = DateFormat('MMM d, yyyy');
+
+  bool _loadingPayments = true;
+  String? _paymentsError;
+  List<ManualSubscriptionPayment> _payments = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPayments();
+  }
+
+  Future<void> _loadPayments() async {
+    setState(() {
+      _loadingPayments = true;
+      _paymentsError = null;
+    });
+    try {
+      final all = await _paymentsService.getPayments();
+      final mine = all.where((p) => p.schoolId == school.id).toList()
+        ..sort((a, b) => b.submittedAt.compareTo(a.submittedAt));
+      if (!mounted) return;
+      setState(() {
+        _payments = mine;
+        _loadingPayments = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loadingPayments = false;
+        _paymentsError = error.toString().replaceFirst(
+          RegExp(r'^Exception:\s*'),
+          '',
+        );
+      });
+    }
+  }
+
+  int get _totalPaid => _payments
+      .where((p) => p.status == ManualPaymentStatus.approved)
+      .fold(0, (sum, p) => sum + p.submittedAmount);
 
   @override
   Widget build(BuildContext context) {
@@ -108,6 +167,8 @@ class SchoolDetailScreen extends StatelessWidget {
                 ],
               ),
             const SizedBox(height: AppSpacing.x4l),
+            _buildPayments(theme, context),
+            const SizedBox(height: AppSpacing.x4l),
             _buildFeatureControl(theme, context),
             const SizedBox(height: AppSpacing.x4l),
             _buildSupportModeAction(theme, context),
@@ -122,13 +183,13 @@ class SchoolDetailScreen extends StatelessWidget {
       child: Row(
         children: [
           CircleAvatar(
-            radius: 32,
+            radius: 24,
             backgroundColor: AppColors.primary(context).withValues(alpha: 0.1),
             child: Text(
               school.name.isEmpty
                   ? '?'
                   : school.name.substring(0, 1).toUpperCase(),
-              style: theme.textTheme.headlineSmall?.copyWith(
+              style: theme.textTheme.titleMedium?.copyWith(
                 color: AppColors.primary(context),
                 fontWeight: FontWeight.bold,
               ),
@@ -141,8 +202,9 @@ class SchoolDetailScreen extends StatelessWidget {
               children: [
                 Text(
                   school.name,
-                  style: AppTypography.headlineSmall.copyWith(
+                  style: AppTypography.titleMedium.copyWith(
                     color: AppColors.textPrimary(context),
+                    fontWeight: FontWeight.bold,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -233,13 +295,14 @@ class SchoolDetailScreen extends StatelessWidget {
                 school.subscriptionPlanId.isEmpty
                     ? 'No plan assigned'
                     : school.subscriptionPlanId.toUpperCase(),
-                style: theme.textTheme.titleLarge?.copyWith(
+                style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 'Expires on ${dateFormat.format(school.subscriptionExpiry)}',
+                style: theme.textTheme.bodySmall,
               ),
               const SizedBox(height: 4),
               Text(
@@ -259,6 +322,114 @@ class SchoolDetailScreen extends StatelessWidget {
       ],
     );
   }
+
+  Widget _buildPayments(ThemeData theme, BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(title: 'Payments'),
+        const SizedBox(height: AppSpacing.m),
+        AppCard(
+          child: Row(
+            children: [
+              Icon(Icons.payments_rounded, color: AppColors.primary(context)),
+              const SizedBox(width: AppSpacing.l),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Total paid',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textSecondary(context),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _loadingPayments ? '—' : _money.format(_totalPaid),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.m),
+        if (_loadingPayments)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
+            child: Center(child: SchoolPulseLoader()),
+          )
+        else if (_paymentsError != null)
+          AppCard(
+            child: Row(
+              children: [
+                Icon(
+                  Icons.error_outline_rounded,
+                  color: AppColors.danger(context),
+                ),
+                const SizedBox(width: AppSpacing.l),
+                Expanded(child: Text(_paymentsError!)),
+                TextButton(
+                  onPressed: _loadPayments,
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          )
+        else if (_payments.isEmpty)
+          const EmptyState(
+            icon: Icons.payments_outlined,
+            title: 'No payments yet',
+            message: 'No manual subscription payments from this school.',
+          )
+        else
+          AppCard(
+            padding: EdgeInsets.zero,
+            child: ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _payments.length,
+              separatorBuilder: (_, _) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final payment = _payments[index];
+                return ListTile(
+                  leading: Icon(
+                    payment.method == ManualPaymentMethod.mtn
+                        ? Icons.phone_android_rounded
+                        : Icons.account_balance_rounded,
+                  ),
+                  title: Text(
+                    '${_money.format(payment.submittedAmount)} • ${payment.planName}',
+                  ),
+                  subtitle: Text(_paymentDate.format(payment.submittedAt)),
+                  trailing: StatusBadge(
+                    label: _paymentStatusLabel(payment.status),
+                    color: _paymentStatusColor(context, payment.status),
+                  ),
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+
+  String _paymentStatusLabel(ManualPaymentStatus status) => switch (status) {
+    ManualPaymentStatus.pendingVerification => 'Pending',
+    ManualPaymentStatus.approved => 'Approved',
+    ManualPaymentStatus.rejected => 'Rejected',
+  };
+
+  Color _paymentStatusColor(BuildContext context, ManualPaymentStatus status) =>
+      switch (status) {
+        ManualPaymentStatus.pendingVerification => AppColors.warning(context),
+        ManualPaymentStatus.approved => AppColors.success(context),
+        ManualPaymentStatus.rejected => AppColors.danger(context),
+      };
 
   Widget _buildFeatureControl(ThemeData theme, BuildContext context) {
     const allFeatures = [
@@ -327,6 +498,7 @@ class SchoolDetailScreen extends StatelessWidget {
     return AppCard(
       color: AppColors.textSecondary(context).withValues(alpha: 0.06),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
             Icons.support_agent,
@@ -345,17 +517,87 @@ class SchoolDetailScreen extends StatelessWidget {
                     color: AppColors.textSecondary(context),
                   ),
                 ),
+                const SizedBox(height: 4),
                 Text(
-                  'Not available yet — impersonating a school admin '
-                  'session requires a dedicated, audited access model that '
-                  "hasn't been built. This card is a placeholder for that "
-                  'future capability.',
+                  'Sign in as this school\'s admin to help with a support '
+                  'request. Every entry and exit is logged, and the session '
+                  'expires automatically after 30 minutes. You will be '
+                  'signed out of your owner session while active.',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: AppColors.textSecondary(context),
                   ),
                 ),
+                const SizedBox(height: AppSpacing.m),
+                OutlinedButton.icon(
+                  onPressed: () => _enterSupportMode(context, school),
+                  icon: const Icon(Icons.login_rounded, size: 18),
+                  label: const Text('Enter Support Mode'),
+                ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _enterSupportMode(BuildContext context, School school) {
+    final authBloc = context.read<AuthBloc>();
+    final reasonController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(Icons.support_agent),
+        title: const Text('Enter Support Mode?'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'You will be signed in as ${school.name}\'s admin and '
+                'signed out of your owner session. This action is logged '
+                'and the session auto-expires after 30 minutes.',
+              ),
+              const SizedBox(height: AppSpacing.m),
+              TextFormField(
+                controller: reasonController,
+                autofocus: true,
+                minLines: 2,
+                maxLines: 4,
+                maxLength: 300,
+                decoration: const InputDecoration(
+                  labelText: 'Reason',
+                  hintText: 'e.g. Debugging a reported attendance issue',
+                ),
+                validator: (value) =>
+                    (value == null || value.trim().length < 3)
+                    ? 'Please enter a reason (min 3 characters)'
+                    : null,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (formKey.currentState?.validate() != true) return;
+              authBloc.add(
+                EnterSupportModeRequested(
+                  schoolId: school.id,
+                  reason: reasonController.text.trim(),
+                ),
+              );
+              Navigator.pop(dialogContext);
+            },
+            child: const Text('Enter Support Mode'),
           ),
         ],
       ),

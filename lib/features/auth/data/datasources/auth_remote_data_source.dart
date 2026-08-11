@@ -85,6 +85,34 @@ abstract class AuthRemoteDataSource {
 
   /// Updates the signed-in user's own `mfaEnabled` flag.
   Future<void> updateMfaEnabled(bool enabled);
+
+  /// Calls the `enterSupportMode` Cloud Function (must be called while
+  /// signed in as the owner), then signs into the returned custom token for
+  /// the target school's admin. Returns the admin's profile plus the
+  /// session metadata the UI needs for the "acting as" banner.
+  Future<SupportModeLogin> enterSupportMode({
+    required String schoolId,
+    required String reason,
+  });
+
+  /// Calls `exitSupportMode` (while still signed in as the impersonated
+  /// admin) to tear down the server-side session doc, then signs out so the
+  /// owner can sign back in.
+  Future<void> exitSupportMode({required String ownerId, String? schoolId});
+}
+
+class SupportModeLogin {
+  final UserModel user;
+  final String ownerId;
+  final String schoolName;
+  final DateTime expiresAt;
+
+  const SupportModeLogin({
+    required this.user,
+    required this.ownerId,
+    required this.schoolName,
+    required this.expiresAt,
+  });
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -457,6 +485,65 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     await firestore.collection('users').doc(user.uid).update({
       'mfaEnabled': enabled,
     });
+  }
+
+  @override
+  Future<SupportModeLogin> enterSupportMode({
+    required String schoolId,
+    required String reason,
+  }) async {
+    final ownerId = firebaseAuth.currentUser?.uid;
+    if (ownerId == null) {
+      throw const AuthFailure('You are not signed in.');
+    }
+    try {
+      final callable = functions.httpsCallable('enterSupportMode');
+      final result = await callable.call<Map<String, dynamic>>({
+        'schoolId': schoolId,
+        'reason': reason,
+      });
+      final data = result.data;
+      final token = data['token'] as String;
+      final expiresAt = DateTime.fromMillisecondsSinceEpoch(
+        (data['expiresAt'] as num).toInt(),
+      );
+
+      // Owner's own Firebase Auth session is deliberately left untouched
+      // server-side. Signing into the custom token here replaces it in this
+      // client instance, which is the intended trade-off of the
+      // single-window design: the owner must sign back in after exiting.
+      final credential = await firebaseAuth.signInWithCustomToken(token);
+      final user = await _getUser(credential.user!.uid);
+
+      return SupportModeLogin(
+        user: user,
+        ownerId: ownerId,
+        schoolName: data['schoolName'] as String? ?? '',
+        expiresAt: expiresAt,
+      );
+    } on FirebaseFunctionsException catch (e) {
+      throw AuthFailure(e.message ?? 'Could not enter support mode.');
+    }
+  }
+
+  @override
+  Future<void> exitSupportMode({
+    required String ownerId,
+    String? schoolId,
+  }) async {
+    try {
+      final callable = functions.httpsCallable('exitSupportMode');
+      await callable.call<Map<String, dynamic>>({
+        'ownerId': ownerId,
+        if (schoolId != null) 'schoolId': schoolId,
+      });
+    } on FirebaseFunctionsException catch (e) {
+      throw AuthFailure(e.message ?? 'Could not exit support mode.');
+    } finally {
+      // Always end the impersonated session locally, even if the server
+      // call fails, so the owner is never stuck signed in as the admin.
+      await firebaseAuth.signOut();
+    }
   }
 
   Map<String, dynamic> _schoolContactData(UserModel user) => {

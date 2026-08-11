@@ -5,6 +5,8 @@ import '../models/school_model.dart';
 import '../models/subscription_plan_model.dart';
 import '../models/audit_log_model.dart';
 import '../models/school_application_model.dart';
+import '../../domain/repositories/super_admin_repository.dart'
+    show SupportModeSession;
 
 abstract class SuperAdminRemoteDataSource {
   Future<List<SchoolModel>> getAllSchools();
@@ -22,6 +24,18 @@ abstract class SuperAdminRemoteDataSource {
   Future<void> logAction(AuditLogModel log);
   Future<List<AuditLogModel>> getAuditLogs({String? schoolId});
   Future<Map<String, dynamic>> getPlatformStats();
+
+  /// Calls the `enterSupportMode` Cloud Function, which verifies the caller
+  /// is the platform owner, audits the request, and mints a short-lived
+  /// custom token for that school's admin account.
+  Future<SupportModeSession> enterSupportMode({
+    required String schoolId,
+    required String reason,
+  });
+
+  /// Calls `exitSupportMode` while still signed in as the impersonated
+  /// admin, tearing down the server-side session doc and logging the exit.
+  Future<void> exitSupportMode({required String ownerId, String? schoolId});
 }
 
 class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
@@ -207,5 +221,39 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
           .where((application) => application.status.name == 'pendingReview')
           .length,
     };
+  }
+
+  @override
+  Future<SupportModeSession> enterSupportMode({
+    required String schoolId,
+    required String reason,
+  }) async {
+    final callable = _ownerFunctions.httpsCallable('enterSupportMode');
+    final result = await callable.call<Map<String, dynamic>>({
+      'schoolId': schoolId,
+      'reason': reason,
+    });
+    final data = result.data;
+    return SupportModeSession(
+      token: data['token'] as String,
+      adminUid: data['adminUid'] as String,
+      adminName: data['adminName'] as String? ?? 'School Admin',
+      schoolName: data['schoolName'] as String? ?? '',
+      expiresAt: DateTime.fromMillisecondsSinceEpoch(
+        (data['expiresAt'] as num).toInt(),
+      ),
+    );
+  }
+
+  @override
+  Future<void> exitSupportMode({
+    required String ownerId,
+    String? schoolId,
+  }) async {
+    final callable = _ownerFunctions.httpsCallable('exitSupportMode');
+    await callable.call<Map<String, dynamic>>({
+      'ownerId': ownerId,
+      if (schoolId != null) 'schoolId': schoolId,
+    });
   }
 }

@@ -5,6 +5,8 @@ import 'package:school_pulse/core/notification/notification_service.dart';
 import 'package:school_pulse/core/usecases/usecase.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/usecases/complete_parent_pin_setup.dart';
+import 'package:school_pulse/features/auth/domain/usecases/enter_support_mode.dart';
+import 'package:school_pulse/features/auth/domain/usecases/exit_support_mode.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_current_user.dart';
 import 'package:school_pulse/features/auth/domain/usecases/login_parent.dart';
 import 'package:school_pulse/features/auth/domain/usecases/login_with_email.dart';
@@ -23,6 +25,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final Logout logout;
   final GetCurrentUser getCurrentUser;
   final ResolveParentAccessCode resolveParentAccessCode;
+  final EnterSupportMode enterSupportMode;
+  final ExitSupportMode exitSupportMode;
   final BrandingBloc brandingBloc;
 
   AuthBloc({
@@ -32,6 +36,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required this.logout,
     required this.getCurrentUser,
     required this.resolveParentAccessCode,
+    required this.enterSupportMode,
+    required this.exitSupportMode,
     required this.brandingBloc,
   }) : super(AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
@@ -40,6 +46,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<CompleteParentPinSetupRequested>(_onCompleteParentPinSetup);
     on<LogoutPressed>(_onLogout);
     on<ResolveAccessCodeRequested>(_onResolveAccessCode);
+    on<EnterSupportModeRequested>(_onEnterSupportMode);
+    on<ExitSupportModePressed>(_onExitSupportMode);
   }
 
   Future<void> _onAuthCheckRequested(
@@ -131,6 +139,49 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       (failure) => emit(AuthFailureState(failure.message)),
       (code) => emit(AuthAccessCodeResolved(code)),
     );
+  }
+
+  Future<void> _onEnterSupportMode(
+    EnterSupportModeRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    final result = await enterSupportMode(
+      EnterSupportModeParams(schoolId: event.schoolId, reason: event.reason),
+    );
+    result.fold((failure) => emit(AuthFailureState(failure.message)), (
+      session,
+    ) {
+      _syncNotifications(session.user);
+      emit(
+        AuthAuthenticated(
+          session.user,
+          supportMode: SupportModeInfo(
+            ownerId: session.ownerId,
+            schoolName: session.schoolName,
+            expiresAt: session.expiresAt,
+          ),
+        ),
+      );
+    });
+  }
+
+  Future<void> _onExitSupportMode(
+    ExitSupportModePressed event,
+    Emitter<AuthState> emit,
+  ) async {
+    final current = state;
+    final ownerId = current is AuthAuthenticated
+        ? current.supportMode?.ownerId
+        : null;
+    if (ownerId == null) {
+      emit(AuthUnauthenticated());
+      return;
+    }
+    emit(AuthLoading());
+    await exitSupportMode(ExitSupportModeParams(ownerId: ownerId));
+    brandingBloc.add(ClearBranding());
+    emit(AuthUnauthenticated());
   }
 
   void _syncNotifications(UserEntity user) {

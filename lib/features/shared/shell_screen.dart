@@ -493,7 +493,12 @@ class StaffShell extends StatelessWidget {
           Expanded(
             child: Container(
               color: AppColors.background(context),
-              child: child,
+              child: Column(
+                children: [
+                  SafeArea(bottom: false, child: const _SupportModeBanner()),
+                  Expanded(child: child),
+                ],
+              ),
             ),
           ),
         ],
@@ -547,6 +552,69 @@ class StaffShell extends StatelessWidget {
               ),
             )
           : null,
+    );
+  }
+}
+
+/// Persistent "acting as" banner shown while the platform owner is signed
+/// in as a school admin via Owner Support Mode. Present at the top of every
+/// staff-shelled screen so it can never be scrolled away or missed - the
+/// owner must always know they're impersonating and be one tap from exiting.
+class _SupportModeBanner extends StatelessWidget {
+  const _SupportModeBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        if (state is! AuthAuthenticated || state.supportMode == null) {
+          return const SizedBox.shrink();
+        }
+        final supportMode = state.supportMode!;
+        final minutesLeft = supportMode.expiresAt
+            .difference(DateTime.now())
+            .inMinutes
+            .clamp(0, 999);
+
+        return Material(
+          color: AppColors.warning(context).withValues(alpha: 0.15),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xl,
+              vertical: AppSpacing.m,
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.support_agent,
+                  size: 20,
+                  color: AppColors.warning(context),
+                ),
+                const SizedBox(width: AppSpacing.m),
+                Expanded(
+                  child: Text(
+                    'Support Mode: acting as ${state.user.name} at '
+                    '${supportMode.schoolName} · expires in ${minutesLeft}m',
+                    style: AppTypography.labelMedium.copyWith(
+                      color: AppColors.textPrimary(context),
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.m),
+                TextButton(
+                  onPressed: () {
+                    context.read<AuthBloc>().add(ExitSupportModePressed());
+                    context.go('/welcome');
+                  },
+                  child: const Text('Exit'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

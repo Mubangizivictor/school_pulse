@@ -73,4 +73,33 @@ abstract class AuthRepository {
   /// Flips the signed-in user's own `mfaEnabled` flag, used by the
   /// Two-Factor Auth screen toggle.
   Future<Either<Failure, void>> updateMfaEnabled(bool enabled);
+
+  /// Verifies the caller is the platform owner (server-side), then signs
+  /// the client into the target school's admin account via a short-lived
+  /// custom token. Must be called while signed in as the owner.
+  Future<Either<Failure, SupportModeSession>> enterSupportMode({
+    required String schoolId,
+    required String reason,
+  });
+
+  /// Tears down the support-mode session and signs out of the impersonated
+  /// admin account, so the owner can sign back in as themselves.
+  Future<Either<Failure, void>> exitSupportMode({
+    required String ownerId,
+    String? schoolId,
+  });
+}
+
+class SupportModeSession {
+  final UserEntity user;
+  final String ownerId;
+  final String schoolName;
+  final DateTime expiresAt;
+
+  const SupportModeSession({
+    required this.user,
+    required this.ownerId,
+    required this.schoolName,
+    required this.expiresAt,
+  });
 }

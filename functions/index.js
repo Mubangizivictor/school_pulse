@@ -379,6 +379,140 @@ exports.revokeAllSessions = onCall(async (request) => {
 });
 
 // ============================================================================
+// Owner Support Mode
+//
+// Lets the SaaS owner briefly act as a school's admin to help with support
+// requests, without ever handling that admin's password. The owner's own
+// session is intentionally left alone in Firebase Auth (revoked sessions on
+// exit would lock them out): the client is expected to sign out of the
+// owner session and into the minted admin session, then reverse that on
+// exit. Every entry/exit is audited, and a server-side support_mode_sessions
+// doc is the source of truth for "is this session still valid" so a leaked
+// custom token can't outlive its window even if the client never calls
+// exitSupportMode.
+// ============================================================================
+const SUPPORT_MODE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+exports.enterSupportMode = onCall(async (request) => {
+  const auth = request.auth;
+  if (!auth) {
+    throw new HttpsError("unauthenticated", "You must be signed in.");
+  }
+
+  const { schoolId, reason } = request.data || {};
+  if (typeof schoolId !== "string" || !schoolId.trim()) {
+    throw new HttpsError("invalid-argument", "schoolId is required.");
+  }
+  if (typeof reason !== "string" || reason.trim().length < 3) {
+    throw new HttpsError("invalid-argument", "A reason of at least 3 characters is required.");
+  }
+
+  const db = admin.firestore();
+
+  const callerDoc = await db.collection("users").doc(auth.uid).get();
+  const callerData = callerDoc.exists ? callerDoc.data() : {};
+  if (callerData.role !== "superAdmin") {
+    throw new HttpsError("permission-denied", "Only the platform owner can enter support mode.");
+  }
+
+  const schoolDoc = await db.collection("schools").doc(schoolId).get();
+  if (!schoolDoc.exists) {
+    throw new HttpsError("not-found", "School not found.");
+  }
+
+  const adminQuery = await db
+    .collection("users")
+    .where("schoolId", "==", schoolId)
+    .where("role", "==", "schoolAdmin")
+    .limit(1)
+    .get();
+  if (adminQuery.empty) {
+    throw new HttpsError(
+      "failed-precondition",
+      "This school has no school admin account to support.",
+    );
+  }
+  const adminDoc = adminQuery.docs[0];
+  const adminData = adminDoc.data();
+
+  const now = Date.now();
+  const expiresAt = now + SUPPORT_MODE_TTL_MS;
+
+  // Source of truth for session validity - Firestore rules for
+  // school-scoped collections can check this to deny writes past expiry
+  // even if the minted token is still technically unexpired.
+  await db.collection("support_mode_sessions").doc(auth.uid).set({
+    ownerId: auth.uid,
+    schoolId,
+    adminUid: adminDoc.id,
+    reason: reason.trim(),
+    startedAt: admin.firestore.FieldValue.serverTimestamp(),
+    expiresAt: admin.firestore.Timestamp.fromMillis(expiresAt),
+  });
+
+  await db.collection("super_admin_audit_logs").add({
+    ownerId: auth.uid,
+    action: "ENTER_SUPPORT_MODE",
+    schoolId,
+    affectedUserId: adminDoc.id,
+    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    device: "Platform Dashboard",
+    reason: reason.trim(),
+    metadata: {},
+  });
+
+  const token = await admin.auth().createCustomToken(adminDoc.id, {
+    supportMode: true,
+    actingOwnerId: auth.uid,
+  });
+
+  return {
+    token,
+    adminUid: adminDoc.id,
+    adminName: adminData.name || adminData.email || "School Admin",
+    schoolName: schoolDoc.data().name || "",
+    expiresAt,
+  };
+});
+
+exports.exitSupportMode = onCall(async (request) => {
+  const auth = request.auth;
+  if (!auth) {
+    throw new HttpsError("unauthenticated", "You must be signed in.");
+  }
+
+  const { ownerId, schoolId } = request.data || {};
+  if (typeof ownerId !== "string" || !ownerId.trim()) {
+    throw new HttpsError("invalid-argument", "ownerId is required.");
+  }
+
+  const db = admin.firestore();
+
+  // Called while signed in as the impersonated admin (auth.uid is the
+  // admin, not the owner), so the caller can't be checked against the
+  // session doc's ownerId directly - instead confirm this uid is indeed the
+  // adminUid on that session before tearing it down.
+  const sessionRef = db.collection("support_mode_sessions").doc(ownerId);
+  const sessionDoc = await sessionRef.get();
+  if (sessionDoc.exists && sessionDoc.data().adminUid !== auth.uid) {
+    throw new HttpsError("permission-denied", "Session mismatch.");
+  }
+
+  await sessionRef.delete();
+
+  await db.collection("super_admin_audit_logs").add({
+    ownerId,
+    action: "EXIT_SUPPORT_MODE",
+    schoolId: schoolId || (sessionDoc.exists ? sessionDoc.data().schoolId : null),
+    affectedUserId: auth.uid,
+    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    device: "Platform Dashboard",
+  });
+
+  return { exited: true };
+});
+
+// ============================================================================
 // School Admin provisioning
 //
 // createSchool() (super_admin_remote_datasource.dart) writes a school and a

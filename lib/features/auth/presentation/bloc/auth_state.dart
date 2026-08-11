@@ -17,10 +17,31 @@ class AuthLoading extends AuthState {}
 class AuthAuthenticated extends AuthState {
   final UserEntity user;
 
-  const AuthAuthenticated(this.user);
+  /// Non-null only when this session is the owner acting as a school admin
+  /// via Owner Support Mode: holds who is impersonating, which school, and
+  /// when the server-side session expires. Drives the persistent "acting
+  /// as" banner and its exit action.
+  final SupportModeInfo? supportMode;
+
+  const AuthAuthenticated(this.user, {this.supportMode});
 
   @override
-  List<Object?> get props => [user];
+  List<Object?> get props => [user, supportMode];
+}
+
+class SupportModeInfo extends Equatable {
+  final String ownerId;
+  final String schoolName;
+  final DateTime expiresAt;
+
+  const SupportModeInfo({
+    required this.ownerId,
+    required this.schoolName,
+    required this.expiresAt,
+  });
+
+  @override
+  List<Object?> get props => [ownerId, schoolName, expiresAt];
 }
 
 class AuthUnauthenticated extends AuthState {}

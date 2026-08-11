@@ -59,3 +59,20 @@ class ResolveAccessCodeRequested extends AuthEvent {
   @override
   List<Object?> get props => [code];
 }
+
+class EnterSupportModeRequested extends AuthEvent {
+  final String schoolId;
+  final String reason;
+
+  const EnterSupportModeRequested({
+    required this.schoolId,
+    required this.reason,
+  });
+
+  @override
+  List<Object?> get props => [schoolId, reason];
+}
+
+/// Ends an active support-mode session and signs the impersonated admin
+/// out, landing the owner back on the login screen to sign in as themself.
+class ExitSupportModePressed extends AuthEvent {}

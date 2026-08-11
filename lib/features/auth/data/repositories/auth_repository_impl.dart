@@ -236,4 +236,47 @@ class AuthRepositoryImpl implements AuthRepository {
       return Left(ServerFailure(e.toString()));
     }
   }
+
+  @override
+  Future<Either<Failure, SupportModeSession>> enterSupportMode({
+    required String schoolId,
+    required String reason,
+  }) async {
+    try {
+      final login = await remoteDataSource.enterSupportMode(
+        schoolId: schoolId,
+        reason: reason,
+      );
+      return Right(
+        SupportModeSession(
+          user: login.user,
+          ownerId: login.ownerId,
+          schoolName: login.schoolName,
+          expiresAt: login.expiresAt,
+        ),
+      );
+    } on AuthFailure catch (e) {
+      return Left(e);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> exitSupportMode({
+    required String ownerId,
+    String? schoolId,
+  }) async {
+    try {
+      await remoteDataSource.exitSupportMode(
+        ownerId: ownerId,
+        schoolId: schoolId,
+      );
+      return const Right(null);
+    } on AuthFailure catch (e) {
+      return Left(e);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
 }

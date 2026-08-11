@@ -135,6 +135,8 @@ import 'package:school_pulse/features/auth/data/repositories/auth_repository_imp
 import 'package:school_pulse/features/auth/data/datasources/auth_remote_data_source.dart';
 import 'package:school_pulse/features/auth/domain/usecases/login_with_email.dart';
 import 'package:school_pulse/features/auth/domain/usecases/login_parent.dart';
+import 'package:school_pulse/features/auth/domain/usecases/enter_support_mode.dart';
+import 'package:school_pulse/features/auth/domain/usecases/exit_support_mode.dart';
 import 'package:school_pulse/features/auth/domain/usecases/complete_parent_pin_setup.dart';
 import 'package:school_pulse/features/auth/domain/usecases/logout.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_current_user.dart';
@@ -738,6 +740,8 @@ Future<void> init() async {
       logout: sl(),
       getCurrentUser: sl(),
       resolveParentAccessCode: sl(),
+      enterSupportMode: sl(),
+      exitSupportMode: sl(),
       brandingBloc: sl(),
     ),
   );
@@ -747,6 +751,8 @@ Future<void> init() async {
   sl.registerLazySingleton(() => CompleteParentPinSetup(sl()));
   sl.registerLazySingleton(() => Logout(sl()));
   sl.registerLazySingleton(() => GetCurrentUser(sl()));
+  sl.registerLazySingleton(() => EnterSupportMode(sl()));
+  sl.registerLazySingleton(() => ExitSupportMode(sl()));
 
   sl.registerLazySingleton<AuthRepository>(
     () => AuthRepositoryImpl(remoteDataSource: sl()),

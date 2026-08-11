@@ -1451,6 +1451,13 @@ service cloud.firestore {
       allow read, create: if isSuperAdmin();
       allow update, delete: if false;
     }
+    match /support_mode_sessions/{ownerId} {
+      // Server-written only, by enterSupportMode/exitSupportMode (Admin
+      // SDK, bypasses these rules). The owner console reads its own session
+      // doc to show the "acting as" banner and countdown.
+      allow read: if isSuperAdmin() && request.auth.uid == ownerId;
+      allow write: if false;
+    }
     match /super_admin_notifications/{id} {
       // Server-written only (manual payment submission/approval/rejection
       // Cloud Functions via the Admin SDK, which bypasses these rules). The

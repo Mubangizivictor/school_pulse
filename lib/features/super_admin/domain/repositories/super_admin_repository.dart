@@ -36,4 +36,27 @@ abstract class SuperAdminRepository {
   // Audit Logs
   Future<List<AuditLog>> getAuditLogs({String? schoolId});
   Future<void> logAction(AuditLog log);
+
+  // Owner Support Mode
+  Future<SupportModeSession> enterSupportMode({
+    required String schoolId,
+    required String reason,
+  });
+  Future<void> exitSupportMode({required String ownerId, String? schoolId});
+}
+
+class SupportModeSession {
+  final String token;
+  final String adminUid;
+  final String adminName;
+  final String schoolName;
+  final DateTime expiresAt;
+
+  const SupportModeSession({
+    required this.token,
+    required this.adminUid,
+    required this.adminName,
+    required this.schoolName,
+    required this.expiresAt,
+  });
 }
