@@ -14,13 +14,36 @@ const EMAIL_SECRETS = [
   'OWNER_NOTIFICATION_EMAIL',
 ];
 
+/**
+ * A manual SaaS subscription payment becomes reviewable when the payment
+ * submission has been persisted with a supported review status and a proof
+ * file. Keep this aligned with payments.js, which currently writes
+ * status=pending_verification and proofStoragePath.
+ */
 function reviewable(payment) {
-  const status = String(payment?.status || '').toLowerCase();
+  const status = String(payment?.status || '').trim().toLowerCase();
   const proof = text(
-    payment?.proofUrl || payment?.paymentProofUrl || payment?.proofPath || payment?.receiptUrl,
+    payment?.proofStoragePath ||
+      payment?.proofUrl ||
+      payment?.paymentProofUrl ||
+      payment?.proofPath ||
+      payment?.receiptUrl,
     1000,
   );
-  return ['pending', 'under_review', 'pending_review'].includes(status) && Boolean(proof);
+  return [
+    'pending_verification',
+    'pending',
+    'under_review',
+    'pending_review',
+  ].includes(status) && Boolean(proof);
+}
+
+function paymentMethod(value) {
+  const method = String(value || '').trim().toLowerCase();
+  if (method === 'airtel') return { id: 'airtel', label: 'Airtel Money' };
+  if (method === 'bank') return { id: 'bank', label: 'Bank transfer' };
+  if (method === 'cash') return { id: 'cash', label: 'Cash' };
+  return { id: 'mtn', label: 'MTN Mobile Money' };
 }
 
 /** Notify the SaaS Owner exactly once when a payment becomes reviewable. */
@@ -40,19 +63,23 @@ exports.notifyOwnerOfManualPayment = onDocumentWritten(
 
     const paymentId = event.params.paymentId;
     const schoolName = text(payment.schoolName, 160) || 'A school';
-    const amount = Math.max(0, Math.round(Number(payment.submittedAmount || payment.amount || 0)));
-    const method = String(payment.method || '').toLowerCase() === 'bank' ? 'bank' : 'mtn';
-    const methodLabel = method === 'bank' ? 'Centenary Bank' : 'MTN Mobile Money';
+    const amount = Math.max(
+      0,
+      Math.round(Number(payment.submittedAmount || payment.amount || 0)),
+    );
+    const method = paymentMethod(payment.method);
     const amountLabel = `UGX ${amount.toLocaleString('en-US')}`;
+    const planName = text(payment.planName, 80);
+    const reference = text(payment.reference, 120);
 
     await notifyOwners({
-      // payments.js already creates payment_<id> in the owner feed. Reusing
-      // that id makes the durable in-app record and push/email delivery one
-      // event instead of two nearly identical notification cards.
+      // payments.js creates payment_<id> in the owner feed during the same
+      // submission transaction. Reusing that deterministic id makes the
+      // in-app card and the push/email delivery one durable event.
       eventId: `payment_${paymentId}`,
       eventType: 'Payment proof submitted',
       title: 'Payment verification required',
-      body: `${schoolName} submitted ${amountLabel} via ${methodLabel}. Confirm the money was received before activating access.`,
+      body: `${schoolName} submitted ${amountLabel} via ${method.label}${planName ? ` for ${planName}` : ''}. Confirm the money was received before activating access.`,
       schoolName,
       data: {
         type: 'manual_subscription_payment',
@@ -65,7 +92,9 @@ exports.notifyOwnerOfManualPayment = onDocumentWritten(
         schoolName,
         amount: String(amount),
         amountUgx: String(amount),
-        method,
+        method: method.id,
+        planName,
+        reference,
       },
     });
   },
