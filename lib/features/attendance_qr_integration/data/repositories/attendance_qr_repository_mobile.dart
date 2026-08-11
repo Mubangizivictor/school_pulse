@@ -5,8 +5,18 @@ import '../../../../core/error/failures.dart';
 import '../../domain/entities/qr_attendance_record.dart';
 import '../../domain/repositories/attendance_qr_repository.dart';
 import '../models/attendance_log_isar.dart';
+import 'attendance_qr_firestore_writer.dart';
 
-class AttendanceQrRepositoryImpl implements AttendanceQrRepository {
+AttendanceQrRepository create({dynamic firestore, dynamic isar}) =>
+    AttendanceQrRepositoryImpl(
+      firestore: firestore as FirebaseFirestore,
+      isar: isar as Isar,
+    );
+
+class AttendanceQrRepositoryImpl
+    with AttendanceQrFirestoreWriter
+    implements AttendanceQrRepository {
+  @override
   final FirebaseFirestore firestore;
   final Isar isar;
 
@@ -95,7 +105,7 @@ class AttendanceQrRepositoryImpl implements AttendanceQrRepository {
       final pending = await getPendingSyncRecords();
       return pending.fold((failure) => Left(failure), (records) async {
         for (final record in records) {
-          await _writeToScopedCollection(record);
+          await writeToScopedCollection(record);
           await markAsSynced(record.id);
         }
         return const Right(null);
@@ -104,69 +114,6 @@ class AttendanceQrRepositoryImpl implements AttendanceQrRepository {
       return Left(ServerFailure(e.toString()));
     }
   }
-
-  /// Routes a synced scan into the same tenant-scoped collection its
-  /// module already uses for manually-entered records, rather than the
-  /// old dead-end `attendance_qr_logs` (which had no Firestore rules at
-  /// all and would have been denied outright) - so a QR-sourced record
-  /// shows up in the same reports/queries as a manual one instead of
-  /// living in an invisible parallel collection.
-  Future<void> _writeToScopedCollection(QrAttendanceRecord record) async {
-    switch (record.module) {
-      case 'boarding':
-        await firestore.collection('boarding_attendance').add({
-          'schoolId': record.schoolId,
-          'studentId': record.studentUniqueId,
-          'studentName': record.studentName,
-          'dormitoryId': record.className,
-          'date': Timestamp.fromDate(record.timestamp),
-          'type': 'Evening',
-          'status': _boardingStatusFor(record.status),
-          'recordedBy': record.scannedBy,
-        });
-      case 'staff':
-        await firestore
-            .collection('staff_attendance')
-            .doc('${record.studentUniqueId}_${_dateKey(record.timestamp)}')
-            .set({
-              'schoolId': record.schoolId,
-              'staffId': record.studentUniqueId,
-              'clockIn': Timestamp.fromDate(record.timestamp),
-              'status': record.status == QrAttendanceStatus.late
-                  ? 'late'
-                  : 'on_time',
-              'location': 'QR Scan',
-            });
-      default:
-        await firestore
-            .collection('attendance_records')
-            .doc('${record.studentUniqueId}_${_dateKey(record.timestamp)}')
-            .set({
-              'schoolId': record.schoolId,
-              'studentId': record.studentUniqueId,
-              'className': record.className,
-              'date': Timestamp.fromDate(record.timestamp),
-              'status': record.status.name,
-              'note': '',
-              'updatedAt': FieldValue.serverTimestamp(),
-            });
-    }
-  }
-
-  String _boardingStatusFor(QrAttendanceStatus status) {
-    switch (status) {
-      case QrAttendanceStatus.present:
-      case QrAttendanceStatus.late:
-        return 'Present';
-      case QrAttendanceStatus.excused:
-        return 'Leave';
-      case QrAttendanceStatus.absent:
-        return 'Absent';
-    }
-  }
-
-  String _dateKey(DateTime date) =>
-      '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
   @override
   Future<Either<Failure, void>> exportToGoogleSheets({
