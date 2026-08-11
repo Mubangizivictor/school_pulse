@@ -1280,6 +1280,18 @@ service cloud.firestore {
       // copies. No client path creates these, and none reads them back.
       allow read, write: if false;
     }
+    match /transactional_email_queue/{id} {
+      // Templated transactional email queue (Resend-backed). Admin SDK only
+      // — this is the integration seam other Cloud Functions codebases use
+      // to send transactional email without holding the Resend secret
+      // themselves. No client path may read, create, or modify these.
+      allow read, write: if false;
+    }
+    match /email_deliveries/{id} {
+      // Per-eventId delivery/idempotency log written by sendTemplatedEmail.
+      // Admin SDK only.
+      allow read, write: if false;
+    }
     match /notification_queue/{id} {
       // Enqueued by sendDirectNotification for both staff-to-X and now
       // parent-initiated 1:1 messages - see the /alerts create rule above.

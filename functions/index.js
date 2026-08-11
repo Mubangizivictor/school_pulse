@@ -6,6 +6,33 @@ const admin = require("firebase-admin");
 
 admin.initializeApp();
 
+/**
+ * Enqueue a templated transactional email for the `public_functions`
+ * codebase to send (it holds the Resend secret and the template registry;
+ * this codebase deliberately does not duplicate either). Writing straight to
+ * Firestore works because both Cloud Functions codebases share one project
+ * — public_functions/email/transactional_queue.js drains this collection.
+ * `eventId` is the idempotency key: writing the same eventId twice is a
+ * no-op once it has been sent.
+ */
+async function enqueueTransactionalEmail({ eventId, templateId, to, data = {} }) {
+  if (!eventId || !to) return;
+  await admin.firestore().collection("transactional_email_queue").doc(eventId).set({
+    eventId,
+    templateId,
+    to: String(to).trim().toLowerCase(),
+    data,
+    schoolBranding: null,
+    status: "queued",
+    attempts: 0,
+    scheduledAt: admin.firestore.FieldValue.serverTimestamp(),
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    sentAt: null,
+    resendId: null,
+    error: null,
+  }, { merge: true });
+}
+
 // ... existing roles and helper functions ...
 const ADMIN_ROLES = ["director", "headTeacher", "schoolAdmin"];
 
@@ -292,6 +319,19 @@ exports.createStaffAccount = onCall(async (request) => {
     throw new HttpsError("internal", err.message || "Failed to save the staff profile.");
   }
 
+  // Best-effort: the account exists and is usable even if this email never
+  // sends (the temp password is also returned to the caller/admin UI).
+  await enqueueTransactionalEmail({
+    eventId: `staff_account_created_${userRecord.uid}`,
+    templateId: "staff_account_created",
+    to: email.trim(),
+    data: {
+      schoolName: schoolDoc.exists ? (schoolDoc.data().name || "") : "",
+      email: email.trim(),
+      roleLabel: roles[0],
+    },
+  }).catch((err) => console.error("staff_account_created email enqueue failed", userRecord.uid, err));
+
   return { uid: userRecord.uid, temporaryPassword };
 });
 
@@ -355,6 +395,20 @@ exports.adminResetStaffPassword = onCall(async (request) => {
     mustChangePassword: true,
   });
 
+  if (targetData.email) {
+    await enqueueTransactionalEmail({
+      eventId: `password_changed_${userId}_${Date.now()}`,
+      templateId: "password_changed",
+      to: targetData.email,
+      data: {
+        email: targetData.email,
+        whenLabel: new Date().toLocaleString("en-GB", {
+          day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
+        }),
+      },
+    }).catch((err) => console.error("password_changed email enqueue failed", userId, err));
+  }
+
   return { temporaryPassword };
 });
 
@@ -369,6 +423,18 @@ exports.revokeAllSessions = onCall(async (request) => {
 
   try {
     await admin.auth().revokeRefreshTokens(request.auth.uid);
+
+    const userDoc = await admin.firestore().collection("users").doc(request.auth.uid).get();
+    const email = userDoc.exists ? userDoc.data().email : null;
+    if (email) {
+      await enqueueTransactionalEmail({
+        eventId: `sessions_revoked_${request.auth.uid}_${Date.now()}`,
+        templateId: "sessions_revoked",
+        to: email,
+        data: { email, reason: "You signed out of all devices." },
+      }).catch((err) => console.error("sessions_revoked email enqueue failed", request.auth.uid, err));
+    }
+
     return { revoked: true };
   } catch (err) {
     throw new HttpsError(
@@ -720,6 +786,17 @@ exports.provisionSchoolAdmin = onDocumentCreated(
         provisionedUid: userRecord.uid,
         consumedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
+
+      // Only for a genuinely new account — an existing user gaining admin
+      // rights at a second school already has an account and knows it.
+      if (createdNewAuthUser) {
+        await enqueueTransactionalEmail({
+          eventId: `school_admin_account_created_${userRecord.uid}`,
+          templateId: "school_admin_account_created",
+          to: email,
+          data: { schoolName, email },
+        }).catch((err) => console.error("school_admin_account_created email enqueue failed", userRecord.uid, err));
+      }
     } catch (err) {
       // Only roll back the Auth account if this invocation created it -
       // never delete a pre-existing identity that predates this trigger.
@@ -866,10 +943,12 @@ exports.initiateMobileMoneyCharge = onCall(async (request) => {
   if (!auth) throw new HttpsError("unauthenticated", "You must be signed in.");
 
   const userDoc = await admin.firestore().collection("users").doc(auth.uid).get();
-  const role = userDoc.data()?.role;
+  const userData = userDoc.data() || {};
+  const role = userData.role;
   if (!BILLING_ROLES.includes(role)) {
     throw new HttpsError("permission-denied", "Only admins or the bursar can manage billing.");
   }
+  const schoolId = userData.schoolId || null;
 
   const { provider, phoneNumber, amountUgx } = request.data || {};
   if (!["mtn", "airtel"].includes(provider)) {
@@ -877,6 +956,12 @@ exports.initiateMobileMoneyCharge = onCall(async (request) => {
   }
   if (!phoneNumber || !amountUgx || amountUgx <= 0) {
     throw new HttpsError("invalid-argument", "phoneNumber and a positive amountUgx are required.");
+  }
+
+  let schoolName = null;
+  if (schoolId) {
+    const schoolDoc = await admin.firestore().collection("schools").doc(schoolId).get();
+    schoolName = schoolDoc.exists ? (schoolDoc.data().name || null) : null;
   }
 
   const transactionId = randomUUID();
@@ -887,6 +972,14 @@ exports.initiateMobileMoneyCharge = onCall(async (request) => {
     amountUgx,
     status: "pending",
     reference: transactionId,
+    // schoolId/schoolName/initiatedByUid: needed so the eventual success/
+    // failure email can be addressed to the right school and tenant-checked
+    // against the caller who started the charge. The legacy subscription/
+    // current doc this flow updates has no per-school concept, but the
+    // transaction itself can and must carry one.
+    schoolId,
+    schoolName,
+    initiatedByUid: auth.uid,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
@@ -913,14 +1006,34 @@ async function markTransactionResult(transactionId, { status, failureReason }) {
   const txDoc = await txRef.get();
   if (!txDoc.exists) return;
 
+  const tx = txDoc.data() || {};
+  // Idempotency guard: webhooks are at-least-once delivery, and both
+  // providers may redeliver the same callback. Once this transaction has
+  // already been resolved, further callbacks for it must not re-run the
+  // subscription update or send a second email.
+  if (tx.status && tx.status !== "pending") return;
+
   await txRef.update({
     status,
     ...(failureReason ? { failureReason } : {}),
     completedAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
+  const schoolId = tx.schoolId || null;
+  const schoolName = tx.schoolName || "Your school";
+  let recipientEmail = null;
+  if (tx.initiatedByUid) {
+    const initiatorDoc = await db.collection("users").doc(tx.initiatedByUid).get();
+    // Tenant check: only email the person who initiated this specific
+    // charge, and only if they still belong to the school the transaction
+    // was opened against — never derive the recipient from anything on the
+    // provider callback payload itself.
+    if (initiatorDoc.exists && (!schoolId || initiatorDoc.data().schoolId === schoolId)) {
+      recipientEmail = initiatorDoc.data().email || null;
+    }
+  }
+
   if (status === "success") {
-    const tx = txDoc.data();
     const subRef = db.collection("subscription").doc("current");
     const subDoc = await subRef.get();
     const currentRenewal = subDoc.data()?.renewalDate?.toDate() ?? new Date();
@@ -934,6 +1047,32 @@ async function markTransactionResult(transactionId, { status, failureReason }) {
       amountUgx: tx.amountUgx,
       plan: subDoc.data()?.plan ?? "Standard",
     }, { merge: true });
+
+    if (recipientEmail) {
+      await enqueueTransactionalEmail({
+        eventId: `mobile_money_payment_success_${transactionId}`,
+        templateId: "mobile_money_payment_success",
+        to: recipientEmail,
+        data: {
+          schoolName,
+          paymentId: transactionId,
+          amount: tx.amountUgx,
+          planLabel: subDoc.data()?.plan ?? "Standard",
+        },
+      });
+    }
+  } else if (status === "failed" && recipientEmail) {
+    await enqueueTransactionalEmail({
+      eventId: `mobile_money_payment_failed_${transactionId}`,
+      templateId: "mobile_money_payment_failed",
+      to: recipientEmail,
+      data: {
+        schoolName,
+        paymentId: transactionId,
+        amount: tx.amountUgx,
+        reason: failureReason || "The payment was not completed.",
+      },
+    });
   }
 }
 

@@ -1,0 +1,52 @@
+// Default School Pulse brand identity. A school's own branding (name/logo
+// colors passed via `schoolBranding`) may override display strings, but the
+// sender identity, support address, and footer legal text never change —
+// every transactional email is sent and owned by School Pulse itself.
+
+const SENDER = 'School Pulse <notifications@schoolpulse.victorbee.com>';
+const SUPPORT_EMAIL = 'support@schoolpulse.victorbee.com';
+const WEBSITE_ORIGIN = 'https://schoolpulse.victorbee.com';
+const STATUS_URL = `${WEBSITE_ORIGIN}/application-status`;
+
+const PRODUCT_NAME = 'School Pulse';
+
+// Matches the in-app brand gradient (Super Admin header, etc): #4839E0 -> #8B3FE0.
+const BRAND_START = '#4839E0';
+const BRAND_END = '#8B3FE0';
+
+const FOOTER_LINES = [PRODUCT_NAME, 'Powered by VictorBee Technologies', 'Uganda'];
+
+function defaultBranding() {
+  return {
+    productName: PRODUCT_NAME,
+    brandStart: BRAND_START,
+    brandEnd: BRAND_END,
+    supportEmail: SUPPORT_EMAIL,
+  };
+}
+
+/**
+ * Merge a school's display branding over the School Pulse default. Only
+ * cosmetic fields (name shown in the header) may be overridden — sender
+ * address, support email, and footer are always School Pulse's own.
+ */
+function resolveBranding(schoolBranding) {
+  const base = defaultBranding();
+  const displayName = String(schoolBranding?.schoolName ?? '').trim().slice(0, 160);
+  return {
+    ...base,
+    schoolName: displayName || null,
+  };
+}
+
+module.exports = {
+  SENDER,
+  SUPPORT_EMAIL,
+  WEBSITE_ORIGIN,
+  STATUS_URL,
+  PRODUCT_NAME,
+  BRAND_START,
+  BRAND_END,
+  FOOTER_LINES,
+  resolveBranding,
+};
