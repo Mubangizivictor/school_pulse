@@ -16,8 +16,7 @@ class CalendarOverviewScreen extends StatefulWidget {
   const CalendarOverviewScreen({super.key});
 
   @override
-  State<CalendarOverviewScreen> createState() =>
-      _CalendarOverviewScreenState();
+  State<CalendarOverviewScreen> createState() => _CalendarOverviewScreenState();
 }
 
 class _CalendarOverviewScreenState extends State<CalendarOverviewScreen> {
@@ -25,8 +24,18 @@ class _CalendarOverviewScreenState extends State<CalendarOverviewScreen> {
   _ViewMode _mode = _ViewMode.calendar;
 
   static const _monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
 
   @override
@@ -69,7 +78,8 @@ class _CalendarOverviewScreenState extends State<CalendarOverviewScreen> {
                       IconButton(
                         icon: const Icon(Icons.chevron_left),
                         onPressed: () => setState(
-                          () => _month = DateTime(_month.year, _month.month - 1),
+                          () =>
+                              _month = DateTime(_month.year, _month.month - 1),
                         ),
                       ),
                       Text(
@@ -82,7 +92,8 @@ class _CalendarOverviewScreenState extends State<CalendarOverviewScreen> {
                       IconButton(
                         icon: const Icon(Icons.chevron_right),
                         onPressed: () => setState(
-                          () => _month = DateTime(_month.year, _month.month + 1),
+                          () =>
+                              _month = DateTime(_month.year, _month.month + 1),
                         ),
                       ),
                     ],

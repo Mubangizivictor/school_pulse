@@ -47,12 +47,11 @@ class GateOpsRemoteDataSourceImpl implements GateOpsRemoteDataSource {
   CollectionReference<Map<String, dynamic>> _gates(String schoolId) =>
       firestore.collection('schools').doc(schoolId).collection('gates');
 
-  CollectionReference<Map<String, dynamic>> _movementEvents(
-    String schoolId,
-  ) => firestore
-      .collection('schools')
-      .doc(schoolId)
-      .collection('movement_events');
+  CollectionReference<Map<String, dynamic>> _movementEvents(String schoolId) =>
+      firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('movement_events');
 
   CollectionReference<Map<String, dynamic>> _visitors(String schoolId) =>
       firestore.collection('schools').doc(schoolId).collection('visitors');
@@ -167,8 +166,9 @@ class GateOpsRemoteDataSourceImpl implements GateOpsRemoteDataSource {
         .orderBy('actionTimestamp', descending: true)
         .snapshots()
         .map(
-          (snapshot) =>
-              snapshot.docs.map((d) => _movementEventFromDoc(schoolId, d)).toList(),
+          (snapshot) => snapshot.docs
+              .map((d) => _movementEventFromDoc(schoolId, d))
+              .toList(),
         );
   }
 
@@ -196,8 +196,8 @@ class GateOpsRemoteDataSourceImpl implements GateOpsRemoteDataSource {
       deviceName: data['deviceName'],
       platform: data['platform'] ?? '',
       appVersion: data['appVersion'] ?? '',
-      actionTimestamp: (data['actionTimestamp'] as Timestamp?)?.toDate() ??
-          DateTime.now(),
+      actionTimestamp:
+          (data['actionTimestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
       serverTimestamp: (data['serverTimestamp'] as Timestamp?)?.toDate(),
       syncStatus: SyncStatus.synced,
       pickupParentCode: data['pickupParentCode'],
@@ -236,8 +236,8 @@ class GateOpsRemoteDataSourceImpl implements GateOpsRemoteDataSource {
       hostId: data['hostId'],
       hostName: data['hostName'],
       gateId: data['gateId'] ?? '',
-      arrivalTime: (data['arrivalTime'] as Timestamp?)?.toDate() ??
-          DateTime.now(),
+      arrivalTime:
+          (data['arrivalTime'] as Timestamp?)?.toDate() ?? DateTime.now(),
       departureTime: (data['departureTime'] as Timestamp?)?.toDate(),
       status: VisitorStatus.values.byName(data['status'] ?? 'checkedIn'),
       isQuickEntry: data['isQuickEntry'] ?? true,
@@ -248,7 +248,9 @@ class GateOpsRemoteDataSourceImpl implements GateOpsRemoteDataSource {
 
   @override
   Future<void> checkInVisitor(Visitor visitor) async {
-    await _visitors(visitor.schoolId).doc(visitor.id).set(_visitorToMap(visitor));
+    await _visitors(
+      visitor.schoolId,
+    ).doc(visitor.id).set(_visitorToMap(visitor));
   }
 
   @override
@@ -369,9 +371,7 @@ class GateOpsRemoteDataSourceImpl implements GateOpsRemoteDataSource {
   }
 
   @override
-  Future<void> addPickupAuthorization(
-    PickupAuthorization authorization,
-  ) async {
+  Future<void> addPickupAuthorization(PickupAuthorization authorization) async {
     await _pickupAuthorizations(
       authorization.schoolId,
     ).doc(authorization.id).set({

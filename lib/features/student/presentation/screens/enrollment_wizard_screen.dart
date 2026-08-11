@@ -71,7 +71,9 @@ class _EnrollmentWizardViewState extends State<_EnrollmentWizardView> {
                 preferredSize: const Size.fromHeight(4),
                 child: LinearProgressIndicator(
                   value: state.progress,
-                  backgroundColor: AppColors.primary(context).withValues(alpha: 0.1),
+                  backgroundColor: AppColors.primary(
+                    context,
+                  ).withValues(alpha: 0.1),
                   valueColor: AlwaysStoppedAnimation<Color>(
                     AppColors.primary(context),
                   ),
@@ -1155,7 +1157,9 @@ class _Step11Submitting extends StatelessWidget {
               valueColor: AlwaysStoppedAnimation<Color>(
                 AppColors.primary(context),
               ),
-              backgroundColor: AppColors.primary(context).withValues(alpha: 0.1),
+              backgroundColor: AppColors.primary(
+                context,
+              ).withValues(alpha: 0.1),
             ),
           ),
           const SizedBox(height: 32),

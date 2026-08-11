@@ -1,23 +1,10 @@
 const crypto = require('crypto');
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
-const {
-  notifyOwners,
-  notificationHealth,
-  isOwnerData,
-} = require('./owner_notification_engine');
+const { isOwnerData } = require('./owner_notification_engine');
 
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
-
-const EMAIL_SECRETS = [
-  'SMTP_HOST',
-  'SMTP_PORT',
-  'SMTP_USER',
-  'SMTP_PASS',
-  'SMTP_FROM',
-  'OWNER_NOTIFICATION_EMAIL',
-];
 
 function text(value, max = 500) {
   return String(value ?? '').trim().slice(0, max);
@@ -100,52 +87,5 @@ exports.unregisterOwnerNotificationDevice = onCall(
     batch.delete(db.collection('users').doc(owner.uid).collection('tokens').doc(token));
     await batch.commit();
     return { ok: true, removed: true };
-  },
-);
-
-/** Returns live diagnostics without sending anything. */
-exports.getOwnerNotificationHealth = onCall(
-  { region: 'europe-west1', secrets: EMAIL_SECRETS },
-  async (request) => {
-    await requireOwner(request);
-    const health = await notificationHealth();
-    return { ok: true, ...health };
-  },
-);
-
-/**
- * Owner-only end-to-end test. Uses exactly the same in-app, FCM and email
- * pipeline as real application/payment events and returns every channel's
- * delivery result instead of hiding failures in logs.
- */
-exports.testOwnerNotificationDelivery = onCall(
-  { region: 'europe-west1', secrets: EMAIL_SECRETS },
-  async (request) => {
-    const owner = await requireOwner(request);
-    const eventId = `owner_test_${owner.uid}_${Date.now()}`;
-    const result = await notifyOwners({
-      eventId,
-      eventType: 'Notification system test',
-      title: 'School Pulse notification test',
-      body: 'This test uses the same delivery pipeline as new-school and payment alerts.',
-      schoolName: 'School Pulse',
-      data: {
-        type: 'owner_notification_test',
-        notificationType: 'custom',
-        priority: 'high',
-        sourceModule: 'super_admin',
-        sourceEntityId: eventId,
-      },
-    });
-
-    return {
-      ok: true,
-      eventId,
-      ownerIds: result.ownerIds || [],
-      ownerCount: result.ownerCount || 0,
-      inApp: result.inApp || null,
-      push: result.push || null,
-      email: result.email || null,
-    };
   },
 );

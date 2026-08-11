@@ -10,6 +10,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   firebase_storage
   geolocator_windows
   isar_flutter_libs
+  local_auth_windows
   printing
   record_windows
   share_plus

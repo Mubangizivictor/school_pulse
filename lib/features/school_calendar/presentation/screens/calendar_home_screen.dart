@@ -48,7 +48,8 @@ class _CalendarHomeBody extends StatelessWidget {
       ),
       body: BlocBuilder<SchoolCalendarBloc, SchoolCalendarState>(
         builder: (context, state) {
-          if (state is SchoolCalendarLoading || state is SchoolCalendarInitial) {
+          if (state is SchoolCalendarLoading ||
+              state is SchoolCalendarInitial) {
             return const Center(child: SchoolPulseLoader());
           }
           if (state is SchoolCalendarError) {
@@ -124,7 +125,10 @@ class _CalendarHomeBody extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.calendar_month, color: AppColors.primary(context)),
+                    Icon(
+                      Icons.calendar_month,
+                      color: AppColors.primary(context),
+                    ),
                     const SizedBox(width: AppSpacing.m),
                     const Expanded(child: Text('Academic Year Calendar')),
                     Text(
@@ -227,7 +231,10 @@ class _QuickAction extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
                 Text(
                   subtitle,
                   style: TextStyle(

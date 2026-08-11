@@ -81,9 +81,9 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
   Future<void> _loadSheetsStatus() async {
     final authState = context.read<AuthBloc>().state;
     if (authState is! AuthAuthenticated) return;
-    final result = await di
-        .sl<SheetsIntegrationRepository>()
-        .getIntegration(authState.user.schoolId);
+    final result = await di.sl<SheetsIntegrationRepository>().getIntegration(
+      authState.user.schoolId,
+    );
     if (!mounted) return;
     result.fold(
       (_) => setState(() => _sheetsLinked = false),
@@ -163,7 +163,10 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
               const Text(
                 'No attendance group has been assigned to your account.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 8),
               const Text(
@@ -207,8 +210,10 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
               onTap: _showTypeSelector,
               borderRadius: BorderRadius.circular(12),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF071229),
                   borderRadius: BorderRadius.circular(12),
@@ -222,8 +227,11 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
                         color: const Color(0xFF103ECF).withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Icons.people_alt_rounded,
-                          color: Color(0xFF176BFF), size: 18),
+                      child: const Icon(
+                        Icons.people_alt_rounded,
+                        color: Color(0xFF176BFF),
+                        size: 18,
+                      ),
                     ),
                     const SizedBox(width: 10),
                     const Expanded(
@@ -240,7 +248,9 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
                     // The Dropdown Button UI
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF0B1B3B),
                         borderRadius: BorderRadius.circular(8),
@@ -258,8 +268,11 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
                             ),
                           ),
                           const SizedBox(width: 6),
-                          const Icon(Icons.keyboard_arrow_down_rounded,
-                              color: Color(0xFF8190AA), size: 18),
+                          const Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: Color(0xFF8190AA),
+                            size: 18,
+                          ),
                         ],
                       ),
                     ),
@@ -354,8 +367,10 @@ class _MethodCard extends StatelessWidget {
               Container(width: 3, color: accentColor),
               Expanded(
                 child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   child: Row(
                     children: [
                       Container(
@@ -378,8 +393,11 @@ class _MethodCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const Icon(Icons.chevron_right_rounded,
-                          color: Color(0xFF8190AA), size: 20),
+                      const Icon(
+                        Icons.chevron_right_rounded,
+                        color: Color(0xFF8190AA),
+                        size: 20,
+                      ),
                     ],
                   ),
                 ),
@@ -405,8 +423,9 @@ class _IntegrationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color statusColor =
-        linked ? const Color(0xFF11A85B) : const Color(0xFF8190AA);
+    final Color statusColor = linked
+        ? const Color(0xFF11A85B)
+        : const Color(0xFF8190AA);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -427,8 +446,11 @@ class _IntegrationCard extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: statusColor.withValues(alpha: 0.15),
               ),
-              child: Icon(Icons.description_rounded,
-                  color: statusColor, size: 18),
+              child: Icon(
+                Icons.description_rounded,
+                color: statusColor,
+                size: 18,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -442,14 +464,16 @@ class _IntegrationCard extends StatelessWidget {
               ),
             ),
             Icon(
-                linked
-                    ? Icons.check_circle_rounded
-                    : Icons.link_off_rounded,
-                color: statusColor,
-                size: 16),
+              linked ? Icons.check_circle_rounded : Icons.link_off_rounded,
+              color: statusColor,
+              size: 16,
+            ),
             const SizedBox(width: 8),
-            const Icon(Icons.chevron_right_rounded,
-                color: Color(0xFF8190AA), size: 20),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: Color(0xFF8190AA),
+              size: 20,
+            ),
           ],
         ),
       ),

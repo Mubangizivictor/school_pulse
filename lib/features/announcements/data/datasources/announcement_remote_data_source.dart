@@ -14,9 +14,7 @@ class AnnouncementRemoteDataSourceImpl implements AnnouncementRemoteDataSource {
   AnnouncementRemoteDataSourceImpl({required this.firestore});
 
   CollectionReference<Map<String, dynamic>> _announcements(String schoolId) =>
-      firestore.collection('schools').doc(schoolId).collection(
-        'announcements',
-      );
+      firestore.collection('schools').doc(schoolId).collection('announcements');
 
   @override
   Future<List<AnnouncementModel>> getAnnouncements(String schoolId) async {

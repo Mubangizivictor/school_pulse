@@ -89,10 +89,7 @@ class GateOpsLocalDataSourceImpl implements GateOpsLocalDataSource {
     var query = isar.movementEventIsars
         .filter()
         .schoolIdEqualTo(schoolId)
-        .optional(
-          personType != null,
-          (q) => q.personTypeEqualTo(personType!),
-        )
+        .optional(personType != null, (q) => q.personTypeEqualTo(personType!))
         .optional(personId != null, (q) => q.personIdEqualTo(personId!))
         .optional(gateId != null, (q) => q.gateIdEqualTo(gateId!));
 

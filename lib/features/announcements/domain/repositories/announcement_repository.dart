@@ -7,7 +7,9 @@ abstract class AnnouncementRepository {
     String schoolId,
   );
 
-  Future<Either<Failure, void>> upsertAnnouncement(AnnouncementEntity announcement);
+  Future<Either<Failure, void>> upsertAnnouncement(
+    AnnouncementEntity announcement,
+  );
 
   Future<Either<Failure, void>> deleteAnnouncement(
     String schoolId,

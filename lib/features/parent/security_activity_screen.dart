@@ -24,8 +24,7 @@ class SecurityActivityScreen extends StatefulWidget {
   const SecurityActivityScreen({super.key});
 
   @override
-  State<SecurityActivityScreen> createState() =>
-      _SecurityActivityScreenState();
+  State<SecurityActivityScreen> createState() => _SecurityActivityScreenState();
 }
 
 class _SecurityActivityScreenState extends State<SecurityActivityScreen> {

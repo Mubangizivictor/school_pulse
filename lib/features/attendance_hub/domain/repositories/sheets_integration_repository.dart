@@ -9,8 +9,6 @@ abstract class SheetsIntegrationRepository {
     SheetsIntegration integration,
   );
   Future<Either<Failure, void>> disconnect(String schoolId);
-  Future<Either<Failure, List<SheetsSyncLogEntry>>> getSyncLog(
-    String schoolId,
-  );
+  Future<Either<Failure, List<SheetsSyncLogEntry>>> getSyncLog(String schoolId);
   Future<Either<Failure, void>> triggerSync(String schoolId, int recordCount);
 }

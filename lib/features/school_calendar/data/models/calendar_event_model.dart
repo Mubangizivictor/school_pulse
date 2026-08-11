@@ -39,8 +39,7 @@ class CalendarEventModel extends CalendarEvent {
         data['recurrence'] as Map<String, dynamic>?,
       ),
       createdBy: data['createdBy'] as String? ?? '',
-      createdAt:
-          (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       archived: data['archived'] as bool? ?? false,
     );
   }

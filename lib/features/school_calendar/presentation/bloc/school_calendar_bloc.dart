@@ -35,9 +35,7 @@ class SchoolCalendarBloc
 
     final canManage = await _canManage(event.operatorUser);
 
-    final yearResult = await repository.getCurrentAcademicYear(
-      event.schoolId,
-    );
+    final yearResult = await repository.getCurrentAcademicYear(event.schoolId);
     final eventsResult = await repository.getEvents(event.schoolId);
 
     final academicYear = yearResult.fold((failure) => null, (year) => year);
@@ -103,10 +101,7 @@ class SchoolCalendarBloc
       return;
     }
 
-    final result = await repository.deleteEvent(
-      event.schoolId,
-      event.eventId,
-    );
+    final result = await repository.deleteEvent(event.schoolId, event.eventId);
     result.fold(
       (failure) => emit(SchoolCalendarError(failure.message)),
       (_) => emit(const SchoolCalendarActionSuccess('Event removed')),

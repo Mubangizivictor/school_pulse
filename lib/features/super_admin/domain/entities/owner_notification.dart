@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 
 /// Durable platform notification surfaced to the SaaS Owner.
-/// Supports school applications, manual payments and notification diagnostics.
+/// Supports school applications, manual payments and platform alerts.
 class OwnerNotification extends Equatable {
   const OwnerNotification({
     required this.id,
@@ -20,6 +20,7 @@ class OwnerNotification extends Equatable {
     this.resolvedAt,
     this.pushStatus,
     this.emailStatus,
+    this.inAppStatus,
   });
 
   final String id;
@@ -37,11 +38,24 @@ class OwnerNotification extends Equatable {
   final DateTime? resolvedAt;
   final String? pushStatus;
   final String? emailStatus;
+  final String? inAppStatus;
 
   bool get isUnread => status == 'unread';
+  bool get isRead => status == 'read';
+  bool get isResolved => status == 'resolved' || resolvedAt != null;
   bool get isPayment => paymentId.isNotEmpty || type.contains('payment');
   bool get isApplication =>
       applicationId.isNotEmpty || type.contains('application');
+
+  /// Tri-state display label derived from [status]/[resolvedAt]. Any status
+  /// that isn't explicitly 'unread' or 'resolved' (including older documents
+  /// with unexpected values) is treated as read rather than resolved, since
+  /// "resolved" is a stronger claim that requires explicit evidence.
+  String get displayStatus {
+    if (isResolved) return 'RESOLVED';
+    if (isUnread) return 'NEW';
+    return 'READ';
+  }
 
   factory OwnerNotification.fromJson(Map<String, dynamic> json) {
     DateTime date(Object? value) {
@@ -67,13 +81,29 @@ class OwnerNotification extends Equatable {
     final email = delivery['email'] is Map
         ? Map<String, dynamic>.from(delivery['email'] as Map)
         : const <String, dynamic>{};
+    final inApp = delivery['inApp'] is Map
+        ? Map<String, dynamic>.from(delivery['inApp'] as Map)
+        : const <String, dynamic>{};
+
+    /// Maps a raw delivery status (which may carry a technical error code
+    /// alongside 'sent'/'failed') to a friendly owner-facing value. Raw
+    /// messaging/SMTP diagnostics are never shown in the UI.
+    String? friendlyStatus(Map<String, dynamic> channel) {
+      final raw = channel['status']?.toString();
+      if (raw == null || raw.isEmpty) return null;
+      if (raw == 'sent' || raw == 'delivered') return 'delivered';
+      if (raw == 'failed') return 'delivery issue';
+      return raw;
+    }
 
     final type = json['type']?.toString() ?? 'platform_event';
-    final paymentId = (json['paymentId'] ?? data['paymentId'])?.toString() ?? '';
+    final paymentId =
+        (json['paymentId'] ?? data['paymentId'])?.toString() ?? '';
     final applicationId =
         (json['applicationId'] ?? data['applicationId'])?.toString() ?? '';
     final schoolName =
-        (json['schoolName'] ?? data['schoolName'])?.toString() ?? 'School Pulse';
+        (json['schoolName'] ?? data['schoolName'])?.toString() ??
+        'School Pulse';
     final amountRaw = json['amountUgx'] ?? data['amountUgx'] ?? data['amount'];
     final amount = amountRaw is num
         ? amountRaw.round()
@@ -103,8 +133,9 @@ class OwnerNotification extends Equatable {
       method: (json['method'] ?? data['method'])?.toString() ?? '',
       createdAt: date(json['createdAt']),
       resolvedAt: nullableDate(json['resolvedAt']),
-      pushStatus: push['status']?.toString(),
-      emailStatus: email['status']?.toString(),
+      pushStatus: friendlyStatus(push),
+      emailStatus: friendlyStatus(email),
+      inAppStatus: friendlyStatus(inApp),
     );
   }
 
@@ -125,5 +156,6 @@ class OwnerNotification extends Equatable {
     resolvedAt,
     pushStatus,
     emailStatus,
+    inAppStatus,
   ];
 }

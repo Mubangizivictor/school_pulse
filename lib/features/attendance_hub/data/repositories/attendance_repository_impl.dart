@@ -45,15 +45,14 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
           // deputyHead, or anyone granted attendance.override) see every
           // active class - everyone else only sees the classes their
           // Class/Subject Teacher assignments actually name.
-          final visible = access.canViewAllForCategory(
-                AttendanceCategory.students,
-              )
+          final visible =
+              access.canViewAllForCategory(AttendanceCategory.students)
               ? classes.where((c) => c.isActive)
-              : classes.where(
-                  (c) => c.isActive && access.canAccessClass(c.id),
-                );
+              : classes.where((c) => c.isActive && access.canAccessClass(c.id));
           return Right(
-            visible.map((c) => AttendanceScope(id: c.id, name: c.name)).toList(),
+            visible
+                .map((c) => AttendanceScope(id: c.id, name: c.name))
+                .toList(),
           );
         case AttendanceCategory.hostel:
           // No dormitory Structure entity is wired into this repository yet

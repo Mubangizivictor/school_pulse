@@ -84,7 +84,9 @@ class PulseCard extends StatelessWidget {
           boxShadow: isDark
               ? AppShadows.card
                     .map(
-                      (s) => s.copyWith(color: Colors.black.withValues(alpha: 0.5)),
+                      (s) => s.copyWith(
+                        color: Colors.black.withValues(alpha: 0.5),
+                      ),
                     )
                     .toList()
               : AppShadows.card,

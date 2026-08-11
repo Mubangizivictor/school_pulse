@@ -82,9 +82,7 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
             },
             builder: (context, state) {
               if (state.isLoading) {
-                return Center(
-                  child: const SchoolPulseLoader(),
-                );
+                return Center(child: const SchoolPulseLoader());
               }
 
               if (state.homework.isEmpty) {

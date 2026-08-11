@@ -76,9 +76,7 @@ class _ReportCommentsScreenState extends State<ReportCommentsScreen> {
               },
               builder: (context, state) {
                 if (state is TeacherLoading) {
-                  return Center(
-                    child: const SchoolPulseLoader(),
-                  );
+                  return Center(child: const SchoolPulseLoader());
                 }
 
                 if (state is TeacherReportCommentsLoaded) {

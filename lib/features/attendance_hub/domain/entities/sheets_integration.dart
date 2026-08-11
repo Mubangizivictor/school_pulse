@@ -72,5 +72,11 @@ class SheetsSyncLogEntry extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, startedAt, success, recordCount, errorMessage];
+  List<Object?> get props => [
+    id,
+    startedAt,
+    success,
+    recordCount,
+    errorMessage,
+  ];
 }

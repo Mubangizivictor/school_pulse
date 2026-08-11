@@ -93,9 +93,7 @@ class _ClassPerformanceScreenState extends State<ClassPerformanceScreen> {
               : BlocBuilder<ClassPerformanceBloc, ClassPerformanceState>(
                   builder: (context, state) {
                     if (state.isLoading) {
-                      return Center(
-                        child: const SchoolPulseLoader(),
-                      );
+                      return Center(child: const SchoolPulseLoader());
                     }
 
                     if (!state.hasSummary) {

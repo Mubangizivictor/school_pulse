@@ -95,9 +95,7 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
         },
         builder: (context, state) {
           if (state.isLoading) {
-            return Center(
-              child: const SchoolPulseLoader(),
-            );
+            return Center(child: const SchoolPulseLoader());
           }
 
           final contextState = context.watch<ClassTeacherContextBloc>().state;

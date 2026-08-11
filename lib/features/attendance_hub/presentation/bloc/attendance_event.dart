@@ -86,6 +86,12 @@ class LoadRecordsRequested extends AttendanceEvent {
   });
 
   @override
-  List<Object?> get props =>
-      [schoolId, operatorUser, category, from, to, scopeId];
+  List<Object?> get props => [
+    schoolId,
+    operatorUser,
+    category,
+    from,
+    to,
+    scopeId,
+  ];
 }

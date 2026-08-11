@@ -187,9 +187,7 @@ class _AccessCodesScreenState extends State<AccessCodesScreen> {
                   child: filtered.isEmpty
                       ? _buildEmptyState()
                       : ListView.builder(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
                           itemCount: filtered.length,
                           itemBuilder: (context, index) =>
                               _buildCodeCard(filtered[index]),
@@ -429,10 +427,7 @@ class _CreateAccessCodeDialogState extends State<_CreateAccessCodeDialog> {
             title: const Text('Access code issued'),
             content: SelectableText(
               'Share this code with the parent along with their phone number:\n\n$code',
-              style: const TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 18,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
             ),
             actions: [
               TextButton(

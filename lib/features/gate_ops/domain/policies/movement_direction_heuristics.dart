@@ -20,10 +20,8 @@ String suggestStudentDirection(
 ) => _suggestDirection(todayEvents, studentId);
 
 /// Same smart-action heuristic as [suggestStudentDirection], for staff.
-String suggestStaffDirection(
-  List<MovementEvent> todayEvents,
-  String staffId,
-) => _suggestDirection(todayEvents, staffId);
+String suggestStaffDirection(List<MovementEvent> todayEvents, String staffId) =>
+    _suggestDirection(todayEvents, staffId);
 
 String _suggestDirection(List<MovementEvent> todayEvents, String personId) {
   final mine = todayEvents.where((m) => m.personId == personId).toList()

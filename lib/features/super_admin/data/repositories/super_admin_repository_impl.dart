@@ -231,11 +231,17 @@ class SuperAdminRepositoryImpl implements SuperAdminRepository {
     required String schoolId,
     required String reason,
   }) {
-    return remoteDataSource.enterSupportMode(schoolId: schoolId, reason: reason);
+    return remoteDataSource.enterSupportMode(
+      schoolId: schoolId,
+      reason: reason,
+    );
   }
 
   @override
   Future<void> exitSupportMode({required String ownerId, String? schoolId}) {
-    return remoteDataSource.exitSupportMode(ownerId: ownerId, schoolId: schoolId);
+    return remoteDataSource.exitSupportMode(
+      ownerId: ownerId,
+      schoolId: schoolId,
+    );
   }
 }

@@ -196,43 +196,54 @@ class _PaymentReviewScreenState extends State<PaymentReviewScreen> {
         ),
         bottomNavigationBar:
             payment.status == ManualPaymentStatus.pendingVerification
-            ? SafeArea(
-                minimum: const EdgeInsets.all(AppSpacing.xl),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _isWorking ? null : _reject,
-                        icon: const Icon(Icons.close_rounded),
-                        label: const Text('Payment Not Received — Reject'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.danger(context),
-                          side: BorderSide(color: AppColors.danger(context)),
+            ? DecoratedBox(
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  border: Border(
+                    top: BorderSide(color: theme.colorScheme.outlineVariant),
+                  ),
+                ),
+                child: SafeArea(
+                  minimum: const EdgeInsets.all(AppSpacing.xl),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _isWorking ? null : _reject,
+                          icon: const Icon(Icons.close_rounded),
+                          label: const Text('Reject'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.danger(context),
+                            side: BorderSide(color: AppColors.danger(context)),
+                            minimumSize: const Size(0, 52),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: AppSpacing.l),
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: (_isWorking || !payment.amountMatches)
-                            ? null
-                            : _approve,
-                        icon: _isWorking
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.verified_rounded),
-                        label: const Text('Money Received — Approve'),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.success(context),
+                      const SizedBox(width: AppSpacing.l),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: (_isWorking || !payment.amountMatches)
+                              ? null
+                              : _approve,
+                          icon: _isWorking
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.verified_rounded),
+                          label: const Text('Approve'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.success(context),
+                            minimumSize: const Size(0, 52),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               )
             : null,
@@ -334,14 +345,32 @@ class _PaymentReviewScreenState extends State<PaymentReviewScreen> {
           'Confirm that ${_money.format(payment.submittedAmount)} from ${payment.payerName} has actually arrived. This will ${payment.paymentType == ManualPaymentType.activation ? 'activate the school for the first time' : 'renew the school subscription'}.',
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton.icon(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            icon: const Icon(Icons.verified_rounded),
-            label: const Text('Money Received — Approve'),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(dialogContext, false),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                    ),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.m),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () => Navigator.pop(dialogContext, true),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.success(dialogContext),
+                      minimumSize: const Size(0, 48),
+                    ),
+                    child: const Text('Approve'),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

@@ -111,9 +111,7 @@ class _ClassAnnouncementsScreenState extends State<ClassAnnouncementsScreen> {
                   },
                   builder: (context, state) {
                     if (state.isLoading) {
-                      return Center(
-                        child: const SchoolPulseLoader(),
-                      );
+                      return Center(child: const SchoolPulseLoader());
                     }
 
                     return Column(

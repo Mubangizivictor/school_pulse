@@ -14,6 +14,10 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/institution/presentation/bloc/institution_context_cubit.dart';
 import 'package:school_pulse/features/institution/presentation/widgets/subscription_access_gate.dart';
+import 'package:school_pulse/features/super_admin/presentation/widgets/owner_app_lock_gate.dart';
+import 'package:school_pulse/features/super_admin/data/datasources/owner_session_remote_data_source.dart';
+import 'package:school_pulse/core/utils/device_id_service.dart';
+import 'package:school_pulse/core/utils/device_info_service.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/academic/presentation/bloc/academic_bloc.dart';
 import 'package:school_pulse/features/finance/presentation/bloc/finance_bloc.dart';
@@ -200,6 +204,12 @@ class SchoolPulseAppView extends StatelessWidget {
                 context.read<InstitutionContextCubit>().restore(
                   state.user.schoolId,
                 );
+              } else {
+                // Registers/refreshes this device in the owner's real
+                // session registry on every successful sign-in, so
+                // Trusted Devices / Active Sessions reflect reality even
+                // if the owner never opens the Security screens.
+                _registerOwnerSession(state.user.id);
               }
             } else if (state is AuthUnauthenticated) {
               // Revoking the token is what actually stops delivery; clearing
@@ -219,13 +229,29 @@ class SchoolPulseAppView extends StatelessWidget {
             darkTheme: themeProvider.darkTheme,
             themeMode: themeProvider.themeMode,
             routerConfig: router,
-            builder: (context, child) => SubscriptionAccessGate(
-              child: child ?? const SizedBox.shrink(),
+            builder: (context, child) => OwnerAppLockGate(
+              child: SubscriptionAccessGate(
+                child: child ?? const SizedBox.shrink(),
+              ),
             ),
             debugShowCheckedModeBanner: false,
           );
         },
       ),
+    );
+  }
+
+  static Future<void> _registerOwnerSession(String ownerId) async {
+    final deviceIdService = di.sl<DeviceIdService>();
+    final deviceInfoService = di.sl<DeviceInfoService>();
+    final sessions = di.sl<OwnerSessionRemoteDataSource>();
+    final deviceId = await deviceIdService.getDeviceId();
+    await sessions.upsertSession(
+      ownerId: ownerId,
+      deviceId: deviceId,
+      platform: await deviceInfoService.platformLabel(),
+      deviceName: await deviceInfoService.deviceName(),
+      isNewSession: false,
     );
   }
 }

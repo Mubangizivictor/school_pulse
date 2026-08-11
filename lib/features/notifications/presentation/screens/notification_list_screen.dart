@@ -145,9 +145,7 @@ class _NotificationListViewState extends State<_NotificationListView>
               if (state.isOffline) const _OfflineBanner(),
               Expanded(
                 child: state.status == NotificationCenterStatus.loading
-                    ? const Center(
-                        child: SchoolPulseLoader(),
-                      )
+                    ? const Center(child: SchoolPulseLoader())
                     : TabBarView(
                         controller: _tabController,
                         children: [
@@ -373,7 +371,9 @@ class _NotificationTile extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE11D48).withValues(alpha: 0.2),
+                            color: const Color(
+                              0xFFE11D48,
+                            ).withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: const Text(

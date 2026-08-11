@@ -28,7 +28,10 @@ class AnnouncementDetailScreen extends StatelessWidget {
     return BlocProvider(
       create: (_) => sl<AnnouncementBloc>()
         ..add(
-          LoadAnnouncementsRequested(schoolId: user.schoolId, operatorUser: user),
+          LoadAnnouncementsRequested(
+            schoolId: user.schoolId,
+            operatorUser: user,
+          ),
         ),
       child: _AnnouncementDetailBody(announcementId: announcementId),
     );
@@ -149,9 +152,8 @@ class _AnnouncementDetailBody extends StatelessWidget {
                 SecondaryButton(
                   label: 'Edit',
                   icon: Icons.edit_outlined,
-                  onPressed: () => context.push(
-                    '/staff/more/announcements/${a.id}/edit',
-                  ),
+                  onPressed: () =>
+                      context.push('/staff/more/announcements/${a.id}/edit'),
                 ),
                 const SizedBox(height: 12),
                 SecondaryButton(
@@ -161,7 +163,8 @@ class _AnnouncementDetailBody extends StatelessWidget {
                     final confirmed = await confirmActionDialog(
                       context,
                       title: 'Delete announcement',
-                      message: 'Are you sure you want to delete this announcement?',
+                      message:
+                          'Are you sure you want to delete this announcement?',
                       confirmLabel: 'Delete',
                       isDestructive: true,
                     );

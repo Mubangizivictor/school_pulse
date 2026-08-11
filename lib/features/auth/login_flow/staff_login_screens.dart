@@ -5,6 +5,7 @@ import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/auth/login_flow/auth_chrome.dart';
+import 'package:school_pulse/features/auth/data/datasources/remembered_login_store.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
@@ -24,8 +25,18 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _rememberedLoginStore = RememberedLoginStore();
   bool _obscure = true;
-  bool _rememberMe = false;
+  bool _rememberMe = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _rememberedLoginStore.getStaffEmail().then((email) {
+      if (!mounted || email == null) return;
+      setState(() => _emailController.text = email);
+    });
+  }
 
   @override
   void dispose() {
@@ -35,11 +46,10 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
   }
 
   void _handleLogin() {
+    final email = _emailController.text.trim();
+    _rememberedLoginStore.setStaffEmail(_rememberMe ? email : null);
     context.read<AuthBloc>().add(
-      LoginWithEmailPressed(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      ),
+      LoginWithEmailPressed(email: email, password: _passwordController.text),
     );
   }
 

@@ -138,7 +138,9 @@ class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
           .where((v) => v.status == VisitorStatus.checkedIn)
           .toList();
       final overdueVisitors = activeVisitors
-          .where((v) => now.difference(v.arrivalTime) > const Duration(hours: 2))
+          .where(
+            (v) => now.difference(v.arrivalTime) > const Duration(hours: 2),
+          )
           .length;
 
       int activeStaff = 0;

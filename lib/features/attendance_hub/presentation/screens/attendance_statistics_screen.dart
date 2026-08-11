@@ -106,7 +106,9 @@ class _AttendanceStatisticsScreenState
             ..sort((a, b) {
               double rate(List<AttendanceRecord> recs) => recs.isEmpty
                   ? 0
-                  : recs.where((r) => r.status == AttendanceStatus.present).length /
+                  : recs
+                            .where((r) => r.status == AttendanceStatus.present)
+                            .length /
                         recs.length;
               return rate(b.value).compareTo(rate(a.value));
             });
@@ -179,7 +181,9 @@ class _AttendanceStatisticsScreenState
                 final rate = recs.isEmpty
                     ? 0.0
                     : recs
-                              .where((r) => r.status == AttendanceStatus.present)
+                              .where(
+                                (r) => r.status == AttendanceStatus.present,
+                              )
                               .length /
                           recs.length *
                           100;
@@ -238,7 +242,10 @@ class _StatCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               label,
-              style: TextStyle(color: AppColors.textMuted(context), fontSize: 12),
+              style: TextStyle(
+                color: AppColors.textMuted(context),
+                fontSize: 12,
+              ),
             ),
           ],
         ),

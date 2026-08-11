@@ -19,7 +19,11 @@ class MonthCalendarGrid extends StatelessWidget {
 
   List<CalendarEvent> _eventsOn(DateTime day) {
     return events.where((e) {
-      final start = DateTime(e.startDate.year, e.startDate.month, e.startDate.day);
+      final start = DateTime(
+        e.startDate.year,
+        e.startDate.month,
+        e.startDate.day,
+      );
       final end = DateTime(e.endDate.year, e.endDate.month, e.endDate.day);
       final target = DateTime(day.year, day.month, day.day);
       return !target.isBefore(start) && !target.isAfter(end);
@@ -40,7 +44,8 @@ class MonthCalendarGrid extends StatelessWidget {
     for (var d = 1; d <= daysInMonth; d++) {
       final day = DateTime(month.year, month.month, d);
       final dayEvents = _eventsOn(day);
-      final isToday = day.year == today.year &&
+      final isToday =
+          day.year == today.year &&
           day.month == today.month &&
           day.day == today.day;
 

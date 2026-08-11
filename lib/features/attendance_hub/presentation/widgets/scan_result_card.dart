@@ -85,9 +85,7 @@ class ScanResultCard extends StatelessWidget {
                       backgroundImage: photoUrl != null
                           ? NetworkImage(photoUrl!)
                           : null,
-                      child: photoUrl == null
-                          ? const Icon(Icons.person)
-                          : null,
+                      child: photoUrl == null ? const Icon(Icons.person) : null,
                     ),
                     const SizedBox(width: AppSpacing.m),
                     Expanded(
@@ -144,10 +142,7 @@ class ScanResultCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.m),
           SizedBox(
             width: double.infinity,
-            child: OutlinedButton(
-              onPressed: onDone,
-              child: const Text('Done'),
-            ),
+            child: OutlinedButton(onPressed: onDone, child: const Text('Done')),
           ),
         ],
       ),

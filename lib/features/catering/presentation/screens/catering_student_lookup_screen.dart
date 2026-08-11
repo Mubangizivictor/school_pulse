@@ -146,8 +146,7 @@ class _CateringStudentLookupScreenState
                 icon: const Icon(Icons.arrow_back),
                 label: const Text('Back to results'),
               ),
-              if (_loadingView)
-                const Center(child: SchoolPulseLoader()),
+              if (_loadingView) const Center(child: SchoolPulseLoader()),
               if (_error != null)
                 Card(
                   color: Colors.red.shade50,

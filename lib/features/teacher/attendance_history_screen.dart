@@ -64,9 +64,7 @@ class _TeacherAttendanceHistoryScreenState
           >(
             builder: (context, state) {
               if (state.isLoading) {
-                return Center(
-                  child: const SchoolPulseLoader(),
-                );
+                return Center(child: const SchoolPulseLoader());
               }
 
               if (state.errorMessage != null && state.isEmpty) {

@@ -25,7 +25,10 @@ class TermsOfServiceScreen extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               'Version 2.1.0',
-              style: TextStyle(fontSize: 13, color: AppColors.textMuted(context)),
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.textMuted(context),
+              ),
             ),
             const SizedBox(height: 24),
             Text(

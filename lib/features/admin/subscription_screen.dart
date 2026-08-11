@@ -122,7 +122,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           SizedBox(
             width: double.infinity,
             child: PrimaryButton(
-              label: _openingPortal ? 'Opening Payment Portal…' : 'Pay / Renew Subscription',
+              label: _openingPortal
+                  ? 'Opening Payment Portal…'
+                  : 'Pay / Renew Subscription',
               icon: Icons.open_in_new_rounded,
               onPressed: _openingPortal ? null : _openPaymentPortal,
             ),
@@ -141,7 +143,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.verified_user_outlined, color: theme.colorScheme.primary),
+              Icon(
+                Icons.verified_user_outlined,
+                color: theme.colorScheme.primary,
+              ),
               const SizedBox(width: 10),
               const Expanded(
                 child: Text(
@@ -169,7 +174,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           const _PaymentMethodLine(
             icon: Icons.account_balance_rounded,
             title: 'Centenary Bank',
-            subtitle: 'Transfer or deposit, then upload the receipt or confirmation.',
+            subtitle:
+                'Transfer or deposit, then upload the receipt or confirmation.',
           ),
           const SizedBox(height: 14),
           Container(
@@ -211,7 +217,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         if (transactions.isEmpty) {
           return const AppCard(
             padding: EdgeInsets.all(24),
-            child: Center(child: Text('No verified subscription payments yet.')),
+            child: Center(
+              child: Text('No verified subscription payments yet.'),
+            ),
           );
         }
         return AppCard(
@@ -233,14 +241,16 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               final providerLabel = isBank
                   ? 'Centenary Bank'
                   : isManualMtn
-                      ? 'MTN Mobile Money'
-                      : transaction.provider.replaceAll('_', ' ').toUpperCase();
+                  ? 'MTN Mobile Money'
+                  : transaction.provider.replaceAll('_', ' ').toUpperCase();
 
               return ListTile(
                 leading: CircleAvatar(
                   backgroundColor: color.withValues(alpha: 0.1),
                   child: Icon(
-                    isBank ? Icons.account_balance_rounded : Icons.phone_android_rounded,
+                    isBank
+                        ? Icons.account_balance_rounded
+                        : Icons.phone_android_rounded,
                     color: color,
                     size: 18,
                   ),
@@ -248,7 +258,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                 title: Text(providerLabel),
                 subtitle: Text(
                   [
-                    DateFormat('MMM dd, yyyy • hh:mm a').format(transaction.createdAt),
+                    DateFormat(
+                      'MMM dd, yyyy • hh:mm a',
+                    ).format(transaction.createdAt),
                     if ((transaction.reference ?? '').isNotEmpty)
                       'Ref: ${transaction.reference}',
                   ].join('  •  '),

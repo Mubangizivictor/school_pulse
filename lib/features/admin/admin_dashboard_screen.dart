@@ -513,7 +513,6 @@ class AdminDashboardScreen extends StatelessWidget {
     }
   }
 
-
   Widget _buildSystemAlerts(BuildContext context) {
     final semantic = Theme.of(context).extension<SemanticColors>()!;
     return BlocBuilder<AdminDashboardBloc, AdminDashboardState>(

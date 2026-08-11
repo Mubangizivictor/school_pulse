@@ -15,6 +15,10 @@ class SubscriptionPlan extends Equatable {
   final double storageLimitGb;
   final List<String> includedFeatures;
   final bool isDefault;
+  final bool isPublic;
+  final bool isActive;
+  final bool isPopular;
+  final int displayOrder;
 
   const SubscriptionPlan({
     required this.id,
@@ -29,6 +33,10 @@ class SubscriptionPlan extends Equatable {
     required this.storageLimitGb,
     required this.includedFeatures,
     this.isDefault = false,
+    this.isPublic = true,
+    this.isActive = true,
+    this.isPopular = false,
+    this.displayOrder = 0,
   });
 
   @override
@@ -45,5 +53,9 @@ class SubscriptionPlan extends Equatable {
     storageLimitGb,
     includedFeatures,
     isDefault,
+    isPublic,
+    isActive,
+    isPopular,
+    displayOrder,
   ];
 }

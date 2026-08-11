@@ -23,8 +23,10 @@ class Visitor extends Equatable {
   final DateTime arrivalTime;
   final DateTime? departureTime;
   final VisitorStatus status;
-  final bool isQuickEntry; // "Basic entry / Details pending" flag for a later phase to complete
-  final String? badgeNumber; // reserved, nullable - badge printing is a later phase
+  final bool
+  isQuickEntry; // "Basic entry / Details pending" flag for a later phase to complete
+  final String?
+  badgeNumber; // reserved, nullable - badge printing is a later phase
   final SyncStatus syncStatus;
 
   const Visitor({

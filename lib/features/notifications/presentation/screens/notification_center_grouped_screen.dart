@@ -138,9 +138,7 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
                   if (state.status == NotificationCenterStatus.loading)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 48),
-                      child: Center(
-                        child: SchoolPulseLoader(),
-                      ),
+                      child: Center(child: SchoolPulseLoader()),
                     )
                   else if (grouped.isEmpty)
                     const Padding(

@@ -10,6 +10,7 @@ import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_gradients.dart';
 import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
+import 'package:school_pulse/features/auth/data/datasources/remembered_login_store.dart';
 import 'package:school_pulse/features/auth/login_flow/auth_chrome.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
@@ -138,6 +139,7 @@ class ChildIdScreen extends StatefulWidget {
 
 class _ChildIdScreenState extends State<ChildIdScreen> {
   final _controller = TextEditingController();
+  final _rememberedLoginStore = RememberedLoginStore();
   bool _isValid = false;
   bool _isLooking = false;
   String? _error;
@@ -146,6 +148,10 @@ class _ChildIdScreenState extends State<ChildIdScreen> {
   void initState() {
     super.initState();
     _controller.addListener(_validate);
+    _rememberedLoginStore.getParentIdentity().then((identity) {
+      if (!mounted || identity == null) return;
+      setState(() => _controller.text = identity.code);
+    });
   }
 
   void _validate() {
@@ -378,6 +384,7 @@ class ParentPinScreen extends StatefulWidget {
 class _ParentPinScreenState extends State<ParentPinScreen> {
   final _pinController = TextEditingController();
   final _confirmPinController = TextEditingController();
+  final _rememberedLoginStore = RememberedLoginStore();
   String? _error;
 
   void _login() {
@@ -424,6 +431,10 @@ class _ParentPinScreenState extends State<ParentPinScreen> {
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
+          _rememberedLoginStore.setParentIdentity(
+            code: widget.accessCode.parentCode,
+            phone: widget.phoneNumber,
+          );
           context.go('/school-splash', extra: state.user);
         } else if (state is AuthFailureState) {
           setState(() => _error = state.message);

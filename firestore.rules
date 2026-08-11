@@ -1480,6 +1480,68 @@ service cloud.firestore {
       allow read: if isSuperAdmin();
       allow write: if false;
     }
+    match /super_admin_sign_in_events/{eventId} {
+      // Server-written only, by the logOwnerSignIn callable (Admin SDK,
+      // bypasses these rules) invoked right after a successful owner
+      // login. The owner console reads its own flagged sign-ins to power
+      // the Security Settings "Suspicious Activity" section, same
+      // trust model as super_admin_audit_logs/super_admin_notifications
+      // above; the client never creates, updates or deletes an event.
+      allow read: if isSuperAdmin() && resource.data.ownerId == request.auth.uid;
+      allow create, update, delete: if false;
+    }
+    match /super_admin_settings/{ownerId} {
+      // Owner-scoped app settings (notification channel toggles, quiet
+      // hours, digest frequency, and security preferences under a
+      // namespaced `security` sub-map). Unlike super_admin_notifications
+      // this is client-writable, but only by the owner it belongs to -
+      // never on behalf of another uid, and only a superAdmin account at
+      // all.
+      allow read, write: if isSuperAdmin() && request.auth.uid == ownerId;
+
+      // Real device/session registry backing Trusted Devices / Active
+      // Sessions in the Security screens. Nested under the parent owner
+      // settings doc (not a new top-level collection) to keep the same
+      // ownership convention as the `security` sub-map above - one device
+      // doc per install, keyed by a client-generated stable device id.
+      // Client-writable (create/update/delete) but only for the owner's
+      // own uid, matching the parent doc's rule.
+      match /sessions/{deviceId} {
+        allow read, write: if isSuperAdmin() && request.auth.uid == ownerId;
+      }
+    }
+
+    // Help & Support module (owner console). Client-created and
+    // client-appended-to, unlike the two server-written collections above -
+    // an owner files their own ticket and replies to it, scoped by
+    // ownerId so one owner account can never read or write another's
+    // support history even if it guesses a document id.
+    match /super_admin_support_tickets/{ticketId} {
+      allow read: if isSuperAdmin() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSuperAdmin() && request.resource.data.ownerId == request.auth.uid;
+      // Only updatedAt may move on a plain ticket update from the client;
+      // status/priority changes by a future admin/agent panel go through
+      // the Admin SDK, which bypasses these rules.
+      allow update: if isSuperAdmin() && resource.data.ownerId == request.auth.uid &&
+        request.resource.data.ownerId == resource.data.ownerId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['updatedAt']);
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        function ticketOwnerId() {
+          return get(/databases/$(database)/documents/super_admin_support_tickets/$(ticketId)).data.ownerId;
+        }
+        // Any authenticated message in an owner's own ticket may be read -
+        // this also covers future agent-authored replies written by an
+        // admin panel/Cloud Function via the Admin SDK, which bypasses
+        // this rule on write but must still be readable by the owner here.
+        allow read: if isSuperAdmin() && ticketOwnerId() == request.auth.uid;
+        allow create: if isSuperAdmin() && ticketOwnerId() == request.auth.uid &&
+          request.resource.data.sender == 'owner' &&
+          request.resource.data.senderId == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
 
     // ---------------------------------------------------------------
     // Subject Teacher panel

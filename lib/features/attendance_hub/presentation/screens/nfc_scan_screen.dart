@@ -348,11 +348,7 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.block,
-                  color: AppColors.danger(context),
-                  size: 64,
-                ),
+                Icon(Icons.block, color: AppColors.danger(context), size: 64),
                 const SizedBox(height: AppSpacing.xl),
                 Text(
                   _deniedMessage.isEmpty
@@ -367,7 +363,10 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
                   style: TextStyle(color: AppColors.textMuted(context)),
                 ),
                 const SizedBox(height: AppSpacing.xl),
-                FilledButton(onPressed: _reset, child: const Text('Scan Another')),
+                FilledButton(
+                  onPressed: _reset,
+                  child: const Text('Scan Another'),
+                ),
               ],
             ),
           ),

@@ -18,8 +18,7 @@ class ManualAttendanceScreen extends StatefulWidget {
   const ManualAttendanceScreen({super.key, required this.category});
 
   @override
-  State<ManualAttendanceScreen> createState() =>
-      _ManualAttendanceScreenState();
+  State<ManualAttendanceScreen> createState() => _ManualAttendanceScreenState();
 }
 
 enum _Step { scope, roster, review, success }
@@ -90,7 +89,9 @@ class _ManualAttendanceScreenState extends State<ManualAttendanceScreen> {
             ),
             TextField(
               controller: idController,
-              decoration: const InputDecoration(labelText: 'ID / Code (optional)'),
+              decoration: const InputDecoration(
+                labelText: 'ID / Code (optional)',
+              ),
             ),
           ],
         ),
@@ -115,7 +116,13 @@ class _ManualAttendanceScreenState extends State<ManualAttendanceScreen> {
         : '${name.toLowerCase().replaceAll(RegExp(r'\s+'), '_')}_${DateTime.now().millisecondsSinceEpoch}';
 
     setState(() {
-      _roster.add(AttendancePerson(id: id, name: name, subtitle: code.isEmpty ? null : code));
+      _roster.add(
+        AttendancePerson(
+          id: id,
+          name: name,
+          subtitle: code.isEmpty ? null : code,
+        ),
+      );
       _marks[id] = AttendanceStatus.present;
     });
   }
@@ -264,7 +271,9 @@ class _ManualAttendanceScreenState extends State<ManualAttendanceScreen> {
                               'No roster available for ${widget.category.label}. '
                               'Tap "Add" to record attendance for a person.',
                               textAlign: TextAlign.center,
-                              style: TextStyle(color: AppColors.textMuted(context)),
+                              style: TextStyle(
+                                color: AppColors.textMuted(context),
+                              ),
                             ),
                           ],
                         ),
@@ -358,10 +367,7 @@ class _ManualAttendanceScreenState extends State<ManualAttendanceScreen> {
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(_statusLabel(s)),
-                          Text('$count'),
-                        ],
+                        children: [Text(_statusLabel(s)), Text('$count')],
                       ),
                     );
                   }),

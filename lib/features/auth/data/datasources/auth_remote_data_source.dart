@@ -470,9 +470,13 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       'phoneNumber': user.phoneNumber,
       'photoUrl': user.photoUrl,
     });
-    batch.set(firestore.collection('school_contacts').doc(user.id), {
-      ..._schoolContactData(user),
-    }, SetOptions(merge: true));
+    if (user.role != UserRole.superAdmin) {
+      batch.set(
+        firestore.collection('school_contacts').doc(user.id),
+        {..._schoolContactData(user)},
+        SetOptions(merge: true),
+      );
+    }
     await batch.commit();
   }
 

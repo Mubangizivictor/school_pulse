@@ -10,21 +10,6 @@ abstract class SuperAdminEvent extends Equatable {
 
 class LoadSuperAdminDashboard extends SuperAdminEvent {}
 
-class CreateSchoolEvent extends SuperAdminEvent {
-  final School school;
-  final String adminEmail;
-  final String adminPassword;
-
-  const CreateSchoolEvent({
-    required this.school,
-    required this.adminEmail,
-    required this.adminPassword,
-  });
-
-  @override
-  List<Object?> get props => [school, adminEmail, adminPassword];
-}
-
 class ApproveSchoolApplicationEvent extends SuperAdminEvent {
   final String applicationId;
 
@@ -118,31 +103,4 @@ class ToggleFeatureEvent extends SuperAdminEvent {
 
   @override
   List<Object?> get props => [schoolId, feature, enabled];
-}
-
-class LoadInvoicesEvent extends SuperAdminEvent {
-  final String? schoolId;
-  const LoadInvoicesEvent({this.schoolId});
-
-  @override
-  List<Object?> get props => [schoolId];
-}
-
-class InitiatePaymentEvent extends SuperAdminEvent {
-  final String schoolId;
-  final double amount;
-  final String email;
-  final String phoneNumber;
-  final String planId;
-
-  const InitiatePaymentEvent({
-    required this.schoolId,
-    required this.amount,
-    required this.email,
-    required this.phoneNumber,
-    required this.planId,
-  });
-
-  @override
-  List<Object?> get props => [schoolId, amount, email, phoneNumber, planId];
 }

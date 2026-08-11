@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:school_pulse/core/notification/notification_service.dart';
 import 'package:school_pulse/core/usecases/usecase.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
@@ -10,6 +11,7 @@ import 'package:school_pulse/features/auth/domain/usecases/exit_support_mode.dar
 import 'package:school_pulse/features/auth/domain/usecases/get_current_user.dart';
 import 'package:school_pulse/features/auth/domain/usecases/login_parent.dart';
 import 'package:school_pulse/features/auth/domain/usecases/login_with_email.dart';
+import 'package:school_pulse/features/auth/data/datasources/remembered_login_store.dart';
 import 'package:school_pulse/features/auth/domain/usecases/logout.dart';
 import 'package:school_pulse/features/student/domain/usecases/resolve_parent_access_code.dart';
 import 'auth_event.dart';
@@ -28,6 +30,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final EnterSupportMode enterSupportMode;
   final ExitSupportMode exitSupportMode;
   final BrandingBloc brandingBloc;
+  final RememberedLoginStore _rememberedLoginStore = RememberedLoginStore();
 
   AuthBloc({
     required this.loginWithEmail,
@@ -125,6 +128,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<void> _onLogout(LogoutPressed event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
     await logout(NoParams());
+    await _rememberedLoginStore.setStaffEmail(null);
+    await _rememberedLoginStore.setParentIdentity();
     brandingBloc.add(ClearBranding());
     emit(AuthUnauthenticated());
   }
@@ -193,5 +198,25 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     // Also trigger branding update
     brandingBloc.add(FetchBrandingForSchool(user.schoolId));
+
+    // --- Additive: SaaS owner sign-in event logging (security feature) ---
+    // Fire-and-forget call to the `logOwnerSignIn` Cloud Function so the
+    // Security Settings "Suspicious Activity" screen has real data. Only
+    // invoked for superAdmin accounts; failures are swallowed so this can
+    // never block or break the normal login flow for any user.
+    if (user.roles.contains(UserRole.superAdmin)) {
+      _logOwnerSignIn();
+    }
+    // --- End additive block ---
+  }
+
+  Future<void> _logOwnerSignIn() async {
+    try {
+      await FirebaseFunctions.instanceFor(region: 'europe-west1')
+          .httpsCallable('logOwnerSignIn')
+          .call({'platform': defaultTargetPlatform.name});
+    } catch (e) {
+      if (kDebugMode) print('Owner sign-in logging failed: $e');
+    }
   }
 }

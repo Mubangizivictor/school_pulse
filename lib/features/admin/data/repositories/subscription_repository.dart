@@ -5,11 +5,9 @@ import '../models/payment_transaction.dart';
 import '../models/subscription.dart';
 
 class SubscriptionRepository {
-  SubscriptionRepository({
-    FirebaseFirestore? firestore,
-    FirebaseAuth? auth,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _auth = auth ?? FirebaseAuth.instance;
+  SubscriptionRepository({FirebaseFirestore? firestore, FirebaseAuth? auth})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _auth = auth ?? FirebaseAuth.instance;
 
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
@@ -42,8 +40,10 @@ class SubscriptionRepository {
       final planId = school['subscriptionPlanId']?.toString() ?? '';
       Map<String, dynamic>? plan;
       if (planId.isNotEmpty) {
-        final planDoc =
-            await _firestore.collection('subscription_plans').doc(planId).get();
+        final planDoc = await _firestore
+            .collection('subscription_plans')
+            .doc(planId)
+            .get();
         plan = planDoc.data();
       }
 
@@ -59,14 +59,15 @@ class SubscriptionRepository {
       final status = !hasEverActivated
           ? SubscriptionStatus.none
           : (subscriptionStatus == 'payment_review' ||
-                  subscriptionStatus == 'payment_due')
-              ? SubscriptionStatus.gracePeriod
-              : (expiry != null && !expiry.isAfter(now))
-                  ? SubscriptionStatus.expired
-                  : SubscriptionStatus.active;
+                subscriptionStatus == 'payment_due')
+          ? SubscriptionStatus.gracePeriod
+          : (expiry != null && !expiry.isAfter(now))
+          ? SubscriptionStatus.expired
+          : SubscriptionStatus.active;
 
       yield Subscription(
-        plan: plan?['name']?.toString() ??
+        plan:
+            plan?['name']?.toString() ??
             school['subscriptionPlanId']?.toString() ??
             'School Pulse Plan',
         status: status,
@@ -86,12 +87,14 @@ class SubscriptionRepository {
       return;
     }
 
-    await for (final snapshot in _firestore
-        .collection('payment_transactions')
-        .where('schoolId', isEqualTo: schoolId)
-        .snapshots()) {
-      final transactions =
-          snapshot.docs.map(PaymentTransaction.fromFirestore).toList();
+    await for (final snapshot
+        in _firestore
+            .collection('payment_transactions')
+            .where('schoolId', isEqualTo: schoolId)
+            .snapshots()) {
+      final transactions = snapshot.docs
+          .map(PaymentTransaction.fromFirestore)
+          .toList();
       transactions.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       yield transactions.take(10).toList(growable: false);
     }

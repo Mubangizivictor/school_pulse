@@ -55,7 +55,9 @@ class ProfileMoreScreen extends StatelessWidget {
                       ),
                       Text(
                         role,
-                        style: TextStyle(color: AppColors.textSecondary(context)),
+                        style: TextStyle(
+                          color: AppColors.textSecondary(context),
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -152,7 +154,11 @@ class _MenuTile extends StatelessWidget {
   final String title;
   final VoidCallback onTap;
 
-  const _MenuTile({required this.icon, required this.title, required this.onTap});
+  const _MenuTile({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -164,8 +170,14 @@ class _MenuTile extends StatelessWidget {
         child: ListTile(
           contentPadding: EdgeInsets.zero,
           leading: Icon(icon, color: AppColors.primary(context)),
-          title: Text(title, style: TextStyle(color: AppColors.textPrimary(context))),
-          trailing: Icon(Icons.chevron_right, color: AppColors.textMuted(context)),
+          title: Text(
+            title,
+            style: TextStyle(color: AppColors.textPrimary(context)),
+          ),
+          trailing: Icon(
+            Icons.chevron_right,
+            color: AppColors.textMuted(context),
+          ),
           onTap: onTap,
         ),
       ),

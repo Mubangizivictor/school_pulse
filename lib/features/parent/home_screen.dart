@@ -227,7 +227,8 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                                             final authState = context
                                                 .read<AuthBloc>()
                                                 .state;
-                                            if (authState is! AuthAuthenticated) {
+                                            if (authState
+                                                is! AuthAuthenticated) {
                                               return;
                                             }
                                             context

@@ -8,8 +8,7 @@ import '../../../admin/data/repositories/audit_repository.dart';
 class DirectorBloc extends Bloc<DirectorEvent, DirectorState> {
   final AuditRepository _auditRepository;
 
-  DirectorBloc({required this._auditRepository})
-    : super(DirectorInitial()) {
+  DirectorBloc({required this._auditRepository}) : super(DirectorInitial()) {
     on<DirectorDashboardRequested>(_onDashboardRequested);
     on<DirectorApprovalsRequested>(_onApprovalsRequested);
     on<DirectorApprovalActionRequested>(_onApprovalActionRequested);

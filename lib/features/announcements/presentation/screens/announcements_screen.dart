@@ -27,7 +27,10 @@ class AnnouncementsScreen extends StatelessWidget {
     return BlocProvider(
       create: (_) => sl<AnnouncementBloc>()
         ..add(
-          LoadAnnouncementsRequested(schoolId: user.schoolId, operatorUser: user),
+          LoadAnnouncementsRequested(
+            schoolId: user.schoolId,
+            operatorUser: user,
+          ),
         ),
       child: const _AnnouncementsBody(),
     );
@@ -77,9 +80,9 @@ class _AnnouncementsBodyState extends State<_AnnouncementsBody>
       body: BlocConsumer<AnnouncementBloc, AnnouncementState>(
         listener: (context, state) {
           if (state is AnnouncementActionDenied) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
           }
         },
         builder: (context, state) {

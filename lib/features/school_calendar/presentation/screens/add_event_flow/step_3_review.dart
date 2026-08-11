@@ -18,8 +18,7 @@ class Step3Review extends StatelessWidget {
     this.saving = false,
   });
 
-  String _fmt(DateTime? d) =>
-      d == null ? '—' : '${d.day}/${d.month}/${d.year}';
+  String _fmt(DateTime? d) => d == null ? '—' : '${d.day}/${d.month}/${d.year}';
 
   @override
   Widget build(BuildContext context) {

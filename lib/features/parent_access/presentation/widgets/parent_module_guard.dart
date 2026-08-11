@@ -27,9 +27,7 @@ class ParentModuleGuard extends StatelessWidget {
     return BlocBuilder<ParentAccessCubit, ParentAccessState>(
       builder: (context, state) {
         if (state is ParentAccessLoading || state is ParentAccessInitial) {
-          return const Scaffold(
-            body: Center(child: SchoolPulseLoader()),
-          );
+          return const Scaffold(body: Center(child: SchoolPulseLoader()));
         }
 
         final visibility = state is ParentAccessResolved
@@ -41,8 +39,7 @@ class ParentModuleGuard extends StatelessWidget {
             body: EmptyState(
               icon: Icons.lock_outline,
               title: 'Not available',
-              message:
-                  'You do not have access to this for the selected child.',
+              message: 'You do not have access to this for the selected child.',
             ),
           );
         }

@@ -188,6 +188,24 @@ class AppTheme {
         color: isDark ? AppColors.borderDark : AppColors.borderLight,
       ),
 
+      // Keep every module toggle on the same visual language: a clean blue
+      // active track with a white thumb, and a solid navy/slate inactive
+      // track. Material's default outline makes these look too busy against
+      // the bordered settings cards used throughout the app.
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? AppColors.pureWhite
+              : (isDark ? AppColors.textSecondaryDark : AppColors.pureWhite),
+        ),
+        trackColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? primaryColor
+              : (isDark ? const Color(0xFF1D3D73) : AppColors.disabledLight),
+        ),
+        trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+      ),
+
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: isDark
             ? AppColors.surfaceDark

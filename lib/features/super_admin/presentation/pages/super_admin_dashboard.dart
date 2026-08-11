@@ -17,7 +17,6 @@ import 'audit_logs_screen.dart';
 import 'billing_page.dart';
 import 'school_management_screen.dart';
 import 'subscription_plans_screen.dart';
-import 'super_admin_more_screen.dart';
 import 'super_admin_notifications_screen.dart';
 import 'super_admin_overview_screen.dart';
 import 'super_admin_settings_screen.dart';
@@ -90,9 +89,10 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
   );
 
   // One nested Navigator per mobile bottom-nav destination (Home, Schools,
-  // Payments, More), so the bottom bar stays visible on pushed screens.
+  // Payments, Plans, More), so the bottom bar stays visible on pushed
+  // screens.
   final List<GlobalKey<NavigatorState>> _mobileNavigatorKeys = List.generate(
-    4,
+    5,
     (_) => GlobalKey<NavigatorState>(),
   );
 
@@ -178,7 +178,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
         key: ValueKey('mobile-$_billingPageKey'),
         initialFilter: _billingInitialFilter,
       ),
-      const SuperAdminMoreScreen(),
+      const SubscriptionPlansScreen(),
+      const SuperAdminSettingsScreen(),
     ];
 
     return Scaffold(
@@ -192,42 +193,75 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
             ),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _mobileNavIndex,
-        onDestinationSelected: (index) {
-          if (index == _mobileNavIndex) {
-            // Re-tapping the active tab returns it to its root screen,
-            // matching standard tab-bar behavior.
-            _popToRoot(_mobileNavigatorKeys[index]);
-            return;
-          }
-          setState(() {
-            _mobileNavIndex = index;
-            if (index <= 2) _selectedIndex = index;
-          });
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard),
-            label: 'Home',
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x12071B45),
+              blurRadius: 20,
+              offset: Offset(0, -4),
+            ),
+          ],
+        ),
+        child: NavigationBar(
+          height: 88,
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          indicatorColor: const Color(0xFFE3E9FF),
+          labelTextStyle: WidgetStateProperty.resolveWith(
+            (states) => TextStyle(
+              color: states.contains(WidgetState.selected)
+                  ? AppColors.electricBlue
+                  : const Color(0xFF68789B),
+              fontSize: 12.5,
+              fontWeight: states.contains(WidgetState.selected)
+                  ? FontWeight.w700
+                  : FontWeight.w500,
+            ),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.school_outlined),
-            selectedIcon: Icon(Icons.school),
-            label: 'Schools',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long),
-            label: 'Payments',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.more_horiz_rounded),
-            selectedIcon: Icon(Icons.more_horiz_rounded),
-            label: 'More',
-          ),
-        ],
+          selectedIndex: _mobileNavIndex,
+          onDestinationSelected: (index) {
+            if (index == _mobileNavIndex) {
+              // Re-tapping the active tab returns it to its root screen,
+              // matching standard tab-bar behavior.
+              _popToRoot(_mobileNavigatorKeys[index]);
+              return;
+            }
+            setState(() {
+              _mobileNavIndex = index;
+              if (index <= 3) _selectedIndex = index;
+            });
+          },
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home),
+              label: 'Home',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.school_outlined),
+              selectedIcon: Icon(Icons.school),
+              label: 'Schools',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.receipt_long_outlined),
+              selectedIcon: Icon(Icons.receipt_long),
+              label: 'Payments',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.subscriptions_outlined),
+              selectedIcon: Icon(Icons.subscriptions),
+              label: 'Plans',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(Icons.settings),
+              label: 'Settings',
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -49,10 +49,7 @@ class AnnouncementCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'By ${announcement.authorName}',
-            style: TextStyle(
-              color: AppColors.textMuted(context),
-              fontSize: 12,
-            ),
+            style: TextStyle(color: AppColors.textMuted(context), fontSize: 12),
           ),
         ],
       ),

@@ -45,10 +45,12 @@ class MovementEvent extends Equatable {
   final String? campusId; // reserved, nullable, not populated in Phase 1
   final String gateId;
   final PersonType personType;
-  final String personId; // studentId / staffId / visitorId (pickup: child's studentId)
+  final String
+  personId; // studentId / staffId / visitorId (pickup: child's studentId)
   final String personName; // denormalized for offline display without a join
   final MovementDirection direction;
-  final String movementType; // Arrival/Late Arrival/Departure/Early Departure/Authorized Pickup - computed, not typed
+  final String
+  movementType; // Arrival/Late Arrival/Departure/Early Departure/Authorized Pickup - computed, not typed
   final VerificationMethod verificationMethod;
   final String officerId; // auto-populated from session
   final String officerRole; // auto-populated from session (denormalized)
@@ -57,9 +59,11 @@ class MovementEvent extends Equatable {
   final String platform; // 'ios' | 'android'
   final String appVersion; // from PackageInfo
   final DateTime actionTimestamp; // local device clock at moment of action
-  final DateTime? serverTimestamp; // set on successful Firestore push, null until synced
+  final DateTime?
+  serverTimestamp; // set on successful Firestore push, null until synced
   final SyncStatus syncStatus;
-  final String? pickupParentCode; // flattened pickup details, only when personType==pickup
+  final String?
+  pickupParentCode; // flattened pickup details, only when personType==pickup
   final String? pickupParentName;
   final String? pickupPhoneNumber;
 

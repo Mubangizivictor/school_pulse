@@ -105,9 +105,8 @@ class _Step04EmploymentInfoState extends State<Step04EmploymentInfo> {
                         .toList()
                       ..sort((a, b) => a.name.compareTo(b.name));
                 return DropdownButtonFormField<String>(
-                  initialValue: departments.any(
-                        (d) => d.id == draft.departmentId,
-                      )
+                  initialValue:
+                      departments.any((d) => d.id == draft.departmentId)
                       ? draft.departmentId
                       : null,
                   decoration: const InputDecoration(
@@ -116,21 +115,22 @@ class _Step04EmploymentInfoState extends State<Step04EmploymentInfo> {
                   ),
                   items: departments
                       .map(
-                        (d) => DropdownMenuItem(
-                          value: d.id,
-                          child: Text(d.name),
-                        ),
+                        (d) =>
+                            DropdownMenuItem(value: d.id, child: Text(d.name)),
                       )
                       .toList(),
                   onChanged: (v) {
-                    final picked = departments.where((d) => d.id == v).firstOrNull;
+                    final picked = departments
+                        .where((d) => d.id == v)
+                        .firstOrNull;
                     if (picked != null) {
                       draft.departmentId = picked.id;
                       draft.department = picked.name;
                       controller.notifyDraftChanged();
                     }
                   },
-                  validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+                  validator: (v) =>
+                      (v == null || v.isEmpty) ? 'Required' : null,
                 );
               },
             ),
@@ -144,9 +144,8 @@ class _Step04EmploymentInfoState extends State<Step04EmploymentInfo> {
                         .toList()
                       ..sort((a, b) => a.name.compareTo(b.name));
                 return DropdownButtonFormField<String>(
-                  initialValue: designations.any(
-                        (d) => d.id == draft.designationId,
-                      )
+                  initialValue:
+                      designations.any((d) => d.id == draft.designationId)
                       ? draft.designationId
                       : null,
                   decoration: const InputDecoration(
@@ -155,22 +154,22 @@ class _Step04EmploymentInfoState extends State<Step04EmploymentInfo> {
                   ),
                   items: designations
                       .map(
-                        (d) => DropdownMenuItem(
-                          value: d.id,
-                          child: Text(d.name),
-                        ),
+                        (d) =>
+                            DropdownMenuItem(value: d.id, child: Text(d.name)),
                       )
                       .toList(),
                   onChanged: (v) {
-                    final picked =
-                        designations.where((d) => d.id == v).firstOrNull;
+                    final picked = designations
+                        .where((d) => d.id == v)
+                        .firstOrNull;
                     if (picked != null) {
                       draft.designationId = picked.id;
                       draft.designation = picked.name;
                       controller.notifyDraftChanged();
                     }
                   },
-                  validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+                  validator: (v) =>
+                      (v == null || v.isEmpty) ? 'Required' : null,
                 );
               },
             ),

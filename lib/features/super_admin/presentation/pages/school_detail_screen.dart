@@ -150,10 +150,15 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(flex: 2, child: _buildOverview(theme)),
+                  Expanded(flex: 2, child: _buildOverview(theme, context)),
                   const SizedBox(width: AppSpacing.xl),
                   Expanded(
-                    child: _buildSubscription(theme, dateFormat, daysRemaining),
+                    child: _buildSubscription(
+                      theme,
+                      context,
+                      dateFormat,
+                      daysRemaining,
+                    ),
                   ),
                 ],
               )
@@ -161,9 +166,9 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildOverview(theme),
+                  _buildOverview(theme, context),
                   const SizedBox(height: AppSpacing.x4l),
-                  _buildSubscription(theme, dateFormat, daysRemaining),
+                  _buildSubscription(theme, context, dateFormat, daysRemaining),
                 ],
               ),
             const SizedBox(height: AppSpacing.x4l),
@@ -178,19 +183,96 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
     );
   }
 
+  Widget _sectionHeader(BuildContext context, IconData icon, String title) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: AppColors.primary(context).withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 16, color: AppColors.primary(context)),
+        ),
+        const SizedBox(width: AppSpacing.m),
+        Text(
+          title,
+          style: AppTypography.titleMedium.copyWith(
+            color: AppColors.textPrimary(context),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _iconChip(BuildContext context, IconData icon, Color color) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(icon, color: color, size: 20),
+    );
+  }
+
+  Widget _infoRow(
+    BuildContext context, {
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          _iconChip(context, icon, color),
+          const SizedBox(width: AppSpacing.l),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.textPrimary(context),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.textSecondary(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHeader(BuildContext context, ThemeData theme) {
     return AppCard(
+      color: AppColors.primary(context).withValues(alpha: 0.08),
+      borderColor: AppColors.primary(context).withValues(alpha: 0.35),
       child: Row(
         children: [
           CircleAvatar(
             radius: 24,
-            backgroundColor: AppColors.primary(context).withValues(alpha: 0.1),
+            backgroundColor: AppColors.primary(context),
             child: Text(
               school.name.isEmpty
                   ? '?'
                   : school.name.substring(0, 1).toUpperCase(),
               style: theme.textTheme.titleMedium?.copyWith(
-                color: AppColors.primary(context),
+                color: Colors.white,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -228,46 +310,51 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
     );
   }
 
-  Widget _buildOverview(ThemeData theme) {
+  Widget _buildOverview(ThemeData theme, BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader(title: 'Overview'),
+        _sectionHeader(context, Icons.grid_view_rounded, 'Overview'),
         const SizedBox(height: AppSpacing.m),
         AppCard(
-          padding: EdgeInsets.zero,
           child: Column(
             children: [
-              ListTile(
-                leading: const Icon(Icons.category_outlined),
-                title: const Text('Category'),
-                subtitle: Text(
-                  school.classificationOther?.isNotEmpty == true
-                      ? school.classificationOther!
-                      : school.classification.name,
-                ),
+              _infoRow(
+                context,
+                icon: Icons.category_outlined,
+                color: AppColors.primary(context),
+                title: 'Category',
+                subtitle: school.classificationOther?.isNotEmpty == true
+                    ? school.classificationOther!
+                    : school.classification.name,
               ),
               const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.email_outlined),
-                title: const Text('Contact email'),
-                subtitle: Text(
-                  school.contactEmail.isEmpty ? '—' : school.contactEmail,
-                ),
+              _infoRow(
+                context,
+                icon: Icons.email_outlined,
+                color: AppColors.primary(context),
+                title: 'Contact email',
+                subtitle: school.contactEmail.isEmpty
+                    ? '—'
+                    : school.contactEmail,
               ),
               const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.phone_outlined),
-                title: const Text('Contact phone'),
-                subtitle: Text(
-                  school.contactPhone.isEmpty ? '—' : school.contactPhone,
-                ),
+              _infoRow(
+                context,
+                icon: Icons.phone_outlined,
+                color: AppColors.primary(context),
+                title: 'Contact phone',
+                subtitle: school.contactPhone.isEmpty
+                    ? '—'
+                    : school.contactPhone,
               ),
               const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.location_on_outlined),
-                title: const Text('Address'),
-                subtitle: Text(school.address.isEmpty ? '—' : school.address),
+              _infoRow(
+                context,
+                icon: Icons.location_on_outlined,
+                color: AppColors.primary(context),
+                title: 'Address',
+                subtitle: school.address.isEmpty ? '—' : school.address,
               ),
             ],
           ),
@@ -278,42 +365,64 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
 
   Widget _buildSubscription(
     ThemeData theme,
+    BuildContext context,
     DateFormat dateFormat,
     int daysRemaining,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader(title: 'Subscription'),
+        _sectionHeader(
+          context,
+          Icons.workspace_premium_rounded,
+          'Subscription',
+        ),
         const SizedBox(height: AppSpacing.m),
         AppCard(
-          color: theme.colorScheme.primaryContainer.withValues(alpha: 0.25),
-          child: Column(
+          color: Colors.purple.withValues(alpha: 0.08),
+          borderColor: Colors.purple.withValues(alpha: 0.25),
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                school.subscriptionPlanId.isEmpty
-                    ? 'No plan assigned'
-                    : school.subscriptionPlanId.toUpperCase(),
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+              _iconChip(
+                context,
+                Icons.workspace_premium_rounded,
+                Colors.purple,
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Expires on ${dateFormat.format(school.subscriptionExpiry)}',
-                style: theme.textTheme.bodySmall,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                daysRemaining >= 0
-                    ? '$daysRemaining days remaining'
-                    : 'Expired ${-daysRemaining} days ago',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: daysRemaining < 0
-                      ? theme.colorScheme.error
-                      : theme.colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
+              const SizedBox(width: AppSpacing.l),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      school.subscriptionPlanId.isEmpty
+                          ? 'No plan assigned'
+                          : school.subscriptionPlanId.toUpperCase(),
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.purple,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Expires on ${dateFormat.format(school.subscriptionExpiry)}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary(context),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      daysRemaining >= 0
+                          ? '$daysRemaining days remaining'
+                          : 'Expired ${-daysRemaining} days ago',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: daysRemaining < 0
+                            ? theme.colorScheme.error
+                            : AppColors.textPrimary(context),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -327,12 +436,16 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader(title: 'Payments'),
+        _sectionHeader(context, Icons.credit_card_rounded, 'Payments'),
         const SizedBox(height: AppSpacing.m),
         AppCard(
           child: Row(
             children: [
-              Icon(Icons.payments_rounded, color: AppColors.primary(context)),
+              _iconChip(
+                context,
+                Icons.camera_alt_rounded,
+                AppColors.primary(context),
+              ),
               const SizedBox(width: AppSpacing.l),
               Expanded(
                 child: Column(
@@ -349,6 +462,7 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
                       _loadingPayments ? '—' : _money.format(_totalPaid),
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
+                        color: AppColors.primary(context),
                       ),
                     ),
                   ],
@@ -397,13 +511,19 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
               itemBuilder: (context, index) {
                 final payment = _payments[index];
                 return ListTile(
-                  leading: Icon(
+                  leading: _iconChip(
+                    context,
                     payment.method == ManualPaymentMethod.mtn
                         ? Icons.phone_android_rounded
                         : Icons.account_balance_rounded,
+                    AppColors.primary(context),
                   ),
                   title: Text(
                     '${_money.format(payment.submittedAmount)} • ${payment.planName}',
+                    style: AppTypography.bodyMedium.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary(context),
+                    ),
                   ),
                   subtitle: Text(_paymentDate.format(payment.submittedAt)),
                   trailing: StatusBadge(
@@ -432,36 +552,55 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
       };
 
   Widget _buildFeatureControl(ThemeData theme, BuildContext context) {
-    const allFeatures = [
+    final allFeatures = [
       {
         'id': 'attendance',
         'name': 'Attendance Management',
         'icon': Icons.calendar_today,
+        'color': AppColors.electricBlue,
       },
-      {'id': 'finance', 'name': 'Financial Records', 'icon': Icons.payments},
-      {'id': 'exams', 'name': 'Examination System', 'icon': Icons.assignment},
+      {
+        'id': 'finance',
+        'name': 'Financial Records',
+        'icon': Icons.payments,
+        'color': AppColors.successGreen,
+      },
+      {
+        'id': 'exams',
+        'name': 'Examination System',
+        'icon': Icons.assignment,
+        'color': Colors.purple,
+      },
       {
         'id': 'transport',
         'name': 'Transport/Bus Tracking',
         'icon': Icons.directions_bus,
+        'color': AppColors.brightOrange,
       },
-      {'id': 'library', 'name': 'Library Management', 'icon': Icons.book},
+      {
+        'id': 'library',
+        'name': 'Library Management',
+        'icon': Icons.book,
+        'color': AppColors.electricBlue,
+      },
       {
         'id': 'qr_scanner',
         'name': 'QR Attendance Integration',
         'icon': Icons.qr_code,
+        'color': Colors.purple,
       },
       {
         'id': 'parent_portal',
         'name': 'Parent Engagement',
         'icon': Icons.family_restroom,
+        'color': AppColors.emeraldGreen,
       },
     ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader(title: 'Features & Modules'),
+        _sectionHeader(context, Icons.grid_view_rounded, 'Features & Modules'),
         const SizedBox(height: AppSpacing.m),
         AppCard(
           padding: EdgeInsets.zero,
@@ -474,8 +613,18 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
               final feature = allFeatures[index];
               final isEnabled = school.enabledFeatures.contains(feature['id']);
               return SwitchListTile(
-                secondary: Icon(feature['icon'] as IconData),
-                title: Text(feature['name'] as String),
+                secondary: _iconChip(
+                  context,
+                  feature['icon'] as IconData,
+                  feature['color'] as Color,
+                ),
+                title: Text(
+                  feature['name'] as String,
+                  style: AppTypography.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary(context),
+                  ),
+                ),
                 value: isEnabled,
                 onChanged: (value) {
                   context.read<SuperAdminBloc>().add(
@@ -496,15 +645,12 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
 
   Widget _buildSupportModeAction(ThemeData theme, BuildContext context) {
     return AppCard(
-      color: AppColors.textSecondary(context).withValues(alpha: 0.06),
+      color: AppColors.primary(context).withValues(alpha: 0.06),
+      borderColor: AppColors.primary(context).withValues(alpha: 0.25),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.support_agent,
-            color: AppColors.textSecondary(context),
-            size: 32,
-          ),
+          _iconChip(context, Icons.support_agent, AppColors.primary(context)),
           const SizedBox(width: AppSpacing.m),
           Expanded(
             child: Column(
@@ -514,7 +660,7 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
                   'Owner Support Mode',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textSecondary(context),
+                    color: AppColors.primary(context),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -573,8 +719,7 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
                   labelText: 'Reason',
                   hintText: 'e.g. Debugging a reported attendance issue',
                 ),
-                validator: (value) =>
-                    (value == null || value.trim().length < 3)
+                validator: (value) => (value == null || value.trim().length < 3)
                     ? 'Please enter a reason (min 3 characters)'
                     : null,
               ),

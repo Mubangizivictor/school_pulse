@@ -137,7 +137,9 @@ class _PreviousAttendanceScreenState extends State<PreviousAttendanceScreen> {
                           final records = sessions[index].value;
                           final first = records.first;
                           final present = records
-                              .where((r) => r.status == AttendanceStatus.present)
+                              .where(
+                                (r) => r.status == AttendanceStatus.present,
+                              )
                               .length;
                           final absent = records
                               .where((r) => r.status == AttendanceStatus.absent)

@@ -16,14 +16,16 @@ class SchoolCalendarRemoteDataSourceImpl
   SchoolCalendarRemoteDataSourceImpl({required this.firestore});
 
   CollectionReference<Map<String, dynamic>> _academicYears(String schoolId) =>
-      firestore.collection('schools').doc(schoolId).collection(
-        'academic_years',
-      );
+      firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('academic_years');
 
   CollectionReference<Map<String, dynamic>> _events(String schoolId) =>
-      firestore.collection('schools').doc(schoolId).collection(
-        'calendar_events',
-      );
+      firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('calendar_events');
 
   @override
   Future<AcademicYearModel?> getCurrentAcademicYear(String schoolId) async {

@@ -346,9 +346,7 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
                           color: Colors.black.withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Center(
-                          child: SchoolPulseLoader(),
-                        ),
+                        child: const Center(child: SchoolPulseLoader()),
                       ),
                   ],
                 ),

@@ -18,7 +18,13 @@ abstract class StructureConfigurationService {
 
   Future<List<EducationalLevel>> getActiveLevels(String schoolId);
 
-  Future<List<SchoolClass>> getActiveClasses(String schoolId, {String? levelId});
+  Future<List<SchoolClass>> getActiveClasses(
+    String schoolId, {
+    String? levelId,
+  });
 
-  Future<List<ClassStream>> getActiveStreams(String schoolId, {String? classId});
+  Future<List<ClassStream>> getActiveStreams(
+    String schoolId, {
+    String? classId,
+  });
 }

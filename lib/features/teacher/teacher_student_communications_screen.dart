@@ -129,7 +129,6 @@ class TeacherStudentCommunicationsScreen extends StatelessWidget {
   }
 }
 
-
 class _MessageTile extends StatelessWidget {
   final String name;
   final String message;

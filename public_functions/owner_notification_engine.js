@@ -220,7 +220,7 @@ async function deliverPush(ownerDocs, eventId, title, body, data) {
 function smtpConfig() {
   const host = text(process.env.SMTP_HOST, 200);
   const user = text(process.env.SMTP_USER, 300);
-  const pass = String(process.env.SMTP_PASS || '');
+  const pass = String(process.env.SMTP_PASS || '').replace(/\s+/g, '');
   const from = text(process.env.SMTP_FROM, 300) || user;
   if (!host || !user || !pass || !from) return null;
   const port = Number(process.env.SMTP_PORT || 587);
@@ -436,35 +436,8 @@ async function notifyOwners({ eventId, eventType, title, body, schoolName = '', 
   return { ...base, ...completed };
 }
 
-async function notificationHealth() {
-  const owners = await getOwnerDocs();
-  const tokens = await tokenEntriesForOwners(owners);
-  const recipients = unique([
-    ...owners.map((doc) => text(doc.data()?.email, 200).toLowerCase()),
-    text(process.env.OWNER_NOTIFICATION_EMAIL || process.env.SAAS_OWNER_NOTIFICATION_EMAIL, 200).toLowerCase(),
-  ]);
-  const latest = await db.collection('notification_deliveries')
-    .orderBy('completedAt', 'desc')
-    .limit(1)
-    .get()
-    .catch(() => null);
-
-  return {
-    ownerCount: owners.length,
-    ownerIds: owners.map((doc) => doc.id),
-    emailRecipients: recipients,
-    pushTokenCount: tokens.length,
-    pushPlatforms: unique(tokens.map((entry) => entry.platform)),
-    smtpConfigured: Boolean(smtpConfig()),
-    latestDelivery: latest?.docs?.[0]
-      ? { id: latest.docs[0].id, ...latest.docs[0].data() }
-      : null,
-  };
-}
-
 module.exports = {
   notifyOwners,
   getOwnerDocs,
-  notificationHealth,
   isOwnerData,
 };

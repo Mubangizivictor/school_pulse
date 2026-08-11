@@ -34,17 +34,27 @@ const DEFAULT_MANUAL_PAYMENT_CONFIG = {
   currency: 'UGX',
   proofMaxBytes: 10 * 1024 * 1024,
   mobileMoney: {
-    enabled: true,
+    enabled: false,
     network: 'MTN',
-    number: '0793128137',
-    accountName: 'Victor Mubangizi',
+    number: '',
+    accountName: '',
+  },
+  airtelMoney: {
+    enabled: false,
+    network: 'Airtel',
+    number: '',
+    accountName: '',
   },
   bank: {
-    enabled: true,
-    bankName: 'Centenary Bank Uganda',
-    branch: 'Mbarara',
-    accountName: 'Victor Mubangizi',
-    accountNumber: '3205381235',
+    enabled: false,
+    bankName: '',
+    branch: '',
+    accountName: '',
+    accountNumber: '',
+  },
+  cash: {
+    enabled: false,
+    instructions: '',
   },
 };
 
@@ -519,7 +529,9 @@ exports.getManualPaymentContext = onRequest({ region: 'europe-west1' }, async (r
     currentSubscriptionExpiry: asIso(subscriber.school.subscriptionExpiry),
     instructions: {
       mobileMoney: config.mobileMoney || DEFAULT_MANUAL_PAYMENT_CONFIG.mobileMoney,
+      airtelMoney: config.airtelMoney || DEFAULT_MANUAL_PAYMENT_CONFIG.airtelMoney,
       bank: config.bank || DEFAULT_MANUAL_PAYMENT_CONFIG.bank,
+      cash: config.cash || DEFAULT_MANUAL_PAYMENT_CONFIG.cash,
     },
     proofMaxBytes: Number(config.proofMaxBytes || DEFAULT_MANUAL_PAYMENT_CONFIG.proofMaxBytes),
   });
@@ -561,11 +573,14 @@ exports.submitManualPayment = onRequest({ region: 'europe-west1' }, async (req, 
     return;
   }
   const method = text(req.body?.method, 20).toLowerCase();
-  if (!['mtn', 'bank'].includes(method)) {
-    res.status(400).json({ error: 'invalid_method', message: 'Choose MTN Mobile Money or bank transfer.' });
+  if (!['mtn', 'airtel', 'bank', 'cash'].includes(method)) {
+    res.status(400).json({ error: 'invalid_method', message: 'Choose MTN Mobile Money, Airtel Money, bank transfer or cash.' });
     return;
   }
   const payerName = text(req.body?.payerName, 160);
+  // Cash has no transaction reference; the school records the receipt/agent
+  // reference the SaaS Owner gave them at hand-off so the payment can still
+  // be matched during review.
   const reference = text(req.body?.reference, 120);
   const referenceNormalized = reference.replace(/\s+/g, '').toUpperCase();
   const paymentDate = new Date(text(req.body?.paymentDate, 40));
@@ -573,7 +588,7 @@ exports.submitManualPayment = onRequest({ region: 'europe-west1' }, async (req, 
   const proofStoragePath = text(req.body?.proofStoragePath, 500);
   const submissionId = text(req.body?.submissionId, 100);
   if (!payerName || referenceNormalized.length < 3 || Number.isNaN(paymentDate.getTime())) {
-    res.status(400).json({ error: 'invalid_payment_details', message: 'Payer name, transaction/reference number and payment date are required.' });
+    res.status(400).json({ error: 'invalid_payment_details', message: 'Payer name, transaction/receipt reference and payment date are required.' });
     return;
   }
   if (paymentDate.getTime() > Date.now() + 24 * 60 * 60 * 1000) {
@@ -803,11 +818,12 @@ exports.approveManualPayment = onCall({ region: 'europe-west1' }, async (request
         updatedAt: serverTime,
       }, { merge: true });
     }
+    const providerByMethod = { mtn: 'manual_mtn', airtel: 'manual_airtel', bank: 'manual_bank', cash: 'manual_cash' };
     tx.set(db.collection('payment_transactions').doc(paymentId), {
       id: paymentId,
       schoolId,
-      provider: payment.method === 'mtn' ? 'manual_mtn' : 'manual_bank',
-      phoneNumber: payment.method === 'mtn' ? text(DEFAULT_MANUAL_PAYMENT_CONFIG.mobileMoney.number, 30) : '',
+      provider: providerByMethod[payment.method] || 'manual_bank',
+      phoneNumber: '',
       amountUgx: Number(payment.submittedAmount),
       status: 'success',
       reference: text(payment.reference, 120),
@@ -936,6 +952,75 @@ exports.updateSubscriptionPlanPricing = onCall({ region: 'europe-west1' }, async
   return { ok: true, planId, price, billingCycle, termLengthDays };
 });
 
+// Full plan editor: name, limits, features and visibility, in addition to
+// the pricing/billing fields updateSubscriptionPlanPricing already covers.
+exports.updateSubscriptionPlan = onCall({ region: 'europe-west1' }, async (request) => {
+  const owner = await requireOwner(request);
+  await ensureBillingDefaults();
+  const planId = normalizedPlanId(request.data?.planId);
+  if (!planId) throw new HttpsError('invalid-argument', 'planId is required.');
+
+  const name = text(request.data?.name, 60);
+  const description = text(request.data?.description, 220);
+  const price = Math.round(Number(request.data?.price));
+  const billingCycle = text(request.data?.billingCycle || 'termly', 20).toLowerCase();
+  const termLengthDays = Math.round(Number(request.data?.termLengthDays || 120));
+  const maxStudents = Math.round(Number(request.data?.maxStudents || 0));
+  const maxStaff = Math.round(Number(request.data?.maxStaff || 0));
+  const storageLimitGb = Number(request.data?.storageLimitGb || 0);
+  const includedFeatures = Array.isArray(request.data?.includedFeatures)
+    ? request.data.includedFeatures.map((item) => text(item, 80)).filter(Boolean).slice(0, 20)
+    : [];
+  const isPublic = request.data?.isPublic !== false;
+  const isActive = request.data?.isActive !== false;
+  const isPopular = request.data?.isPopular === true;
+  const displayOrder = Math.round(Number(request.data?.displayOrder || 0));
+
+  if (!name) throw new HttpsError('invalid-argument', 'Plan name is required.');
+  if (!['monthly', 'termly', 'yearly'].includes(billingCycle)) throw new HttpsError('invalid-argument', 'Invalid billing cycle.');
+  if (termLengthDays < 1 || termLengthDays > 730) throw new HttpsError('invalid-argument', 'Billing period length must be between 1 and 730 days.');
+  if (planId !== 'enterprise' && (!Number.isFinite(price) || price <= 0)) throw new HttpsError('invalid-argument', 'Plan price must be greater than zero.');
+  if (planId === 'enterprise' && (!Number.isFinite(price) || price < 0)) throw new HttpsError('invalid-argument', 'Enterprise price cannot be negative.');
+  if (maxStudents < 0 || maxStaff < 0 || storageLimitGb < 0) throw new HttpsError('invalid-argument', 'Limits cannot be negative.');
+
+  const planRef = db.collection('subscription_plans').doc(planId);
+  const snap = await planRef.get();
+  if (!snap.exists) throw new HttpsError('not-found', 'Subscription plan not found.');
+  const serverTime = admin.firestore.FieldValue.serverTimestamp();
+  const auditRef = db.collection('super_admin_audit_logs').doc();
+  const batch = db.batch();
+  batch.set(planRef, {
+    name,
+    description,
+    price,
+    billingCycle,
+    termLengthDays,
+    maxStudents,
+    maxStaff,
+    storageLimitGb,
+    includedFeatures,
+    customPricing: planId === 'enterprise' && price === 0,
+    isPublic,
+    isActive,
+    isPopular,
+    displayOrder,
+    billingModel: 'manual_v1',
+    updatedAt: serverTime,
+    updatedBy: owner.uid,
+  }, { merge: true });
+  batch.set(auditRef, {
+    id: auditRef.id,
+    ownerId: owner.uid,
+    action: 'UPDATE_SUBSCRIPTION_PLAN',
+    schoolId: null,
+    timestamp: serverTime,
+    device: 'Platform Dashboard',
+    metadata: { planId, price, billingCycle, termLengthDays, isPublic, isActive, isPopular, displayOrder },
+  });
+  await batch.commit();
+  return { ok: true, planId };
+});
+
 // Owner-scoped read/write for the manual payment method configuration
 // (MTN MoMo / bank details schools use to pay). Distinct from
 // getManualPaymentContext, which is gated to a school-admin subscriber
@@ -952,12 +1037,22 @@ exports.getManualPaymentConfig = onCall({ region: 'europe-west1' }, async (reque
       number: text(config.mobileMoney?.number, 30),
       accountName: text(config.mobileMoney?.accountName, 120),
     },
+    airtelMoney: {
+      enabled: config.airtelMoney?.enabled !== false,
+      network: text(config.airtelMoney?.network || 'Airtel', 20),
+      number: text(config.airtelMoney?.number, 30),
+      accountName: text(config.airtelMoney?.accountName, 120),
+    },
     bank: {
       enabled: config.bank?.enabled !== false,
       bankName: text(config.bank?.bankName, 120),
       branch: text(config.bank?.branch, 120),
       accountName: text(config.bank?.accountName, 120),
       accountNumber: text(config.bank?.accountNumber, 40),
+    },
+    cash: {
+      enabled: config.cash?.enabled === true,
+      instructions: text(config.cash?.instructions, 500),
     },
   };
 });
@@ -968,16 +1063,29 @@ exports.updateManualPaymentConfig = onCall({ region: 'europe-west1' }, async (re
 
   const mobileMoneyNumber = text(request.data?.mobileMoney?.number, 30);
   const mobileMoneyName = text(request.data?.mobileMoney?.accountName, 120);
+  const airtelMoneyNumber = text(request.data?.airtelMoney?.number, 30);
+  const airtelMoneyName = text(request.data?.airtelMoney?.accountName, 120);
   const bankName = text(request.data?.bank?.bankName, 120);
   const bankBranch = text(request.data?.bank?.branch, 120);
   const bankAccountName = text(request.data?.bank?.accountName, 120);
   const bankAccountNumber = text(request.data?.bank?.accountNumber, 40);
+  const cashInstructions = text(request.data?.cash?.instructions, 500);
+  const cashRequestedEnabled = request.data?.cash?.enabled === true;
 
-  if (!mobileMoneyNumber || !mobileMoneyName) {
-    throw new HttpsError('invalid-argument', 'MTN Mobile Money number and account name are required.');
+  if ((mobileMoneyNumber || mobileMoneyName) && (!mobileMoneyNumber || !mobileMoneyName)) {
+    throw new HttpsError('invalid-argument', 'MTN Mobile Money number and account name are both required.');
   }
-  if (!bankName || !bankAccountName || !bankAccountNumber) {
-    throw new HttpsError('invalid-argument', 'Bank name, account name and account number are required.');
+  if ((airtelMoneyNumber || airtelMoneyName) && (!airtelMoneyNumber || !airtelMoneyName)) {
+    throw new HttpsError('invalid-argument', 'Airtel Money number and account name are both required.');
+  }
+  if ((bankName || bankAccountName || bankAccountNumber) && (!bankName || !bankAccountName || !bankAccountNumber)) {
+    throw new HttpsError('invalid-argument', 'Bank name, account name and account number are all required.');
+  }
+  if (cashRequestedEnabled && !cashInstructions) {
+    throw new HttpsError('invalid-argument', 'Cash payment instructions are required to enable cash payments.');
+  }
+  if (!mobileMoneyNumber && !airtelMoneyNumber && !bankAccountNumber && !cashRequestedEnabled) {
+    throw new HttpsError('invalid-argument', 'At least one payment method must be configured.');
   }
 
   const configRef = db.collection('platform_billing_config').doc('manual');
@@ -986,17 +1094,27 @@ exports.updateManualPaymentConfig = onCall({ region: 'europe-west1' }, async (re
   const batch = db.batch();
   batch.set(configRef, {
     mobileMoney: {
-      enabled: true,
+      enabled: Boolean(mobileMoneyNumber && mobileMoneyName),
       network: 'MTN',
       number: mobileMoneyNumber,
       accountName: mobileMoneyName,
     },
+    airtelMoney: {
+      enabled: Boolean(airtelMoneyNumber && airtelMoneyName),
+      network: 'Airtel',
+      number: airtelMoneyNumber,
+      accountName: airtelMoneyName,
+    },
     bank: {
-      enabled: true,
+      enabled: Boolean(bankName && bankAccountName && bankAccountNumber),
       bankName,
       branch: bankBranch,
       accountName: bankAccountName,
       accountNumber: bankAccountNumber,
+    },
+    cash: {
+      enabled: cashRequestedEnabled,
+      instructions: cashInstructions,
     },
     updatedAt: serverTime,
     updatedBy: owner.uid,
@@ -1008,7 +1126,12 @@ exports.updateManualPaymentConfig = onCall({ region: 'europe-west1' }, async (re
     schoolId: null,
     timestamp: serverTime,
     device: 'Platform Dashboard',
-    metadata: { mobileMoneyNumber, bankAccountNumber },
+    metadata: {
+      mtnEnabled: Boolean(mobileMoneyNumber && mobileMoneyName),
+      airtelEnabled: Boolean(airtelMoneyNumber && airtelMoneyName),
+      bankEnabled: Boolean(bankName && bankAccountName && bankAccountNumber),
+      cashEnabled: cashRequestedEnabled,
+    },
   });
   await batch.commit();
   return { ok: true };

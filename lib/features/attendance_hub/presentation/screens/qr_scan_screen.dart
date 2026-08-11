@@ -184,7 +184,10 @@ class _QrScanScreenState extends State<QrScanScreen> {
                 width: 240,
                 height: 240,
                 decoration: BoxDecoration(
-                  border: Border.all(color: AppColors.primary(context), width: 3),
+                  border: Border.all(
+                    color: AppColors.primary(context),
+                    width: 3,
+                  ),
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
@@ -249,11 +252,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.block,
-                  color: AppColors.danger(context),
-                  size: 64,
-                ),
+                Icon(Icons.block, color: AppColors.danger(context), size: 64),
                 const SizedBox(height: AppSpacing.xl),
                 Text(
                   _deniedMessage.isEmpty
@@ -268,7 +267,10 @@ class _QrScanScreenState extends State<QrScanScreen> {
                   style: TextStyle(color: AppColors.textMuted(context)),
                 ),
                 const SizedBox(height: AppSpacing.xl),
-                FilledButton(onPressed: _reset, child: const Text('Scan Another')),
+                FilledButton(
+                  onPressed: _reset,
+                  child: const Text('Scan Another'),
+                ),
               ],
             ),
           ),

@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.example.schoolPulse</string>
+	<string>com.victorbee.schoolPulse</string>
 	<key>PROJECT_ID</key>
 	<string>school-pulse-3d95b</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:925585407650:ios:7fd13d46681d5a449461fb</string>
+	<string>1:925585407650:ios:bb062f8d95db974b9461fb</string>
 </dict>
 </plist>

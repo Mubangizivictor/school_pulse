@@ -822,4 +822,3 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
     );
   }
 }
-

@@ -57,6 +57,7 @@ exports.getPublicSubscriptionPlans = onRequest(
         price,
         currency: 'UGX',
         billingCycle: clean(stored.billingCycle || fallback.billingCycle || 'termly', 30),
+        termLengthDays: Math.max(1, Number(stored.termLengthDays || 120)),
         customPricing: stored.customPricing === true || fallback.customPricing === true,
         maxStudents,
         maxStaff,
@@ -64,8 +65,15 @@ exports.getPublicSubscriptionPlans = onRequest(
           ? stored.includedFeatures.map((item) => clean(item, 80)).filter(Boolean).slice(0, 12)
           : [],
         isDefault: stored.isDefault === true,
+        isPopular: stored.isPopular === true,
+        isPublic: stored.isPublic !== false,
+        isActive: stored.isActive !== false,
+        displayOrder: Math.round(Number(stored.displayOrder || 0)),
       };
-    });
+    })
+      .filter((plan) => plan.isPublic && plan.isActive)
+      .sort((a, b) => a.displayOrder - b.displayOrder)
+      .map(({ isPublic, isActive, ...publicFields }) => publicFields);
 
     res.set('Cache-Control', 'public, max-age=300, s-maxage=300');
     res.status(200).json({ ok: true, plans });

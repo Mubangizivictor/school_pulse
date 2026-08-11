@@ -20,9 +20,7 @@ class ProfileScreen extends StatelessWidget {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         if (state is! AuthAuthenticated) {
-          return const Scaffold(
-            body: Center(child: SchoolPulseLoader()),
-          );
+          return const Scaffold(body: Center(child: SchoolPulseLoader()));
         }
         final parentName = state.user.name;
         final parentPhone = state.user.phoneNumber ?? '—';

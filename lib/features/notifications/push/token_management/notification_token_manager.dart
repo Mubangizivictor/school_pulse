@@ -183,8 +183,9 @@ class NotificationTokenManager {
 
   Future<bool> _registerOwnerToken(String token) async {
     try {
-      final callable = FirebaseFunctions.instanceFor(region: 'europe-west1')
-          .httpsCallable('registerOwnerNotificationDevice');
+      final callable = FirebaseFunctions.instanceFor(
+        region: 'europe-west1',
+      ).httpsCallable('registerOwnerNotificationDevice');
       final result = await callable.call<Map<String, dynamic>>({
         'token': token,
         'platform': _platformName,
@@ -223,8 +224,9 @@ class NotificationTokenManager {
       // has already completed, the invalid/expired FCM token cleanup in the
       // server fan-out remains the final safety net.
       try {
-        final callable = FirebaseFunctions.instanceFor(region: 'europe-west1')
-            .httpsCallable('unregisterOwnerNotificationDevice');
+        final callable = FirebaseFunctions.instanceFor(
+          region: 'europe-west1',
+        ).httpsCallable('unregisterOwnerNotificationDevice');
         await callable.call<Map<String, dynamic>>({'token': row.token});
       } catch (_) {}
 

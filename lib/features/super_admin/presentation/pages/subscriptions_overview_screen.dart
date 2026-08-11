@@ -176,6 +176,7 @@ class _SubscriptionsOverviewScreenState
                   now: now,
                   emptyLabel: 'No subscriptions expiring soon.',
                   accentColor: AppColors.warning(context),
+                  icon: Icons.schedule_rounded,
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 _section(
@@ -187,6 +188,7 @@ class _SubscriptionsOverviewScreenState
                   now: now,
                   emptyLabel: 'No expired subscriptions.',
                   accentColor: AppColors.danger(context),
+                  icon: Icons.cancel_outlined,
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 _section(
@@ -198,6 +200,7 @@ class _SubscriptionsOverviewScreenState
                   now: now,
                   emptyLabel: 'No schools on trial.',
                   accentColor: AppColors.information(context),
+                  icon: Icons.hourglass_top_rounded,
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 _section(
@@ -209,6 +212,7 @@ class _SubscriptionsOverviewScreenState
                   now: now,
                   emptyLabel: 'No active subscriptions with a healthy runway.',
                   accentColor: AppColors.success(context),
+                  icon: Icons.verified_rounded,
                 ),
               ],
             ),
@@ -278,13 +282,41 @@ class _SubscriptionsOverviewScreenState
     required DateTime now,
     required String emptyLabel,
     required Color accentColor,
+    required IconData icon,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionHeader(title: '$title (${schools.length})', color: accentColor),
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.l),
+              decoration: BoxDecoration(
+                color: accentColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: accentColor, size: 20),
+            ),
+            const SizedBox(width: AppSpacing.m),
+            Expanded(
+              child: Text(
+                '$title (${schools.length})',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.titleMedium.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary(context),
+                ),
+              ),
+            ),
+          ],
+        ),
         Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.m),
+          padding: const EdgeInsets.only(
+            top: AppSpacing.s,
+            bottom: AppSpacing.m,
+            left: AppSpacing.x4l,
+          ),
           child: Text(
             subtitle,
             style: AppTypography.bodySmall.copyWith(

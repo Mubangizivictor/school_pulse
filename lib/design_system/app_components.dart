@@ -689,15 +689,15 @@ class _DashboardStatCardState extends State<DashboardStatCard>
   Widget build(BuildContext context) {
     final semantic = Theme.of(context).extension<SemanticColors>()!;
     return AppCard(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.all(6),
+                padding: const EdgeInsets.all(5),
                 decoration: BoxDecoration(
                   color: widget.color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -706,7 +706,19 @@ class _DashboardStatCardState extends State<DashboardStatCard>
                   scale: _iconAnimation,
                   child: RotationTransition(
                     turns: Tween(begin: -0.1, end: 0.0).animate(_controller),
-                    child: Icon(widget.icon, color: widget.color, size: 16),
+                    child: Icon(widget.icon, color: widget.color, size: 14),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  widget.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
@@ -722,35 +734,17 @@ class _DashboardStatCardState extends State<DashboardStatCard>
                 ),
             ],
           ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Expanded(
-                child: Text(
-                  widget.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              AnimatedNumberText(
-                value: widget.value,
-                suffix: widget.suffix,
-                decimalPlaces: widget.decimalPlaces,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 18,
-                  letterSpacing: -0.5,
-                ),
-              ),
-            ],
+          const SizedBox(height: 2),
+          AnimatedNumberText(
+            value: widget.value,
+            suffix: widget.suffix,
+            decimalPlaces: widget.decimalPlaces,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w900,
+              fontSize: 18,
+              letterSpacing: -0.5,
+              height: 1.0,
+            ),
           ),
         ],
       ),

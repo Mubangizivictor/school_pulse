@@ -426,4 +426,3 @@ class _ProfileData {
 
   const _ProfileData({required this.contact, this.conversationId});
 }
-

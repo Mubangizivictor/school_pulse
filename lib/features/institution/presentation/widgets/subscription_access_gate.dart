@@ -180,8 +180,8 @@ class _InitialPaymentGate extends StatelessWidget {
                         underReview
                             ? 'We received the payment proof. The first School Pulse dashboard will unlock only after the SaaS Owner verifies that the payment was received.'
                             : isSchoolAdmin
-                                ? 'Your school application is approved. Complete the full subscription payment and upload proof before the first dashboard can open.'
-                                : 'Your school is approved but has not completed its first subscription payment. Ask the School Administrator to complete payment.',
+                            ? 'Your school application is approved. Complete the full subscription payment and upload proof before the first dashboard can open.'
+                            : 'Your school is approved but has not completed its first subscription payment. Ask the School Administrator to complete payment.',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
@@ -289,8 +289,8 @@ class _RenewalGate extends StatelessWidget {
                           underReview
                               ? 'Your dashboard stays visible while we verify the renewal payment, but School Pulse actions remain locked until approval.'
                               : isSchoolAdmin
-                                  ? 'Your paid period has ended. The dashboard remains visible, but every action is locked until the full renewal payment is verified.'
-                                  : 'Your school subscription has expired. The dashboard remains visible but locked. Ask the School Administrator to renew School Pulse.',
+                              ? 'Your paid period has ended. The dashboard remains visible, but every action is locked until the full renewal payment is verified.'
+                              : 'Your school subscription has expired. The dashboard remains visible but locked. Ask the School Administrator to renew School Pulse.',
                           textAlign: TextAlign.center,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,

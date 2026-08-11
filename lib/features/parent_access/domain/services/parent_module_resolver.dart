@@ -49,8 +49,10 @@ class ParentModuleResolver {
       library: featureToggles.library && academicAccess,
       discipline: academicAccess,
       boarding: featureToggles.boarding && academicAccess,
-      messages: featureToggles.communication && relationship.communicationPermission,
-      appointments: featureToggles.communication && relationship.communicationPermission,
+      messages:
+          featureToggles.communication && relationship.communicationPermission,
+      appointments:
+          featureToggles.communication && relationship.communicationPermission,
       digitalId: featureToggles.digitalIds && academicAccess,
     );
   }

@@ -78,7 +78,9 @@ class _SheetsIntegrationScreenState extends State<SheetsIntegrationScreen> {
                 color: AppColors.warning(dialogContext).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: AppColors.warning(dialogContext).withValues(alpha: 0.4),
+                  color: AppColors.warning(
+                    dialogContext,
+                  ).withValues(alpha: 0.4),
                 ),
               ),
               child: Row(
@@ -114,10 +116,10 @@ class _SheetsIntegrationScreenState extends State<SheetsIntegrationScreen> {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(
-              dialogContext,
-              (nameController.text.trim(), idController.text.trim()),
-            ),
+            onPressed: () => Navigator.pop(dialogContext, (
+              nameController.text.trim(),
+              idController.text.trim(),
+            )),
             child: const Text('Connect'),
           ),
         ],
@@ -147,12 +149,12 @@ class _SheetsIntegrationScreenState extends State<SheetsIntegrationScreen> {
     setState(() => _syncing = false);
     if (!mounted) return;
     result.fold(
-      (failure) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(failure.message)),
-      ),
-      (_) => ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Synced to Google Sheets')),
-      ),
+      (failure) => ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(failure.message))),
+      (_) => ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Synced to Google Sheets'))),
     );
   }
 

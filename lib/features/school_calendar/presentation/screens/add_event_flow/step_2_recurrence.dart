@@ -52,7 +52,10 @@ class _Step2RecurrenceState extends State<Step2Recurrence> {
         ),
         if (draft.repeats) ...[
           const SizedBox(height: AppSpacing.xl),
-          Text('Repeat', style: TextStyle(color: AppColors.textSecondary(context))),
+          Text(
+            'Repeat',
+            style: TextStyle(color: AppColors.textSecondary(context)),
+          ),
           const SizedBox(height: AppSpacing.s),
           DropdownButtonFormField<RecurrenceFrequency>(
             initialValue: draft.frequency,
@@ -61,14 +64,19 @@ class _Step2RecurrenceState extends State<Step2Recurrence> {
                 .map(
                   (f) => DropdownMenuItem(
                     value: f,
-                    child: Text('Every ${f.name[0].toUpperCase()}${f.name.substring(1)}'),
+                    child: Text(
+                      'Every ${f.name[0].toUpperCase()}${f.name.substring(1)}',
+                    ),
                   ),
                 )
                 .toList(),
             onChanged: (v) => setState(() => draft.frequency = v!),
           ),
           const SizedBox(height: AppSpacing.xl),
-          Text('Repeats On', style: TextStyle(color: AppColors.textSecondary(context))),
+          Text(
+            'Repeats On',
+            style: TextStyle(color: AppColors.textSecondary(context)),
+          ),
           const SizedBox(height: AppSpacing.s),
           Wrap(
             spacing: AppSpacing.s,
@@ -88,7 +96,10 @@ class _Step2RecurrenceState extends State<Step2Recurrence> {
             }).toList(),
           ),
           const SizedBox(height: AppSpacing.xl),
-          Text('Ends', style: TextStyle(color: AppColors.textSecondary(context))),
+          Text(
+            'Ends',
+            style: TextStyle(color: AppColors.textSecondary(context)),
+          ),
           RadioGroup<RecurrenceEndType>(
             groupValue: draft.endType,
             onChanged: (v) => setState(() => draft.endType = v!),

@@ -55,6 +55,10 @@ import 'package:school_pulse/features/gate_ops/data/models/gate_ops_isar_models.
 import 'package:school_pulse/features/gate_ops/domain/policies/movement_verification_policy.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:school_pulse/features/super_admin/data/datasources/security_settings_remote_data_source.dart';
+import 'package:school_pulse/features/super_admin/data/datasources/owner_session_remote_data_source.dart';
+import 'package:school_pulse/core/utils/device_info_service.dart';
+import 'package:school_pulse/core/utils/biometric_auth_service.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get_it/get_it.dart';
@@ -98,9 +102,6 @@ import 'package:school_pulse/features/super_admin/domain/repositories/super_admi
 import 'package:school_pulse/features/super_admin/data/repositories/super_admin_repository_impl.dart';
 import 'package:school_pulse/features/super_admin/data/datasources/super_admin_remote_datasource.dart';
 import 'package:school_pulse/features/super_admin/presentation/bloc/super_admin_bloc.dart';
-import 'package:school_pulse/features/super_admin/domain/repositories/billing_repository.dart';
-import 'package:school_pulse/features/super_admin/data/repositories/billing_repository_impl.dart';
-import 'package:school_pulse/features/super_admin/data/datasources/billing_remote_datasource.dart';
 
 // Admin / System Config
 import 'package:school_pulse/features/admin/data/repositories/system_config_repository.dart';
@@ -486,24 +487,14 @@ Future<void> init() async {
   sl.registerFactory(() => AssessmentBloc(repository: sl()));
 
   // Features - Auth
-  sl.registerFactory(
-    () => SuperAdminBloc(repository: sl(), billingRepository: sl(), auth: sl()),
-  );
+  sl.registerFactory(() => SuperAdminBloc(repository: sl(), auth: sl()));
 
   sl.registerLazySingleton<SuperAdminRepository>(
     () => SuperAdminRepositoryImpl(remoteDataSource: sl()),
   );
 
-  sl.registerLazySingleton<BillingRepository>(
-    () => BillingRepositoryImpl(remoteDataSource: sl()),
-  );
-
   sl.registerLazySingleton<SuperAdminRemoteDataSource>(
     () => SuperAdminRemoteDataSourceImpl(firestore: sl(), auth: sl()),
-  );
-
-  sl.registerLazySingleton<BillingRemoteDataSource>(
-    () => BillingRemoteDataSourceImpl(firestore: sl(), functions: sl()),
   );
 
   sl.registerLazySingleton<AssessmentRepository>(
@@ -1908,6 +1899,14 @@ Future<void> init() async {
 
   sl.registerLazySingleton(() => FirebaseAuth.instance);
   sl.registerLazySingleton(() => FirebaseFirestore.instance);
+  sl.registerLazySingleton<SecuritySettingsRemoteDataSource>(
+    () => SecuritySettingsRemoteDataSourceImpl(firestore: sl()),
+  );
+  sl.registerLazySingleton<OwnerSessionRemoteDataSource>(
+    () => OwnerSessionRemoteDataSourceImpl(firestore: sl()),
+  );
+  sl.registerLazySingleton(() => DeviceInfoService());
+  sl.registerLazySingleton(() => BiometricAuthService());
   sl.registerLazySingleton(() => FirebaseStorage.instance);
   sl.registerLazySingleton(() => FirebaseFunctions.instance);
   sl.registerLazySingleton(() => InternetConnectionChecker());

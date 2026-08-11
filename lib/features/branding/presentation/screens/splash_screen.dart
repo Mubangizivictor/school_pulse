@@ -9,8 +9,6 @@ import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
-import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.dart';
-import 'package:school_pulse/features/branding/presentation/bloc/branding_state.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -56,18 +54,36 @@ class _SplashScreenState extends State<SplashScreen>
     await Future.delayed(const Duration(seconds: 3));
     if (!mounted) return;
 
-    final authState = context.read<AuthBloc>().state;
-    final brandingState = context.read<BrandingBloc>().state;
+    final authBloc = context.read<AuthBloc>();
+    final authState = authBloc.state;
 
+    // The initial AuthCheckRequested read (Firebase session + Firestore
+    // profile fetch) may still be in flight after the splash delay, e.g. on
+    // a slow network or cold start. Resolving that as "unauthenticated"
+    // would force a valid session back to the login screen, so wait for the
+    // real result instead of racing a fixed timer.
     if (authState is AuthAuthenticated) {
-      if (brandingState is BrandingLoaded && brandingState.branding != null) {
-        context.go('/branded-splash');
-      } else {
-        context.go(UserRoleRouting.dashboardPath(authState.user.role));
-      }
+      _navigate(authState);
+      return;
+    }
+    if (authState is AuthUnauthenticated) {
+      context.go('/welcome');
+      return;
+    }
+
+    final resolvedState = await authBloc.stream.firstWhere(
+      (state) => state is AuthAuthenticated || state is AuthUnauthenticated,
+    );
+    if (!mounted) return;
+    if (resolvedState is AuthAuthenticated) {
+      _navigate(resolvedState);
     } else {
       context.go('/welcome');
     }
+  }
+
+  void _navigate(AuthAuthenticated state) {
+    context.go(UserRoleRouting.dashboardPath(state.user.role));
   }
 
   @override

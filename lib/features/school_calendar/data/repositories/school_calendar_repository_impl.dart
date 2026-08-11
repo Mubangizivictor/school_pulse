@@ -41,9 +41,7 @@ class SchoolCalendarRepositoryImpl implements SchoolCalendarRepository {
   @override
   Future<Either<Failure, void>> upsertEvent(CalendarEvent event) async {
     try {
-      await remoteDataSource.upsertEvent(
-        CalendarEventModel.fromEntity(event),
-      );
+      await remoteDataSource.upsertEvent(CalendarEventModel.fromEntity(event));
       return const Right(null);
     } catch (e, st) {
       debugPrint('SchoolCalendarRepositoryImpl error: $e\n$st');

@@ -39,7 +39,10 @@ class PersonalInformationScreen extends StatelessWidget {
                       ? user.phoneNumber!
                       : 'Not set',
                 ),
-                _InfoTile(label: 'Role', value: UserRoleDisplay.name(user.role)),
+                _InfoTile(
+                  label: 'Role',
+                  value: UserRoleDisplay.name(user.role),
+                ),
                 if (user.staffCode != null)
                   _InfoTile(label: 'Staff Code', value: user.staffCode!),
                 if (user.schoolName != null)
@@ -77,7 +80,10 @@ class _InfoTile extends StatelessWidget {
             ),
           ),
         ),
-        Divider(height: 1, color: AppColors.border(context).withValues(alpha: 0.5)),
+        Divider(
+          height: 1,
+          color: AppColors.border(context).withValues(alpha: 0.5),
+        ),
       ],
     );
   }

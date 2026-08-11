@@ -90,7 +90,8 @@ class InstitutionContext extends Equatable {
   /// (or while a renewal proof is waiting for verification).
   bool get isRenewalLocked {
     if (!hasEverActivated || isSuspended) return false;
-    final expired = subscriptionExpiry != null &&
+    final expired =
+        subscriptionExpiry != null &&
         !subscriptionExpiry!.isAfter(DateTime.now());
     return expired ||
         subscriptionStatus == 'payment_due' ||

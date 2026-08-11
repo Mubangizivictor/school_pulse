@@ -14,6 +14,10 @@ class SubscriptionPlanModel extends SubscriptionPlan {
     required super.storageLimitGb,
     required super.includedFeatures,
     super.isDefault,
+    super.isPublic,
+    super.isActive,
+    super.isPopular,
+    super.displayOrder,
   });
 
   factory SubscriptionPlanModel.fromJson(Map<String, dynamic> json) {
@@ -33,6 +37,10 @@ class SubscriptionPlanModel extends SubscriptionPlan {
       storageLimitGb: (json['storageLimitGb'] ?? 0).toDouble(),
       includedFeatures: List<String>.from(json['includedFeatures'] ?? []),
       isDefault: json['isDefault'] ?? false,
+      isPublic: json['isPublic'] ?? true,
+      isActive: json['isActive'] ?? true,
+      isPopular: json['isPopular'] ?? false,
+      displayOrder: (json['displayOrder'] ?? 0) as int,
     );
   }
 
@@ -50,6 +58,10 @@ class SubscriptionPlanModel extends SubscriptionPlan {
       'storageLimitGb': storageLimitGb,
       'includedFeatures': includedFeatures,
       'isDefault': isDefault,
+      'isPublic': isPublic,
+      'isActive': isActive,
+      'isPopular': isPopular,
+      'displayOrder': displayOrder,
     };
   }
 }

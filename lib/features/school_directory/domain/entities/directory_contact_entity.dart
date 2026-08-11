@@ -20,5 +20,13 @@ class DirectoryContactEntity extends Equatable {
   });
 
   @override
-  List<Object?> get props => [uid, name, role, roles, schoolId, isActive, phone];
+  List<Object?> get props => [
+    uid,
+    name,
+    role,
+    roles,
+    schoolId,
+    isActive,
+    phone,
+  ];
 }

@@ -234,9 +234,7 @@ class _EnterScoresScreenState extends State<EnterScoresScreen> {
 
   Widget _buildContent(TeacherState state) {
     if (state is TeacherLoading) {
-      return Center(
-        child: const SchoolPulseLoader(),
-      );
+      return Center(child: const SchoolPulseLoader());
     }
 
     if (state is TeacherMarksEntryLoaded) {

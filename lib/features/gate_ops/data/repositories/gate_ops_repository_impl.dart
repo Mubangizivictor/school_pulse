@@ -50,14 +50,10 @@ class GateOpsRepositoryImpl implements GateOpsRepository {
   }
 
   @override
-  Future<Either<Failure, void>> recordMovementEvent(
-    MovementEvent event,
-  ) async {
+  Future<Either<Failure, void>> recordMovementEvent(MovementEvent event) async {
     try {
       final isarEvent = MovementEventIsar.fromEntity(
-        event.syncStatus == SyncStatus.pending
-            ? event
-            : _asPending(event),
+        event.syncStatus == SyncStatus.pending ? event : _asPending(event),
       );
       await localDataSource.cacheMovementEvent(isarEvent);
 
@@ -202,25 +198,22 @@ class GateOpsRepositoryImpl implements GateOpsRepository {
         'visitors/${visitor.schoolId}/${visitor.id}/photo.jpg',
       );
 
-      final pushed = await syncEngine.tryPush(
-        'schools/${visitor.schoolId}/visitors',
-        visitor.id,
-        {
-          'schoolId': visitor.schoolId,
-          'fullName': visitor.fullName,
-          'phone': visitor.phone,
-          'photoUrl': photoUrl ?? visitor.photoUrl,
-          'purpose': visitor.purpose,
-          'hostId': visitor.hostId,
-          'hostName': visitor.hostName,
-          'gateId': visitor.gateId,
-          'arrivalTime': visitor.arrivalTime,
-          'departureTime': visitor.departureTime,
-          'status': visitor.status.name,
-          'isQuickEntry': visitor.isQuickEntry,
-          'badgeNumber': visitor.badgeNumber,
-        },
-      );
+      final pushed = await syncEngine
+          .tryPush('schools/${visitor.schoolId}/visitors', visitor.id, {
+            'schoolId': visitor.schoolId,
+            'fullName': visitor.fullName,
+            'phone': visitor.phone,
+            'photoUrl': photoUrl ?? visitor.photoUrl,
+            'purpose': visitor.purpose,
+            'hostId': visitor.hostId,
+            'hostName': visitor.hostName,
+            'gateId': visitor.gateId,
+            'arrivalTime': visitor.arrivalTime,
+            'departureTime': visitor.departureTime,
+            'status': visitor.status.name,
+            'isQuickEntry': visitor.isQuickEntry,
+            'badgeNumber': visitor.badgeNumber,
+          });
       if (pushed) {
         await localDataSource.markVisitorSynced(visitor.id);
       }

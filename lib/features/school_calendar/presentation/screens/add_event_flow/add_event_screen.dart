@@ -23,11 +23,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
   final _draft = AddEventDraft();
   int _step = 1;
 
-  static const _titles = {
-    1: 'Add Event',
-    2: 'Add Event',
-    3: 'Add Event',
-  };
+  static const _titles = {1: 'Add Event', 2: 'Add Event', 3: 'Add Event'};
 
   void _goTo(int step) => setState(() => _step = step);
 
@@ -65,10 +61,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
   Widget _buildStep(BuildContext context) {
     switch (_step) {
       case 1:
-        return Step1EventDetails(
-          draft: _draft,
-          onNext: () => _goTo(2),
-        );
+        return Step1EventDetails(draft: _draft, onNext: () => _goTo(2));
       case 2:
         return Step2Recurrence(
           draft: _draft,

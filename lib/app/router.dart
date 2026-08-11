@@ -186,6 +186,16 @@ import 'package:school_pulse/features/student_identity/presentation/screens/stud
 import 'package:school_pulse/features/student_identity/presentation/screens/batch_id_card_screen.dart';
 import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/super_admin_dashboard.dart';
+import 'package:school_pulse/features/super_admin/presentation/pages/super_admin_notifications_screen.dart';
+import 'package:school_pulse/features/super_admin/presentation/pages/owner_notification_preferences_screen.dart';
+import 'package:school_pulse/features/super_admin/presentation/pages/owner_notification_history_screen.dart';
+import 'package:school_pulse/features/super_admin/presentation/pages/security_center_screen.dart';
+import 'package:school_pulse/features/super_admin/presentation/pages/security_settings_deep_dive_screen.dart';
+import 'package:school_pulse/features/super_admin/presentation/pages/help_support_home_screen.dart';
+import 'package:school_pulse/features/super_admin/presentation/pages/submit_support_request_screen.dart';
+import 'package:school_pulse/features/super_admin/presentation/pages/support_ticket_conversation_screen.dart';
+import 'package:school_pulse/features/super_admin/presentation/pages/contact_about_screen.dart';
+import 'package:school_pulse/features/super_admin/presentation/pages/privacy_policy_screen.dart';
 import 'package:school_pulse/features/games/presentation/screens/games_dashboard_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/dean_dashboard_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/approvals/report_approval_screen.dart';
@@ -2098,6 +2108,73 @@ final router = GoRouter(
     GoRoute(
       path: '/super-admin',
       builder: (context, state) => const SuperAdminDashboard(),
+      routes: [
+        GoRoute(
+          path: 'settings/notifications',
+          builder: (context, state) => const SuperAdminNotificationsScreen(),
+          routes: [
+            GoRoute(
+              path: 'preferences',
+              builder: (context, state) =>
+                  const OwnerNotificationPreferencesScreen(),
+            ),
+            GoRoute(
+              path: 'history',
+              builder: (context, state) =>
+                  const OwnerNotificationHistoryScreen(),
+            ),
+          ],
+        ),
+        GoRoute(
+          path: 'settings/security',
+          builder: (context, state) => const SecurityCenterScreen(),
+          routes: [
+            GoRoute(
+              path: 'deep-dive',
+              builder: (context, state) =>
+                  const SecuritySettingsDeepDiveScreen(),
+            ),
+          ],
+        ),
+        GoRoute(
+          path: 'settings/support',
+          builder: (context, state) => const HelpSupportHomeScreen(),
+          routes: [
+            GoRoute(
+              path: 'help-center',
+              builder: (context, state) => const SupportHelpCenterScreen(),
+            ),
+            GoRoute(
+              path: 'faqs',
+              builder: (context, state) => const SupportFaqsScreen(),
+            ),
+            GoRoute(
+              path: 'new',
+              builder: (context, state) => SubmitSupportRequestScreen(
+                args:
+                    state.extra as SubmitSupportRequestArgs? ??
+                    const SubmitSupportRequestArgs(origin: 'submit_request'),
+              ),
+            ),
+            GoRoute(
+              path: 'ticket/:id',
+              builder: (context, state) => SupportTicketConversationScreen(
+                ticketId: state.pathParameters['id']!,
+              ),
+            ),
+          ],
+        ),
+        GoRoute(
+          path: 'settings/about',
+          builder: (context, state) => const ContactAboutScreen(),
+          routes: [
+            GoRoute(
+              path: 'privacy-policy',
+              builder: (context, state) => const PrivacyPolicyScreen(),
+            ),
+          ],
+        ),
+      ],
     ),
   ],
 );

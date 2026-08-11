@@ -156,9 +156,9 @@ class _ParentAppointmentsScreenState extends State<ParentAppointmentsScreen> {
       ),
     );
     if (result != null && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Appointment request sent')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Appointment request sent')));
     }
   }
 }
@@ -244,7 +244,9 @@ class _AppointmentCard extends StatelessWidget {
       children: [
         Icon(icon, size: 16, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 8),
-        Expanded(child: Text(text, style: Theme.of(context).textTheme.bodySmall)),
+        Expanded(
+          child: Text(text, style: Theme.of(context).textTheme.bodySmall),
+        ),
       ],
     );
   }

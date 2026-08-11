@@ -44,9 +44,10 @@ class AttendanceRemoteDataSourceImpl implements AttendanceRemoteDataSource {
   AttendanceRemoteDataSourceImpl({required this.firestore});
 
   CollectionReference<Map<String, dynamic>> _records(String schoolId) =>
-      firestore.collection('schools').doc(schoolId).collection(
-        'attendance_records',
-      );
+      firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('attendance_records');
 
   @override
   Future<AttendanceRecordModel> markAttendance(
@@ -66,9 +67,7 @@ class AttendanceRemoteDataSourceImpl implements AttendanceRemoteDataSource {
       throw DuplicateAttendanceException();
     }
 
-    final withId = AttendanceRecordModel.fromEntity(
-      record.copyWith(),
-    );
+    final withId = AttendanceRecordModel.fromEntity(record.copyWith());
     await docRef.set(withId.toFirestore());
     return AttendanceRecordModel.fromFirestore(await docRef.get());
   }
@@ -96,9 +95,7 @@ class AttendanceRemoteDataSourceImpl implements AttendanceRemoteDataSource {
       return _records(schoolId).doc(id);
     }).toList();
 
-    final existingChecks = await Future.wait(
-      docRefs.map((ref) => ref.get()),
-    );
+    final existingChecks = await Future.wait(docRefs.map((ref) => ref.get()));
     final duplicateNames = <String>[];
     for (var i = 0; i < existingChecks.length; i++) {
       if (existingChecks[i].exists) {

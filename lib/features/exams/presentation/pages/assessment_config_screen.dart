@@ -122,7 +122,8 @@ class _AssessmentConfigScreenState extends State<AssessmentConfigScreen>
           ),
           ElevatedButton(
             onPressed: () {
-              if (nameController.text.isEmpty || weightController.text.isEmpty) {
+              if (nameController.text.isEmpty ||
+                  weightController.text.isEmpty) {
                 return;
               }
               final type = AssessmentTypeModel(

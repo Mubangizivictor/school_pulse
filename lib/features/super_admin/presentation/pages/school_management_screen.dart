@@ -12,7 +12,6 @@ import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
 import '../bloc/super_admin_state.dart';
 import '../responsive.dart';
-import 'create_school_dialog.dart';
 import 'school_detail_screen.dart';
 import 'school_application_review_screen.dart';
 
@@ -31,157 +30,369 @@ class _SchoolManagementScreenState extends State<SchoolManagementScreen> {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Schools'),
-          actions: [
-            IconButton(
-              onPressed: () =>
-                  context.read<SuperAdminBloc>().add(LoadSuperAdminDashboard()),
-              tooltip: 'Refresh',
-              icon: const Icon(Icons.refresh_rounded),
-            ),
-          ],
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Active Schools'),
-              Tab(text: 'Applications'),
-              Tab(text: 'Suspended'),
+        backgroundColor: const Color(0xFFF9FAFE),
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              _SchoolsHeader(
+                onRefresh: () => context.read<SuperAdminBloc>().add(
+                  LoadSuperAdminDashboard(),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _SchoolsSegmentedTabs(),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFEAF0FF),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.health_and_safety_outlined,
+                            color: AppColors.electricBlue,
+                            size: 17,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Manage every institution using School Pulse.',
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: const Color(0xFF647397),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    _SchoolSearchField(
+                      onChanged: (value) =>
+                          setState(() => _searchQuery = value),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: BlocBuilder<SuperAdminBloc, SuperAdminState>(
+                  builder: (context, state) {
+                    if (state.status == SuperAdminStatus.loading) {
+                      return const Center(child: SchoolPulseLoader());
+                    }
+                    if (state.status == SuperAdminStatus.failure &&
+                        state.schools.isEmpty &&
+                        state.applications.isEmpty) {
+                      return _ErrorState(
+                        message:
+                            state.errorMessage ?? 'Unable to load schools.',
+                        onRetry: () => context.read<SuperAdminBloc>().add(
+                          LoadSuperAdminDashboard(),
+                        ),
+                      );
+                    }
+
+                    final query = _searchQuery.trim().toLowerCase();
+                    bool schoolMatches(School school) {
+                      if (query.isEmpty) return true;
+                      return school.name.toLowerCase().contains(query) ||
+                          school.tenantId.toLowerCase().contains(query) ||
+                          school.contactEmail.toLowerCase().contains(query) ||
+                          school.address.toLowerCase().contains(query);
+                    }
+
+                    bool applicationMatches(SchoolApplication application) {
+                      if (query.isEmpty) return true;
+                      return application.schoolName.toLowerCase().contains(
+                            query,
+                          ) ||
+                          application.prefix.toLowerCase().contains(query) ||
+                          application.administratorName.toLowerCase().contains(
+                            query,
+                          ) ||
+                          application.administratorEmail.toLowerCase().contains(
+                            query,
+                          ) ||
+                          application.schoolEmail.toLowerCase().contains(
+                            query,
+                          ) ||
+                          application.district.toLowerCase().contains(query);
+                    }
+
+                    final activeSchools = state.schools
+                        .where(
+                          (school) =>
+                              schoolMatches(school) &&
+                              (school.status == SchoolStatus.active ||
+                                  school.status == SchoolStatus.trial),
+                        )
+                        .toList();
+                    final suspendedSchools = state.schools
+                        .where(
+                          (school) =>
+                              schoolMatches(school) &&
+                              (school.status == SchoolStatus.suspended ||
+                                  school.status == SchoolStatus.archived),
+                        )
+                        .toList();
+                    final applications =
+                        state.applications.where(applicationMatches).toList()
+                          ..sort((a, b) {
+                            final aPending =
+                                a.status ==
+                                SchoolApplicationStatus.pendingReview;
+                            final bPending =
+                                b.status ==
+                                SchoolApplicationStatus.pendingReview;
+                            if (aPending != bPending) return aPending ? -1 : 1;
+                            final aDate = a.createdAt ?? DateTime(1970);
+                            final bDate = b.createdAt ?? DateTime(1970);
+                            return bDate.compareTo(aDate);
+                          });
+
+                    return TabBarView(
+                      children: [
+                        _SchoolList(
+                          schools: activeSchools,
+                          emptyTitle: 'No active schools',
+                          emptyCopy:
+                              'Approved schools and manually provisioned schools appear here.',
+                        ),
+                        _ApplicationList(applications: applications),
+                        _SchoolList(
+                          schools: suspendedSchools,
+                          emptyTitle: 'No suspended schools',
+                          emptyCopy:
+                              'Suspended and archived tenants will appear here.',
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
             ],
           ),
-        ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => _showCreateSchoolDialog(context),
-          icon: const Icon(Icons.add_rounded),
-          label: const Text('Add School'),
-        ),
-        body: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.x2l,
-                AppSpacing.xl,
-                AppSpacing.x2l,
-                AppSpacing.l,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Manage every institution using School Pulse.',
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: AppColors.textSecondary(context),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.l),
-                  AppSearchField(
-                    hintText:
-                        'Search by name, prefix, email, district or tenant ID…',
-                    onChanged: (value) => setState(() => _searchQuery = value),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: BlocBuilder<SuperAdminBloc, SuperAdminState>(
-                builder: (context, state) {
-                  if (state.status == SuperAdminStatus.loading) {
-                    return const Center(child: SchoolPulseLoader());
-                  }
-                  if (state.status == SuperAdminStatus.failure &&
-                      state.schools.isEmpty &&
-                      state.applications.isEmpty) {
-                    return _ErrorState(
-                      message: state.errorMessage ?? 'Unable to load schools.',
-                      onRetry: () => context.read<SuperAdminBloc>().add(
-                        LoadSuperAdminDashboard(),
-                      ),
-                    );
-                  }
-
-                  final query = _searchQuery.trim().toLowerCase();
-                  bool schoolMatches(School school) {
-                    if (query.isEmpty) return true;
-                    return school.name.toLowerCase().contains(query) ||
-                        school.tenantId.toLowerCase().contains(query) ||
-                        school.contactEmail.toLowerCase().contains(query) ||
-                        school.address.toLowerCase().contains(query);
-                  }
-
-                  bool applicationMatches(SchoolApplication application) {
-                    if (query.isEmpty) return true;
-                    return application.schoolName.toLowerCase().contains(
-                          query,
-                        ) ||
-                        application.prefix.toLowerCase().contains(query) ||
-                        application.administratorName.toLowerCase().contains(
-                          query,
-                        ) ||
-                        application.administratorEmail.toLowerCase().contains(
-                          query,
-                        ) ||
-                        application.schoolEmail.toLowerCase().contains(query) ||
-                        application.district.toLowerCase().contains(query);
-                  }
-
-                  final activeSchools = state.schools
-                      .where(
-                        (school) =>
-                            schoolMatches(school) &&
-                            (school.status == SchoolStatus.active ||
-                                school.status == SchoolStatus.trial),
-                      )
-                      .toList();
-                  final suspendedSchools = state.schools
-                      .where(
-                        (school) =>
-                            schoolMatches(school) &&
-                            (school.status == SchoolStatus.suspended ||
-                                school.status == SchoolStatus.archived),
-                      )
-                      .toList();
-                  final applications =
-                      state.applications.where(applicationMatches).toList()
-                        ..sort((a, b) {
-                          final aPending =
-                              a.status == SchoolApplicationStatus.pendingReview;
-                          final bPending =
-                              b.status == SchoolApplicationStatus.pendingReview;
-                          if (aPending != bPending) return aPending ? -1 : 1;
-                          final aDate = a.createdAt ?? DateTime(1970);
-                          final bDate = b.createdAt ?? DateTime(1970);
-                          return bDate.compareTo(aDate);
-                        });
-
-                  return TabBarView(
-                    children: [
-                      _SchoolList(
-                        schools: activeSchools,
-                        emptyTitle: 'No active schools',
-                        emptyCopy:
-                            'Approved schools and manually provisioned schools appear here.',
-                      ),
-                      _ApplicationList(applications: applications),
-                      _SchoolList(
-                        schools: suspendedSchools,
-                        emptyTitle: 'No suspended schools',
-                        emptyCopy:
-                            'Suspended and archived tenants will appear here.',
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-          ],
         ),
       ),
     );
   }
+}
 
-  void _showCreateSchoolDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => const CreateSchoolDialog(),
+class _SchoolsHeader extends StatelessWidget {
+  const _SchoolsHeader({required this.onRefresh});
+
+  final VoidCallback onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 64,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            right: -38,
+            top: -95,
+            child: Container(
+              width: 220,
+              height: 220,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [Color(0x294D8BFF), Color(0x004D8BFF)],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 0,
+            top: 0,
+            width: 160,
+            height: 64,
+            child: IgnorePointer(
+              child: CustomPaint(painter: _DotGridPainter()),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Text(
+                    'Schools',
+                    style: AppTypography.displaySmall.copyWith(
+                      color: AppColors.deepNavy,
+                      fontSize: 26,
+                      height: 1,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.6,
+                    ),
+                  ),
+                ),
+                Material(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  elevation: 2,
+                  shadowColor: const Color(0x1A0A245B),
+                  child: InkWell(
+                    onTap: onRefresh,
+                    borderRadius: BorderRadius.circular(12),
+                    child: const SizedBox(
+                      width: 38,
+                      height: 38,
+                      child: Icon(
+                        Icons.refresh_rounded,
+                        color: AppColors.royalBlue,
+                        size: 19,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DotGridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = const Color(0x1A4D8BFF);
+    const spacing = 14.0;
+    for (double y = 0; y < size.height; y += spacing) {
+      for (double x = 0; x < size.width; x += spacing) {
+        canvas.drawCircle(Offset(x, y), 1.1, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DotGridPainter oldDelegate) => false;
+}
+
+class _SchoolsSegmentedTabs extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 64,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E6F0)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0D091F4E),
+            blurRadius: 10,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: TabBar(
+        splashBorderRadius: BorderRadius.circular(13),
+        indicatorSize: TabBarIndicatorSize.tab,
+        indicatorPadding: EdgeInsets.zero,
+        dividerColor: Colors.transparent,
+        indicator: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(13),
+          border: const Border(
+            bottom: BorderSide(color: AppColors.electricBlue, width: 3),
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x12091F4E),
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        labelColor: AppColors.electricBlue,
+        unselectedLabelColor: const Color(0xFF647397),
+        labelStyle: const TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w700,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w600,
+        ),
+        tabs: const [
+          Tab(
+            height: 56,
+            icon: Icon(Icons.account_balance_outlined, size: 18),
+            text: 'Active Schools',
+            iconMargin: EdgeInsets.only(bottom: 2),
+          ),
+          Tab(
+            height: 56,
+            icon: Icon(Icons.description_outlined, size: 18),
+            text: 'Applications',
+            iconMargin: EdgeInsets.only(bottom: 2),
+          ),
+          Tab(
+            height: 56,
+            icon: Icon(Icons.block_outlined, size: 18),
+            text: 'Suspended',
+            iconMargin: EdgeInsets.only(bottom: 2),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SchoolSearchField extends StatelessWidget {
+  const _SchoolSearchField({required this.onChanged});
+
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      onChanged: onChanged,
+      style: const TextStyle(color: AppColors.deepNavy, fontSize: 14),
+      decoration: InputDecoration(
+        hintText: 'Search by name, prefix, email, district or tenant ID...',
+        hintStyle: const TextStyle(color: Color(0xFF93A0BD), fontSize: 13),
+        prefixIcon: const Icon(
+          Icons.search_rounded,
+          color: Color(0xFF647397),
+          size: 20,
+        ),
+        suffixIcon: const Icon(
+          Icons.tune_rounded,
+          color: Color(0xFF647397),
+          size: 18,
+        ),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFD5DBE8), width: 1.2),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(
+            color: AppColors.electricBlue,
+            width: 1.4,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -218,14 +429,9 @@ class _SchoolList extends StatelessWidget {
 
   Widget _schoolCards(BuildContext context) {
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.x2l,
-        AppSpacing.s,
-        AppSpacing.x2l,
-        AppSpacing.x3l,
-      ),
+      padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
       itemCount: schools.length,
-      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.l),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) => _SchoolCard(school: schools[index]),
     );
   }
@@ -475,84 +681,190 @@ class _SchoolCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final statusColor = _schoolStatusColor(context, school.status);
     final initial = school.name.trim().isEmpty
         ? 'S'
         : school.name.trim()[0].toUpperCase();
 
-    return AppCard(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => SchoolDetailScreen(school: school),
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(21),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SchoolDetailScreen(school: school),
+          ),
         ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Center(
-              child: Text(
-                initial,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  color: theme.colorScheme.onPrimaryContainer,
-                  fontWeight: FontWeight.bold,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 16, 10, 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE7EAF1)),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x0A071B45),
+                blurRadius: 10,
+                offset: Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SchoolInitialAvatar(initial: initial, name: school.name),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 1),
+                            child: Text(
+                              school.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: AppColors.deepNavy,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 15.5,
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        _SchoolStatusPill(status: school.status),
+                      ],
+                    ),
+                    const SizedBox(height: 9),
+                    _SchoolMetaRow(
+                      icon: Icons.badge_outlined,
+                      text: 'ID: ${school.tenantId}',
+                    ),
+                    const SizedBox(height: 6),
+                    _SchoolMetaRow(
+                      icon: Icons.calendar_today_outlined,
+                      text:
+                          'Expiry: ${DateFormat('MMM dd, yyyy').format(school.subscriptionExpiry)}',
+                    ),
+                    const SizedBox(height: 6),
+                    _SchoolMetaRow(
+                      icon: Icons.mail_outline_rounded,
+                      text: school.contactEmail,
+                    ),
+                  ],
                 ),
               ),
-            ),
+              const SizedBox(width: 2),
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: _SchoolQuickActions(school: school),
+              ),
+            ],
           ),
-          const SizedBox(width: AppSpacing.l),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        school.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    StatusBadge(label: school.status.name, color: statusColor),
-                  ],
-                ),
-                const SizedBox(height: 7),
-                Text(
-                  'ID: ${school.tenantId}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Wrap(
-                  spacing: 14,
-                  runSpacing: 4,
-                  children: [
-                    Text(
-                      'Expiry: ${DateFormat('MMM dd, yyyy').format(school.subscriptionExpiry)}',
-                      style: theme.textTheme.bodySmall,
-                    ),
-                    Text(school.contactEmail, style: theme.textTheme.bodySmall),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: AppSpacing.m),
-          _SchoolQuickActions(school: school),
-        ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SchoolInitialAvatar extends StatelessWidget {
+  const _SchoolInitialAvatar({required this.initial, required this.name});
+
+  final String initial;
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    const palettes = [
+      (Color(0xFFBED0FF), Color(0xFFE8EEFF), Color(0xFF1549B8)),
+      (Color(0xFFBCEFD7), Color(0xFFE7FAEF), Color(0xFF087342)),
+      (Color(0xFFE0C8FF), Color(0xFFF2E9FF), Color(0xFF4E149D)),
+      (Color(0xFFFFD1B5), Color(0xFFFFEEE3), Color(0xFFB3430B)),
+    ];
+    final palette =
+        palettes[name.codeUnits.fold<int>(0, (a, b) => a + b) %
+            palettes.length];
+    return Container(
+      width: 56,
+      height: 84,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [palette.$1, palette.$2],
+        ),
+        border: Border.all(color: palette.$1.withValues(alpha: .75)),
+      ),
+      child: Text(
+        initial,
+        style: TextStyle(
+          color: palette.$3,
+          fontSize: 36,
+          fontWeight: FontWeight.w800,
+          height: 1,
+        ),
+      ),
+    );
+  }
+}
+
+class _SchoolMetaRow extends StatelessWidget {
+  const _SchoolMetaRow({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Icon(icon, size: 14, color: const Color(0xFF697A9F)),
+      const SizedBox(width: 8),
+      Expanded(
+        child: Text(
+          text,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: Color(0xFF637397), fontSize: 12.5),
+        ),
+      ),
+    ],
+  );
+}
+
+class _SchoolStatusPill extends StatelessWidget {
+  const _SchoolStatusPill({required this.status});
+
+  final SchoolStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final isActive =
+        status == SchoolStatus.active || status == SchoolStatus.trial;
+    final color = isActive
+        ? const Color(0xFF08A851)
+        : _schoolStatusColor(context, status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .10),
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(color: color.withValues(alpha: .14)),
+      ),
+      child: Text(
+        status.name.toUpperCase(),
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w700,
+          fontSize: 10.5,
+        ),
       ),
     );
   }

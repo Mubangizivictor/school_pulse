@@ -74,6 +74,42 @@ class ManualPaymentService {
         });
   }
 
+  Future<void> updatePlan({
+    required String planId,
+    required String name,
+    required String description,
+    required int priceUgx,
+    required BillingCycle billingCycle,
+    required int termLengthDays,
+    required int maxStudents,
+    required int maxStaff,
+    required double storageLimitGb,
+    required List<String> includedFeatures,
+    required bool isPublic,
+    required bool isActive,
+    required bool isPopular,
+    required int displayOrder,
+  }) async {
+    await _functions
+        .httpsCallable('updateSubscriptionPlan')
+        .call<Map<String, dynamic>>({
+          'planId': planId,
+          'name': name,
+          'description': description,
+          'price': priceUgx,
+          'billingCycle': billingCycle.name,
+          'termLengthDays': termLengthDays,
+          'maxStudents': maxStudents,
+          'maxStaff': maxStaff,
+          'storageLimitGb': storageLimitGb,
+          'includedFeatures': includedFeatures,
+          'isPublic': isPublic,
+          'isActive': isActive,
+          'isPopular': isPopular,
+          'displayOrder': displayOrder,
+        });
+  }
+
   static String _statusWire(ManualPaymentStatus status) => switch (status) {
     ManualPaymentStatus.pendingVerification => 'pending_verification',
     ManualPaymentStatus.approved => 'approved',

@@ -1,7 +1,6 @@
 import 'package:equatable/equatable.dart';
 import '../../domain/entities/school.dart';
 import '../../domain/entities/subscription_plan.dart';
-import '../../domain/entities/payment.dart';
 import '../../domain/entities/audit_log.dart';
 import '../../domain/entities/school_application.dart';
 
@@ -12,8 +11,6 @@ class SuperAdminState extends Equatable {
   final List<School> schools;
   final List<SchoolApplication> applications;
   final List<SubscriptionPlan> plans;
-  final List<Invoice> invoices;
-  final List<Transaction> transactions;
   final List<AuditLog> auditLogs;
   final Map<String, dynamic> stats;
   final String? errorMessage;
@@ -26,8 +23,6 @@ class SuperAdminState extends Equatable {
     this.schools = const [],
     this.applications = const [],
     this.plans = const [],
-    this.invoices = const [],
-    this.transactions = const [],
     this.auditLogs = const [],
     this.stats = const {},
     this.errorMessage,
@@ -42,8 +37,6 @@ class SuperAdminState extends Equatable {
     schools,
     applications,
     plans,
-    invoices,
-    transactions,
     auditLogs,
     stats,
     errorMessage,
@@ -57,8 +50,6 @@ class SuperAdminState extends Equatable {
     List<School>? schools,
     List<SchoolApplication>? applications,
     List<SubscriptionPlan>? plans,
-    List<Invoice>? invoices,
-    List<Transaction>? transactions,
     List<AuditLog>? auditLogs,
     Map<String, dynamic>? stats,
     String? errorMessage,
@@ -75,8 +66,6 @@ class SuperAdminState extends Equatable {
       schools: schools ?? this.schools,
       applications: applications ?? this.applications,
       plans: plans ?? this.plans,
-      invoices: invoices ?? this.invoices,
-      transactions: transactions ?? this.transactions,
       auditLogs: auditLogs ?? this.auditLogs,
       stats: stats ?? this.stats,
       errorMessage: clearErrorMessage

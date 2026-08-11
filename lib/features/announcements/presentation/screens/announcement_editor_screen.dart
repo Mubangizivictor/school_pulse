@@ -31,7 +31,10 @@ class AnnouncementEditorScreen extends StatelessWidget {
     return BlocProvider(
       create: (_) => sl<AnnouncementBloc>()
         ..add(
-          LoadAnnouncementsRequested(schoolId: user.schoolId, operatorUser: user),
+          LoadAnnouncementsRequested(
+            schoolId: user.schoolId,
+            operatorUser: user,
+          ),
         ),
       child: _AnnouncementEditorBody(announcementId: announcementId),
     );
@@ -109,10 +112,7 @@ class _AnnouncementEditorBodyState extends State<_AnnouncementEditorBody> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              AppSearchField(
-                controller: _titleController,
-                hintText: 'Title',
-              ),
+              AppSearchField(controller: _titleController, hintText: 'Title'),
               const SizedBox(height: 16),
               TextField(
                 controller: _bodyController,

@@ -79,7 +79,9 @@ class AttendanceRecordModel extends AttendanceRecord {
       'deviceId': deviceId,
       'syncStatus': syncStatus.name,
       'createdAt': Timestamp.fromDate(createdAt),
-      'correctedAt': correctedAt != null ? Timestamp.fromDate(correctedAt!) : null,
+      'correctedAt': correctedAt != null
+          ? Timestamp.fromDate(correctedAt!)
+          : null,
       'correctionOf': correctionOf,
       'roleAssignmentId': roleAssignmentId,
     };

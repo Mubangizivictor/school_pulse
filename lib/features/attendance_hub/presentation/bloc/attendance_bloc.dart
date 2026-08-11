@@ -204,34 +204,35 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     if (event.records.isEmpty) return;
 
     final accessResult = await _resolveAccess(event.operatorUser);
-    final outcome = await accessResult.fold<
-        Future<Either<AttendanceState, AttendanceAccessContext>>>(
-      (failure) async => Left(AttendanceError(failure.message)),
-      (access) async {
-        final allowed = await _canMark(
-          event.records.first.category,
-          event.operatorUser,
-        );
-        if (!allowed) {
-          return const Left(
-            AttendanceActionDenied(
-              'You do not have permission to take attendance for this category.',
-            ),
+    final outcome = await accessResult
+        .fold<
+          Future<Either<AttendanceState, AttendanceAccessContext>>
+        >((failure) async => Left(AttendanceError(failure.message)), (
+          access,
+        ) async {
+          final allowed = await _canMark(
+            event.records.first.category,
+            event.operatorUser,
           );
-        }
-        final outOfScope = event.records.any(
-          (r) => !access.canActOnScope(r.category, r.scopeId),
-        );
-        if (outOfScope) {
-          return const Left(
-            AttendanceActionDenied(
-              'One or more people are not part of your assigned attendance group.',
-            ),
+          if (!allowed) {
+            return const Left(
+              AttendanceActionDenied(
+                'You do not have permission to take attendance for this category.',
+              ),
+            );
+          }
+          final outOfScope = event.records.any(
+            (r) => !access.canActOnScope(r.category, r.scopeId),
           );
-        }
-        return Right(access);
-      },
-    );
+          if (outOfScope) {
+            return const Left(
+              AttendanceActionDenied(
+                'One or more people are not part of your assigned attendance group.',
+              ),
+            );
+          }
+          return Right(access);
+        });
     final denial = outcome.fold((denied) => denied, (_) => null);
     if (denial != null) {
       emit(denial);
