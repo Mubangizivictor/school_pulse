@@ -1,16 +1,14 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:isar/isar.dart';
-import 'package:school_pulse/features/branding/data/models/school_branding_isar.dart';
-import 'package:school_pulse/features/branding/domain/entities/school_branding.dart';
+import 'package:school_pulse/features/branding/data/branding_local_cache.dart';
 import 'package:school_pulse/features/branding/domain/usecases/get_school_branding.dart';
 import 'branding_event.dart';
 import 'branding_state.dart';
 
 class BrandingBloc extends Bloc<BrandingEvent, BrandingState> {
-  final Isar isar;
+  final BrandingLocalCache localCache;
   final GetSchoolBranding getSchoolBranding;
 
-  BrandingBloc({required this.isar, required this.getSchoolBranding})
+  BrandingBloc({required this.localCache, required this.getSchoolBranding})
     : super(BrandingInitial()) {
     on<InitializeBranding>(_onInitializeBranding);
     on<BrandingUpdateRequested>(_onBrandingUpdateRequested);
@@ -22,19 +20,15 @@ class BrandingBloc extends Bloc<BrandingEvent, BrandingState> {
     InitializeBranding event,
     Emitter<BrandingState> emit,
   ) async {
-    final cached = await isar.schoolBrandingIsars.where().findFirst();
-    if (cached != null) {
-      emit(BrandingLoaded(_fromIsar(cached)));
-    } else {
-      emit(const BrandingLoaded(null));
-    }
+    final cached = await localCache.get();
+    emit(BrandingLoaded(cached));
   }
 
   Future<void> _onBrandingUpdateRequested(
     BrandingUpdateRequested event,
     Emitter<BrandingState> emit,
   ) async {
-    await _saveToIsar(event.branding);
+    await localCache.save(event.branding);
     emit(BrandingLoaded(event.branding));
   }
 
@@ -48,7 +42,7 @@ class BrandingBloc extends Bloc<BrandingEvent, BrandingState> {
         // Handle failure if needed, maybe keep current state
       },
       (branding) async {
-        await _saveToIsar(branding);
+        await localCache.save(branding);
         emit(BrandingLoaded(branding));
       },
     );
@@ -58,46 +52,7 @@ class BrandingBloc extends Bloc<BrandingEvent, BrandingState> {
     ClearBranding event,
     Emitter<BrandingState> emit,
   ) async {
-    await isar.writeTxn(() async {
-      await isar.schoolBrandingIsars.clear();
-    });
+    await localCache.clear();
     emit(const BrandingLoaded(null));
-  }
-
-  Future<void> _saveToIsar(SchoolBranding branding) async {
-    await isar.writeTxn(() async {
-      final isarModel = SchoolBrandingIsar()
-        ..schoolId = branding.schoolId
-        ..schoolName = branding.schoolName
-        ..schoolMotto = branding.schoolMotto
-        ..logoUrl = branding.logoUrl
-        ..badgeUrl = branding.badgeUrl
-        ..primaryColor = branding.primaryColor
-        ..secondaryColor = branding.secondaryColor
-        ..accentColor = branding.accentColor
-        ..welcomeMessage = branding.welcomeMessage
-        ..dashboardBannerUrl = branding.dashboardBannerUrl
-        ..loginBackgroundUrl = branding.loginBackgroundUrl
-        ..version = branding.version;
-
-      await isar.schoolBrandingIsars.put(isarModel);
-    });
-  }
-
-  SchoolBranding _fromIsar(SchoolBrandingIsar isarModel) {
-    return SchoolBranding(
-      schoolId: isarModel.schoolId,
-      schoolName: isarModel.schoolName,
-      schoolMotto: isarModel.schoolMotto,
-      logoUrl: isarModel.logoUrl,
-      badgeUrl: isarModel.badgeUrl,
-      primaryColor: isarModel.primaryColor,
-      secondaryColor: isarModel.secondaryColor,
-      accentColor: isarModel.accentColor,
-      welcomeMessage: isarModel.welcomeMessage,
-      dashboardBannerUrl: isarModel.dashboardBannerUrl,
-      loginBackgroundUrl: isarModel.loginBackgroundUrl,
-      version: isarModel.version,
-    );
   }
 }
