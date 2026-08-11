@@ -43,7 +43,6 @@ class _SuperAdminNotificationsScreenState
   final DateFormat _dateTime = DateFormat('MMM d, yyyy • h:mm a');
 
   String? _openingNotificationId;
-  bool _diagnosing = false;
   bool _savingPreferences = false;
 
   String? get _ownerId => _notifications.currentOwnerId;
@@ -76,54 +75,6 @@ class _SuperAdminNotificationsScreenState
       if (mounted) _showSnack(_friendlyError(error), isError: true);
     } finally {
       if (mounted) setState(() => _openingNotificationId = null);
-    }
-  }
-
-  Future<void> _showDiagnostics() async {
-    if (_diagnosing) return;
-    setState(() => _diagnosing = true);
-    try {
-      final health = await _notifications.getHealth();
-      if (!mounted) return;
-      await showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        showDragHandle: true,
-        builder: (sheetContext) => _NotificationHealthSheet(
-          health: health,
-          onSendTest: () async {
-            Navigator.of(sheetContext).pop();
-            await _sendTest();
-          },
-        ),
-      );
-    } catch (error) {
-      if (mounted) _showSnack(_friendlyError(error), isError: true);
-    } finally {
-      if (mounted) setState(() => _diagnosing = false);
-    }
-  }
-
-  Future<void> _sendTest() async {
-    _showSnack('Sending test through in-app, push and email…');
-    try {
-      final result = await _notifications.sendTest();
-      if (!mounted) return;
-      final push = result['push'] is Map
-          ? Map<String, dynamic>.from(result['push'] as Map)
-          : const <String, dynamic>{};
-      final email = result['email'] is Map
-          ? Map<String, dynamic>.from(result['email'] as Map)
-          : const <String, dynamic>{};
-      final inApp = result['inApp'] is Map
-          ? Map<String, dynamic>.from(result['inApp'] as Map)
-          : const <String, dynamic>{};
-      _showSnack(
-        'In-app: ${inApp['status'] ?? 'unknown'} • Push: ${push['status'] ?? 'unknown'} • Email: ${email['status'] ?? 'unknown'}',
-        isError: push['status'] == 'failed' || email['status'] == 'failed',
-      );
-    } catch (error) {
-      if (mounted) _showSnack(_friendlyError(error), isError: true);
     }
   }
 
@@ -191,22 +142,7 @@ class _SuperAdminNotificationsScreenState
   Widget build(BuildContext context) {
     final ownerId = _ownerId;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Notifications'),
-        actions: [
-          IconButton(
-            tooltip: 'Notification health',
-            onPressed: _diagnosing ? null : _showDiagnostics,
-            icon: _diagnosing
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.monitor_heart_outlined),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Notifications')),
       body: ownerId == null
           ? const Center(child: Text('Sign in to manage notifications'))
           : StreamBuilder<OwnerNotificationPreferences>(
@@ -671,118 +607,6 @@ class _DeliveryChip extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _NotificationHealthSheet extends StatelessWidget {
-  const _NotificationHealthSheet({
-    required this.health,
-    required this.onSendTest,
-  });
-
-  final Map<String, dynamic> health;
-  final Future<void> Function() onSendTest;
-
-  @override
-  Widget build(BuildContext context) {
-    final ownerCount = health['ownerCount'] ?? 0;
-    final tokenCount = health['pushTokenCount'] ?? 0;
-    final smtpReady = health['smtpConfigured'] == true;
-    final recipients = health['emailRecipients'] is List
-        ? (health['emailRecipients'] as List).join(', ')
-        : 'None';
-
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(22, 4, 22, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Notification health',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Live backend checks for the SaaS Owner notification pipeline.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSecondary(context),
-              ),
-            ),
-            const SizedBox(height: 20),
-            _HealthRow(
-              label: 'Owner account',
-              value: '$ownerCount found',
-              ok: ownerCount is num && ownerCount > 0,
-            ),
-            _HealthRow(
-              label: 'Push devices',
-              value: '$tokenCount registered',
-              ok: tokenCount is num && tokenCount > 0,
-            ),
-            _HealthRow(
-              label: 'Email transport',
-              value: smtpReady ? 'SMTP configured' : 'SMTP not configured',
-              ok: smtpReady,
-            ),
-            _HealthRow(
-              label: 'Email recipient',
-              value: recipients,
-              ok: recipients != 'None' && recipients.isNotEmpty,
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: onSendTest,
-                icon: const Icon(Icons.send_rounded),
-                label: const Text('Send test notification'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HealthRow extends StatelessWidget {
-  const _HealthRow({
-    required this.label,
-    required this.value,
-    required this.ok,
-  });
-  final String label;
-  final String value;
-  final bool ok;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            ok ? Icons.check_circle_rounded : Icons.error_outline_rounded,
-            size: 20,
-            color: ok ? Colors.green : Theme.of(context).colorScheme.error,
-          ),
-          const SizedBox(width: 10),
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
-          Expanded(child: Text(value)),
-        ],
-      ),
     );
   }
 }

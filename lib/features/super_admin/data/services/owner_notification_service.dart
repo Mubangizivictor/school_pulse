@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../domain/entities/owner_notification.dart';
@@ -8,26 +7,18 @@ import '../mappers/owner_notification_preferences_mapper.dart';
 
 /// SaaS Owner notification client.
 ///
-/// The feed is written server-side to `super_admin_notifications`. Critical
-/// delivery diagnostics/test calls use authenticated Cloud Functions so the UI
-/// can distinguish "no token", "email not configured" and real send failures.
+/// The feed is written server-side to `super_admin_notifications`.
 ///
 /// Owner notification *preferences* (channel toggles, quiet hours, digest
 /// frequency) are a separate, client-writable document at
 /// `super_admin_settings/{ownerId}` - unlike the notification feed itself,
 /// which is server-write-only.
 class OwnerNotificationService {
-  OwnerNotificationService({
-    FirebaseFirestore? firestore,
-    FirebaseFunctions? functions,
-    FirebaseAuth? auth,
-  }) : _firestore = firestore ?? FirebaseFirestore.instance,
-       _functions =
-           functions ?? FirebaseFunctions.instanceFor(region: 'europe-west1'),
-       _auth = auth ?? FirebaseAuth.instance;
+  OwnerNotificationService({FirebaseFirestore? firestore, FirebaseAuth? auth})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _auth = auth ?? FirebaseAuth.instance;
 
   final FirebaseFirestore _firestore;
-  final FirebaseFunctions _functions;
   final FirebaseAuth _auth;
 
   Stream<List<OwnerNotification>> watchNotifications() {
@@ -55,18 +46,6 @@ class OwnerNotificationService {
     return snapshot.docs
         .map((doc) => OwnerNotification.fromJson({...doc.data(), 'id': doc.id}))
         .toList(growable: false);
-  }
-
-  Future<Map<String, dynamic>> getHealth() async {
-    final callable = _functions.httpsCallable('getOwnerNotificationHealth');
-    final result = await callable.call<Map<String, dynamic>>();
-    return Map<String, dynamic>.from(result.data);
-  }
-
-  Future<Map<String, dynamic>> sendTest() async {
-    final callable = _functions.httpsCallable('testOwnerNotificationDelivery');
-    final result = await callable.call<Map<String, dynamic>>();
-    return Map<String, dynamic>.from(result.data);
   }
 
   /// The signed-in owner's uid, or null if nobody is signed in.
