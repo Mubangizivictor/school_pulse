@@ -21,14 +21,28 @@ const EMAIL_SECRETS = [
   RESEND_API_KEY,
 ];
 
+/**
+ * A manual SaaS subscription payment becomes reviewable when the payment
+ * submission has been persisted with a supported review status and a proof
+ * file. Keep this aligned with payments.js, which currently writes
+ * status=pending_verification and proofStoragePath.
+ */
 function reviewable(payment) {
-  const status = String(payment?.status || '').toLowerCase();
+  const status = String(payment?.status || '').trim().toLowerCase();
   const proof = text(
-    payment?.proofUrl || payment?.paymentProofUrl || payment?.proofPath ||
-      payment?.proofStoragePath || payment?.receiptUrl,
+    payment?.proofStoragePath ||
+      payment?.proofUrl ||
+      payment?.paymentProofUrl ||
+      payment?.proofPath ||
+      payment?.receiptUrl,
     1000,
   );
-  return ['pending', 'under_review', 'pending_review', 'pending_verification'].includes(status) && Boolean(proof);
+  return [
+    'pending_verification',
+    'pending',
+    'under_review',
+    'pending_review',
+  ].includes(status) && Boolean(proof);
 }
 
 async function applicantEmailFor(payment) {
@@ -48,12 +62,16 @@ function amountLabel(payment) {
   return `UGX ${amount.toLocaleString('en-US')}`;
 }
 
+function paymentMethod(value) {
+  const method = String(value || '').trim().toLowerCase();
+  if (method === 'airtel') return { id: 'airtel', label: 'Airtel Money' };
+  if (method === 'bank') return { id: 'bank', label: 'Bank transfer' };
+  if (method === 'cash') return { id: 'cash', label: 'Cash' };
+  return { id: 'mtn', label: 'MTN Mobile Money' };
+}
+
 function methodLabel(payment) {
-  const method = String(payment?.method || '').toLowerCase();
-  if (method === 'bank') return 'Centenary Bank';
-  if (method === 'airtel') return 'Airtel Money';
-  if (method === 'cash') return 'Cash';
-  return 'MTN Mobile Money';
+  return paymentMethod(payment?.method).label;
 }
 
 /** Notify the SaaS Owner exactly once when a payment becomes reviewable. */
@@ -76,9 +94,10 @@ exports.notifyOwnerOfManualPayment = onDocumentWritten(
 
     if (reviewable(payment) && !reviewable(before)) {
       const amount = Math.max(0, Math.round(Number(payment.submittedAmount || payment.amount || 0)));
-      const method = String(payment.method || '').toLowerCase() === 'bank' ? 'bank' : 'mtn';
-      const ownerMethodLabel = method === 'bank' ? 'Centenary Bank' : 'MTN Mobile Money';
+      const method = paymentMethod(payment.method);
       const ownerAmountLabel = `UGX ${amount.toLocaleString('en-US')}`;
+      const planName = text(payment.planName, 80);
+      const reference = text(payment.reference, 120);
 
       await notifyOwners({
         // payments.js already creates payment_<id> in the owner feed. Reusing
@@ -87,7 +106,7 @@ exports.notifyOwnerOfManualPayment = onDocumentWritten(
         eventId: `payment_${paymentId}`,
         eventType: 'Payment proof submitted',
         title: 'Payment verification required',
-        body: `${schoolName} submitted ${ownerAmountLabel} via ${ownerMethodLabel}. Confirm the money was received before activating access.`,
+        body: `${schoolName} submitted ${ownerAmountLabel} via ${method.label}${planName ? ` for ${planName}` : ''}. Confirm the money was received before activating access.`,
         schoolName,
         data: {
           type: 'manual_subscription_payment',
@@ -100,7 +119,9 @@ exports.notifyOwnerOfManualPayment = onDocumentWritten(
           schoolName,
           amount: String(amount),
           amountUgx: String(amount),
-          method,
+          method: method.id,
+          planName,
+          reference,
         },
       });
 
@@ -115,7 +136,7 @@ exports.notifyOwnerOfManualPayment = onDocumentWritten(
         eventId: `billing_action_required_${paymentId}`,
         eventType: 'Billing action required',
         title: 'Billing action required',
-        body: `${schoolName} submitted ${ownerAmountLabel} via ${ownerMethodLabel}. Verify the payment to activate or renew access.`,
+        body: `${schoolName} submitted ${ownerAmountLabel} via ${method.label}. Verify the payment to activate or renew access.`,
         schoolName,
         data: {
           type: 'billing_action_required',
@@ -127,7 +148,7 @@ exports.notifyOwnerOfManualPayment = onDocumentWritten(
           schoolId: text(payment.schoolId, 180),
           schoolName,
           amountUgx: String(amount),
-          method,
+          method: method.id,
         },
       }).catch((error) => console.error('Owner billing_action_required notice failed', paymentId, error));
       return;

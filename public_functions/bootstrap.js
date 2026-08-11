@@ -6,6 +6,7 @@ const paymentNotifications = require('./payment_notifications');
 const applicationNotifications = require('./application_notifications');
 const ownerDeviceRegistry = require('./owner_device_registry');
 const ownerNotificationsAdmin = require('./owner_notifications_admin');
+const ownerNotificationPreferences = require('./owner_notification_preferences');
 const publicBilling = require('./billing_public');
 const availability = require('./availability');
 const ownerSignInEvents = require('./owner_sign_in_events');
@@ -24,6 +25,7 @@ module.exports = {
   ...applicationNotifications,
   ...ownerDeviceRegistry,
   ...ownerNotificationsAdmin,
+  ...ownerNotificationPreferences,
   ...publicBilling,
   ...availability,
   ...ownerSignInEvents,
