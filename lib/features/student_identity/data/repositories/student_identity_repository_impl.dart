@@ -1,26 +1,24 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:dartz/dartz.dart';
-import 'package:isar/isar.dart';
 import '../../../../core/error/failures.dart';
 import '../../../student/domain/entities/student.dart';
-import '../../../student/domain/entities/student_enums.dart';
 import '../../../student/data/models/student_model.dart';
 import '../../domain/entities/student_identity.dart';
 import '../../domain/repositories/student_identity_repository.dart';
 import '../models/student_identity_model.dart';
-import '../models/student_cache_isar.dart';
 import '../../domain/services/id_generator_service.dart';
+import 'student_identity_local_cache.dart';
 
 class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
   final FirebaseFirestore firestore;
-  final Isar isar;
+  final StudentIdentityLocalCache localCache;
   final IdGeneratorService idGenerator;
   final FirebaseFunctions functions;
 
   StudentIdentityRepositoryImpl({
     required this.firestore,
-    required this.isar,
+    required this.localCache,
     required this.idGenerator,
     required this.functions,
   });
@@ -148,32 +146,19 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
     List<Student> students,
   ) async {
     try {
-      await isar.writeTxn(() async {
-        for (final student in students) {
-          // Fetch identity for each student to cache
-          final identityDoc = await firestore
-              .collection('student_identities')
-              .where('studentId', isEqualTo: student.id)
-              .get();
+      for (final student in students) {
+        final identityDoc = await firestore
+            .collection('student_identities')
+            .where('studentId', isEqualTo: student.id)
+            .get();
 
-          if (identityDoc.docs.isNotEmpty) {
-            final identity = StudentIdentityModel.fromFirestore(
-              identityDoc.docs.first.data(),
-            );
-
-            final cache = StudentCacheIsar()
-              ..studentId = student.id
-              ..uniqueSystemId = identity.uniqueSystemId
-              ..name = student.name
-              ..photoUrl = student.photoUrl
-              ..className = student.className
-              ..schoolStudentId = identity.schoolStudentId
-              ..schoolId = student.schoolId;
-
-            await isar.studentCacheIsars.put(cache);
-          }
+        if (identityDoc.docs.isNotEmpty) {
+          final identity = StudentIdentityModel.fromFirestore(
+            identityDoc.docs.first.data(),
+          );
+          await localCache.save(student: student, identity: identity);
         }
-      });
+      }
       return const Right(null);
     } catch (e) {
       return Left(CacheFailure());
@@ -185,29 +170,10 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
     String uniqueSystemId,
   ) async {
     try {
-      // First try local cache
-      final cached = await isar.studentCacheIsars
-          .filter()
-          .uniqueSystemIdEqualTo(uniqueSystemId)
-          .findFirst();
-      if (cached != null) {
-        return Right(
-          Student(
-            id: cached.studentId,
-            schoolId: cached.schoolId,
-            name: cached.name,
-            photoUrl: cached.photoUrl,
-            studentCode: cached.schoolStudentId,
-            admissionNumber: '',
-            dateOfBirth: DateTime(2000),
-            gender: Gender.male,
-            classId: cached.className,
-            academicYearId: '',
-            status: StudentStatus.active,
-            level: EducationLevel.primary,
-          ),
-        );
-      }
+      // First try local cache (no-op/always-miss on web - falls through to
+      // the Firestore lookup below)
+      final cached = await localCache.findByUniqueSystemId(uniqueSystemId);
+      if (cached != null) return Right(cached);
 
       // Fallback to Firestore
       final identityDoc = await firestore

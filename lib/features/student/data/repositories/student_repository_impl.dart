@@ -12,7 +12,6 @@ import '../../domain/entities/parent_access_code.dart';
 import '../../domain/repositories/student_repository.dart';
 import '../datasources/student_local_data_source.dart';
 import '../datasources/student_remote_data_source.dart';
-import '../models/student_isar_models.dart';
 import '../models/student_model.dart';
 import '../models/admission_application_model.dart';
 import '../models/parent_access_code_model.dart';
@@ -37,19 +36,17 @@ class StudentRepositoryImpl implements StudentRepository {
     try {
       if (await networkInfo.isConnected) {
         final student = await remoteDataSource.getStudentById(studentId);
-        await localDataSource.cacheStudent(
-          StudentProfileIsar.fromEntity(student),
-        );
+        await localDataSource.cacheStudent(student);
         return Right(student);
       }
       final cached = await localDataSource.getCachedStudent(studentId);
       if (cached == null) {
         return Left(CacheFailure('Student not found offline.'));
       }
-      return Right(cached.toEntity());
+      return Right(cached);
     } catch (e) {
       final cached = await localDataSource.getCachedStudent(studentId);
-      if (cached != null) return Right(cached.toEntity());
+      if (cached != null) return Right(cached);
       return Left(ServerFailure(e.toString()));
     }
   }
@@ -64,9 +61,7 @@ class StudentRepositoryImpl implements StudentRepository {
           schoolId: schoolId,
         );
         if (schoolId != null && schoolId.isNotEmpty) {
-          await localDataSource.cacheStudents(
-            students.map(StudentProfileIsar.fromEntity).toList(),
-          );
+          await localDataSource.cacheStudents(students);
         }
         return Right(students);
       }
@@ -78,12 +73,12 @@ class StudentRepositoryImpl implements StudentRepository {
         );
       }
       final cached = await localDataSource.getCachedStudents(schoolId);
-      return Right(cached.map((c) => c.toEntity()).toList());
+      return Right(cached);
     } catch (e) {
       if (schoolId != null && schoolId.isNotEmpty) {
         final cached = await localDataSource.getCachedStudents(schoolId);
         if (cached.isNotEmpty) {
-          return Right(cached.map((c) => c.toEntity()).toList());
+          return Right(cached);
         }
       }
       return Left(ServerFailure(e.toString()));
@@ -137,9 +132,7 @@ class StudentRepositoryImpl implements StudentRepository {
         recordedBy: recordedBy,
       );
       final created = model.copyWithModelId(studentId);
-      await localDataSource.cacheStudent(
-        StudentProfileIsar.fromEntity(created),
-      );
+      await localDataSource.cacheStudent(created);
       return Right(studentId);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -174,7 +167,7 @@ class StudentRepositoryImpl implements StudentRepository {
         admissionNumber: admissionNumber,
         classId: classId,
       );
-      return Right(cached.map((c) => c.toEntity()).toList());
+      return Right(cached);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -210,7 +203,7 @@ class StudentRepositoryImpl implements StudentRepository {
         level: student.level,
       );
       await remoteDataSource.updateStudent(model);
-      await localDataSource.cacheStudent(StudentProfileIsar.fromEntity(model));
+      await localDataSource.cacheStudent(model);
 
       final placementChanged =
           before.classId != student.classId ||

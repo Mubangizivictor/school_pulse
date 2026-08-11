@@ -1,473 +1,107 @@
-import 'package:isar/isar.dart';
-import '../models/structure_isar_models.dart';
+import '../../domain/entities/structure_entities.dart';
+import '../../domain/entities/campus_entities.dart';
+import '../../domain/entities/hostel_entities.dart';
+import '../../domain/entities/transport_structure_entities.dart';
+import '../../domain/entities/fee_category_entities.dart';
+import '../../domain/entities/assessment_grading_entities.dart';
+import '../../domain/entities/attendance_config_entities.dart';
+import '../../domain/entities/communication_config_entities.dart';
+import '../../domain/entities/document_template_entities.dart';
+import '../../domain/entities/custom_field_entities.dart';
 
+/// No Isar/isar-model import here on purpose - see
+/// structure_local_data_source_mobile.dart for why. Mobile and web
+/// implementations are selected at compile time via
+/// structure_local_data_source_factory.dart's conditional import.
 abstract class StructureLocalDataSource {
-  Future<List<EducationalLevelIsar>> getLevels();
-  Future<void> cacheLevels(List<EducationalLevelIsar> levels);
+  Future<List<EducationalLevel>> getLevels();
+  Future<void> cacheLevels(List<EducationalLevel> levels);
 
-  Future<List<AcademicYearIsar>> getAcademicYears();
-  Future<void> cacheAcademicYears(List<AcademicYearIsar> years);
+  Future<List<AcademicYear>> getAcademicYears();
+  Future<void> cacheAcademicYears(List<AcademicYear> years);
 
-  Future<List<AcademicTermIsar>> getAcademicTerms();
-  Future<void> cacheAcademicTerms(List<AcademicTermIsar> terms);
+  Future<List<AcademicTerm>> getAcademicTerms();
+  Future<void> cacheAcademicTerms(List<AcademicTerm> terms);
 
-  Future<List<SchoolClassIsar>> getClasses();
-  Future<void> cacheClasses(List<SchoolClassIsar> classes);
+  Future<List<SchoolClass>> getClasses();
+  Future<void> cacheClasses(List<SchoolClass> classes);
 
-  Future<List<ClassStreamIsar>> getStreams();
-  Future<void> cacheStreams(List<ClassStreamIsar> streams);
+  Future<List<ClassStream>> getStreams();
+  Future<void> cacheStreams(List<ClassStream> streams);
 
-  Future<List<SubjectIsar>> getSubjects();
-  Future<void> cacheSubjects(List<SubjectIsar> subjects);
+  Future<List<Subject>> getSubjects();
+  Future<void> cacheSubjects(List<Subject> subjects);
 
-  Future<List<DepartmentIsar>> getDepartments();
-  Future<void> cacheDepartments(List<DepartmentIsar> departments);
+  Future<List<Department>> getDepartments();
+  Future<void> cacheDepartments(List<Department> departments);
 
-  Future<List<StaffDesignationIsar>> getDesignations();
-  Future<void> cacheDesignations(List<StaffDesignationIsar> designations);
+  Future<List<StaffDesignation>> getDesignations();
+  Future<void> cacheDesignations(List<StaffDesignation> designations);
 
-  Future<List<StaffRoleIsar>> getStaffRoles();
-  Future<void> cacheStaffRoles(List<StaffRoleIsar> roles);
+  Future<List<StaffRole>> getStaffRoles();
+  Future<void> cacheStaffRoles(List<StaffRole> roles);
 
-  Future<List<CampusIsar>> getCampuses();
-  Future<void> cacheCampuses(List<CampusIsar> campuses);
+  Future<List<Campus>> getCampuses();
+  Future<void> cacheCampuses(List<Campus> campuses);
 
-  Future<List<HouseIsar>> getHouses();
-  Future<void> cacheHouses(List<HouseIsar> houses);
+  Future<List<House>> getHouses();
+  Future<void> cacheHouses(List<House> houses);
 
-  Future<List<ClubIsar>> getClubs();
-  Future<void> cacheClubs(List<ClubIsar> clubs);
+  Future<List<Club>> getClubs();
+  Future<void> cacheClubs(List<Club> clubs);
 
-  Future<List<FacilityIsar>> getFacilities();
-  Future<void> cacheFacilities(List<FacilityIsar> facilities);
+  Future<List<Facility>> getFacilities();
+  Future<void> cacheFacilities(List<Facility> facilities);
 
-  Future<List<HostelIsar>> getHostels();
-  Future<void> cacheHostels(List<HostelIsar> hostels);
+  Future<List<Hostel>> getHostels();
+  Future<void> cacheHostels(List<Hostel> hostels);
 
-  Future<List<HostelRoomIsar>> getHostelRooms();
-  Future<void> cacheHostelRooms(List<HostelRoomIsar> rooms);
+  Future<List<HostelRoom>> getHostelRooms();
+  Future<void> cacheHostelRooms(List<HostelRoom> rooms);
 
-  Future<List<TransportRouteIsar>> getTransportRoutes();
-  Future<void> cacheTransportRoutes(List<TransportRouteIsar> routes);
+  Future<List<TransportRoute>> getTransportRoutes();
+  Future<void> cacheTransportRoutes(List<TransportRoute> routes);
 
-  Future<List<TransportStopIsar>> getTransportStops();
-  Future<void> cacheTransportStops(List<TransportStopIsar> stops);
+  Future<List<TransportStop>> getTransportStops();
+  Future<void> cacheTransportStops(List<TransportStop> stops);
 
-  Future<List<TransportVehicleIsar>> getTransportVehicles();
-  Future<void> cacheTransportVehicles(List<TransportVehicleIsar> vehicles);
+  Future<List<TransportVehicle>> getTransportVehicles();
+  Future<void> cacheTransportVehicles(List<TransportVehicle> vehicles);
 
-  Future<List<StructureFeeCategoryIsar>> getFeeCategories();
-  Future<void> cacheFeeCategories(List<StructureFeeCategoryIsar> categories);
+  Future<List<FeeCategory>> getFeeCategories();
+  Future<void> cacheFeeCategories(List<FeeCategory> categories);
 
-  Future<List<AssessmentTypeDefIsar>> getAssessmentTypes();
-  Future<void> cacheAssessmentTypes(List<AssessmentTypeDefIsar> types);
+  Future<List<AssessmentTypeDef>> getAssessmentTypes();
+  Future<void> cacheAssessmentTypes(List<AssessmentTypeDef> types);
 
-  Future<List<GradingSystemDefIsar>> getGradingSystems();
-  Future<void> cacheGradingSystems(List<GradingSystemDefIsar> systems);
+  Future<List<GradingSystemDef>> getGradingSystems();
+  Future<void> cacheGradingSystems(List<GradingSystemDef> systems);
 
-  Future<List<GradeBandIsar>> getGradeBands();
-  Future<void> cacheGradeBands(List<GradeBandIsar> bands);
+  Future<List<GradeBand>> getGradeBands();
+  Future<void> cacheGradeBands(List<GradeBand> bands);
 
-  Future<List<AttendanceTypeDefIsar>> getAttendanceTypes();
-  Future<void> cacheAttendanceTypes(List<AttendanceTypeDefIsar> types);
+  Future<List<AttendanceTypeDef>> getAttendanceTypes();
+  Future<void> cacheAttendanceTypes(List<AttendanceTypeDef> types);
 
-  Future<List<AttendanceSessionDefIsar>> getAttendanceSessions();
-  Future<void> cacheAttendanceSessions(List<AttendanceSessionDefIsar> sessions);
+  Future<List<AttendanceSessionDef>> getAttendanceSessions();
+  Future<void> cacheAttendanceSessions(List<AttendanceSessionDef> sessions);
 
-  Future<List<AnnouncementCategoryDefIsar>> getAnnouncementCategories();
+  Future<List<AnnouncementCategoryDef>> getAnnouncementCategories();
   Future<void> cacheAnnouncementCategories(
-    List<AnnouncementCategoryDefIsar> categories,
+    List<AnnouncementCategoryDef> categories,
   );
 
-  Future<List<NotificationCategoryDefIsar>> getNotificationCategories();
+  Future<List<NotificationCategoryDef>> getNotificationCategories();
   Future<void> cacheNotificationCategories(
-    List<NotificationCategoryDefIsar> categories,
+    List<NotificationCategoryDef> categories,
   );
 
-  Future<List<MessageTemplateDefIsar>> getMessageTemplates();
-  Future<void> cacheMessageTemplates(List<MessageTemplateDefIsar> templates);
+  Future<List<MessageTemplateDef>> getMessageTemplates();
+  Future<void> cacheMessageTemplates(List<MessageTemplateDef> templates);
 
-  Future<List<DocumentTemplateDefIsar>> getDocumentTemplates();
-  Future<void> cacheDocumentTemplates(List<DocumentTemplateDefIsar> templates);
+  Future<List<DocumentTemplateDef>> getDocumentTemplates();
+  Future<void> cacheDocumentTemplates(List<DocumentTemplateDef> templates);
 
-  Future<List<CustomFieldDefIsar>> getCustomFields();
-  Future<void> cacheCustomFields(List<CustomFieldDefIsar> fields);
-}
-
-class StructureLocalDataSourceImpl implements StructureLocalDataSource {
-  final Isar isar;
-
-  StructureLocalDataSourceImpl({required this.isar});
-
-  @override
-  Future<List<EducationalLevelIsar>> getLevels() async {
-    return await isar.educationalLevelIsars.where().findAll();
-  }
-
-  @override
-  Future<void> cacheLevels(List<EducationalLevelIsar> levels) async {
-    await isar.writeTxn(() async {
-      await isar.educationalLevelIsars.clear();
-      await isar.educationalLevelIsars.putAll(levels);
-    });
-  }
-
-  @override
-  Future<List<AcademicYearIsar>> getAcademicYears() async {
-    return await isar.academicYearIsars.where().findAll();
-  }
-
-  @override
-  Future<void> cacheAcademicYears(List<AcademicYearIsar> years) async {
-    await isar.writeTxn(() async {
-      await isar.academicYearIsars.clear();
-      await isar.academicYearIsars.putAll(years);
-    });
-  }
-
-  @override
-  Future<List<AcademicTermIsar>> getAcademicTerms() async {
-    return await isar.academicTermIsars.where().findAll();
-  }
-
-  @override
-  Future<void> cacheAcademicTerms(List<AcademicTermIsar> terms) async {
-    await isar.writeTxn(() async {
-      await isar.academicTermIsars.clear();
-      await isar.academicTermIsars.putAll(terms);
-    });
-  }
-
-  @override
-  Future<List<SchoolClassIsar>> getClasses() async {
-    return await isar.schoolClassIsars.where().findAll();
-  }
-
-  @override
-  Future<void> cacheClasses(List<SchoolClassIsar> classes) async {
-    await isar.writeTxn(() async {
-      await isar.schoolClassIsars.clear();
-      await isar.schoolClassIsars.putAll(classes);
-    });
-  }
-
-  @override
-  Future<List<ClassStreamIsar>> getStreams() async {
-    return await isar.classStreamIsars.where().findAll();
-  }
-
-  @override
-  Future<void> cacheStreams(List<ClassStreamIsar> streams) async {
-    await isar.writeTxn(() async {
-      await isar.classStreamIsars.clear();
-      await isar.classStreamIsars.putAll(streams);
-    });
-  }
-
-  @override
-  Future<List<SubjectIsar>> getSubjects() async {
-    return await isar.subjectIsars.where().findAll();
-  }
-
-  @override
-  Future<void> cacheSubjects(List<SubjectIsar> subjects) async {
-    await isar.writeTxn(() async {
-      await isar.subjectIsars.clear();
-      await isar.subjectIsars.putAll(subjects);
-    });
-  }
-
-  @override
-  Future<List<DepartmentIsar>> getDepartments() async {
-    return await isar.departmentIsars.where().findAll();
-  }
-
-  @override
-  Future<void> cacheDepartments(List<DepartmentIsar> departments) async {
-    await isar.writeTxn(() async {
-      await isar.departmentIsars.clear();
-      await isar.departmentIsars.putAll(departments);
-    });
-  }
-
-  @override
-  Future<List<StaffDesignationIsar>> getDesignations() async {
-    return await isar.staffDesignationIsars.where().findAll();
-  }
-
-  @override
-  Future<void> cacheDesignations(
-    List<StaffDesignationIsar> designations,
-  ) async {
-    await isar.writeTxn(() async {
-      await isar.staffDesignationIsars.clear();
-      await isar.staffDesignationIsars.putAll(designations);
-    });
-  }
-
-  @override
-  Future<List<StaffRoleIsar>> getStaffRoles() async {
-    return await isar.staffRoleIsars.where().findAll();
-  }
-
-  @override
-  Future<void> cacheStaffRoles(List<StaffRoleIsar> roles) async {
-    await isar.writeTxn(() async {
-      await isar.staffRoleIsars.clear();
-      await isar.staffRoleIsars.putAll(roles);
-    });
-  }
-
-  @override
-  Future<List<CampusIsar>> getCampuses() async =>
-      isar.campusIsars.where().findAll();
-
-  @override
-  Future<void> cacheCampuses(List<CampusIsar> campuses) async {
-    await isar.writeTxn(() async {
-      await isar.campusIsars.clear();
-      await isar.campusIsars.putAll(campuses);
-    });
-  }
-
-  @override
-  Future<List<HouseIsar>> getHouses() async =>
-      isar.houseIsars.where().findAll();
-
-  @override
-  Future<void> cacheHouses(List<HouseIsar> houses) async {
-    await isar.writeTxn(() async {
-      await isar.houseIsars.clear();
-      await isar.houseIsars.putAll(houses);
-    });
-  }
-
-  @override
-  Future<List<ClubIsar>> getClubs() async => isar.clubIsars.where().findAll();
-
-  @override
-  Future<void> cacheClubs(List<ClubIsar> clubs) async {
-    await isar.writeTxn(() async {
-      await isar.clubIsars.clear();
-      await isar.clubIsars.putAll(clubs);
-    });
-  }
-
-  @override
-  Future<List<FacilityIsar>> getFacilities() async =>
-      isar.facilityIsars.where().findAll();
-
-  @override
-  Future<void> cacheFacilities(List<FacilityIsar> facilities) async {
-    await isar.writeTxn(() async {
-      await isar.facilityIsars.clear();
-      await isar.facilityIsars.putAll(facilities);
-    });
-  }
-
-  @override
-  Future<List<HostelIsar>> getHostels() async =>
-      isar.hostelIsars.where().findAll();
-
-  @override
-  Future<void> cacheHostels(List<HostelIsar> hostels) async {
-    await isar.writeTxn(() async {
-      await isar.hostelIsars.clear();
-      await isar.hostelIsars.putAll(hostels);
-    });
-  }
-
-  @override
-  Future<List<HostelRoomIsar>> getHostelRooms() async =>
-      isar.hostelRoomIsars.where().findAll();
-
-  @override
-  Future<void> cacheHostelRooms(List<HostelRoomIsar> rooms) async {
-    await isar.writeTxn(() async {
-      await isar.hostelRoomIsars.clear();
-      await isar.hostelRoomIsars.putAll(rooms);
-    });
-  }
-
-  @override
-  Future<List<TransportRouteIsar>> getTransportRoutes() async =>
-      isar.transportRouteIsars.where().findAll();
-
-  @override
-  Future<void> cacheTransportRoutes(List<TransportRouteIsar> routes) async {
-    await isar.writeTxn(() async {
-      await isar.transportRouteIsars.clear();
-      await isar.transportRouteIsars.putAll(routes);
-    });
-  }
-
-  @override
-  Future<List<TransportStopIsar>> getTransportStops() async =>
-      isar.transportStopIsars.where().findAll();
-
-  @override
-  Future<void> cacheTransportStops(List<TransportStopIsar> stops) async {
-    await isar.writeTxn(() async {
-      await isar.transportStopIsars.clear();
-      await isar.transportStopIsars.putAll(stops);
-    });
-  }
-
-  @override
-  Future<List<TransportVehicleIsar>> getTransportVehicles() async =>
-      isar.transportVehicleIsars.where().findAll();
-
-  @override
-  Future<void> cacheTransportVehicles(
-    List<TransportVehicleIsar> vehicles,
-  ) async {
-    await isar.writeTxn(() async {
-      await isar.transportVehicleIsars.clear();
-      await isar.transportVehicleIsars.putAll(vehicles);
-    });
-  }
-
-  @override
-  Future<List<StructureFeeCategoryIsar>> getFeeCategories() async =>
-      isar.structureFeeCategoryIsars.where().findAll();
-
-  @override
-  Future<void> cacheFeeCategories(
-    List<StructureFeeCategoryIsar> categories,
-  ) async {
-    await isar.writeTxn(() async {
-      await isar.structureFeeCategoryIsars.clear();
-      await isar.structureFeeCategoryIsars.putAll(categories);
-    });
-  }
-
-  @override
-  Future<List<AssessmentTypeDefIsar>> getAssessmentTypes() async =>
-      isar.assessmentTypeDefIsars.where().findAll();
-
-  @override
-  Future<void> cacheAssessmentTypes(List<AssessmentTypeDefIsar> types) async {
-    await isar.writeTxn(() async {
-      await isar.assessmentTypeDefIsars.clear();
-      await isar.assessmentTypeDefIsars.putAll(types);
-    });
-  }
-
-  @override
-  Future<List<GradingSystemDefIsar>> getGradingSystems() async =>
-      isar.gradingSystemDefIsars.where().findAll();
-
-  @override
-  Future<void> cacheGradingSystems(List<GradingSystemDefIsar> systems) async {
-    await isar.writeTxn(() async {
-      await isar.gradingSystemDefIsars.clear();
-      await isar.gradingSystemDefIsars.putAll(systems);
-    });
-  }
-
-  @override
-  Future<List<GradeBandIsar>> getGradeBands() async =>
-      isar.gradeBandIsars.where().findAll();
-
-  @override
-  Future<void> cacheGradeBands(List<GradeBandIsar> bands) async {
-    await isar.writeTxn(() async {
-      await isar.gradeBandIsars.clear();
-      await isar.gradeBandIsars.putAll(bands);
-    });
-  }
-
-  @override
-  Future<List<AttendanceTypeDefIsar>> getAttendanceTypes() async =>
-      isar.attendanceTypeDefIsars.where().findAll();
-
-  @override
-  Future<void> cacheAttendanceTypes(List<AttendanceTypeDefIsar> types) async {
-    await isar.writeTxn(() async {
-      await isar.attendanceTypeDefIsars.clear();
-      await isar.attendanceTypeDefIsars.putAll(types);
-    });
-  }
-
-  @override
-  Future<List<AttendanceSessionDefIsar>> getAttendanceSessions() async =>
-      isar.attendanceSessionDefIsars.where().findAll();
-
-  @override
-  Future<void> cacheAttendanceSessions(
-    List<AttendanceSessionDefIsar> sessions,
-  ) async {
-    await isar.writeTxn(() async {
-      await isar.attendanceSessionDefIsars.clear();
-      await isar.attendanceSessionDefIsars.putAll(sessions);
-    });
-  }
-
-  @override
-  Future<List<AnnouncementCategoryDefIsar>> getAnnouncementCategories() async =>
-      isar.announcementCategoryDefIsars.where().findAll();
-
-  @override
-  Future<void> cacheAnnouncementCategories(
-    List<AnnouncementCategoryDefIsar> categories,
-  ) async {
-    await isar.writeTxn(() async {
-      await isar.announcementCategoryDefIsars.clear();
-      await isar.announcementCategoryDefIsars.putAll(categories);
-    });
-  }
-
-  @override
-  Future<List<NotificationCategoryDefIsar>> getNotificationCategories() async =>
-      isar.notificationCategoryDefIsars.where().findAll();
-
-  @override
-  Future<void> cacheNotificationCategories(
-    List<NotificationCategoryDefIsar> categories,
-  ) async {
-    await isar.writeTxn(() async {
-      await isar.notificationCategoryDefIsars.clear();
-      await isar.notificationCategoryDefIsars.putAll(categories);
-    });
-  }
-
-  @override
-  Future<List<MessageTemplateDefIsar>> getMessageTemplates() async =>
-      isar.messageTemplateDefIsars.where().findAll();
-
-  @override
-  Future<void> cacheMessageTemplates(
-    List<MessageTemplateDefIsar> templates,
-  ) async {
-    await isar.writeTxn(() async {
-      await isar.messageTemplateDefIsars.clear();
-      await isar.messageTemplateDefIsars.putAll(templates);
-    });
-  }
-
-  @override
-  Future<List<DocumentTemplateDefIsar>> getDocumentTemplates() async =>
-      isar.documentTemplateDefIsars.where().findAll();
-
-  @override
-  Future<void> cacheDocumentTemplates(
-    List<DocumentTemplateDefIsar> templates,
-  ) async {
-    await isar.writeTxn(() async {
-      await isar.documentTemplateDefIsars.clear();
-      await isar.documentTemplateDefIsars.putAll(templates);
-    });
-  }
-
-  @override
-  Future<List<CustomFieldDefIsar>> getCustomFields() async =>
-      isar.customFieldDefIsars.where().findAll();
-
-  @override
-  Future<void> cacheCustomFields(List<CustomFieldDefIsar> fields) async {
-    await isar.writeTxn(() async {
-      await isar.customFieldDefIsars.clear();
-      await isar.customFieldDefIsars.putAll(fields);
-    });
-  }
+  Future<List<CustomFieldDef>> getCustomFields();
+  Future<void> cacheCustomFields(List<CustomFieldDef> fields);
 }

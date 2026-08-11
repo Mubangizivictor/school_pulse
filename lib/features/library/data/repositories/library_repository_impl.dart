@@ -10,7 +10,6 @@ import '../models/library_policy_model.dart';
 import '../models/library_resource_model.dart';
 import '../models/library_borrowing_model.dart';
 import '../models/library_reservation_model.dart';
-import '../models/library_isar_models.dart';
 import 'package:rxdart/rxdart.dart';
 import '../../../admin/data/repositories/audit_repository.dart';
 import '../../../finance/domain/repositories/finance_repository.dart';
@@ -36,14 +35,9 @@ class LibraryRepositoryImpl implements LibraryRepository {
   @override
   Stream<List<LibraryResource>> watchResources(String schoolId) {
     return Rx.merge([
-      localDataSource
-          .getCachedResources(schoolId)
-          .asStream()
-          .map((isarList) => isarList.map((i) => i.toEntity()).toList()),
+      localDataSource.getCachedResources(schoolId).asStream(),
       remoteDataSource.watchResources(schoolId).doOnData((resources) {
-        localDataSource.cacheResources(
-          resources.map((r) => LibraryResourceIsar.fromEntity(r)).toList(),
-        );
+        localDataSource.cacheResources(resources);
       }),
     ]).distinct();
   }
@@ -135,16 +129,11 @@ class LibraryRepositoryImpl implements LibraryRepository {
     return Rx.merge([
       localDataSource
           .getCachedBorrowings(schoolId, borrowerId: borrowerId)
-          .asStream()
-          .map((isarList) => isarList.map((i) => i.toEntity()).toList()),
+          .asStream(),
       remoteDataSource
           .watchBorrowingHistory(schoolId, borrowerId: borrowerId)
           .doOnData((borrowings) {
-            localDataSource.cacheBorrowings(
-              borrowings
-                  .map((b) => LibraryBorrowingIsar.fromEntity(b))
-                  .toList(),
-            );
+            localDataSource.cacheBorrowings(borrowings);
           }),
     ]).distinct();
   }

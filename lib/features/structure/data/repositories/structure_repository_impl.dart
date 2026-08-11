@@ -14,7 +14,6 @@ import '../../domain/entities/custom_field_entities.dart';
 import '../../domain/repositories/structure_repository.dart';
 import '../datasources/structure_remote_data_source.dart';
 import '../datasources/structure_local_data_source.dart';
-import '../models/structure_isar_models.dart';
 
 /// Streams read live from Firestore (which already persists its own
 /// offline cache) and side-effect write through to the Isar cache on
@@ -33,7 +32,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<EducationalLevel>> watchLevels(String schoolId) {
     return remoteDataSource.watchLevels(schoolId).map((levels) {
       localDataSource.cacheLevels(
-        levels.map((e) => EducationalLevelIsar.fromEntity(e)).toList(),
+        levels,
       );
       return levels;
     });
@@ -63,7 +62,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<AcademicYear>> watchAcademicYears(String schoolId) {
     return remoteDataSource.watchAcademicYears(schoolId).map((years) {
       localDataSource.cacheAcademicYears(
-        years.map((e) => AcademicYearIsar.fromEntity(e)).toList(),
+        years,
       );
       return years;
     });
@@ -97,7 +96,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<AcademicTerm>> watchAcademicTerms(String schoolId) {
     return remoteDataSource.watchAcademicTerms(schoolId).map((terms) {
       localDataSource.cacheAcademicTerms(
-        terms.map((e) => AcademicTermIsar.fromEntity(e)).toList(),
+        terms,
       );
       return terms;
     });
@@ -131,7 +130,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<SchoolClass>> watchClasses(String schoolId) {
     return remoteDataSource.watchClasses(schoolId).map((classes) {
       localDataSource.cacheClasses(
-        classes.map((e) => SchoolClassIsar.fromEntity(e)).toList(),
+        classes,
       );
       return classes;
     });
@@ -161,7 +160,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<ClassStream>> watchStreams(String schoolId) {
     return remoteDataSource.watchStreams(schoolId).map((streams) {
       localDataSource.cacheStreams(
-        streams.map((e) => ClassStreamIsar.fromEntity(e)).toList(),
+        streams,
       );
       return streams;
     });
@@ -191,7 +190,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<Subject>> watchSubjects(String schoolId) {
     return remoteDataSource.watchSubjects(schoolId).map((subjects) {
       localDataSource.cacheSubjects(
-        subjects.map((e) => SubjectIsar.fromEntity(e)).toList(),
+        subjects,
       );
       return subjects;
     });
@@ -213,7 +212,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<Department>> watchDepartments(String schoolId) {
     return remoteDataSource.watchDepartments(schoolId).map((departments) {
       localDataSource.cacheDepartments(
-        departments.map((e) => DepartmentIsar.fromEntity(e)).toList(),
+        departments,
       );
       return departments;
     });
@@ -239,7 +238,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<StaffDesignation>> watchDesignations(String schoolId) {
     return remoteDataSource.watchDesignations(schoolId).map((designations) {
       localDataSource.cacheDesignations(
-        designations.map((e) => StaffDesignationIsar.fromEntity(e)).toList(),
+        designations,
       );
       return designations;
     });
@@ -261,7 +260,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<StaffRole>> watchStaffRoles(String schoolId) {
     return remoteDataSource.watchStaffRoles(schoolId).map((roles) {
       localDataSource.cacheStaffRoles(
-        roles.map((e) => StaffRoleIsar.fromEntity(e)).toList(),
+        roles,
       );
       return roles;
     });
@@ -301,7 +300,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<Campus>> watchCampuses(String schoolId) {
     return remoteDataSource.watchCampuses(schoolId).map((campuses) {
       localDataSource.cacheCampuses(
-        campuses.map((e) => CampusIsar.fromEntity(e)).toList(),
+        campuses,
       );
       return campuses;
     });
@@ -326,7 +325,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<House>> watchHouses(String schoolId) {
     return remoteDataSource.watchHouses(schoolId).map((houses) {
       localDataSource.cacheHouses(
-        houses.map((e) => HouseIsar.fromEntity(e)).toList(),
+        houses,
       );
       return houses;
     });
@@ -346,7 +345,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<Club>> watchClubs(String schoolId) {
     return remoteDataSource.watchClubs(schoolId).map((clubs) {
       localDataSource.cacheClubs(
-        clubs.map((e) => ClubIsar.fromEntity(e)).toList(),
+        clubs,
       );
       return clubs;
     });
@@ -365,7 +364,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<Facility>> watchFacilities(String schoolId) {
     return remoteDataSource.watchFacilities(schoolId).map((facilities) {
       localDataSource.cacheFacilities(
-        facilities.map((e) => FacilityIsar.fromEntity(e)).toList(),
+        facilities,
       );
       return facilities;
     });
@@ -387,7 +386,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<Hostel>> watchHostels(String schoolId) {
     return remoteDataSource.watchHostels(schoolId).map((hostels) {
       localDataSource.cacheHostels(
-        hostels.map((e) => HostelIsar.fromEntity(e)).toList(),
+        hostels,
       );
       return hostels;
     });
@@ -408,7 +407,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<HostelRoom>> watchHostelRooms(String schoolId) {
     return remoteDataSource.watchHostelRooms(schoolId).map((rooms) {
       localDataSource.cacheHostelRooms(
-        rooms.map((e) => HostelRoomIsar.fromEntity(e)).toList(),
+        rooms,
       );
       return rooms;
     });
@@ -430,7 +429,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<TransportRoute>> watchTransportRoutes(String schoolId) {
     return remoteDataSource.watchTransportRoutes(schoolId).map((routes) {
       localDataSource.cacheTransportRoutes(
-        routes.map((e) => TransportRouteIsar.fromEntity(e)).toList(),
+        routes,
       );
       return routes;
     });
@@ -452,7 +451,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<TransportStop>> watchTransportStops(String schoolId) {
     return remoteDataSource.watchTransportStops(schoolId).map((stops) {
       localDataSource.cacheTransportStops(
-        stops.map((e) => TransportStopIsar.fromEntity(e)).toList(),
+        stops,
       );
       return stops;
     });
@@ -474,7 +473,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<TransportVehicle>> watchTransportVehicles(String schoolId) {
     return remoteDataSource.watchTransportVehicles(schoolId).map((vehicles) {
       localDataSource.cacheTransportVehicles(
-        vehicles.map((e) => TransportVehicleIsar.fromEntity(e)).toList(),
+        vehicles,
       );
       return vehicles;
     });
@@ -496,7 +495,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<FeeCategory>> watchFeeCategories(String schoolId) {
     return remoteDataSource.watchFeeCategories(schoolId).map((categories) {
       localDataSource.cacheFeeCategories(
-        categories.map((e) => StructureFeeCategoryIsar.fromEntity(e)).toList(),
+        categories,
       );
       return categories;
     });
@@ -518,7 +517,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<AssessmentTypeDef>> watchAssessmentTypes(String schoolId) {
     return remoteDataSource.watchAssessmentTypes(schoolId).map((types) {
       localDataSource.cacheAssessmentTypes(
-        types.map((e) => AssessmentTypeDefIsar.fromEntity(e)).toList(),
+        types,
       );
       return types;
     });
@@ -540,7 +539,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<GradingSystemDef>> watchGradingSystems(String schoolId) {
     return remoteDataSource.watchGradingSystems(schoolId).map((systems) {
       localDataSource.cacheGradingSystems(
-        systems.map((e) => GradingSystemDefIsar.fromEntity(e)).toList(),
+        systems,
       );
       return systems;
     });
@@ -562,7 +561,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<GradeBand>> watchGradeBands(String schoolId) {
     return remoteDataSource.watchGradeBands(schoolId).map((bands) {
       localDataSource.cacheGradeBands(
-        bands.map((e) => GradeBandIsar.fromEntity(e)).toList(),
+        bands,
       );
       return bands;
     });
@@ -592,7 +591,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<AttendanceTypeDef>> watchAttendanceTypes(String schoolId) {
     return remoteDataSource.watchAttendanceTypes(schoolId).map((types) {
       localDataSource.cacheAttendanceTypes(
-        types.map((e) => AttendanceTypeDefIsar.fromEntity(e)).toList(),
+        types,
       );
       return types;
     });
@@ -614,7 +613,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<AttendanceSessionDef>> watchAttendanceSessions(String schoolId) {
     return remoteDataSource.watchAttendanceSessions(schoolId).map((sessions) {
       localDataSource.cacheAttendanceSessions(
-        sessions.map((e) => AttendanceSessionDefIsar.fromEntity(e)).toList(),
+        sessions,
       );
       return sessions;
     });
@@ -639,11 +638,7 @@ class StructureRepositoryImpl implements StructureRepository {
     return remoteDataSource.watchAnnouncementCategories(schoolId).map((
       categories,
     ) {
-      localDataSource.cacheAnnouncementCategories(
-        categories
-            .map((e) => AnnouncementCategoryDefIsar.fromEntity(e))
-            .toList(),
-      );
+      localDataSource.cacheAnnouncementCategories(categories);
       return categories;
     });
   }
@@ -667,11 +662,7 @@ class StructureRepositoryImpl implements StructureRepository {
     return remoteDataSource.watchNotificationCategories(schoolId).map((
       categories,
     ) {
-      localDataSource.cacheNotificationCategories(
-        categories
-            .map((e) => NotificationCategoryDefIsar.fromEntity(e))
-            .toList(),
-      );
+      localDataSource.cacheNotificationCategories(categories);
       return categories;
     });
   }
@@ -692,7 +683,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<MessageTemplateDef>> watchMessageTemplates(String schoolId) {
     return remoteDataSource.watchMessageTemplates(schoolId).map((templates) {
       localDataSource.cacheMessageTemplates(
-        templates.map((e) => MessageTemplateDefIsar.fromEntity(e)).toList(),
+        templates,
       );
       return templates;
     });
@@ -714,7 +705,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<DocumentTemplateDef>> watchDocumentTemplates(String schoolId) {
     return remoteDataSource.watchDocumentTemplates(schoolId).map((templates) {
       localDataSource.cacheDocumentTemplates(
-        templates.map((e) => DocumentTemplateDefIsar.fromEntity(e)).toList(),
+        templates,
       );
       return templates;
     });
@@ -736,7 +727,7 @@ class StructureRepositoryImpl implements StructureRepository {
   Stream<List<CustomFieldDef>> watchCustomFields(String schoolId) {
     return remoteDataSource.watchCustomFields(schoolId).map((fields) {
       localDataSource.cacheCustomFields(
-        fields.map((e) => CustomFieldDefIsar.fromEntity(e)).toList(),
+        fields,
       );
       return fields;
     });
