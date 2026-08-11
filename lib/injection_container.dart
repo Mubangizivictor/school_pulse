@@ -29,7 +29,7 @@ import 'package:school_pulse/features/appointments/presentation/bloc/appointment
 import 'package:school_pulse/features/appointments/presentation/bloc/appointment_action_bloc.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:isar/isar.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:school_pulse/core/platform/isar_bootstrap.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:school_pulse/core/access/effective_access_resolver.dart';
 import 'package:school_pulse/core/utils/device_id_service.dart';
@@ -52,7 +52,7 @@ import 'package:school_pulse/features/gate_ops/data/sync/movement_sync_engine.da
 import 'package:school_pulse/features/gate_ops/data/repositories/gate_ops_repository_impl.dart';
 import 'package:school_pulse/features/gate_ops/data/datasources/gate_ops_remote_data_source.dart';
 import 'package:school_pulse/features/gate_ops/data/datasources/gate_ops_local_data_source.dart';
-import 'package:school_pulse/features/gate_ops/data/models/gate_ops_isar_models.dart';
+import 'package:school_pulse/features/gate_ops/data/datasources/gate_ops_local_data_source_factory.dart';
 import 'package:school_pulse/features/gate_ops/domain/policies/movement_verification_policy.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -65,22 +65,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get_it/get_it.dart';
 import 'package:school_pulse/core/network/network_info.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
-import 'package:school_pulse/features/attendance_qr_integration/data/models/attendance_log_isar.dart';
 import 'package:school_pulse/features/attendance_qr_integration/domain/repositories/attendance_qr_repository.dart';
-import 'package:school_pulse/features/attendance_qr_integration/data/repositories/attendance_qr_repository_impl.dart';
+import 'package:school_pulse/features/attendance_qr_integration/data/repositories/attendance_qr_repository_factory.dart';
 import 'package:school_pulse/features/attendance_qr_integration/presentation/bloc/attendance_qr_bloc.dart';
-import 'package:school_pulse/features/student_identity/data/models/student_cache_isar.dart';
-import 'package:school_pulse/features/inventory/data/models/asset_isar.dart';
-import 'package:school_pulse/features/inventory/data/models/inventory_item_isar.dart';
-import 'package:school_pulse/features/inventory/data/models/stock_movement_isar.dart';
-import 'package:school_pulse/features/inventory/data/models/supplier_isar.dart';
-import 'package:school_pulse/features/inventory/data/models/purchase_order_isar.dart';
-import 'package:school_pulse/features/inventory/data/models/repair_isar.dart';
-import 'package:school_pulse/features/inventory/data/models/maintenance_isar.dart';
-import 'package:school_pulse/features/inventory/data/models/procurement_request_isar.dart';
-import 'package:school_pulse/features/library/data/models/library_isar_models.dart';
+import 'package:school_pulse/features/student_identity/data/repositories/student_identity_local_cache_factory.dart';
+import 'package:school_pulse/features/inventory/data/datasources/stores_assets_local_data_source_factory.dart';
+import 'package:school_pulse/features/library/data/datasources/local/library_local_data_source_factory.dart';
 import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.dart';
-import 'package:school_pulse/features/branding/data/models/school_branding_isar.dart';
+import 'package:school_pulse/features/branding/data/branding_local_cache_factory.dart';
 import 'package:school_pulse/features/branding/domain/usecases/get_school_branding.dart';
 
 import 'package:school_pulse/features/messages/domain/repositories/messages_repository.dart';
@@ -112,8 +104,6 @@ import 'package:school_pulse/features/admin/presentation/bloc/system_config_bloc
 import 'package:school_pulse/features/exams/domain/repositories/assessment_repository.dart';
 import 'package:school_pulse/features/exams/data/repositories/assessment_repository_impl.dart';
 import 'package:school_pulse/features/exams/data/datasources/assessment_remote_data_source.dart';
-import 'package:school_pulse/features/exams/data/datasources/assessment_local_data_source.dart';
-import 'package:school_pulse/features/exams/data/models/isar_assessment_mark.dart';
 import 'package:school_pulse/features/exams/presentation/bloc/assessment_bloc.dart';
 
 // Exams (dashboard)
@@ -149,7 +139,7 @@ import 'package:school_pulse/features/student/domain/repositories/student_reposi
 import 'package:school_pulse/features/student/data/repositories/student_repository_impl.dart';
 import 'package:school_pulse/features/student/data/datasources/student_remote_data_source.dart';
 import 'package:school_pulse/features/student/data/datasources/student_local_data_source.dart';
-import 'package:school_pulse/features/student/data/models/student_isar_models.dart';
+import 'package:school_pulse/features/student/data/datasources/student_local_data_source_factory.dart';
 import 'package:school_pulse/features/student/domain/usecases/create_student.dart';
 import 'package:school_pulse/features/student/domain/usecases/get_students_by_ids.dart';
 import 'package:school_pulse/features/student/domain/usecases/get_all_students.dart';
@@ -208,7 +198,7 @@ import 'package:school_pulse/features/catering/data/repositories/catering_reposi
 import 'package:school_pulse/features/catering/data/datasources/catering_remote_data_source.dart';
 import 'package:school_pulse/features/catering/data/datasources/catering_local_data_source.dart';
 import 'package:school_pulse/features/catering/presentation/bloc/catering_bloc.dart';
-import 'package:school_pulse/features/catering/data/models/meal_record_isar.dart';
+import 'package:school_pulse/features/catering/data/datasources/catering_local_data_source_factory.dart';
 
 // Dean
 import 'package:school_pulse/features/dean/domain/repositories/dean_repository.dart';
@@ -327,8 +317,8 @@ import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_l
 import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_remote_data_source.dart';
 import 'package:school_pulse/features/teacher/data/datasources/class_teacher_local_data_source.dart';
 import 'package:school_pulse/features/teacher/data/datasources/class_teacher_remote_data_source.dart';
-import 'package:school_pulse/features/teacher/data/models/class_teacher_isar_models.dart';
-import 'package:school_pulse/features/teacher/data/models/subject_teacher_isar_models.dart';
+import 'package:school_pulse/features/teacher/data/datasources/class_teacher_local_data_source_factory.dart';
+import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_local_data_source_factory.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_attendance_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_communication_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_performance_repository_impl.dart';
@@ -418,7 +408,7 @@ import 'package:school_pulse/features/structure/data/repositories/structure_repo
 import 'package:school_pulse/features/structure/data/datasources/structure_remote_data_source.dart';
 import 'package:school_pulse/features/structure/data/datasources/structure_local_data_source.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/structure_bloc.dart';
-import 'package:school_pulse/features/structure/data/models/structure_isar_models.dart';
+import 'package:school_pulse/features/structure/data/datasources/structure_local_data_source_factory.dart';
 import 'package:school_pulse/features/structure/domain/services/structure_configuration_service.dart';
 import 'package:school_pulse/features/structure/data/services/structure_configuration_service_impl.dart';
 
@@ -440,9 +430,8 @@ import 'package:school_pulse/features/biometrics/data/datasources/biometric_loca
 import 'package:school_pulse/features/biometrics/data/datasources/mock_biometric_device_service.dart';
 import 'package:school_pulse/features/biometrics/domain/usecases/biometric_usecases.dart';
 import 'package:school_pulse/features/biometrics/presentation/bloc/biometrics_bloc.dart';
-import 'package:school_pulse/features/biometrics/data/models/biometric_template_isar.dart';
-import 'package:school_pulse/features/notifications/data/models/notification_isar.dart';
-import 'package:school_pulse/features/notifications/data/models/notification_token_isar.dart';
+import 'package:school_pulse/features/biometrics/data/datasources/biometric_local_data_source_factory.dart';
+import 'package:school_pulse/features/notifications/data/datasources/notification_local_data_source_factory.dart';
 import 'package:school_pulse/features/notifications/domain/repositories/notification_repository.dart';
 import 'package:school_pulse/features/notifications/data/repositories/notification_repository_impl.dart';
 import 'package:school_pulse/features/notifications/data/datasources/notification_local_data_source.dart';
@@ -456,13 +445,14 @@ import 'package:school_pulse/features/notifications/data/notification_image_cach
 import 'package:school_pulse/features/notifications/domain/services/notification_sender.dart';
 import 'package:school_pulse/features/notifications/local/notification_presenter.dart';
 import 'package:school_pulse/features/notifications/push/token_management/notification_token_manager.dart';
+import 'package:school_pulse/features/notifications/push/token_management/token_local_cache_factory.dart';
 import 'package:school_pulse/features/notifications/push/notification_badge_service.dart';
 import 'package:school_pulse/features/notifications/testing/notification_test_service/notification_test_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source.dart';
-import 'package:school_pulse/features/verification/data/models/verification_isar_models.dart';
+import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source_factory.dart';
 import 'package:school_pulse/features/verification/data/repositories/identity_resolver_impl.dart';
 import 'package:school_pulse/features/verification/data/repositories/permission_evaluator_impl.dart';
 import 'package:school_pulse/features/verification/data/repositories/verification_event_recorder_impl.dart';
@@ -482,15 +472,6 @@ import 'package:school_pulse/features/verification/domain/repositories/credentia
 import 'package:school_pulse/core/services/nfc/nfc_credential_reader_adapter.dart';
 
 final sl = GetIt.instance;
-
-/// Isar's web engine persists to IndexedDB and ignores the directory path;
-/// `getApplicationDocumentsDirectory()` has no web implementation and throws,
-/// so it must not be called on web at all.
-Future<String> _resolveIsarDirectory() async {
-  if (kIsWeb) return '';
-  final dir = await getApplicationDocumentsDirectory();
-  return dir.path;
-}
 
 Future<void> init() async {
   // Features - Assessment
@@ -515,9 +496,11 @@ Future<void> init() async {
     () => AssessmentRemoteDataSourceImpl(firestore: sl()),
   );
 
-  sl.registerLazySingleton<AssessmentLocalDataSource>(
-    () => AssessmentLocalDataSourceImpl(isar: sl()),
-  );
+  // AssessmentLocalDataSource: confirmed unused anywhere in the codebase
+  // (registered but never sl<AssessmentLocalDataSource>()'d) - not
+  // registered here since its Isar model has no web-safe path and nothing
+  // depends on it. See lib/features/exams/data/datasources/
+  // assessment_local_data_source.dart if this needs reviving later.
 
   // Features - Gate Operations (Gatekeeper Simple Mode rebuild)
   // Note: GateOpsBloc itself is registered once the presentation layer
@@ -553,7 +536,10 @@ Future<void> init() async {
     () => GateOpsRemoteDataSourceImpl(firestore: sl()),
   );
   sl.registerLazySingleton<GateOpsLocalDataSource>(
-    () => GateOpsLocalDataSourceImpl(sl()),
+    () => createGateOpsLocalDataSource(
+      isar: kIsWeb ? null : sl<Isar>(),
+      remote: sl<GateOpsRemoteDataSource>(),
+    ),
   );
 
   // Features - Appointments & Meeting Management
@@ -612,7 +598,12 @@ Future<void> init() async {
 
   // Branding
   sl.registerLazySingleton(() => GetSchoolBranding(sl()));
-  sl.registerFactory(() => BrandingBloc(isar: sl(), getSchoolBranding: sl()));
+  sl.registerFactory(
+    () => BrandingBloc(
+      localCache: createBrandingLocalCache(isar: kIsWeb ? null : sl<Isar>()),
+      getSchoolBranding: sl(),
+    ),
+  );
 
   // Features - Exams (dashboard)
   sl.registerFactory(() => ExamsBloc(repository: sl()));
@@ -674,7 +665,10 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<StudentLocalDataSource>(
-    () => StudentLocalDataSourceImpl(sl()),
+    () => createStudentLocalDataSource(
+      isar: kIsWeb ? null : sl<Isar>(),
+      remote: sl<StudentRemoteDataSource>(),
+    ),
   );
 
   sl.registerLazySingleton(
@@ -708,7 +702,9 @@ Future<void> init() async {
   sl.registerLazySingleton<StudentIdentityRepository>(
     () => StudentIdentityRepositoryImpl(
       firestore: sl(),
-      isar: sl(),
+      localCache: createStudentIdentityLocalCache(
+        isar: kIsWeb ? null : sl<Isar>(),
+      ),
       idGenerator: sl(),
       functions: sl(),
     ),
@@ -718,7 +714,10 @@ Future<void> init() async {
   // lookup) but never registered, so the QR/manual attendance stub
   // screens had nothing real to call - see qr_scanner_screen.dart etc.
   sl.registerLazySingleton<AttendanceQrRepository>(
-    () => AttendanceQrRepositoryImpl(firestore: sl(), isar: sl()),
+    () => createAttendanceQrRepository(
+      firestore: sl<FirebaseFirestore>(),
+      isar: kIsWeb ? null : sl<Isar>(),
+    ),
   );
   sl.registerFactory(
     () =>
@@ -887,7 +886,10 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<CateringLocalDataSource>(
-    () => CateringLocalDataSourceImpl(isar: sl()),
+    () => createCateringLocalDataSource(
+      isar: kIsWeb ? null : sl<Isar>(),
+      remote: sl<CateringRemoteDataSource>(),
+    ),
   );
 
   // Features - Dean
@@ -1067,7 +1069,10 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<StoresAssetsLocalDataSource>(
-    () => StoresAssetsLocalDataSourceImpl(isar: sl()),
+    () => createStoresAssetsLocalDataSource(
+      isar: kIsWeb ? null : sl<Isar>(),
+      remote: sl<StoresAssetsRemoteDataSource>(),
+    ),
   );
 
   // Features - Library
@@ -1096,7 +1101,10 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<LibraryLocalDataSource>(
-    () => LibraryLocalDataSourceImpl(isar: sl()),
+    () => createLibraryLocalDataSource(
+      isar: kIsWeb ? null : sl<Isar>(),
+      remote: sl<LibraryRemoteDataSource>(),
+    ),
   );
 
   // Features - Matron
@@ -1167,7 +1175,10 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<NotificationLocalDataSource>(
-    () => NotificationLocalDataSourceImpl(isar: sl()),
+    () => createNotificationLocalDataSource(
+      isar: kIsWeb ? null : sl<Isar>(),
+      remote: sl<NotificationRemoteDataSource>(),
+    ),
   );
 
   // Push delivery pipeline.
@@ -1195,7 +1206,7 @@ Future<void> init() async {
     () => NotificationTokenManager(
       messaging: FirebaseMessaging.instance,
       firestore: sl(),
-      isar: sl(),
+      localCache: createTokenLocalCache(isar: kIsWeb ? null : sl<Isar>()),
     ),
   );
 
@@ -1487,7 +1498,10 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<ClassTeacherLocalDataSource>(
-    () => ClassTeacherLocalDataSourceImpl(isar: sl()),
+    () => createClassTeacherLocalDataSource(
+      isar: kIsWeb ? null : sl<Isar>(),
+      remote: sl<ClassTeacherRemoteDataSource>(),
+    ),
   );
 
   sl.registerLazySingleton<MarksRepository>(
@@ -1578,7 +1592,7 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<SubjectTeacherLocalDataSource>(
-    () => SubjectTeacherLocalDataSourceImpl(isar: sl()),
+    () => createSubjectTeacherLocalDataSource(isar: kIsWeb ? null : sl<Isar>()),
   );
 
   // Features - Transport
@@ -1677,7 +1691,7 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<StructureLocalDataSource>(
-    () => StructureLocalDataSourceImpl(isar: sl()),
+    () => createStructureLocalDataSource(isar: kIsWeb ? null : sl<Isar>()),
   );
 
   sl.registerLazySingleton(() => StructureDependencyService(firestore: sl()));
@@ -1727,7 +1741,7 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<BiometricLocalDataSource>(
-    () => BiometricLocalDataSourceImpl(sl()),
+    () => createBiometricLocalDataSource(isar: kIsWeb ? null : sl<Isar>()),
   );
 
   // `VerifyFingerprint`/`EnrollFingerprint` already depended on this but it
@@ -1806,7 +1820,10 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<VerificationLocalDataSource>(
-    () => VerificationLocalDataSourceImpl(sl()),
+    () => createVerificationLocalDataSource(
+      isar: kIsWeb ? null : sl<Isar>(),
+      remote: kIsWeb ? sl<FirebaseFirestore>() : null,
+    ),
   );
 
   sl.registerLazySingleton<NfcCredentialRepository>(
@@ -1833,79 +1850,19 @@ Future<void> init() async {
 
   //! External
   final preferences = await SharedPreferences.getInstance();
-  final isarDirectory = await _resolveIsarDirectory();
-  final isar = await Isar.open([
-    StudentCacheIsarSchema,
-    StudentProfileIsarSchema,
-    AttendanceLogIsarSchema,
-    AssetIsarSchema,
-    InventoryItemIsarSchema,
-    StockMovementIsarSchema,
-    SupplierIsarSchema,
-    PurchaseOrderIsarSchema,
-    RepairIsarSchema,
-    MaintenanceIsarSchema,
-    ProcurementRequestIsarSchema,
-    SchoolBrandingIsarSchema,
-    BiometricTemplateIsarSchema,
-    GateIsarSchema,
-    MovementEventIsarSchema,
-    VisitorIsarSchema,
-    SecurityIncidentIsarSchema,
-    EmergencyEventIsarSchema,
-    EducationalLevelIsarSchema,
-    AcademicYearIsarSchema,
-    AcademicTermIsarSchema,
-    SchoolClassIsarSchema,
-    ClassStreamIsarSchema,
-    SubjectIsarSchema,
-    DepartmentIsarSchema,
-    StaffDesignationIsarSchema,
-    StaffRoleIsarSchema,
-    IsarAssessmentMarkSchema,
-    LibraryResourceIsarSchema,
-    LibraryBorrowingIsarSchema,
-    LibraryReservationIsarSchema,
-    MealRecordIsarSchema,
-    CachedCredentialIsarSchema,
-    RevokedCredentialIsarSchema,
-    VerificationEventIsarSchema,
-    AuthorizedDeviceIsarSchema,
-    OperatorPermissionSnapshotIsarSchema,
-    NotificationIsarSchema,
-    NotificationTokenIsarSchema,
-    StaffRoleAssignmentIsarSchema,
-    SubjectEnrollmentIsarSchema,
-    SubjectTeacherOfflineOperationIsarSchema,
-    LessonIsarSchema,
-    LessonAttendanceIsarSchema,
-    ClassStudentIsarSchema,
-    ClassDashboardCacheIsarSchema,
-    ClassAttendanceDraftIsarSchema,
-    AttendanceTypeDefIsarSchema,
-    CampusIsarSchema,
-    HouseIsarSchema,
-    ClubIsarSchema,
-    FacilityIsarSchema,
-    HostelIsarSchema,
-    HostelRoomIsarSchema,
-    TransportRouteIsarSchema,
-    TransportStopIsarSchema,
-    TransportVehicleIsarSchema,
-    StructureFeeCategoryIsarSchema,
-    AssessmentTypeDefIsarSchema,
-    GradingSystemDefIsarSchema,
-    GradeBandIsarSchema,
-    AttendanceSessionDefIsarSchema,
-    AnnouncementCategoryDefIsarSchema,
-    NotificationCategoryDefIsarSchema,
-    MessageTemplateDefIsarSchema,
-    DocumentTemplateDefIsarSchema,
-    CustomFieldDefIsarSchema,
-  ], directory: isarDirectory);
-  sl.registerLazySingleton(() => isar);
-
   sl.registerLazySingleton(() => preferences);
+
+  // No local database on web: every XLocalDataSource is registered with a
+  // web-specific implementation that talks to Firestore directly (see the
+  // conditional-import factory used on each registration below), so
+  // sl<Isar>() is never resolved on web. The schema list itself is also
+  // unreachable to the web compiler - it lives entirely inside
+  // isar_bootstrap_mobile.dart, which openIsarForMobile() only reaches via
+  // conditional import (see lib/core/platform/isar_bootstrap.dart).
+  if (!kIsWeb) {
+    final isar = await openIsarForMobile();
+    sl.registerLazySingleton<Isar>(() => isar as Isar);
+  }
 
   sl.registerLazySingleton(() => FirebaseAuth.instance);
   sl.registerLazySingleton(() => FirebaseFirestore.instance);
