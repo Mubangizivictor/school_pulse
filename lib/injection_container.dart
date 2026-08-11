@@ -27,6 +27,7 @@ import 'package:school_pulse/features/appointments/data/repositories/appointment
 import 'package:school_pulse/features/appointments/data/datasources/appointment_remote_data_source.dart';
 import 'package:school_pulse/features/appointments/presentation/bloc/appointment_settings_bloc.dart';
 import 'package:school_pulse/features/appointments/presentation/bloc/appointment_action_bloc.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -481,6 +482,15 @@ import 'package:school_pulse/features/verification/domain/repositories/credentia
 import 'package:school_pulse/core/services/nfc/nfc_credential_reader_adapter.dart';
 
 final sl = GetIt.instance;
+
+/// Isar's web engine persists to IndexedDB and ignores the directory path;
+/// `getApplicationDocumentsDirectory()` has no web implementation and throws,
+/// so it must not be called on web at all.
+Future<String> _resolveIsarDirectory() async {
+  if (kIsWeb) return '';
+  final dir = await getApplicationDocumentsDirectory();
+  return dir.path;
+}
 
 Future<void> init() async {
   // Features - Assessment
@@ -1823,7 +1833,7 @@ Future<void> init() async {
 
   //! External
   final preferences = await SharedPreferences.getInstance();
-  final dir = await getApplicationDocumentsDirectory();
+  final isarDirectory = await _resolveIsarDirectory();
   final isar = await Isar.open([
     StudentCacheIsarSchema,
     StudentProfileIsarSchema,
@@ -1892,7 +1902,7 @@ Future<void> init() async {
     MessageTemplateDefIsarSchema,
     DocumentTemplateDefIsarSchema,
     CustomFieldDefIsarSchema,
-  ], directory: dir.path);
+  ], directory: isarDirectory);
   sl.registerLazySingleton(() => isar);
 
   sl.registerLazySingleton(() => preferences);

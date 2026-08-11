@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:school_pulse/features/notifications/notification_coordinator.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -80,19 +81,35 @@ void main() async {
     }
   }
 
-  await NotificationService().initialize();
+  // Notification/DI/coordinator pipeline: one boundary, not one per call,
+  // because NotificationCoordinator depends on di.init()'s container and
+  // checkInitialMessage depends on the coordinator - per-call catching would
+  // let a later step run against an already-failed container and produce
+  // confusing secondary errors instead of one clear root cause. A failure
+  // here must never block runApp() (e.g. on web, where some of these
+  // services may be unavailable or misconfigured).
+  try {
+    await NotificationService().initialize();
+    await di.init();
 
-  await di.init();
-
-  // Notification pipeline: register channels and bind the FCM listeners.
-  // Deliberately after di.init() (it needs the container) and deliberately
-  // not awaited beyond this - the cold-launch check below is the only part
-  // that touches the network, and it is timeout-guarded inside.
-  await di.sl<NotificationCoordinator>().initialize();
-  unawaited(di.sl<NotificationCoordinator>().checkInitialMessage());
+    // Notification pipeline: register channels and bind the FCM listeners.
+    // Deliberately after di.init() (it needs the container) and deliberately
+    // not awaited beyond this - the cold-launch check below is the only part
+    // that touches the network, and it is timeout-guarded inside.
+    await di.sl<NotificationCoordinator>().initialize();
+    unawaited(di.sl<NotificationCoordinator>().checkInitialMessage());
+  } catch (e, stackTrace) {
+    if (kDebugMode) {
+      debugPrint('Startup initialization failed: $e\n$stackTrace');
+    }
+  }
 
   final themeProvider = ThemeProvider();
-  await themeProvider.initialize();
+  try {
+    await themeProvider.initialize();
+  } catch (e) {
+    if (kDebugMode) debugPrint('ThemeProvider initialization failed: $e');
+  }
 
   runApp(
     ChangeNotifierProvider.value(
