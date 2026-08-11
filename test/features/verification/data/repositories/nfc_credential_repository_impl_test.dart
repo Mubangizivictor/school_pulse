@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:school_pulse/core/network/network_info.dart';
 import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source.dart';
-import 'package:school_pulse/features/verification/data/models/verification_isar_models.dart';
 import 'package:school_pulse/features/verification/data/repositories/nfc_credential_repository_impl.dart';
+import 'package:school_pulse/features/verification/domain/entities/verification_cache_records.dart';
 
 class MockVerificationLocalDataSource extends Mock
     implements VerificationLocalDataSource {}
@@ -22,8 +22,25 @@ void main() {
   const cardUid = 'CARD-001';
 
   setUpAll(() {
-    registerFallbackValue(CachedCredentialIsar());
-    registerFallbackValue(RevokedCredentialIsar());
+    registerFallbackValue(
+      CachedCredential(
+        credentialValue: '',
+        credentialType: 'nfc',
+        identityId: '',
+        identityType: 'student',
+        schoolId: '',
+        status: 'active',
+        updatedAt: DateTime(2026),
+      ),
+    );
+    registerFallbackValue(
+      RevokedCredential(
+        credentialValue: '',
+        schoolId: '',
+        revokedAt: DateTime(2026),
+        reason: '',
+      ),
+    );
   });
 
   setUp(() {
@@ -70,7 +87,7 @@ void main() {
         final captured = verify(
           () => localDataSource.cacheCredential(captureAny()),
         ).captured;
-        final saved = captured.single as CachedCredentialIsar;
+        final saved = captured.single as CachedCredential;
         expect(saved.credentialValue, cardUid);
         expect(saved.credentialType, 'nfc');
         expect(saved.identityId, 'SP-STUDENT-1');
@@ -82,14 +99,15 @@ void main() {
     test(
       'is idempotent when the card is already actively assigned to the same identity',
       () async {
-        final existing = CachedCredentialIsar()
-          ..credentialValue = cardUid
-          ..credentialType = 'nfc'
-          ..identityId = 'SP-STUDENT-1'
-          ..identityType = 'student'
-          ..schoolId = schoolId
-          ..status = 'active'
-          ..updatedAt = DateTime(2026);
+        final existing = CachedCredential(
+      credentialValue: cardUid,
+      credentialType: 'nfc',
+      identityId: 'SP-STUDENT-1',
+      identityType: 'student',
+      schoolId: schoolId,
+      status: 'active',
+      updatedAt: DateTime(2026),
+    );
         when(
           () => localDataSource.findCredential(cardUid, schoolId),
         ).thenAnswer((_) async => existing);
@@ -109,14 +127,15 @@ void main() {
     test(
       'fails without writing anything when the card is actively assigned to a different identity',
       () async {
-        final existing = CachedCredentialIsar()
-          ..credentialValue = cardUid
-          ..credentialType = 'nfc'
-          ..identityId = 'SP-STUDENT-OTHER'
-          ..identityType = 'student'
-          ..schoolId = schoolId
-          ..status = 'active'
-          ..updatedAt = DateTime(2026);
+        final existing = CachedCredential(
+      credentialValue: cardUid,
+      credentialType: 'nfc',
+      identityId: 'SP-STUDENT-OTHER',
+      identityType: 'student',
+      schoolId: schoolId,
+      status: 'active',
+      updatedAt: DateTime(2026),
+    );
         when(
           () => localDataSource.findCredential(cardUid, schoolId),
         ).thenAnswer((_) async => existing);
@@ -137,14 +156,15 @@ void main() {
     test(
       'reuse: reassigns a previously-revoked card to a new identity and clears the denylist',
       () async {
-        final existing = CachedCredentialIsar()
-          ..credentialValue = cardUid
-          ..credentialType = 'nfc'
-          ..identityId = 'SP-STUDENT-OLD'
-          ..identityType = 'student'
-          ..schoolId = schoolId
-          ..status = 'revoked'
-          ..updatedAt = DateTime(2026);
+        final existing = CachedCredential(
+      credentialValue: cardUid,
+      credentialType: 'nfc',
+      identityId: 'SP-STUDENT-OLD',
+      identityType: 'student',
+      schoolId: schoolId,
+      status: 'revoked',
+      updatedAt: DateTime(2026),
+    );
         when(
           () => localDataSource.findCredential(cardUid, schoolId),
         ).thenAnswer((_) async => existing);
@@ -164,7 +184,7 @@ void main() {
           () => localDataSource.cacheCredential(captureAny()),
         ).captured;
         expect(
-          (captured.single as CachedCredentialIsar).identityId,
+          (captured.single as CachedCredential).identityId,
           'SP-STUDENT-NEW',
         );
       },
@@ -175,14 +195,15 @@ void main() {
     test(
       'marks the cached mapping revoked and adds a denylist entry',
       () async {
-        final existing = CachedCredentialIsar()
-          ..credentialValue = cardUid
-          ..credentialType = 'nfc'
-          ..identityId = 'SP-STUDENT-1'
-          ..identityType = 'student'
-          ..schoolId = schoolId
-          ..status = 'active'
-          ..updatedAt = DateTime(2026);
+        final existing = CachedCredential(
+      credentialValue: cardUid,
+      credentialType: 'nfc',
+      identityId: 'SP-STUDENT-1',
+      identityType: 'student',
+      schoolId: schoolId,
+      status: 'active',
+      updatedAt: DateTime(2026),
+    );
         when(
           () => localDataSource.findCredential(cardUid, schoolId),
         ).thenAnswer((_) async => existing);
@@ -199,7 +220,7 @@ void main() {
         final captured = verify(
           () => localDataSource.saveRevocation(captureAny()),
         ).captured;
-        final revocation = captured.single as RevokedCredentialIsar;
+        final revocation = captured.single as RevokedCredential;
         expect(revocation.credentialValue, cardUid);
         expect(revocation.reason, 'lost');
       },
@@ -226,14 +247,15 @@ void main() {
     test(
       'clears the denylist entry and restores the cached mapping to active',
       () async {
-        final existing = CachedCredentialIsar()
-          ..credentialValue = cardUid
-          ..credentialType = 'nfc'
-          ..identityId = 'SP-STUDENT-1'
-          ..identityType = 'student'
-          ..schoolId = schoolId
-          ..status = 'revoked'
-          ..updatedAt = DateTime(2026);
+        final existing = CachedCredential(
+      credentialValue: cardUid,
+      credentialType: 'nfc',
+      identityId: 'SP-STUDENT-1',
+      identityType: 'student',
+      schoolId: schoolId,
+      status: 'revoked',
+      updatedAt: DateTime(2026),
+    );
         when(
           () => localDataSource.findCredential(cardUid, schoolId),
         ).thenAnswer((_) async => existing);
@@ -273,14 +295,15 @@ void main() {
       'revokes the old card and assigns the new one to the same identity',
       () async {
         when(() => localDataSource.findCredential('OLD', schoolId)).thenAnswer(
-          (_) async => CachedCredentialIsar()
-            ..credentialValue = 'OLD'
-            ..credentialType = 'nfc'
-            ..identityId = 'SP-STUDENT-1'
-            ..identityType = 'student'
-            ..schoolId = schoolId
-            ..status = 'active'
-            ..updatedAt = DateTime(2026),
+          (_) async => CachedCredential(
+      credentialValue: 'OLD',
+      credentialType: 'nfc',
+      identityId: 'SP-STUDENT-1',
+      identityType: 'student',
+      schoolId: schoolId,
+      status: 'active',
+      updatedAt: DateTime(2026),
+    )
         );
         when(
           () => localDataSource.findCredential('NEW', schoolId),
@@ -302,7 +325,7 @@ void main() {
         final captured = verify(
           () => localDataSource.cacheCredential(captureAny()),
         ).captured;
-        final saved = captured.cast<CachedCredentialIsar>();
+        final saved = captured.cast<CachedCredential>();
         expect(
           saved.map((c) => c.credentialValue),
           containsAll(['OLD', 'NEW']),
@@ -325,14 +348,15 @@ void main() {
             schoolId,
           ),
         ).thenAnswer(
-          (_) async => CachedCredentialIsar()
-            ..credentialValue = cardUid
-            ..credentialType = 'nfc'
-            ..identityId = 'SP-STUDENT-1'
-            ..identityType = 'student'
-            ..schoolId = schoolId
-            ..status = 'revoked'
-            ..updatedAt = DateTime(2026),
+          (_) async => CachedCredential(
+      credentialValue: cardUid,
+      credentialType: 'nfc',
+      identityId: 'SP-STUDENT-1',
+      identityType: 'student',
+      schoolId: schoolId,
+      status: 'revoked',
+      updatedAt: DateTime(2026),
+    )
         );
 
         final result = await repository.findAssignedCredential(
@@ -435,14 +459,15 @@ void main() {
         when(
           () => localDataSource.findCredential(cardUid, schoolId),
         ).thenAnswer(
-          (_) async => CachedCredentialIsar()
-            ..credentialValue = cardUid
-            ..credentialType = 'nfc'
-            ..identityId = 'SP-STUDENT-OLD'
-            ..identityType = 'student'
-            ..schoolId = schoolId
-            ..status = 'revoked'
-            ..updatedAt = DateTime(2026),
+          (_) async => CachedCredential(
+      credentialValue: cardUid,
+      credentialType: 'nfc',
+      identityId: 'SP-STUDENT-OLD',
+      identityType: 'student',
+      schoolId: schoolId,
+      status: 'revoked',
+      updatedAt: DateTime(2026),
+    )
         );
 
         await repository.assign(

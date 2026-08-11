@@ -6,7 +6,7 @@ import 'package:school_pulse/core/network/network_info.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/gate_ops/domain/entities/gate.dart';
 import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source.dart';
-import 'package:school_pulse/features/verification/data/models/verification_isar_models.dart';
+import 'package:school_pulse/features/verification/domain/entities/verification_cache_records.dart';
 import 'package:school_pulse/features/verification/data/repositories/verification_event_recorder_impl.dart';
 import 'package:school_pulse/features/verification/domain/entities/resolved_identity.dart';
 import 'package:school_pulse/features/verification/domain/entities/scan_credential.dart';
@@ -77,7 +77,22 @@ void main() {
   );
 
   setUpAll(() {
-    registerFallbackValue(VerificationEventIsar());
+    registerFallbackValue(
+      VerificationEvent(
+        eventId: '',
+        schoolId: '',
+        gateId: '',
+        operatorId: '',
+        credentialKind: 'qr',
+        identityId: '',
+        identityType: 'student',
+        outcome: 'allowed',
+        direction: 'In',
+        timestamp: DateTime(2026),
+        deviceId: '',
+        isSynced: false,
+      ),
+    );
   });
 
   setUp(() {
@@ -113,7 +128,7 @@ void main() {
       // Called twice: once with isSynced=false before the push, once with
       // isSynced=true after it succeeds.
       expect(saved.length, 2);
-      expect((saved.last as VerificationEventIsar).isSynced, isTrue);
+      expect((saved.last as VerificationEvent).isSynced, isTrue);
 
       final docs = await firestore
           .collection('schools')
@@ -149,7 +164,7 @@ void main() {
         () => localDataSource.saveVerificationEvent(captureAny()),
       ).captured;
       expect(saved, hasLength(1));
-      expect((saved.single as VerificationEventIsar).isSynced, isFalse);
+      expect((saved.single as VerificationEvent).isSynced, isFalse);
 
       final docs = await firestore
           .collection('schools')
@@ -185,7 +200,7 @@ void main() {
         () => localDataSource.saveVerificationEvent(captureAny()),
       ).captured;
       expect(saved, hasLength(1));
-      expect((saved.single as VerificationEventIsar).isSynced, isFalse);
+      expect((saved.single as VerificationEvent).isSynced, isFalse);
     },
   );
 
@@ -200,19 +215,20 @@ void main() {
         networkInfo: networkInfo,
       );
 
-      final pendingEvent = VerificationEventIsar()
-        ..eventId = 'evt-1'
-        ..schoolId = 'school-1'
-        ..gateId = 'gate-1'
-        ..operatorId = 'op-1'
-        ..credentialKind = 'qr'
-        ..identityId = 'student-1'
-        ..identityType = 'student'
-        ..outcome = 'allowed'
-        ..direction = 'In'
-        ..timestamp = DateTime.now()
-        ..deviceId = 'device-1'
-        ..isSynced = false;
+      final pendingEvent = VerificationEvent(
+      eventId: 'evt-1',
+      schoolId: 'school-1',
+      gateId: 'gate-1',
+      operatorId: 'op-1',
+      credentialKind: 'qr',
+      identityId: 'student-1',
+      identityType: 'student',
+      outcome: 'allowed',
+      direction: 'In',
+      timestamp: DateTime.now(),
+      deviceId: 'device-1',
+      isSynced: false,
+    );
 
       when(
         () => localDataSource.getUnsyncedEvents(),

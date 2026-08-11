@@ -7,7 +7,7 @@ import 'package:school_pulse/features/admin/domain/repositories/role_permission_
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/gate_ops/domain/entities/gate.dart';
 import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source.dart';
-import 'package:school_pulse/features/verification/data/models/verification_isar_models.dart';
+import 'package:school_pulse/features/verification/domain/entities/verification_cache_records.dart';
 import 'package:school_pulse/features/verification/data/repositories/permission_evaluator_impl.dart';
 
 class MockVerificationLocalDataSource extends Mock
@@ -63,7 +63,15 @@ void main() {
   }
 
   setUpAll(() {
-    registerFallbackValue(OperatorPermissionSnapshotIsar());
+    registerFallbackValue(
+      OperatorPermissionSnapshot(
+        operatorId: '',
+        schoolId: '',
+        permissionIds: const [],
+        version: 0,
+        expiresAt: DateTime(2026),
+      ),
+    );
   });
 
   setUp(() {
@@ -184,12 +192,13 @@ void main() {
         when(
           () => localDataSource.getPermissionSnapshot(ordinaryTeacher.id),
         ).thenAnswer(
-          (_) async => OperatorPermissionSnapshotIsar()
-            ..operatorId = ordinaryTeacher.id
-            ..schoolId = ordinaryTeacher.schoolId
-            ..permissionIds = [Permission.securityIdentityVerify]
-            ..version = 2
-            ..expiresAt = DateTime.now().add(const Duration(hours: 1)),
+          (_) async => OperatorPermissionSnapshot(
+      operatorId: ordinaryTeacher.id,
+      schoolId: ordinaryTeacher.schoolId,
+      permissionIds: [Permission.securityIdentityVerify],
+      version: 2,
+      expiresAt: DateTime.now().add(const Duration(hours: 1)),
+    )
         );
 
         final result = await evaluator.can(
@@ -207,12 +216,13 @@ void main() {
         when(
           () => localDataSource.getPermissionSnapshot(gatekeeper.id),
         ).thenAnswer(
-          (_) async => OperatorPermissionSnapshotIsar()
-            ..operatorId = gatekeeper.id
-            ..schoolId = gatekeeper.schoolId
-            ..permissionIds = <String>[]
-            ..version = 1
-            ..expiresAt = DateTime.now().subtract(const Duration(hours: 1)),
+          (_) async => OperatorPermissionSnapshot(
+      operatorId: gatekeeper.id,
+      schoolId: gatekeeper.schoolId,
+      permissionIds: <String>[],
+      version: 1,
+      expiresAt: DateTime.now().subtract(const Duration(hours: 1)),
+    )
         );
 
         final result = await evaluator.can(

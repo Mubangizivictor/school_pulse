@@ -10,7 +10,6 @@ import '../../domain/entities/visitor.dart';
 import '../../domain/repositories/gate_ops_repository.dart';
 import '../datasources/gate_ops_local_data_source.dart';
 import '../datasources/gate_ops_remote_data_source.dart';
-import '../models/gate_ops_isar_models.dart';
 import '../sync/movement_sync_engine.dart';
 
 /// Isar-first, best-effort-push repository per plan section 6: every write
@@ -38,24 +37,20 @@ class GateOpsRepositoryImpl implements GateOpsRepository {
     networkInfo.isConnected.then((isConnected) {
       if (isConnected) {
         remoteDataSource.watchGates(schoolId).listen((gates) async {
-          final isarGates = gates.map((g) => GateIsar.fromEntity(g)).toList();
-          await localDataSource.cacheGates(isarGates);
+          await localDataSource.cacheGates(gates);
         });
       }
     });
 
-    return localDataSource
-        .watchCachedGates(schoolId)
-        .map((isarGates) => isarGates.map((g) => g.toEntity()).toList());
+    return localDataSource.watchCachedGates(schoolId);
   }
 
   @override
   Future<Either<Failure, void>> recordMovementEvent(MovementEvent event) async {
     try {
-      final isarEvent = MovementEventIsar.fromEntity(
+      await localDataSource.cacheMovementEvent(
         event.syncStatus == SyncStatus.pending ? event : _asPending(event),
       );
-      await localDataSource.cacheMovementEvent(isarEvent);
 
       final pushed = await syncEngine.tryPush(
         'schools/${event.schoolId}/movement_events',
@@ -150,22 +145,18 @@ class GateOpsRepositoryImpl implements GateOpsRepository {
             )
             .listen((events) async {
               for (final event in events) {
-                await localDataSource.cacheMovementEvent(
-                  MovementEventIsar.fromEntity(event),
-                );
+                await localDataSource.cacheMovementEvent(event);
               }
             });
       }
     });
 
-    return localDataSource
-        .watchCachedMovementEvents(
-          schoolId,
-          personType: personType?.name,
-          gateId: gateId,
-          date: date,
-        )
-        .map((isarEvents) => isarEvents.map((e) => e.toEntity()).toList());
+    return localDataSource.watchCachedMovementEvents(
+      schoolId,
+      personType: personType?.name,
+      gateId: gateId,
+      date: date,
+    );
   }
 
   @override
@@ -189,9 +180,7 @@ class GateOpsRepositoryImpl implements GateOpsRepository {
         badgeNumber: visitor.badgeNumber,
         syncStatus: SyncStatus.pending,
       );
-      await localDataSource.cacheVisitor(
-        VisitorIsar.fromEntity(pendingVisitor),
-      );
+      await localDataSource.cacheVisitor(pendingVisitor);
 
       final photoUrl = await syncEngine.uploadIfPresent(
         visitor.photoLocalPath,
@@ -230,14 +219,29 @@ class GateOpsRepositoryImpl implements GateOpsRepository {
       if (cached == null) {
         return const Left(CacheFailure('Visitor not found locally'));
       }
-      cached.status = VisitorStatus.checkedOut.name;
-      cached.departureTime = DateTime.now();
-      cached.syncStatus = SyncStatus.pending.name;
-      await localDataSource.cacheVisitor(cached);
+      final updated = Visitor(
+        id: cached.id,
+        schoolId: cached.schoolId,
+        fullName: cached.fullName,
+        phone: cached.phone,
+        photoLocalPath: cached.photoLocalPath,
+        photoUrl: cached.photoUrl,
+        purpose: cached.purpose,
+        hostId: cached.hostId,
+        hostName: cached.hostName,
+        gateId: cached.gateId,
+        arrivalTime: cached.arrivalTime,
+        departureTime: DateTime.now(),
+        status: VisitorStatus.checkedOut,
+        isQuickEntry: cached.isQuickEntry,
+        badgeNumber: cached.badgeNumber,
+        syncStatus: SyncStatus.pending,
+      );
+      await localDataSource.cacheVisitor(updated);
 
       final isConnected = await networkInfo.isConnected;
       if (isConnected) {
-        await remoteDataSource.checkOutVisitor(cached.schoolId, visitorId);
+        await remoteDataSource.checkOutVisitor(updated.schoolId, visitorId);
         await localDataSource.markVisitorSynced(visitorId);
       }
       return const Right(null);
@@ -252,15 +256,13 @@ class GateOpsRepositoryImpl implements GateOpsRepository {
       if (isConnected) {
         remoteDataSource.watchVisitors(schoolId).listen((visitors) async {
           for (final visitor in visitors) {
-            await localDataSource.cacheVisitor(VisitorIsar.fromEntity(visitor));
+            await localDataSource.cacheVisitor(visitor);
           }
         });
       }
     });
 
-    return localDataSource
-        .watchCachedVisitors(schoolId)
-        .map((isarVisitors) => isarVisitors.map((v) => v.toEntity()).toList());
+    return localDataSource.watchCachedVisitors(schoolId);
   }
 
   @override
@@ -270,15 +272,14 @@ class GateOpsRepositoryImpl implements GateOpsRepository {
       try {
         final visitors = await remoteDataSource.getVisitorsOnce(schoolId);
         for (final visitor in visitors) {
-          await localDataSource.cacheVisitor(VisitorIsar.fromEntity(visitor));
+          await localDataSource.cacheVisitor(visitor);
         }
         return visitors;
       } catch (_) {
         // Fall through to cache on any remote failure.
       }
     }
-    final cached = await localDataSource.getCachedVisitorsOnce(schoolId);
-    return cached.map((v) => v.toEntity()).toList();
+    return localDataSource.getCachedVisitorsOnce(schoolId);
   }
 
   @override
@@ -286,9 +287,7 @@ class GateOpsRepositoryImpl implements GateOpsRepository {
     SecurityIncident incident,
   ) async {
     try {
-      await localDataSource.cacheIncident(
-        SecurityIncidentIsar.fromEntity(incident),
-      );
+      await localDataSource.cacheIncident(incident);
 
       final pushed = await syncEngine.tryPush(
         'schools/${incident.schoolId}/security_incidents',
@@ -318,9 +317,7 @@ class GateOpsRepositoryImpl implements GateOpsRepository {
     EmergencyEvent emergency,
   ) async {
     try {
-      await localDataSource.cacheEmergency(
-        EmergencyEventIsar.fromEntity(emergency),
-      );
+      await localDataSource.cacheEmergency(emergency);
 
       final pushed = await syncEngine.tryPush(
         'schools/${emergency.schoolId}/emergency_events',
@@ -353,13 +350,24 @@ class GateOpsRepositoryImpl implements GateOpsRepository {
       if (cached == null) {
         return const Left(CacheFailure('Emergency not found locally'));
       }
-      cached.status = 'Resolved';
-      cached.endTime = DateTime.now();
-      await localDataSource.cacheEmergency(cached);
+      final updated = EmergencyEvent(
+        id: cached.id,
+        schoolId: cached.schoolId,
+        gateId: cached.gateId,
+        type: cached.type,
+        startTime: cached.startTime,
+        endTime: DateTime.now(),
+        description: cached.description,
+        officerId: cached.officerId,
+        deviceId: cached.deviceId,
+        status: 'Resolved',
+        syncStatus: cached.syncStatus,
+      );
+      await localDataSource.cacheEmergency(updated);
 
       final isConnected = await networkInfo.isConnected;
       if (isConnected) {
-        await remoteDataSource.resolveEmergency(cached.schoolId, emergencyId);
+        await remoteDataSource.resolveEmergency(updated.schoolId, emergencyId);
         await localDataSource.markEmergencySynced(emergencyId);
       }
       return const Right(null);
@@ -376,17 +384,13 @@ class GateOpsRepositoryImpl implements GateOpsRepository {
           emergencies,
         ) async {
           for (final emergency in emergencies) {
-            await localDataSource.cacheEmergency(
-              EmergencyEventIsar.fromEntity(emergency),
-            );
+            await localDataSource.cacheEmergency(emergency);
           }
         });
       }
     });
 
-    return localDataSource
-        .watchActiveEmergencies(schoolId)
-        .map((isarEvents) => isarEvents.map((e) => e.toEntity()).toList());
+    return localDataSource.watchActiveEmergencies(schoolId);
   }
 
   @override

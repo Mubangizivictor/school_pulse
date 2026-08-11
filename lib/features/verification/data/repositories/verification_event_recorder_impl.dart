@@ -4,7 +4,7 @@ import 'package:uuid/uuid.dart';
 import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/network/network_info.dart';
 import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source.dart';
-import 'package:school_pulse/features/verification/data/models/verification_isar_models.dart';
+import 'package:school_pulse/features/verification/domain/entities/verification_cache_records.dart';
 import 'package:school_pulse/features/verification/domain/entities/resolved_identity.dart';
 import 'package:school_pulse/features/verification/domain/entities/scan_credential.dart';
 import 'package:school_pulse/features/verification/domain/entities/verification_context.dart';
@@ -39,20 +39,21 @@ class VerificationEventRecorderImpl implements VerificationEventRecorder {
       final eventId = const Uuid().v4();
       final schoolId = context.gate.schoolId;
 
-      final event = VerificationEventIsar()
-        ..eventId = eventId
-        ..schoolId = schoolId
-        ..gateId = context.gate.id
-        ..operatorId = context.operatorUser.id
-        ..credentialKind = _kindOf(credential)
-        ..identityId = _identityIdOf(decision.identity)
-        ..identityType = _identityTypeOf(decision.identity)
-        ..outcome = decision.outcome.name
-        ..reasonCode = decision.reasonCode
-        ..direction = direction
-        ..timestamp = context.requestedAt
-        ..deviceId = context.deviceId
-        ..isSynced = false;
+      var event = VerificationEvent(
+        eventId: eventId,
+        schoolId: schoolId,
+        gateId: context.gate.id,
+        operatorId: context.operatorUser.id,
+        credentialKind: _kindOf(credential),
+        identityId: _identityIdOf(decision.identity),
+        identityType: _identityTypeOf(decision.identity),
+        outcome: decision.outcome.name,
+        reasonCode: decision.reasonCode,
+        direction: direction,
+        timestamp: context.requestedAt,
+        deviceId: context.deviceId,
+        isSynced: false,
+      );
 
       await localDataSource.saveVerificationEvent(event);
 
@@ -93,7 +94,7 @@ class VerificationEventRecorderImpl implements VerificationEventRecorder {
     }
   }
 
-  Future<void> _pushEvent(String schoolId, VerificationEventIsar event) async {
+  Future<void> _pushEvent(String schoolId, VerificationEvent event) async {
     await firestore
         .collection('schools')
         .doc(schoolId)

@@ -3,7 +3,7 @@ import 'package:dartz/dartz.dart';
 import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/network/network_info.dart';
 import '../datasources/verification_local_data_source.dart';
-import '../models/verification_isar_models.dart';
+import '../../domain/entities/verification_cache_records.dart';
 import '../../domain/repositories/nfc_credential_repository.dart';
 
 /// Local Isar writes are always the source of truth for "did this
@@ -53,14 +53,15 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
       // findCredential at scan time.
       await localDataSource.deleteRevocation(credentialValue, schoolId);
 
-      final credential = CachedCredentialIsar()
-        ..credentialValue = credentialValue
-        ..credentialType = 'nfc'
-        ..identityId = identityId
-        ..identityType = identityType
-        ..schoolId = schoolId
-        ..status = 'active'
-        ..updatedAt = DateTime.now();
+      final credential = CachedCredential(
+        credentialValue: credentialValue,
+        credentialType: 'nfc',
+        identityId: identityId,
+        identityType: identityType,
+        schoolId: schoolId,
+        status: 'active',
+        updatedAt: DateTime.now(),
+      );
       await localDataSource.cacheCredential(credential);
 
       await _pushCredential(credential);
@@ -114,11 +115,12 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
         await _pushCredential(existing);
       }
 
-      final revocation = RevokedCredentialIsar()
-        ..credentialValue = credentialValue
-        ..schoolId = schoolId
-        ..revokedAt = DateTime.now()
-        ..reason = reason;
+      final revocation = RevokedCredential(
+        credentialValue: credentialValue,
+        schoolId: schoolId,
+        revokedAt: DateTime.now(),
+        reason: reason,
+      );
       await localDataSource.saveRevocation(revocation);
       await _pushRevocation(revocation);
 
@@ -176,7 +178,7 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
     }
   }
 
-  Future<void> _pushCredential(CachedCredentialIsar credential) async {
+  Future<void> _pushCredential(CachedCredential credential) async {
     if (!await networkInfo.isConnected) return;
     try {
       await firestore
@@ -200,7 +202,7 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
     }
   }
 
-  Future<void> _pushRevocation(RevokedCredentialIsar revocation) async {
+  Future<void> _pushRevocation(RevokedCredential revocation) async {
     if (!await networkInfo.isConnected) return;
     try {
       await firestore

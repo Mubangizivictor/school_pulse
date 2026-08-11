@@ -7,7 +7,7 @@ import 'package:school_pulse/features/biometrics/domain/usecases/biometric_useca
 import 'package:school_pulse/features/student/domain/usecases/resolve_parent_access_code.dart';
 import 'package:school_pulse/features/student_identity/domain/repositories/student_identity_repository.dart';
 import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source.dart';
-import 'package:school_pulse/features/verification/data/models/verification_isar_models.dart';
+import 'package:school_pulse/features/verification/domain/entities/verification_cache_records.dart';
 import 'package:school_pulse/features/verification/domain/entities/resolved_identity.dart';
 import 'package:school_pulse/features/verification/domain/entities/scan_credential.dart';
 import 'package:school_pulse/features/verification/domain/entities/verification_context.dart';
@@ -179,7 +179,7 @@ class IdentityResolverImpl implements IdentityResolver {
     return _resolveStaffId(cached.identityId, context);
   }
 
-  Future<({CachedCredentialIsar? credential, bool isRevoked})>
+  Future<({CachedCredential? credential, bool isRevoked})>
   _fetchRemoteCredentialState(String cardUid, String schoolId) async {
     try {
       final revokedDoc = await firestore
@@ -191,13 +191,14 @@ class IdentityResolverImpl implements IdentityResolver {
       if (revokedDoc.exists) {
         final data = revokedDoc.data()!;
         await localDataSource.saveRevocation(
-          RevokedCredentialIsar()
-            ..credentialValue = cardUid
-            ..schoolId = schoolId
-            ..revokedAt =
+          RevokedCredential(
+            credentialValue: cardUid,
+            schoolId: schoolId,
+            revokedAt:
                 DateTime.tryParse(data['revokedAt'] as String? ?? '') ??
-                DateTime.now()
-            ..reason = data['reason'] as String? ?? 'revoked',
+                DateTime.now(),
+            reason: data['reason'] as String? ?? 'revoked',
+          ),
         );
         return (credential: null, isRevoked: true);
       }
@@ -211,16 +212,17 @@ class IdentityResolverImpl implements IdentityResolver {
       if (!credentialDoc.exists) return (credential: null, isRevoked: false);
 
       final data = credentialDoc.data()!;
-      final credential = CachedCredentialIsar()
-        ..credentialValue = cardUid
-        ..credentialType = data['credentialType'] as String? ?? 'nfc'
-        ..identityId = data['identityId'] as String
-        ..identityType = data['identityType'] as String
-        ..schoolId = schoolId
-        ..status = data['status'] as String? ?? 'active'
-        ..updatedAt =
+      final credential = CachedCredential(
+        credentialValue: cardUid,
+        credentialType: data['credentialType'] as String? ?? 'nfc',
+        identityId: data['identityId'] as String,
+        identityType: data['identityType'] as String,
+        schoolId: schoolId,
+        status: data['status'] as String? ?? 'active',
+        updatedAt:
             DateTime.tryParse(data['updatedAt'] as String? ?? '') ??
-            DateTime.now();
+            DateTime.now(),
+      );
 
       await localDataSource.cacheCredential(credential);
       return (credential: credential, isRevoked: false);

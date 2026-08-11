@@ -6,7 +6,7 @@ import 'package:school_pulse/features/admin/domain/repositories/role_permission_
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/gate_ops/domain/entities/gate.dart';
 import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source.dart';
-import 'package:school_pulse/features/verification/data/models/verification_isar_models.dart';
+import 'package:school_pulse/features/verification/domain/entities/verification_cache_records.dart';
 import 'package:school_pulse/features/verification/domain/repositories/permission_evaluator.dart';
 
 // Bumped from 1 so an existing on-device snapshot (cached under version 1,
@@ -95,12 +95,13 @@ class PermissionEvaluatorImpl implements PermissionEvaluator {
       );
     }
     await localDataSource.savePermissionSnapshot(
-      OperatorPermissionSnapshotIsar()
-        ..operatorId = operatorUser.id
-        ..schoolId = operatorUser.schoolId
-        ..permissionIds = computed.toList()
-        ..version = _permissionCatalogVersion
-        ..expiresAt = DateTime.now().add(_permissionCacheTtl),
+      OperatorPermissionSnapshot(
+        operatorId: operatorUser.id,
+        schoolId: operatorUser.schoolId,
+        permissionIds: computed.toList(),
+        version: _permissionCatalogVersion,
+        expiresAt: DateTime.now().add(_permissionCacheTtl),
+      ),
     );
     return computed;
   }

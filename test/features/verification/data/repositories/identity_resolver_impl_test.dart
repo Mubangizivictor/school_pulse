@@ -14,7 +14,7 @@ import 'package:school_pulse/features/student/domain/entities/student_enums.dart
 import 'package:school_pulse/features/student/domain/usecases/resolve_parent_access_code.dart';
 import 'package:school_pulse/features/student_identity/domain/repositories/student_identity_repository.dart';
 import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source.dart';
-import 'package:school_pulse/features/verification/data/models/verification_isar_models.dart';
+import 'package:school_pulse/features/verification/domain/entities/verification_cache_records.dart';
 import 'package:school_pulse/features/verification/data/repositories/identity_resolver_impl.dart';
 import 'package:school_pulse/features/verification/domain/entities/resolved_identity.dart';
 import 'package:school_pulse/features/verification/domain/entities/scan_credential.dart';
@@ -95,8 +95,25 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(NoParams());
-    registerFallbackValue(CachedCredentialIsar());
-    registerFallbackValue(RevokedCredentialIsar());
+    registerFallbackValue(
+      CachedCredential(
+        credentialValue: '',
+        credentialType: 'nfc',
+        identityId: '',
+        identityType: 'student',
+        schoolId: '',
+        status: 'active',
+        updatedAt: DateTime(2026),
+      ),
+    );
+    registerFallbackValue(
+      RevokedCredential(
+        credentialValue: '',
+        schoolId: '',
+        revokedAt: DateTime(2026),
+        reason: '',
+      ),
+    );
   });
 
   setUp(() {
@@ -204,7 +221,7 @@ void main() {
 
   group('NFC credential', () {
     test(
-      'resolves via CachedCredentialIsar when the card UID is cached and active',
+      'resolves via CachedCredential when the card UID is cached and active',
       () async {
         when(
           () => localDataSource.findRevocation('UID123', 'school-1'),
@@ -212,14 +229,15 @@ void main() {
         when(
           () => localDataSource.findCredential('UID123', 'school-1'),
         ).thenAnswer(
-          (_) async => CachedCredentialIsar()
-            ..credentialValue = 'UID123'
-            ..credentialType = 'nfc'
-            ..identityId = 'SP-0001'
-            ..identityType = 'student'
-            ..schoolId = 'school-1'
-            ..status = 'active'
-            ..updatedAt = DateTime.now(),
+          (_) async => CachedCredential(
+      credentialValue: 'UID123',
+      credentialType: 'nfc',
+      identityId: 'SP-0001',
+      identityType: 'student',
+      schoolId: 'school-1',
+      status: 'active',
+      updatedAt: DateTime.now(),
+    )
         );
         when(
           () => studentIdentityRepository.getStudentByUniqueId('SP-0001'),
@@ -241,11 +259,12 @@ void main() {
         when(
           () => localDataSource.findRevocation('UID999', 'school-1'),
         ).thenAnswer(
-          (_) async => RevokedCredentialIsar()
-            ..credentialValue = 'UID999'
-            ..schoolId = 'school-1'
-            ..revokedAt = DateTime.now()
-            ..reason = 'lost card',
+          (_) async => RevokedCredential(
+      credentialValue: 'UID999',
+      schoolId: 'school-1',
+      revokedAt: DateTime.now(),
+      reason: 'lost card',
+    )
         );
 
         final result = await resolver.resolve(
