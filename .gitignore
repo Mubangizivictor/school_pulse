@@ -47,6 +47,13 @@ app.*.map.json
 # Cloud Functions
 /functions/node_modules/
 /functions/lib/
+/public_functions/node_modules/
 firebase-debug.log
 firebase-debug.*.log
 .firebase/
+
+# Secrets - never commit real .env files (see functions/.env.example)
+.env
+.env.*
+!.env.example
+!*.env.example
