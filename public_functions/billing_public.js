@@ -5,12 +5,16 @@ if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
 
 const WEBSITE_ORIGIN = 'https://schoolpulse.victorbee.com';
-const PLAN_ORDER = ['starter', 'growth', 'pro', 'enterprise'];
+// Enterprise is intentionally absent here: this endpoint only ever serves
+// the 3 public/self-service plans (isPublic/isActive filter below already
+// excludes it), so no fallback for it can ever be reached in this file's
+// output. payments.js:PLAN_DEFAULTS still keeps its own Enterprise entry -
+// that one maintains the legacy Firestore doc, a different job than this.
+const PLAN_ORDER = ['starter', 'growth', 'pro'];
 const FALLBACKS = {
   starter: { name: 'Starter', price: 350000, billingCycle: 'termly' },
   growth: { name: 'Growth', price: 550000, billingCycle: 'termly' },
   pro: { name: 'Pro', price: 800000, billingCycle: 'termly' },
-  enterprise: { name: 'Enterprise', price: 0, billingCycle: 'termly', customPricing: true },
 };
 
 function cors(req, res) {

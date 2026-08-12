@@ -6,9 +6,10 @@ const { enqueueTemplatedEmail } = require('./email/transactional_queue');
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
 
-const EXPIRING_SOON_MS = 7 * 24 * 60 * 60 * 1000; // notify 7 days out
-const OVERDUE_GRACE_MS = 3 * 24 * 60 * 60 * 1000; // first overdue reminder 3 days after expiry
-const OVERDUE_REPEAT_MS = 5 * 24 * 60 * 60 * 1000; // repeat overdue reminder every 5 days after that
+// Nearest-tier-first: the first entry whose day threshold is >= days
+// remaining is the one tier fired per run. 1 day is the last warning before
+// "expired" (day 0) takes over via the separate expiry branch below.
+const EXPIRING_TIERS_DAYS = [30, 14, 7, 3, 1];
 
 function text(value, max = 200) {
   return String(value ?? '').trim().slice(0, max);
@@ -29,20 +30,23 @@ async function schoolAdminEmail(schoolId) {
 }
 
 /**
- * Daily subscription-lifecycle sweep: expiring-soon reminders, expiry
- * transition, and repeating overdue nudges. Manual-payment approval/
- * rejection already sends subscription_activated/renewed/manual_payment_*
- * directly (see payment_notifications.js) — this only covers the
- * time-based transitions nothing else observes.
+ * Hourly subscription-lifecycle sweep: expiring-soon reminders (30/14/7/3/1
+ * days out) and the expiry transition to read-only. Manual-payment
+ * approval/rejection already sends subscription_activated/renewed/
+ * manual_payment_* directly (see payment_notifications.js) and already
+ * writes accessMode on approval/rejection - this job only covers the
+ * purely time-based transition nothing else observes: a paid term quietly
+ * running out while the school is otherwise untouched.
  *
- * Idempotency: each notification type is only sent once per expiry value
- * (metadata.lastExpiringNotifiedFor / lastExpiredNotifiedFor track the
- * subscriptionExpiry timestamp they were sent for), except the overdue
- * reminder, which is intentionally recurring on a fixed cadence
- * (metadata.lastOverdueNotifiedAt).
+ * Idempotency: each expiring-tier notification is deduped by a deterministic
+ * eventId (school + expiry value + tier), so the enqueueTemplatedEmail/
+ * email_deliveries ledger itself prevents duplicates across runs - no
+ * separate "already notified" bookkeeping is needed for the tiers. The
+ * expired-transition notification keeps its own metadata.lastExpiredNotifiedFor
+ * guard since it also gates the accessMode write, not just the email.
  */
 exports.checkSubscriptionLifecycle = onSchedule(
-  { region: 'europe-west1', schedule: 'every day 06:00', timeZone: 'Africa/Kampala', secrets: [RESEND_API_KEY] },
+  { region: 'europe-west1', schedule: 'every 1 hours', timeZone: 'Africa/Kampala', secrets: [RESEND_API_KEY] },
   async () => {
     const nowMs = Date.now();
     const snapshot = await db.collection('schools')
@@ -60,54 +64,37 @@ exports.checkSubscriptionLifecycle = onSchedule(
       const metadata = school.metadata && typeof school.metadata === 'object' ? school.metadata : {};
 
       try {
-        if (expiryMs > nowMs && expiryMs - nowMs <= EXPIRING_SOON_MS) {
-          if (metadata.lastExpiringNotifiedFor === expiryMs) continue;
-          const recipient = await schoolAdminEmail(schoolId);
-          await enqueueTemplatedEmail({
-            eventId: `subscription_expiring_${schoolId}_${expiryMs}`,
-            templateId: 'subscription_expiring',
-            to: recipient,
-            data: { schoolName, planLabel, expiryLabel: dateLabel(expiryMs) },
-          });
-          await doc.ref.set({ metadata: { ...metadata, lastExpiringNotifiedFor: expiryMs } }, { merge: true });
+        if (expiryMs > nowMs) {
+          const daysUntilExpiry = Math.ceil((expiryMs - nowMs) / (24 * 60 * 60 * 1000));
+          const tier = EXPIRING_TIERS_DAYS.find((tierDays) => daysUntilExpiry <= tierDays);
+          if (tier) {
+            const recipient = await schoolAdminEmail(schoolId);
+            await enqueueTemplatedEmail({
+              eventId: `subscription_expiring_${schoolId}_${expiryMs}_${tier}`,
+              templateId: 'subscription_expiring',
+              to: recipient,
+              data: { schoolName, planLabel, expiryLabel: dateLabel(expiryMs), daysRemaining: tier },
+            });
+          }
           continue;
         }
 
-        if (expiryMs <= nowMs) {
-          if (metadata.lastExpiredNotifiedFor !== expiryMs) {
-            const recipient = await schoolAdminEmail(schoolId);
-            await enqueueTemplatedEmail({
-              eventId: `subscription_expired_${schoolId}_${expiryMs}`,
-              templateId: 'subscription_expired',
-              to: recipient,
-              data: { schoolName, planLabel, expiryLabel: dateLabel(expiryMs) },
-            });
-            // Reuses the same "payment_due" vocabulary rejectManualPayment
-            // already writes for a renewal gone unpaid — not a new status.
-            await doc.ref.set({
-              metadata: { ...metadata, lastExpiredNotifiedFor: expiryMs, subscriptionStatus: 'payment_due' },
-            }, { merge: true });
-          }
-
-          const overdueMs = nowMs - expiryMs;
-          const lastOverdueAt = Number(metadata.lastOverdueNotifiedAt || 0);
-          const dueForOverdueReminder = overdueMs >= OVERDUE_GRACE_MS &&
-            (lastOverdueAt === 0 || nowMs - lastOverdueAt >= OVERDUE_REPEAT_MS);
-          if (dueForOverdueReminder) {
-            const recipient = await schoolAdminEmail(schoolId);
-            // Keyed off the overdue cycle's start (last reminder timestamp,
-            // or the expiry itself for the first reminder) rather than
-            // nowMs, so a retried/double-fired scheduler invocation within
-            // the same cycle computes the same eventId and is deduped by
-            // email_deliveries instead of sending a second reminder.
-            await enqueueTemplatedEmail({
-              eventId: `payment_overdue_${schoolId}_${lastOverdueAt || expiryMs}`,
-              templateId: 'payment_overdue',
-              to: recipient,
-              data: { schoolName, schoolId, dueDateLabel: dateLabel(expiryMs) },
-            });
-            await doc.ref.set({ metadata: { ...metadata, lastOverdueNotifiedAt: nowMs } }, { merge: true });
-          }
+        if (metadata.lastExpiredNotifiedFor !== expiryMs) {
+          const recipient = await schoolAdminEmail(schoolId);
+          await enqueueTemplatedEmail({
+            eventId: `subscription_expired_${schoolId}_${expiryMs}`,
+            templateId: 'subscription_expired',
+            to: recipient,
+            data: { schoolName, planLabel, expiryLabel: dateLabel(expiryMs) },
+          });
+          // Reuses the same "payment_due" vocabulary rejectManualPayment
+          // already writes for a renewal gone unpaid - not a new status.
+          // accessMode is the field Firestore rules and the Flutter gate
+          // actually trust; subscriptionStatus stays for display/email copy.
+          await doc.ref.set({
+            accessMode: 'readOnly',
+            metadata: { ...metadata, lastExpiredNotifiedFor: expiryMs, subscriptionStatus: 'payment_due' },
+          }, { merge: true });
         }
       } catch (error) {
         console.error('Subscription lifecycle sweep failed for school', schoolId, error);

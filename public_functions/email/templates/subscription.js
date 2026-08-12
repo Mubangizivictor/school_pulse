@@ -35,21 +35,25 @@ module.exports = {
     cta: { label: 'View Subscription', url: STATUS_URL },
   }),
 
-  subscription_expiring: (data) => ({
-    subject: 'Your School Pulse subscription is expiring soon',
-    preheader: `${data.schoolName}'s subscription expires soon.`,
-    eyebrow: 'Renewal reminder',
-    title: 'Your subscription is expiring soon',
-    status: 'warning',
-    bodyText: `${data.schoolName}'s School Pulse subscription will expire soon. Renew now to avoid interruption.`,
-    bodyHtml: `<p><strong>${escapeHtml(data.schoolName)}</strong>'s School Pulse subscription will expire soon. Renew now to avoid interruption.</p>`,
-    infoRows: [
-      { label: 'School', value: data.schoolName },
-      { label: 'Plan', value: data.planLabel },
-      { label: 'Expires', value: data.expiryLabel },
-    ],
-    cta: { label: 'Renew Subscription', url: STATUS_URL },
-  }),
+  subscription_expiring: (data) => {
+    const days = Number(data.daysRemaining || 0);
+    const dayLabel = days === 1 ? '1 day' : `${days} days`;
+    return {
+      subject: `Your School Pulse subscription expires in ${dayLabel}`,
+      preheader: `${data.schoolName}'s subscription expires in ${dayLabel}.`,
+      eyebrow: 'Renewal reminder',
+      title: `Your subscription expires in ${dayLabel}`,
+      status: 'warning',
+      bodyText: `${data.schoolName}'s School Pulse subscription will expire in ${dayLabel}. Renew now to avoid interruption.`,
+      bodyHtml: `<p><strong>${escapeHtml(data.schoolName)}</strong>'s School Pulse subscription will expire in ${dayLabel}. Renew now to avoid interruption.</p>`,
+      infoRows: [
+        { label: 'School', value: data.schoolName },
+        { label: 'Plan', value: data.planLabel },
+        { label: 'Expires', value: data.expiryLabel },
+      ],
+      cta: { label: 'Renew Subscription', url: STATUS_URL },
+    };
+  },
 
   subscription_expired: (data) => ({
     subject: 'Your School Pulse subscription has expired',
