@@ -71,6 +71,23 @@ service cloud.firestore {
       return isSignedIn() && myUser().schoolId == schoolId;
     }
 
+    // Subscription write-lock. accessMode is server-authoritative (written
+    // by payment approval/rejection and the hourly lifecycle sweep in
+    // public_functions/). The two-arg get() defaults to 'full' when the
+    // field is absent, so a school that predates these Cloud Functions - or
+    // simply hasn't been touched by one yet since this rule deployed - is
+    // never locked out by this rule alone. superAdmin (the SaaS owner
+    // console) always bypasses this: billing state must never prevent the
+    // platform owner from managing a tenant.
+    function schoolAccessMode(schoolId) {
+      return get(/databases/$(database)/documents/schools/$(schoolId)).data.get('accessMode', 'full');
+    }
+
+    function schoolCanWrite(schoolId) {
+      return isSuperAdmin() ||
+        (schoolAccessMode(schoolId) != 'readOnly' && schoolAccessMode(schoolId) != 'blocked');
+    }
+
     function canManageAppointments() {
       return isStaff() && (
         hasAnyRole(['schoolAdmin', 'director', 'headTeacher', 'deputyHead', 'receptionist', 'securityHead']) ||
@@ -234,9 +251,11 @@ service cloud.firestore {
       // and update now both require same-school, and update additionally
       // locks schoolId so a doc can never be re-parented to another
       // school by editing this field.
-      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolCanWrite(request.resource.data.schoolId);
       allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
-        request.resource.data.schoolId == resource.data.schoolId;
+        request.resource.data.schoolId == resource.data.schoolId &&
+        schoolCanWrite(resource.data.schoolId);
       allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
 
@@ -336,9 +355,11 @@ service cloud.firestore {
     // and locked on update.
     match /attendance_records/{docId} {
       allow read: if isStudentRecordReadable() && isSameSchool(resource.data.schoolId);
-      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolCanWrite(request.resource.data.schoolId);
       allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
-        request.resource.data.schoolId == resource.data.schoolId;
+        request.resource.data.schoolId == resource.data.schoolId &&
+        schoolCanWrite(resource.data.schoolId);
       allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /fees/{docId} {
@@ -761,20 +782,21 @@ service cloud.firestore {
       allow write: if isStaff() && isSameSchool(schoolId);
     }
     match /schools/{schoolId}/assessmentMarks/{id} {
-      allow read, write: if isStaff() && isSameSchool(schoolId);
+      allow read: if isStaff() && isSameSchool(schoolId);
+      allow write: if isStaff() && isSameSchool(schoolId) && schoolCanWrite(schoolId);
       match /auditLog/{entryId} {
         allow read: if isStaff() && isSameSchool(schoolId);
-        allow create: if isStaff() && isSameSchool(schoolId);
+        allow create: if isStaff() && isSameSchool(schoolId) && schoolCanWrite(schoolId);
         allow update, delete: if false;
       }
     }
     match /schools/{schoolId}/reportCards/{id} {
       allow read: if (isStaff() && isSameSchool(schoolId)) ||
         isParentOf(resource.data.studentId) || isMe(resource.data.studentId);
-      allow write: if isStaff() && isSameSchool(schoolId);
+      allow write: if isStaff() && isSameSchool(schoolId) && schoolCanWrite(schoolId);
       match /auditLog/{entryId} {
         allow read: if isStaff() && isSameSchool(schoolId);
-        allow create: if isStaff() && isSameSchool(schoolId);
+        allow create: if isStaff() && isSameSchool(schoolId) && schoolCanWrite(schoolId);
         allow update, delete: if false;
       }
     }
@@ -1146,9 +1168,11 @@ service cloud.firestore {
     // is a straight tightening rather than an OR-fallback migration.
     match /staff_attendance/{id} {
       allow read: if isStaff() && isSameSchool(resource.data.schoolId);
-      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolCanWrite(request.resource.data.schoolId);
       allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
-        request.resource.data.schoolId == resource.data.schoolId;
+        request.resource.data.schoolId == resource.data.schoolId &&
+        schoolCanWrite(resource.data.schoolId);
       allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
 
@@ -1687,8 +1711,10 @@ service cloud.firestore {
         (resource.data.status == 'published' || hasAnnouncementManagePermission(schoolId));
       allow create: if isSameSchool(schoolId) &&
         hasAnnouncementManagePermission(schoolId) &&
-        request.resource.data.schoolId == schoolId;
-      allow update, delete: if isSameSchool(schoolId) && hasAnnouncementManagePermission(schoolId);
+        request.resource.data.schoolId == schoolId &&
+        schoolCanWrite(schoolId);
+      allow update, delete: if isSameSchool(schoolId) && hasAnnouncementManagePermission(schoolId) &&
+        schoolCanWrite(schoolId);
     }
 
     // Unified Attendance (attendance_hub). Marking is gated per-category by
@@ -1755,7 +1781,8 @@ service cloud.firestore {
       allow create: if isSameSchool(schoolId) &&
         hasAttendancePermission(schoolId, attendanceCategoryPermission(request.resource.data.category)) &&
         hasAttendanceScopeAccess(schoolId, request.resource.data) &&
-        request.resource.data.schoolId == schoolId;
+        request.resource.data.schoolId == schoolId &&
+        schoolCanWrite(schoolId);
       // Records are corrected via a separate attendance_corrections trail,
       // never overwritten in place - see AttendanceCorrectionRequest in the
       // implementation plan. No update/delete path exists yet.
@@ -2050,7 +2077,7 @@ service cloud.firestore {
     match /schools/{schoolId}/class_announcements/{announcementId} {
       allow read: if isSameSchool(schoolId) && isStaff();
 
-      allow create, update: if isSameSchool(schoolId)
+      allow create, update: if isSameSchool(schoolId) && schoolCanWrite(schoolId)
         && (schoolAcademicAdmin() || (
           holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
                           null,

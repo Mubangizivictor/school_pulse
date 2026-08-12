@@ -67,6 +67,15 @@ async function seed() {
       teacherB: {
         role: 'classTeacher', roles: ['classTeacher'], schoolId: 'schoolB', studentIds: [],
       },
+      teacherReadOnly: {
+        role: 'classTeacher', roles: ['classTeacher'], schoolId: 'schoolReadOnly', studentIds: [],
+      },
+      teacherBlocked: {
+        role: 'classTeacher', roles: ['classTeacher'], schoolId: 'schoolBlocked', studentIds: [],
+      },
+      teacherFull: {
+        role: 'classTeacher', roles: ['classTeacher'], schoolId: 'schoolFull', studentIds: [],
+      },
     };
 
     await Promise.all(
@@ -109,6 +118,17 @@ async function seed() {
       }),
       setDoc(doc(db, 'schools', 'schoolA'), {
         name: 'School A', status: 'active', enabledFeatures: ['attendance'],
+        // No accessMode field - the fail-open default case: a school this
+        // rules deploy hasn't touched yet must still be fully writable.
+      }),
+      setDoc(doc(db, 'schools', 'schoolReadOnly'), {
+        name: 'School Read Only', status: 'active', enabledFeatures: [], accessMode: 'readOnly',
+      }),
+      setDoc(doc(db, 'schools', 'schoolBlocked'), {
+        name: 'School Blocked', status: 'trial', enabledFeatures: [], accessMode: 'blocked',
+      }),
+      setDoc(doc(db, 'schools', 'schoolFull'), {
+        name: 'School Full', status: 'active', enabledFeatures: [], accessMode: 'full',
       }),
       setDoc(doc(db, 'super_admin_audit_logs', 'logA'), {
         ownerId: 'ownerA', action: 'CREATE_SCHOOL', schoolId: 'schoolA', device: 'Platform Dashboard',
@@ -531,6 +551,72 @@ describe('SaaS owner / platform layer', () => {
         },
       ));
     });
+  });
+});
+
+describe('subscription access enforcement', () => {
+  test('a readOnly school cannot create a student', async () => {
+    await assertFails(setDoc(doc(dbFor('teacherReadOnly'), 'students', 'roStudent'), {
+      schoolId: 'schoolReadOnly', firstName: 'Ro', lastName: 'Student',
+    }));
+  });
+
+  test('superAdmin bypasses the write-lock on a collection that already admits superAdmin (schools doc itself)', async () => {
+    // students/{id} requires isSameSchool(), which is staff-membership-based
+    // and was never superAdmin-reachable even before this change - the
+    // owner manages billing state via the schools/{id} doc directly, not by
+    // impersonating a school's own student-record writes. schoolCanWrite's
+    // isSuperAdmin() bypass matters for collections the owner can already
+    // reach, like schools/{schoolId} itself.
+    await assertSucceeds(updateDoc(doc(dbFor('ownerA'), 'schools', 'schoolReadOnly'), {
+      accessMode: 'full',
+    }));
+  });
+
+  test('a blocked school cannot create a student', async () => {
+    await assertFails(setDoc(doc(dbFor('teacherBlocked'), 'students', 'blockedStudent'), {
+      schoolId: 'schoolBlocked', firstName: 'Blocked', lastName: 'Student',
+    }));
+  });
+
+  test('a school with no accessMode field at all can still create a student (fail-open default)', async () => {
+    await assertSucceeds(setDoc(doc(dbFor('teacherA'), 'students', 'legacyStudent'), {
+      schoolId: 'schoolA', firstName: 'Legacy', lastName: 'Student',
+    }));
+  });
+
+  test('a full-access school can create a student normally', async () => {
+    await assertSucceeds(setDoc(doc(dbFor('teacherFull'), 'students', 'fullStudent'), {
+      schoolId: 'schoolFull', firstName: 'Full', lastName: 'Student',
+    }));
+  });
+
+  test('reads succeed regardless of accessMode - read-only quarantine, not deletion', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'students', 'roExistingStudent'), {
+        schoolId: 'schoolReadOnly', firstName: 'Existing', lastName: 'Student',
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('teacherReadOnly'), 'students', 'roExistingStudent')));
+  });
+
+  test('the write-lock generalizes to other threaded collections (staff_attendance)', async () => {
+    await assertFails(setDoc(doc(dbFor('teacherReadOnly'), 'staff_attendance', 'roAttendance'), {
+      schoolId: 'schoolReadOnly', staffId: 'teacherReadOnly', date: '2026-08-12',
+    }));
+    await assertSucceeds(setDoc(doc(dbFor('teacherFull'), 'staff_attendance', 'fullAttendance'), {
+      schoolId: 'schoolFull', staffId: 'teacherFull', date: '2026-08-12',
+    }));
+  });
+
+  test('a readOnly school cannot be bypassed by forging a different, writable schoolId on the request', async () => {
+    // teacherReadOnly's own users/{uid}.schoolId is schoolReadOnly, so
+    // isSameSchool('schoolFull') already fails before schoolCanWrite is
+    // ever evaluated - the tenant check and the billing check are
+    // independent gates, not a single point of failure.
+    await assertFails(setDoc(doc(dbFor('teacherReadOnly'), 'students', 'forgedStudent'), {
+      schoolId: 'schoolFull', firstName: 'Forged', lastName: 'Student',
+    }));
   });
 });
 
