@@ -1,6 +1,20 @@
 {
   "indexes": [
     {
+      "collectionGroup": "mtn_payments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "schoolId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "transactional_email_queue",
       "queryScope": "COLLECTION",
       "fields": [

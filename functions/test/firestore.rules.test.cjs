@@ -47,6 +47,8 @@ async function seed() {
       teacherA: { role: 'classTeacher', roles: ['classTeacher'], schoolId: 'schoolA', studentIds: [] },
       storeA: { role: 'storeInventory', roles: ['storeInventory'], schoolId: 'schoolA', studentIds: [] },
       adminA: { role: 'schoolAdmin', roles: ['schoolAdmin'], schoolId: 'schoolA', studentIds: [] },
+      bursarA: { role: 'bursar', roles: ['bursar'], schoolId: 'schoolA', studentIds: [] },
+      bursarB: { role: 'bursar', roles: ['bursar'], schoolId: 'schoolB', studentIds: [] },
       ownerA: { role: 'superAdmin', roles: ['superAdmin'], schoolId: null, studentIds: [] },
       matronA: { role: 'boardingMatron', roles: ['boardingMatron'], schoolId: 'schoolA', studentIds: [] },
       parentA: { role: 'parent', roles: ['parent'], schoolId: 'schoolA', studentIds: ['studentA'] },
@@ -1120,5 +1122,140 @@ describe('Phase 5 attendance security gate', () => {
       schoolId: 'schoolA', studentId: 'studentA', studentName: 'Student A',
       dormitoryId: 'dormA', date: new Date(), type: 'Evening', status: 'Present', recordedBy: 'teacherA',
     }));
+  });
+});
+
+// MTN Mobile Money payment tenant isolation. payment_transactions is the
+// pre-existing audit-trail mirror (now also written by the automated MTN
+// settlement path in public_functions/mtn_momo.js); mtn_payments is the new
+// live-status collection Flutter polls while a payment is in flight. Both
+// are Admin-SDK-write-only - every scenario here is about who may *read*
+// which school's rows, and that no client write of any kind is ever
+// permitted regardless of role.
+describe('MTN Mobile Money payment tenant isolation', () => {
+  async function seedPayments() {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await Promise.all([
+        setDoc(doc(db, 'payment_transactions', 'txnA'), {
+          id: 'txnA', schoolId: 'schoolA', provider: 'mtn_momo_auto',
+          phoneNumber: '2567******37', amountUgx: 550000, status: 'success',
+          reference: 'financial-txn-a', paymentType: 'activation', planId: 'growth',
+        }),
+        setDoc(doc(db, 'payment_transactions', 'txnB'), {
+          id: 'txnB', schoolId: 'schoolB', provider: 'mtn_momo_auto',
+          phoneNumber: '2567******99', amountUgx: 350000, status: 'success',
+          reference: 'financial-txn-b', paymentType: 'activation', planId: 'starter',
+        }),
+        setDoc(doc(db, 'mtn_payments', 'payA'), {
+          id: 'payA', schoolId: 'schoolA', schoolName: 'School A', planId: 'growth',
+          planName: 'Growth', paymentType: 'activation', provider: 'mtn_momo',
+          status: 'PENDING', amount: '100', currency: 'EUR', realPlanPriceUgx: 550000,
+          targetEnvironment: 'sandbox', phoneNumberMasked: '2567******37',
+        }),
+        setDoc(doc(db, 'mtn_payments', 'payB'), {
+          id: 'payB', schoolId: 'schoolB', schoolName: 'School B', planId: 'starter',
+          planName: 'Starter', paymentType: 'activation', provider: 'mtn_momo',
+          status: 'PENDING', amount: '100', currency: 'EUR', realPlanPriceUgx: 350000,
+          targetEnvironment: 'sandbox', phoneNumberMasked: '2567******99',
+        }),
+      ]);
+    });
+  }
+
+  test('payment_transactions: School A cannot read School B transactions', async () => {
+    await seedPayments();
+    await assertFails(getDoc(doc(dbFor('adminA'), 'payment_transactions', 'txnB')));
+    await assertFails(getDoc(doc(dbFor('bursarA'), 'payment_transactions', 'txnB')));
+  });
+
+  test('payment_transactions: School B cannot read School A transactions', async () => {
+    await seedPayments();
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'payment_transactions', 'txnA')));
+    await assertFails(getDoc(doc(dbFor('bursarB'), 'payment_transactions', 'txnA')));
+  });
+
+  test('payment_transactions: authorized School A staff (bursar/admin) can read School A transactions', async () => {
+    await seedPayments();
+    await assertSucceeds(getDoc(doc(dbFor('bursarA'), 'payment_transactions', 'txnA')));
+    await assertSucceeds(getDoc(doc(dbFor('adminA'), 'payment_transactions', 'txnA')));
+  });
+
+  test('payment_transactions: SaaS owner can read across schools, unauthenticated cannot read at all', async () => {
+    await seedPayments();
+    await assertSucceeds(getDoc(doc(dbFor('ownerA'), 'payment_transactions', 'txnA')));
+    await assertSucceeds(getDoc(doc(dbFor('ownerA'), 'payment_transactions', 'txnB')));
+    await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'payment_transactions', 'txnA')));
+  });
+
+  test('payment_transactions: no client, including the owning school, can create a fake settled transaction', async () => {
+    await assertFails(setDoc(doc(dbFor('bursarA'), 'payment_transactions', 'fakeTxn'), {
+      id: 'fakeTxn', schoolId: 'schoolA', provider: 'mtn_momo_auto',
+      amountUgx: 999999, status: 'success', reference: 'forged',
+    }));
+    await assertFails(setDoc(doc(dbFor('ownerA'), 'payment_transactions', 'fakeTxn2'), {
+      id: 'fakeTxn2', schoolId: 'schoolA', provider: 'mtn_momo_auto',
+      amountUgx: 1, status: 'success', reference: 'forged-by-owner',
+    }));
+  });
+
+  test('payment_transactions: no client can mark an existing transaction successful or mutate its reference', async () => {
+    await seedPayments();
+    await assertFails(updateDoc(doc(dbFor('bursarA'), 'payment_transactions', 'txnA'), {
+      status: 'success', reference: 'tampered-reference',
+    }));
+    await assertFails(updateDoc(doc(dbFor('ownerA'), 'payment_transactions', 'txnA'), {
+      amountUgx: 1,
+    }));
+  });
+
+  test('mtn_payments: School A cannot read School B payment attempts, and vice versa', async () => {
+    await seedPayments();
+    await assertFails(getDoc(doc(dbFor('adminA'), 'mtn_payments', 'payB')));
+    await assertFails(getDoc(doc(dbFor('bursarA'), 'mtn_payments', 'payB')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'mtn_payments', 'payA')));
+  });
+
+  test('mtn_payments: authorized School A billing role can read School A payment attempts', async () => {
+    await seedPayments();
+    await assertSucceeds(getDoc(doc(dbFor('adminA'), 'mtn_payments', 'payA')));
+    await assertSucceeds(getDoc(doc(dbFor('bursarA'), 'mtn_payments', 'payA')));
+  });
+
+  test('mtn_payments: a same-school role outside the billing allow-list (e.g. classTeacher) is denied', async () => {
+    await seedPayments();
+    await assertFails(getDoc(doc(dbFor('teacherA'), 'mtn_payments', 'payA')));
+  });
+
+  test('mtn_payments: SaaS owner can read across schools', async () => {
+    await seedPayments();
+    await assertSucceeds(getDoc(doc(dbFor('ownerA'), 'mtn_payments', 'payA')));
+    await assertSucceeds(getDoc(doc(dbFor('ownerA'), 'mtn_payments', 'payB')));
+  });
+
+  test('mtn_payments: no client can create an arbitrary successful payment attempt', async () => {
+    await assertFails(setDoc(doc(dbFor('adminA'), 'mtn_payments', 'fakePay'), {
+      id: 'fakePay', schoolId: 'schoolA', status: 'SUCCESSFUL', realPlanPriceUgx: 1,
+      provider: 'mtn_momo', targetEnvironment: 'sandbox',
+    }));
+  });
+
+  test('mtn_payments: no client can flip status to SUCCESSFUL or change settlement/provider fields', async () => {
+    await seedPayments();
+    await assertFails(updateDoc(doc(dbFor('adminA'), 'mtn_payments', 'payA'), {
+      status: 'SUCCESSFUL',
+    }));
+    await assertFails(updateDoc(doc(dbFor('bursarA'), 'mtn_payments', 'payA'), {
+      mtnFinancialTransactionId: 'forged-ftid', settledAt: new Date(), subscriptionExpiry: 0,
+    }));
+    await assertFails(updateDoc(doc(dbFor('ownerA'), 'mtn_payments', 'payA'), {
+      status: 'SUCCESSFUL',
+    }));
+  });
+
+  test('mtn_payments: no client can delete a payment attempt', async () => {
+    await seedPayments();
+    await assertFails(deleteDoc(doc(dbFor('adminA'), 'mtn_payments', 'payA')));
+    await assertFails(deleteDoc(doc(dbFor('ownerA'), 'mtn_payments', 'payA')));
   });
 });

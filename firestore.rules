@@ -1278,8 +1278,35 @@ service cloud.firestore {
     match /subscription/{id} {
       allow read, write: if isStaff();
     }
+    // Tenant-isolated: only staff at the transaction's own school (or the
+    // SaaS owner console) may read it. This previously allowed any staff
+    // member at any school to read every school's payment_transactions -
+    // amounts, masked phone numbers and references included. The MTN MoMo
+    // settlement path (mtn_momo.js:checkAndSettle) writes into this exact
+    // collection, which is what surfaced the gap; fixed here rather than
+    // left open now that automated payments land here too. Writes remain
+    // Admin-SDK-only - no client, including the school that owns the
+    // transaction, may create/update one directly.
     match /payment_transactions/{id} {
-      allow read: if isStaff();
+      allow read: if isSuperAdmin() || isSameSchool(resource.data.schoolId);
+      allow write: if false;
+    }
+    // MTN Mobile Money Collections payment attempts. Named mtn_payments
+    // (not payments) deliberately - a top-level payments/{docId} collection
+    // already exists above (line ~369) for the unrelated Finance/Bursar
+    // student-fee flow with a completely different access model (parents
+    // and staff can read/write it); reusing that path here would have
+    // silently OR'd the two rule blocks together on the same documents.
+    // Server-authoritative: initiateMtnPayment/checkMtnPaymentStatus (Admin
+    // SDK, public_functions codebase) are the only writers. Unlike
+    // payment_transactions above, Flutter reads this collection directly to
+    // drive the live awaitingApproval/checking UI between polls, so the
+    // read is scoped to the caller's own school rather than any staff
+    // member anywhere.
+    match /mtn_payments/{paymentId} {
+      allow read: if isSuperAdmin() ||
+        (isSameSchool(resource.data.schoolId) &&
+          hasAnyRole(['schoolAdmin', 'director', 'headTeacher', 'bursar']));
       allow write: if false;
     }
     // Each teacher's own lesson plans; any staff can read (e.g. dean review).
