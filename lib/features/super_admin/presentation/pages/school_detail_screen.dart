@@ -10,6 +10,7 @@ import 'package:school_pulse/features/super_admin/data/services/manual_payment_s
 import 'package:school_pulse/features/super_admin/domain/entities/manual_subscription_payment.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
+import 'package:school_pulse/features/institution/domain/entities/access_mode.dart';
 import '../../domain/entities/school.dart';
 import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
@@ -272,7 +273,7 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
                   ? '?'
                   : school.name.substring(0, 1).toUpperCase(),
               style: theme.textTheme.titleMedium?.copyWith(
-                color: Colors.white,
+                color: theme.colorScheme.onPrimary,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -363,6 +364,23 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
     );
   }
 
+  Widget _accessModeBadge(BuildContext context) {
+    final mode = AccessMode.fromRaw(school.accessMode);
+    return switch (mode) {
+      AccessMode.full => const SizedBox.shrink(),
+      AccessMode.readOnly => StatusBadge(
+        label: 'Read-only',
+        color: Colors.amber.shade800,
+        icon: Icons.lock_clock_rounded,
+      ),
+      AccessMode.blocked => StatusBadge(
+        label: 'Blocked',
+        color: Theme.of(context).colorScheme.error,
+        icon: Icons.block_rounded,
+      ),
+    };
+  }
+
   Widget _buildSubscription(
     ThemeData theme,
     BuildContext context,
@@ -394,14 +412,21 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      school.subscriptionPlanId.isEmpty
-                          ? 'No plan assigned'
-                          : school.subscriptionPlanId.toUpperCase(),
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.purple,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            school.subscriptionPlanId.isEmpty
+                                ? 'No plan assigned'
+                                : school.subscriptionPlanId.toUpperCase(),
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.purple,
+                            ),
+                          ),
+                        ),
+                        _accessModeBadge(context),
+                      ],
                     ),
                     const SizedBox(height: 8),
                     Text(

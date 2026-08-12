@@ -4,8 +4,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../../../design_system/app_components.dart';
 import '../../../../design_system/theme/app_colors.dart';
+import '../../../../design_system/theme/app_radius.dart';
 import '../../../../design_system/theme/app_spacing.dart';
 import '../../../../design_system/theme/app_typography.dart';
+import 'package:school_pulse/features/institution/domain/entities/access_mode.dart';
 import '../../domain/entities/school.dart';
 import '../../domain/entities/school_application.dart';
 import '../bloc/super_admin_bloc.dart';
@@ -30,7 +32,7 @@ class _SchoolManagementScreenState extends State<SchoolManagementScreen> {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF9FAFE),
+        backgroundColor: AppColors.background(context),
         body: SafeArea(
           bottom: false,
           child: Column(
@@ -41,11 +43,16 @@ class _SchoolManagementScreenState extends State<SchoolManagementScreen> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l),
                 child: _SchoolsSegmentedTabs(),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.x2l,
+                  AppSpacing.xl,
+                  AppSpacing.x2l,
+                  AppSpacing.l,
+                ),
                 child: Column(
                   children: [
                     Row(
@@ -53,11 +60,11 @@ class _SchoolManagementScreenState extends State<SchoolManagementScreen> {
                         Container(
                           width: 32,
                           height: 32,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFEAF0FF),
+                          decoration: BoxDecoration(
+                            color: AppColors.primarySoft(context),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.health_and_safety_outlined,
                             color: AppColors.electricBlue,
                             size: 17,
@@ -68,7 +75,7 @@ class _SchoolManagementScreenState extends State<SchoolManagementScreen> {
                           child: Text(
                             'Manage every institution using School Pulse.',
                             style: AppTypography.bodyMedium.copyWith(
-                              color: const Color(0xFF647397),
+                              color: AppColors.textSecondary(context),
                               fontSize: 13,
                             ),
                           ),
@@ -231,7 +238,7 @@ class _SchoolsHeader extends StatelessWidget {
                   child: Text(
                     'Schools',
                     style: AppTypography.displaySmall.copyWith(
-                      color: AppColors.deepNavy,
+                      color: AppColors.textPrimary(context),
                       fontSize: 26,
                       height: 1,
                       fontWeight: FontWeight.w800,
@@ -240,19 +247,18 @@ class _SchoolsHeader extends StatelessWidget {
                   ),
                 ),
                 Material(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  elevation: 2,
-                  shadowColor: const Color(0x1A0A245B),
+                  color: AppColors.surfaceElevated(context),
+                  borderRadius: AppRadius.medium,
+                  elevation: 0,
                   child: InkWell(
                     onTap: onRefresh,
-                    borderRadius: BorderRadius.circular(12),
-                    child: const SizedBox(
+                    borderRadius: AppRadius.medium,
+                    child: SizedBox(
                       width: 38,
                       height: 38,
                       child: Icon(
                         Icons.refresh_rounded,
-                        color: AppColors.royalBlue,
+                        color: AppColors.primary(context),
                         size: 19,
                       ),
                     ),
@@ -290,38 +296,38 @@ class _SchoolsSegmentedTabs extends StatelessWidget {
       height: 64,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E6F0)),
-        boxShadow: const [
+        color: AppColors.surfaceElevated(context),
+        borderRadius: AppRadius.large,
+        border: Border.all(color: AppColors.border(context)),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x0D091F4E),
-            blurRadius: 10,
+            color: AppColors.shadow(context),
+            blurRadius: 8,
             offset: Offset(0, 3),
           ),
         ],
       ),
       child: TabBar(
-        splashBorderRadius: BorderRadius.circular(13),
+        splashBorderRadius: AppRadius.medium,
         indicatorSize: TabBarIndicatorSize.tab,
         indicatorPadding: EdgeInsets.zero,
         dividerColor: Colors.transparent,
         indicator: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(13),
+          color: AppColors.surfaceContainerHigh(context),
+          borderRadius: AppRadius.medium,
           border: const Border(
             bottom: BorderSide(color: AppColors.electricBlue, width: 3),
           ),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
-              color: Color(0x12091F4E),
-              blurRadius: 8,
+              color: AppColors.shadow(context),
+              blurRadius: 4,
               offset: Offset(0, 2),
             ),
           ],
         ),
-        labelColor: AppColors.electricBlue,
-        unselectedLabelColor: const Color(0xFF647397),
+        labelColor: AppColors.primary(context),
+        unselectedLabelColor: AppColors.textSecondary(context),
         labelStyle: const TextStyle(
           fontSize: 12.5,
           fontWeight: FontWeight.w700,
@@ -364,33 +370,34 @@ class _SchoolSearchField extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextField(
       onChanged: onChanged,
-      style: const TextStyle(color: AppColors.deepNavy, fontSize: 14),
+      style: AppTypography.bodyMedium.copyWith(
+        color: AppColors.textPrimary(context),
+      ),
       decoration: InputDecoration(
         hintText: 'Search by name, prefix, email, district or tenant ID...',
-        hintStyle: const TextStyle(color: Color(0xFF93A0BD), fontSize: 13),
-        prefixIcon: const Icon(
+        hintStyle: AppTypography.bodySmall.copyWith(
+          color: AppColors.textMuted(context),
+        ),
+        prefixIcon: Icon(
           Icons.search_rounded,
-          color: Color(0xFF647397),
+          color: AppColors.textSecondary(context),
           size: 20,
         ),
-        suffixIcon: const Icon(
+        suffixIcon: Icon(
           Icons.tune_rounded,
-          color: Color(0xFF647397),
+          color: AppColors.textSecondary(context),
           size: 18,
         ),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: AppColors.surfaceElevated(context),
         contentPadding: const EdgeInsets.symmetric(vertical: 12),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFFD5DBE8), width: 1.2),
+          borderRadius: AppRadius.medium,
+          borderSide: BorderSide(color: AppColors.border(context), width: 1.2),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: AppColors.electricBlue,
-            width: 1.4,
-          ),
+          borderRadius: AppRadius.medium,
+          borderSide: BorderSide(color: AppColors.primary(context), width: 1.4),
         ),
       ),
     );
@@ -686,8 +693,8 @@ class _SchoolCard extends StatelessWidget {
         : school.name.trim()[0].toUpperCase();
 
     return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(21),
+      color: AppColors.surfaceElevated(context),
+      borderRadius: AppRadius.large,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => Navigator.push(
@@ -697,14 +704,19 @@ class _SchoolCard extends StatelessWidget {
           ),
         ),
         child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 16, 10, 16),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            AppSpacing.xl,
+            AppSpacing.l,
+            AppSpacing.xl,
+          ),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE7EAF1)),
-            boxShadow: const [
+            borderRadius: AppRadius.large,
+            border: Border.all(color: AppColors.border(context)),
+            boxShadow: [
               BoxShadow(
-                color: Color(0x0A071B45),
-                blurRadius: 10,
+                color: AppColors.shadow(context),
+                blurRadius: 8,
                 offset: Offset(0, 3),
               ),
             ],
@@ -728,8 +740,8 @@ class _SchoolCard extends StatelessWidget {
                               school.name,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: AppColors.deepNavy,
+                              style: AppTypography.labelLarge.copyWith(
+                                color: AppColors.textPrimary(context),
                                 fontWeight: FontWeight.w800,
                                 fontSize: 15.5,
                                 letterSpacing: -0.2,
@@ -739,6 +751,11 @@ class _SchoolCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 6),
                         _SchoolStatusPill(status: school.status),
+                        if (AccessMode.fromRaw(school.accessMode) !=
+                            AccessMode.full) ...[
+                          const SizedBox(width: 6),
+                          _AccessModePill(accessMode: school.accessMode),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 9),
@@ -825,18 +842,57 @@ class _SchoolMetaRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      Icon(icon, size: 14, color: const Color(0xFF697A9F)),
+      Icon(icon, size: 14, color: AppColors.textSecondary(context)),
       const SizedBox(width: 8),
       Expanded(
         child: Text(
           text,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(color: Color(0xFF637397), fontSize: 12.5),
+          style: AppTypography.bodySmall.copyWith(
+            color: AppColors.textSecondary(context),
+          ),
         ),
       ),
     ],
   );
+}
+
+/// Billing state, deliberately separate from _SchoolStatusPill's operational
+/// status (active/suspended/etc) - an expired subscription and an
+/// owner-suspended school are different concepts and must never share one
+/// badge. Only rendered when accessMode isn't 'full', so a normal paying
+/// school shows no extra pill.
+class _AccessModePill extends StatelessWidget {
+  const _AccessModePill({required this.accessMode});
+
+  final String? accessMode;
+
+  @override
+  Widget build(BuildContext context) {
+    final mode = AccessMode.fromRaw(accessMode);
+    final (label, color) = switch (mode) {
+      AccessMode.readOnly => ('READ-ONLY', Colors.amber.shade800),
+      AccessMode.blocked => ('BLOCKED', Theme.of(context).colorScheme.error),
+      AccessMode.full => ('', Colors.transparent),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .12),
+        borderRadius: AppRadius.full,
+        border: Border.all(color: color.withValues(alpha: .14)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w700,
+          fontSize: 10.5,
+        ),
+      ),
+    );
+  }
 }
 
 class _SchoolStatusPill extends StatelessWidget {
@@ -849,13 +905,15 @@ class _SchoolStatusPill extends StatelessWidget {
     final isActive =
         status == SchoolStatus.active || status == SchoolStatus.trial;
     final color = isActive
-        ? const Color(0xFF08A851)
+        ? AppColors.success(context)
         : _schoolStatusColor(context, status);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: .10),
-        borderRadius: BorderRadius.circular(99),
+        color: isActive
+            ? AppColors.successSurface(context)
+            : color.withValues(alpha: .12),
+        borderRadius: AppRadius.full,
         border: Border.all(color: color.withValues(alpha: .14)),
       ),
       child: Text(
@@ -922,7 +980,17 @@ class _SchoolTableRow extends StatelessWidget {
             ),
             Expanded(
               flex: 2,
-              child: StatusBadge(label: school.status.name, color: statusColor),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  StatusBadge(label: school.status.name, color: statusColor),
+                  if (AccessMode.fromRaw(school.accessMode) !=
+                      AccessMode.full)
+                    _AccessModePill(accessMode: school.accessMode),
+                ],
+              ),
             ),
             Expanded(
               flex: 2,
