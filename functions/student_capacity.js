@@ -88,7 +88,14 @@ exports.createStudentWithCapacityCheck = onCall(async (request) => {
       );
     }
 
-    const studentData = { ...student, id: studentRef.id, schoolId };
+    // The Flutter client sends dateOfBirth as an ISO string (callables
+    // can't carry a Firestore Timestamp over the wire) - convert back so
+    // the stored shape matches every other writer of this collection.
+    // StudentModel.fromMap() on the client already accepts either shape.
+    const dateOfBirth = typeof student.dateOfBirth === "string"
+      ? admin.firestore.Timestamp.fromDate(new Date(student.dateOfBirth))
+      : student.dateOfBirth;
+    const studentData = { ...student, id: studentRef.id, schoolId, dateOfBirth };
     tx.set(studentRef, studentData);
     tx.set(enrolmentRef, {
       schoolId,

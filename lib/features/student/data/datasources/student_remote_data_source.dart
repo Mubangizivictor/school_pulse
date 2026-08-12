@@ -1,9 +1,36 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../../../teacher/domain/entities/homework.dart';
 import '../models/student_model.dart';
 import '../models/admission_application_model.dart';
 import '../models/parent_access_code_model.dart';
+
+/// Thrown when createStudentWithCapacityCheck rejects a create because the
+/// school has reached its plan's maxStudents limit, so callers can show a
+/// clear upgrade message instead of a generic Firestore/network error.
+class StudentCapacityExceededException implements Exception {
+  const StudentCapacityExceededException(this.message);
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
+/// student.toMap() is written for direct Firestore writes and includes a
+/// raw Timestamp for dateOfBirth, which cloud_functions callables cannot
+/// serialize over the wire (mirrors the ISO-string convention
+/// AuthRemoteDataSourceImpl already uses for createStaffAccount's
+/// dateJoined). StudentModel.fromMap() already accepts either a Timestamp
+/// or an ISO string, so the server side converts this back before writing.
+Map<String, dynamic> _studentPayloadForCallable(StudentModel student) {
+  final map = student.toMap();
+  final dateOfBirth = map['dateOfBirth'];
+  if (dateOfBirth is Timestamp) {
+    map['dateOfBirth'] = dateOfBirth.toDate().toIso8601String();
+  }
+  return map;
+}
 
 abstract class StudentRemoteDataSource {
   // Student Management
@@ -70,8 +97,13 @@ abstract class StudentRemoteDataSource {
 class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
   final FirebaseFirestore firestore;
   final FirebaseStorage storage;
+  final FirebaseFunctions functions;
 
-  StudentRemoteDataSourceImpl({required this.firestore, required this.storage});
+  StudentRemoteDataSourceImpl({
+    required this.firestore,
+    required this.storage,
+    required this.functions,
+  });
 
   @override
   Future<StudentModel> getStudentById(String studentId) async {
@@ -148,33 +180,23 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
     StudentModel student, {
     String? recordedBy,
   }) async {
-    final batch = firestore.batch();
-
-    final studentRef = student.id.isEmpty
-        ? firestore.collection('students').doc()
-        : firestore.collection('students').doc(student.id);
-    final studentWithId = student.copyWithModelId(studentRef.id);
-    batch.set(studentRef, studentWithId.toMap());
-
-    // Same convention as finalizeAdmission: a direct create still opens an
-    // initial placement record, so enrolment history has a starting point
-    // regardless of which path created the student.
-    final enrolmentRef = firestore.collection('student_enrolments').doc();
-    batch.set(enrolmentRef, {
-      'schoolId': student.schoolId,
-      'studentId': studentRef.id,
-      'classId': student.classId,
-      'streamId': student.streamId,
-      'academicYearId': student.academicYearId,
-      'status': 'active',
-      'startDate': Timestamp.now(),
-      'reason': 'direct creation',
-      'recordedBy': recordedBy ?? '',
-      'createdAt': Timestamp.now(),
-    });
-
-    await batch.commit();
-    return studentRef.id;
+    try {
+      final callable = functions.httpsCallable(
+        'createStudentWithCapacityCheck',
+      );
+      final result = await callable.call<Map<String, dynamic>>({
+        'student': _studentPayloadForCallable(student),
+        'recordedBy': recordedBy,
+      });
+      return result.data['studentId'] as String;
+    } on FirebaseFunctionsException catch (e) {
+      if (e.code == 'resource-exhausted') {
+        throw StudentCapacityExceededException(
+          e.message ?? 'This school has reached its student limit.',
+        );
+      }
+      rethrow;
+    }
   }
 
   @override
@@ -187,14 +209,12 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
 
   @override
   Future<void> updateStudentStatus(String studentId, String status) async {
-    final reference = firestore.collection('students').doc(studentId);
-    final snapshot = await reference.get();
-    if (!snapshot.exists) {
-      throw StateError('Student not found.');
-    }
-    await reference.update({
+    final callable = functions.httpsCallable(
+      'updateStudentStatusWithCapacityAdjustment',
+    );
+    await callable.call<Map<String, dynamic>>({
+      'studentId': studentId,
       'status': status,
-      'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 
@@ -296,43 +316,27 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
     StudentModel student, {
     String? recordedBy,
   }) async {
-    final batch = firestore.batch();
-
-    // 1. Create Student record (Generate new ID)
-    final studentRef = firestore.collection('students').doc();
-    final studentWithId = student.copyWithModelId(studentRef.id);
-    batch.set(studentRef, studentWithId.toMap());
-
-    // 2. Update Application status
-    final appRef = firestore
-        .collection('admission_applications')
-        .doc(application.id);
-    batch.update(appRef, {
-      'status': 'admitted',
-      'studentId': studentRef.id,
-      'admissionNumber': student.admissionNumber,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-
-    // 3. First student_enrolments record - the initial placement, so
-    // enrolment history starts from admission rather than only from the
-    // first later change.
-    final enrolmentRef = firestore.collection('student_enrolments').doc();
-    batch.set(enrolmentRef, {
-      'schoolId': student.schoolId,
-      'studentId': studentRef.id,
-      'classId': student.classId,
-      'streamId': student.streamId,
-      'academicYearId': student.academicYearId,
-      'status': 'active',
-      'startDate': Timestamp.now(),
-      'reason': 'initial admission',
-      'recordedBy': recordedBy ?? application.reviewerId ?? '',
-      'createdAt': Timestamp.now(),
-    });
-
-    await batch.commit();
-    return studentRef.id;
+    try {
+      final callable = functions.httpsCallable(
+        'createStudentWithCapacityCheck',
+      );
+      final result = await callable.call<Map<String, dynamic>>({
+        'student': _studentPayloadForCallable(student),
+        'recordedBy': recordedBy ?? application.reviewerId,
+        'application': {
+          'id': application.id,
+          'schoolId': student.schoolId,
+        },
+      });
+      return result.data['studentId'] as String;
+    } on FirebaseFunctionsException catch (e) {
+      if (e.code == 'resource-exhausted') {
+        throw StudentCapacityExceededException(
+          e.message ?? 'This school has reached its student limit.',
+        );
+      }
+      rethrow;
+    }
   }
 
   @override

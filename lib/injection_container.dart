@@ -661,7 +661,11 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<StudentRemoteDataSource>(
-    () => StudentRemoteDataSourceImpl(firestore: sl(), storage: sl()),
+    () => StudentRemoteDataSourceImpl(
+      firestore: sl(),
+      storage: sl(),
+      functions: sl(),
+    ),
   );
 
   sl.registerLazySingleton<StudentLocalDataSource>(
