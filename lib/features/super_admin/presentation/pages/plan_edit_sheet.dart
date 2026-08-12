@@ -193,36 +193,53 @@ class _PlanEditSheetState extends State<_PlanEditSheet> {
                         validator: _validatePrice,
                       ),
                       const SizedBox(height: AppSpacing.m),
-                      DropdownButtonFormField<BillingCycle>(
-                        initialValue: _cycle,
-                        decoration: const InputDecoration(
-                          labelText: 'Billing cycle',
+                      if (_isEnterprise) ...[
+                        DropdownButtonFormField<BillingCycle>(
+                          initialValue: _cycle,
+                          decoration: const InputDecoration(
+                            labelText: 'Billing cycle',
+                          ),
+                          items: BillingCycle.values
+                              .map(
+                                (cycle) => DropdownMenuItem(
+                                  value: cycle,
+                                  child: Text(_cycleLabel(cycle)),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: _saving
+                              ? null
+                              : (value) {
+                                  if (value != null) {
+                                    setState(() => _cycle = value);
+                                  }
+                                },
                         ),
-                        items: BillingCycle.values
-                            .map(
-                              (cycle) => DropdownMenuItem(
-                                value: cycle,
-                                child: Text(_cycleLabel(cycle)),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: _saving
-                            ? null
-                            : (value) {
-                                if (value != null) {
-                                  setState(() => _cycle = value);
-                                }
-                              },
-                      ),
-                      const SizedBox(height: AppSpacing.m),
-                      PulseTextField(
-                        label: 'Paid period length (days)',
-                        controller: _daysController,
-                        enabled: !_saving,
-                        keyboardType: TextInputType.number,
-                        isRequired: true,
-                        validator: _validateDays,
-                      ),
+                        const SizedBox(height: AppSpacing.m),
+                        PulseTextField(
+                          label: 'Paid period length (days)',
+                          controller: _daysController,
+                          enabled: !_saving,
+                          keyboardType: TextInputType.number,
+                          isRequired: true,
+                          validator: _validateDays,
+                        ),
+                      ] else ...[
+                        // All public School Pulse plans are termly, fixed
+                        // 120-day terms - no monthly/yearly option, and the
+                        // term length isn't casually editable per plan.
+                        // Enterprise stays editable above: it's a legacy,
+                        // non-public, individually-negotiated plan.
+                        _ReadOnlyField(
+                          label: 'Billing cycle',
+                          value: 'Per term',
+                        ),
+                        const SizedBox(height: AppSpacing.m),
+                        _ReadOnlyField(
+                          label: 'Paid period length (days)',
+                          value: '120 days',
+                        ),
+                      ],
                       const SizedBox(height: AppSpacing.l),
                       Row(
                         children: [
@@ -420,8 +437,13 @@ class _PlanEditSheetState extends State<_PlanEditSheet> {
         name: _nameController.text.trim(),
         description: _descriptionController.text.trim(),
         priceUgx: int.parse(_priceController.text.replaceAll(',', '').trim()),
-        billingCycle: _cycle,
-        termLengthDays: int.parse(_daysController.text.trim()),
+        // Public plans are always termly/120 days - not read from the
+        // (no longer editable, for these plans) controllers, so a stale
+        // in-memory value can never diverge from what the UI actually shows.
+        billingCycle: _isEnterprise ? _cycle : BillingCycle.termly,
+        termLengthDays: _isEnterprise
+            ? int.parse(_daysController.text.trim())
+            : 120,
         maxStudents: int.parse(
           _maxStudentsController.text.trim().isEmpty
               ? '0'
@@ -455,5 +477,29 @@ class _PlanEditSheetState extends State<_PlanEditSheet> {
         _error = error.toString();
       });
     }
+  }
+}
+
+/// Non-editable label/value row for the plan fields that are display-only
+/// on the 3 public plans (billing cycle, term length) - same visual weight
+/// as a disabled PulseTextField, without offering a field that looks
+/// interactive but silently ignores taps.
+class _ReadOnlyField extends StatelessWidget {
+  const _ReadOnlyField({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return InputDecorator(
+      decoration: InputDecoration(labelText: label),
+      child: Text(
+        value,
+        style: AppTypography.bodyMedium.copyWith(
+          color: AppColors.textSecondary(context),
+        ),
+      ),
+    );
   }
 }
