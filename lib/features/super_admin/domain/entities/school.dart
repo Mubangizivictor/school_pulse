@@ -76,6 +76,13 @@ class School extends Equatable {
   final List<InstitutionDivision> divisions;
   final String? displayLabel;
 
+  /// Server-written subscription access state ('full' | 'readOnly' |
+  /// 'blocked'). Null on schools not yet touched by the Cloud Functions that
+  /// write it (payment approval, hourly lifecycle sweep) - callers should
+  /// treat null the same way [AccessMode.fromRaw] does, not assume 'full'
+  /// blindly at every call site.
+  final String? accessMode;
+
   const School({
     required this.id,
     required this.name,
@@ -93,6 +100,7 @@ class School extends Equatable {
     this.classificationOther,
     this.divisions = const [],
     this.displayLabel,
+    this.accessMode,
   });
 
   @override
@@ -113,6 +121,7 @@ class School extends Equatable {
     classificationOther,
     divisions,
     displayLabel,
+    accessMode,
   ];
 
   School copyWith({
@@ -129,6 +138,7 @@ class School extends Equatable {
     String? classificationOther,
     List<InstitutionDivision>? divisions,
     String? displayLabel,
+    String? accessMode,
   }) {
     return School(
       id: id,
@@ -147,6 +157,7 @@ class School extends Equatable {
       classificationOther: classificationOther ?? this.classificationOther,
       divisions: divisions ?? this.divisions,
       displayLabel: displayLabel ?? this.displayLabel,
+      accessMode: accessMode ?? this.accessMode,
     );
   }
 }

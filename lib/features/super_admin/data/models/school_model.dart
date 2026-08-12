@@ -18,6 +18,7 @@ class SchoolModel extends School {
     super.classificationOther,
     super.divisions,
     super.displayLabel,
+    super.accessMode,
   });
 
   factory SchoolModel.fromJson(Map<String, dynamic> json) {
@@ -50,6 +51,7 @@ class SchoolModel extends School {
           .map((d) => _divisionFromJson(Map<String, dynamic>.from(d as Map)))
           .toList(),
       displayLabel: json['displayLabel'] as String?,
+      accessMode: json['accessMode'] as String?,
     );
   }
 
@@ -94,6 +96,7 @@ class SchoolModel extends School {
       'classificationOther': classificationOther,
       'divisions': divisions.map(_divisionToJson).toList(),
       'displayLabel': displayLabel,
+      if (accessMode != null) 'accessMode': accessMode,
     };
   }
 }

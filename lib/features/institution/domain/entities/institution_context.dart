@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:school_pulse/features/institution/domain/entities/access_mode.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/school.dart';
 
 /// Single source of truth for the currently active institution tenant.
@@ -21,6 +22,11 @@ class InstitutionContext extends Equatable {
   final String subscriptionStatus;
   final bool hasEverActivated;
 
+  /// Raw server-written access mode string ('full' | 'readOnly' | 'blocked'),
+  /// null on schools not yet touched by the accessMode-writing Cloud
+  /// Functions. Use [resolvedAccessMode] rather than this field directly.
+  final String? accessMode;
+
   const InstitutionContext({
     required this.institutionId,
     required this.displayLabel,
@@ -33,7 +39,19 @@ class InstitutionContext extends Equatable {
     this.subscriptionExpiry,
     this.subscriptionStatus = 'active',
     this.hasEverActivated = true,
+    this.accessMode,
   });
+
+  /// Prefers the server-authoritative [accessMode] field. Falls back to
+  /// deriving from [isInitialPaymentRequired]/[isRenewalLocked] when absent,
+  /// so schools that predate the Cloud Functions writing this field are not
+  /// misread as fully open by a stale/missing value alone.
+  AccessMode get resolvedAccessMode {
+    if (accessMode != null) return AccessMode.fromRaw(accessMode);
+    if (isInitialPaymentRequired) return AccessMode.blocked;
+    if (isRenewalLocked) return AccessMode.readOnly;
+    return AccessMode.full;
+  }
 
   factory InstitutionContext.fromSchool(
     School school, {
@@ -63,6 +81,7 @@ class InstitutionContext extends Equatable {
       hasEverActivated: hasExplicitActivationFlag
           ? metadata['hasEverActivated'] == true
           : source != 'public_website_application',
+      accessMode: school.accessMode,
     );
   }
 
@@ -111,5 +130,6 @@ class InstitutionContext extends Equatable {
     subscriptionExpiry,
     subscriptionStatus,
     hasEverActivated,
+    accessMode,
   ];
 }
