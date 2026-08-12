@@ -654,6 +654,9 @@ exports.submitManualPayment = onRequest({ region: 'europe-west1' }, async (req, 
         planName: text(plan.name, 80),
         billingCycle: text(plan.billingCycle || 'termly', 20),
         termLengthDays,
+        maxStudents: Number(plan.maxStudents || 0),
+        maxStaff: Number(plan.maxStaff || 0),
+        storageLimitGb: Number(plan.storageLimitGb || 0),
         paymentType,
         expectedAmount,
         submittedAmount,
@@ -789,10 +792,27 @@ exports.approveManualPayment = onCall({ region: 'europe-west1' }, async (request
     const startMs = payment.paymentType === 'renewal' && existingExpiry > nowMs ? existingExpiry : nowMs;
     const expiryMs = startMs + termLengthDays * 24 * 60 * 60 * 1000;
 
+    // Activation snapshot: the commercial agreement as it stood when this
+    // payment was submitted (payments.js:submitManualPayment already froze
+    // termLengthDays/maxStudents/maxStaff/storageLimitGb there), not a live
+    // re-read of subscription_plans - so a later plan price/cap change never
+    // retroactively alters an already-paid term.
     tx.set(schoolRef, {
       status: 'active',
       subscriptionPlanId: text(payment.planId, 80),
       subscriptionExpiry: expiryMs,
+      accessMode: 'full',
+      subscription: {
+        planId: text(payment.planId, 80),
+        planName: text(payment.planName, 80),
+        price: Number(payment.expectedAmount || 0),
+        maxStudents: Number(payment.maxStudents || 0),
+        maxStaff: Number(payment.maxStaff || 0),
+        storageLimitGb: Number(payment.storageLimitGb || 0),
+        termLengthDays,
+        periodStart: startMs,
+        periodEnd: expiryMs,
+      },
       metadata: {
         ...metadata,
         subscriptionStatus: 'active',
@@ -809,6 +829,22 @@ exports.approveManualPayment = onCall({ region: 'europe-west1' }, async (request
       subscriptionExpiry: expiryMs,
       rejectionReason: null,
     }, { merge: true });
+    const receiptRef = db.collection('subscription_receipts').doc(paymentId);
+    tx.set(receiptRef, {
+      receiptNumber: paymentId,
+      schoolId,
+      schoolName: text(payment.schoolName, 160),
+      planId: text(payment.planId, 80),
+      planName: text(payment.planName, 80),
+      periodStart: startMs,
+      periodEnd: expiryMs,
+      amountUgx: Number(payment.submittedAmount || 0),
+      currency: text(payment.currency || 'UGX', 10),
+      method: text(payment.method, 20),
+      paymentType: text(payment.paymentType, 20),
+      approvedBy: owner.uid,
+      approvedAt: serverTime,
+    });
     if (payment.applicationId) {
       tx.set(db.collection('public_school_applications').doc(text(payment.applicationId, 180)), {
         paymentStatus: 'paid',
@@ -880,7 +916,13 @@ exports.rejectManualPayment = onCall({ region: 'europe-west1' }, async (request)
     const metadata = school.metadata && typeof school.metadata === 'object' ? school.metadata : {};
     const nextSubscriptionStatus = payment.paymentType === 'renewal' ? 'payment_due' : 'awaiting_payment';
     tx.set(paymentRef, { status: 'rejected', reviewedByUid: owner.uid, reviewedAt: serverTime, rejectionReason: reason }, { merge: true });
-    tx.set(schoolRef, { metadata: { ...metadata, subscriptionStatus: nextSubscriptionStatus } }, { merge: true });
+    // A renewal rejection leaves the school exactly as it already was
+    // (readOnly, set by the prior lifecycle sweep) - only an activation
+    // rejection needs an explicit write, keeping the server-authoritative
+    // field in sync with what isInitialPaymentRequired already implies.
+    const schoolUpdate = { metadata: { ...metadata, subscriptionStatus: nextSubscriptionStatus } };
+    if (payment.paymentType !== 'renewal') schoolUpdate.accessMode = 'blocked';
+    tx.set(schoolRef, schoolUpdate, { merge: true });
     if (payment.applicationId) {
       tx.set(db.collection('public_school_applications').doc(text(payment.applicationId, 180)), {
         paymentStatus: 'rejected',
