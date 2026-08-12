@@ -57,6 +57,24 @@ async function usedByOtherActiveApplication(field, value, currentUid) {
   return snap.docs.some((doc) => doc.id !== currentUid && RESERVED_STATUSES.has(String(doc.data()?.status || "")));
 }
 
+// Recomputed server-side rather than trusted from the client's submitted
+// boolean - this flag gates a human review workflow, and a client value
+// could be forged to skip that review. "Largest public plan" means the
+// biggest maxStudents cap among the currently public/active plans (Pro
+// today, but this deliberately doesn't hardcode 'pro' as the plan id).
+async function requiresCapacityReview(studentCapacity) {
+  if (studentCapacity <= 0) return false;
+  const snapshot = await db.collection("subscription_plans")
+    .where("isPublic", "==", true)
+    .where("isActive", "==", true)
+    .get();
+  const caps = snapshot.docs
+    .map((doc) => Number(doc.data()?.maxStudents || 0))
+    .filter((n) => n > 0);
+  if (!caps.length) return false;
+  return studentCapacity > Math.max(...caps);
+}
+
 exports.submitSchoolApplication = onRequest({ region: "europe-west1" }, async (req, res) => {
   if (cors(req, res)) return;
   if (req.method !== "POST") { res.status(405).json({ error: "method_not_allowed" }); return; }
@@ -92,9 +110,11 @@ exports.submitSchoolApplication = onRequest({ region: "europe-west1" }, async (r
   if (adminPhoneUsedAsSchool || adminPhoneUsedAsAdmin) { res.status(409).json({ error: "admin_phone_in_use", message: "That administrator phone number is already linked to another School Pulse school." }); return; }
   if (schoolEmailUsed) { res.status(409).json({ error: "school_email_in_use", message: "That school email is already linked to another School Pulse application." }); return; }
 
+  const capacityReview = await requiresCapacityReview(studentCapacity);
   const now = admin.firestore.FieldValue.serverTimestamp();
   await ref.set({
     id: identity.uid, authUid: identity.uid, status: "pending_review", source: "public_website", plan, selectedModules,
+    requiresCapacityReview: capacityReview,
     school: { name: schoolName, shortName: text(school.shortName, 40), email: schoolEmail, phone: schoolPhone, category: text(school.category, 80), poBox: "", prefix, motto: "", studentCapacity },
     location: { region: text(location.region, 40), district: text(location.district, 100), address: text(location.address, 240), country: "Uganda", website: "", locationName: text(location.locationName, 140), latitude: "", longitude: "" },
     administrator: { firstName: text(administrator.firstName, 100), lastName: text(administrator.lastName, 100), gender: text(administrator.gender, 40), phone: adminPhone, email: adminEmail, username: text(administrator.username, 120), emailVerified: true },
@@ -102,7 +122,7 @@ exports.submitSchoolApplication = onRequest({ region: "europe-west1" }, async (r
     createdAt: existing.exists ? (existing.data()?.createdAt ?? now) : now, updatedAt: now, reviewedAt: null, reviewedBy: null,
   }, { merge: true });
 
-  res.status(201).json({ ok: true, applicationId: identity.uid, status: "pending_review", schoolName });
+  res.status(201).json({ ok: true, applicationId: identity.uid, status: "pending_review", schoolName, requiresCapacityReview: capacityReview });
 });
 
 exports.getSchoolApplicationStatus = onRequest({ region: "europe-west1" }, async (req, res) => {
