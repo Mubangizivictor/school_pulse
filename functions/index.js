@@ -1788,6 +1788,8 @@ exports.sendTestNotification = notificationFunctions.sendTestNotification;
 
 const appointmentFunctions = require('./appointments');
 exports.queueAppointmentNotifications = appointmentFunctions.queueAppointmentNotifications;
+exports.notifyAppointmentStatusChange = appointmentFunctions.notifyAppointmentStatusChange;
+exports.sendAppointmentReminderEmails = appointmentFunctions.sendAppointmentReminderEmails;
 
 /**
  * Attendance -> Google Sheets export. Kept in its own file for the same
@@ -1943,8 +1945,82 @@ exports.publishClassReports = onCall(async (request) => {
     newValue: { publishedCount: published.length, skipped },
   });
 
+  if (published.length > 0) {
+    notifyParentsOfPublishedReports({
+      schoolId: caller.schoolId,
+      studentIds: published,
+      termId,
+    }).catch((err) => console.error("report_available email fan-out failed", classId, err));
+  }
+
   return { published: published.length, skipped };
 });
+
+/** One idempotency key per (student, term, recipient) - never per report content, so a duplicate publish event can't double-email. */
+function reportAvailableEventId(studentId, termId, parentId) {
+  return `report_available_${studentId}_${termId}_${parentId}`;
+}
+
+/** Firestore's `in` query operator accepts at most 10 values per query. */
+function chunkIds(ids, size = 10) {
+  const chunks = [];
+  for (let i = 0; i < ids.length; i += size) chunks.push(ids.slice(i, i + size));
+  return chunks;
+}
+
+/**
+ * Emails each published student's parent(s) that a report is now available.
+ * Uses the same schoolId-scoped students lookup pattern as notifications.js's
+ * "student_parents" audience resolution (students filtered by caller.schoolId,
+ * never a client-supplied schoolId), so a studentId can never resolve to a
+ * parent outside the caller's own school. Does not attach or embed the
+ * report's actual content - the email is a notification only, and existing
+ * report-access/fee-clearance rules remain the sole gate on viewing it.
+ */
+async function notifyParentsOfPublishedReports({ schoolId, studentIds, termId }) {
+  const db = admin.firestore();
+  const schoolDoc = await db.collection("schools").doc(schoolId).get();
+  const schoolName = schoolDoc.exists ? (schoolDoc.data().name || "Your school") : "Your school";
+  const publishedAtLabel = new Date().toLocaleDateString("en-GB", {
+    day: "numeric", month: "long", year: "numeric",
+  });
+
+  for (const idChunk of chunkIds(studentIds)) {
+    const students = await db.collection("students")
+      .where("schoolId", "==", schoolId)
+      .where(admin.firestore.FieldPath.documentId(), "in", idChunk)
+      .get();
+
+    for (const student of students.docs) {
+      const studentData = student.data() || {};
+      const studentName = studentData.name || "Your child";
+      const parentIds = studentData.parentIds || [];
+      if (!parentIds.length) continue;
+
+      const parents = await db.collection("users")
+        .where(admin.firestore.FieldPath.documentId(), "in", parentIds.slice(0, 10))
+        .get();
+
+      for (const parent of parents.docs) {
+        const email = parent.data()?.email;
+        if (!email) continue;
+        await enqueueTransactionalEmail({
+          eventId: reportAvailableEventId(student.id, termId, parent.id),
+          templateId: "report_available",
+          to: email,
+          data: {
+            schoolName,
+            studentName,
+            reportId: `${student.id}_${termId}`,
+            reportName: `${studentName}'s report`,
+            periodLabel: termId,
+            publishedByLabel: publishedAtLabel,
+          },
+        }).catch((err) => console.error("report_available email enqueue failed", student.id, parent.id, err));
+      }
+    }
+  }
+}
 
 /**
  * Decides a teacher's request to change a register they may no longer edit.
@@ -2133,3 +2209,5 @@ exports.overrideClassTeacherAssignment = onCall(async (request) => {
     classesHeld: conflicting.length + 1,
   };
 });
+
+exports.__test__ = { reportAvailableEventId, chunkIds, notifyParentsOfPublishedReports };

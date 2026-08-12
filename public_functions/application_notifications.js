@@ -44,14 +44,14 @@ exports.notifyOwnerOfSchoolApplication = onDocumentWritten(
     const applicationId = event.params.applicationId;
     const schoolName = text(application.school?.name, 160) || 'A school';
     const applicantEmail = text(application.administrator?.email, 200);
+    const adminName = [
+      text(application.administrator?.firstName, 80),
+      text(application.administrator?.lastName, 80),
+    ].filter(Boolean).join(' ');
 
     if (afterStatus === 'pending_review' && beforeStatus !== 'pending_review') {
       const plan = text(application.plan, 60) || 'School Pulse';
       const district = text(application.location?.district, 100);
-      const adminName = [
-        text(application.administrator?.firstName, 80),
-        text(application.administrator?.lastName, 80),
-      ].filter(Boolean).join(' ');
       const body = `${schoolName} submitted a ${plan} application${district ? ` from ${district}` : ''}. Review the school before requesting payment.`;
 
       await notifyOwners({
@@ -88,7 +88,7 @@ exports.notifyOwnerOfSchoolApplication = onDocumentWritten(
         eventId: `application_approved_${applicationId}`,
         templateId: 'application_approved',
         to: applicantEmail,
-        data: { schoolName, applicationId },
+        data: { schoolName, applicationId, adminName },
       });
 
       // Push, alongside the email above, to any device the applicant has
@@ -115,7 +115,7 @@ exports.notifyOwnerOfSchoolApplication = onDocumentWritten(
         eventId: `application_rejected_${applicationId}`,
         templateId: 'application_rejected',
         to: applicantEmail,
-        data: { schoolName, applicationId, reason: text(application.rejectionReason, 500) },
+        data: { schoolName, applicationId, adminName, reason: text(application.rejectionReason, 500) },
       });
     }
   },

@@ -833,6 +833,20 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
+          "fieldPath": "emailQueued",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "scheduledAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "notification_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
           "fieldPath": "schoolId",
           "order": "ASCENDING"
         },

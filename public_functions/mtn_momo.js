@@ -313,15 +313,17 @@ async function checkAndSettle(paymentId) {
       metadata: { amount: Number(payment.realPlanPriceUgx || 0), currency: 'UGX' },
     });
 
-    return { alreadySettled: false, schoolId, expiryMs, payment };
+    return { alreadySettled: false, schoolId, expiryMs, startMs, payment };
   });
 
   if (settlement.alreadySettled) return settlement;
 
   // Notifications are network calls that must not hold the Firestore
   // transaction open - fired after commit, best-effort.
-  const { schoolId, expiryMs, payment } = settlement;
+  const { schoolId, expiryMs, startMs, payment } = settlement;
   const amountLabel = `UGX ${Number(payment.realPlanPriceUgx || 0).toLocaleString('en-US')}`;
+  const expiryLabel = new Date(expiryMs).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const startLabel = new Date(startMs).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
   try {
     await notifyOwners({
       eventId: `mtn_payment_successful_${paymentId}`,
@@ -358,6 +360,8 @@ async function checkAndSettle(paymentId) {
         amountLabel,
         amount: amountLabel,
         planLabel: text(payment.planName, 80),
+        startLabel,
+        expiryLabel,
       },
     });
   } catch (error) {

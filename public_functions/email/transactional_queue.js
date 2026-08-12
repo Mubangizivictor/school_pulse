@@ -78,17 +78,22 @@ async function attemptDelivery(snap) {
     }
 
     // sendTemplatedEmail itself reported failure (Resend error) — fall
-    // through to the shared retry/give-up logic below.
-    await scheduleRetryOrFail(ref, attempts, result.error || 'send_failed');
+    // through to the shared retry/give-up logic below. `result.retryable`
+    // comes from resend_error_classifier.js: false means this is a
+    // configuration problem (bad template/variables/sender), which no
+    // amount of retrying fixes, so it skips straight to `failed` instead of
+    // waiting out the full bounded schedule. Undefined (e.g. a non-Resend
+    // throw elsewhere) is treated as retryable, matching prior behavior.
+    await scheduleRetryOrFail(ref, attempts, result.error || 'send_failed', result.retryable !== false);
   } catch (error) {
-    await scheduleRetryOrFail(ref, attempts, error?.message || String(error));
+    await scheduleRetryOrFail(ref, attempts, error?.message || String(error), true);
   }
 }
 
-async function scheduleRetryOrFail(ref, attempts, error) {
-  if (attempts >= MAX_ATTEMPTS) {
-    await ref.set({ status: 'failed', error: String(error).slice(0, 600) }, { merge: true });
-    console.error('TRANSACTIONAL_EMAIL_FAILED', ref.id, error);
+async function scheduleRetryOrFail(ref, attempts, error, retryable) {
+  if (!retryable || attempts >= MAX_ATTEMPTS) {
+    await ref.set({ status: 'failed', error: String(error).slice(0, 600), retryable: Boolean(retryable) }, { merge: true });
+    console.error('TRANSACTIONAL_EMAIL_FAILED', ref.id, error, retryable ? '(max attempts reached)' : '(non-retryable)');
     return;
   }
   const delay = RETRY_DELAYS_MS[attempts - 1] || RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1];
@@ -131,3 +136,4 @@ exports.retryTransactionalEmailQueue = onSchedule(
 );
 
 module.exports.enqueueTemplatedEmail = enqueueTemplatedEmail;
+module.exports.__test__ = { scheduleRetryOrFail, MAX_ATTEMPTS, RETRY_DELAYS_MS };

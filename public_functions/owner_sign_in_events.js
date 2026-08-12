@@ -1,9 +1,13 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
 const { isOwnerData } = require('./owner_notification_engine');
+const { RESEND_API_KEY } = require('./email/email_service');
+const { enqueueTemplatedEmail } = require('./email/transactional_queue');
 
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
+
+const EMAIL_SECRETS = [RESEND_API_KEY];
 
 function text(value, max = 200) {
   return String(value ?? '').trim().slice(0, max);
@@ -40,6 +44,18 @@ function callerIp(request) {
 }
 
 /**
+ * Pure decision: given the suspicion heuristic's result and the sign-in
+ * event's own doc id (already the idempotency anchor for the audit record
+ * itself), which hosted template fires and under what eventId. Extracted so
+ * it's testable without a Firestore emulator.
+ */
+function classifySignInEmail(suspicious, signInEventId) {
+  return suspicious
+    ? { templateId: 'suspicious_login_alert', eventId: `suspicious_login_${signInEventId}` }
+    : { templateId: 'new_login_alert', eventId: `new_login_${signInEventId}` };
+}
+
+/**
  * Records an owner sign-in event, called by the Flutter client right after
  * a successful SaaS-owner login (see AuthBloc._syncNotifications). This
  * project has no Identity Platform blocking functions configured today
@@ -53,7 +69,7 @@ function callerIp(request) {
  * immediately-preceding sign-in event. A first-ever sign-in is never
  * flagged (nothing to compare against).
  */
-exports.logOwnerSignIn = onCall({ region: 'europe-west1' }, async (request) => {
+exports.logOwnerSignIn = onCall({ region: 'europe-west1', secrets: EMAIL_SECRETS }, async (request) => {
   const owner = await requireOwner(request);
   const platform = text(request.data?.platform, 40) || 'unknown';
   const ip = callerIp(request);
@@ -91,6 +107,26 @@ exports.logOwnerSignIn = onCall({ region: 'europe-west1' }, async (request) => {
     suspicious,
     reason,
   });
+
+  // Email goes through the existing central queue -> hosted-template
+  // pipeline (email/transactional_queue.js -> email/email_service.js),
+  // exactly like every other business event in this codebase
+  // (application_notifications.js, payment_notifications.js). Never calls
+  // Resend directly from here. `whenLabel` and `locationLabel` deliberately
+  // omit the raw IP: this codebase has no IP-geolocation capability, and a
+  // raw IP is more identifying than a coarse label, not less - the hosted
+  // template's own "Unknown location" fallback is used instead of inventing
+  // a geolocation dependency or a fabricated risk signal.
+  const whenLabel = new Date().toISOString();
+  const emailData = { email: owner.user.email, deviceLabel: platform, platform, whenLabel };
+  const decision = classifySignInEmail(suspicious, ref.id);
+
+  await enqueueTemplatedEmail({
+    eventId: decision.eventId,
+    templateId: decision.templateId,
+    to: owner.user.email,
+    data: suspicious ? { ...emailData, activityType: 'Suspicious sign-in', reason } : emailData,
+  }).catch((error) => console.error(`${decision.templateId} email enqueue failed`, ref.id, error));
 
   return { ok: true, suspicious };
 });
@@ -145,3 +181,5 @@ exports.revokeOwnerSessions = onCall({ region: 'europe-west1' }, async (request)
 
   return { ok: true };
 });
+
+exports.__test__ = { classifySignInEmail };

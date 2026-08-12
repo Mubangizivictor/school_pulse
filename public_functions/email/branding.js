@@ -8,6 +8,54 @@ const SUPPORT_EMAIL = 'support@schoolpulse.victorbee.com';
 const WEBSITE_ORIGIN = 'https://schoolpulse.victorbee.com';
 const STATUS_URL = `${WEBSITE_ORIGIN}/application-status`;
 
+// Per-category senders, all under the already-verified schoolpulse.victorbee.com
+// domain — no new domain/DNS configuration. Falls back to the general
+// `notifications@` sender (SENDER) for any templateId not listed below.
+const SENDER_BY_TEMPLATE = {
+  application_received: 'School Pulse <applications@schoolpulse.victorbee.com>',
+  application_approved: 'School Pulse <applications@schoolpulse.victorbee.com>',
+  application_rejected: 'School Pulse <applications@schoolpulse.victorbee.com>',
+
+  payment_proof_received: 'School Pulse <payments@schoolpulse.victorbee.com>',
+  manual_payment_approved: 'School Pulse <payments@schoolpulse.victorbee.com>',
+  manual_payment_rejected: 'School Pulse <payments@schoolpulse.victorbee.com>',
+  mobile_money_payment_success: 'School Pulse <payments@schoolpulse.victorbee.com>',
+  mobile_money_payment_failed: 'School Pulse <payments@schoolpulse.victorbee.com>',
+  payment_receipt: 'School Pulse <payments@schoolpulse.victorbee.com>',
+  payment_reversed: 'School Pulse <payments@schoolpulse.victorbee.com>',
+  payment_overdue: 'School Pulse <payments@schoolpulse.victorbee.com>',
+  subscription_activated: 'School Pulse <payments@schoolpulse.victorbee.com>',
+  subscription_renewed: 'School Pulse <payments@schoolpulse.victorbee.com>',
+  subscription_expiring: 'School Pulse <payments@schoolpulse.victorbee.com>',
+  subscription_expired: 'School Pulse <payments@schoolpulse.victorbee.com>',
+  subscription_suspended: 'School Pulse <payments@schoolpulse.victorbee.com>',
+  subscription_reactivated: 'School Pulse <payments@schoolpulse.victorbee.com>',
+
+  school_admin_account_created: 'School Pulse <accounts@schoolpulse.victorbee.com>',
+  staff_account_created: 'School Pulse <accounts@schoolpulse.victorbee.com>',
+  password_reset: 'School Pulse <accounts@schoolpulse.victorbee.com>',
+
+  new_login_alert: 'School Pulse <security@schoolpulse.victorbee.com>',
+  suspicious_login_alert: 'School Pulse <security@schoolpulse.victorbee.com>',
+  sessions_revoked: 'School Pulse <security@schoolpulse.victorbee.com>',
+  account_locked: 'School Pulse <security@schoolpulse.victorbee.com>',
+  account_reactivated: 'School Pulse <security@schoolpulse.victorbee.com>',
+  password_changed: 'School Pulse <security@schoolpulse.victorbee.com>',
+  two_step_verification_enabled: 'School Pulse <security@schoolpulse.victorbee.com>',
+  two_step_verification_disabled: 'School Pulse <security@schoolpulse.victorbee.com>',
+  trusted_device_added: 'School Pulse <security@schoolpulse.victorbee.com>',
+  trusted_device_removed: 'School Pulse <security@schoolpulse.victorbee.com>',
+};
+
+/**
+ * Resolve the From header for a given local templateId. Appointments,
+ * reports, and anything not explicitly categorized above use the general
+ * `notifications@` sender per the SaaS Owner's sender mapping.
+ */
+function senderForTemplate(templateId) {
+  return SENDER_BY_TEMPLATE[templateId] || SENDER;
+}
+
 const PRODUCT_NAME = 'School Pulse';
 
 // Matches the in-app brand gradient (Super Admin header, etc): #4839E0 -> #8B3FE0.
@@ -49,4 +97,5 @@ module.exports = {
   BRAND_END,
   FOOTER_LINES,
   resolveBranding,
+  senderForTemplate,
 };
