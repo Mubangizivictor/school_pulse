@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/app/school_splash_user_resolver.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/login_flow/welcome_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/parent_login_screens.dart';
@@ -400,8 +401,20 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/school-splash',
-      builder: (context, state) =>
-          SchoolSplashScreen(user: state.extra as UserEntity),
+      redirect: (context, state) {
+        final user = resolveSchoolSplashUser(
+          state.extra,
+          context.read<AuthBloc>().state,
+        );
+        return user == null ? '/welcome' : null;
+      },
+      builder: (context, state) {
+        final user = resolveSchoolSplashUser(
+          state.extra,
+          context.read<AuthBloc>().state,
+        )!;
+        return SchoolSplashScreen(user: user);
+      },
     ),
     ShellRoute(
       builder: (context, state, child) => StudentShell(child: child),
