@@ -75,6 +75,8 @@ function methodLabel(payment) {
 }
 
 /** Notify the SaaS Owner exactly once when a payment becomes reviewable. */
+exports.__test__ = { reviewable, paymentMethod, amountLabel, methodLabel };
+
 exports.notifyOwnerOfManualPayment = onDocumentWritten(
   {
     region: 'europe-west1',

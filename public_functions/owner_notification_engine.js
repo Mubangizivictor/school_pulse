@@ -236,6 +236,19 @@ function emailHtml({ title, body, schoolName, eventLabel }) {
   return `<!doctype html><html><body style="margin:0;background:#f3f6fb;font-family:Arial,sans-serif;color:#0b1935"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:32px 16px"><table role="presentation" width="100%" style="max-width:600px;background:#fff;border-radius:18px;border:1px solid #dfe7f2"><tr><td style="padding:30px"><div style="font-size:22px;font-weight:800;color:#1267e8">School Pulse</div><div style="font-size:12px;color:#718096;margin-top:4px">SaaS Owner Alert · Victorbee Technologies</div><div style="margin:28px 0 8px;font-size:12px;font-weight:700;letter-spacing:.08em;color:#1267e8;text-transform:uppercase">${safe(eventLabel)}</div><h1 style="font-size:24px;line-height:1.25;margin:0 0 12px">${safe(title)}</h1>${schoolName ? `<div style="font-size:16px;font-weight:700;margin-bottom:10px">${safe(schoolName)}</div>` : ''}<p style="font-size:15px;line-height:1.6;color:#44546a;margin:0">${safe(body)}</p><div style="margin-top:26px;padding:16px;background:#f5f8fd;border-radius:12px;color:#52647a;font-size:13px">Open the secured School Pulse SaaS Owner app to review and take action. Approval actions are never performed from email.</div><div style="margin-top:28px;font-size:12px;color:#9aa8ba">School Pulse · Victorbee Technologies</div></td></tr></table></td></tr></table></body></html>`;
 }
 
+// Transient SMTP failures (network blips, temporary 4xx) are worth a couple
+// of bounded retries; permanent auth/recipient failures are not — retrying
+// 535 BadCredentials or a rejected recipient just delays the same failure.
+const TRANSIENT_SMTP_CODES = new Set(['ETIMEDOUT', 'ECONNRESET', 'ESOCKET', 'ECONNECTION', 'EDNS']);
+const MAX_SMTP_ATTEMPTS = 3;
+
+function isTransientSmtpError(error) {
+  const code = String(error?.code || '').toUpperCase();
+  if (TRANSIENT_SMTP_CODES.has(code)) return true;
+  const responseCode = Number(error?.responseCode || 0);
+  return responseCode >= 400 && responseCode < 500;
+}
+
 async function deliverEmail(ownerDocs, payload) {
   const recipients = unique([
     ...ownerDocs.map((doc) => text(doc.data()?.email, 200).toLowerCase()),
@@ -265,29 +278,60 @@ async function deliverEmail(ownerDocs, payload) {
 
   try {
     await transporter.verify();
-    const info = await transporter.sendMail({
-      from: config.from,
-      to: recipients.join(', '),
-      subject: `[School Pulse] ${payload.title}`,
-      text: `${payload.title}\n\n${payload.body}\n\nOpen the School Pulse SaaS Owner app to review this item.`,
-      html: emailHtml(payload),
-    });
-    return {
-      status: 'sent',
-      provider: 'smtp',
-      recipients,
-      sentCount: recipients.length,
-      messageId: text(info.messageId, 300),
-    };
   } catch (error) {
     return {
       status: 'failed',
+      stage: 'verify',
       provider: 'smtp',
       recipients,
       sentCount: 0,
       error: text(error?.message || error, 600),
     };
   }
+
+  let lastError;
+  for (let attempt = 1; attempt <= MAX_SMTP_ATTEMPTS; attempt += 1) {
+    try {
+      const info = await transporter.sendMail({
+        from: config.from,
+        to: recipients.join(', '),
+        subject: `[School Pulse] ${payload.title}`,
+        text: `${payload.title}\n\n${payload.body}\n\nOpen the School Pulse SaaS Owner app to review this item.`,
+        html: emailHtml(payload),
+      });
+      const accepted = (info.accepted || []).map((value) => text(value, 200).toLowerCase());
+      const rejected = (info.rejected || []).map((value) => text(value, 200).toLowerCase());
+      const pending = (info.pending || []).map((value) => text(value, 200).toLowerCase());
+      return {
+        status: accepted.length > 0 ? 'sent' : 'failed',
+        stage: 'sendMail',
+        provider: 'smtp',
+        recipients,
+        accepted,
+        rejected,
+        pending,
+        sentCount: accepted.length,
+        messageId: text(info.messageId, 300),
+        response: text(info.response, 300),
+        attempts: attempt,
+        ...(accepted.length === 0 ? { error: 'SMTP accepted zero recipients.' } : {}),
+      };
+    } catch (error) {
+      lastError = error;
+      if (attempt >= MAX_SMTP_ATTEMPTS || !isTransientSmtpError(error)) break;
+      await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+    }
+  }
+
+  return {
+    status: 'failed',
+    stage: 'sendMail',
+    provider: 'smtp',
+    recipients,
+    sentCount: 0,
+    attempts: MAX_SMTP_ATTEMPTS,
+    error: text(lastError?.message || lastError, 600),
+  };
 }
 
 function ownerNotificationDocument(eventId, eventType, title, body, schoolName, data) {
