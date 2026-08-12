@@ -1178,3 +1178,25 @@ exports.updateManualPaymentConfig = onCall({ region: 'europe-west1' }, async (re
   await batch.commit();
   return { ok: true };
 });
+
+async function schoolAdminEmail(schoolId) {
+  const snap = await db.collection('users')
+    .where('schoolId', '==', schoolId)
+    .where('role', '==', 'schoolAdmin')
+    .limit(1)
+    .get();
+  if (snap.empty) return '';
+  return text(snap.docs[0].data()?.email, 200);
+}
+
+// Additive escape hatch: lets other modules in this codebase (e.g.
+// mtn_momo.js) reuse tenant-resolution/formatting helpers instead of
+// forking a second copy. Does not change any existing export above.
+module.exports.__internal = {
+  text,
+  asIso,
+  resolveSubscriber,
+  subscriberCanManagePayment,
+  schoolAdminEmail,
+  getPlan,
+};
