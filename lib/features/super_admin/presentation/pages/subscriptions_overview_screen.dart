@@ -131,7 +131,10 @@ class _SubscriptionsOverviewScreenState
             }
             if (school.status == SchoolStatus.active) {
               final daysUntilExpiry =
-                  date_math.daysRemaining(school.subscriptionExpiry, now: now) ??
+                  date_math.daysRemaining(
+                    school.subscriptionExpiry,
+                    now: now,
+                  ) ??
                   0;
               if (daysUntilExpiry <= kExpiringSoonWindowDays) {
                 expiringSoon.add(school);

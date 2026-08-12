@@ -986,8 +986,7 @@ class _SchoolTableRow extends StatelessWidget {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   StatusBadge(label: school.status.name, color: statusColor),
-                  if (AccessMode.fromRaw(school.accessMode) !=
-                      AccessMode.full)
+                  if (AccessMode.fromRaw(school.accessMode) != AccessMode.full)
                     _AccessModePill(accessMode: school.accessMode),
                 ],
               ),

@@ -18,11 +18,7 @@ int? daysRemaining(DateTime? expiry, {DateTime? now}) {
   return diff < 0 ? 0 : diff;
 }
 
-bool isExpiringSoon(
-  DateTime? expiry, {
-  DateTime? now,
-  int withinDays = 7,
-}) {
+bool isExpiringSoon(DateTime? expiry, {DateTime? now, int withinDays = 7}) {
   if (expiry == null) return false;
   final effectiveNow = now ?? DateTime.now();
   if (!expiry.isAfter(effectiveNow)) return false;

@@ -323,10 +323,7 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
       final result = await callable.call<Map<String, dynamic>>({
         'student': _studentPayloadForCallable(student),
         'recordedBy': recordedBy ?? application.reviewerId,
-        'application': {
-          'id': application.id,
-          'schoolId': student.schoolId,
-        },
+        'application': {'id': application.id, 'schoolId': student.schoolId},
       });
       return result.data['studentId'] as String;
     } on FirebaseFunctionsException catch (e) {
