@@ -1797,6 +1797,16 @@ const attendanceSheetsFunctions = require("./attendance_sheets");
 exports.exportAttendanceRecordToSheets = attendanceSheetsFunctions.exportAttendanceRecordToSheets;
 exports.syncAttendanceToSheetsNow = attendanceSheetsFunctions.syncAttendanceToSheetsNow;
 
+/**
+ * Student creation with transactional maxStudents cap enforcement. Kept in
+ * its own file for the same reason as notifications.js/attendance_sheets.js
+ * above - index.js is already large, and this is a self-contained concern.
+ */
+const studentCapacityFunctions = require("./student_capacity");
+exports.createStudentWithCapacityCheck = studentCapacityFunctions.createStudentWithCapacityCheck;
+exports.updateStudentStatusWithCapacityAdjustment = studentCapacityFunctions.updateStudentStatusWithCapacityAdjustment;
+exports.backfillActiveStudentCounts = studentCapacityFunctions.backfillActiveStudentCounts;
+
 // ---------------------------------------------------------------------------
 // Class Teacher panel - the three actions that must not be a client write.
 //
