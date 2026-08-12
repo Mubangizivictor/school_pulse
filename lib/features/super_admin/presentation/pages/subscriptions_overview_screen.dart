@@ -7,6 +7,8 @@ import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
+import 'package:school_pulse/features/institution/domain/services/subscription_date_math.dart'
+    as date_math;
 import 'package:school_pulse/features/super_admin/data/services/manual_payment_service.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/manual_subscription_payment.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/school.dart';
@@ -119,8 +121,7 @@ class _SubscriptionsOverviewScreenState
           final trial = <School>[];
 
           for (final school in state.schools) {
-            final isExpired = school.subscriptionExpiry.isBefore(now);
-            if (isExpired) {
+            if (date_math.isExpired(school.subscriptionExpiry, now: now)) {
               expired.add(school);
               continue;
             }
@@ -129,9 +130,9 @@ class _SubscriptionsOverviewScreenState
               continue;
             }
             if (school.status == SchoolStatus.active) {
-              final daysUntilExpiry = school.subscriptionExpiry
-                  .difference(now)
-                  .inDays;
+              final daysUntilExpiry =
+                  date_math.daysRemaining(school.subscriptionExpiry, now: now) ??
+                  0;
               if (daysUntilExpiry <= kExpiringSoonWindowDays) {
                 expiringSoon.add(school);
               } else {

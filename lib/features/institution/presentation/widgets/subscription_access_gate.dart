@@ -9,6 +9,7 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/institution/domain/entities/institution_context.dart';
+import 'package:school_pulse/features/institution/domain/services/subscription_access_resolver.dart';
 import 'package:school_pulse/features/institution/presentation/bloc/institution_context_cubit.dart';
 import 'package:school_pulse/features/institution/presentation/bloc/institution_context_state.dart';
 
@@ -66,23 +67,33 @@ class _SubscriptionAccessGateState extends State<SubscriptionAccessGate> {
         if (institutionState is! InstitutionContextLoaded) return widget.child;
 
         final institution = institutionState.context;
-        if (institution.isInitialPaymentRequired) {
-          return _InitialPaymentGate(
-            institution: institution,
-            isSchoolAdmin: authState.user.role == UserRole.schoolAdmin,
-            onPay: () => _openPaymentPortal(context),
-            onLogout: () => context.read<AuthBloc>().add(LogoutPressed()),
-          );
+        final resolver = SubscriptionAccessResolver.of(
+          institution,
+          role: authState.user.role,
+        );
+        switch (resolver.gateKind) {
+          case AccessGateKind.initialPaymentRequired:
+            return _InitialPaymentGate(
+              institution: institution,
+              isSchoolAdmin: authState.user.role == UserRole.schoolAdmin,
+              onPay: () => _openPaymentPortal(context),
+              onLogout: () => context.read<AuthBloc>().add(LogoutPressed()),
+            );
+          case AccessGateKind.renewalReadOnly:
+            return _RenewalReadOnlyGate(
+              institution: institution,
+              isSchoolAdmin: true,
+              onPay: () => _openPaymentPortal(context),
+              child: widget.child,
+            );
+          case AccessGateKind.renewalBlocked:
+            return _RenewalBlockedGate(
+              institution: institution,
+              onLogout: () => context.read<AuthBloc>().add(LogoutPressed()),
+            );
+          case AccessGateKind.none:
+            return widget.child;
         }
-        if (institution.isRenewalLocked) {
-          return _RenewalGate(
-            institution: institution,
-            isSchoolAdmin: authState.user.role == UserRole.schoolAdmin,
-            onPay: () => _openPaymentPortal(context),
-            child: widget.child,
-          );
-        }
-        return widget.child;
       },
     );
   }
@@ -227,8 +238,8 @@ class _InitialPaymentGate extends StatelessWidget {
   }
 }
 
-class _RenewalGate extends StatelessWidget {
-  const _RenewalGate({
+class _RenewalReadOnlyGate extends StatelessWidget {
+  const _RenewalReadOnlyGate({
     required this.child,
     required this.institution,
     required this.isSchoolAdmin,
@@ -325,6 +336,82 @@ class _RenewalGate extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Every role except School Admin, once the subscription has lapsed: a
+/// plain blocking screen with no renewal CTA (they can't act on it) and
+/// none of _RenewalReadOnlyGate's dashboard-behind-a-barrier complexity -
+/// they just need to know who can fix it.
+class _RenewalBlockedGate extends StatelessWidget {
+  const _RenewalBlockedGate({
+    required this.institution,
+    required this.onLogout,
+  });
+
+  final InstitutionContext institution;
+  final VoidCallback onLogout;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Material(
+      color: theme.colorScheme.surface,
+      child: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 58,
+                    height: 58,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Icon(
+                      Icons.lock_clock_rounded,
+                      color: theme.colorScheme.onPrimaryContainer,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    'School Pulse subscription expired',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    "Your school's School Pulse subscription has ended. Contact your School Administrator to renew access.",
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: onLogout,
+                      child: const Text('Sign Out'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
