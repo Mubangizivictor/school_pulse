@@ -161,4 +161,4 @@ module.exports = {
   mapMtnStatus,
   newReferenceId,
 };
-module.exports.__test__ = { mapMtnStatus };
+module.exports.__test__ = { mapMtnStatus, withMtnAuthRetry };
