@@ -82,6 +82,8 @@ class AppColors {
       Theme.of(context).colorScheme.outline;
 
   static Color success(BuildContext context) => successGreen;
+  static Color successSurface(BuildContext context) =>
+      successGreen.withValues(alpha: .12);
   static Color warning(BuildContext context) => goldenYellow;
   static Color danger(BuildContext context) => deepOrange;
   static Color error = deepOrange;

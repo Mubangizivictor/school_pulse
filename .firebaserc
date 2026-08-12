@@ -1,5 +1,7 @@
 {
   "projects": {
     "default": "school-pulse-3d95b"
-  }
+  },
+  "targets": {},
+  "etags": {}
 }

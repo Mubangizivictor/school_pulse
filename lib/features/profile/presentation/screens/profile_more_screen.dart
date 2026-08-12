@@ -19,10 +19,14 @@ class ProfileMoreScreen extends StatelessWidget {
     final authState = context.watch<AuthBloc>().state;
     String name = 'Staff Member';
     String role = 'Staff';
+    bool isAdmin = false;
 
     if (authState is AuthAuthenticated) {
       name = authState.user.name;
       role = UserRoleDisplay.name(authState.user.role);
+      isAdmin = authState.user.roles.any(
+        UserRoleDisplay.adminConsoleRoles.contains,
+      );
     }
 
     return Scaffold(
@@ -107,6 +111,15 @@ class ProfileMoreScreen extends StatelessWidget {
             title: 'School Directory',
             onTap: () => context.push('/staff/more/school-directory'),
           ),
+          if (isAdmin) ...[
+            const SizedBox(height: 24),
+            const SectionHeader(title: 'BILLING'),
+            _MenuTile(
+              icon: Icons.payment_outlined,
+              title: 'Subscription & Billing',
+              onTap: () => context.push('/staff/admin/subscription'),
+            ),
+          ],
           const SizedBox(height: 24),
           const SectionHeader(title: 'SUPPORT'),
           _MenuTile(
