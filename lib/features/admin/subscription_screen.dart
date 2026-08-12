@@ -9,6 +9,7 @@ import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/features/admin/data/models/payment_transaction.dart';
 import 'package:school_pulse/features/admin/data/models/subscription.dart';
 import 'package:school_pulse/features/admin/data/repositories/subscription_repository.dart';
+import 'package:school_pulse/features/subscription_payment/presentation/screens/mtn_momo_payment_screen.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
 class SubscriptionScreen extends StatefulWidget {
@@ -127,6 +128,17 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   : 'Pay / Renew Subscription',
               icon: Icons.open_in_new_rounded,
               onPressed: _openingPortal ? null : _openPaymentPortal,
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: SecondaryButton(
+              label: 'Pay with MTN Mobile Money',
+              icon: Icons.phone_android_rounded,
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const MtnMomoPaymentScreen()),
+              ),
             ),
           ),
         ],

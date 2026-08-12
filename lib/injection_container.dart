@@ -92,6 +92,9 @@ import 'package:school_pulse/features/admin/data/repositories/admin_attendance_r
 
 // Super Admin
 import 'package:school_pulse/features/super_admin/domain/repositories/super_admin_repository.dart';
+import 'package:school_pulse/features/subscription_payment/data/repositories/subscription_payment_repository_impl.dart';
+import 'package:school_pulse/features/subscription_payment/domain/repositories/subscription_payment_repository.dart';
+import 'package:school_pulse/features/subscription_payment/presentation/bloc/subscription_payment_cubit.dart';
 import 'package:school_pulse/features/super_admin/data/repositories/super_admin_repository_impl.dart';
 import 'package:school_pulse/features/super_admin/data/datasources/super_admin_remote_datasource.dart';
 import 'package:school_pulse/features/super_admin/presentation/bloc/super_admin_bloc.dart';
@@ -1658,6 +1661,15 @@ Future<void> init() async {
   // Admin - Staff Attendance / Subscription
   sl.registerLazySingleton(() => StaffAttendanceRepository());
   sl.registerLazySingleton(() => SubscriptionRepository());
+
+  // Subscription Payment - MTN Mobile Money
+  sl.registerLazySingleton<SubscriptionPaymentRepository>(
+    () => SubscriptionPaymentRepositoryImpl(
+      functions: FirebaseFunctions.instanceFor(region: 'europe-west1'),
+      firestore: sl(),
+    ),
+  );
+  sl.registerFactory(() => SubscriptionPaymentCubit(repository: sl()));
 
   // Features - Relationships (Phase 4: parent-student links, enrolment
   // history, guardian-limit policy)
