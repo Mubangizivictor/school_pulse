@@ -235,17 +235,14 @@ class _AccountCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final primary = AppColors.primary(context);
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.l),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-        border: Border.all(
-          color: isDark ? AppColors.borderDark : AppColors.borderLight,
-        ),
+        color: AppColors.surfaceElevated(context),
+        border: Border.all(color: AppColors.border(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,10 +300,7 @@ class _AccountCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.l),
-          Divider(
-            height: 1,
-            color: isDark ? AppColors.borderDark : AppColors.borderLight,
-          ),
+          Divider(height: 1, color: AppColors.border(context)),
           const SizedBox(height: AppSpacing.m),
           if (phone?.isNotEmpty ?? false) ...[
             _ContactRow(icon: Icons.phone_outlined, value: phone!),
@@ -319,11 +313,7 @@ class _AccountCard extends StatelessWidget {
               Expanded(
                 child: _AccountStat(label: 'Schools', value: '$totalSchools'),
               ),
-              Container(
-                width: 1,
-                height: 32,
-                color: isDark ? AppColors.borderDark : AppColors.borderLight,
-              ),
+              Container(width: 1, height: 32, color: AppColors.border(context)),
               Expanded(
                 child: _AccountStat(label: 'Active', value: '$activeSchools'),
               ),
@@ -405,11 +395,10 @@ class _CompactDangerButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final color = AppColors.deepOrange;
+    final color = AppColors.danger(context);
 
     return Material(
-      color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+      color: AppColors.surfaceElevated(context),
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -421,9 +410,7 @@ class _CompactDangerButton extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isDark ? AppColors.borderDark : AppColors.borderLight,
-            ),
+            border: Border.all(color: AppColors.border(context)),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -465,18 +452,15 @@ class _SettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final color = AppColors.primary(context);
 
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: AppSpacing.m),
-      color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+      color: AppColors.surfaceElevated(context),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: isDark ? AppColors.borderDark : AppColors.borderLight,
-        ),
+        side: BorderSide(color: AppColors.border(context)),
       ),
       child: ListTile(
         onTap: onTap,

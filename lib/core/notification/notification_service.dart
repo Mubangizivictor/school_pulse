@@ -24,30 +24,38 @@ class NotificationService {
 
     await LocalNotificationService.initialize();
 
-    // Request permissions for iOS
-    NotificationSettings settings = await _fcm.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+    // Request permissions for iOS/Android at startup - the OS-native
+    // prompt there is the expected, unsurprising pattern. On web this same
+    // call triggers the browser's notification-permission dialog, which
+    // must only ever appear after an explicit user action (e.g. tapping
+    // "Enable notifications" in Notification Settings), never
+    // automatically on load - see requestWebPushPermission below, which
+    // Settings calls instead.
+    if (!kIsWeb) {
+      NotificationSettings settings = await _fcm.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
 
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      if (kDebugMode) {
-        debugPrint('User granted permission');
-      }
-
-      // Get the token for this device. iOS simulators have no APNs token,
-      // so getToken() throws there - that's expected, not a failure worth
-      // taking the whole app down over.
-      try {
-        String? token = await _fcm.getToken();
-        final uid = _auth.currentUser?.uid;
-        if (token != null && uid != null) {
-          await _saveTokenToDatabase(uid, token);
-        }
-      } catch (e) {
+      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
         if (kDebugMode) {
-          debugPrint('Skipping FCM token (expected on simulators): $e');
+          debugPrint('User granted permission');
+        }
+
+        // Get the token for this device. iOS simulators have no APNs token,
+        // so getToken() throws there - that's expected, not a failure worth
+        // taking the whole app down over.
+        try {
+          String? token = await _fcm.getToken();
+          final uid = _auth.currentUser?.uid;
+          if (token != null && uid != null) {
+            await _saveTokenToDatabase(uid, token);
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            debugPrint('Skipping FCM token (expected on simulators): $e');
+          }
         }
       }
     }
@@ -118,6 +126,33 @@ class NotificationService {
         ? '/staff/notifications'
         : '/parent/notifications';
     router.push(path);
+  }
+
+  /// Requests browser push permission on web, only ever on an explicit
+  /// user action (e.g. a "Enable notifications" toggle/button in
+  /// Notification Settings) - never called from `initialize()`. Returns
+  /// whether permission was granted, so the caller can reflect that back
+  /// in its own UI without duplicating `_fcm` access.
+  Future<bool> requestWebPushPermission() async {
+    if (!kIsWeb) return false;
+    final settings = await _fcm.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+    final granted = settings.authorizationStatus == AuthorizationStatus.authorized;
+    if (granted) {
+      try {
+        final token = await _fcm.getToken();
+        final uid = _auth.currentUser?.uid;
+        if (token != null && uid != null) {
+          await _saveTokenToDatabase(uid, token);
+        }
+      } catch (e) {
+        if (kDebugMode) debugPrint('Error fetching web FCM token: $e');
+      }
+    }
+    return granted;
   }
 
   /// Manually sync the FCM token for a specific user ID.

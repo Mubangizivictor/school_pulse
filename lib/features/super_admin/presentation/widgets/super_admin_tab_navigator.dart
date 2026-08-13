@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 /// Wraps one section of the SaaS Owner console in its own [Navigator] so
 /// that screens pushed from within it (e.g. School Details from Schools,
@@ -28,4 +29,36 @@ class SuperAdminTabNavigator extends StatelessWidget {
           MaterialPageRoute(builder: (_) => child, settings: settings),
     );
   }
+}
+
+/// Pushes [detail] onto the nearest nested [Navigator] (the same target a
+/// plain `Navigator.push(context, ...)` from within a
+/// [SuperAdminTabNavigator] would use) while also giving the browser a
+/// matching URL/history entry via [detailPath] (a child path of the
+/// current section, e.g. `'abc123'` under `/schools`).
+///
+/// The two stacks are independent, so both directions are wired here: the
+/// URL is set going in, and a [PopScope] on [detail] resyncs the URL back
+/// to [sectionPath] when the nested screen is popped by any means (in-app
+/// back button, browser Back, or the OS back gesture) — otherwise the
+/// address bar would keep pointing at the detail URL after the detail
+/// screen itself is gone.
+Future<T?> pushSuperAdminDetail<T>({
+  required BuildContext context,
+  required String sectionPath,
+  required String detailPath,
+  required Widget detail,
+}) {
+  final sectionUrl = '/super-admin/$sectionPath';
+  context.go('$sectionUrl/$detailPath');
+  return Navigator.of(context).push<T>(
+    MaterialPageRoute(
+      builder: (context) => PopScope(
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop && context.mounted) context.go(sectionUrl);
+        },
+        child: detail,
+      ),
+    ),
+  );
 }

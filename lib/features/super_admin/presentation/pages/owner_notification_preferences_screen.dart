@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
+import 'package:school_pulse/core/notification/notification_service.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -33,6 +35,34 @@ class _OwnerNotificationPreferencesScreenState
   bool _saving = false;
 
   String? get _ownerId => _service.currentOwnerId;
+
+  /// Toggling Push on is the one explicit user action that's allowed to
+  /// trigger the browser's notification-permission prompt on web (per the
+  /// "never request at startup" requirement). If the owner declines, the
+  /// preference is left off so the UI doesn't claim push is enabled when
+  /// the browser will never actually deliver it.
+  Future<void> _togglePush(
+    OwnerNotificationPreferences prefs,
+    bool value,
+  ) async {
+    if (kIsWeb && value) {
+      final granted = await NotificationService().requestWebPushPermission();
+      if (!granted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Browser notifications were blocked. Enable them in your '
+                "browser's site settings to receive push alerts here.",
+              ),
+            ),
+          );
+        }
+        return;
+      }
+    }
+    await _save(prefs.copyWith(pushEnabled: value));
+  }
 
   Future<void> _save(OwnerNotificationPreferences updated) async {
     setState(() => _saving = true);
@@ -234,9 +264,11 @@ class _OwnerNotificationPreferencesScreenState
           context,
           icon: Icons.notifications_active_outlined,
           title: 'Push',
-          subtitle: 'Send push notifications to this device',
+          subtitle: kIsWeb
+              ? 'Send browser notifications to this device'
+              : 'Send push notifications to this device',
           value: prefs.pushEnabled,
-          onChanged: (value) => _save(prefs.copyWith(pushEnabled: value)),
+          onChanged: (value) => _togglePush(prefs, value),
         ),
         _channelTile(
           context,

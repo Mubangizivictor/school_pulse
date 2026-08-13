@@ -2122,6 +2122,62 @@ final router = GoRouter(
       path: '/super-admin',
       builder: (context, state) => const SuperAdminDashboard(),
       routes: [
+        // Top-level sidebar/bottom-nav sections. Each renders the same
+        // SuperAdminDashboard, which reads the active section back out of
+        // the URL (see `_sectionIndexForLocation` in super_admin_dashboard
+        // .dart) - giving every section its own real, refreshable,
+        // back/forward-able address without duplicating the dashboard's
+        // IndexedStack/nested-Navigator shell per route.
+        //
+        // Detail screens (School Details, Application Review, Payment
+        // Review) are deliberately NOT full GoRoutes: they're pushed onto
+        // the section's own nested Navigator (SuperAdminTabNavigator) so
+        // the sidebar/bottom-nav stays visible, exactly as before this
+        // change. Their :id child routes below exist only so the URL bar
+        // reflects that a detail screen is open and Back/Forward has a
+        // history entry to land on - navigating to one directly (no
+        // `extra`, e.g. a cold refresh) falls back to the section list,
+        // since there is no fetch-by-id path yet for these entities.
+        GoRoute(
+          path: 'schools',
+          builder: (context, state) => const SuperAdminDashboard(),
+          routes: [
+            GoRoute(
+              path: ':schoolId',
+              builder: (context, state) => const SuperAdminDashboard(),
+            ),
+            GoRoute(
+              path: 'applications/:applicationId',
+              builder: (context, state) => const SuperAdminDashboard(),
+            ),
+          ],
+        ),
+        GoRoute(
+          path: 'payments',
+          builder: (context, state) => const SuperAdminDashboard(),
+          routes: [
+            GoRoute(
+              path: ':paymentId',
+              builder: (context, state) => const SuperAdminDashboard(),
+            ),
+          ],
+        ),
+        GoRoute(
+          path: 'plans',
+          builder: (context, state) => const SuperAdminDashboard(),
+        ),
+        GoRoute(
+          path: 'notifications',
+          builder: (context, state) => const SuperAdminDashboard(),
+        ),
+        GoRoute(
+          path: 'audit-logs',
+          builder: (context, state) => const SuperAdminDashboard(),
+        ),
+        GoRoute(
+          path: 'settings',
+          builder: (context, state) => const SuperAdminDashboard(),
+        ),
         GoRoute(
           path: 'settings/notifications',
           builder: (context, state) => const SuperAdminNotificationsScreen(),

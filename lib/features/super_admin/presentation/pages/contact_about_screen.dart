@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -86,12 +84,24 @@ class _ContactAboutScreenState extends State<ContactAboutScreen> {
 
   String get _platformName {
     if (kIsWeb) return 'Web';
-    if (Platform.isIOS) return 'iOS';
-    if (Platform.isAndroid) return 'Android';
-    if (Platform.isMacOS) return 'macOS';
-    if (Platform.isWindows) return 'Windows';
-    if (Platform.isLinux) return 'Linux';
-    return 'Unknown';
+    // `defaultTargetPlatform` is a pure Flutter compile-time constant on
+    // every platform including web, unlike `dart:io`'s `Platform`, whose
+    // getters throw `UnsupportedError` there - safe to read unconditionally
+    // even though this line only runs once `kIsWeb` is already false above.
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.iOS:
+        return 'iOS';
+      case TargetPlatform.android:
+        return 'Android';
+      case TargetPlatform.macOS:
+        return 'macOS';
+      case TargetPlatform.windows:
+        return 'Windows';
+      case TargetPlatform.linux:
+        return 'Linux';
+      case TargetPlatform.fuchsia:
+        return 'Unknown';
+    }
   }
 
   @override
@@ -203,18 +213,15 @@ class _InfoTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final color = AppColors.primary(context);
 
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: AppSpacing.m),
-      color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+      color: AppColors.surfaceElevated(context),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: isDark ? AppColors.borderDark : AppColors.borderLight,
-        ),
+        side: BorderSide(color: AppColors.border(context)),
       ),
       child: ListTile(
         onTap: onTap,

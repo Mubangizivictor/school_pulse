@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
@@ -20,6 +21,34 @@ import 'subscription_plans_screen.dart';
 import 'super_admin_notifications_screen.dart';
 import 'super_admin_overview_screen.dart';
 import 'super_admin_settings_screen.dart';
+
+/// Section paths, in the same order as `_kSections` / the mobile bottom
+/// nav — index N here is index N there. Each is a real child GoRoute of
+/// `/super-admin` so the URL, browser refresh, and Back/Forward reflect
+/// the active section instead of only living in local widget state.
+const _kSectionPaths = [
+  '', // Dashboard (the /super-admin index route itself)
+  'schools',
+  'payments',
+  'plans',
+  'notifications',
+  'audit-logs',
+  'settings',
+];
+
+/// Reads the active section index from the current route location, so a
+/// direct/refreshed URL like `/super-admin/payments` opens on the right
+/// section instead of always resetting to Dashboard (index 0).
+int _sectionIndexForLocation(String location) {
+  final path = location.startsWith('/super-admin')
+      ? location.substring('/super-admin'.length)
+      : '';
+  final segment = path.startsWith('/') ? path.substring(1) : path;
+  final top = segment.split('/').first;
+  if (top.isEmpty) return 0;
+  final index = _kSectionPaths.indexOf(top);
+  return index == -1 ? 0 : index;
+}
 
 /// Top-level sections shown in the desktop sidebar. Schools also hosts
 /// Applications internally (`SchoolManagementScreen`'s `_ApplicationList`),
@@ -69,10 +98,56 @@ class SuperAdminDashboard extends StatefulWidget {
 
 class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
   // Index into `_kSections` — drives the desktop sidebar / IndexedStack.
+  // Kept in sync with the route (see `didChangeDependencies`) so a direct
+  // URL or a browser refresh (e.g. `/super-admin/payments`) opens on the
+  // matching section instead of always resetting to Dashboard.
   int _selectedIndex = 0;
 
   // Index into the 4-item mobile bottom nav (Home, Schools, Payments, More).
+  // Settings (desktop section index 6) has no dedicated mobile tab, so it
+  // clamps to the last one instead of pointing past the mobile array.
   int _mobileNavIndex = 0;
+
+  String? _lastSyncedLocation;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Only react to *external* location changes (deep link, browser
+    // refresh, Back/Forward) — sidebar/bottom-nav taps already update
+    // `_selectedIndex` locally and push the matching route themselves, so
+    // re-deriving it here too would just be redundant, not wrong.
+    final location = GoRouterState.of(context).uri.path;
+    if (location == _lastSyncedLocation) return;
+    _lastSyncedLocation = location;
+    final index = _sectionIndexForLocation(location);
+    if (index != _selectedIndex) {
+      setState(() {
+        _selectedIndex = index;
+        // Mobile nav only has 5 destinations (Home, Schools, Payments,
+        // Plans, Settings); Notifications/Audit Logs (desktop indices 4-5)
+        // have no dedicated mobile tab, so land on the nearest one rather
+        // than pointing the bottom nav's `selectedIndex` out of range.
+        _mobileNavIndex = index == 6
+            ? 4
+            : index > 3
+            ? 3
+            : index;
+      });
+    }
+  }
+
+  /// Updates the URL to match `sectionPath` (a child of `/super-admin`,
+  /// e.g. `'schools'`, or `''` for the Dashboard root) without disturbing
+  /// that section's own nested-Navigator stack.
+  void _syncRouteToSection(String sectionPath) {
+    final target = sectionPath.isEmpty
+        ? '/super-admin'
+        : '/super-admin/$sectionPath';
+    _lastSyncedLocation = target;
+    if (GoRouterState.of(context).uri.path == target) return;
+    context.go(target);
+  }
 
   // Bumping this key forces BillingPage to rebuild with a fresh
   // `initialFilter` when navigated to from the Dashboard's
@@ -113,6 +188,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       _selectedIndex = 2;
       _mobileNavIndex = 2;
     });
+    _syncRouteToSection(_kSectionPaths[2]);
     _popToRoot(_desktopNavigatorKeys[2]);
     _popToRoot(_mobileNavigatorKeys[2]);
   }
@@ -122,6 +198,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       _selectedIndex = 1;
       _mobileNavIndex = 1;
     });
+    _syncRouteToSection(_kSectionPaths[1]);
     _popToRoot(_desktopNavigatorKeys[1]);
     _popToRoot(_mobileNavigatorKeys[1]);
   }
@@ -194,14 +271,14 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
         ],
       ),
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceElevated(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
           boxShadow: [
             BoxShadow(
-              color: Color(0x12071B45),
+              color: AppColors.shadow(context),
               blurRadius: 20,
-              offset: Offset(0, -4),
+              offset: const Offset(0, -4),
             ),
           ],
         ),
@@ -209,12 +286,12 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           height: 88,
           backgroundColor: Colors.transparent,
           surfaceTintColor: Colors.transparent,
-          indicatorColor: const Color(0xFFE3E9FF),
+          indicatorColor: AppColors.primary(context).withValues(alpha: 0.14),
           labelTextStyle: WidgetStateProperty.resolveWith(
             (states) => TextStyle(
               color: states.contains(WidgetState.selected)
-                  ? AppColors.electricBlue
-                  : const Color(0xFF68789B),
+                  ? AppColors.primary(context)
+                  : AppColors.textMuted(context),
               fontSize: 12.5,
               fontWeight: states.contains(WidgetState.selected)
                   ? FontWeight.w700
@@ -229,10 +306,16 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
               _popToRoot(_mobileNavigatorKeys[index]);
               return;
             }
+            // Mobile nav index 4 is Settings, which is desktop section
+            // index 6 (Notifications and Audit Logs have no mobile tab of
+            // their own) — every other index lines up 1:1 with a desktop
+            // section and a `_kSectionPaths` entry.
+            final sectionIndex = index == 4 ? 6 : index;
             setState(() {
               _mobileNavIndex = index;
-              if (index <= 3) _selectedIndex = index;
+              _selectedIndex = sectionIndex;
             });
+            _syncRouteToSection(_kSectionPaths[sectionIndex]);
           },
           destinations: const [
             NavigationDestination(
@@ -267,7 +350,6 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
   }
 
   Widget _buildSidebar() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final user = FirebaseAuth.instance.currentUser;
     final ownerLabel = (user?.displayName?.trim().isNotEmpty ?? false)
         ? user!.displayName!.trim()
@@ -278,12 +360,9 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     return Container(
       width: 280,
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+        color: AppColors.surfaceElevated(context),
         border: Border(
-          right: BorderSide(
-            color: isDark ? AppColors.borderDark : AppColors.borderLight,
-            width: 1,
-          ),
+          right: BorderSide(color: AppColors.border(context), width: 1),
         ),
         boxShadow: [
           BoxShadow(
@@ -318,7 +397,15 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                         _popToRoot(_desktopNavigatorKeys[index]);
                         return;
                       }
-                      setState(() => _selectedIndex = index);
+                      setState(() {
+                        _selectedIndex = index;
+                        _mobileNavIndex = index == 6
+                            ? 4
+                            : index > 3
+                            ? 3
+                            : index;
+                      });
+                      _syncRouteToSection(_kSectionPaths[index]);
                     },
                   ),
               ],
@@ -420,7 +507,7 @@ class _SidebarItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = isDestructive
-        ? AppColors.deepOrange
+        ? AppColors.danger(context)
         : (isSelected
               ? AppColors.primary(context)
               : AppColors.textSecondary(context));

@@ -1892,8 +1892,16 @@ Future<void> init() async {
   sl.registerLazySingleton(() => BiometricAuthService());
   sl.registerLazySingleton(() => FirebaseStorage.instance);
   sl.registerLazySingleton(() => FirebaseFunctions.instance);
-  sl.registerLazySingleton(() => InternetConnectionChecker());
-  sl.registerLazySingleton<NetworkInfo>(() => NetworkInfoImpl(sl()));
+  // `InternetConnectionChecker` constructs `dart:io` sockets eagerly (even
+  // just to build the singleton), which throws on web - so its
+  // registration, and the `NetworkInfo` that would wrap it, must never be
+  // reached there. See WebNetworkInfo's doc comment for the full story.
+  if (kIsWeb) {
+    sl.registerLazySingleton<NetworkInfo>(() => const WebNetworkInfo());
+  } else {
+    sl.registerLazySingleton(() => InternetConnectionChecker());
+    sl.registerLazySingleton<NetworkInfo>(() => NetworkInfoImpl(sl()));
+  }
 
   sl.registerLazySingleton<InstitutionContextRemoteDataSource>(
     () => InstitutionContextRemoteDataSourceImpl(firestore: sl()),

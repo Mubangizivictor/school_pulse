@@ -152,17 +152,12 @@ class _TicketHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.l),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-        border: Border(
-          bottom: BorderSide(
-            color: isDark ? AppColors.borderDark : AppColors.borderLight,
-          ),
-        ),
+        color: AppColors.surfaceElevated(context),
+        border: Border(bottom: BorderSide(color: AppColors.border(context))),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -270,10 +265,9 @@ class _MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isOwner = message.sender == SupportMessageSender.owner;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final bubbleColor = isOwner
         ? AppColors.primary(context)
-        : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight);
+        : AppColors.surfaceElevated(context);
     final textColor = isOwner ? Colors.white : AppColors.textPrimary(context);
 
     return Align(
@@ -292,11 +286,7 @@ class _MessageBubble extends StatelessWidget {
             bottomLeft: Radius.circular(isOwner ? 14 : 2),
             bottomRight: Radius.circular(isOwner ? 2 : 14),
           ),
-          border: isOwner
-              ? null
-              : Border.all(
-                  color: isDark ? AppColors.borderDark : AppColors.borderLight,
-                ),
+          border: isOwner ? null : Border.all(color: AppColors.border(context)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -345,17 +335,12 @@ class _Composer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SafeArea(
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.m),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-          border: Border(
-            top: BorderSide(
-              color: isDark ? AppColors.borderDark : AppColors.borderLight,
-            ),
-          ),
+          color: AppColors.surfaceElevated(context),
+          border: Border(top: BorderSide(color: AppColors.border(context))),
         ),
         child: Row(
           children: [

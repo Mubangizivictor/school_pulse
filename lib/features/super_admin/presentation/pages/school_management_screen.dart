@@ -14,6 +14,7 @@ import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
 import '../bloc/super_admin_state.dart';
 import '../responsive.dart';
+import '../widgets/super_admin_tab_navigator.dart';
 import 'school_detail_screen.dart';
 import 'school_application_review_screen.dart';
 
@@ -547,13 +548,13 @@ class _ApplicationTile extends StatelessWidget {
         : application.schoolName.trim()[0].toUpperCase();
 
     return AppCard(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => BlocProvider.value(
-            value: context.read<SuperAdminBloc>(),
-            child: SchoolApplicationReviewScreen(application: application),
-          ),
+      onTap: () => pushSuperAdminDetail(
+        context: context,
+        sectionPath: 'schools',
+        detailPath: 'applications/${application.id}',
+        detail: BlocProvider.value(
+          value: context.read<SuperAdminBloc>(),
+          child: SchoolApplicationReviewScreen(application: application),
         ),
       ),
       child: Row(
@@ -697,11 +698,11 @@ class _SchoolCard extends StatelessWidget {
       borderRadius: AppRadius.large,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => SchoolDetailScreen(school: school),
-          ),
+        onTap: () => pushSuperAdminDetail(
+          context: context,
+          sectionPath: 'schools',
+          detailPath: school.id,
+          detail: SchoolDetailScreen(school: school),
         ),
         child: Container(
           padding: const EdgeInsets.fromLTRB(
@@ -938,11 +939,11 @@ class _SchoolTableRow extends StatelessWidget {
     final theme = Theme.of(context);
     final statusColor = _schoolStatusColor(context, school.status);
     return InkWell(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => SchoolDetailScreen(school: school),
-        ),
+      onTap: () => pushSuperAdminDetail(
+        context: context,
+        sectionPath: 'schools',
+        detailPath: school.id,
+        detail: SchoolDetailScreen(school: school),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(
@@ -1076,11 +1077,11 @@ class _SchoolQuickActions extends StatelessWidget {
       itemBuilder: (menuContext) => [
         PopupMenuItem(
           value: 'view',
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => SchoolDetailScreen(school: school),
-            ),
+          onTap: () => pushSuperAdminDetail(
+            context: context,
+            sectionPath: 'schools',
+            detailPath: school.id,
+            detail: SchoolDetailScreen(school: school),
           ),
           child: const Row(
             children: [

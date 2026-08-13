@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -110,7 +111,13 @@ class _OwnerAppLockGateState extends State<OwnerAppLockGate>
         .first;
     if (!mounted) return;
     final settings = SecuritySettings.fromMap(map);
-    if (settings.biometricEnabled && settings.appLockEnabled) {
+    // `local_auth` has no web implementation, so `_unlock()`'s
+    // `BiometricAuthService.authenticate()` call would fail every time on
+    // web - showing the lock overlay there would strand the owner behind a
+    // challenge they can never pass. Web relies on the authenticated
+    // Firebase session (and re-auth on individual sensitive actions)
+    // instead of an app-level biometric lock.
+    if (!kIsWeb && settings.biometricEnabled && settings.appLockEnabled) {
       setState(() => _locked = true);
     }
   }

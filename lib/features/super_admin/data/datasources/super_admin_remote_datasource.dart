@@ -65,6 +65,15 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
         .toList();
   }
 
+  // NOTE: `getAllSchools`/`watchSchools` are unbounded reads used both by
+  // the Schools list AND by dashboard aggregates (total/active school
+  // counts, revenue rollups - see super_admin_repository_impl.dart). A
+  // `.limit()` here would silently under-count those aggregates once the
+  // platform passes the cap, which is worse than an unbounded read at
+  // today's low school volume. Real pagination needs a separate paginated
+  // query for the list view distinct from whatever computes the counts -
+  // out of scope for this pass; flagging here rather than adding a limit
+  // that would quietly corrupt dashboard numbers.
   @override
   Future<List<SchoolModel>> getAllSchools() async {
     final snapshot = await firestore.collection('schools').get();

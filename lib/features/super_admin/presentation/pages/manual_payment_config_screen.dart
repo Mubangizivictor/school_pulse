@@ -501,17 +501,15 @@ class _ProviderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+        color: AppColors.surfaceElevated(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isExpanded
               ? AppColors.primary(context)
-              : (isDark ? AppColors.borderDark : AppColors.borderLight),
+              : AppColors.border(context),
           width: isExpanded ? 1.5 : 1,
         ),
       ),

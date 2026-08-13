@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 
 Future<void> handleSuperAdminLogout(BuildContext context) async {
   final confirmed = await showDialog<bool>(
     context: context,
-    barrierColor: const Color(0x9906153D),
+    barrierColor: AppColors.overlay(context),
     builder: (dialogContext) => const _LogoutConfirmationDialog(),
   );
   if (confirmed == true && context.mounted) {
@@ -21,6 +22,8 @@ class _LogoutConfirmationDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final danger = AppColors.danger(context);
+    final primary = AppColors.primary(context);
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 28),
       backgroundColor: Colors.transparent,
@@ -29,13 +32,13 @@ class _LogoutConfirmationDialog extends StatelessWidget {
         constraints: const BoxConstraints(maxWidth: 390),
         padding: const EdgeInsets.fromLTRB(24, 26, 24, 22),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surfaceElevated(context),
           borderRadius: BorderRadius.circular(28),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
-              color: Color(0x33000724),
+              color: AppColors.shadow(context),
               blurRadius: 30,
-              offset: Offset(0, 16),
+              offset: const Offset(0, 16),
             ),
           ],
         ),
@@ -45,33 +48,29 @@ class _LogoutConfirmationDialog extends StatelessWidget {
             Container(
               width: 58,
               height: 58,
-              decoration: const BoxDecoration(
-                color: Color(0xFFFFEEF0),
+              decoration: BoxDecoration(
+                color: danger.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.logout_rounded,
-                color: Color(0xFFE64A5A),
-                size: 29,
-              ),
+              child: Icon(Icons.logout_rounded, color: danger, size: 29),
             ),
             const SizedBox(height: 18),
-            const Text(
+            Text(
               'Log out?',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Color(0xFF06164A),
+                color: AppColors.textPrimary(context),
                 fontSize: 23,
                 fontWeight: FontWeight.w800,
                 letterSpacing: -0.35,
               ),
             ),
             const SizedBox(height: 9),
-            const Text(
+            Text(
               'You will need to sign in again to access your School Pulse owner account.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Color(0xFF667493),
+                color: AppColors.textSecondary(context),
                 fontSize: 15,
                 height: 1.45,
               ),
@@ -83,8 +82,8 @@ class _LogoutConfirmationDialog extends StatelessWidget {
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(context, false),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF1A50D5),
-                      side: const BorderSide(color: Color(0xFFDCE4F5)),
+                      foregroundColor: primary,
+                      side: BorderSide(color: AppColors.border(context)),
                       minimumSize: const Size.fromHeight(52),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(15),
@@ -104,7 +103,7 @@ class _LogoutConfirmationDialog extends StatelessWidget {
                   child: FilledButton(
                     onPressed: () => Navigator.pop(context, true),
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFFE64A5A),
+                      backgroundColor: danger,
                       foregroundColor: Colors.white,
                       minimumSize: const Size.fromHeight(52),
                       elevation: 0,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -28,12 +29,21 @@ class PaymentReviewScreen extends StatefulWidget {
 
   /// Pushes the review screen using a full page route on mobile, or a wide
   /// fixed-width panel dialog (640px) on desktop widths.
+  ///
+  /// Also syncs the browser URL to `/super-admin/payments/:id` while open,
+  /// and back to `/super-admin/payments` once the dialog/page closes by
+  /// any means (approve/reject pop, in-app back, or browser Back) — there
+  /// is no fetch-by-id path yet, so this is address-bar/history signaling
+  /// only, not a route that can be cold-loaded from a refresh.
   static Future<bool?> open(
     BuildContext context,
     ManualSubscriptionPayment payment,
-  ) {
+  ) async {
+    const sectionUrl = '/super-admin/payments';
+    context.go('$sectionUrl/${payment.id}');
+    final bool? result;
     if (isSuperAdminWide(context)) {
-      return showGeneralDialog<bool>(
+      result = await showGeneralDialog<bool>(
         context: context,
         barrierLabel: 'Payment Verification',
         barrierDismissible: true,
@@ -64,11 +74,16 @@ class PaymentReviewScreen extends StatefulWidget {
           );
         },
       );
+    } else {
+      result = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PaymentReviewScreen(payment: payment),
+        ),
+      );
     }
-    return Navigator.push<bool>(
-      context,
-      MaterialPageRoute(builder: (_) => PaymentReviewScreen(payment: payment)),
-    );
+    if (context.mounted) context.go(sectionUrl);
+    return result;
   }
 
   @override
@@ -108,7 +123,11 @@ class _PaymentReviewScreenState extends State<PaymentReviewScreen> {
 
     return PopScope(
       canPop: true,
-      onPopInvokedWithResult: (didPop, _) {},
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop && context.mounted) {
+          context.go('/super-admin/payments');
+        }
+      },
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Payment Verification'),

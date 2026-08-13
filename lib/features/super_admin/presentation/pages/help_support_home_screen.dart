@@ -117,18 +117,15 @@ class _SupportTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final color = AppColors.primary(context);
 
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: AppSpacing.m),
-      color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+      color: AppColors.surfaceElevated(context),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: isDark ? AppColors.borderDark : AppColors.borderLight,
-        ),
+        side: BorderSide(color: AppColors.border(context)),
       ),
       child: ListTile(
         onTap: onTap,
@@ -234,15 +231,12 @@ class SupportHelpCenterScreen extends StatelessWidget {
         separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.m),
         itemBuilder: (context, index) {
           final topic = _topics[index];
-          final isDark = Theme.of(context).brightness == Brightness.dark;
           return Card(
             elevation: 0,
-            color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+            color: AppColors.surfaceElevated(context),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              side: BorderSide(
-                color: isDark ? AppColors.borderDark : AppColors.borderLight,
-              ),
+              side: BorderSide(color: AppColors.border(context)),
             ),
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.l),
@@ -313,7 +307,6 @@ class SupportFaqsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       backgroundColor: AppColors.background(context),
       appBar: AppBar(title: const Text('FAQs')),
@@ -327,12 +320,10 @@ class SupportFaqsScreen extends StatelessWidget {
             data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
             child: Card(
               elevation: 0,
-              color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+              color: AppColors.surfaceElevated(context),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
-                side: BorderSide(
-                  color: isDark ? AppColors.borderDark : AppColors.borderLight,
-                ),
+                side: BorderSide(color: AppColors.border(context)),
               ),
               clipBehavior: Clip.antiAlias,
               child: ExpansionTile(
