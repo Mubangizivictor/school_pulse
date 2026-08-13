@@ -75,6 +75,42 @@ async function requiresCapacityReview(studentCapacity) {
   return studentCapacity > Math.max(...caps);
 }
 
+// Pure so it can be unit-tested without mocking Firestore/Auth. Field names
+// mirror the request body shape (e.g. "location.address") for safe internal
+// logging - never expose this list to the client response.
+function validateSchoolApplicationFields({ school, location, administrator, plan, termsAccepted, schoolName, schoolEmail, schoolPhone, prefix, studentCapacity, adminEmail, adminPhone, identityEmail }) {
+  const invalidFields = [];
+  if (!schoolName || schoolName.length < 3) invalidFields.push("school.name");
+  if (!schoolEmail) invalidFields.push("school.email");
+  if (!schoolPhone) invalidFields.push("school.phone");
+  if (!prefix || prefix.length < 2) invalidFields.push("school.prefix");
+  if (!text(school.category, 80)) invalidFields.push("school.category");
+  if (studentCapacity < 1) invalidFields.push("school.studentCapacity");
+  if (!text(location.region, 40)) invalidFields.push("location.region");
+  if (!text(location.district, 100)) invalidFields.push("location.district");
+  if (!text(location.address, 240)) invalidFields.push("location.address");
+  if (!text(administrator.firstName, 100)) invalidFields.push("administrator.firstName");
+  if (!text(administrator.lastName, 100)) invalidFields.push("administrator.lastName");
+  if (!adminPhone) invalidFields.push("administrator.phone");
+  if (adminEmail !== String(identityEmail).toLowerCase()) invalidFields.push("administrator.email");
+  if (!ALLOWED_PLANS.includes(plan)) invalidFields.push("plan");
+  if (termsAccepted !== true) invalidFields.push("termsAccepted");
+  return invalidFields;
+}
+
+// Test-only convenience: derives the same fields the handler derives from a
+// raw request body, so tests exercise the real validation without mocking
+// Firestore/Auth.
+function validateSchoolApplicationBody(body, identityEmail) {
+  const school = body?.school ?? {}, location = body?.location ?? {}, administrator = body?.administrator ?? {};
+  const plan = text(body?.plan, 40);
+  const schoolName = text(school.name, 160), schoolEmail = text(school.email, 160).toLowerCase(), schoolPhone = normalizePhone(school.phone);
+  const prefix = text(school.prefix, 12).toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const studentCapacity = Math.max(0, Math.min(1000000, Math.round(Number(school.studentCapacity || 0))));
+  const adminEmail = text(administrator.email, 160).toLowerCase(), adminPhone = normalizePhone(administrator.phone);
+  return validateSchoolApplicationFields({ school, location, administrator, plan, termsAccepted: body?.termsAccepted, schoolName, schoolEmail, schoolPhone, prefix, studentCapacity, adminEmail, adminPhone, identityEmail });
+}
+
 exports.submitSchoolApplication = onRequest({ region: "europe-west1" }, async (req, res) => {
   if (cors(req, res)) return;
   if (req.method !== "POST") { res.status(405).json({ error: "method_not_allowed" }); return; }
@@ -90,7 +126,10 @@ exports.submitSchoolApplication = onRequest({ region: "europe-west1" }, async (r
   const studentCapacity = Math.max(0, Math.min(1000000, Math.round(Number(school.studentCapacity || 0))));
   const adminEmail = text(administrator.email, 160).toLowerCase(), adminPhone = normalizePhone(administrator.phone);
 
-  if (!schoolName || schoolName.length < 3 || !schoolEmail || !schoolPhone || !prefix || prefix.length < 2 || !text(school.category, 80) || studentCapacity < 1 || !text(location.region, 40) || !text(location.district, 100) || !text(location.address, 240) || !text(administrator.firstName, 100) || !text(administrator.lastName, 100) || !adminPhone || adminEmail !== String(identity.email).toLowerCase() || !ALLOWED_PLANS.includes(plan) || req.body?.termsAccepted !== true) {
+  const invalidFields = validateSchoolApplicationFields({ school, location, administrator, plan, termsAccepted: req.body?.termsAccepted, schoolName, schoolEmail, schoolPhone, prefix, studentCapacity, adminEmail, adminPhone, identityEmail: identity.email });
+
+  if (invalidFields.length) {
+    console.warn("Invalid school application payload", { uid: identity.uid, invalidFields });
     res.status(400).json({ error: "invalid_application", message: "Required registration information is missing or invalid." }); return;
   }
 
@@ -135,3 +174,5 @@ exports.getSchoolApplicationStatus = onRequest({ region: "europe-west1" }, async
   const data = snap.data(); await ref.set({ lastStatusCheckAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
   res.status(200).json({ status: text(data.status, 40), schoolName: text(data.school?.name, 160), plan: text(data.plan, 40), appReady: data.appReady === true, appUrl: APP_URL, rejectionReason: text(data.rejectionReason, 500) });
 });
+
+exports.__test__ = { validateSchoolApplicationBody };

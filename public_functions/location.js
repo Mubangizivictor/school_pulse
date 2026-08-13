@@ -115,10 +115,13 @@ function normalizeNominatimResult(raw) {
   const lon = Number(raw.lon);
   if (!area || !Number.isFinite(lat) || !Number.isFinite(lon)) return null;
 
+  const fullAddress = text(raw.display_name, 240);
+
   return {
     placeId: text(raw.place_id, 60),
     locationName: area,
-    formattedAddress: text(raw.display_name, 240),
+    formattedAddress: fullAddress,
+    address: fullAddress,
     area,
     town: text(address.town || address.city || '', 140),
     city: text(address.city || '', 140),
@@ -250,3 +253,5 @@ exports.reverseGeocodeUgandaLocation = onRequest({ region: 'europe-west1' }, asy
     res.status(502).json({ error: 'geocode_unavailable', message: 'Current location lookup is temporarily unavailable.' });
   }
 });
+
+exports.__test__ = { normalizeNominatimResult };
