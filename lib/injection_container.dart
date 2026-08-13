@@ -798,7 +798,6 @@ Future<void> init() async {
   sl.registerLazySingleton(
     () => GetAdminDashboardStats(
       authRepository: sl(),
-      studentRepository: sl(),
       gateOpsRepository: sl(),
       firestore: sl(),
       adminAttendanceRepository: sl(),

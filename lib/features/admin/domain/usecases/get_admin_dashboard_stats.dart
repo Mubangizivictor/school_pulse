@@ -5,7 +5,6 @@ import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/usecases/usecase.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/repositories/auth_repository.dart';
-import 'package:school_pulse/features/student/domain/repositories/student_repository.dart';
 import 'package:school_pulse/features/gate_ops/domain/entities/visitor.dart';
 import 'package:school_pulse/features/gate_ops/domain/repositories/gate_ops_repository.dart';
 import 'package:school_pulse/features/admin/domain/repositories/admin_attendance_repository.dart';
@@ -123,7 +122,6 @@ class AdminDashboardStats extends Equatable {
 
 class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
   final AuthRepository authRepository;
-  final StudentRepository studentRepository;
   final GateOpsRepository gateOpsRepository;
   final FirebaseFirestore firestore;
   final AdminAttendanceRepository adminAttendanceRepository;
@@ -132,7 +130,6 @@ class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
 
   GetAdminDashboardStats({
     required this.authRepository,
-    required this.studentRepository,
     required this.gateOpsRepository,
     required this.firestore,
     required this.adminAttendanceRepository,
@@ -151,8 +148,15 @@ class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
       final Either<Failure, List<UserEntity>> staffResult = await authRepository
           .getStaffMembers(schoolId)
           .timeout(const Duration(seconds: 10));
-      final studentsResult = await studentRepository
-          .getAllStudents(schoolId: schoolId)
+      // A dashboard KPI must not download every student just to show a
+      // number. Status is a canonical student field, so this server-side
+      // aggregate remains tenant-scoped and counts exactly active students.
+      final activeStudentsCount = await firestore
+          .collection('students')
+          .where('schoolId', isEqualTo: schoolId)
+          .where('status', isEqualTo: 'active')
+          .count()
+          .get()
           .timeout(const Duration(seconds: 10));
 
       // For visitors, we use a Future instead of .first on a stream to avoid deadlocks
@@ -186,12 +190,6 @@ class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
             .where((s) => s.isActive && s.mustChangePassword)
             .length;
       });
-
-      int totalStudents = 0;
-      studentsResult.fold(
-        (_) => null,
-        (students) => totalStudents = students.length,
-      );
 
       final serviceStatuses = await _getServiceStatuses();
       final systemHealth = _scoreServices(serviceStatuses);
@@ -242,7 +240,7 @@ class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
         AdminDashboardStats(
           schoolId: schoolId,
           activeStaffCount: activeStaff,
-          totalStudentsCount: totalStudents,
+          totalStudentsCount: activeStudentsCount.count ?? 0,
           visitorsTodayCount: todayVisitors.length,
           activeVisitorsCount: activeVisitors.length,
           systemHealth: systemHealth,
