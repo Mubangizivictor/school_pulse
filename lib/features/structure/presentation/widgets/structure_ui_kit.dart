@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/searchable_picker.dart';
+import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 
 /// A compact icon-tile used on the Structure hub - mirrors Admin
 /// dashboard's `_AdminShortcut` tile so the module fits the app's existing
@@ -193,30 +195,34 @@ class StructureSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       height: 48,
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+        border: Border.all(color: colors.outline.withValues(alpha: 0.22)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
         children: [
-          Icon(Icons.search, color: Colors.grey[600], size: 20),
+          Icon(Icons.search, color: colors.onSurfaceVariant, size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: TextField(
               onChanged: onChanged,
               decoration: InputDecoration(
                 hintText: hint,
-                hintStyle: TextStyle(color: Colors.grey[600], fontSize: 14),
+                hintStyle: TextStyle(
+                  color: colors.onSurfaceVariant,
+                  fontSize: 14,
+                ),
                 border: InputBorder.none,
                 isDense: true,
               ),
             ),
           ),
-          Icon(Icons.tune, color: Colors.grey[600], size: 20),
+          Icon(Icons.tune, color: colors.onSurfaceVariant, size: 20),
         ],
       ),
     );
@@ -278,6 +284,7 @@ class StructureSectionPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selected = sections[selectedIndex];
+    final colors = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
       child: Material(
@@ -289,12 +296,16 @@ class StructureSectionPicker extends StatelessWidget {
               context: context,
               backgroundColor: Theme.of(context).scaffoldBackgroundColor,
               showDragHandle: true,
+              isScrollControlled: true,
               builder: (sheetContext) => SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight:
+                        MediaQuery.sizeOf(sheetContext).height * 0.8,
+                  ),
+                  child: ListView(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
                     children: [
                       Text(
                         'Choose section',
@@ -324,7 +335,7 @@ class StructureSectionPicker extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.grey.withValues(alpha: .3)),
+              border: Border.all(color: colors.outline.withValues(alpha: .24)),
               color: Theme.of(context).cardColor,
             ),
             child: Row(
@@ -503,4 +514,213 @@ class StructureFieldGroup extends StatelessWidget {
       children: spaced,
     );
   }
+}
+
+/// The reference-design record card: a colored icon box, title, code/count
+/// subtitle, optional status badge, and a chevron leading to a details page.
+/// Replaces [StructureListRow]'s inline edit/delete affordances for entity
+/// types that now have a dedicated details screen.
+class StructureRecordCard extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String? subtitle;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const StructureRecordCard({
+    super.key,
+    required this.icon,
+    required this.color,
+    required this.title,
+    this.subtitle,
+    this.isActive = true,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 9),
+      child: Material(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: colors.outline.withValues(alpha: .18)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: .10),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: Icon(icon, color: color, size: 19),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          decoration: isActive
+                              ? null
+                              : TextDecoration.lineThrough,
+                        ),
+                      ),
+                      if (subtitle != null && subtitle!.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle!,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (!isActive) ...[
+                  const StructureStatusBadge(label: 'Inactive', isActive: false),
+                  const SizedBox(width: 6),
+                ],
+                Icon(Icons.chevron_right_rounded, color: colors.primary),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A searchable staff-selection field for the Structure module (Head of
+/// Department, House Master/Mistress, Club Patron, Hostel Warden, ...).
+/// Thin wrapper over the app's generic [showSearchablePicker] so every
+/// "assign a staff member" field in Structure looks and behaves the same.
+class StructureStaffPickerField extends StatelessWidget {
+  final String label;
+  final String? selectedStaffId;
+  final List<UserEntity> staff;
+  final ValueChanged<String?> onChanged;
+  final bool required;
+
+  const StructureStaffPickerField({
+    super.key,
+    required this.label,
+    required this.selectedStaffId,
+    required this.staff,
+    required this.onChanged,
+    this.required = false,
+  });
+
+  UserEntity? get _selected {
+    if (selectedStaffId == null || selectedStaffId!.isEmpty) return null;
+    for (final member in staff) {
+      if (member.id == selectedStaffId) return member;
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final selected = _selected;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        RichText(
+          text: TextSpan(
+            style: Theme.of(context).textTheme.labelSmall,
+            children: [
+              TextSpan(text: label),
+              if (required)
+                TextSpan(text: ' *', style: TextStyle(color: colors.error)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 7),
+        InkWell(
+          borderRadius: BorderRadius.circular(7),
+          onTap: () async {
+            final picked = await showSearchablePicker<UserEntity>(
+              context: context,
+              title: label,
+              items: staff,
+              labelBuilder: (s) => s.name,
+              subtitleBuilder: (s) =>
+                  s.designationId?.isNotEmpty == true ? s.designationId : null,
+              searchHint: 'Search staff by name...',
+            );
+            if (picked != null) onChanged(picked.id);
+          },
+          child: Container(
+            height: 46,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              border: Border.all(color: colors.outline.withValues(alpha: .35)),
+              borderRadius: BorderRadius.circular(7),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    selected?.name ?? 'Select staff member',
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: selected == null
+                          ? colors.onSurfaceVariant
+                          : null,
+                    ),
+                  ),
+                ),
+                if (selected != null)
+                  InkWell(
+                    onTap: () => onChanged(null),
+                    child: Icon(Icons.close_rounded, size: 16, color: colors.onSurfaceVariant),
+                  )
+                else
+                  const Icon(Icons.keyboard_arrow_down_rounded),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// True if [code] already belongs to a different record in [items] within
+/// the same school - used by Department/Campus/House/Club/Facility forms so
+/// every coded Structure entity rejects duplicate codes consistently.
+bool structureDuplicateCode<T>({
+  required List<T> items,
+  required String Function(T item) codeOf,
+  required String Function(T item) idOf,
+  required String code,
+  String? excludeId,
+}) {
+  final normalized = code.trim().toLowerCase();
+  if (normalized.isEmpty) return false;
+  return items.any(
+    (item) =>
+        idOf(item) != excludeId &&
+        codeOf(item).trim().toLowerCase() == normalized,
+  );
 }

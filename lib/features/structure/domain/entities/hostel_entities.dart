@@ -10,6 +10,7 @@ class Hostel extends Equatable {
   final String gender;
   final String wardenName;
   final String wardenContact;
+  final String? wardenStaffId;
   final int capacity;
   final String description;
   final bool isActive;
@@ -21,6 +22,7 @@ class Hostel extends Equatable {
     this.gender = '',
     this.wardenName = '',
     this.wardenContact = '',
+    this.wardenStaffId,
     this.capacity = 0,
     this.description = '',
     this.isActive = true,
@@ -33,6 +35,7 @@ class Hostel extends Equatable {
     String? gender,
     String? wardenName,
     String? wardenContact,
+    String? wardenStaffId,
     int? capacity,
     String? description,
     bool? isActive,
@@ -44,6 +47,7 @@ class Hostel extends Equatable {
       gender: gender ?? this.gender,
       wardenName: wardenName ?? this.wardenName,
       wardenContact: wardenContact ?? this.wardenContact,
+      wardenStaffId: wardenStaffId ?? this.wardenStaffId,
       capacity: capacity ?? this.capacity,
       description: description ?? this.description,
       isActive: isActive ?? this.isActive,
@@ -58,6 +62,7 @@ class Hostel extends Equatable {
     gender,
     wardenName,
     wardenContact,
+    wardenStaffId,
     capacity,
     description,
     isActive,

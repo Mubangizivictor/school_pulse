@@ -297,6 +297,7 @@ class DepartmentIsar {
   late String code;
   late String description;
   late String headOfDepartmentStaffId;
+  late int displayOrder;
   late bool isActive;
 
   DepartmentIsar();
@@ -309,6 +310,7 @@ class DepartmentIsar {
       ..code = e.code
       ..description = e.description
       ..headOfDepartmentStaffId = e.headOfDepartmentStaffId
+      ..displayOrder = e.displayOrder
       ..isActive = e.isActive;
   }
 
@@ -320,6 +322,7 @@ class DepartmentIsar {
       code: code,
       description: description,
       headOfDepartmentStaffId: headOfDepartmentStaffId,
+      displayOrder: displayOrder,
       isActive: isActive,
     );
   }
@@ -334,7 +337,10 @@ class StaffDesignationIsar {
 
   late String schoolId;
   late String name;
+  late String code;
+  late String category;
   late String description;
+  late int displayOrder;
   late bool isActive;
 
   StaffDesignationIsar();
@@ -344,7 +350,10 @@ class StaffDesignationIsar {
       ..designationId = e.id
       ..schoolId = e.schoolId
       ..name = e.name
+      ..code = e.code
+      ..category = e.category
       ..description = e.description
+      ..displayOrder = e.displayOrder
       ..isActive = e.isActive;
   }
 
@@ -353,7 +362,10 @@ class StaffDesignationIsar {
       id: designationId,
       schoolId: schoolId,
       name: name,
+      code: code,
+      category: category,
       description: description,
+      displayOrder: displayOrder,
       isActive: isActive,
     );
   }
@@ -463,8 +475,12 @@ class HouseIsar {
 
   late String schoolId;
   late String name;
+  late String code;
+  late String type;
   late String colorHex;
   late String description;
+  String? houseMasterStaffId;
+  late int order;
   late bool isActive;
 
   HouseIsar();
@@ -474,8 +490,12 @@ class HouseIsar {
       ..houseId = e.id
       ..schoolId = e.schoolId
       ..name = e.name
+      ..code = e.code
+      ..type = e.type
       ..colorHex = e.colorHex
       ..description = e.description
+      ..houseMasterStaffId = e.houseMasterStaffId
+      ..order = e.order
       ..isActive = e.isActive;
   }
 
@@ -484,8 +504,12 @@ class HouseIsar {
       id: houseId,
       schoolId: schoolId,
       name: name,
+      code: code,
+      type: type,
       colorHex: colorHex,
       description: description,
+      houseMasterStaffId: houseMasterStaffId,
+      order: order,
       isActive: isActive,
     );
   }
@@ -500,9 +524,14 @@ class ClubIsar {
 
   late String schoolId;
   late String name;
+  late String code;
   late String category;
   late String description;
   late String patronName;
+  String? patronStaffId;
+  late String meetingDay;
+  late String meetingTime;
+  late int maxMembers;
   late bool isActive;
 
   ClubIsar();
@@ -512,9 +541,14 @@ class ClubIsar {
       ..clubId = e.id
       ..schoolId = e.schoolId
       ..name = e.name
+      ..code = e.code
       ..category = e.category
       ..description = e.description
       ..patronName = e.patronName
+      ..patronStaffId = e.patronStaffId
+      ..meetingDay = e.meetingDay
+      ..meetingTime = e.meetingTime
+      ..maxMembers = e.maxMembers
       ..isActive = e.isActive;
   }
 
@@ -523,9 +557,14 @@ class ClubIsar {
       id: clubId,
       schoolId: schoolId,
       name: name,
+      code: code,
       category: category,
       description: description,
       patronName: patronName,
+      patronStaffId: patronStaffId,
+      meetingDay: meetingDay,
+      meetingTime: meetingTime,
+      maxMembers: maxMembers,
       isActive: isActive,
     );
   }
@@ -540,7 +579,9 @@ class FacilityIsar {
 
   late String schoolId;
   late String name;
+  late String code;
   late String facilityType;
+  late String campusId;
   late String location;
   late int capacity;
   late String description;
@@ -553,7 +594,9 @@ class FacilityIsar {
       ..facilityId = e.id
       ..schoolId = e.schoolId
       ..name = e.name
+      ..code = e.code
       ..facilityType = e.facilityType
+      ..campusId = e.campusId
       ..location = e.location
       ..capacity = e.capacity
       ..description = e.description
@@ -565,7 +608,9 @@ class FacilityIsar {
       id: facilityId,
       schoolId: schoolId,
       name: name,
+      code: code,
       facilityType: facilityType,
+      campusId: campusId,
       location: location,
       capacity: capacity,
       description: description,
@@ -586,6 +631,7 @@ class HostelIsar {
   late String gender;
   late String wardenName;
   late String wardenContact;
+  String? wardenStaffId;
   late int capacity;
   late String description;
   late bool isActive;
@@ -600,6 +646,7 @@ class HostelIsar {
       ..gender = e.gender
       ..wardenName = e.wardenName
       ..wardenContact = e.wardenContact
+      ..wardenStaffId = e.wardenStaffId
       ..capacity = e.capacity
       ..description = e.description
       ..isActive = e.isActive;
@@ -613,6 +660,7 @@ class HostelIsar {
       gender: gender,
       wardenName: wardenName,
       wardenContact: wardenContact,
+      wardenStaffId: wardenStaffId,
       capacity: capacity,
       description: description,
       isActive: isActive,

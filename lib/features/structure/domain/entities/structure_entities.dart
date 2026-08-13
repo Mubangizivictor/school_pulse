@@ -391,6 +391,7 @@ class Department extends Equatable {
   final String code;
   final String description;
   final String headOfDepartmentStaffId;
+  final int displayOrder;
   final bool isActive;
 
   const Department({
@@ -400,6 +401,7 @@ class Department extends Equatable {
     this.code = '',
     this.description = '',
     this.headOfDepartmentStaffId = '',
+    this.displayOrder = 0,
     this.isActive = true,
   });
 
@@ -410,6 +412,7 @@ class Department extends Equatable {
     String? code,
     String? description,
     String? headOfDepartmentStaffId,
+    int? displayOrder,
     bool? isActive,
   }) {
     return Department(
@@ -420,6 +423,7 @@ class Department extends Equatable {
       description: description ?? this.description,
       headOfDepartmentStaffId:
           headOfDepartmentStaffId ?? this.headOfDepartmentStaffId,
+      displayOrder: displayOrder ?? this.displayOrder,
       isActive: isActive ?? this.isActive,
     );
   }
@@ -432,6 +436,7 @@ class Department extends Equatable {
     code,
     description,
     headOfDepartmentStaffId,
+    displayOrder,
     isActive,
   ];
 }
@@ -444,14 +449,20 @@ class StaffDesignation extends Equatable {
   final String id;
   final String schoolId;
   final String name;
+  final String code;
+  final String category;
   final String description;
+  final int displayOrder;
   final bool isActive;
 
   const StaffDesignation({
     required this.id,
     required this.schoolId,
     required this.name,
+    this.code = '',
+    this.category = '',
     this.description = '',
+    this.displayOrder = 0,
     this.isActive = true,
   });
 
@@ -459,20 +470,35 @@ class StaffDesignation extends Equatable {
     String? id,
     String? schoolId,
     String? name,
+    String? code,
+    String? category,
     String? description,
+    int? displayOrder,
     bool? isActive,
   }) {
     return StaffDesignation(
       id: id ?? this.id,
       schoolId: schoolId ?? this.schoolId,
       name: name ?? this.name,
+      code: code ?? this.code,
+      category: category ?? this.category,
       description: description ?? this.description,
+      displayOrder: displayOrder ?? this.displayOrder,
       isActive: isActive ?? this.isActive,
     );
   }
 
   @override
-  List<Object?> get props => [id, schoolId, name, description, isActive];
+  List<Object?> get props => [
+    id,
+    schoolId,
+    name,
+    code,
+    category,
+    description,
+    displayOrder,
+    isActive,
+  ];
 }
 
 /// A functional role a staff member performs (Class Teacher, Exam Officer,

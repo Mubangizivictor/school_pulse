@@ -92,16 +92,24 @@ class House extends Equatable {
   final String id;
   final String schoolId;
   final String name;
+  final String code;
+  final String type;
   final String colorHex;
   final String description;
+  final String? houseMasterStaffId;
+  final int order;
   final bool isActive;
 
   const House({
     required this.id,
     required this.schoolId,
     required this.name,
+    this.code = '',
+    this.type = '',
     this.colorHex = '',
     this.description = '',
+    this.houseMasterStaffId,
+    this.order = 0,
     this.isActive = true,
   });
 
@@ -109,16 +117,24 @@ class House extends Equatable {
     String? id,
     String? schoolId,
     String? name,
+    String? code,
+    String? type,
     String? colorHex,
     String? description,
+    String? houseMasterStaffId,
+    int? order,
     bool? isActive,
   }) {
     return House(
       id: id ?? this.id,
       schoolId: schoolId ?? this.schoolId,
       name: name ?? this.name,
+      code: code ?? this.code,
+      type: type ?? this.type,
       colorHex: colorHex ?? this.colorHex,
       description: description ?? this.description,
+      houseMasterStaffId: houseMasterStaffId ?? this.houseMasterStaffId,
+      order: order ?? this.order,
       isActive: isActive ?? this.isActive,
     );
   }
@@ -128,8 +144,12 @@ class House extends Equatable {
     id,
     schoolId,
     name,
+    code,
+    type,
     colorHex,
     description,
+    houseMasterStaffId,
+    order,
     isActive,
   ];
 }
@@ -139,18 +159,28 @@ class Club extends Equatable {
   final String id;
   final String schoolId;
   final String name;
+  final String code;
   final String category;
   final String description;
   final String patronName;
+  final String? patronStaffId;
+  final String meetingDay;
+  final String meetingTime;
+  final int maxMembers;
   final bool isActive;
 
   const Club({
     required this.id,
     required this.schoolId,
     required this.name,
+    this.code = '',
     this.category = '',
     this.description = '',
     this.patronName = '',
+    this.patronStaffId,
+    this.meetingDay = '',
+    this.meetingTime = '',
+    this.maxMembers = 0,
     this.isActive = true,
   });
 
@@ -158,18 +188,28 @@ class Club extends Equatable {
     String? id,
     String? schoolId,
     String? name,
+    String? code,
     String? category,
     String? description,
     String? patronName,
+    String? patronStaffId,
+    String? meetingDay,
+    String? meetingTime,
+    int? maxMembers,
     bool? isActive,
   }) {
     return Club(
       id: id ?? this.id,
       schoolId: schoolId ?? this.schoolId,
       name: name ?? this.name,
+      code: code ?? this.code,
       category: category ?? this.category,
       description: description ?? this.description,
       patronName: patronName ?? this.patronName,
+      patronStaffId: patronStaffId ?? this.patronStaffId,
+      meetingDay: meetingDay ?? this.meetingDay,
+      meetingTime: meetingTime ?? this.meetingTime,
+      maxMembers: maxMembers ?? this.maxMembers,
       isActive: isActive ?? this.isActive,
     );
   }
@@ -179,9 +219,14 @@ class Club extends Equatable {
     id,
     schoolId,
     name,
+    code,
     category,
     description,
     patronName,
+    patronStaffId,
+    meetingDay,
+    meetingTime,
+    maxMembers,
     isActive,
   ];
 }
@@ -191,7 +236,9 @@ class Facility extends Equatable {
   final String id;
   final String schoolId;
   final String name;
+  final String code;
   final String facilityType;
+  final String campusId;
   final String location;
   final int capacity;
   final String description;
@@ -201,7 +248,9 @@ class Facility extends Equatable {
     required this.id,
     required this.schoolId,
     required this.name,
+    this.code = '',
     this.facilityType = '',
+    this.campusId = '',
     this.location = '',
     this.capacity = 0,
     this.description = '',
@@ -212,7 +261,9 @@ class Facility extends Equatable {
     String? id,
     String? schoolId,
     String? name,
+    String? code,
     String? facilityType,
+    String? campusId,
     String? location,
     int? capacity,
     String? description,
@@ -222,7 +273,9 @@ class Facility extends Equatable {
       id: id ?? this.id,
       schoolId: schoolId ?? this.schoolId,
       name: name ?? this.name,
+      code: code ?? this.code,
       facilityType: facilityType ?? this.facilityType,
+      campusId: campusId ?? this.campusId,
       location: location ?? this.location,
       capacity: capacity ?? this.capacity,
       description: description ?? this.description,
@@ -235,7 +288,9 @@ class Facility extends Equatable {
     id,
     schoolId,
     name,
+    code,
     facilityType,
+    campusId,
     location,
     capacity,
     description,
