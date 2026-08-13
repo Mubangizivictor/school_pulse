@@ -1,7 +1,8 @@
 import 'dart:async';
 
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:school_pulse/features/notifications/notification_coordinator.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -78,6 +79,35 @@ void main() async {
       debugPrint('Firebase already initialized, skipping...');
     } else {
       rethrow;
+    }
+  }
+
+  // App Check: monitoring-only for now, deliberately NOT enforced
+  // server-side yet (no `enforceAppCheck`/`consumeAppCheckToken` anywhere
+  // in functions/ or public_functions/). Debug providers mint a per-install
+  // debug token that must be registered in Firebase Console > App Check >
+  // this app > Manage debug tokens - until that's done AND enforcement is
+  // turned on, this has zero effect on any existing auth/Functions/
+  // Firestore/Storage/Messaging call, by design. Failure here must never
+  // block app startup.
+  //
+  // Web is deliberately skipped: it requires a reCAPTCHA v3 site key
+  // registered in Firebase Console (App Check > Web app), which doesn't
+  // exist yet. Activating with a placeholder key would fail loudly on
+  // every web page load rather than degrading quietly - Android/iOS get
+  // real debug-mode App Check now, web can be added once a site key exists.
+  if (!kIsWeb) {
+    try {
+      await FirebaseAppCheck.instance.activate(
+        androidProvider: kDebugMode
+            ? AndroidProvider.debug
+            : AndroidProvider.playIntegrity,
+        appleProvider: kDebugMode
+            ? AppleProvider.debug
+            : AppleProvider.appAttest,
+      );
+    } catch (e) {
+      debugPrint('App Check activation failed (non-fatal): $e');
     }
   }
 

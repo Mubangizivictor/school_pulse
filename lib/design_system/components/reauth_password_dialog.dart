@@ -145,7 +145,9 @@ class _ReauthPasswordDialogState extends State<_ReauthPasswordDialog> {
   Widget build(BuildContext context) {
     final needsTotp = _mfaResolver != null;
     return AlertDialog(
-      title: Text(needsTotp ? 'Enter Authentication Code' : 'Confirm Your Password'),
+      title: Text(
+        needsTotp ? 'Enter Authentication Code' : 'Confirm Your Password',
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,

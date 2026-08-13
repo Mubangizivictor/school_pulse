@@ -191,11 +191,11 @@ import 'package:school_pulse/features/student_identity/presentation/screens/batc
 import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/super_admin/domain/owner_security_session_service.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/super_admin_dashboard.dart';
+import 'package:school_pulse/features/super_admin/presentation/widgets/super_admin_mobile_nav_shell.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/super_admin_notifications_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/owner_notification_preferences_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/owner_notification_history_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/security_center_screen.dart';
-import 'package:school_pulse/features/super_admin/presentation/pages/security_settings_deep_dive_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/help_support_home_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/submit_support_request_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/support_ticket_conversation_screen.dart';
@@ -2306,66 +2306,74 @@ final router = GoRouter(
         ),
         GoRoute(
           path: 'settings/notifications',
-          builder: (context, state) => const SuperAdminNotificationsScreen(),
+          builder: (context, state) => const SuperAdminMobileNavShell(
+            child: SuperAdminNotificationsScreen(),
+          ),
           routes: [
             GoRoute(
               path: 'preferences',
-              builder: (context, state) =>
-                  const OwnerNotificationPreferencesScreen(),
+              builder: (context, state) => const SuperAdminMobileNavShell(
+                child: OwnerNotificationPreferencesScreen(),
+              ),
             ),
             GoRoute(
               path: 'history',
-              builder: (context, state) =>
-                  const OwnerNotificationHistoryScreen(),
+              builder: (context, state) => const SuperAdminMobileNavShell(
+                child: OwnerNotificationHistoryScreen(),
+              ),
             ),
           ],
         ),
         GoRoute(
           path: 'settings/security',
-          builder: (context, state) => const SecurityCenterScreen(),
-          routes: [
-            GoRoute(
-              path: 'deep-dive',
-              builder: (context, state) =>
-                  const SecuritySettingsDeepDiveScreen(),
-            ),
-          ],
+          builder: (context, state) =>
+              const SuperAdminMobileNavShell(child: SecurityCenterScreen()),
         ),
         GoRoute(
           path: 'settings/support',
-          builder: (context, state) => const HelpSupportHomeScreen(),
+          builder: (context, state) =>
+              const SuperAdminMobileNavShell(child: HelpSupportHomeScreen()),
           routes: [
             GoRoute(
               path: 'help-center',
-              builder: (context, state) => const SupportHelpCenterScreen(),
+              builder: (context, state) => const SuperAdminMobileNavShell(
+                child: SupportHelpCenterScreen(),
+              ),
             ),
             GoRoute(
               path: 'faqs',
-              builder: (context, state) => const SupportFaqsScreen(),
+              builder: (context, state) =>
+                  const SuperAdminMobileNavShell(child: SupportFaqsScreen()),
             ),
             GoRoute(
               path: 'new',
-              builder: (context, state) => SubmitSupportRequestScreen(
-                args:
-                    state.extra as SubmitSupportRequestArgs? ??
-                    const SubmitSupportRequestArgs(origin: 'submit_request'),
+              builder: (context, state) => SuperAdminMobileNavShell(
+                child: SubmitSupportRequestScreen(
+                  args:
+                      state.extra as SubmitSupportRequestArgs? ??
+                      const SubmitSupportRequestArgs(origin: 'submit_request'),
+                ),
               ),
             ),
             GoRoute(
               path: 'ticket/:id',
-              builder: (context, state) => SupportTicketConversationScreen(
-                ticketId: state.pathParameters['id']!,
+              builder: (context, state) => SuperAdminMobileNavShell(
+                child: SupportTicketConversationScreen(
+                  ticketId: state.pathParameters['id']!,
+                ),
               ),
             ),
           ],
         ),
         GoRoute(
           path: 'settings/about',
-          builder: (context, state) => const ContactAboutScreen(),
+          builder: (context, state) =>
+              const SuperAdminMobileNavShell(child: ContactAboutScreen()),
           routes: [
             GoRoute(
               path: 'privacy-policy',
-              builder: (context, state) => const PrivacyPolicyScreen(),
+              builder: (context, state) =>
+                  const SuperAdminMobileNavShell(child: PrivacyPolicyScreen()),
             ),
           ],
         ),

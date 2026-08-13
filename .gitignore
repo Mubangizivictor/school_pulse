@@ -63,3 +63,16 @@ firebase-debug.*.log
 
 # Local backups of Firebase config files - never commit
 /.config_backups/
+
+# Android release signing - the keystore and its credentials must never be
+# committed. key.properties holds the store/key passwords and alias in
+# plaintext; keep it local or inject via CI secrets, never in git.
+/android/key.properties
+*.jks
+*.keystore
+
+# Apple Sign-In / APNs private keys (.p8) and any service account JSON -
+# never committed, regardless of where they end up on disk.
+*.p8
+*service-account*.json
+*serviceAccountKey*.json

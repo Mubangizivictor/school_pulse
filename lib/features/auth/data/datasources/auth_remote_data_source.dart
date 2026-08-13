@@ -332,7 +332,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   /// which region it was configured for, and Firebase's error code) without
   /// ever touching anything sensitive - never the password, ID token, TOTP
   /// code, Apple/Google token, or recovery code involved in the same flow.
-  void _logOwnerCallableFailure(String callableName, FirebaseFunctionsException e) {
+  void _logOwnerCallableFailure(
+    String callableName,
+    FirebaseFunctionsException e,
+  ) {
     debugPrint(
       'OwnerCallableFailure callable=$callableName '
       'region=${ownerFunctions.app.name}:${_ownerFunctionsRegion()} '

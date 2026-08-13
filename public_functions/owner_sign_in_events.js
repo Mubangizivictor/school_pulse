@@ -143,11 +143,22 @@ exports.logOwnerSignIn = onCall({ region: 'europe-west1', secrets: EMAIL_SECRETS
  * invalidates refresh tokens issued before this call project-wide, so any
  * other signed-in device is forced to re-authenticate the next time its
  * ID token is refreshed or verified server-side.
+ *
+ * `revokeRefreshTokens` has no per-device exclusion - it is genuinely
+ * all-or-nothing at the Firebase Admin SDK level, so "sign out every
+ * OTHER device but keep me signed in here" cannot be done by skipping
+ * this device's token. Instead: revoke everything, then immediately mint
+ * a fresh custom token for the SAME uid and hand it back - the caller
+ * exchanges it via `signInWithCustomToken`, which establishes a brand-new
+ * (unrevoked) refresh token for this device only. Every other device's
+ * now-dead token stays dead; this device ends up on a fresh one instead
+ * of being signed out.
  */
 exports.revokeOwnerSessions = onCall({ region: 'europe-west1' }, async (request) => {
   const owner = await requireOwner(request);
 
   await admin.auth().revokeRefreshTokens(owner.uid);
+  const freshCustomToken = await admin.auth().createCustomToken(owner.uid);
 
   // A revoked session state must not leave a still-valid recovery
   // challenge redeemable - see owner_recovery_codes.js's
@@ -174,7 +185,7 @@ exports.revokeOwnerSessions = onCall({ region: 'europe-west1' }, async (request)
     affectedUserId: owner.uid,
     timestamp: serverTime,
     device: 'Owner Console',
-    metadata: { via: 'security_settings_deep_dive_screen' },
+    metadata: { via: 'security_center_screen' },
   });
 
   // Mark the owner's device/session registry docs revoked too, so Trusted
@@ -199,7 +210,13 @@ exports.revokeOwnerSessions = onCall({ region: 'europe-west1' }, async (request)
     // Collection absent or rules not yet defined for it - non-fatal.
   }
 
-  return { ok: true };
+  // customToken carries no custom claims (no platformOwner/mfaVerified
+  // flags), exactly like every other createCustomToken call in this
+  // codebase - the client must call assertPlatformOwnerAccess again after
+  // signInWithCustomToken, and re-establish an OwnerSecuritySession (both
+  // were just revoked above), before treating this device as having
+  // standing owner-console access again.
+  return { ok: true, customToken: freshCustomToken };
 });
 
 exports.__test__ = { classifySignInEmail };

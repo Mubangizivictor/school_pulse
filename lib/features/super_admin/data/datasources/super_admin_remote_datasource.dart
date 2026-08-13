@@ -246,7 +246,9 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
     required String schoolId,
     required String reason,
   }) async {
-    final callable = _defaultCodebaseFunctions.httpsCallable('enterSupportMode');
+    final callable = _defaultCodebaseFunctions.httpsCallable(
+      'enterSupportMode',
+    );
     final result = await callable.call<Map<String, dynamic>>({
       'schoolId': schoolId,
       'reason': reason,

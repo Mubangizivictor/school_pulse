@@ -57,7 +57,9 @@ class _TwoFactorAuthScreenState extends State<TwoFactorAuthScreen> {
           reason: 'enable two-factor authentication',
         );
         if (!reauthed) {
-          _showError('Re-authentication is required to enable two-factor authentication.');
+          _showError(
+            'Re-authentication is required to enable two-factor authentication.',
+          );
           return;
         }
       }

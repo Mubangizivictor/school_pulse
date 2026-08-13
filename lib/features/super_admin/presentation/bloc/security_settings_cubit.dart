@@ -15,7 +15,7 @@ class SecuritySettings extends Equatable {
 
   /// Whether the owner has opted in to biometric unlock. Only ever set to
   /// true after a real `local_auth` `authenticate()` call succeeds - see
-  /// `SecurityCenterScreen`/`SecuritySettingsDeepDiveScreen`.
+  /// `SecurityCenterScreen`.
   final bool biometricEnabled;
 
   /// Whether the app should require biometric re-auth on resume from

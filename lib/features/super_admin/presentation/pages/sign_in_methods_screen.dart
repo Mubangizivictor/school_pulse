@@ -475,7 +475,17 @@ class _ProviderTile extends StatelessWidget {
               ),
             ),
           ),
-          ?trailing,
+          // trailing may be an OutlinedButton/FilledButton, which sizes
+          // itself based on available width - a bare Row gives unbounded
+          // width on the main axis, which throws
+          // "BoxConstraints(unconstrained)" during layout. Wrapping in a
+          // non-expanding IntrinsicWidth+ConstrainedBox lets it size to its
+          // own content instead of trying to fill infinite space.
+          if (trailing != null)
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 160),
+              child: IntrinsicWidth(child: trailing),
+            ),
         ],
       ),
     );
