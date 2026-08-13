@@ -583,6 +583,15 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
           const SizedBox(height: 4),
           StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
             stream: FirebaseFirestore.instance
+                .collection('schools')
+                .doc(
+                  context.select<AuthBloc, String?>((bloc) {
+                    final state = bloc.state;
+                    return state is AuthAuthenticated
+                        ? state.user.schoolId
+                        : null;
+                  }),
+                )
                 .collection('config')
                 .doc('system')
                 .snapshots(),
