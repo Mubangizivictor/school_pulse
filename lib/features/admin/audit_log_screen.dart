@@ -4,7 +4,10 @@ import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/admin/data/models/audit_log.dart';
 import 'package:school_pulse/features/admin/data/repositories/audit_repository.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/injection_container.dart' as di;
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class AuditLogScreen extends StatelessWidget {
   const AuditLogScreen({super.key});
@@ -20,11 +23,15 @@ class AuditLogScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final repository = di.sl<AuditRepository>();
+    final schoolId = context.select<AuthBloc, String?>((bloc) {
+      final state = bloc.state;
+      return state is AuthAuthenticated ? state.user.schoolId : null;
+    });
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
       appBar: const AdminAppBar(title: 'Audit Log'),
       body: StreamBuilder<List<AuditLog>>(
-        stream: repository.watchRecentLogs(limit: 200),
+        stream: repository.watchRecentLogs(limit: 200, schoolId: schoolId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: SchoolPulseLoader());
