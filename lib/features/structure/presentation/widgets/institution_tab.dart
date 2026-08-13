@@ -400,7 +400,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
       final imageBytes = await image.readAsBytes();
       final kind = isLogo ? 'logo' : 'badge';
       final reference = di.sl<FirebaseStorage>().ref(
-        'school_assets/${schoolId}_${kind}_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        'schools/$schoolId/school_assets/${kind}_${DateTime.now().millisecondsSinceEpoch}.jpg',
       );
       await reference.putData(
         imageBytes,
