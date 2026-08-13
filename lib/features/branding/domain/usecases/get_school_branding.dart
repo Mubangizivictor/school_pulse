@@ -12,39 +12,75 @@ class GetSchoolBranding implements UseCase<SchoolBranding, String> {
   @override
   Future<Either<Failure, SchoolBranding>> call(String schoolId) async {
     try {
-      final doc = await firestore.collection('schools').doc(schoolId).get();
+      final school = firestore.collection('schools').doc(schoolId);
+      final snapshots = await Future.wait([
+        school.get(),
+        school.collection('config').doc('institution_profile').get(),
+      ]);
+      final doc = snapshots[0];
+      final profileDoc = snapshots[1];
 
       if (!doc.exists) {
         return Left(ServerFailure('School branding not found'));
       }
 
       final data = doc.data()!;
-      // Structure owns this document. Branding is optional presentation data,
-      // not a second configuration source, so a valid school can still open
-      // with safe platform defaults while its admin finishes setup.
+      // Institution profile is the editable, tenant-scoped source of truth.
+      // The root school document remains a platform-owned tenant record; its
+      // legacy branding fields are retained only as a migration fallback.
+      final profileData = profileDoc.data() ?? const <String, dynamic>{};
       final brandingData =
           (data['branding'] as Map<String, dynamic>?) ??
           const <String, dynamic>{};
-      final schoolName = (data['name'] ?? data['schoolName'])
-          ?.toString()
-          .trim();
+      String? nonEmpty(Object? value) {
+        final text = value?.toString().trim();
+        return text == null || text.isEmpty ? null : text;
+      }
+
+      final schoolName =
+          nonEmpty(profileData['name']) ??
+          nonEmpty(data['name']) ??
+          nonEmpty(data['schoolName']);
       if (schoolName == null || schoolName.isEmpty) {
         return Left(ServerFailure('School identity is incomplete'));
       }
+
+      final profileColors = List<String>.from(
+        profileData['colors'] ?? const <String>[],
+      ).where((color) => color.trim().isNotEmpty).toList();
+      final primaryColor = profileColors.isNotEmpty
+          ? profileColors[0]
+          : brandingData['primaryColor']?.toString();
+      final secondaryColor = profileColors.length > 1
+          ? profileColors[1]
+          : brandingData['secondaryColor']?.toString();
+      final accentColor = profileColors.length > 2
+          ? profileColors[2]
+          : brandingData['accentColor']?.toString();
 
       return Right(
         SchoolBranding(
           schoolId: schoolId,
           schoolName: schoolName,
-          schoolInitials: (data['initials'] ?? data['schoolInitials'] ?? '')
-              .toString(),
-          schoolMotto: brandingData['motto'] ?? '',
-          schoolType: data['schoolType']?.toString(),
-          logoUrl: brandingData['logoUrl'],
-          badgeUrl: brandingData['badgeUrl'],
-          primaryColor: brandingData['primaryColor'],
-          secondaryColor: brandingData['secondaryColor'],
-          accentColor: brandingData['accentColor'],
+          schoolInitials:
+              nonEmpty(profileData['shortName']) ??
+              (data['initials'] ?? data['schoolInitials'] ?? '').toString(),
+          schoolMotto:
+              nonEmpty(profileData['motto']) ??
+              brandingData['motto']?.toString() ??
+              '',
+          schoolType:
+              nonEmpty(profileData['schoolType']) ??
+              data['schoolType']?.toString(),
+          logoUrl:
+              nonEmpty(profileData['logoUrl']) ??
+              brandingData['logoUrl']?.toString(),
+          badgeUrl:
+              nonEmpty(profileData['badgeUrl']) ??
+              brandingData['badgeUrl']?.toString(),
+          primaryColor: primaryColor,
+          secondaryColor: secondaryColor,
+          accentColor: accentColor,
           welcomeMessage: brandingData['welcomeMessage'],
           dashboardBannerUrl: brandingData['dashboardBannerUrl'],
           loginBackgroundUrl: brandingData['loginBackgroundUrl'],
