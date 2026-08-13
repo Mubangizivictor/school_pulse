@@ -18,6 +18,7 @@ import '../../data/datasources/owner_session_remote_data_source.dart';
 import '../bloc/security_settings_cubit.dart';
 import '../bloc/owner_session_cubit.dart';
 import 'security_settings_deep_dive_screen.dart';
+import 'sign_in_methods_screen.dart';
 import 'trusted_devices_screen.dart';
 
 /// SaaS Owner Settings > Security > Overview.
@@ -181,6 +182,15 @@ class _SecurityOverviewBodyState extends State<_SecurityOverviewBody> {
             ),
           ),
           const SizedBox(height: AppSpacing.m),
+          _SecurityRow(
+            icon: Icons.login_rounded,
+            title: 'Sign-in Methods',
+            subtitle: 'Manage Google, Apple, and password sign-in',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SignInMethodsScreen()),
+            ),
+          ),
           _SecurityRow(
             icon: Icons.verified_user_outlined,
             title: 'Two-Step Verification',
