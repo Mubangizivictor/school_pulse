@@ -5,18 +5,26 @@ import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 
 class BroadcastHistoryScreen extends StatelessWidget {
   const BroadcastHistoryScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final schoolId = context.select<AuthBloc, String?>((bloc) {
+      final state = bloc.state;
+      return state is AuthAuthenticated ? state.user.schoolId : null;
+    });
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
       appBar: const AdminAppBar(title: 'Broadcast History'),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: FirebaseFirestore.instance
             .collection('alerts')
+            .where('schoolId', isEqualTo: schoolId)
             .where('type', whereIn: ['Push', 'SMS'])
             .orderBy('timestamp', descending: true)
             .limit(100)

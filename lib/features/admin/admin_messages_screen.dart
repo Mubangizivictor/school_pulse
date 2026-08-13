@@ -8,6 +8,9 @@ import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/features/student/domain/entities/parent_access_code.dart';
 import 'package:school_pulse/features/student/domain/usecases/manage_parent_access_codes.dart';
 import 'package:school_pulse/injection_container.dart' as di;
@@ -34,6 +37,10 @@ class AdminMessagesScreen extends StatefulWidget {
 class _AdminMessagesScreenState extends State<AdminMessagesScreen> {
   @override
   Widget build(BuildContext context) {
+    final schoolId = context.select<AuthBloc, String?>((bloc) {
+      final state = bloc.state;
+      return state is AuthAuthenticated ? state.user.schoolId : null;
+    });
     return Scaffold(
       appBar: AdminAppBar(
         title: 'Messages',
@@ -48,6 +55,7 @@ class _AdminMessagesScreenState extends State<AdminMessagesScreen> {
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: FirebaseFirestore.instance
             .collection('alerts')
+            .where('schoolId', isEqualTo: schoolId)
             .where('userId', isNull: false)
             .orderBy('timestamp', descending: true)
             .limit(30)
