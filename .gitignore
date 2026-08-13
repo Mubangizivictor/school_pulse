@@ -57,3 +57,6 @@ firebase-debug.*.log
 .env.*
 !.env.example
 !*.env.example
+
+# Cleanup script manifests contain user emails/PII - never commit
+/cleanup_backups/
