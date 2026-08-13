@@ -211,11 +211,16 @@ service cloud.firestore {
     // A parent must be able to resolve a code before they've signed in, so
     // direct-by-ID reads are public - but the collection can't be listed or
     // enumerated without already knowing a code. Only staff can create/
-    // regenerate codes.
+    // regenerate codes, and only in their own school. The schoolId is
+    // immutable after creation so a code cannot be reassigned to another
+    // tenant by an update.
     match /parent_access_codes/{code} {
       allow get: if true;
-      allow list: if isStaff();
-      allow write: if isStaff();
+      allow list: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId;
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
 
     // Same pattern as parent_access_codes, scoped to a single student

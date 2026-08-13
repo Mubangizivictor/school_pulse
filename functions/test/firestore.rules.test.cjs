@@ -1079,6 +1079,20 @@ describe('Phase 4 core people records', () => {
 });
 
 describe('Phase 5 attendance security gate', () => {
+  test('parent_access_codes: list and mutation are tenant-scoped while direct resolution remains public', async () => {
+    const ref = doc(dbFor('adminA'), 'parent_access_codes', 'PA1');
+    await assertSucceeds(setDoc(ref, {
+      schoolId: 'schoolA', studentIds: ['studentA'], phoneNumber: '+256700000001', isActive: true,
+    }));
+    await assertSucceeds(getDoc(doc(dbFor('anonymous'), 'parent_access_codes', 'PA1')));
+    await assertSucceeds(getDocs(query(collection(dbFor('teacherA'), 'parent_access_codes'), where('schoolId', '==', 'schoolA'))));
+    await assertFails(getDocs(collection(dbFor('teacherB'), 'parent_access_codes')));
+    await assertFails(setDoc(doc(dbFor('teacherB'), 'parent_access_codes', 'PB1'), {
+      schoolId: 'schoolA', studentIds: ['studentA'], phoneNumber: '+256700000002', isActive: true,
+    }));
+    await assertFails(updateDoc(ref, { schoolId: 'schoolB' }));
+  });
+
   test('school_stats: staff can only access their own school statistics', async () => {
     const ref = doc(dbFor('adminA'), 'school_stats', 'teacher_teacherA');
     await assertSucceeds(setDoc(ref, { schoolId: 'schoolA', totalStudents: 10 }));
