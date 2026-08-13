@@ -41,16 +41,18 @@ void main() {
   );
 
   setUpAll(() {
-    registerFallbackValue(const UpdateInstitutionProfileRequested(profile, 'school-123'));
+    registerFallbackValue(
+      const UpdateInstitutionProfileRequested(profile, 'school-123'),
+    );
   });
 
   setUp(() {
     authBloc = MockAuthBloc();
     structureBloc = MockStructureBloc();
     when(() => authBloc.state).thenReturn(const AuthAuthenticated(user));
-    when(
-      () => structureBloc.state,
-    ).thenReturn(const StructureState(isLoading: false, institutionProfile: profile));
+    when(() => structureBloc.state).thenReturn(
+      const StructureState(isLoading: false, institutionProfile: profile),
+    );
   });
 
   Widget buildSubject() {
@@ -66,51 +68,61 @@ void main() {
     );
   }
 
-  testWidgets('renders every section with the school\'s real saved data, not sample copy', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(430, 4000);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
+  testWidgets(
+    'renders every section with the school\'s real saved data, not sample copy',
+    (tester) async {
+      tester.view.physicalSize = const Size(430, 4000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(buildSubject());
+      await tester.pumpWidget(buildSubject());
 
-    expect(find.text('School Identity'), findsOneWidget);
-    expect(find.text('Branding'), findsOneWidget);
-    expect(find.text('Institution Classification'), findsOneWidget);
-    expect(find.text('Registration'), findsOneWidget);
-    expect(find.text('Location'), findsOneWidget);
-    expect(find.text('Contact'), findsOneWidget);
-    expect(find.text('Regional Settings'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Save Institution'), findsOneWidget);
+      expect(find.text('School Identity'), findsOneWidget);
+      expect(find.text('Branding'), findsOneWidget);
+      expect(find.text('Institution Classification'), findsOneWidget);
+      expect(find.text('Registration'), findsOneWidget);
+      expect(find.text('Location'), findsOneWidget);
+      expect(find.text('Contact'), findsOneWidget);
+      expect(find.text('Regional Settings'), findsOneWidget);
+      expect(
+        find.widgetWithText(FilledButton, 'Save Institution'),
+        findsOneWidget,
+      );
 
-    expect(find.text('Riverside Academy'), findsOneWidget);
-    expect(find.text('RVA'), findsOneWidget);
-    expect(find.text('St. Mary\'s Academy'), findsNothing);
-    expect(find.text('SMA/REG/2024/0012'), findsNothing);
-  });
+      expect(find.text('Riverside Academy'), findsOneWidget);
+      expect(find.text('RVA'), findsOneWidget);
+      expect(find.text('St. Mary\'s Academy'), findsNothing);
+      expect(find.text('SMA/REG/2024/0012'), findsNothing);
+    },
+  );
 
-  testWidgets('dispatches UpdateInstitutionProfileRequested for the authenticated school on save', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(430, 4000);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
+  testWidgets(
+    'dispatches UpdateInstitutionProfileRequested for the authenticated school on save',
+    (tester) async {
+      tester.view.physicalSize = const Size(430, 4000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(buildSubject());
+      await tester.pumpWidget(buildSubject());
 
-    await tester.enterText(find.widgetWithText(TextFormField, 'Institution Name'), 'New Name');
-    await tester.tap(find.widgetWithText(FilledButton, 'Save Institution'));
-    await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Institution Name'),
+        'New Name',
+      );
+      await tester.tap(find.widgetWithText(FilledButton, 'Save Institution'));
+      await tester.pumpAndSettle();
 
-    final captured = verify(
-      () => structureBloc.add(captureAny(that: isA<UpdateInstitutionProfileRequested>())),
-    ).captured;
-    expect(captured, hasLength(1));
-    final event = captured.first as UpdateInstitutionProfileRequested;
-    expect(event.schoolId, 'school-123');
-    expect(event.profile.name, 'New Name');
-  });
+      final captured = verify(
+        () => structureBloc.add(
+          captureAny(that: isA<UpdateInstitutionProfileRequested>()),
+        ),
+      ).captured;
+      expect(captured, hasLength(1));
+      final event = captured.first as UpdateInstitutionProfileRequested;
+      expect(event.schoolId, 'school-123');
+      expect(event.profile.name, 'New Name');
+    },
+  );
 }

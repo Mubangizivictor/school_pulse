@@ -44,9 +44,7 @@ Widget _wrap(Widget child, {required StructureState structureState}) {
 }
 
 void main() {
-  testWidgets('renders empty-state hint when no levels exist', (
-    tester,
-  ) async {
+  testWidgets('renders empty-state hint when no levels exist', (tester) async {
     await tester.pumpWidget(
       _wrap(const LevelsScreen(), structureState: const StructureState()),
     );
@@ -126,9 +124,7 @@ void main() {
     await tester.pumpAndSettle();
 
     verify(
-      () => structureBloc.add(
-        any(that: isA<SaveLevelRequested>()),
-      ),
+      () => structureBloc.add(any(that: isA<SaveLevelRequested>())),
     ).called(1);
   });
 }

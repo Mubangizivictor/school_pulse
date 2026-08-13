@@ -143,10 +143,11 @@ class _YearsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final years = state.academicYears
-        .where((y) => y.name.toLowerCase().contains(query.toLowerCase()))
-        .toList()
-      ..sort((a, b) => b.startDate.compareTo(a.startDate));
+    final years =
+        state.academicYears
+            .where((y) => y.name.toLowerCase().contains(query.toLowerCase()))
+            .toList()
+          ..sort((a, b) => b.startDate.compareTo(a.startDate));
 
     if (years.isEmpty) {
       return StructureEmptyHint(
@@ -211,10 +212,11 @@ class _TermsList extends StatelessWidget {
     if (state.academicYears.isEmpty) {
       return const StructureEmptyHint('Add an academic year first.');
     }
-    final terms = state.academicTerms
-        .where((t) => t.name.toLowerCase().contains(query.toLowerCase()))
-        .toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
+    final terms =
+        state.academicTerms
+            .where((t) => t.name.toLowerCase().contains(query.toLowerCase()))
+            .toList()
+          ..sort((a, b) => a.order.compareTo(b.order));
 
     if (terms.isEmpty) {
       return StructureEmptyHint(
@@ -463,8 +465,9 @@ class _YearFormScreenState extends State<_YearFormScreen> {
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(hintText: 'e.g. 2024/2025'),
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Year name is required' : null,
+                validator: (v) => v == null || v.trim().isEmpty
+                    ? 'Year name is required'
+                    : null,
               ),
               const SizedBox(height: 16),
               const _FieldLabel('Start Date *'),

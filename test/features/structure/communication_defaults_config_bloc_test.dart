@@ -155,10 +155,8 @@ void main() {
       ),
       verify: (_) {
         verify(
-          () => repository.updateCommunicationDefaultsConfig(
-            _config,
-            'school-1',
-          ),
+          () =>
+              repository.updateCommunicationDefaultsConfig(_config, 'school-1'),
         ).called(1);
       },
     );

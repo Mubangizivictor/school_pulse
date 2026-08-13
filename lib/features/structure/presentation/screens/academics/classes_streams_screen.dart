@@ -122,14 +122,17 @@ class _ClassesList extends StatelessWidget {
         'Add an educational level first (see the Levels section).',
       );
     }
-    final classes = state.classes
-        .where((c) => c.name.toLowerCase().contains(query.toLowerCase()))
-        .toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
+    final classes =
+        state.classes
+            .where((c) => c.name.toLowerCase().contains(query.toLowerCase()))
+            .toList()
+          ..sort((a, b) => a.name.compareTo(b.name));
 
     if (classes.isEmpty) {
       return StructureEmptyHint(
-        query.isEmpty ? 'No classes defined yet.' : 'No classes match "$query".',
+        query.isEmpty
+            ? 'No classes defined yet.'
+            : 'No classes match "$query".',
       );
     }
 
@@ -208,7 +211,10 @@ class _StreamsList extends StatelessWidget {
             child: Text(
               state.classes.where((c) => c.id == classId).firstOrNull?.name ??
                   'Unknown class',
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 13.5,
+              ),
             ),
           ),
           for (final stream in byClass[classId]!)
@@ -329,8 +335,7 @@ class _ClassFormScreenState extends State<_ClassFormScreen> {
         ? ''
         : widget.existing!.capacity.toString(),
   );
-  late String? _levelId =
-      widget.existing?.levelId.isNotEmpty == true
+  late String? _levelId = widget.existing?.levelId.isNotEmpty == true
       ? widget.existing!.levelId
       : (widget.levels.isNotEmpty ? widget.levels.first.id : null);
   late bool _isActive = widget.existing?.isActive ?? true;
@@ -364,16 +369,18 @@ class _ClassFormScreenState extends State<_ClassFormScreen> {
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(hintText: 'e.g. Primary 1'),
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Class name is required' : null,
+                validator: (v) => v == null || v.trim().isEmpty
+                    ? 'Class name is required'
+                    : null,
               ),
               const SizedBox(height: 16),
               const _AcademicsFieldLabel('Class Code *'),
               TextFormField(
                 controller: _codeController,
                 decoration: const InputDecoration(hintText: 'e.g. P1'),
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Class code is required' : null,
+                validator: (v) => v == null || v.trim().isEmpty
+                    ? 'Class code is required'
+                    : null,
               ),
               const SizedBox(height: 16),
               const _AcademicsFieldLabel('Level *'),

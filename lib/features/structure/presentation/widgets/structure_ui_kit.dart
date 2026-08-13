@@ -300,8 +300,7 @@ class StructureSectionPicker extends StatelessWidget {
               builder: (sheetContext) => SafeArea(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxHeight:
-                        MediaQuery.sizeOf(sheetContext).height * 0.8,
+                    maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.8,
                   ),
                   child: ListView(
                     shrinkWrap: true,
@@ -596,7 +595,10 @@ class StructureRecordCard extends StatelessWidget {
                   ),
                 ),
                 if (!isActive) ...[
-                  const StructureStatusBadge(label: 'Inactive', isActive: false),
+                  const StructureStatusBadge(
+                    label: 'Inactive',
+                    isActive: false,
+                  ),
                   const SizedBox(width: 6),
                 ],
                 Icon(Icons.chevron_right_rounded, color: colors.primary),
@@ -650,7 +652,10 @@ class StructureStaffPickerField extends StatelessWidget {
             children: [
               TextSpan(text: label),
               if (required)
-                TextSpan(text: ' *', style: TextStyle(color: colors.error)),
+                TextSpan(
+                  text: ' *',
+                  style: TextStyle(color: colors.error),
+                ),
             ],
           ),
         ),
@@ -684,16 +689,18 @@ class StructureStaffPickerField extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 13,
-                      color: selected == null
-                          ? colors.onSurfaceVariant
-                          : null,
+                      color: selected == null ? colors.onSurfaceVariant : null,
                     ),
                   ),
                 ),
                 if (selected != null)
                   InkWell(
                     onTap: () => onChanged(null),
-                    child: Icon(Icons.close_rounded, size: 16, color: colors.onSurfaceVariant),
+                    child: Icon(
+                      Icons.close_rounded,
+                      size: 16,
+                      color: colors.onSurfaceVariant,
+                    ),
                   )
                 else
                   const Icon(Icons.keyboard_arrow_down_rounded),

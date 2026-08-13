@@ -30,10 +30,13 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
     return BlocBuilder<StructureBloc, StructureState>(
       builder: (context, state) {
         final bloc = context.read<StructureBloc>();
-        final departments = state.departments
-            .where((d) => d.name.toLowerCase().contains(_query.toLowerCase()))
-            .toList()
-          ..sort((a, b) => a.name.compareTo(b.name));
+        final departments =
+            state.departments
+                .where(
+                  (d) => d.name.toLowerCase().contains(_query.toLowerCase()),
+                )
+                .toList()
+              ..sort((a, b) => a.name.compareTo(b.name));
 
         return AcademicsListScaffold(
           title: 'Departments',
@@ -41,7 +44,8 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
           searchHint: 'Search departments...',
           onSearchChanged: (v) => setState(() => _query = v),
           fabLabel: 'Add Department',
-          onFabPressed: () => _openForm(context, schoolId: schoolId, bloc: bloc),
+          onFabPressed: () =>
+              _openForm(context, schoolId: schoolId, bloc: bloc),
           body: departments.isEmpty
               ? StructureEmptyHint(
                   _query.isEmpty

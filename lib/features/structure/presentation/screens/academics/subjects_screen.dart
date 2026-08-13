@@ -29,10 +29,13 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
     return BlocBuilder<StructureBloc, StructureState>(
       builder: (context, state) {
         final bloc = context.read<StructureBloc>();
-        final subjects = state.subjects
-            .where((s) => s.name.toLowerCase().contains(_query.toLowerCase()))
-            .toList()
-          ..sort((a, b) => a.name.compareTo(b.name));
+        final subjects =
+            state.subjects
+                .where(
+                  (s) => s.name.toLowerCase().contains(_query.toLowerCase()),
+                )
+                .toList()
+              ..sort((a, b) => a.name.compareTo(b.name));
 
         return AcademicsListScaffold(
           title: 'Subjects',
@@ -40,12 +43,8 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
           searchHint: 'Search subjects...',
           onSearchChanged: (v) => setState(() => _query = v),
           fabLabel: 'Add Subject',
-          onFabPressed: () => _openForm(
-            context,
-            schoolId: schoolId,
-            bloc: bloc,
-            state: state,
-          ),
+          onFabPressed: () =>
+              _openForm(context, schoolId: schoolId, bloc: bloc, state: state),
           body: subjects.isEmpty
               ? StructureEmptyHint(
                   _query.isEmpty
@@ -147,8 +146,7 @@ class _SubjectFormScreenState extends State<_SubjectFormScreen> {
   late final _descController = TextEditingController(
     text: widget.existing?.description,
   );
-  late String? _departmentId =
-      widget.existing?.departmentId.isNotEmpty == true
+  late String? _departmentId = widget.existing?.departmentId.isNotEmpty == true
       ? widget.existing!.departmentId
       : null;
   late String _subjectType = widget.existing?.isElective == true
@@ -209,7 +207,9 @@ class _SubjectFormScreenState extends State<_SubjectFormScreen> {
               const _FieldLabel('Department'),
               DropdownButtonFormField<String>(
                 initialValue: _departmentId,
-                decoration: const InputDecoration(hintText: 'Select department'),
+                decoration: const InputDecoration(
+                  hintText: 'Select department',
+                ),
                 items: widget.departments
                     .map(
                       (d) => DropdownMenuItem(value: d.id, child: Text(d.name)),
@@ -252,7 +252,11 @@ class _SubjectFormScreenState extends State<_SubjectFormScreen> {
                       backgroundColor: c,
                       radius: 14,
                       child: selected
-                          ? const Icon(Icons.check, color: Colors.white, size: 16)
+                          ? const Icon(
+                              Icons.check,
+                              color: Colors.white,
+                              size: 16,
+                            )
                           : null,
                     ),
                   );
@@ -317,8 +321,7 @@ class _SubjectFormScreenState extends State<_SubjectFormScreen> {
         name: _nameController.text.trim(),
         code: _codeController.text.trim(),
         departmentId: _departmentId ?? '',
-        color:
-            '#${_color.toARGB32().toRadixString(16).substring(2)}',
+        color: '#${_color.toARGB32().toRadixString(16).substring(2)}',
         description: _descController.text.trim(),
         isElective: _subjectType == 'Elective' || _subjectType == 'Optional',
         isPractical: _isPractical,

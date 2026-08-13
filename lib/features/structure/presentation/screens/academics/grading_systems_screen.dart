@@ -29,10 +29,13 @@ class _GradingSystemsScreenState extends State<GradingSystemsScreen> {
     return BlocBuilder<StructureBloc, StructureState>(
       builder: (context, state) {
         final bloc = context.read<StructureBloc>();
-        final systems = state.gradingSystems
-            .where((s) => s.name.toLowerCase().contains(_query.toLowerCase()))
-            .toList()
-          ..sort((a, b) => a.name.compareTo(b.name));
+        final systems =
+            state.gradingSystems
+                .where(
+                  (s) => s.name.toLowerCase().contains(_query.toLowerCase()),
+                )
+                .toList()
+              ..sort((a, b) => a.name.compareTo(b.name));
 
         return AcademicsListScaffold(
           title: 'Grading Systems',
@@ -119,14 +122,14 @@ class _GradingSystemDetailScreen extends StatelessWidget {
     return BlocBuilder<StructureBloc, StructureState>(
       builder: (context, state) {
         final bloc = context.read<StructureBloc>();
-        final current = state.gradingSystems
-                .where((s) => s.id == system.id)
-                .firstOrNull ??
+        final current =
+            state.gradingSystems.where((s) => s.id == system.id).firstOrNull ??
             system;
-        final bands = state.gradeBands
-            .where((b) => b.gradingSystemId == system.id)
-            .toList()
-          ..sort((a, b) => a.order.compareTo(b.order));
+        final bands =
+            state.gradeBands
+                .where((b) => b.gradingSystemId == system.id)
+                .toList()
+              ..sort((a, b) => a.order.compareTo(b.order));
 
         return Scaffold(
           appBar: AdminAppBar(
@@ -160,7 +163,8 @@ class _GradingSystemDetailScreen extends StatelessWidget {
                     return AcademicsListCard(
                       icon: Icons.grade_outlined,
                       color: Colors.amber.shade800,
-                      title: '${band.grade}  (${band.minScore.toStringAsFixed(0)}-${band.maxScore.toStringAsFixed(0)})',
+                      title:
+                          '${band.grade}  (${band.minScore.toStringAsFixed(0)}-${band.maxScore.toStringAsFixed(0)})',
                       subtitle: band.remarks,
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
@@ -402,8 +406,9 @@ class _GradeBandFormScreenState extends State<_GradeBandFormScreen> {
                           keyboardType: const TextInputType.numberWithOptions(
                             decimal: true,
                           ),
-                          validator: (v) =>
-                              double.tryParse(v ?? '') == null ? 'Required' : null,
+                          validator: (v) => double.tryParse(v ?? '') == null
+                              ? 'Required'
+                              : null,
                         ),
                       ],
                     ),
@@ -420,8 +425,9 @@ class _GradeBandFormScreenState extends State<_GradeBandFormScreen> {
                           keyboardType: const TextInputType.numberWithOptions(
                             decimal: true,
                           ),
-                          validator: (v) =>
-                              double.tryParse(v ?? '') == null ? 'Required' : null,
+                          validator: (v) => double.tryParse(v ?? '') == null
+                              ? 'Required'
+                              : null,
                         ),
                       ],
                     ),
@@ -478,7 +484,9 @@ class _GradeBandFormScreenState extends State<_GradeBandFormScreen> {
     if (max < min) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Maximum score must be greater than or equal to minimum'),
+          content: Text(
+            'Maximum score must be greater than or equal to minimum',
+          ),
         ),
       );
       return;

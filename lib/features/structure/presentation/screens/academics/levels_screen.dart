@@ -30,12 +30,13 @@ class _LevelsScreenState extends State<LevelsScreen> {
     return BlocBuilder<StructureBloc, StructureState>(
       builder: (context, state) {
         final bloc = context.read<StructureBloc>();
-        final levels = state.levels
-            .where(
-              (l) => l.name.toLowerCase().contains(_query.toLowerCase()),
-            )
-            .toList()
-          ..sort((a, b) => a.order.compareTo(b.order));
+        final levels =
+            state.levels
+                .where(
+                  (l) => l.name.toLowerCase().contains(_query.toLowerCase()),
+                )
+                .toList()
+              ..sort((a, b) => a.order.compareTo(b.order));
 
         return AcademicsListScaffold(
           title: 'Levels',
@@ -44,7 +45,8 @@ class _LevelsScreenState extends State<LevelsScreen> {
           searchHint: 'Search levels...',
           onSearchChanged: (v) => setState(() => _query = v),
           fabLabel: 'Add Level',
-          onFabPressed: () => _openForm(context, schoolId: schoolId, bloc: bloc),
+          onFabPressed: () =>
+              _openForm(context, schoolId: schoolId, bloc: bloc),
           body: levels.isEmpty
               ? StructureEmptyHint(
                   _query.isEmpty
@@ -187,8 +189,9 @@ class _LevelFormScreenState extends State<_LevelFormScreen> {
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(hintText: 'e.g. Primary'),
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Level name is required' : null,
+                validator: (v) => v == null || v.trim().isEmpty
+                    ? 'Level name is required'
+                    : null,
               ),
               const SizedBox(height: 16),
               const Text(
@@ -199,8 +202,9 @@ class _LevelFormScreenState extends State<_LevelFormScreen> {
               TextFormField(
                 controller: _codeController,
                 decoration: const InputDecoration(hintText: 'e.g. PRI'),
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Level code is required' : null,
+                validator: (v) => v == null || v.trim().isEmpty
+                    ? 'Level code is required'
+                    : null,
               ),
               const SizedBox(height: 16),
               const Text(

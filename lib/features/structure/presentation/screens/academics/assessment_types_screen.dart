@@ -28,10 +28,13 @@ class _AssessmentTypesScreenState extends State<AssessmentTypesScreen> {
     return BlocBuilder<StructureBloc, StructureState>(
       builder: (context, state) {
         final bloc = context.read<StructureBloc>();
-        final types = state.assessmentTypes
-            .where((t) => t.name.toLowerCase().contains(_query.toLowerCase()))
-            .toList()
-          ..sort((a, b) => a.name.compareTo(b.name));
+        final types =
+            state.assessmentTypes
+                .where(
+                  (t) => t.name.toLowerCase().contains(_query.toLowerCase()),
+                )
+                .toList()
+              ..sort((a, b) => a.name.compareTo(b.name));
 
         return AcademicsListScaffold(
           title: 'Assessment Types',
@@ -114,8 +117,7 @@ class _AssessmentTypeFormScreen extends StatefulWidget {
       _AssessmentTypeFormScreenState();
 }
 
-class _AssessmentTypeFormScreenState
-    extends State<_AssessmentTypeFormScreen> {
+class _AssessmentTypeFormScreenState extends State<_AssessmentTypeFormScreen> {
   final _formKey = GlobalKey<FormState>();
   late final _nameController = TextEditingController(
     text: widget.existing?.name,

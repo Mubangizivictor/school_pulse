@@ -795,8 +795,7 @@ class _CommunicationDefaults extends StatefulWidget {
   const _CommunicationDefaults({required this.config});
   final CommunicationDefaultsConfig config;
   @override
-  State<_CommunicationDefaults> createState() =>
-      _CommunicationDefaultsState();
+  State<_CommunicationDefaults> createState() => _CommunicationDefaultsState();
 }
 
 class _CommunicationDefaultsState extends State<_CommunicationDefaults> {
@@ -1072,10 +1071,7 @@ class _SettingsRow extends StatelessWidget {
         leading: icon == null
             ? null
             : Icon(icon, color: AppColors.primary(context)),
-        title: Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(value),
         trailing: badge == null
             ? const Icon(Icons.chevron_right)

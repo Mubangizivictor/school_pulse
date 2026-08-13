@@ -144,10 +144,7 @@ class ConfigurationHealthCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(9),
               onTap: onViewDetails,
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 9,
-                  vertical: 7,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

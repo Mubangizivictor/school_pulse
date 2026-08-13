@@ -27,7 +27,8 @@ class AcademicsLandingScreen extends StatelessWidget {
             color: Colors.teal,
             title: 'Levels',
             subtitle: 'Manage educational levels',
-            onTap: () => context.push('/staff/admin/structure/academics/levels'),
+            onTap: () =>
+                context.push('/staff/admin/structure/academics/levels'),
           ),
           AcademicsNavCard(
             icon: Icons.calendar_today_outlined,
@@ -42,8 +43,9 @@ class AcademicsLandingScreen extends StatelessWidget {
             color: Colors.indigo,
             title: 'Classes & Streams',
             subtitle: 'Create classes and streams',
-            onTap: () => context
-                .push('/staff/admin/structure/academics/classes-streams'),
+            onTap: () => context.push(
+              '/staff/admin/structure/academics/classes-streams',
+            ),
           ),
           AcademicsNavCard(
             icon: Icons.menu_book_outlined,
@@ -66,16 +68,18 @@ class AcademicsLandingScreen extends StatelessWidget {
             color: Colors.amber,
             title: 'Grading Systems',
             subtitle: 'Grading scales and systems',
-            onTap: () => context
-                .push('/staff/admin/structure/academics/grading-systems'),
+            onTap: () => context.push(
+              '/staff/admin/structure/academics/grading-systems',
+            ),
           ),
           AcademicsNavCard(
             icon: Icons.fact_check_outlined,
             color: Colors.green,
             title: 'Assessment Types',
             subtitle: 'Manage assessment types',
-            onTap: () => context
-                .push('/staff/admin/structure/academics/assessment-types'),
+            onTap: () => context.push(
+              '/staff/admin/structure/academics/assessment-types',
+            ),
           ),
         ],
       ),

@@ -277,7 +277,10 @@ class AcademicsListScaffold extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                 ],
-                AppSearchField(hintText: searchHint, onChanged: onSearchChanged),
+                AppSearchField(
+                  hintText: searchHint,
+                  onChanged: onSearchChanged,
+                ),
                 if (headerExtra != null) ...[
                   const SizedBox(height: 12),
                   ...headerExtra!,
