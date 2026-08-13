@@ -117,13 +117,16 @@ class QrAttendanceDashboardScreen extends StatelessWidget {
                                     ),
                                     TextButton(
                                       onPressed: () {
-                                        // TODO: Invoke GoogleSheetsService via Bloc or direct
                                         Navigator.pop(context);
                                         ScaffoldMessenger.of(
                                           context,
                                         ).showSnackBar(
                                           const SnackBar(
-                                            content: Text('Export started...'),
+                                            content: Text(
+                                              'Google Sheets export is not available from '
+                                              'this scanner. Configure and sync it from the '
+                                              'Google Sheets integration screen.',
+                                            ),
                                           ),
                                         );
                                       },
