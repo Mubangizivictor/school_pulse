@@ -443,7 +443,16 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
     final doc = await firestore.collection('users').doc(user.uid).get();
     if (doc.exists) {
-      return UserModel.fromJson({...doc.data()!, 'id': doc.id});
+      final profile = UserModel.fromJson({...doc.data()!, 'id': doc.id});
+      // A persisted Firebase Auth token is not proof that the school account
+      // remains active. Re-check the profile on every session restore, just
+      // as the interactive login path does, and revoke the local session if
+      // an administrator has deactivated the account.
+      if (!profile.isActive) {
+        await firebaseAuth.signOut();
+        throw const AuthFailure('This account has been disabled.');
+      }
+      return profile;
     }
     // Session survives but the profile is missing (e.g. account created via
     // phone auth was never completed) - treat as signed-out rather than
