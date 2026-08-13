@@ -1079,6 +1079,17 @@ describe('Phase 4 core people records', () => {
 });
 
 describe('Phase 5 attendance security gate', () => {
+  test('school_stats: staff can only access their own school statistics', async () => {
+    const ref = doc(dbFor('adminA'), 'school_stats', 'teacher_teacherA');
+    await assertSucceeds(setDoc(ref, { schoolId: 'schoolA', totalStudents: 10 }));
+    await assertSucceeds(getDoc(ref));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'school_stats', 'teacher_teacherA')));
+    await assertFails(setDoc(doc(dbFor('teacherB'), 'school_stats', 'teacher_teacherB'), {
+      schoolId: 'schoolA', totalStudents: 999,
+    }));
+    await assertFails(updateDoc(ref, { schoolId: 'schoolB' }));
+  });
+
   test('attendance_records: cross-school staff write denied, schoolId locked on update', async () => {
     const ref = doc(dbFor('adminA'), 'attendance_records', 'rec1');
     await assertSucceeds(setDoc(ref, {
