@@ -316,6 +316,7 @@ service cloud.firestore {
         request.resource.data.studentId == resource.data.studentId &&
         resource.data.status == 'active' &&
         request.resource.data.status in ['superseded', 'revoked'] &&
+        request.resource.data.keys().hasAll(['supersessionReason']) &&
         request.resource.data.supersessionReason is string &&
         request.resource.data.supersessionReason.size() > 0;
       allow delete: if false;
@@ -517,7 +518,8 @@ service cloud.firestore {
         (isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId));
       allow write: if isSameSchool(request.resource.data.schoolId) && (
         hasAnyRole(['boardingPatron', 'boardingMatron', 'schoolAdmin', 'headTeacher', 'director']) ||
-        (holdsAssignment(request.resource.data.schoolId, request.resource.data.roleAssignmentId,
+        (request.resource.data.keys().hasAll(['roleAssignmentId', 'academicYearId']) &&
+          holdsAssignment(request.resource.data.schoolId, request.resource.data.roleAssignmentId,
             null, null, request.resource.data.academicYearId) &&
           grantsPermission(request.resource.data.schoolId, request.resource.data.roleAssignmentId,
             'attendance.boarding.scan'))
@@ -946,19 +948,23 @@ service cloud.firestore {
 
     // School-wide configuration, plus its archived-term history.
     match /config/{configId} {
-      allow read, write: if isStaff();
+      // Tenant configuration now lives at schools/{schoolId}/config. Root
+      // config documents are platform-owned operational records, never a
+      // cross-school settings store for ordinary staff.
+      allow read, write: if isSuperAdmin();
       match /history/{historyId} {
-        allow read, create: if isStaff();
+        allow read, create: if isSuperAdmin();
         allow update, delete: if false;
       }
     }
     // Appointments module booking policy (advance booking window, same-day/
     // weekend rules, cancellation policy, etc.) - a doc inside the same
     // `config` collection as `config/system`. Parents need read access to
-    // enforce booking-window rules client-side; only staff can edit it.
+    // enforce booking-window rules client-side; only top-tier administrators
+    // can edit this legacy platform policy document.
     match /config/appointment_policy {
       allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow write: if hasAnyRole(['director', 'headTeacher', 'schoolAdmin']);
     }
 
     // School structure management (Admin > Structure) - the school's

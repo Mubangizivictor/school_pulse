@@ -1079,6 +1079,17 @@ describe('Phase 4 core people records', () => {
 });
 
 describe('Phase 5 attendance security gate', () => {
+  test('root config is platform-only while appointment policy keeps its explicit client read', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'config', 'system'), { value: 'legacy' });
+      await setDoc(doc(context.firestore(), 'config', 'appointment_policy'), { value: 'policy' });
+    });
+    await assertFails(getDoc(doc(dbFor('adminA'), 'config', 'system')));
+    await assertSucceeds(getDoc(doc(dbFor('ownerA'), 'config', 'system')));
+    await assertSucceeds(getDoc(doc(dbFor('parentA'), 'config', 'appointment_policy')));
+    await assertFails(setDoc(doc(dbFor('teacherA'), 'config', 'appointment_policy'), { value: 'changed' }));
+  });
+
   test('parent_access_codes: list and mutation are tenant-scoped while direct resolution remains public', async () => {
     const ref = doc(dbFor('adminA'), 'parent_access_codes', 'PA1');
     await assertSucceeds(setDoc(ref, {
