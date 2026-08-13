@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/core/usecases/usecase.dart';
@@ -8,6 +9,8 @@ import 'package:school_pulse/features/admin/domain/usecases/get_admin_dashboard_
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 import '../screens/access_codes_screen.dart';
 
@@ -28,9 +31,12 @@ class _UserManagementPageState extends State<UserManagementPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {},
+            onPressed: () => context.push('/staff/notifications'),
           ),
-          IconButton(icon: const Icon(Icons.help_outline), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            onPressed: () => context.push('/staff/more/help-center'),
+          ),
         ],
       ),
       body: const UsersOverviewView(),
@@ -43,6 +49,8 @@ class UsersOverviewView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.read<AuthBloc>().state;
+    final schoolId = auth is AuthAuthenticated ? auth.user.schoolId : null;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -62,7 +70,15 @@ class UsersOverviewView extends StatelessWidget {
               label: 'Add Student',
               icon: Icons.school_outlined,
               color: AppColors.secondary(context),
-              onTap: () {},
+              onTap: () {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is AuthAuthenticated) {
+                  context.push(
+                    '/staff/admin/admissions/new',
+                    extra: auth.user.schoolId,
+                  );
+                }
+              },
             ),
             QuickActionItem(
               label: 'Add Parents',
@@ -79,11 +95,14 @@ class UsersOverviewView extends StatelessWidget {
         SectionHeader(
           title: 'Recent Activity',
           actionLabel: 'View All',
-          onActionPressed: () {},
+          onActionPressed: () => context.push('/staff/admin/audit-log'),
         ),
         const SizedBox(height: 8),
         StreamBuilder<List<AuditLog>>(
-          stream: di.sl<AuditRepository>().watchRecentLogs(limit: 5),
+          stream: di.sl<AuditRepository>().watchRecentLogs(
+            limit: 5,
+            schoolId: schoolId,
+          ),
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
               return const Center(
