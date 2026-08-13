@@ -133,26 +133,23 @@ void main() {
       },
     );
 
-    test(
-      'loadInstitution persists the selection for session restoration',
-      () async {
-        when(
-          () => repository.watchContext('school-1'),
-        ).thenAnswer((_) => Stream.value(_context()));
-        final cubit = InstitutionContextCubit(
-          repository: repository,
-          preferences: preferences,
-        );
+    test('loadInstitution never persists a tenant selection', () async {
+      when(
+        () => repository.watchContext('school-1'),
+      ).thenAnswer((_) => Stream.value(_context()));
+      final cubit = InstitutionContextCubit(
+        repository: repository,
+        preferences: preferences,
+      );
 
-        await cubit.loadInstitution('school-1');
+      await cubit.loadInstitution('school-1');
 
-        expect(
-          preferences.getString('institution_context.current_institution_id'),
-          'school-1',
-        );
-        expect(cubit.currentInstitutionId, 'school-1');
-      },
-    );
+      expect(
+        preferences.getString('institution_context.current_institution_id'),
+        isNull,
+      );
+      expect(cubit.currentInstitutionId, 'school-1');
+    });
 
     test(
       'restore falls back to home institution when nothing was previously selected',
@@ -171,26 +168,41 @@ void main() {
       },
     );
 
-    test(
-      'restore prefers a previously switched-to institution over home',
-      () async {
-        await preferences.setString(
-          'institution_context.current_institution_id',
-          'other-school',
-        );
-        when(() => repository.watchContext('other-school')).thenAnswer(
-          (_) => Stream.value(_context(institutionId: 'other-school')),
-        );
-        final cubit = InstitutionContextCubit(
-          repository: repository,
-          preferences: preferences,
-        );
+    test('restore ignores a previous device-local tenant selection', () async {
+      await preferences.setString(
+        'institution_context.current_institution_id',
+        'other-school',
+      );
+      when(
+        () => repository.watchContext('home-school'),
+      ).thenAnswer((_) => Stream.value(_context(institutionId: 'home-school')));
+      final cubit = InstitutionContextCubit(
+        repository: repository,
+        preferences: preferences,
+      );
 
-        await cubit.restore('home-school');
+      await cubit.restore('home-school');
 
-        expect(cubit.currentInstitutionId, 'other-school');
-      },
-    );
+      expect(cubit.currentInstitutionId, 'home-school');
+      expect(
+        preferences.getString('institution_context.current_institution_id'),
+        isNull,
+      );
+    });
+
+    test('switching to an unverified institution fails closed', () async {
+      when(
+        () => repository.watchContext('school-1'),
+      ).thenAnswer((_) => Stream.value(_context()));
+      final cubit = InstitutionContextCubit(
+        repository: repository,
+        preferences: preferences,
+      );
+      await cubit.loadInstitution('school-1');
+
+      await expectLater(cubit.switchTo('school-2'), throwsStateError);
+      expect(cubit.currentInstitutionId, 'school-1');
+    });
 
     blocTest<InstitutionContextCubit, InstitutionContextState>(
       'clear resets to Initial and drops the persisted institution',

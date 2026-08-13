@@ -93,14 +93,11 @@ class InstitutionSwitcherSheet extends StatelessWidget {
                                   color: Colors.green,
                                 )
                               : null,
-                          onTap: isActive
-                              ? null
-                              : () {
-                                  context
-                                      .read<InstitutionContextCubit>()
-                                      .switchTo(institutionId);
-                                  Navigator.of(context).pop();
-                                },
+                          // A client-side membership list is not sufficient
+                          // authority to switch a tenant context. Re-enable
+                          // this only when switching is backed by the
+                          // authenticated session resolver.
+                          onTap: null,
                         );
                       },
                     );

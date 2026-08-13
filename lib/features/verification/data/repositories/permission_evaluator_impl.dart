@@ -72,6 +72,7 @@ class PermissionEvaluatorImpl implements PermissionEvaluator {
     );
     final isFresh =
         snapshot != null &&
+        snapshot.schoolId == operatorUser.schoolId &&
         snapshot.version == _permissionCatalogVersion &&
         snapshot.expiresAt.isAfter(DateTime.now());
 

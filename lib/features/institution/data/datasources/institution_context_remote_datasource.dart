@@ -16,7 +16,15 @@ class InstitutionContextRemoteDataSourceImpl
   @override
   Future<InstitutionContext> loadContext(String institutionId) async {
     final doc = await firestore.collection('schools').doc(institutionId).get();
-    final school = SchoolModel.fromJson(doc.data() ?? {});
+    if (!doc.exists) {
+      throw StateError('Institution context was not found.');
+    }
+    final school = SchoolModel.fromJson({
+      ...?doc.data(),
+      // The path is authoritative. Older documents do not consistently
+      // duplicate their ID in their fields.
+      'id': doc.id,
+    });
     return InstitutionContext.fromSchool(
       school,
       isOfflineCached: doc.metadata.isFromCache,
@@ -30,7 +38,10 @@ class InstitutionContextRemoteDataSourceImpl
         .doc(institutionId)
         .snapshots(includeMetadataChanges: true)
         .map((doc) {
-          final school = SchoolModel.fromJson(doc.data() ?? {});
+          if (!doc.exists) {
+            throw StateError('Institution context was not found.');
+          }
+          final school = SchoolModel.fromJson({...?doc.data(), 'id': doc.id});
           return InstitutionContext.fromSchool(
             school,
             isOfflineCached: doc.metadata.isFromCache,

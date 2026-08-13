@@ -24,13 +24,17 @@ class InstitutionContextCubit extends Cubit<InstitutionContextState> {
 
   String? get currentInstitutionId => _currentInstitutionId;
 
-  /// Loads the given institution and starts watching it for live updates
-  /// (status changes, suspension, entitlement changes). Persists the
-  /// selection locally so a relaunch can restore the same active tenant.
+  /// Loads the authenticated tenant and starts watching it for live updates
+  /// (status changes, suspension, entitlement changes).
+  ///
+  /// The selected tenant is deliberately never persisted. A device-local
+  /// school id is not an authorization grant and restoring one before the
+  /// current authenticated membership has been verified can expose stale
+  /// tenant state after an account switch.
   Future<void> loadInstitution(String institutionId) async {
     emit(const InstitutionContextLoading());
     _currentInstitutionId = institutionId;
-    await preferences.setString(_lastInstitutionKey, institutionId);
+    await preferences.remove(_lastInstitutionKey);
 
     await _watchSubscription?.cancel();
     _watchSubscription = repository.watchContext(institutionId).listen((
@@ -44,16 +48,23 @@ class InstitutionContextCubit extends Cubit<InstitutionContextState> {
     }, onError: (error) => emit(InstitutionContextError(error.toString())));
   }
 
-  /// Switches the active institution context for a multi-institution user.
-  /// Callers must have already verified an active membership before calling
-  /// this - the cubit itself only loads/watches, it doesn't authorize.
-  Future<void> switchTo(String institutionId) => loadInstitution(institutionId);
+  /// Tenant switching is unavailable until the session resolver can return
+  /// an authenticated, server-authorized membership for the target school.
+  /// Loading an ID selected in the UI would make the client cache an
+  /// unverified tenant context, so fail closed instead.
+  Future<void> switchTo(String institutionId) {
+    if (institutionId == _currentInstitutionId) return Future.value();
+    return Future.error(
+      StateError('Institution switching requires a verified session.'),
+    );
+  }
 
-  /// Restores the last-active institution on app relaunch, falling back to
-  /// the user's home schoolId when nothing was previously selected.
+  /// Resolves context from the authenticated user's server-backed schoolId.
+  /// Never restore a tenant from local preferences: it is only a cache and
+  /// cannot prove the current user is still a member of that tenant.
   Future<void> restore(String homeInstitutionId) async {
-    final lastId = preferences.getString(_lastInstitutionKey);
-    await loadInstitution(lastId ?? homeInstitutionId);
+    await preferences.remove(_lastInstitutionKey);
+    await loadInstitution(homeInstitutionId);
   }
 
   void clear() {

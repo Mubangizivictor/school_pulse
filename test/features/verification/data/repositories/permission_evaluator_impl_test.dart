@@ -187,6 +187,31 @@ void main() {
 
   group('permission cache', () {
     test(
+      'never reuses a cached permission snapshot from another school',
+      () async {
+        when(
+          () => localDataSource.getPermissionSnapshot(ordinaryTeacher.id),
+        ).thenAnswer(
+          (_) async => OperatorPermissionSnapshot(
+            operatorId: ordinaryTeacher.id,
+            schoolId: 'school-2',
+            permissionIds: [Permission.securityIdentityVerify],
+            version: 2,
+            expiresAt: DateTime.now().add(const Duration(hours: 1)),
+          ),
+        );
+
+        final result = await evaluator.can(
+          Permission.securityIdentityVerify,
+          ordinaryTeacher,
+        );
+
+        expect(result.getOrElse(() => true), isFalse);
+        verify(() => localDataSource.savePermissionSnapshot(any())).called(1);
+      },
+    );
+
+    test(
       'uses a fresh cached snapshot instead of recomputing from role defaults',
       () async {
         when(
