@@ -145,23 +145,21 @@ class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
     try {
       final currentUserResult = await authRepository.getCurrentUser();
       final schoolId = currentUserResult.fold((_) => null, (u) => u?.schoolId);
-      final Either<Failure, List<UserEntity>> staffResult =
-          schoolId != null && schoolId.isNotEmpty
-          ? await authRepository
-                .getStaffMembers(schoolId)
-                .timeout(const Duration(seconds: 10))
-          : const Right(<UserEntity>[]);
-      final studentsResult = await studentRepository.getAllStudents().timeout(
-        const Duration(seconds: 10),
-      );
+      if (schoolId == null || schoolId.isEmpty) {
+        return const Left(AuthFailure('No active school context.'));
+      }
+      final Either<Failure, List<UserEntity>> staffResult = await authRepository
+          .getStaffMembers(schoolId)
+          .timeout(const Duration(seconds: 10));
+      final studentsResult = await studentRepository
+          .getAllStudents(schoolId: schoolId)
+          .timeout(const Duration(seconds: 10));
 
       // For visitors, we use a Future instead of .first on a stream to avoid deadlocks
       // if the stream doesn't emit immediately.
-      final visitors = schoolId != null && schoolId.isNotEmpty
-          ? await gateOpsRepository
-                .getVisitorsOnce(schoolId)
-                .timeout(const Duration(seconds: 10))
-          : const <Visitor>[];
+      final visitors = await gateOpsRepository
+          .getVisitorsOnce(schoolId)
+          .timeout(const Duration(seconds: 10));
 
       final now = DateTime.now();
       final todayVisitors = visitors.where((v) {
@@ -204,42 +202,40 @@ class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
       String? periodLabel;
       int pendingExpenditure = 0;
 
-      if (schoolId != null && schoolId.isNotEmpty) {
-        final attendanceResult = await adminAttendanceRepository
-            .getStudentAttendanceStats(schoolId)
-            .timeout(const Duration(seconds: 10));
-        attendanceResult.fold(
-          (_) => null,
-          (stats) => attendancePercent = stats.$1,
-        );
+      final attendanceResult = await adminAttendanceRepository
+          .getStudentAttendanceStats(schoolId)
+          .timeout(const Duration(seconds: 10));
+      attendanceResult.fold(
+        (_) => null,
+        (stats) => attendancePercent = stats.$1,
+      );
 
-        final kpiResult = await financeRepository
-            .getFinancialDashboardKPIs(schoolId)
-            .timeout(const Duration(seconds: 10));
-        kpiResult.fold((_) => null, (kpis) {
-          final value = kpis['termCollections'];
-          if (value is num) feesCollected = value.toDouble();
-        });
+      final kpiResult = await financeRepository
+          .getFinancialDashboardKPIs(schoolId)
+          .timeout(const Duration(seconds: 10));
+      kpiResult.fold((_) => null, (kpis) {
+        final value = kpis['termCollections'];
+        if (value is num) feesCollected = value.toDouble();
+      });
 
-        final expenditureResult = await financeRepository
-            .getExpenditureRequests(schoolId)
-            .timeout(const Duration(seconds: 10));
-        expenditureResult.fold((_) => null, (requests) {
-          pendingExpenditure = requests
-              .where((r) => r.status == ExpenditureStatus.pending)
-              .length;
-        });
+      final expenditureResult = await financeRepository
+          .getExpenditureRequests(schoolId)
+          .timeout(const Duration(seconds: 10));
+      expenditureResult.fold((_) => null, (requests) {
+        pendingExpenditure = requests
+            .where((r) => r.status == ExpenditureStatus.pending)
+            .length;
+      });
 
-        try {
-          final terms = await structureRepository
-              .watchAcademicTerms(schoolId)
-              .first
-              .timeout(const Duration(seconds: 10));
-          final current = terms.where((t) => t.isCurrent).firstOrNull;
-          periodLabel = current?.name;
-        } catch (_) {
-          // Structure not configured yet - leave label null.
-        }
+      try {
+        final terms = await structureRepository
+            .watchAcademicTerms(schoolId)
+            .first
+            .timeout(const Duration(seconds: 10));
+        final current = terms.where((t) => t.isCurrent).firstOrNull;
+        periodLabel = current?.name;
+      } catch (_) {
+        // Structure not configured yet - leave label null.
       }
 
       return Right(
@@ -253,8 +249,8 @@ class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
           staffPendingSetupCount: staffPendingSetup,
           overdueVisitorsCount: overdueVisitors,
           serviceStatuses: serviceStatuses,
-          upcomingDeadlines: await _getUpcomingDeadlines(),
-          activeNotices: await _getActiveNotices(),
+          upcomingDeadlines: await _getUpcomingDeadlines(schoolId),
+          activeNotices: await _getActiveNotices(schoolId),
           dataSyncRatePercent: syncHealth.$1,
           failedOperationsCount: syncHealth.$2,
           studentAttendancePercent: attendancePercent,
@@ -268,11 +264,12 @@ class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
     }
   }
 
-  Future<List<DashboardDeadline>> _getUpcomingDeadlines() async {
+  Future<List<DashboardDeadline>> _getUpcomingDeadlines(String schoolId) async {
     try {
       final now = DateTime.now();
       final snapshot = await firestore
           .collection('school_events')
+          .where('schoolId', isEqualTo: schoolId)
           .where('type', isEqualTo: 'deadline')
           .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(now))
           .orderBy('date')
@@ -291,10 +288,11 @@ class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
     }
   }
 
-  Future<List<DashboardNotice>> _getActiveNotices() async {
+  Future<List<DashboardNotice>> _getActiveNotices(String schoolId) async {
     try {
       final snapshot = await firestore
           .collection('alerts')
+          .where('schoolId', isEqualTo: schoolId)
           .where('targets', arrayContains: 'All Staff')
           .orderBy('timestamp', descending: true)
           .limit(3)
