@@ -7,6 +7,7 @@ import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/admin/data/models/staff_attendance_record.dart';
 import 'package:school_pulse/features/admin/data/repositories/staff_attendance_repository.dart';
+import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
@@ -59,8 +60,8 @@ class _AdminStaffAttendanceScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
-      appBar: AppBar(
-        title: const Text('Staff Attendance Monitor'),
+      appBar: AdminAppBar(
+        title: 'Staff Attendance Monitor',
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list),

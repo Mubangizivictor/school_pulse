@@ -8,6 +8,10 @@ import 'package:school_pulse/features/auth/domain/repositories/auth_repository.d
 import 'package:school_pulse/features/student/domain/repositories/student_repository.dart';
 import 'package:school_pulse/features/gate_ops/domain/entities/visitor.dart';
 import 'package:school_pulse/features/gate_ops/domain/repositories/gate_ops_repository.dart';
+import 'package:school_pulse/features/admin/domain/repositories/admin_attendance_repository.dart';
+import 'package:school_pulse/features/finance/domain/repositories/finance_repository.dart';
+import 'package:school_pulse/features/finance/domain/entities/expenditure.dart';
+import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
 
 /// One row of the dashboard's "Live Services" panel.
 class ServiceStatusItem extends Equatable {
@@ -45,6 +49,7 @@ class DashboardNotice extends Equatable {
 }
 
 class AdminDashboardStats extends Equatable {
+  final String? schoolId;
   final int activeStaffCount;
   final int totalStudentsCount;
   final int visitorsTodayCount;
@@ -58,7 +63,24 @@ class AdminDashboardStats extends Equatable {
   final double dataSyncRatePercent;
   final int failedOperationsCount;
 
+  /// School-wide average student attendance for the current week, or null
+  /// if it couldn't be computed (e.g. no attendance recorded yet).
+  final double? studentAttendancePercent;
+
+  /// Fees collected for the active term, in the school's base currency
+  /// units (e.g. UGX), or null if Finance data isn't available.
+  final double? termFeesCollected;
+
+  /// Label of the currently active academic period (e.g. "Term 2",
+  /// "Semester 1"), or null if Structure hasn't configured one yet.
+  final String? currentPeriodLabel;
+
+  /// Pending (not yet approved/rejected) expenditure requests - the one
+  /// real approvals queue this dashboard has access to today.
+  final int pendingExpenditureRequestsCount;
+
   const AdminDashboardStats({
+    this.schoolId,
     required this.activeStaffCount,
     required this.totalStudentsCount,
     required this.visitorsTodayCount,
@@ -71,10 +93,15 @@ class AdminDashboardStats extends Equatable {
     this.activeNotices = const [],
     this.dataSyncRatePercent = 100.0,
     this.failedOperationsCount = 0,
+    this.studentAttendancePercent,
+    this.termFeesCollected,
+    this.currentPeriodLabel,
+    this.pendingExpenditureRequestsCount = 0,
   });
 
   @override
   List<Object?> get props => [
+    schoolId,
     activeStaffCount,
     totalStudentsCount,
     visitorsTodayCount,
@@ -87,6 +114,10 @@ class AdminDashboardStats extends Equatable {
     activeNotices,
     dataSyncRatePercent,
     failedOperationsCount,
+    studentAttendancePercent,
+    termFeesCollected,
+    currentPeriodLabel,
+    pendingExpenditureRequestsCount,
   ];
 }
 
@@ -95,12 +126,18 @@ class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
   final StudentRepository studentRepository;
   final GateOpsRepository gateOpsRepository;
   final FirebaseFirestore firestore;
+  final AdminAttendanceRepository adminAttendanceRepository;
+  final FinanceRepository financeRepository;
+  final StructureRepository structureRepository;
 
   GetAdminDashboardStats({
     required this.authRepository,
     required this.studentRepository,
     required this.gateOpsRepository,
     required this.firestore,
+    required this.adminAttendanceRepository,
+    required this.financeRepository,
+    required this.structureRepository,
   });
 
   @override
@@ -162,8 +199,52 @@ class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
       final systemHealth = _scoreServices(serviceStatuses);
       final syncHealth = await _getSyncHealth();
 
+      double? attendancePercent;
+      double? feesCollected;
+      String? periodLabel;
+      int pendingExpenditure = 0;
+
+      if (schoolId != null && schoolId.isNotEmpty) {
+        final attendanceResult = await adminAttendanceRepository
+            .getStudentAttendanceStats(schoolId)
+            .timeout(const Duration(seconds: 10));
+        attendanceResult.fold(
+          (_) => null,
+          (stats) => attendancePercent = stats.$1,
+        );
+
+        final kpiResult = await financeRepository
+            .getFinancialDashboardKPIs(schoolId)
+            .timeout(const Duration(seconds: 10));
+        kpiResult.fold((_) => null, (kpis) {
+          final value = kpis['termCollections'];
+          if (value is num) feesCollected = value.toDouble();
+        });
+
+        final expenditureResult = await financeRepository
+            .getExpenditureRequests(schoolId)
+            .timeout(const Duration(seconds: 10));
+        expenditureResult.fold((_) => null, (requests) {
+          pendingExpenditure = requests
+              .where((r) => r.status == ExpenditureStatus.pending)
+              .length;
+        });
+
+        try {
+          final terms = await structureRepository
+              .watchAcademicTerms(schoolId)
+              .first
+              .timeout(const Duration(seconds: 10));
+          final current = terms.where((t) => t.isCurrent).firstOrNull;
+          periodLabel = current?.name;
+        } catch (_) {
+          // Structure not configured yet - leave label null.
+        }
+      }
+
       return Right(
         AdminDashboardStats(
+          schoolId: schoolId,
           activeStaffCount: activeStaff,
           totalStudentsCount: totalStudents,
           visitorsTodayCount: todayVisitors.length,
@@ -176,6 +257,10 @@ class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
           activeNotices: await _getActiveNotices(),
           dataSyncRatePercent: syncHealth.$1,
           failedOperationsCount: syncHealth.$2,
+          studentAttendancePercent: attendancePercent,
+          termFeesCollected: feesCollected,
+          currentPeriodLabel: periodLabel,
+          pendingExpenditureRequestsCount: pendingExpenditure,
         ),
       );
     } catch (e) {

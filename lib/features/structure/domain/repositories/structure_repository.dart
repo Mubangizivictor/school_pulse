@@ -8,7 +8,9 @@ import '../entities/fee_category_entities.dart';
 import '../entities/assessment_grading_entities.dart';
 import '../entities/timetable_config.dart';
 import '../entities/attendance_config_entities.dart';
+import '../entities/attendance_defaults_config.dart';
 import '../entities/communication_config_entities.dart';
+import '../entities/communication_defaults_config.dart';
 import '../entities/document_template_entities.dart';
 import '../entities/custom_field_entities.dart';
 
@@ -177,6 +179,24 @@ abstract class StructureRepository {
   // Timetable Config
   Stream<TimetableConfig> watchTimetableConfig(String schoolId);
   Future<void> updateTimetableConfig(TimetableConfig config, String schoolId);
+
+  // Attendance Defaults Config
+  Stream<AttendanceDefaultsConfig> watchAttendanceDefaultsConfig(
+    String schoolId,
+  );
+  Future<void> updateAttendanceDefaultsConfig(
+    AttendanceDefaultsConfig config,
+    String schoolId,
+  );
+
+  // Communication Defaults Config
+  Stream<CommunicationDefaultsConfig> watchCommunicationDefaultsConfig(
+    String schoolId,
+  );
+  Future<void> updateCommunicationDefaultsConfig(
+    CommunicationDefaultsConfig config,
+    String schoolId,
+  );
 
   // Attendance Types
   Stream<List<AttendanceTypeDef>> watchAttendanceTypes(String schoolId);

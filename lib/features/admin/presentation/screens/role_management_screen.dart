@@ -7,6 +7,7 @@ import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/admin/domain/usecases/get_role_permission_overrides.dart';
+import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/features/admin/domain/usecases/save_role_permission_override.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
@@ -90,14 +91,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        title: const Text(
-          'Role Permissions',
-          style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: -0.5),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
+      appBar: const AdminAppBar(title: 'Role Permissions'),
       body: _isLoading
           ? const Center(child: SchoolPulseLoader())
           : Row(

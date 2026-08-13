@@ -44,8 +44,15 @@ import 'package:school_pulse/features/admin/presentation/add_staff_wizard/add_st
 import 'package:school_pulse/features/admin/broadcast_sms_screen.dart';
 import 'package:school_pulse/features/admin/system_config_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/structure_screen.dart';
-import 'package:school_pulse/features/structure/presentation/screens/institution_profile_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academic_structure_screen.dart';
+import 'package:school_pulse/features/structure/presentation/screens/academics_landing_screen.dart';
+import 'package:school_pulse/features/structure/presentation/screens/academics/levels_screen.dart';
+import 'package:school_pulse/features/structure/presentation/screens/academics/years_terms_screen.dart';
+import 'package:school_pulse/features/structure/presentation/screens/academics/classes_streams_screen.dart';
+import 'package:school_pulse/features/structure/presentation/screens/academics/subjects_screen.dart';
+import 'package:school_pulse/features/structure/presentation/screens/academics/departments_screen.dart';
+import 'package:school_pulse/features/structure/presentation/screens/academics/grading_systems_screen.dart';
+import 'package:school_pulse/features/structure/presentation/screens/academics/assessment_types_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/people_structure_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/assessment_grading_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/campus_facilities_screen.dart';
@@ -407,6 +414,22 @@ final router = GoRouter(
           branding.branding?.schoolId != authState.user.schoolId) {
         return '/school-bootstrap';
       }
+    }
+
+    // The seeded SaaS Owner must never render Staff Gateway (or any
+    // /staff/* screen), even transiently - e.g. the MFA-challenge screen
+    // (shared by staff and owner TOTP) always lands back on /staff/login
+    // after resolveSignIn(), relying on StaffCredentialsScreen's own
+    // listener to notice AuthAuthenticated and bounce away. That's a UI
+    // convenience, not a security boundary: this router-level guard is the
+    // actual one, catching a superAdmin session on any staff surface
+    // before it ever builds, and sending it through the same
+    // /school-bootstrap -> /super-admin path a fresh owner login takes.
+    if (authState is AuthAuthenticated &&
+        authState.user.role == UserRole.superAdmin &&
+        (state.uri.path == '/staff/login' ||
+            state.uri.path.startsWith('/staff/'))) {
+      return '/school-bootstrap';
     }
 
     // Protect Super Admin routes
@@ -1467,10 +1490,6 @@ final router = GoRouter(
               ),
               routes: [
                 GoRoute(
-                  path: 'institution',
-                  builder: (context, state) => const InstitutionProfileScreen(),
-                ),
-                GoRoute(
                   path: 'academic',
                   builder: (context, state) {
                     final tab =
@@ -1478,6 +1497,43 @@ final router = GoRouter(
                         0;
                     return AcademicStructureScreen(initialTab: tab);
                   },
+                ),
+                GoRoute(
+                  path: 'academics',
+                  builder: (context, state) => const AcademicsLandingScreen(),
+                  routes: [
+                    GoRoute(
+                      path: 'levels',
+                      builder: (context, state) => const LevelsScreen(),
+                    ),
+                    GoRoute(
+                      path: 'years-terms',
+                      builder: (context, state) => const YearsTermsScreen(),
+                    ),
+                    GoRoute(
+                      path: 'classes-streams',
+                      builder: (context, state) =>
+                          const ClassesStreamsScreen(),
+                    ),
+                    GoRoute(
+                      path: 'subjects',
+                      builder: (context, state) => const SubjectsScreen(),
+                    ),
+                    GoRoute(
+                      path: 'departments',
+                      builder: (context, state) => const DepartmentsScreen(),
+                    ),
+                    GoRoute(
+                      path: 'grading-systems',
+                      builder: (context, state) =>
+                          const GradingSystemsScreen(),
+                    ),
+                    GoRoute(
+                      path: 'assessment-types',
+                      builder: (context, state) =>
+                          const AssessmentTypesScreen(),
+                    ),
+                  ],
                 ),
                 GoRoute(
                   path: 'people',

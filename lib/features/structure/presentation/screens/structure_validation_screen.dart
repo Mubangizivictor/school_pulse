@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import '../../domain/services/structure_validation_service.dart';
 import '../bloc/structure_bloc.dart';
 import '../bloc/structure_state.dart';
@@ -17,25 +18,7 @@ class StructureValidationScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        elevation: 0,
-        title: Text(
-          'Structure Validation',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios,
-            color: Theme.of(context).colorScheme.onSurface,
-            size: 20,
-          ),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
+      appBar: const AdminAppBar(title: 'Structure Validation'),
       body: BlocBuilder<StructureBloc, StructureState>(
         builder: (context, state) {
           final issues = StructureValidationService().validate(state);

@@ -51,6 +51,19 @@ module.exports = {
     cta: { label: 'Reset Password', url: data.resetUrl || STATUS_URL },
   }),
 
+  email_verification: (data) => ({
+    subject: 'Verify your School Pulse email',
+    preheader: 'Confirm your email address to finish setting up your School Pulse account.',
+    eyebrow: 'Verify your email',
+    title: 'Verify your email',
+    status: 'information',
+    bodyText: `Hi ${data.userName || 'there'}, confirm your email address to finish setting up your School Pulse account.`,
+    bodyHtml: `<p>Hi ${escapeHtml(data.userName || 'there')}, confirm your email address to finish setting up your School Pulse account.</p>`,
+    infoRows: [],
+    secondaryText: "For your security, only use this link if you created or requested access to this School Pulse account. If you didn't request this, you can safely ignore this email.",
+    cta: { label: 'Verify email address', url: data.verificationUrl || STATUS_URL },
+  }),
+
   password_changed: (data) => ({
     subject: 'Your School Pulse password was changed',
     preheader: 'Your password was just changed.',

@@ -9,7 +9,9 @@ import '../../domain/entities/fee_category_entities.dart';
 import '../../domain/entities/assessment_grading_entities.dart';
 import '../../domain/entities/timetable_config.dart';
 import '../../domain/entities/attendance_config_entities.dart';
+import '../../domain/entities/attendance_defaults_config.dart';
 import '../../domain/entities/communication_config_entities.dart';
+import '../../domain/entities/communication_defaults_config.dart';
 import '../../domain/entities/document_template_entities.dart';
 import '../../domain/entities/custom_field_entities.dart';
 
@@ -41,6 +43,8 @@ class StructureState extends Equatable {
   final List<GradingSystemDef> gradingSystems;
   final List<GradeBand> gradeBands;
   final TimetableConfig timetableConfig;
+  final AttendanceDefaultsConfig attendanceDefaultsConfig;
+  final CommunicationDefaultsConfig communicationDefaultsConfig;
   final List<AttendanceTypeDef> attendanceTypes;
   final List<AttendanceSessionDef> attendanceSessions;
   final List<AnnouncementCategoryDef> announcementCategories;
@@ -77,6 +81,8 @@ class StructureState extends Equatable {
     this.gradingSystems = const [],
     this.gradeBands = const [],
     this.timetableConfig = const TimetableConfig(),
+    this.attendanceDefaultsConfig = const AttendanceDefaultsConfig(),
+    this.communicationDefaultsConfig = const CommunicationDefaultsConfig(),
     this.attendanceTypes = const [],
     this.attendanceSessions = const [],
     this.announcementCategories = const [],
@@ -114,6 +120,8 @@ class StructureState extends Equatable {
     List<GradingSystemDef>? gradingSystems,
     List<GradeBand>? gradeBands,
     TimetableConfig? timetableConfig,
+    AttendanceDefaultsConfig? attendanceDefaultsConfig,
+    CommunicationDefaultsConfig? communicationDefaultsConfig,
     List<AttendanceTypeDef>? attendanceTypes,
     List<AttendanceSessionDef>? attendanceSessions,
     List<AnnouncementCategoryDef>? announcementCategories,
@@ -150,6 +158,10 @@ class StructureState extends Equatable {
       gradingSystems: gradingSystems ?? this.gradingSystems,
       gradeBands: gradeBands ?? this.gradeBands,
       timetableConfig: timetableConfig ?? this.timetableConfig,
+      attendanceDefaultsConfig:
+          attendanceDefaultsConfig ?? this.attendanceDefaultsConfig,
+      communicationDefaultsConfig:
+          communicationDefaultsConfig ?? this.communicationDefaultsConfig,
       attendanceTypes: attendanceTypes ?? this.attendanceTypes,
       attendanceSessions: attendanceSessions ?? this.attendanceSessions,
       announcementCategories:
@@ -191,6 +203,8 @@ class StructureState extends Equatable {
     gradingSystems,
     gradeBands,
     timetableConfig,
+    attendanceDefaultsConfig,
+    communicationDefaultsConfig,
     attendanceTypes,
     attendanceSessions,
     announcementCategories,

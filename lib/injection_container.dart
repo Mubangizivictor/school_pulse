@@ -803,6 +803,9 @@ Future<void> init() async {
       studentRepository: sl(),
       gateOpsRepository: sl(),
       firestore: sl(),
+      adminAttendanceRepository: sl(),
+      financeRepository: sl(),
+      structureRepository: sl(),
     ),
   );
 

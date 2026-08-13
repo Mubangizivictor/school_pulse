@@ -184,14 +184,42 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         email: email,
         password: password,
       );
+      final uid = credential.user!.uid;
+      // The seeded SaaS Owner must never obtain a staff session through
+      // Staff Gateway, even with correct credentials - only the hidden
+      // Platform Owner Access entry may authenticate that UID. Checked
+      // before the Firestore profile read below so an owner login can't
+      // even observe whether a staff profile doc exists for that UID.
+      await _rejectIfOwner(uid);
       // Staff accounts are provisioned ahead of time (with their real role)
       // by an admin, never auto-created here.
-      return await _getUser(credential.user!.uid);
+      return await _getUser(uid);
     } on FirebaseAuthMultiFactorException {
       // The caller needs the resolver to complete the authenticator challenge.
       rethrow;
     } on FirebaseAuthException catch (e) {
       throw AuthFailure(e.message ?? 'Authentication failed');
+    }
+  }
+
+  /// Server-side gate (the `assertNotPlatformOwner` callable) that rejects
+  /// the authenticated UID if it is the canonical seeded owner
+  /// (`platform_config/owner_seed.ownerUid`) - the inverse of
+  /// [_assertOwnerAndGetUser]'s "deny if not owner" check, used by every
+  /// authentication surface that is NOT the dedicated owner login. On
+  /// denial the (owner's) Firebase session is signed out immediately and a
+  /// generic message is thrown, identical in shape to a real credential
+  /// failure so Staff Gateway leaks nothing about the owner account's
+  /// existence.
+  Future<void> _rejectIfOwner(String uid) async {
+    try {
+      await ownerFunctions
+          .httpsCallable('assertNotPlatformOwner')
+          .call<Map<String, dynamic>>();
+    } on FirebaseFunctionsException catch (e) {
+      _logOwnerCallableFailure('assertNotPlatformOwner', e);
+      await firebaseAuth.signOut();
+      throw const AuthFailure('Access denied.');
     }
   }
 

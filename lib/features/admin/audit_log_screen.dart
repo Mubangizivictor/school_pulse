@@ -3,6 +3,7 @@ import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/admin/data/models/audit_log.dart';
 import 'package:school_pulse/features/admin/data/repositories/audit_repository.dart';
+import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
 class AuditLogScreen extends StatelessWidget {
@@ -21,7 +22,7 @@ class AuditLogScreen extends StatelessWidget {
     final repository = di.sl<AuditRepository>();
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
-      appBar: AppBar(title: const Text('Audit Log')),
+      appBar: const AdminAppBar(title: 'Audit Log'),
       body: StreamBuilder<List<AuditLog>>(
         stream: repository.watchRecentLogs(limit: 200),
         builder: (context, snapshot) {

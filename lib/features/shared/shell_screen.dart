@@ -11,6 +11,7 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/institution/presentation/screens/institution_switcher_sheet.dart';
+import 'package:school_pulse/features/admin/presentation/widgets/admin_quick_add_sheet.dart';
 
 class StaffShell extends StatelessWidget {
   final Widget child;
@@ -83,10 +84,8 @@ class StaffShell extends StatelessWidget {
 
     if (_isAdmin(context)) {
       if (location.contains('/staff/admin/structure')) return 1;
-      if (location.contains('/staff/admin/users')) {
-        return 2;
-      }
-      if (isMoreSubRoute(location)) return 3;
+      if (location.startsWith('/staff/messages')) return 3;
+      if (isMoreSubRoute(location)) return 4;
       if (location.startsWith('/staff/admin')) return 0;
       return 0;
     }
@@ -145,9 +144,12 @@ class StaffShell extends StatelessWidget {
           context.go('/staff/admin/structure');
           break;
         case 2:
-          context.go('/staff/admin/users');
+          AdminQuickAddSheet.show(context);
           break;
         case 3:
+          context.go('/staff/messages');
+          break;
+        case 4:
           context.go('/staff/more');
           break;
       }
@@ -300,7 +302,7 @@ class StaffShell extends StatelessWidget {
       const NavigationDestination(
         icon: Icon(Icons.home_outlined, size: 24),
         selectedIcon: Icon(Icons.home_rounded, size: 24),
-        label: 'Dashboard',
+        label: 'Home',
       ),
       const NavigationDestination(
         icon: Icon(Icons.account_tree_outlined, size: 24),
@@ -308,9 +310,14 @@ class StaffShell extends StatelessWidget {
         label: 'Structure',
       ),
       const NavigationDestination(
-        icon: Icon(Icons.people_outline_rounded, size: 24),
-        selectedIcon: Icon(Icons.people_rounded, size: 24),
-        label: 'Users',
+        icon: Icon(Icons.add_circle_rounded, size: 24),
+        selectedIcon: Icon(Icons.add_circle_rounded, size: 24),
+        label: 'Add',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.chat_bubble_outline_rounded, size: 24),
+        selectedIcon: Icon(Icons.chat_bubble_rounded, size: 24),
+        label: 'Messages',
       ),
       const NavigationDestination(
         icon: Icon(Icons.grid_view_outlined, size: 24),
@@ -495,7 +502,7 @@ class StaffShell extends StatelessWidget {
               color: AppColors.background(context),
               child: Column(
                 children: [
-                  SafeArea(bottom: false, child: const _SupportModeBanner()),
+                  const _SupportModeBanner(),
                   Expanded(child: child),
                 ],
               ),
@@ -531,9 +538,27 @@ class StaffShell extends StatelessWidget {
                   selectedIndex: _calculateSelectedIndex(context),
                   onDestinationSelected: (idx) => _onItemTapped(idx, context),
                   destinations: destinations.map((d) {
+                    final index = destinations.indexOf(d);
                     final isSelected =
-                        destinations.indexOf(d) ==
-                        _calculateSelectedIndex(context);
+                        index == _calculateSelectedIndex(context);
+                    final isAdminAddAction = isAdmin && d.label == 'Add';
+                    if (isAdminAddAction) {
+                      return NavigationDestination(
+                        icon: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary(context),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.add_rounded,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                        ),
+                        label: '',
+                      );
+                    }
                     return NavigationDestination(
                       icon: Icon(
                         isSelected
@@ -578,39 +603,42 @@ class _SupportModeBanner extends StatelessWidget {
 
         return Material(
           color: AppColors.warning(context).withValues(alpha: 0.15),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.xl,
-              vertical: AppSpacing.m,
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.support_agent,
-                  size: 20,
-                  color: AppColors.warning(context),
-                ),
-                const SizedBox(width: AppSpacing.m),
-                Expanded(
-                  child: Text(
-                    'Support Mode: acting as ${state.user.name} at '
-                    '${supportMode.schoolName} · expires in ${minutesLeft}m',
-                    style: AppTypography.labelMedium.copyWith(
-                      color: AppColors.textPrimary(context),
-                      fontWeight: FontWeight.w600,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xl,
+                vertical: AppSpacing.m,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.support_agent,
+                    size: 20,
+                    color: AppColors.warning(context),
                   ),
-                ),
-                const SizedBox(width: AppSpacing.m),
-                TextButton(
-                  onPressed: () {
-                    context.read<AuthBloc>().add(ExitSupportModePressed());
-                    context.go('/welcome');
-                  },
-                  child: const Text('Exit'),
-                ),
-              ],
+                  const SizedBox(width: AppSpacing.m),
+                  Expanded(
+                    child: Text(
+                      'Support Mode: acting as ${state.user.name} at '
+                      '${supportMode.schoolName} · expires in ${minutesLeft}m',
+                      style: AppTypography.labelMedium.copyWith(
+                        color: AppColors.textPrimary(context),
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.m),
+                  TextButton(
+                    onPressed: () {
+                      context.read<AuthBloc>().add(ExitSupportModePressed());
+                      context.go('/welcome');
+                    },
+                    child: const Text('Exit'),
+                  ),
+                ],
+              ),
             ),
           ),
         );

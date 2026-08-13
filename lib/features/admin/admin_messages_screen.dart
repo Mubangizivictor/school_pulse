@@ -5,6 +5,7 @@ import 'package:school_pulse/core/notification/notification_service.dart';
 import 'package:school_pulse/core/usecases/usecase.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
 import 'package:school_pulse/features/student/domain/entities/parent_access_code.dart';
@@ -34,8 +35,8 @@ class _AdminMessagesScreenState extends State<AdminMessagesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Messages'),
+      appBar: AdminAppBar(
+        title: 'Messages',
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_square),

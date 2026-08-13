@@ -7,12 +7,16 @@ class TimetableSlot extends Equatable {
   final String startTime;
   final String endTime;
   final String type;
+  final int displayOrder;
+  final bool isActive;
 
   const TimetableSlot({
     required this.name,
     required this.startTime,
     required this.endTime,
     this.type = 'period',
+    this.displayOrder = 0,
+    this.isActive = true,
   });
 
   TimetableSlot copyWith({
@@ -20,17 +24,28 @@ class TimetableSlot extends Equatable {
     String? startTime,
     String? endTime,
     String? type,
+    int? displayOrder,
+    bool? isActive,
   }) {
     return TimetableSlot(
       name: name ?? this.name,
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
       type: type ?? this.type,
+      displayOrder: displayOrder ?? this.displayOrder,
+      isActive: isActive ?? this.isActive,
     );
   }
 
   @override
-  List<Object?> get props => [name, startTime, endTime, type];
+  List<Object?> get props => [
+    name,
+    startTime,
+    endTime,
+    type,
+    displayOrder,
+    isActive,
+  ];
 }
 
 /// The school's timetable shape - a singleton document, like

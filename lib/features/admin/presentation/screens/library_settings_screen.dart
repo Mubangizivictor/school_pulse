@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../design_system/app_components.dart';
+import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import '../../../library/domain/entities/library_policy.dart';
 import '../../../library/presentation/bloc/library_bloc.dart';
 import '../../../library/presentation/bloc/library_event.dart';
@@ -31,7 +32,7 @@ class _LibrarySettingsScreenState extends State<LibrarySettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Library Policies')),
+      appBar: const AdminAppBar(title: 'Library Policies'),
       body: BlocBuilder<LibraryBloc, LibraryState>(
         builder: (context, state) {
           if (state is LibraryPoliciesLoaded) {

@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/injection_container.dart' as di;
@@ -73,21 +74,10 @@ class _StructureSetupWizardScreenState
         final issues = _validationIssues(state);
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            title: Text(
-              'Structure Setup Wizard',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+          appBar: AdminAppBar(
+            title: 'Structure Setup Wizard',
             leading: IconButton(
-              icon: Icon(
-                Icons.close,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+              icon: const Icon(Icons.close),
               onPressed: () => Navigator.pop(context),
             ),
           ),

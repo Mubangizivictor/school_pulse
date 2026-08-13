@@ -4,6 +4,7 @@ import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 
 class BroadcastHistoryScreen extends StatelessWidget {
   const BroadcastHistoryScreen({super.key});
@@ -12,7 +13,7 @@ class BroadcastHistoryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
-      appBar: AppBar(title: const Text('Broadcast History')),
+      appBar: const AdminAppBar(title: 'Broadcast History'),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: FirebaseFirestore.instance
             .collection('alerts')

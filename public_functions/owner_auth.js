@@ -1,6 +1,10 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
-const { requirePlatformOwner, OwnerAuthorizationError } = require('./vendor/owner-auth');
+const {
+  requirePlatformOwner,
+  rejectIfPlatformOwner,
+  OwnerAuthorizationError,
+} = require('./vendor/owner-auth');
 const { ownerRateLimit } = require('./owner_rate_limit');
 
 if (!admin.apps.length) admin.initializeApp();
@@ -71,6 +75,43 @@ exports.assertPlatformOwnerAccess = onCall({ region: 'europe-west1' }, async (re
 
   const owner = await requireOwner(request);
   return { ok: true, uid: owner.uid };
+});
+
+/**
+ * Called by the Flutter client from every NON-owner authentication surface
+ * (Staff Gateway email/password login, and app-start session restore) right
+ * after Firebase Authentication resolves a UID - the inverse gate of
+ * [assertPlatformOwnerAccess]. The seeded owner must never be able to reach
+ * a staff session, even with correct credentials, a remembered session, or a
+ * restored Firebase session: this callable rejects the request outright if
+ * (and only if) the authenticated UID is the canonical seeded owner UID
+ * (`platform_config/owner_seed.ownerUid`), the same single source of truth
+ * [assertPlatformOwnerAccess] uses - never keyed on email.
+ *
+ * Rate-limited per-UID for the same reason assertPlatformOwnerAccess is: a
+ * caller who ISN'T the owner still consumes their own bucket, so this can't
+ * be hammered to probe for behavior differences.
+ */
+exports.assertNotPlatformOwner = onCall({ region: 'europe-west1' }, async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError('unauthenticated', 'Sign in first.');
+  }
+  const allowed = await ownerRateLimit(uid, 'assert_not_owner_access', 30);
+  if (!allowed) {
+    throw new HttpsError('resource-exhausted', 'Too many attempts. Try again later.');
+  }
+
+  try {
+    await rejectIfPlatformOwner(request, { db });
+  } catch (error) {
+    if (error instanceof OwnerAuthorizationError) {
+      throw new HttpsError(error.code, error.message);
+    }
+    throw error;
+  }
+
+  return { ok: true };
 });
 
 /**

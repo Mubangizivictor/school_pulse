@@ -8,7 +8,9 @@ import '../../domain/entities/fee_category_entities.dart';
 import '../../domain/entities/assessment_grading_entities.dart';
 import '../../domain/entities/timetable_config.dart';
 import '../../domain/entities/attendance_config_entities.dart';
+import '../../domain/entities/attendance_defaults_config.dart';
 import '../../domain/entities/communication_config_entities.dart';
+import '../../domain/entities/communication_defaults_config.dart';
 import '../../domain/entities/document_template_entities.dart';
 import '../../domain/entities/custom_field_entities.dart';
 import '../../domain/repositories/structure_repository.dart';
@@ -542,6 +544,28 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Future<void> updateTimetableConfig(TimetableConfig config, String schoolId) =>
       remoteDataSource.updateTimetableConfig(config, schoolId);
+
+  @override
+  Stream<AttendanceDefaultsConfig> watchAttendanceDefaultsConfig(
+    String schoolId,
+  ) => remoteDataSource.watchAttendanceDefaultsConfig(schoolId);
+
+  @override
+  Future<void> updateAttendanceDefaultsConfig(
+    AttendanceDefaultsConfig config,
+    String schoolId,
+  ) => remoteDataSource.updateAttendanceDefaultsConfig(config, schoolId);
+
+  @override
+  Stream<CommunicationDefaultsConfig> watchCommunicationDefaultsConfig(
+    String schoolId,
+  ) => remoteDataSource.watchCommunicationDefaultsConfig(schoolId);
+
+  @override
+  Future<void> updateCommunicationDefaultsConfig(
+    CommunicationDefaultsConfig config,
+    String schoolId,
+  ) => remoteDataSource.updateCommunicationDefaultsConfig(config, schoolId);
 
   @override
   Stream<List<AttendanceTypeDef>> watchAttendanceTypes(String schoolId) {

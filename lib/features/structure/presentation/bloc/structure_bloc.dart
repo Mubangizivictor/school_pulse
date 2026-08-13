@@ -32,6 +32,8 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
   StreamSubscription? _gradingSystemsSub;
   StreamSubscription? _gradeBandsSub;
   StreamSubscription? _timetableConfigSub;
+  StreamSubscription? _attendanceDefaultsConfigSub;
+  StreamSubscription? _communicationDefaultsConfigSub;
   StreamSubscription? _attendanceTypesSub;
   StreamSubscription? _attendanceSessionsSub;
   StreamSubscription? _announcementCategoriesSub;
@@ -146,6 +148,22 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     on<TimetableConfigUpdated>(
       (event, emit) =>
           emit(state.copyWith(isLoading: false, timetableConfig: event.config)),
+    );
+    on<AttendanceDefaultsConfigUpdated>(
+      (event, emit) => emit(
+        state.copyWith(
+          isLoading: false,
+          attendanceDefaultsConfig: event.config,
+        ),
+      ),
+    );
+    on<CommunicationDefaultsConfigUpdated>(
+      (event, emit) => emit(
+        state.copyWith(
+          isLoading: false,
+          communicationDefaultsConfig: event.config,
+        ),
+      ),
     );
     on<AttendanceTypesUpdated>(
       (event, emit) =>
@@ -373,6 +391,18 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
       (event, emit) =>
           repository.updateTimetableConfig(event.config, event.schoolId),
     );
+    on<UpdateAttendanceDefaultsConfigRequested>(
+      (event, emit) => repository.updateAttendanceDefaultsConfig(
+        event.config,
+        event.schoolId,
+      ),
+    );
+    on<UpdateCommunicationDefaultsConfigRequested>(
+      (event, emit) => repository.updateCommunicationDefaultsConfig(
+        event.config,
+        event.schoolId,
+      ),
+    );
 
     on<SaveAttendanceTypeRequested>(
       (event, emit) => repository.addAttendanceType(event.type),
@@ -453,6 +483,8 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     await _gradingSystemsSub?.cancel();
     await _gradeBandsSub?.cancel();
     await _timetableConfigSub?.cancel();
+    await _attendanceDefaultsConfigSub?.cancel();
+    await _communicationDefaultsConfigSub?.cancel();
     await _attendanceTypesSub?.cancel();
     await _attendanceSessionsSub?.cancel();
     await _announcementCategoriesSub?.cancel();
@@ -611,6 +643,18 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
           (config) => add(TimetableConfigUpdated(config)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
+    _attendanceDefaultsConfigSub = repository
+        .watchAttendanceDefaultsConfig(event.schoolId)
+        .listen(
+          (config) => add(AttendanceDefaultsConfigUpdated(config)),
+          onError: (e) => add(StructureLoadFailed(e.toString())),
+        );
+    _communicationDefaultsConfigSub = repository
+        .watchCommunicationDefaultsConfig(event.schoolId)
+        .listen(
+          (config) => add(CommunicationDefaultsConfigUpdated(config)),
+          onError: (e) => add(StructureLoadFailed(e.toString())),
+        );
     _attendanceTypesSub = repository
         .watchAttendanceTypes(event.schoolId)
         .listen(
@@ -682,6 +726,8 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     _gradingSystemsSub?.cancel();
     _gradeBandsSub?.cancel();
     _timetableConfigSub?.cancel();
+    _attendanceDefaultsConfigSub?.cancel();
+    _communicationDefaultsConfigSub?.cancel();
     _attendanceTypesSub?.cancel();
     _attendanceSessionsSub?.cancel();
     _announcementCategoriesSub?.cancel();

@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/admin/data/models/system_config.dart';
+import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/system_config_bloc.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/system_config_event.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/system_config_state.dart';
@@ -100,8 +101,8 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
     // We use the global SystemConfigBloc provided in main.dart
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
-      appBar: AppBar(
-        title: const Text('System Configuration'),
+      appBar: AdminAppBar(
+        title: 'System Configuration',
         actions: [
           BlocBuilder<SystemConfigBloc, SystemConfigState>(
             builder: (context, state) {
@@ -110,13 +111,10 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
                   : (state is SystemConfigError ? state.config : null);
 
               if (config != null) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: 16.0),
-                  child: FilledButton.icon(
-                    onPressed: () => _saveConfig(context, config),
-                    icon: const Icon(Icons.save, size: 18),
-                    label: const Text('Save Changes'),
-                  ),
+                return FilledButton.icon(
+                  onPressed: () => _saveConfig(context, config),
+                  icon: const Icon(Icons.save, size: 18),
+                  label: const Text('Save Changes'),
                 );
               }
               return const SizedBox.shrink();

@@ -189,18 +189,18 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           // Main Title
           Text(
             'Attendance',
             style: AppTypography.headlineLarge.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.w900,
-              fontSize: 24,
-              letterSpacing: -0.6,
+              fontSize: 34,
+              letterSpacing: -0.8,
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 20),
 
           // Dropdown Section Card - only shown when there's an actual
           // choice to make (multiple authorised domains); a single-domain
@@ -286,6 +286,7 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
           // NFC Card
           _MethodCard(
             title: 'NFC Scan',
+            subtitle: 'Mark attendance using NFC card',
             accentColor: const Color(0xFF11A85B),
             icon: Icons.sensors_rounded,
             onTap: () => context.push('/staff/attendance/nfc'),
@@ -294,6 +295,7 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
           // QR Code Card
           _MethodCard(
             title: 'QR Code Scanner',
+            subtitle: 'Scan student QR code',
             accentColor: const Color(0xFF103ECF),
             icon: Icons.qr_code_2_rounded,
             onTap: () => context.push('/staff/attendance/qr'),
@@ -302,6 +304,7 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
           // Manual Card
           _MethodCard(
             title: 'Manual Attendance',
+            subtitle: 'Mark attendance manually',
             accentColor: const Color(0xFFFFB400),
             icon: Icons.assignment_turned_in_rounded,
             onTap: () => context.push(
@@ -313,6 +316,7 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
           // History Card
           _MethodCard(
             title: 'Previous Attendances',
+            subtitle: 'View and manage past records',
             accentColor: const Color(0xFF7C4DFF),
             icon: Icons.history_rounded,
             onTap: () => context.push('/staff/attendance/history'),
@@ -321,6 +325,7 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
           // Google Sheets Card
           _IntegrationCard(
             title: 'Google Sheets',
+            subtitle: 'Sync attendance to Google Sheets',
             linked: _sheetsLinked,
             onTap: () async {
               await context.push('/staff/attendance/sheets');
@@ -337,12 +342,14 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
 
 class _MethodCard extends StatelessWidget {
   final String title;
+  final String subtitle;
   final Color accentColor;
   final IconData icon;
   final VoidCallback onTap;
 
   const _MethodCard({
     required this.title,
+    required this.subtitle,
     required this.accentColor,
     required this.icon,
     required this.onTap,
@@ -352,58 +359,58 @@ class _MethodCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
           color: const Color(0xFF071229),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFF1A315B)),
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Row(
-            children: [
-              Container(width: 3, color: accentColor),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: accentColor.withValues(alpha: 0.15),
-                        ),
-                        child: Icon(icon, color: accentColor, size: 18),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                      const Icon(
-                        Icons.chevron_right_rounded,
-                        color: Color(0xFF8190AA),
-                        size: 20,
-                      ),
-                    ],
-                  ),
-                ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: accentColor.withValues(alpha: 0.15),
               ),
-            ],
-          ),
+              child: Icon(icon, color: accentColor, size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      color: Color(0xFF8190AA),
+                      fontWeight: FontWeight.w400,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: Color(0xFF8190AA),
+              size: 22,
+            ),
+          ],
         ),
       ),
     );
@@ -412,67 +419,84 @@ class _MethodCard extends StatelessWidget {
 
 class _IntegrationCard extends StatelessWidget {
   final String title;
+  final String subtitle;
   final bool linked;
   final VoidCallback onTap;
 
   const _IntegrationCard({
     required this.title,
+    required this.subtitle,
     required this.linked,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    const Color iconColor = Color(0xFF8190AA);
     final Color statusColor = linked
         ? const Color(0xFF11A85B)
         : const Color(0xFF8190AA);
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
           color: const Color(0xFF071229),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFF1A315B)),
         ),
         child: Row(
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: statusColor.withValues(alpha: 0.15),
+                color: iconColor.withValues(alpha: 0.15),
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.description_rounded,
-                color: statusColor,
-                size: 18,
+                color: iconColor,
+                size: 22,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
             Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      color: Color(0xFF8190AA),
+                      fontWeight: FontWeight.w400,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
               ),
             ),
             Icon(
-              linked ? Icons.check_circle_rounded : Icons.link_off_rounded,
+              linked ? Icons.link_rounded : Icons.link_off_rounded,
               color: statusColor,
-              size: 16,
+              size: 18,
             ),
             const SizedBox(width: 8),
             const Icon(
               Icons.chevron_right_rounded,
               color: Color(0xFF8190AA),
-              size: 20,
+              size: 22,
             ),
           ],
         ),

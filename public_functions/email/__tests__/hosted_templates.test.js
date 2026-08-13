@@ -34,6 +34,7 @@ const EXPECTED_ALIASES = {
   subscription_expiring: 'subscription-expiring-soon',
   subscription_expired: 'subscription-expired',
   school_admin_account_created: 'school-admin-welcome',
+  email_verification: 'email-verification',
   new_login_alert: 'new-login-alert',
   suspicious_login_alert: 'suspicious-activity-alert',
   appointment_confirmed: 'appointment-confirmed',
@@ -54,6 +55,11 @@ const REQUIRED_VARIABLES = {
   'subscription-expiring-soon': ['school_name', 'plan_name', 'subscription_end', 'days_remaining', 'renewal_amount'],
   'subscription-expired': ['school_name', 'plan_name', 'subscription_end', 'renewal_amount'],
   'school-admin-welcome': ['admin_name', 'school_name', 'admin_email'],
+  // school_name is deliberately omitted from the key set entirely when not
+  // supplied (see hosted_templates.js) rather than sent as an empty string,
+  // so the generic "exact key match on empty input" loop below only expects
+  // the two always-present keys here.
+  'email-verification': ['user_name', 'verification_url'],
   'new-login-alert': ['account_email', 'device_name', 'platform', 'signed_in_at', 'location'],
   'suspicious-activity-alert': ['account_email', 'activity_type', 'device_name', 'activity_time', 'location', 'alert_reason'],
   'appointment-confirmed': ['school_name', 'staff_name', 'appointment_date', 'appointment_time', 'appointment_reference', 'appointment_purpose'],
@@ -81,7 +87,7 @@ test('unmapped local templateId (e.g. a local-only template) returns null, not a
 // always supplies these (they double as the send recipient), so the only
 // thing asserted for these keys is "no literal undefined/null", not
 // "non-empty on fully empty input".
-const NO_GENERIC_FALLBACK = new Set(['admin_email', 'account_email']);
+const NO_GENERIC_FALLBACK = new Set(['admin_email', 'account_email', 'verification_url']);
 
 console.log('\nVariable contracts: exact key match, no undefined/null leakage');
 for (const [templateId, hosted] of Object.entries(HOSTED_TEMPLATES)) {
@@ -162,6 +168,7 @@ const PRODUCTION_CALL_SITES = {
   sessions_revoked: 'LOCAL_TEMPLATE_FALLBACK', // no published template for this event
   password_changed: 'LOCAL_TEMPLATE_FALLBACK',
   school_admin_account_created: 'HOSTED_RESEND_TEMPLATE',
+  email_verification: 'HOSTED_RESEND_TEMPLATE',
   appointment_confirmed: 'HOSTED_RESEND_TEMPLATE',
   appointment_cancelled: 'HOSTED_RESEND_TEMPLATE',
   appointment_reminder: 'HOSTED_RESEND_TEMPLATE',

@@ -102,4 +102,39 @@ async function requirePlatformOwner(request, { db }) {
   return { uid, user };
 }
 
-module.exports = { requirePlatformOwner, isOwnerProfile, OwnerAuthorizationError };
+/**
+ * The inverse of [requirePlatformOwner]: gates every non-owner authentication
+ * surface (Staff Gateway login, session restore) by rejecting the request
+ * outright if the authenticated UID IS the canonical seeded owner. The
+ * seeded owner must only ever be able to authenticate through the dedicated
+ * Platform Owner Access flow (requirePlatformOwner + TOTP +
+ * OwnerSecuritySession) - never through Staff Gateway, even with correct
+ * credentials, a remembered session, or a restored session.
+ *
+ * Keyed on `platform_config/owner_seed.ownerUid` (the same single
+ * authorization boundary [requirePlatformOwner] uses) - deliberately NEVER
+ * by email, so an owner email typo/alias or a staff account that happens to
+ * reuse the owner's email string can't accidentally trip or evade this gate
+ * in either direction.
+ *
+ * No-ops (does not throw) if the request is unauthenticated or the caller
+ * simply isn't the seeded owner - this is only a denial gate for the owner
+ * UID specifically, not a general auth requirement.
+ */
+async function rejectIfPlatformOwner(request, { db }) {
+  const uid = request?.auth?.uid;
+  if (!uid) return;
+
+  const seedSnap = await db.collection('platform_config').doc('owner_seed').get();
+  const seed = seedSnap.exists ? seedSnap.data() : null;
+  if (seed?.seeded && seed.ownerUid === uid) {
+    throw new OwnerAuthorizationError('permission-denied', 'Access denied.');
+  }
+}
+
+module.exports = {
+  requirePlatformOwner,
+  rejectIfPlatformOwner,
+  isOwnerProfile,
+  OwnerAuthorizationError,
+};

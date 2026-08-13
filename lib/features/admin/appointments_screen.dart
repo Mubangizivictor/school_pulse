@@ -7,6 +7,7 @@ import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/admin/data/models/appointment.dart';
 import 'package:school_pulse/features/admin/data/repositories/appointment_repository.dart'
     as admin_appointment;
+import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/injection_container.dart' as di;
@@ -25,8 +26,8 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
-      appBar: AppBar(
-        title: const Text('Appointments & Schedule'),
+      appBar: AdminAppBar(
+        title: 'Appointments & Schedule',
         actions: [
           IconButton(
             icon: const Icon(Icons.add),

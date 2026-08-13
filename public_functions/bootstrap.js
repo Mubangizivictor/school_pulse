@@ -17,6 +17,7 @@ const transactionalEmailQueue = require('./email/transactional_queue');
 const subscriptionLifecycle = require('./subscription_lifecycle');
 const location = require('./location');
 const mtnMomo = require('./mtn_momo');
+const emailVerification = require('./email_verification');
 
 // payments is intentionally spread after owner: it replaces the old
 // approval/status exports with the payment-gated onboarding lifecycle while
@@ -41,4 +42,5 @@ module.exports = {
   ...subscriptionLifecycle,
   ...location,
   ...mtnMomo,
+  ...emailVerification,
 };

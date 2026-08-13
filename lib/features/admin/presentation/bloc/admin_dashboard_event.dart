@@ -9,4 +9,11 @@ abstract class AdminDashboardEvent extends Equatable {
 
 class LoadAdminDashboardStats extends AdminDashboardEvent {}
 
-class WatchAuditLogs extends AdminDashboardEvent {}
+class WatchAuditLogs extends AdminDashboardEvent {
+  final String? schoolId;
+
+  const WatchAuditLogs({this.schoolId});
+
+  @override
+  List<Object> get props => [schoolId ?? ''];
+}

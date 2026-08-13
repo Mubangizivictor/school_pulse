@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import '../bloc/structure_bloc.dart';
@@ -49,7 +50,7 @@ class _AssessmentGradingScreenState extends State<AssessmentGradingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Assessment & Grading')),
+      appBar: const AdminAppBar(title: 'Assessment & Grading'),
       body: Column(
         children: [
           StructureSectionPicker(

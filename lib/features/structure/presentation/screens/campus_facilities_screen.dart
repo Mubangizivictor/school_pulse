@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import '../bloc/structure_bloc.dart';
@@ -53,24 +54,7 @@ class _CampusFacilitiesScreenState extends State<CampusFacilitiesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(
-          'Campus & Facilities',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
+      appBar: const AdminAppBar(title: 'Houses & Campus Life'),
       body: Column(
         children: [
           StructureSectionPicker(
@@ -112,12 +96,19 @@ class _CampusesTab extends StatefulWidget {
 }
 
 class _CampusesTabState extends State<_CampusesTab> {
+  String _query = '';
+
   @override
   Widget build(BuildContext context) {
     final bloc = context.read<StructureBloc>();
     final schoolId =
         (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
     final campuses = [...widget.state.campuses]
+      ..removeWhere(
+        (campus) =>
+            !campus.name.toLowerCase().contains(_query.toLowerCase()) &&
+            !campus.code.toLowerCase().contains(_query.toLowerCase()),
+      )
       ..sort((a, b) => a.order.compareTo(b.order));
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -125,7 +116,10 @@ class _CampusesTabState extends State<_CampusesTab> {
         children: [
           Padding(
             padding: const EdgeInsets.all(AppSpacing.l),
-            child: const StructureSearchBar(hint: 'Search campuses...'),
+            child: StructureSearchBar(
+              hint: 'Search campuses...',
+              onChanged: (value) => setState(() => _query = value),
+            ),
           ),
           Expanded(
             child: campuses.isEmpty
@@ -199,7 +193,7 @@ class _HousesTab extends StatefulWidget {
 }
 
 class _HousesTabState extends State<_HousesTab> {
-  String _selectedFilter = 'All';
+  String _query = '';
 
   @override
   Widget build(BuildContext context) {
@@ -214,26 +208,42 @@ class _HousesTabState extends State<_HousesTab> {
             padding: const EdgeInsets.all(AppSpacing.l),
             child: Column(
               children: [
-                const StructureSearchBar(hint: 'Search houses...'),
-                const SizedBox(height: AppSpacing.m),
-                StructureFilterChips(
-                  filters: const ['All', 'Boys', 'Girls', 'Mixed'],
-                  selectedFilter: _selectedFilter,
-                  onSelected: (val) => setState(() => _selectedFilter = val),
+                StructureSearchBar(
+                  hint: 'Search houses...',
+                  onChanged: (value) => setState(() => _query = value),
                 ),
               ],
             ),
           ),
           Expanded(
-            child: widget.state.houses.isEmpty
+            child:
+                widget.state.houses
+                    .where(
+                      (house) => house.name.toLowerCase().contains(
+                        _query.toLowerCase(),
+                      ),
+                    )
+                    .isEmpty
                 ? const StructureEmptyHint('No houses defined yet.')
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.l,
                     ),
-                    itemCount: widget.state.houses.length,
+                    itemCount: widget.state.houses
+                        .where(
+                          (house) => house.name.toLowerCase().contains(
+                            _query.toLowerCase(),
+                          ),
+                        )
+                        .length,
                     itemBuilder: (context, index) {
-                      final house = widget.state.houses[index];
+                      final house = widget.state.houses
+                          .where(
+                            (house) => house.name.toLowerCase().contains(
+                              _query.toLowerCase(),
+                            ),
+                          )
+                          .elementAt(index);
                       return StructureListRow(
                         icon: Icons.home_outlined,
                         color: _fromHex(house.colorHex, Colors.indigo),
@@ -290,7 +300,7 @@ class _ClubsTab extends StatefulWidget {
 }
 
 class _ClubsTabState extends State<_ClubsTab> {
-  String _selectedFilter = 'All';
+  String _query = '';
 
   @override
   Widget build(BuildContext context) {
@@ -305,26 +315,42 @@ class _ClubsTabState extends State<_ClubsTab> {
             padding: const EdgeInsets.all(AppSpacing.l),
             child: Column(
               children: [
-                const StructureSearchBar(hint: 'Search clubs...'),
-                const SizedBox(height: AppSpacing.m),
-                StructureFilterChips(
-                  filters: const ['All', 'Academic', 'Sports', 'Social'],
-                  selectedFilter: _selectedFilter,
-                  onSelected: (val) => setState(() => _selectedFilter = val),
+                StructureSearchBar(
+                  hint: 'Search clubs...',
+                  onChanged: (value) => setState(() => _query = value),
                 ),
               ],
             ),
           ),
           Expanded(
-            child: widget.state.clubs.isEmpty
+            child:
+                widget.state.clubs
+                    .where(
+                      (club) => club.name.toLowerCase().contains(
+                        _query.toLowerCase(),
+                      ),
+                    )
+                    .isEmpty
                 ? const StructureEmptyHint('No clubs or societies defined yet.')
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.l,
                     ),
-                    itemCount: widget.state.clubs.length,
+                    itemCount: widget.state.clubs
+                        .where(
+                          (club) => club.name.toLowerCase().contains(
+                            _query.toLowerCase(),
+                          ),
+                        )
+                        .length,
                     itemBuilder: (context, index) {
-                      final club = widget.state.clubs[index];
+                      final club = widget.state.clubs
+                          .where(
+                            (club) => club.name.toLowerCase().contains(
+                              _query.toLowerCase(),
+                            ),
+                          )
+                          .elementAt(index);
                       return StructureListRow(
                         icon: Icons.groups_outlined,
                         color: Colors.deepPurple,

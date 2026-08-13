@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/features/dean/domain/entities/report_card_approval.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_event.dart';
@@ -22,7 +23,7 @@ class _HeadTeacherApprovalScreenState extends State<HeadTeacherApprovalScreen> {
       create: (context) =>
           sl<DeanBloc>()..add(PendingReportApprovalsRequested()),
       child: Scaffold(
-        appBar: AppBar(title: const Text('Final Report Approvals')),
+        appBar: const AdminAppBar(title: 'Final Report Approvals'),
         body: BlocListener<DeanBloc, DeanState>(
           listener: (context, state) {
             if (state is DeanOperationSuccess) {

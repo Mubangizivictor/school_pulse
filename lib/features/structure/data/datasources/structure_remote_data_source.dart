@@ -9,7 +9,9 @@ import '../../domain/entities/fee_category_entities.dart';
 import '../../domain/entities/assessment_grading_entities.dart';
 import '../../domain/entities/timetable_config.dart';
 import '../../domain/entities/attendance_config_entities.dart';
+import '../../domain/entities/attendance_defaults_config.dart';
 import '../../domain/entities/communication_config_entities.dart';
+import '../../domain/entities/communication_defaults_config.dart';
 import '../../domain/entities/document_template_entities.dart';
 import '../../domain/entities/custom_field_entities.dart';
 
@@ -127,6 +129,22 @@ abstract class StructureRemoteDataSource {
 
   Stream<TimetableConfig> watchTimetableConfig(String schoolId);
   Future<void> updateTimetableConfig(TimetableConfig config, String schoolId);
+
+  Stream<AttendanceDefaultsConfig> watchAttendanceDefaultsConfig(
+    String schoolId,
+  );
+  Future<void> updateAttendanceDefaultsConfig(
+    AttendanceDefaultsConfig config,
+    String schoolId,
+  );
+
+  Stream<CommunicationDefaultsConfig> watchCommunicationDefaultsConfig(
+    String schoolId,
+  );
+  Future<void> updateCommunicationDefaultsConfig(
+    CommunicationDefaultsConfig config,
+    String schoolId,
+  );
 
   Stream<List<AttendanceTypeDef>> watchAttendanceTypes(String schoolId);
   Future<void> saveAttendanceType(AttendanceTypeDef type);
@@ -246,6 +264,20 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       .doc(schoolId)
       .collection('config')
       .doc('timetable_config');
+  DocumentReference<Map<String, dynamic>> _attendanceDefaultsConfigDoc(
+    String schoolId,
+  ) => firestore
+      .collection('schools')
+      .doc(schoolId)
+      .collection('config')
+      .doc('attendance_defaults');
+  DocumentReference<Map<String, dynamic>> _communicationDefaultsConfigDoc(
+    String schoolId,
+  ) => firestore
+      .collection('schools')
+      .doc(schoolId)
+      .collection('config')
+      .doc('communication_defaults');
 
   // Educational Levels
   @override
@@ -1417,6 +1449,8 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
               startTime: s['startTime'] ?? '',
               endTime: s['endTime'] ?? '',
               type: s['type'] ?? 'period',
+              displayOrder: s['displayOrder'] ?? 0,
+              isActive: s['isActive'] ?? true,
             ),
           )
           .toList(),
@@ -1436,10 +1470,66 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
             'startTime': s.startTime,
             'endTime': s.endTime,
             'type': s.type,
+            'displayOrder': s.displayOrder,
+            'isActive': s.isActive,
           },
         )
         .toList(),
   };
+
+  // Attendance Defaults Config
+  @override
+  Stream<AttendanceDefaultsConfig> watchAttendanceDefaultsConfig(
+    String schoolId,
+  ) {
+    return _attendanceDefaultsConfigDoc(schoolId).snapshots().map((doc) {
+      final map = doc.data();
+      if (map == null) return const AttendanceDefaultsConfig();
+      return AttendanceDefaultsConfig(
+        attendanceMode: map['attendanceMode'] ?? 'Daily',
+        markingWindow: map['markingWindow'] ?? 'Until End of School Day',
+        allowBackdatedAttendance: map['allowBackdatedAttendance'] ?? false,
+        autoPresentOnAdmission: map['autoPresentOnAdmission'] ?? false,
+      );
+    });
+  }
+
+  @override
+  Future<void> updateAttendanceDefaultsConfig(
+    AttendanceDefaultsConfig config,
+    String schoolId,
+  ) => _attendanceDefaultsConfigDoc(schoolId).set({
+    'attendanceMode': config.attendanceMode,
+    'markingWindow': config.markingWindow,
+    'allowBackdatedAttendance': config.allowBackdatedAttendance,
+    'autoPresentOnAdmission': config.autoPresentOnAdmission,
+  });
+
+  // Communication Defaults Config
+  @override
+  Stream<CommunicationDefaultsConfig> watchCommunicationDefaultsConfig(
+    String schoolId,
+  ) {
+    return _communicationDefaultsConfigDoc(schoolId).snapshots().map((doc) {
+      final map = doc.data();
+      if (map == null) return const CommunicationDefaultsConfig();
+      return CommunicationDefaultsConfig(
+        defaultChannels: List<String>.from(
+          map['defaultChannels'] ?? const ['app'],
+        ),
+        defaultLanguage: map['defaultLanguage'] ?? 'English',
+      );
+    });
+  }
+
+  @override
+  Future<void> updateCommunicationDefaultsConfig(
+    CommunicationDefaultsConfig config,
+    String schoolId,
+  ) => _communicationDefaultsConfigDoc(schoolId).set({
+    'defaultChannels': config.defaultChannels,
+    'defaultLanguage': config.defaultLanguage,
+  });
 
   // Attendance Types
   @override

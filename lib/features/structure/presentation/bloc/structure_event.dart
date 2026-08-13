@@ -9,7 +9,9 @@ import '../../domain/entities/fee_category_entities.dart';
 import '../../domain/entities/assessment_grading_entities.dart';
 import '../../domain/entities/timetable_config.dart';
 import '../../domain/entities/attendance_config_entities.dart';
+import '../../domain/entities/attendance_defaults_config.dart';
 import '../../domain/entities/communication_config_entities.dart';
+import '../../domain/entities/communication_defaults_config.dart';
 import '../../domain/entities/document_template_entities.dart';
 import '../../domain/entities/custom_field_entities.dart';
 
@@ -199,6 +201,20 @@ class GradeBandsUpdated extends StructureEvent {
 class TimetableConfigUpdated extends StructureEvent {
   final TimetableConfig config;
   const TimetableConfigUpdated(this.config);
+  @override
+  List<Object?> get props => [config];
+}
+
+class AttendanceDefaultsConfigUpdated extends StructureEvent {
+  final AttendanceDefaultsConfig config;
+  const AttendanceDefaultsConfigUpdated(this.config);
+  @override
+  List<Object?> get props => [config];
+}
+
+class CommunicationDefaultsConfigUpdated extends StructureEvent {
+  final CommunicationDefaultsConfig config;
+  const CommunicationDefaultsConfigUpdated(this.config);
   @override
   List<Object?> get props => [config];
 }
@@ -632,6 +648,22 @@ class UpdateTimetableConfigRequested extends StructureEvent {
   final TimetableConfig config;
   final String schoolId;
   const UpdateTimetableConfigRequested(this.config, this.schoolId);
+  @override
+  List<Object?> get props => [config, schoolId];
+}
+
+class UpdateAttendanceDefaultsConfigRequested extends StructureEvent {
+  final AttendanceDefaultsConfig config;
+  final String schoolId;
+  const UpdateAttendanceDefaultsConfigRequested(this.config, this.schoolId);
+  @override
+  List<Object?> get props => [config, schoolId];
+}
+
+class UpdateCommunicationDefaultsConfigRequested extends StructureEvent {
+  final CommunicationDefaultsConfig config;
+  final String schoolId;
+  const UpdateCommunicationDefaultsConfigRequested(this.config, this.schoolId);
   @override
   List<Object?> get props => [config, schoolId];
 }

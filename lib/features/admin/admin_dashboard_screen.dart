@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
-import 'package:school_pulse/features/admin/domain/usecases/get_admin_dashboard_stats.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/design_system/theme/app_radius.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/admin_dashboard_bloc.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/admin_dashboard_event.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/admin_dashboard_state.dart';
+import 'package:school_pulse/features/admin/presentation/widgets/quick_access_prefs.dart';
+import 'package:school_pulse/features/admin/data/models/audit_log.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.dart';
+import 'package:school_pulse/features/branding/presentation/bloc/branding_state.dart';
+import 'package:school_pulse/features/branding/presentation/widgets/school_badge.dart';
 import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 import 'package:school_pulse/features/admin/admin_search_delegate.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/injection_container.dart' as di;
-import 'package:school_pulse/features/inventory/presentation/screens/stores_assets_dashboard.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
@@ -24,560 +28,933 @@ class AdminDashboardScreen extends StatelessWidget {
       create: (context) =>
           di.sl<AdminDashboardBloc>()..add(LoadAdminDashboardStats()),
       child: Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
-        body: Row(
-          children: [
-            Expanded(
-              child: Builder(
-                builder: (context) => RefreshIndicator(
-                  onRefresh: () async {
-                    context.read<AdminDashboardBloc>().add(
-                      LoadAdminDashboardStats(),
-                    );
-                    await context.read<AdminDashboardBloc>().stream.firstWhere(
-                      (state) => state is! AdminDashboardLoading,
-                    );
-                  },
-                  child: CustomScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    slivers: [
-                      _buildAppBar(context),
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 15,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              FadeInSlide(
-                                duration: const Duration(milliseconds: 400),
-                                child: _buildHighLevelStats(context),
-                              ),
-                              const SizedBox(height: 15),
-                              FadeInSlide(
-                                delay: const Duration(milliseconds: 100),
-                                child: _buildMainGrid(context),
-                              ),
-                            ],
-                          ),
+        body: Builder(
+          builder: (context) => RefreshIndicator(
+            onRefresh: () async {
+              context.read<AdminDashboardBloc>().add(LoadAdminDashboardStats());
+              await context.read<AdminDashboardBloc>().stream.firstWhere(
+                (state) => state is! AdminDashboardLoading,
+              );
+            },
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverToBoxAdapter(child: _DashboardHeader()),
+                SliverToBoxAdapter(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 640),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.xl,
+                          0,
+                          AppSpacing.xl,
+                          AppSpacing.x3l,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _HeroSummaryCard(),
+                            const SizedBox(height: AppSpacing.xl),
+                            _QuickAccessSection(),
+                            const SizedBox(height: AppSpacing.xl),
+                            const _PendingApprovalsCard(),
+                            const SizedBox(height: AppSpacing.l),
+                            const _RecentActivityCard(),
+                          ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAppBar(BuildContext context) {
-    final isDesktop = MediaQuery.of(context).size.width > 900;
-    return SliverAppBar(
-      pinned: true,
-      expandedHeight: isDesktop ? 76 : 0,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      surfaceTintColor: Colors.transparent,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
-                Theme.of(context).colorScheme.surface,
               ],
             ),
           ),
         ),
       ),
-      title: isDesktop
-          ? Row(
-              children: [
-                const Column(
+    );
+  }
+}
+
+/// Left: school badge + "School Admin" + real school name. Right:
+/// notification bell (real unread count) + profile button routing into the
+/// existing shared More/account hub.
+class _DashboardHeader extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final brandingState = context.watch<BrandingBloc>().state;
+    final branding = brandingState is BrandingLoaded
+        ? brandingState.branding
+        : null;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.l,
+        AppSpacing.xl,
+        AppSpacing.l,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: Row(
+            children: [
+              SchoolBadge(
+                badgeUrl: branding?.badgeUrl ?? branding?.logoUrl,
+                size: 56,
+              ),
+              const SizedBox(width: AppSpacing.l),
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      'Pulse Console',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 24,
-                        letterSpacing: -1,
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            'School Admin',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 19,
+                              fontWeight: FontWeight.w800,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          size: 20,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ],
                     ),
                     Text(
-                      'Cloud Infrastructure • Term 3',
+                      branding?.schoolName ?? 'School Pulse',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.normal,
+                        fontSize: 14,
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(width: 48),
-                Expanded(
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: () => showSearch(
-                      context: context,
-                      delegate: AdminSearchDelegate(),
-                    ),
-                    child: Container(
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainer,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: Theme.of(
-                            context,
-                          ).dividerColor.withValues(alpha: 0.05),
-                        ),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.search,
-                            size: 18,
-                            color: Theme.of(context).colorScheme.outline,
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Search anything (staff, students, settings...)',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Theme.of(context).colorScheme.outline,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+              ),
+              IconButton(
+                tooltip: 'Search',
+                icon: const Icon(Icons.search_rounded),
+                onPressed: () => showSearch(
+                  context: context,
+                  delegate: AdminSearchDelegate(),
                 ),
-                const SizedBox(width: 48),
-              ],
-            )
-          : const Text(
-              'Pulse Console',
-              style: TextStyle(fontWeight: FontWeight.w900),
-            ),
-      actions: [
-        if (isDesktop) ...[_buildLiveIndicator(), const SizedBox(width: 16)],
-        NotificationBellButton(
-          backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+              ),
+              NotificationBellButton(
+                backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+              ),
+              const SizedBox(width: AppSpacing.s),
+              _ProfileButton(),
+            ],
+          ),
         ),
-        const SizedBox(width: 8),
-        const _LogoutButton(),
-        const SizedBox(width: 12),
-      ],
+      ),
     );
   }
+}
 
-  Widget _buildLiveIndicator() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.green.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
+class _ProfileButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final authState = context.watch<AuthBloc>().state;
+    final photoUrl = authState is AuthAuthenticated
+        ? authState.user.photoUrl
+        : null;
+    return InkWell(
+      borderRadius: AppRadius.full,
+      onTap: () => context.push('/staff/more'),
+      child: CircleAvatar(
+        radius: 18,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+        backgroundImage: (photoUrl != null && photoUrl.isNotEmpty)
+            ? NetworkImage(photoUrl)
+            : null,
+        child: (photoUrl == null || photoUrl.isEmpty)
+            ? Icon(
+                Icons.person_outline_rounded,
+                size: 18,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              )
+            : null,
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+    );
+  }
+}
+
+/// Large rounded gradient card: "Welcome back, {firstName}", the active
+/// academic period, and the 4 KPI tiles. Uses the theme's own primary and
+/// secondary colors, which are already school-branded via
+/// BrandingThemeEngine, so this looks correct per-tenant without any new
+/// branding plumbing.
+class _HeroSummaryCard extends StatelessWidget {
+  const _HeroSummaryCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final authState = context.watch<AuthBloc>().state;
+    final fullName = authState is AuthAuthenticated ? authState.user.name : '';
+    final firstName = fullName.trim().isEmpty
+        ? 'Admin'
+        : fullName.trim().split(RegExp(r'\s+')).first;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      decoration: BoxDecoration(
+        borderRadius: AppRadius.extraLarge,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [scheme.primary, scheme.secondary],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: scheme.primary.withValues(alpha: 0.25),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              color: Colors.green,
-              shape: BoxShape.circle,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome back,',
+                      style: TextStyle(
+                        color: scheme.onPrimary.withValues(alpha: 0.85),
+                        fontSize: 14,
+                      ),
+                    ),
+                    Text(
+                      firstName,
+                      style: TextStyle(
+                        color: scheme.onPrimary,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.s),
+                    Text(
+                      "Here's what's happening today.",
+                      style: TextStyle(
+                        color: scheme.onPrimary.withValues(alpha: 0.85),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
+                builder: (context, state) {
+                  final label = state is AdminDashboardLoaded
+                      ? state.stats.currentPeriodLabel
+                      : null;
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.l,
+                      vertical: AppSpacing.m,
+                    ),
+                    decoration: BoxDecoration(
+                      color: scheme.onPrimary.withValues(alpha: 0.16),
+                      borderRadius: AppRadius.full,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.calendar_today_rounded,
+                          size: 14,
+                          color: scheme.onPrimary,
+                        ),
+                        const SizedBox(width: AppSpacing.s),
+                        Text(
+                          label ?? 'This Term',
+                          style: TextStyle(
+                            color: scheme.onPrimary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          const Text(
-            'SYSTEM LIVE',
-            style: TextStyle(
-              color: Colors.green,
-              fontSize: 11,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0.5,
-            ),
-          ),
+          const SizedBox(height: AppSpacing.xl),
+          const _KpiRow(),
         ],
       ),
     );
   }
+}
 
-  Widget _buildHighLevelStats(BuildContext context) {
+class _KpiRow extends StatelessWidget {
+  const _KpiRow();
+
+  @override
+  Widget build(BuildContext context) {
     return BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
       builder: (context, state) {
-        if (state is AdminDashboardLoading) {
-          return const Center(child: SchoolPulseLoader());
+        if (state is AdminDashboardLoading || state is AdminDashboardInitial) {
+          return const _KpiRowSkeleton();
         }
         if (state is AdminDashboardError) {
           return AlertBanner(
-            title: 'Couldn\'t load dashboard stats',
+            title: "Couldn't load dashboard stats",
             message:
                 'Something went wrong on our end. Pull to refresh or check back shortly.',
             color: Theme.of(context).extension<SemanticColors>()!.error,
             icon: Icons.error_outline_rounded,
           );
         }
-        if (state is AdminDashboardLoaded) {
-          final stats = state.stats;
-          final screenWidth = MediaQuery.of(context).size.width;
-          final isMobile = screenWidth < 600;
+        final stats = (state as AdminDashboardLoaded).stats;
+        final feesLabel = stats.termFeesCollected == null
+            ? null
+            : _formatUgx(stats.termFeesCollected!);
 
-          if (isMobile) {
-            // Row/Expanded instead of a fixed-aspect-ratio grid: each card
-            // sizes to its own content height, so it's structurally
-            // impossible for the number/label text to overflow the cell
-            // no matter the text-scale factor or content length.
+        final tiles = [
+          _KpiTileData(
+            title: 'Students',
+            valueText: '${stats.totalStudentsCount}',
+            subtitle: 'Active students',
+            icon: Icons.school_rounded,
+          ),
+          _KpiTileData(
+            title: 'Staff',
+            valueText: '${stats.activeStaffCount}',
+            subtitle: 'Active staff',
+            icon: Icons.badge_rounded,
+          ),
+          _KpiTileData(
+            title: 'Attendance',
+            valueText: stats.studentAttendancePercent == null
+                ? '—'
+                : '${stats.studentAttendancePercent!.round()}%',
+            subtitle: 'This week',
+            icon: Icons.fact_check_rounded,
+          ),
+          _KpiTileData(
+            title: 'Fees Collected',
+            valueText: feesLabel ?? '—',
+            subtitle: 'This year',
+            icon: Icons.account_balance_wallet_rounded,
+          ),
+        ];
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isNarrow = constraints.maxWidth < 420;
+            if (!isNarrow) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (var i = 0; i < tiles.length; i++) ...[
+                    if (i > 0) const SizedBox(width: AppSpacing.m),
+                    Expanded(child: _KpiTile(data: tiles[i])),
+                  ],
+                ],
+              );
+            }
             return Column(
               children: [
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: DashboardStatCard(
-                        title: 'Health',
-                        value: stats.systemHealth,
-                        suffix: '%',
-                        icon: Icons.cloud_done_rounded,
-                        color: Colors.teal,
-                        trend: 'STABLE',
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: DashboardStatCard(
-                        title: 'Visitors',
-                        value: stats.visitorsTodayCount.toDouble(),
-                        icon: Icons.people_rounded,
-                        color: Colors.blue,
-                        trend: '${stats.activeVisitorsCount} LIVE',
-                      ),
-                    ),
+                    Expanded(child: _KpiTile(data: tiles[0])),
+                    const SizedBox(width: AppSpacing.m),
+                    Expanded(child: _KpiTile(data: tiles[1])),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.m),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: DashboardStatCard(
-                        title: 'Staff',
-                        value: stats.activeStaffCount.toDouble(),
-                        icon: Icons.badge_rounded,
-                        color: Colors.indigo,
-                        trend: 'VERIFIED',
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: DashboardStatCard(
-                        title: 'Students',
-                        value: stats.totalStudentsCount.toDouble(),
-                        icon: Icons.school_rounded,
-                        color: Colors.orange,
-                        trend: 'ENROLLED',
-                      ),
-                    ),
+                    Expanded(child: _KpiTile(data: tiles[2])),
+                    const SizedBox(width: AppSpacing.m),
+                    Expanded(child: _KpiTile(data: tiles[3])),
                   ],
                 ),
               ],
             );
-          }
-
-          return Row(
-            children: [
-              Expanded(
-                child: DashboardStatCard(
-                  title: 'System Health',
-                  value: stats.systemHealth,
-                  suffix: '%',
-                  icon: Icons.cloud_done_rounded,
-                  color: Colors.teal,
-                  trend: 'STABLE',
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: DashboardStatCard(
-                  title: 'Visitors Today',
-                  value: stats.visitorsTodayCount.toDouble(),
-                  icon: Icons.people_rounded,
-                  color: Colors.blue,
-                  trend: '${stats.activeVisitorsCount} LIVE',
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: DashboardStatCard(
-                  title: 'Active Staff',
-                  value: stats.activeStaffCount.toDouble(),
-                  icon: Icons.badge_rounded,
-                  color: Colors.indigo,
-                  trend: 'VERIFIED',
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: DashboardStatCard(
-                  title: 'Total Students',
-                  value: stats.totalStudentsCount.toDouble(),
-                  icon: Icons.school_rounded,
-                  color: Colors.orange,
-                  trend: 'ENROLLED',
-                ),
-              ),
-            ],
-          );
-        }
-        return const SizedBox.shrink();
-      },
-    );
-  }
-
-  Widget _buildMainGrid(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isWide = constraints.maxWidth > 900;
-        if (!isWide) {
-          return Column(
-            children: [
-              _buildShortcutSection(context),
-              const SizedBox(height: 24),
-              _buildSystemAlerts(context),
-              const SizedBox(height: 24),
-              _buildServiceStatus(context),
-            ],
-          );
-        }
-
-        final isExtraWide = constraints.maxWidth > 1100;
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 5,
-              child: Column(
-                children: [
-                  _buildShortcutSection(context),
-                  const SizedBox(height: 24),
-                  if (isExtraWide)
-                    _buildServiceStatus(context)
-                  else ...[
-                    _buildServiceStatus(context),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(width: 24),
-            Expanded(
-              flex: 2,
-              child: Column(children: [_buildSystemAlerts(context)]),
-            ),
-          ],
+          },
         );
       },
     );
   }
 
-  Widget _buildShortcutSection(BuildContext context) {
-    return GridView.count(
-      padding: EdgeInsets.zero,
-      crossAxisCount: MediaQuery.of(context).size.width > 1200
-          ? 6
-          : (MediaQuery.of(context).size.width > 600 ? 4 : 3),
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 8,
-      crossAxisSpacing: 8,
-      childAspectRatio: MediaQuery.of(context).size.width > 600 ? 1.5 : 1.1,
-      children: [
-        _AdminShortcut(
-          icon: Icons.people_rounded,
-          label: 'Users',
-          color: Colors.blueAccent,
-          onTap: () => context.go('/staff/admin/users'),
-        ),
-        _AdminShortcut(
-          icon: Icons.meeting_room_rounded,
-          label: 'Visitors',
-          color: Colors.purple,
-          onTap: () => context.go('/staff/security/visitors'),
-        ),
-        _AdminShortcut(
-          icon: Icons.fact_check_rounded,
-          label: 'Take Attendance',
-          color: Colors.teal,
-          onTap: () => context.go('/staff/attendance'),
-        ),
-        _AdminShortcut(
-          icon: Icons.event_available_rounded,
-          label: 'Appointments',
-          color: Colors.lightBlue,
-          onTap: () => context.go('/staff/admin/appointments'),
-        ),
-        _AdminShortcut(
-          icon: Icons.badge_rounded,
-          label: 'Batch ID Cards',
-          color: Colors.teal,
-          onTap: () => context.go('/staff/admin/batch-id-cards'),
-        ),
-        _AdminShortcut(
-          icon: Icons.campaign_rounded,
-          label: 'Broadcast',
-          color: Colors.red,
-          onTap: () => context.go('/staff/admin/broadcast-sms'),
-        ),
-        _AdminShortcut(
-          icon: Icons.warehouse_rounded,
-          label: 'Procurement',
-          color: Colors.deepPurple,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const StoresAssetsDashboard(),
+  static String _formatUgx(double amount) {
+    if (amount >= 1000000) {
+      return 'UGX ${(amount / 1000000).toStringAsFixed(1)}M';
+    }
+    if (amount >= 1000) {
+      return 'UGX ${(amount / 1000).toStringAsFixed(0)}K';
+    }
+    return 'UGX ${amount.toStringAsFixed(0)}';
+  }
+}
+
+class _KpiTileData {
+  final String title;
+  final String valueText;
+  final String subtitle;
+  final IconData icon;
+
+  const _KpiTileData({
+    required this.title,
+    required this.valueText,
+    required this.subtitle,
+    required this.icon,
+  });
+}
+
+class _KpiTile extends StatelessWidget {
+  final _KpiTileData data;
+
+  const _KpiTile({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.l,
+        vertical: AppSpacing.l,
+      ),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: AppRadius.large,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            data.valueText,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 26,
+              letterSpacing: -0.8,
+              height: 1.1,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
+          const SizedBox(height: 4),
+          Text(
+            data.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+          Text(
+            data.subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 11,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _KpiRowSkeleton extends StatelessWidget {
+  const _KpiRowSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        for (var i = 0; i < 4; i++) ...[
+          if (i > 0) const SizedBox(width: AppSpacing.m),
+          const Expanded(child: Skeleton(height: 72, borderRadius: 16)),
+        ],
+      ],
+    );
+  }
+}
+
+/// Quick Access destination: fixed metadata (icon/color/route) keyed by id,
+/// so the persisted preference only ever stores ids, never widgets/routes.
+class _QuickAccessItem {
+  final String id;
+  final String label;
+  final IconData icon;
+  final Color color;
+  final String route;
+
+  const _QuickAccessItem({
+    required this.id,
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.route,
+  });
+}
+
+final Map<String, _QuickAccessItem> _quickAccessCatalog = {
+  'students': const _QuickAccessItem(
+    id: 'students',
+    label: 'Students',
+    icon: Icons.school_rounded,
+    color: Colors.blueAccent,
+    route: '/staff/students',
+  ),
+  'staff': const _QuickAccessItem(
+    id: 'staff',
+    label: 'Staff',
+    icon: Icons.badge_rounded,
+    color: Colors.indigo,
+    route: '/staff/admin/users',
+  ),
+  'attendance': const _QuickAccessItem(
+    id: 'attendance',
+    label: 'Attendance',
+    icon: Icons.fact_check_rounded,
+    color: Colors.teal,
+    route: '/staff/attendance',
+  ),
+  'classes': const _QuickAccessItem(
+    id: 'classes',
+    label: 'Classes',
+    icon: Icons.class_rounded,
+    color: Colors.deepPurple,
+    route: '/staff/classes',
+  ),
+  'exams': const _QuickAccessItem(
+    id: 'exams',
+    label: 'Exams & Marks',
+    icon: Icons.assignment_rounded,
+    color: Colors.cyan,
+    route: '/staff/exams',
+  ),
+  'finance': const _QuickAccessItem(
+    id: 'finance',
+    label: 'Finance',
+    icon: Icons.account_balance_wallet_rounded,
+    color: Colors.green,
+    route: '/staff/bursar',
+  ),
+  'transport': const _QuickAccessItem(
+    id: 'transport',
+    label: 'Transport',
+    icon: Icons.directions_bus_rounded,
+    color: Colors.amber,
+    route: '/staff/transport',
+  ),
+  'library': const _QuickAccessItem(
+    id: 'library',
+    label: 'Library',
+    icon: Icons.local_library_rounded,
+    color: Colors.orange,
+    route: '/staff/librarian',
+  ),
+  'announcements': const _QuickAccessItem(
+    id: 'announcements',
+    label: 'Announcements',
+    icon: Icons.campaign_rounded,
+    color: Colors.redAccent,
+    route: '/staff/more/announcements',
+  ),
+  'communication': const _QuickAccessItem(
+    id: 'communication',
+    label: 'Communication',
+    icon: Icons.chat_bubble_rounded,
+    color: Colors.blue,
+    route: '/staff/messages',
+  ),
+  'reports': const _QuickAccessItem(
+    id: 'reports',
+    label: 'Reports',
+    icon: Icons.bar_chart_rounded,
+    color: Colors.teal,
+    route: '/staff/reports',
+  ),
+  'calendar': const _QuickAccessItem(
+    id: 'calendar',
+    label: 'Calendar',
+    icon: Icons.calendar_month_rounded,
+    color: Colors.indigoAccent,
+    route: '/staff/calendar',
+  ),
+};
+
+class _QuickAccessSection extends StatefulWidget {
+  @override
+  State<_QuickAccessSection> createState() => _QuickAccessSectionState();
+}
+
+class _QuickAccessSectionState extends State<_QuickAccessSection> {
+  List<String>? _ids;
+
+  @override
+  void initState() {
+    super.initState();
+    QuickAccessPrefs.load().then((ids) {
+      if (mounted) setState(() => _ids = ids);
+    });
+  }
+
+  Future<void> _openEditSheet() async {
+    final current = _ids ?? List.of(QuickAccessPrefs.allIds);
+    final result = await showModalBottomSheet<List<String>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _QuickAccessEditSheet(initialIds: current),
+    );
+    if (result != null) {
+      await QuickAccessPrefs.save(result);
+      if (mounted) setState(() => _ids = result);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ids = _ids ?? QuickAccessPrefs.allIds;
+    final items = ids
+        .map((id) => _quickAccessCatalog[id])
+        .whereType<_QuickAccessItem>()
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader(
+          title: 'Quick Access',
+          actionLabel: 'Edit',
+          onActionPressed: _openEditSheet,
         ),
-        _AdminShortcut(
-          icon: Icons.local_library_rounded,
-          label: 'Library',
-          color: Colors.orange,
-          onTap: () => context.go(
-            '/staff/library',
-          ), // Assuming Librarian/Admin dashboard path
+        GridView.builder(
+          padding: EdgeInsets.zero,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            mainAxisSpacing: AppSpacing.m,
+            crossAxisSpacing: AppSpacing.m,
+            childAspectRatio: 1.7,
+          ),
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final item = items[index];
+            return _QuickAccessTile(item: item);
+          },
         ),
       ],
     );
   }
+}
 
-  Widget _buildServiceStatus(BuildContext context) {
-    return BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
-      builder: (context, state) {
-        final services = state is AdminDashboardLoaded
-            ? state.stats.serviceStatuses
-            : const <ServiceStatusItem>[];
-        final allOperational = services.every((s) => s.status == 'Operational');
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SectionHeader(
-              title: 'Live Services',
-              trailing: StatusBadge(
-                label: services.isEmpty
-                    ? 'Checking...'
-                    : (allOperational ? 'Global: Stable' : 'Global: Degraded'),
-                color: services.isEmpty
-                    ? Colors.grey
-                    : (allOperational ? Colors.green : Colors.orange),
-                icon: allOperational
-                    ? Icons.check_circle
-                    : Icons.warning_amber_rounded,
+class _QuickAccessTile extends StatelessWidget {
+  final _QuickAccessItem item;
+
+  const _QuickAccessTile({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s,
+        vertical: AppSpacing.m,
+      ),
+      showShadow: false,
+      onTap: () => context.go(item.route),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: item.color.withValues(alpha: 0.12),
+              borderRadius: AppRadius.medium,
+            ),
+            child: Icon(item.icon, color: item.color, size: 16),
+          ),
+          const SizedBox(width: AppSpacing.s),
+          Expanded(
+            child: Text(
+              item.label,
+              textAlign: TextAlign.left,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
-            if (services.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: Skeleton(height: 48),
-              )
-            else
-              ...services.map(
-                (s) => _StatusRow(
-                  label: s.label,
-                  status: s.status,
-                  color: _statusColor(s.status),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Reorder + show/hide sheet for the Edit action. Core shortcuts
+/// (students/staff/attendance) can be reordered but not hidden.
+class _QuickAccessEditSheet extends StatefulWidget {
+  final List<String> initialIds;
+
+  const _QuickAccessEditSheet({required this.initialIds});
+
+  @override
+  State<_QuickAccessEditSheet> createState() => _QuickAccessEditSheetState();
+}
+
+class _QuickAccessEditSheetState extends State<_QuickAccessEditSheet> {
+  late List<String> _visible;
+  late List<String> _hidden;
+
+  @override
+  void initState() {
+    super.initState();
+    _visible = List.of(widget.initialIds);
+    _hidden = QuickAccessPrefs.allIds
+        .where((id) => !_visible.contains(id))
+        .toList();
+  }
+
+  void _toggle(String id, bool show) {
+    setState(() {
+      if (show) {
+        _hidden.remove(id);
+        _visible.add(id);
+      } else {
+        _visible.remove(id);
+        _hidden.add(id);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.4,
+      maxChildSize: 0.92,
+      expand: false,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppRadius.xl),
+            ),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: AppSpacing.m),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                  borderRadius: AppRadius.full,
                 ),
               ),
-          ],
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Customize Quick Access',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(_visible),
+                      child: const Text('Done'),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ReorderableListView.builder(
+                  scrollController: scrollController,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                  ),
+                  itemCount: _visible.length + 1 + _hidden.length,
+                  onReorder: (oldIndex, newIndex) {
+                    if (oldIndex >= _visible.length ||
+                        newIndex > _visible.length) {
+                      return;
+                    }
+                    setState(() {
+                      if (newIndex > oldIndex) newIndex -= 1;
+                      final id = _visible.removeAt(oldIndex);
+                      _visible.insert(newIndex, id);
+                    });
+                  },
+                  itemBuilder: (context, index) {
+                    if (index < _visible.length) {
+                      final id = _visible[index];
+                      final item = _quickAccessCatalog[id];
+                      if (item == null)
+                        return const SizedBox.shrink(key: ValueKey('_'));
+                      final isCore = QuickAccessPrefs.coreIds.contains(id);
+                      return ListTile(
+                        key: ValueKey('visible_$id'),
+                        leading: Icon(item.icon, color: item.color),
+                        title: Text(item.label),
+                        trailing: isCore
+                            ? const Icon(Icons.lock_outline_rounded, size: 18)
+                            : IconButton(
+                                icon: const Icon(Icons.visibility_off_outlined),
+                                onPressed: () => _toggle(id, false),
+                              ),
+                      );
+                    }
+                    if (index == _visible.length) {
+                      return Padding(
+                        key: const ValueKey('divider'),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppSpacing.m,
+                        ),
+                        child: Text(
+                          _hidden.isEmpty ? '' : 'Hidden',
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                      );
+                    }
+                    final id = _hidden[index - _visible.length - 1];
+                    final item = _quickAccessCatalog[id];
+                    if (item == null)
+                      return const SizedBox.shrink(key: ValueKey('_'));
+                    return ListTile(
+                      key: ValueKey('hidden_$id'),
+                      leading: Icon(
+                        item.icon,
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
+                      title: Text(
+                        item.label,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.add_circle_outline_rounded),
+                        onPressed: () => _toggle(id, true),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
   }
+}
 
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'Operational':
-        return Colors.green;
-      case 'Degraded':
-        return Colors.orange;
-      default:
-        return Colors.red;
-    }
-  }
+/// Real pending-approvals queue. Today the only backed queue is Finance
+/// expenditure requests; other categories from the reference design
+/// (leave, visitor, purchase) aren't wired to a real repository yet, so
+/// they're intentionally omitted rather than shown with fake counts.
+class _PendingApprovalsCard extends StatelessWidget {
+  const _PendingApprovalsCard();
 
-  Widget _buildSystemAlerts(BuildContext context) {
-    final semantic = Theme.of(context).extension<SemanticColors>()!;
+  @override
+  Widget build(BuildContext context) {
     return BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
       builder: (context, state) {
-        final items = <String>[];
-        if (state is AdminDashboardLoaded) {
-          final stats = state.stats;
-          if (stats.staffPendingSetupCount > 0) {
-            items.add(
-              '${stats.staffPendingSetupCount} staff account${stats.staffPendingSetupCount == 1 ? '' : 's'} pending first-login setup',
-            );
-          }
-          if (stats.overdueVisitorsCount > 0) {
-            items.add(
-              '${stats.overdueVisitorsCount} visitor${stats.overdueVisitorsCount == 1 ? '' : 's'} on premises over 2 hours - check them out',
-            );
-          }
-        }
+        final loading =
+            state is AdminDashboardLoading || state is AdminDashboardInitial;
+        final count = state is AdminDashboardLoaded
+            ? state.stats.pendingExpenditureRequestsCount
+            : 0;
 
-        return Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: (items.isEmpty ? semantic.success : semantic.warning)
-                .withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(16),
-          ),
+        return AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Icon(
-                    items.isEmpty
-                        ? Icons.check_circle_outline_rounded
-                        : Icons.warning_amber_rounded,
-                    color: items.isEmpty ? semantic.success : semantic.warning,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Pending Actions',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: items.isEmpty
-                          ? semantic.success
-                          : semantic.warning,
-                    ),
-                  ),
-                ],
+              SectionHeader(
+                title: 'Pending Approvals',
+                actionLabel: count > 0 ? 'View all' : null,
+                onActionPressed: () => context.push('/staff/bursar'),
               ),
-              const SizedBox(height: 12),
-              if (items.isEmpty)
-                const Text(
-                  'All clear - nothing needs your attention.',
-                  style: TextStyle(fontSize: 13),
+              if (loading)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: AppSpacing.s),
+                  child: Skeleton(height: 56),
+                )
+              else if (count == 0)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.check_circle_outline_rounded,
+                        color: Theme.of(
+                          context,
+                        ).extension<SemanticColors>()!.success,
+                        size: 18,
+                      ),
+                      const SizedBox(width: AppSpacing.m),
+                      Expanded(
+                        child: Text(
+                          'All clear — nothing needs your attention.',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                    ],
+                  ),
                 )
               else
-                ...items.map(
-                  (text) => Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(
-                      '• $text',
-                      style: const TextStyle(fontSize: 13),
-                    ),
+                Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.s),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _ApprovalStat(
+                          icon: Icons.receipt_long_rounded,
+                          color: Colors.orange,
+                          label: 'Expense\nRequests',
+                          count: count,
+                          onTap: () => context.push('/staff/bursar'),
+                        ),
+                      ),
+                      const Spacer(flex: 3),
+                    ],
                   ),
                 ),
             ],
@@ -588,43 +965,56 @@ class AdminDashboardScreen extends StatelessWidget {
   }
 }
 
-class _AdminShortcut extends StatelessWidget {
+class _ApprovalStat extends StatelessWidget {
   final IconData icon;
-  final String label;
   final Color color;
+  final String label;
+  final int count;
   final VoidCallback onTap;
 
-  const _AdminShortcut({
+  const _ApprovalStat({
     required this.icon,
-    required this.label,
     required this.color,
+    required this.label,
+    required this.count,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
+    return InkWell(
+      borderRadius: AppRadius.medium,
       onTap: onTap,
-      padding: EdgeInsets.zero,
-      showShadow: false,
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+              color: color.withValues(alpha: 0.12),
+              borderRadius: AppRadius.medium,
             ),
-            child: Icon(icon, color: color, size: 20),
+            child: Icon(icon, color: color, size: 18),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: AppSpacing.s),
           Text(
             label,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.onSurface,
+              height: 1.2,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '$count',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
           ),
         ],
       ),
@@ -632,72 +1022,147 @@ class _AdminShortcut extends StatelessWidget {
   }
 }
 
-class _StatusRow extends StatelessWidget {
-  final String label;
-  final String status;
-  final Color color;
-
-  const _StatusRow({
-    required this.label,
-    required this.status,
-    required this.color,
-  });
+/// Renders the audit-log stream that was already wired into the bloc but
+/// never shown in the old UI.
+class _RecentActivityCard extends StatelessWidget {
+  const _RecentActivityCard();
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 14)),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              status,
-              style: TextStyle(
-                color: color,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
+    return BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
+      builder: (context, state) {
+        final logs = state is AdminDashboardLoaded
+            ? state.recentLogs
+            : const <AuditLog>[];
+        final loading =
+            state is AdminDashboardLoading || state is AdminDashboardInitial;
+
+        return AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SectionHeader(
+                title: 'Recent Activity',
+                actionLabel: logs.isNotEmpty ? 'View all' : null,
+                onActionPressed: () => context.push('/staff/admin/audit-log'),
               ),
-            ),
+              if (loading)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: AppSpacing.s),
+                  child: Skeleton(height: 56),
+                )
+              else if (logs.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
+                  child: Text(
+                    'No recent activity yet.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                )
+              else
+                ...logs.take(5).map((log) => _ActivityRow(log: log)),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
 
-class _LogoutButton extends StatelessWidget {
-  const _LogoutButton();
+class _ActivityRow extends StatelessWidget {
+  final AuditLog log;
 
-  void _handleLogout(BuildContext context) async {
-    final confirmed = await confirmActionDialog(
-      context,
-      title: 'Logout',
-      message: 'Are you sure you want to log out?',
-      confirmLabel: 'Logout',
-      isDestructive: true,
-    );
-    if (confirmed == true && context.mounted) {
-      context.read<AuthBloc>().add(LogoutPressed());
-      context.go('/welcome');
+  const _ActivityRow({required this.log});
+
+  Color _color(BuildContext context) {
+    try {
+      final hex = log.colorHex.replaceFirst('#', '');
+      final value = int.parse(hex.length == 6 ? 'FF$hex' : hex, radix: 16);
+      return Color(value);
+    } catch (_) {
+      return Theme.of(context).colorScheme.primary;
     }
   }
 
+  IconData get _icon {
+    switch (log.iconName) {
+      case 'person_add':
+        return Icons.person_add_alt_1_rounded;
+      case 'payment':
+        return Icons.payments_rounded;
+      case 'announcement':
+        return Icons.campaign_rounded;
+      case 'attendance':
+        return Icons.fact_check_rounded;
+      case 'structure':
+        return Icons.account_tree_rounded;
+      case 'appointment':
+        return Icons.event_available_rounded;
+      default:
+        return Icons.info_outline_rounded;
+    }
+  }
+
+  String _timeAgo(DateTime time) {
+    final diff = DateTime.now().difference(time);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return '${time.day}/${time.month}/${time.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      icon: Icon(
-        Icons.logout_rounded,
-        color: Theme.of(context).colorScheme.error,
+    final color = _color(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: AppRadius.medium,
+            ),
+            child: Icon(_icon, color: color, size: 16),
+          ),
+          const SizedBox(width: AppSpacing.l),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  log.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+                if (log.description.isNotEmpty)
+                  Text(
+                    log.description,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.s),
+          Text(
+            _timeAgo(log.timestamp),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
       ),
-      tooltip: 'Logout',
-      onPressed: () => _handleLogout(context),
     );
   }
 }

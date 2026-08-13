@@ -104,6 +104,12 @@ void main() {
       () => repository.watchTimetableConfig(any()),
     ).thenAnswer((_) => const Stream.empty());
     when(
+      () => repository.watchAttendanceDefaultsConfig(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
+      () => repository.watchCommunicationDefaultsConfig(any()),
+    ).thenAnswer((_) => const Stream.empty());
+    when(
       () => repository.watchAttendanceTypes(any()),
     ).thenAnswer((_) => const Stream.empty());
     when(

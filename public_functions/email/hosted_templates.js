@@ -147,6 +147,19 @@ const HOSTED_TEMPLATES = {
     }),
   },
 
+  // Variable contract confirmed directly against the published Resend
+  // template (alias `email-verification`, Templates dashboard) on
+  // 2026-08-13 - user_name/verification_url are required, school_name is
+  // included only when the caller actually has one to offer.
+  email_verification: {
+    alias: 'email-verification',
+    variables: (data) => ({
+      user_name: text(data.userName, 160) || 'there',
+      verification_url: text(data.verificationUrl, 2000),
+      ...(text(data.schoolName, 160) ? { school_name: text(data.schoolName, 160) } : {}),
+    }),
+  },
+
   school_admin_account_created: {
     alias: 'school-admin-welcome',
     // No adminName field exists anywhere in the school_admin_invitations

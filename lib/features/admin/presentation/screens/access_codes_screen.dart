@@ -9,6 +9,7 @@ import 'package:school_pulse/features/student/domain/entities/parent_access_code
 import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/student/domain/usecases/get_all_students.dart';
 import 'package:school_pulse/features/student/domain/usecases/manage_parent_access_codes.dart';
+import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
 /// Admin screen for issuing and managing parent access codes for already
@@ -146,20 +147,14 @@ class _AccessCodesScreenState extends State<AccessCodesScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        title: const Text(
-          'Access Codes',
-          style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: -0.5),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+      appBar: AdminAppBar(
+        title: 'Access Codes',
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
             tooltip: 'Issue new access code',
             onPressed: _openCreateDialog,
           ),
-          const SizedBox(width: 8),
         ],
       ),
       body: _isLoading

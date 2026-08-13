@@ -7,6 +7,7 @@ import '../../data/repositories/audit_repository.dart';
 import 'package:school_pulse/features/admin/domain/usecases/get_admin_dashboard_stats.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 import '../screens/access_codes_screen.dart';
 
@@ -22,21 +23,14 @@ class _UserManagementPageState extends State<UserManagementPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        title: const Text(
-          'Account Management',
-          style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: -0.5),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: false,
+      appBar: AdminAppBar(
+        title: 'Account Management',
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             onPressed: () {},
           ),
           IconButton(icon: const Icon(Icons.help_outline), onPressed: () {}),
-          const SizedBox(width: 8),
         ],
       ),
       body: const UsersOverviewView(),

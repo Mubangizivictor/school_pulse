@@ -35,6 +35,7 @@ const SENDER_BY_TEMPLATE = {
   staff_account_created: 'School Pulse <accounts@schoolpulse.victorbee.com>',
   password_reset: 'School Pulse <accounts@schoolpulse.victorbee.com>',
 
+  email_verification: 'School Pulse <security@schoolpulse.victorbee.com>',
   new_login_alert: 'School Pulse <security@schoolpulse.victorbee.com>',
   suspicious_login_alert: 'School Pulse <security@schoolpulse.victorbee.com>',
   sessions_revoked: 'School Pulse <security@schoolpulse.victorbee.com>',

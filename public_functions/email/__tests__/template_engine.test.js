@@ -11,7 +11,7 @@ const REQUIRED_TEMPLATE_IDS = [
   'mobile_money_payment_success', 'mobile_money_payment_failed', 'payment_reversed', 'payment_receipt',
   'subscription_activated', 'subscription_renewed', 'subscription_expiring', 'subscription_expired',
   'subscription_suspended', 'subscription_reactivated', 'payment_overdue',
-  'school_admin_account_created', 'staff_account_created', 'password_reset', 'password_changed',
+  'school_admin_account_created', 'staff_account_created', 'password_reset', 'password_changed', 'email_verification',
   'new_login_alert', 'suspicious_login_alert', 'sessions_revoked', 'account_locked', 'account_reactivated',
   'appointment_requested', 'appointment_confirmed', 'appointment_rescheduled', 'appointment_cancelled', 'appointment_reminder',
   'report_available', 'report_published',
@@ -64,6 +64,7 @@ for (const id of TEMPLATE_IDS) {
       deviceLabel: 'iPhone 17 Pro Max', locationLabel2: 'Kampala, Uganda', whenLabel: '11 August 2026',
       roleLabel: 'Class Teacher', dueDateLabel: '20 August 2026', periodLabel: 'Term 1 2026',
       publishedByLabel: 'System', ticketReference: 'SP-TCK-000001', statusLabel: 'In progress',
+      userName: 'Jane Namono', verificationUrl: 'https://schoolpulse.victorbee.com/verify-email?oobCode=sample',
     };
     const rendered = renderer(sampleData);
     assert.ok(rendered.subject && rendered.subject.length > 0, 'subject missing');

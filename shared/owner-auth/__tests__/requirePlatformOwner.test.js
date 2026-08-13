@@ -8,7 +8,12 @@
 // Run with: node __tests__/requirePlatformOwner.test.js
 const assert = require('node:assert/strict');
 const path = require('node:path');
-const { requirePlatformOwner, isOwnerProfile, OwnerAuthorizationError } = require('../index.js');
+const {
+  requirePlatformOwner,
+  rejectIfPlatformOwner,
+  isOwnerProfile,
+  OwnerAuthorizationError,
+} = require('../index.js');
 
 let passed = 0;
 let failed = 0;
@@ -131,6 +136,62 @@ async function run() {
     });
     const result = await requirePlatformOwner({ auth: { uid: OWNER_UID } }, { db });
     assert.equal(result.uid, OWNER_UID);
+  });
+
+  console.log('\nrejectIfPlatformOwner() - the inverse gate used by every NON-owner auth surface (Staff Gateway, session restore)');
+
+  await asyncTest('no-ops for an unauthenticated request', async () => {
+    const db = fakeDb({});
+    await assert.doesNotReject(() => rejectIfPlatformOwner({ auth: null }, { db }));
+  });
+
+  await asyncTest('no-ops for an ordinary staff UID that is not the seeded owner', async () => {
+    const db = fakeDb({
+      'platform_config/owner_seed': { seeded: true, ownerUid: OWNER_UID },
+      [`users/${OTHER_UID}`]: { role: 'schoolAdmin', isActive: true },
+    });
+    await assert.doesNotReject(() => rejectIfPlatformOwner({ auth: { uid: OTHER_UID } }, { db }));
+  });
+
+  await asyncTest('no-ops when platform_config/owner_seed does not exist at all', async () => {
+    const db = fakeDb({});
+    await assert.doesNotReject(() => rejectIfPlatformOwner({ auth: { uid: OTHER_UID } }, { db }));
+  });
+
+  await asyncTest('no-ops when seed.seeded is false, even if ownerUid happens to match', async () => {
+    const db = fakeDb({
+      'platform_config/owner_seed': { seeded: false, ownerUid: OWNER_UID },
+    });
+    await assert.doesNotReject(() => rejectIfPlatformOwner({ auth: { uid: OWNER_UID } }, { db }));
+  });
+
+  await asyncTest('CRITICAL: rejects the canonical seeded owner UID, with correct credentials, on a non-owner auth surface', async () => {
+    const db = fakeDb({
+      'platform_config/owner_seed': { seeded: true, ownerUid: OWNER_UID },
+      [`users/${OWNER_UID}`]: { role: 'superAdmin', isActive: true },
+    });
+    await assert.rejects(
+      () => rejectIfPlatformOwner({ auth: { uid: OWNER_UID } }, { db }),
+      (err) => err instanceof OwnerAuthorizationError && err.code === 'permission-denied'
+    );
+  });
+
+  await asyncTest('rejects the seeded owner UID even if their profile happens to be missing/deactivated - identity is by UID, not profile state', async () => {
+    const db = fakeDb({
+      'platform_config/owner_seed': { seeded: true, ownerUid: OWNER_UID },
+    });
+    await assert.rejects(
+      () => rejectIfPlatformOwner({ auth: { uid: OWNER_UID } }, { db }),
+      (err) => err instanceof OwnerAuthorizationError && err.code === 'permission-denied'
+    );
+  });
+
+  await asyncTest('does NOT reject by email match - a non-owner UID that happens to share the owner email string still passes', async () => {
+    const db = fakeDb({
+      'platform_config/owner_seed': { seeded: true, ownerUid: OWNER_UID },
+      [`users/${OTHER_UID}`]: { role: 'schoolAdmin', isActive: true, email: 'owner@school-pulse.app' },
+    });
+    await assert.doesNotReject(() => rejectIfPlatformOwner({ auth: { uid: OTHER_UID } }, { db }));
   });
 
   console.log('\nisOwnerProfile() - role recognition, never by email');

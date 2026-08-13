@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import '../bloc/structure_bloc.dart';
@@ -93,7 +94,7 @@ class _AcademicStructureScreenState extends State<AcademicStructureScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Academic Structure')),
+      appBar: const AdminAppBar(title: 'Academic Structure'),
       body: Column(
         children: [
           StructureSectionPicker(

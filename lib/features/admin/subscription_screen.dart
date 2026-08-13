@@ -9,6 +9,7 @@ import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/features/admin/data/models/payment_transaction.dart';
 import 'package:school_pulse/features/admin/data/models/subscription.dart';
 import 'package:school_pulse/features/admin/data/repositories/subscription_repository.dart';
+import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/features/subscription_payment/presentation/screens/mtn_momo_payment_screen.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
@@ -33,7 +34,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
-      appBar: AppBar(title: const Text('Subscription & Billing')),
+      appBar: const AdminAppBar(title: 'Subscription & Billing'),
       body: StreamBuilder<Subscription>(
         stream: _repository.watchSubscription(),
         builder: (context, subSnapshot) {

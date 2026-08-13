@@ -8,6 +8,7 @@ import 'package:school_pulse/core/notification/notification_service.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/admin/data/repositories/audit_repository.dart';
+import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
 class BroadcastSmsScreen extends StatefulWidget {
@@ -66,7 +67,7 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
-      appBar: AppBar(title: const Text('Broadcast Center')),
+      appBar: const AdminAppBar(title: 'Broadcast Center'),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(isWide ? 24 : 16),
         child: isWide

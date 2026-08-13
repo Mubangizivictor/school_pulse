@@ -25,13 +25,13 @@ class AdminDashboardBloc
         } else {
           emit(AdminDashboardLoaded(stats: stats));
         }
-        add(WatchAuditLogs());
+        add(WatchAuditLogs(schoolId: stats.schoolId));
       });
     });
 
     on<WatchAuditLogs>((event, emit) async {
       await emit.forEach(
-        auditRepository.watchRecentLogs(),
+        auditRepository.watchRecentLogs(schoolId: event.schoolId),
         onData: (logs) {
           if (state is AdminDashboardLoaded) {
             return (state as AdminDashboardLoaded).copyWith(recentLogs: logs);

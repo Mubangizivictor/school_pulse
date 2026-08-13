@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import '../../domain/entities/feature_toggles.dart';
@@ -15,7 +16,7 @@ class FeatureTogglesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Feature Toggles')),
+      appBar: const AdminAppBar(title: 'Feature Toggles'),
       body: BlocBuilder<StructureBloc, StructureState>(
         builder: (context, state) => _FeatureTogglesBody(state: state),
       ),
