@@ -9,7 +9,10 @@ import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/admin/data/repositories/audit_repository.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/injection_container.dart' as di;
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class BroadcastSmsScreen extends StatefulWidget {
   const BroadcastSmsScreen({super.key});
@@ -633,6 +636,10 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
 
   Widget _buildRecentBroadcasts() {
     final semantic = Theme.of(context).extension<SemanticColors>()!;
+    final schoolId = context.select<AuthBloc, String?>((bloc) {
+      final state = bloc.state;
+      return state is AuthAuthenticated ? state.user.schoolId : null;
+    });
 
     return AppCard(
       padding: EdgeInsets.zero,
@@ -659,6 +666,7 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
           StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             stream: FirebaseFirestore.instance
                 .collection('alerts')
+                .where('schoolId', isEqualTo: schoolId)
                 .where('type', whereIn: ['Push', 'SMS'])
                 .orderBy('timestamp', descending: true)
                 .limit(3)
