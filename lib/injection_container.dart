@@ -862,7 +862,7 @@ Future<void> init() async {
     () => AttendanceRepositoryImpl(
       remoteDataSource: sl(),
       structureRepository: sl(),
-      getStudentsByClass: sl(),
+      studentRepository: sl(),
       getStaffMembers: sl(),
     ),
   );

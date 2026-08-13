@@ -3,7 +3,7 @@ import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/usecases/usecase.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
 import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
-import 'package:school_pulse/features/teacher/domain/usecases/get_students_by_class.dart';
+import 'package:school_pulse/features/student/domain/repositories/student_repository.dart';
 import '../../domain/entities/attendance_access_context.dart';
 import '../../domain/entities/attendance_category.dart';
 import '../../domain/entities/attendance_record.dart';
@@ -16,13 +16,13 @@ import '../models/attendance_record_model.dart';
 class AttendanceRepositoryImpl implements AttendanceRepository {
   final AttendanceRemoteDataSource remoteDataSource;
   final StructureRepository structureRepository;
-  final GetStudentsByClass getStudentsByClass;
+  final StudentRepository studentRepository;
   final GetStaffMembers getStaffMembers;
 
   AttendanceRepositoryImpl({
     required this.remoteDataSource,
     required this.structureRepository,
-    required this.getStudentsByClass,
+    required this.studentRepository,
     required this.getStaffMembers,
   });
 
@@ -102,16 +102,25 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
     try {
       switch (category) {
         case AttendanceCategory.students:
-          final result = await getStudentsByClass(scopeId);
+          // The teacher feature's legacy class-name lookup is not a safe
+          // attendance roster source: the hub uses Structure class IDs and
+          // it must always carry the active tenant into the query. The
+          // canonical student repository performs a server-side
+          // schoolId/classId filter before returning a roster.
+          final result = await studentRepository.searchStudents(
+            schoolId: schoolId,
+            classId: scopeId,
+          );
           return result.fold(
             (failure) => Left(failure),
             (students) => Right(
               students
+                  .where((student) => student.status.name == 'active')
                   .map(
                     (s) => AttendancePerson(
                       id: s.id,
                       name: s.name,
-                      subtitle: s.studentId,
+                      subtitle: s.studentCode,
                     ),
                   )
                   .toList(),
