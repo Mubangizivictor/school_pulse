@@ -40,6 +40,15 @@ class StructureSetupProgressCalculator {
   StructureSetupProgress calculate(StructureState state) {
     final sections = <StructureProgressSection>[
       StructureProgressSection(
+        title: 'Institution Profile',
+        route: '/staff/admin/structure?section=institution',
+        // An institution's name is the minimum identity required before any
+        // downstream academic or operational setup can safely begin. The
+        // remaining profile fields are optional by school type and region.
+        isConfigured: state.institutionProfile.name.trim().isNotEmpty,
+        isCore: true,
+      ),
+      StructureProgressSection(
         title: 'Educational Levels',
         route: '/staff/admin/structure/academic?tab=0',
         isConfigured: state.levels.isNotEmpty,

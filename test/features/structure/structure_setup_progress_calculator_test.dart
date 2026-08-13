@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
+import 'package:school_pulse/features/structure/domain/entities/institution_profile.dart';
 import 'package:school_pulse/features/structure/domain/services/structure_setup_progress_calculator.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/structure_state.dart';
 
@@ -27,6 +28,23 @@ void main() {
     expect(progress.configuredCount, 1);
   });
 
+  test('institution identity is a required setup step', () {
+    final incomplete = calculator.calculate(const StructureState());
+    expect(
+      incomplete.sections.first.title,
+      'Institution Profile',
+      reason: 'Continue setup must establish school identity before structure',
+    );
+    expect(incomplete.sections.first.isConfigured, false);
+
+    final complete = calculator.calculate(
+      const StructureState(
+        institutionProfile: InstitutionProfile(name: 'School Pulse Academy'),
+      ),
+    );
+    expect(complete.sections.first.isConfigured, true);
+  });
+
   test('percentage reflects the ratio of configured to total sections', () {
     final state = StructureState(
       levels: [
@@ -42,7 +60,11 @@ void main() {
     final coreSections = progress.sections.where((s) => s.isCore);
     expect(
       coreSections.map((s) => s.title),
-      containsAll(['Educational Levels', 'Academic Years']),
+      containsAll([
+        'Institution Profile',
+        'Educational Levels',
+        'Academic Years',
+      ]),
     );
   });
 }
