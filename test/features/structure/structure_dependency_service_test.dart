@@ -96,13 +96,39 @@ void main() {
     });
   });
 
-  group('stubbed counts (documented as always-0 until future phases)', () {
-    test('countStaffInDepartment always returns 0', () async {
-      expect(await service.countStaffInDepartment('school-1', 'dept-1'), 0);
+  group('staff structure references', () {
+    test('counts only staff in the tenant and department', () async {
+      await firestore.collection('users').add({
+        'schoolId': 'school-1',
+        'departmentId': 'dept-1',
+      });
+      await firestore.collection('users').add({
+        'schoolId': 'school-1',
+        'departmentId': 'dept-2',
+      });
+      await firestore.collection('users').add({
+        'schoolId': 'school-2',
+        'departmentId': 'dept-1',
+      });
+
+      expect(await service.countStaffInDepartment('school-1', 'dept-1'), 1);
     });
 
-    test('countCampusReferences always returns 0', () async {
-      expect(await service.countCampusReferences('school-1', 'campus-1'), 0);
+    test('counts only staff in the tenant and campus', () async {
+      await firestore.collection('users').add({
+        'schoolId': 'school-1',
+        'campusId': 'campus-1',
+      });
+      await firestore.collection('users').add({
+        'schoolId': 'school-1',
+        'campusId': 'campus-2',
+      });
+      await firestore.collection('users').add({
+        'schoolId': 'school-2',
+        'campusId': 'campus-1',
+      });
+
+      expect(await service.countCampusReferences('school-1', 'campus-1'), 1);
     });
   });
 }

@@ -52,22 +52,31 @@ class StructureDependencyService {
     return total;
   }
 
-  /// Staff profiles (users/{uid}) don't carry a departmentId field today -
-  /// always returns 0 until a future phase adds that field. Documented
-  /// as a stub, not a silent false "safe to delete" signal masquerading
-  /// as a real check.
+  /// Staff profiles carry their Structure department ID. Count the actual
+  /// tenant-scoped references before allowing a department to be deleted.
   Future<int> countStaffInDepartment(
     String schoolId,
     String departmentId,
   ) async {
-    return 0;
+    final snap = await firestore
+        .collection('users')
+        .where('schoolId', isEqualTo: schoolId)
+        .where('departmentId', isEqualTo: departmentId)
+        .count()
+        .get();
+    return snap.count ?? 0;
   }
 
-  /// No module writes a campusId onto its own records yet (Campus is
-  /// intentionally standalone this phase - see campus_entity.dart) -
-  /// always returns 0 until a later phase wires campusId into other
-  /// modules' entities.
+  /// Staff profiles also carry their assigned campus. This guards campus
+  /// deletion against removing a live reference; other campus-aware modules
+  /// can add their own checks here as they become canonical.
   Future<int> countCampusReferences(String schoolId, String campusId) async {
-    return 0;
+    final snap = await firestore
+        .collection('users')
+        .where('schoolId', isEqualTo: schoolId)
+        .where('campusId', isEqualTo: campusId)
+        .count()
+        .get();
+    return snap.count ?? 0;
   }
 }
