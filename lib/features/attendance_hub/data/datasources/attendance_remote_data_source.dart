@@ -53,6 +53,13 @@ class AttendanceRemoteDataSourceImpl implements AttendanceRemoteDataSource {
   Future<AttendanceRecordModel> markAttendance(
     AttendanceRecordModel record,
   ) async {
+    if (record.schoolId.isEmpty) {
+      throw ArgumentError.value(
+        record.schoolId,
+        'schoolId',
+        'must not be empty',
+      );
+    }
     final id = buildAttendanceRecordId(
       category: record.category,
       scopeId: record.scopeId,
@@ -78,12 +85,19 @@ class AttendanceRemoteDataSourceImpl implements AttendanceRemoteDataSource {
   ) async {
     if (records.isEmpty) return [];
     final schoolId = records.first.schoolId;
+    if (schoolId.isEmpty ||
+        records.any((record) => record.schoolId != schoolId)) {
+      throw ArgumentError(
+        'An attendance batch must contain records for exactly one school.',
+      );
+    }
 
     // Firestore has no batched "create if absent" - so each record's
     // existence is checked individually first, same as markAttendance's
     // single-record path, before anything is written. A batch that mixed
     // new and duplicate marks would otherwise silently overwrite the
     // duplicates instead of rejecting them.
+    final recordIds = <String>{};
     final docRefs = records.map((record) {
       final id = buildAttendanceRecordId(
         category: record.category,
@@ -92,6 +106,11 @@ class AttendanceRemoteDataSourceImpl implements AttendanceRemoteDataSource {
         date: record.date,
         personId: record.personId,
       );
+      if (!recordIds.add(id)) {
+        throw DuplicateAttendanceException(
+          'The same person was marked more than once in this batch.',
+        );
+      }
       return _records(schoolId).doc(id);
     }).toList();
 
