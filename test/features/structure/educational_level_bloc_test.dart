@@ -187,6 +187,7 @@ void main() {
       },
       act: (bloc) => bloc.add(const LoadStructureData('school-1')),
       expect: () => [
+        isA<StructureState>().having((s) => s.isLoading, 'isLoading', isTrue),
         isA<StructureState>().having((s) => s.levels, 'levels', [_level()]),
       ],
     );

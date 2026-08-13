@@ -44,6 +44,7 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
 
   StructureBloc({required this.repository}) : super(const StructureState()) {
     on<LoadStructureData>(_onLoad);
+    on<ClearStructureData>(_onClear);
     on<LevelsUpdated>(
       (event, emit) =>
           emit(state.copyWith(isLoading: false, levels: event.levels)),
@@ -458,6 +459,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     LoadStructureData event,
     Emitter<StructureState> emit,
   ) async {
+    // Never retain the previous school's configuration while new tenant
+    // streams are being attached.
+    emit(const StructureState());
     await _levelsSub?.cancel();
     await _yearsSub?.cancel();
     await _termsSub?.cancel();
@@ -697,6 +701,53 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
           (fields) => add(CustomFieldsUpdated(fields)),
           onError: (e) => add(StructureLoadFailed(e.toString())),
         );
+  }
+
+  Future<void> _onClear(
+    ClearStructureData event,
+    Emitter<StructureState> emit,
+  ) async {
+    await Future.wait<void>([
+      if (_levelsSub != null) _levelsSub!.cancel(),
+      if (_yearsSub != null) _yearsSub!.cancel(),
+      if (_termsSub != null) _termsSub!.cancel(),
+      if (_classesSub != null) _classesSub!.cancel(),
+      if (_streamsSub != null) _streamsSub!.cancel(),
+      if (_subjectsSub != null) _subjectsSub!.cancel(),
+      if (_departmentsSub != null) _departmentsSub!.cancel(),
+      if (_designationsSub != null) _designationsSub!.cancel(),
+      if (_staffRolesSub != null) _staffRolesSub!.cancel(),
+      if (_togglesSub != null) _togglesSub!.cancel(),
+      if (_institutionProfileSub != null) _institutionProfileSub!.cancel(),
+      if (_campusesSub != null) _campusesSub!.cancel(),
+      if (_housesSub != null) _housesSub!.cancel(),
+      if (_clubsSub != null) _clubsSub!.cancel(),
+      if (_facilitiesSub != null) _facilitiesSub!.cancel(),
+      if (_hostelsSub != null) _hostelsSub!.cancel(),
+      if (_hostelRoomsSub != null) _hostelRoomsSub!.cancel(),
+      if (_transportRoutesSub != null) _transportRoutesSub!.cancel(),
+      if (_transportStopsSub != null) _transportStopsSub!.cancel(),
+      if (_transportVehiclesSub != null) _transportVehiclesSub!.cancel(),
+      if (_feeCategoriesSub != null) _feeCategoriesSub!.cancel(),
+      if (_assessmentTypesSub != null) _assessmentTypesSub!.cancel(),
+      if (_gradingSystemsSub != null) _gradingSystemsSub!.cancel(),
+      if (_gradeBandsSub != null) _gradeBandsSub!.cancel(),
+      if (_timetableConfigSub != null) _timetableConfigSub!.cancel(),
+      if (_attendanceDefaultsConfigSub != null)
+        _attendanceDefaultsConfigSub!.cancel(),
+      if (_communicationDefaultsConfigSub != null)
+        _communicationDefaultsConfigSub!.cancel(),
+      if (_attendanceTypesSub != null) _attendanceTypesSub!.cancel(),
+      if (_attendanceSessionsSub != null) _attendanceSessionsSub!.cancel(),
+      if (_announcementCategoriesSub != null)
+        _announcementCategoriesSub!.cancel(),
+      if (_notificationCategoriesSub != null)
+        _notificationCategoriesSub!.cancel(),
+      if (_messageTemplatesSub != null) _messageTemplatesSub!.cancel(),
+      if (_documentTemplatesSub != null) _documentTemplatesSub!.cancel(),
+      if (_customFieldsSub != null) _customFieldsSub!.cancel(),
+    ]);
+    emit(const StructureState());
   }
 
   @override

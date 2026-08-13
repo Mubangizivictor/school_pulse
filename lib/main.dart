@@ -264,6 +264,7 @@ class SchoolPulseAppView extends StatelessWidget {
               // previous user's alerts.
               di.sl<NotificationCoordinator>().onSignedOut();
               context.read<InstitutionContextCubit>().clear();
+              context.read<StructureBloc>().add(const ClearStructureData());
             }
           },
         ),

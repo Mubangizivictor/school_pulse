@@ -29,6 +29,13 @@ class LoadStructureData extends StructureEvent {
   List<Object?> get props => [schoolId];
 }
 
+/// Drops tenant-scoped Structure state when authentication ends, preventing a
+/// subsequent account on a shared device from seeing the previous school's
+/// cached configuration while its own streams are starting.
+class ClearStructureData extends StructureEvent {
+  const ClearStructureData();
+}
+
 // Internal events fed by the bloc's own stream subscriptions.
 class LevelsUpdated extends StructureEvent {
   final List<EducationalLevel> levels;
