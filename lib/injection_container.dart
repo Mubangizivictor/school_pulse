@@ -596,9 +596,7 @@ Future<void> init() async {
 
   // Admin/System Config
   sl.registerLazySingleton(() => SystemConfigRepository());
-  sl.registerFactory(
-    () => SystemConfigBloc(repository: sl(), brandingBloc: sl()),
-  );
+  sl.registerFactory(() => SystemConfigBloc(repository: sl()));
 
   // Branding
   sl.registerLazySingleton(() => GetSchoolBranding(sl()));

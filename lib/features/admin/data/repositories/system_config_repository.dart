@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../models/system_config.dart';
@@ -8,11 +9,43 @@ import 'package:school_pulse/features/student/domain/entities/student_portal_con
 import 'package:school_pulse/firebase_options.dart';
 
 class SystemConfigRepository {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  // Explicitly initialize with the bucket from options to avoid mismatch on hot-restart
-  final FirebaseStorage _storage = FirebaseStorage.instanceFor(
-    bucket: DefaultFirebaseOptions.currentPlatform.storageBucket,
-  );
+  SystemConfigRepository({
+    FirebaseFirestore? firestore,
+    FirebaseStorage? storage,
+    FirebaseAuth? auth,
+  }) : _firestore = firestore ?? FirebaseFirestore.instance,
+       _storage =
+           storage ??
+           FirebaseStorage.instanceFor(
+             bucket: DefaultFirebaseOptions.currentPlatform.storageBucket,
+           ),
+       _auth = auth ?? FirebaseAuth.instance;
+
+  final FirebaseFirestore _firestore;
+  final FirebaseStorage _storage;
+  final FirebaseAuth _auth;
+
+  Future<String> _requireSchoolId() async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null || uid.isEmpty) {
+      throw StateError('An authenticated school context is required.');
+    }
+    final user = await _firestore.collection('users').doc(uid).get();
+    final schoolId = user.data()?['schoolId']?.toString().trim();
+    if (schoolId == null || schoolId.isEmpty) {
+      throw StateError('Your account is not assigned to a school.');
+    }
+    return schoolId;
+  }
+
+  Future<DocumentReference<Map<String, dynamic>>> _configDoc() async {
+    final schoolId = await _requireSchoolId();
+    return _firestore
+        .collection('schools')
+        .doc(schoolId)
+        .collection('config')
+        .doc('system');
+  }
 
   SystemConfig _defaultConfig() {
     final now = DateTime.now();
@@ -41,7 +74,7 @@ class SystemConfigRepository {
   /// permanent "failed to load" screen with no way to create one - the
   /// default is only persisted once the admin hits Save.
   Future<SystemConfig> getConfig() async {
-    final doc = await _firestore.collection('config').doc('system').get();
+    final doc = await (await _configDoc()).get();
     if (doc.exists) {
       return SystemConfig.fromMap(doc.data()!);
     }
@@ -49,37 +82,33 @@ class SystemConfigRepository {
   }
 
   Future<void> updateConfig(SystemConfig config) async {
-    final existing = await _firestore.collection('config').doc('system').get();
+    final configDoc = await _configDoc();
+    final existing = await configDoc.get();
     if (existing.exists) {
       final old = SystemConfig.fromMap(existing.data()!);
       if (old.currentTerm != config.currentTerm ||
           old.academicYear != config.academicYear) {
-        await _firestore
-            .collection('config')
-            .doc('system')
-            .collection('history')
-            .add({...old.toMap(), 'archivedAt': FieldValue.serverTimestamp()});
+        await configDoc.collection('history').add({
+          ...old.toMap(),
+          'archivedAt': FieldValue.serverTimestamp(),
+        });
       }
     }
-    await _firestore.collection('config').doc('system').set(config.toMap());
+    await configDoc.set(config.toMap());
   }
 
-  Stream<SystemConfig> watchConfig() {
-    return _firestore
-        .collection('config')
-        .doc('system')
-        .snapshots()
-        .map(
-          (doc) => doc.data() == null
-              ? _defaultConfig()
-              : SystemConfig.fromMap(doc.data()!),
-        );
+  Stream<SystemConfig> watchConfig() async* {
+    final configDoc = await _configDoc();
+    yield* configDoc.snapshots().map(
+      (doc) => doc.data() == null
+          ? _defaultConfig()
+          : SystemConfig.fromMap(doc.data()!),
+    );
   }
 
-  Stream<List<Map<String, dynamic>>> watchPastSessions() {
-    return _firestore
-        .collection('config')
-        .doc('system')
+  Stream<List<Map<String, dynamic>>> watchPastSessions() async* {
+    final configDoc = await _configDoc();
+    yield* configDoc
         .collection('history')
         .orderBy('archivedAt', descending: true)
         .snapshots()
@@ -88,6 +117,7 @@ class SystemConfigRepository {
 
   Future<String> uploadLogo(File file) async {
     try {
+      final schoolId = await _requireSchoolId();
       debugPrint('Starting logo upload. File path: ${file.path}');
       if (!await file.exists()) {
         throw 'Local file not found';
@@ -96,7 +126,12 @@ class SystemConfigRepository {
       final fileName =
           'school_badge_${DateTime.now().millisecondsSinceEpoch}.png';
       // Explicitly using the default bucket from options
-      final ref = _storage.ref().child('school_assets').child(fileName);
+      final ref = _storage
+          .ref()
+          .child('schools')
+          .child(schoolId)
+          .child('school_assets')
+          .child(fileName);
       debugPrint('Uploading to bucket: ${_storage.bucket}');
       debugPrint('Full path: ${ref.fullPath}');
 
