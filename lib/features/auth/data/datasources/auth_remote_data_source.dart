@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
@@ -506,77 +505,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       });
       return result.data['temporaryPassword'] as String;
     } catch (e) {
-      // Fallback for Development
-      bool isDevError = false;
-      if (e is FirebaseFunctionsException) {
-        isDevError = [
-          'not-found',
-          'unimplemented',
-          'internal',
-          'unavailable',
-        ].contains(e.code);
-      } else {
-        final errStr = e.toString().toLowerCase();
-        isDevError =
-            errStr.contains('cors') ||
-            errStr.contains('failed to load') ||
-            errStr.contains('internal');
-      }
-
-      if (isDevError) {
-        String finalUid = 'dev_${DateTime.now().millisecondsSinceEpoch}';
-
-        try {
-          final tempAppName =
-              'temp_app_${DateTime.now().millisecondsSinceEpoch}';
-          final tempApp = await Firebase.initializeApp(
-            name: tempAppName,
-            options: Firebase.app().options,
-          );
-
-          final tempAuth = FirebaseAuth.instanceFor(app: tempApp);
-          final userCredential = await tempAuth.createUserWithEmailAndPassword(
-            email: email,
-            password: password,
-          );
-
-          finalUid = userCredential.user!.uid;
-          await tempApp.delete();
-        } catch (authErr) {
-          debugPrint(
-            "Auth Fallback Warning: Could not create Auth account ($authErr)",
-          );
-        }
-
-        final newUser = UserModel(
-          id: finalUid,
-          name: name,
-          email: email,
-          schoolId: schoolId,
-          roles: roles,
-          isActive: true,
-          mustChangePassword: true,
-          assignedClass: assignedClass,
-          subjects: subjects,
-          departmentId: departmentId,
-          designationId: designationId,
-          campusId: campusId,
-          employmentType: employmentType,
-          dateJoined: dateJoined,
-        );
-        final batch = firestore.batch();
-        batch.set(
-          firestore.collection('users').doc(finalUid),
-          newUser.toJson(),
-        );
-        batch.set(
-          firestore.collection('school_contacts').doc(finalUid),
-          _schoolContactData(newUser),
-        );
-        await batch.commit();
-        return password;
-      }
-
+      // Staff identities, their tenant membership, and their initial
+      // credential must be created together by the privileged callable.
+      // Falling back to client-created accounts bypasses that authorization
+      // boundary and can leave a partial Auth/profile pair behind.
       if (e is FirebaseFunctionsException) {
         throw AuthFailure(e.message ?? 'Failed to create staff account');
       }
@@ -648,12 +580,13 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   @override
   Future<void> deleteStaffMember(String userId) async {
-    // Note: In a real production app, you might also want to delete the user from Firebase Auth
-    // via a Cloud Function, but for now we'll delete the Firestore record.
-    final batch = firestore.batch();
-    batch.delete(firestore.collection('users').doc(userId));
-    batch.delete(firestore.collection('school_contacts').doc(userId));
-    await batch.commit();
+    // Deleting only the profile leaves a live Firebase Auth identity behind;
+    // deleting Auth needs an audited Admin SDK workflow. The supported staff
+    // lifecycle is deactivate/reactivate, so fail closed until a server-side
+    // offboarding workflow exists.
+    throw const AuthFailure(
+      'Staff accounts cannot be deleted. Deactivate the account instead.',
+    );
   }
 
   @override
@@ -782,10 +715,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }) async {
     try {
       final callable = functions.httpsCallable('exitSupportMode');
-      await callable.call<Map<String, dynamic>>({
-        'ownerId': ownerId,
-        if (schoolId != null) 'schoolId': schoolId,
-      });
+      final payload = <String, dynamic>{'ownerId': ownerId};
+      if (schoolId != null) payload['schoolId'] = schoolId;
+      await callable.call<Map<String, dynamic>>(payload);
     } on FirebaseFunctionsException catch (e) {
       throw AuthFailure(e.message ?? 'Could not exit support mode.');
     } finally {
