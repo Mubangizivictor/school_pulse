@@ -121,9 +121,8 @@ class AttendanceQrRepositoryImpl
     required List<QrAttendanceRecord> records,
     required String sheetName,
   }) async {
-    // Implementation for Google Sheets export
-    // This typically involves calling a Cloud Function or using a Google Sheets API client
-    // For now, we'll mark it as a placeholder.
-    return const Right(null);
+    return const Left(
+      ServerFailure('Google Sheets integration has not been configured.'),
+    );
   }
 }

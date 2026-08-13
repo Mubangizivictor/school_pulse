@@ -50,6 +50,8 @@ class AttendanceQrRepositoryWeb
     required List<QrAttendanceRecord> records,
     required String sheetName,
   }) async {
-    return const Right(null);
+    return const Left(
+      ServerFailure('Google Sheets integration has not been configured.'),
+    );
   }
 }
