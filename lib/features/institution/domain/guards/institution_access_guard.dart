@@ -14,7 +14,10 @@ bool canAccessInstitution(UserEntity user, InstitutionContext context) {
 }
 
 bool isInstitutionAdministrator(UserEntity user) {
-  return UserRoleDisplay.adminRoles.contains(user.role);
+  // Authorization is multi-role. The legacy `role` accessor is only the
+  // first role for presentation compatibility and must not hide a valid
+  // administrator responsibility that appears later in the assignment.
+  return user.roles.any(UserRoleDisplay.adminRoles.contains);
 }
 
 bool isSaasOwner(UserEntity user) {

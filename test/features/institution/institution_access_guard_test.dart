@@ -82,6 +82,15 @@ void main() {
       );
     });
 
+    test('true when an administrator role is not the legacy primary role', () {
+      expect(
+        isInstitutionAdministrator(
+          _user(roles: [UserRole.subjectTeacher, UserRole.schoolAdmin]),
+        ),
+        isTrue,
+      );
+    });
+
     test('false for a non-admin role', () {
       expect(
         isInstitutionAdministrator(_user(roles: [UserRole.parent])),
