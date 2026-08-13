@@ -163,7 +163,9 @@ service cloud.firestore {
         // write role/roles - any signed-in staff member editing any other
         // staff member's roles would be a privilege-escalation path.
         (hasAnyRole(['director', 'headTeacher', 'schoolAdmin']) &&
-         resource.data.role != 'parent')
+         resource.data.role != 'parent' &&
+         isSameSchool(resource.data.schoolId) &&
+         request.resource.data.schoolId == resource.data.schoolId)
       );
       // "Delete Account" in User Management removes the Firestore profile
       // (the paired Firebase Auth account persists - removing that needs
@@ -173,7 +175,8 @@ service cloud.firestore {
       // admin console UI but was never granted staff-invitation authority,
       // and editing another staff member's role is equally sensitive.
       allow delete: if hasAnyRole(['director', 'headTeacher', 'schoolAdmin']) &&
-        resource.data.role != 'parent';
+        resource.data.role != 'parent' &&
+        isSameSchool(resource.data.schoolId);
     }
 
     // Sanitized directory used by parent-facing contact actions. It contains

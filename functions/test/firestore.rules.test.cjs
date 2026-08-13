@@ -850,6 +850,14 @@ describe('Phase 3 people/roles/permissions', () => {
     ));
   });
 
+  test('an admin-console role cannot edit or delete another school\'s staff profile', async () => {
+    await assertFails(updateDoc(
+      doc(dbFor('adminA'), 'users', 'teacherB'),
+      { roles: ['schoolAdmin'] },
+    ));
+    await assertFails(deleteDoc(doc(dbFor('adminA'), 'users', 'teacherB')));
+  });
+
   test('deputyHead is not granted staff-role-editing authority (matches ADMIN_ROLES in Cloud Functions)', async () => {
     await testEnv.withSecurityRulesDisabled(async (context) => {
       await setDoc(doc(context.firestore(), 'users', 'deputyA'), {
