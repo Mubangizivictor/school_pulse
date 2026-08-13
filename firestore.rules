@@ -222,8 +222,14 @@ service cloud.firestore {
     // rather than a sibling group.
     match /student_access_codes/{code} {
       allow get: if true;
-      allow list: if isStaff();
-      allow write: if isStaff();
+      allow list: if hasAnyRole(['director', 'headTeacher', 'schoolAdmin']) &&
+        isSameSchool(resource.data.schoolId);
+      allow create: if hasAnyRole(['director', 'headTeacher', 'schoolAdmin']) &&
+        isSameSchool(request.resource.data.schoolId);
+      allow update: if hasAnyRole(['director', 'headTeacher', 'schoolAdmin']) &&
+        isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId;
+      allow delete: if false;
     }
 
     // Students are readable by any staff member, or by the parent(s)
@@ -326,7 +332,7 @@ service cloud.firestore {
         isSameSchool(resource.data.schoolId) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'endDate']) &&
         request.resource.data.classId == resource.data.classId &&
-        request.resource.data.streamId == resource.data.streamId &&
+        request.resource.data.get('streamId', null) == resource.data.get('streamId', null) &&
         request.resource.data.academicYearId == resource.data.academicYearId;
       allow delete: if false;
     }

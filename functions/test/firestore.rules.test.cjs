@@ -924,14 +924,17 @@ describe('Phase 3 people/roles/permissions', () => {
     await assertFails(deleteDoc(doc(dbFor('adminA'), 'schools/schoolA/role_permission_overrides/nurse')));
   });
 
-  test('student_access_codes: staff can list/write, direct-by-id get is public, unauthenticated cannot list', async () => {
+  test('student_access_codes: only tenant administrators can list/write, direct-by-id get is public', async () => {
     await assertSucceeds(setDoc(doc(dbFor('adminA'), 'student_access_codes', 'STU123'), {
       schoolId: 'schoolA', studentId: 'studentA', studentName: 'Student A',
       phoneNumber: '+256700000000', pin: '1234', isActive: true,
     }));
     await assertSucceeds(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'student_access_codes', 'STU123')));
     await assertFails(getDocs(collection(dbFor('teacherA'), 'student_access_codes')));
-    await assertSucceeds(getDocs(collection(dbFor('adminA'), 'student_access_codes')));
+    await assertSucceeds(getDocs(query(
+      collection(dbFor('adminA'), 'student_access_codes'),
+      where('schoolId', '==', 'schoolA'),
+    )));
   });
 });
 
