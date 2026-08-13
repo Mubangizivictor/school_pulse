@@ -62,6 +62,8 @@ PODS:
   - printing (1.0.0):
     - Flutter
   - PromisesObjC (2.4.1)
+  - sign_in_with_apple (0.0.1):
+    - Flutter
   - TOCropViewController (2.7.4)
 
 DEPENDENCIES:
@@ -73,6 +75,7 @@ DEPENDENCIES:
   - nfc_manager (from `.symlinks/plugins/nfc_manager/ios`)
   - open_filex (from `.symlinks/plugins/open_filex/ios`)
   - printing (from `.symlinks/plugins/printing/ios`)
+  - sign_in_with_apple (from `.symlinks/plugins/sign_in_with_apple/ios`)
 
 SPEC REPOS:
   trunk:
@@ -106,6 +109,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/open_filex/ios"
   printing:
     :path: ".symlinks/plugins/printing/ios"
+  sign_in_with_apple:
+    :path: ".symlinks/plugins/sign_in_with_apple/ios"
 
 SPEC CHECKSUMS:
   blue_thermal_printer: d859595ae87fd0d2317a7f023d32551db13775df
@@ -127,6 +132,7 @@ SPEC CHECKSUMS:
   open_filex: 432f3cd11432da3e39f47fcc0df2b1603854eff1
   printing: 54ff03f28fe9ba3aa93358afb80a8595a071dd07
   PromisesObjC: 752c3227f599e3467650e47ea36f433eeb10c273
+  sign_in_with_apple: c5dcc141574c8c54d5ac99dd2163c0c72ad22418
   TOCropViewController: 80b8985ad794298fb69d3341de183f33d1853654
 
 PODFILE CHECKSUM: fc3c4023c024e8d7e0cc6c227234522f10e915b7

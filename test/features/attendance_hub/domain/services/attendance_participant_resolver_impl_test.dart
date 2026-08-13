@@ -47,10 +47,7 @@ void main() {
     ).thenAnswer((_) async => period);
   });
 
-  UserEntity buildUser({
-    required String id,
-    required List<UserRole> roles,
-  }) {
+  UserEntity buildUser({required String id, required List<UserRole> roles}) {
     return UserEntity(
       id: id,
       name: 'Test User',
@@ -123,7 +120,10 @@ void main() {
       final access = result.getOrElse(() => throw StateError('failed'));
 
       expect(access.allowedDomains, contains(AttendanceCategory.students));
-      expect(access.canViewAllForCategory(AttendanceCategory.students), isFalse);
+      expect(
+        access.canViewAllForCategory(AttendanceCategory.students),
+        isFalse,
+      );
       expect(access.canAccessClass('p5-blue'), isTrue);
       expect(access.canAccessClass('p5-red'), isFalse);
       expect(access.canAccessClass('p6'), isFalse);
@@ -142,10 +142,7 @@ void main() {
       // Staff/gate/hostel were never granted - must not leak into scope.
       expect(access.allowedDomains, isNot(contains(AttendanceCategory.staff)));
       expect(access.allowedDomains, isNot(contains(AttendanceCategory.gate)));
-      expect(
-        access.allowedDomains,
-        isNot(contains(AttendanceCategory.hostel)),
-      );
+      expect(access.allowedDomains, isNot(contains(AttendanceCategory.hostel)));
     });
   });
 
@@ -216,10 +213,7 @@ void main() {
       expect(access.canAccessDormitory('girls-hostel-b'), isFalse);
       expect(access.canAccessDormitory('boys-hostel-b'), isFalse);
       expect(
-        access.assignmentIdForScope(
-          AttendanceCategory.hostel,
-          'boys-hostel-a',
-        ),
+        access.assignmentIdForScope(AttendanceCategory.hostel, 'boys-hostel-a'),
         'assign-hostel-a',
       );
     });
@@ -255,32 +249,35 @@ void main() {
   });
 
   group('Security - gate', () {
-    test('gets category-level students/gate access with no class scoping', () async {
-      final user = buildUser(id: 'sec-1', roles: [UserRole.gatekeeper]);
-      grantOnly(user, {Permission.attendanceGateScan});
-      when(
-        () => assignmentRepository.getValidAssignments(
-          schoolId: schoolId,
-          userId: user.id,
-          academicYearId: academicYearId,
-        ),
-      ).thenAnswer((_) async => const Right([]));
+    test(
+      'gets category-level students/gate access with no class scoping',
+      () async {
+        final user = buildUser(id: 'sec-1', roles: [UserRole.gatekeeper]);
+        grantOnly(user, {Permission.attendanceGateScan});
+        when(
+          () => assignmentRepository.getValidAssignments(
+            schoolId: schoolId,
+            userId: user.id,
+            academicYearId: academicYearId,
+          ),
+        ).thenAnswer((_) async => const Right([]));
 
-      final result = await resolver.resolve(user);
-      final access = result.getOrElse(() => throw StateError('failed'));
+        final result = await resolver.resolve(user);
+        final access = result.getOrElse(() => throw StateError('failed'));
 
-      expect(access.allowedDomains, {AttendanceCategory.gate});
-      // Not scoped to any specific class/dormitory - category permission is
-      // the only gate for this category this pass.
-      expect(
-        access.canActOnScope(AttendanceCategory.gate, 'any-gate-id'),
-        isTrue,
-      );
-      expect(
-        access.canActOnScope(AttendanceCategory.students, 'p5-blue'),
-        isFalse,
-      );
-    });
+        expect(access.allowedDomains, {AttendanceCategory.gate});
+        // Not scoped to any specific class/dormitory - category permission is
+        // the only gate for this category this pass.
+        expect(
+          access.canActOnScope(AttendanceCategory.gate, 'any-gate-id'),
+          isTrue,
+        );
+        expect(
+          access.canActOnScope(AttendanceCategory.students, 'p5-blue'),
+          isFalse,
+        );
+      },
+    );
   });
 
   group('Headteacher - entire institution', () {
@@ -308,7 +305,10 @@ void main() {
       // Any classId/dormitoryId is authorised, without needing a matching
       // assignment row - this is the admin bypass, not scope-derived access.
       expect(
-        access.canActOnScope(AttendanceCategory.students, 'literally-any-class'),
+        access.canActOnScope(
+          AttendanceCategory.students,
+          'literally-any-class',
+        ),
         isTrue,
       );
       expect(
@@ -338,27 +338,30 @@ void main() {
   });
 
   group('Bursar - no attendance assignment', () {
-    test('has no attendance access at all, never falls back to all students', () async {
-      final user = buildUser(id: 'bursar-1', roles: [UserRole.bursar]);
-      grantOnly(user, {}); // Bursar's role defaults grant no attendance.*.
-      when(
-        () => assignmentRepository.getValidAssignments(
-          schoolId: schoolId,
-          userId: user.id,
-          academicYearId: academicYearId,
-        ),
-      ).thenAnswer((_) async => const Right([]));
+    test(
+      'has no attendance access at all, never falls back to all students',
+      () async {
+        final user = buildUser(id: 'bursar-1', roles: [UserRole.bursar]);
+        grantOnly(user, {}); // Bursar's role defaults grant no attendance.*.
+        when(
+          () => assignmentRepository.getValidAssignments(
+            schoolId: schoolId,
+            userId: user.id,
+            academicYearId: academicYearId,
+          ),
+        ).thenAnswer((_) async => const Right([]));
 
-      final result = await resolver.resolve(user);
-      final access = result.getOrElse(() => throw StateError('failed'));
+        final result = await resolver.resolve(user);
+        final access = result.getOrElse(() => throw StateError('failed'));
 
-      expect(access.hasAnyAccess, isFalse);
-      expect(access.allowedDomains, isEmpty);
-      expect(
-        access.canActOnScope(AttendanceCategory.students, 'any-class'),
-        isFalse,
-      );
-    });
+        expect(access.hasAnyAccess, isFalse);
+        expect(access.allowedDomains, isEmpty);
+        expect(
+          access.canActOnScope(AttendanceCategory.students, 'any-class'),
+          isFalse,
+        );
+      },
+    );
   });
 
   group('Multi-role user', () {
@@ -441,38 +444,41 @@ void main() {
   });
 
   group('Wrong-scope access', () {
-    test('Class Teacher cannot act on a class outside their assignment', () async {
-      final user = buildUser(id: 'ct-3', roles: [UserRole.classTeacher]);
-      grantOnly(user, {Permission.attendanceClassScan});
-      when(
-        () => assignmentRepository.getValidAssignments(
-          schoolId: schoolId,
-          userId: user.id,
-          academicYearId: academicYearId,
-        ),
-      ).thenAnswer(
-        (_) async => Right([
-          buildAssignment(
-            id: 'assign-1',
+    test(
+      'Class Teacher cannot act on a class outside their assignment',
+      () async {
+        final user = buildUser(id: 'ct-3', roles: [UserRole.classTeacher]);
+        grantOnly(user, {Permission.attendanceClassScan});
+        when(
+          () => assignmentRepository.getValidAssignments(
+            schoolId: schoolId,
             userId: user.id,
-            roleType: StaffResponsibilityType.classTeacher,
-            classId: 'p5-blue',
+            academicYearId: academicYearId,
           ),
-        ]),
-      );
+        ).thenAnswer(
+          (_) async => Right([
+            buildAssignment(
+              id: 'assign-1',
+              userId: user.id,
+              roleType: StaffResponsibilityType.classTeacher,
+              classId: 'p5-blue',
+            ),
+          ]),
+        );
 
-      final result = await resolver.resolve(user);
-      final access = result.getOrElse(() => throw StateError('failed'));
+        final result = await resolver.resolve(user);
+        final access = result.getOrElse(() => throw StateError('failed'));
 
-      expect(
-        access.canActOnScope(AttendanceCategory.students, 'p6-blue'),
-        isFalse,
-      );
-      expect(
-        access.assignmentIdForScope(AttendanceCategory.students, 'p6-blue'),
-        isNull,
-      );
-    });
+        expect(
+          access.canActOnScope(AttendanceCategory.students, 'p6-blue'),
+          isFalse,
+        );
+        expect(
+          access.assignmentIdForScope(AttendanceCategory.students, 'p6-blue'),
+          isNull,
+        );
+      },
+    );
 
     test('Matron cannot act on a dormitory outside their assignment', () async {
       final user = buildUser(id: 'mat-2', roles: [UserRole.boardingMatron]);
@@ -504,18 +510,21 @@ void main() {
     });
   });
 
-  test('resolve() surfaces a repository failure rather than granting access', () async {
-    final user = buildUser(id: 'ct-4', roles: [UserRole.classTeacher]);
-    when(
-      () => assignmentRepository.getValidAssignments(
-        schoolId: schoolId,
-        userId: user.id,
-        academicYearId: academicYearId,
-      ),
-    ).thenAnswer((_) async => Left(ServerFailure()));
+  test(
+    'resolve() surfaces a repository failure rather than granting access',
+    () async {
+      final user = buildUser(id: 'ct-4', roles: [UserRole.classTeacher]);
+      when(
+        () => assignmentRepository.getValidAssignments(
+          schoolId: schoolId,
+          userId: user.id,
+          academicYearId: academicYearId,
+        ),
+      ).thenAnswer((_) async => Left(ServerFailure()));
 
-    final result = await resolver.resolve(user);
+      final result = await resolver.resolve(user);
 
-    expect(result.isLeft(), isTrue);
-  });
+      expect(result.isLeft(), isTrue);
+    },
+  );
 }

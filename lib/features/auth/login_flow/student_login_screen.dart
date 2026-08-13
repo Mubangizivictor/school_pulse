@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
-import 'package:school_pulse/features/auth/login_flow/auth_chrome.dart';
 
-/// Student Hub onboarding: access code, then a PIN the student chooses.
-/// Presentation only - no auth wiring yet, so the CTA and "Sign In" link are
-/// inert until the student auth flow is built.
+/// Student Hub access screen.
+///
+/// This remains deliberately presentation-only until a student authentication
+/// use case is introduced; it provides only local input validation.
 class StudentHubScreen extends StatefulWidget {
   const StudentHubScreen({super.key});
 
@@ -15,281 +17,168 @@ class StudentHubScreen extends StatefulWidget {
 }
 
 class _StudentHubScreenState extends State<StudentHubScreen> {
-  static const _accent = AppColors.emeraldGreen;
-
-  /// The school office issues the PIN alongside the access code, so this is a
-  /// fixed 4-digit entry rather than a PIN the student picks.
   static const _pinLength = 4;
 
   final _codeController = TextEditingController();
-  final List<TextEditingController> _pinControllers = List.generate(
+  final _pinControllers = List.generate(
     _pinLength,
     (_) => TextEditingController(),
   );
-  final List<FocusNode> _pinFocus = List.generate(
-    _pinLength,
-    (_) => FocusNode(),
-  );
+  final _pinFocusNodes = List.generate(_pinLength, (_) => FocusNode());
+  String? _codeError;
+  String? _pinError;
 
   @override
   void initState() {
     super.initState();
-    // The boxes restyle themselves on focus, so a rebuild has to follow the
-    // focus change as well as the text change.
-    for (final node in _pinFocus) {
-      node.addListener(() {
-        if (mounted) setState(() {});
-      });
+    for (final node in _pinFocusNodes) {
+      node.addListener(_refresh);
     }
   }
 
   @override
   void dispose() {
     _codeController.dispose();
-    for (final c in _pinControllers) {
-      c.dispose();
+    for (final controller in _pinControllers) {
+      controller.dispose();
     }
-    for (final f in _pinFocus) {
-      f.dispose();
+    for (final node in _pinFocusNodes) {
+      node
+        ..removeListener(_refresh)
+        ..dispose();
     }
     super.dispose();
   }
 
-  /// Advance to the next box as digits are typed, and step back on delete so
-  /// the row behaves like a single field.
+  void _refresh() {
+    if (mounted) setState(() {});
+  }
+
+  void _submit() {
+    final code = _codeController.text.trim();
+    final pin = _pinControllers.map((controller) => controller.text).join();
+    setState(() {
+      _codeError = code.isEmpty ? 'Enter your access code.' : null;
+      _pinError = pin.length == _pinLength ? null : 'Enter your 4-digit PIN.';
+    });
+  }
+
   void _onPinChanged(int index, String value) {
-    if (value.isNotEmpty && index < _pinLength - 1) {
-      _pinFocus[index + 1].requestFocus();
-    } else if (value.isEmpty && index > 0) {
-      _pinFocus[index - 1].requestFocus();
+    if (value.length > 1) {
+      _distributePin(value);
+      return;
     }
-    setState(() {});
+    if (value.isNotEmpty && index < _pinLength - 1) {
+      _pinFocusNodes[index + 1].requestFocus();
+    } else if (value.isEmpty && index > 0) {
+      _pinFocusNodes[index - 1].requestFocus();
+    }
+    if (_pinError != null) _pinError = null;
+    _refresh();
+  }
+
+  void _distributePin(String value) {
+    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+    for (var i = 0; i < _pinLength; i++) {
+      _pinControllers[i].text = i < digits.length ? digits[i] : '';
+    }
+    _pinFocusNodes[digits.length.clamp(1, _pinLength) - 1].requestFocus();
+    _pinError = null;
+    _refresh();
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    const accent = AppColors.emeraldGreen;
 
-    return AuthPortalScaffold(
-      accent: _accent,
-      children: [
-        const _StudentBadge(),
-        const SizedBox(height: AppSpacing.l),
-        // Keep the portal mark legible against either app theme.
-        RichText(
-          textAlign: TextAlign.center,
-          text: TextSpan(
-            style: AppTypography.headlineMedium.copyWith(
-              color: colors.onSurface,
-              fontWeight: FontWeight.w800,
-            ),
-            children: const [
-              TextSpan(text: 'Student '),
-              TextSpan(
-                text: 'Hub',
-                style: TextStyle(color: _accent),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.m),
-        Text(
-          'Enter the code and PIN issued by\nyour school to get started.',
-          textAlign: TextAlign.center,
-          style: AppTypography.bodyMedium.copyWith(
-            color: colors.onSurfaceVariant,
-            height: 1.4,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.x2l),
-
-        // Step 1 - access code
-        _StepCard(
-          step: 1,
-          stepColor: AppColors.electricBlue,
-          title: 'Enter Access Code',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(
-                controller: _codeController,
-                textCapitalization: TextCapitalization.characters,
-                style: AppTypography.bodyLarge.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'e.g. STU12345',
-                  hintStyle: AppTypography.bodyLarge.copyWith(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurfaceVariant.withValues(alpha: 0.65),
-                  ),
-                  prefixIcon: Icon(
-                    Icons.vpn_key_outlined,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.l,
-                    vertical: AppSpacing.xl,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white.withValues(alpha: 0.14)
-                          : AppColors.borderLight,
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(
-                      color: AppColors.electricBlue,
-                      width: 1.6,
-                    ),
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white.withValues(alpha: 0.14)
-                          : AppColors.borderLight,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.m),
-              Row(
-                children: [
-                  const Icon(
-                    Icons.info_outline,
-                    size: 16,
-                    color: AppColors.brightCyan,
-                  ),
-                  const SizedBox(width: AppSpacing.m),
-                  Expanded(
-                    child: Text(
-                      'Use the code provided by your school office.',
-                      style: AppTypography.bodySmall.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+    return Scaffold(
+      backgroundColor: colors.brightness == Brightness.dark
+          ? colors.surface
+          : AppColors.surfaceLight,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, viewport) => SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.fromLTRB(28, 4, 28, AppSpacing.x4l),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: viewport.maxHeight - 36),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 480),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: IconButton(
+                          onPressed: () => context.canPop()
+                              ? context.pop()
+                              : context.go('/welcome'),
+                          icon: Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            color: colors.onSurface,
+                            size: 32,
+                          ),
+                          tooltip: 'Back',
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 26),
+                      const _StudentBadge(),
+                      const SizedBox(height: AppSpacing.xl),
+                      RichText(
+                        textAlign: TextAlign.center,
+                        text: TextSpan(
+                          style: AppTypography.headlineLarge.copyWith(
+                            color: colors.onSurface,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.8,
+                          ),
+                          children: const [
+                            TextSpan(text: 'Student '),
+                            TextSpan(
+                              text: 'Hub',
+                              style: TextStyle(color: accent),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.l),
+                      Text(
+                        'Enter the code and PIN issued by\nyour school to get started.',
+                        textAlign: TextAlign.center,
+                        style: AppTypography.bodyLarge.copyWith(
+                          color: colors.onSurfaceVariant,
+                          fontSize: 16,
+                          height: 1.5,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                      _AccessCodeCard(
+                        controller: _codeController,
+                        errorText: _codeError,
+                        onChanged: (_) {
+                          if (_codeError != null) {
+                            setState(() => _codeError = null);
+                          }
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.x4l),
+                      _PinCard(
+                        controllers: _pinControllers,
+                        focusNodes: _pinFocusNodes,
+                        errorText: _pinError,
+                        onChanged: _onPinChanged,
+                      ),
+                      const SizedBox(height: AppSpacing.x4l),
+                      _ContinueButton(onPressed: _submit),
+                    ],
                   ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xl),
-
-        // Step 2 - PIN
-        _StepCard(
-          step: 2,
-          stepColor: _accent,
-          title: 'Enter Your PIN',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Enter the 4-digit PIN issued with your access code.',
-                style: AppTypography.bodySmall.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
-              const SizedBox(height: AppSpacing.l),
-              // Fixed-size squares rather than stretched cells, so the row
-              // reads as a PIN entry instead of four wide text boxes.
-              Row(
-                children: [
-                  for (var i = 0; i < _pinLength; i++) ...[
-                    if (i > 0) const SizedBox(width: AppSpacing.l),
-                    _pinBox(i),
-                  ],
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.x2l),
-
-        AuthCtaButton(
-          label: 'Continue',
-          gradient: const [AppColors.royalBlue, _accent],
-          onPressed: () {},
-        ),
-        const SizedBox(height: AppSpacing.x2l),
-        const _StudentScene(),
-      ],
-    );
-  }
-
-  Widget _pinBox(int index) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final colors = Theme.of(context).colorScheme;
-    final filled = _pinControllers[index].text.isNotEmpty;
-    final focused = _pinFocus[index].hasFocus;
-
-    return SizedBox(
-      width: 56,
-      height: 56,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        decoration: BoxDecoration(
-          color: isDark
-              ? Colors.white.withValues(alpha: focused ? 0.08 : 0.04)
-              : colors.surfaceContainerHighest.withValues(
-                  alpha: focused ? 0.8 : 0.55,
-                ),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: focused
-                ? _accent
-                : filled
-                ? _accent.withValues(alpha: 0.6)
-                : (isDark
-                      ? Colors.white.withValues(alpha: 0.22)
-                      : AppColors.borderLight),
-            width: focused ? 2 : 1.2,
-          ),
-          boxShadow: focused
-              ? [
-                  BoxShadow(
-                    color: _accent.withValues(alpha: 0.3),
-                    blurRadius: 12,
-                  ),
-                ]
-              : null,
-        ),
-        alignment: Alignment.center,
-        child: TextField(
-          controller: _pinControllers[index],
-          focusNode: _pinFocus[index],
-          onChanged: (v) => _onPinChanged(index, v),
-          keyboardType: TextInputType.number,
-          textAlign: TextAlign.center,
-          maxLength: 1,
-          obscureText: true,
-          obscuringCharacter: '•',
-          showCursor: false,
-          style: AppTypography.headlineSmall.copyWith(
-            color: colors.onSurface,
-            fontWeight: FontWeight.w700,
-            height: 1,
-          ),
-          // The global InputDecorationTheme fills and outlines every field.
-          // Both are cleared here - every border state, not just `border` -
-          // so only the surrounding container is visible.
-          decoration: const InputDecoration(
-            counterText: '',
-            filled: false,
-            fillColor: Colors.transparent,
-            border: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            focusedBorder: InputBorder.none,
-            errorBorder: InputBorder.none,
-            focusedErrorBorder: InputBorder.none,
-            disabledBorder: InputBorder.none,
-            isCollapsed: true,
-            contentPadding: EdgeInsets.zero,
+            ),
           ),
         ),
       ),
@@ -297,108 +186,176 @@ class _StudentHubScreenState extends State<StudentHubScreen> {
   }
 }
 
-/// Graduation-cap badge flanked by the circuit traces from the reference.
 class _StudentBadge extends StatelessWidget {
   const _StudentBadge();
 
   @override
-  Widget build(BuildContext context) {
-    return SizedBox(
+  Widget build(BuildContext context) => Center(
+    child: Container(
+      width: 86,
       height: 86,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Positioned.fill(child: CustomPaint(painter: _TracePainter())),
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.bgDark,
-              border: Border.all(color: AppColors.emeraldGreen, width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.emeraldGreen.withValues(alpha: 0.5),
-                  blurRadius: 26,
-                  spreadRadius: 1,
-                ),
-              ],
-            ),
-            child: const Icon(
-              Icons.school_rounded,
-              size: 34,
-              color: Colors.white,
-            ),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Theme.of(context).colorScheme.surface,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.emeraldGreen.withValues(alpha: .18),
+            blurRadius: 26,
+            spreadRadius: 4,
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .04),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
-    );
-  }
+      child: const Icon(
+        Icons.school_rounded,
+        color: AppColors.emeraldGreen,
+        size: 38,
+      ),
+    ),
+  );
 }
 
-class _TracePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final cy = size.height / 2;
-    final stroke = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.4
-      ..strokeCap = StrokeCap.round;
-    final dot = Paint();
-
-    // Mirrored traces running out from behind the badge on both sides.
-    for (final dir in [-1.0, 1.0]) {
-      final start = size.width / 2 + dir * 46;
-      for (final spec in [
-        (dy: -9.0, len: 46.0),
-        (dy: 0.0, len: 62.0),
-        (dy: 9.0, len: 46.0),
-      ]) {
-        final end = start + dir * spec.len;
-        stroke.color = (dir < 0 ? AppColors.brightCyan : AppColors.emeraldGreen)
-            .withValues(alpha: 0.55);
-        canvas.drawLine(
-          Offset(start, cy + spec.dy),
-          Offset(end, cy + spec.dy),
-          stroke,
-        );
-        dot.color = (dir < 0 ? AppColors.brightCyan : AppColors.emeraldGreen);
-        canvas.drawCircle(Offset(end, cy + spec.dy), 2.2, dot);
-      }
-    }
-  }
+class _AccessCodeCard extends StatelessWidget {
+  const _AccessCodeCard({
+    required this.controller,
+    required this.errorText,
+    required this.onChanged,
+  });
+  final TextEditingController controller;
+  final String? errorText;
+  final ValueChanged<String> onChanged;
 
   @override
-  bool shouldRepaint(_TracePainter oldDelegate) => false;
+  Widget build(BuildContext context) => _StepCard(
+    step: 1,
+    title: 'Access Code',
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 35),
+          child: Text(
+            'Enter the access code provided by your school.',
+            style: _descriptionStyle(context),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.l),
+        TextField(
+          controller: controller,
+          onChanged: onChanged,
+          textCapitalization: TextCapitalization.characters,
+          style: AppTypography.bodyLarge.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontSize: 16,
+          ),
+          decoration: _fieldDecoration(
+            context,
+            hint: 'e.g. STU12345',
+            icon: Icons.vpn_key_outlined,
+            errorText: errorText,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
-/// Numbered step container used for the two onboarding stages.
+class _PinCard extends StatelessWidget {
+  const _PinCard({
+    required this.controllers,
+    required this.focusNodes,
+    required this.errorText,
+    required this.onChanged,
+  });
+  final List<TextEditingController> controllers;
+  final List<FocusNode> focusNodes;
+  final String? errorText;
+  final void Function(int, String) onChanged;
+
+  @override
+  Widget build(BuildContext context) => _StepCard(
+    step: 2,
+    title: 'Your PIN',
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 35),
+          child: Text(
+            'Enter the 4-digit PIN issued with your access code.',
+            style: _descriptionStyle(context),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.l),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            // Keep the four-cell rhythm identical on wide browser windows;
+            // only use the full available width when a mobile viewport needs it.
+            final pinRowWidth = constraints.maxWidth > 320
+                ? 320.0
+                : constraints.maxWidth;
+            final cellWidth = ((pinRowWidth - 72) / 4).clamp(44.0, 50.0);
+            return SizedBox(
+              width: pinRowWidth,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: List.generate(
+                  4,
+                  (index) => _PinCell(
+                    width: cellWidth,
+                    controller: controllers[index],
+                    focusNode: focusNodes[index],
+                    onChanged: (value) => onChanged(index, value),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+        if (errorText != null) ...[
+          const SizedBox(height: AppSpacing.m),
+          Text(
+            errorText!,
+            style: AppTypography.bodySmall.copyWith(
+              color: Theme.of(context).colorScheme.error,
+            ),
+          ),
+        ],
+      ],
+    ),
+  );
+}
+
 class _StepCard extends StatelessWidget {
-  final int step;
-  final Color stepColor;
-  final String title;
-  final Widget child;
-
   const _StepCard({
     required this.step,
-    required this.stepColor,
     required this.title,
     required this.child,
   });
+  final int step;
+  final String title;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = Theme.of(context).colorScheme;
-
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.l),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.03) : colors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.08) : colors.outline,
-        ),
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.borderLight.withValues(alpha: .75)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .015),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -408,33 +365,31 @@ class _StepCard extends StatelessWidget {
               Container(
                 width: 30,
                 height: 30,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: stepColor.withValues(alpha: 0.18),
-                  border: Border.all(color: stepColor, width: 1.4),
+                  border: Border.all(color: AppColors.emeraldGreen, width: 2),
                 ),
-                alignment: Alignment.center,
                 child: Text(
                   '$step',
-                  style: AppTypography.labelLarge.copyWith(
-                    color: stepColor,
-                    fontWeight: FontWeight.w800,
+                  style: AppTypography.titleLarge.copyWith(
+                    color: AppColors.emeraldGreen,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
-              const SizedBox(width: AppSpacing.l),
-              Expanded(
-                child: Text(
-                  title,
-                  style: AppTypography.titleMedium.copyWith(
-                    color: colors.onSurface,
-                    fontWeight: FontWeight.w700,
-                  ),
+              const SizedBox(width: AppSpacing.m),
+              Text(
+                title,
+                style: AppTypography.headlineSmall.copyWith(
+                  color: colors.onSurface,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.l),
+          const SizedBox(height: 4),
           child,
         ],
       ),
@@ -442,116 +397,178 @@ class _StepCard extends StatelessWidget {
   }
 }
 
-/// Line-art learning scene closing the page: a school flanked by floating
-/// study motifs on a field of stars.
-class _StudentScene extends StatelessWidget {
-  const _StudentScene();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 150,
-      child: Stack(
-        alignment: Alignment.bottomCenter,
-        children: [
-          Positioned.fill(child: CustomPaint(painter: _StudentScenePainter())),
-          const Padding(
-            padding: EdgeInsets.only(bottom: AppSpacing.m),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                _SceneGlyph(
-                  icon: Icons.menu_book_outlined,
-                  size: 26,
-                  bottom: 44,
-                ),
-                _SceneGlyph(
-                  icon: Icons.emoji_events_outlined,
-                  size: 28,
-                  bottom: 62,
-                ),
-                _SceneGlyph(
-                  icon: Icons.lightbulb_outline,
-                  size: 26,
-                  bottom: 40,
-                ),
-                _SceneGlyph(icon: Icons.public_outlined, size: 30, bottom: 30),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SceneGlyph extends StatelessWidget {
-  final IconData icon;
-  final double size;
-  final double bottom;
-
-  const _SceneGlyph({
-    required this.icon,
-    required this.size,
-    required this.bottom,
+class _PinCell extends StatelessWidget {
+  const _PinCell({
+    required this.width,
+    required this.controller,
+    required this.focusNode,
+    required this.onChanged,
   });
+  final double width;
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: bottom),
-      child: Icon(
-        icon,
-        size: size,
-        color: AppColors.brightCyan.withValues(alpha: 0.55),
+    final focused = focusNode.hasFocus;
+    final filled = controller.text.isNotEmpty;
+    return SizedBox(
+      width: width,
+      height: 52,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: focused ? AppColors.emeraldGreen : AppColors.borderLight,
+            width: focused ? 1.8 : 1.4,
+          ),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            TextField(
+              controller: controller,
+              focusNode: focusNode,
+              onChanged: onChanged,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              maxLength: 4,
+              obscureText: true,
+              showCursor: false,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.transparent, fontSize: 16),
+              decoration: const InputDecoration(
+                counterText: '',
+                isCollapsed: true,
+                filled: false,
+                fillColor: Colors.transparent,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                focusedErrorBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+            IgnorePointer(
+              child: Text(
+                '•',
+                style: TextStyle(
+                  color: filled
+                      ? AppColors.emeraldGreen
+                      : Theme.of(
+                          context,
+                        ).colorScheme.onSurfaceVariant.withValues(alpha: .42),
+                  fontSize: 22,
+                  height: 1,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _StudentScenePainter extends CustomPainter {
+class _ContinueButton extends StatelessWidget {
+  const _ContinueButton({required this.onPressed});
+  final VoidCallback onPressed;
   @override
-  void paint(Canvas canvas, Size size) {
-    final stroke = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.3
-      ..strokeCap = StrokeCap.round
-      ..color = AppColors.brightCyan.withValues(alpha: 0.5);
-
-    // Small schoolhouse centred on the baseline.
-    final cx = size.width / 2;
-    final baseY = size.height - 6;
-    const bw = 66.0;
-    const bh = 44.0;
-    canvas.drawRect(Rect.fromLTWH(cx - bw / 2, baseY - bh, bw, bh), stroke);
-    canvas.drawPath(
-      Path()
-        ..moveTo(cx - bw / 2 - 5, baseY - bh)
-        ..lineTo(cx, baseY - bh - 20)
-        ..lineTo(cx + bw / 2 + 5, baseY - bh)
-        ..close(),
-      stroke,
-    );
-    canvas.drawLine(
-      Offset(cx, baseY - bh - 20),
-      Offset(cx, baseY - bh - 34),
-      stroke,
-    );
-    canvas.drawRect(Rect.fromLTWH(cx - 8, baseY - 22, 16, 22), stroke);
-
-    // Star field behind the scene.
-    final dot = Paint();
-    for (var i = 0; i < 46; i++) {
-      final x = (i * 71.0) % size.width;
-      final y = (i * 43.0) % (size.height * 0.85);
-      dot.color = AppColors.brightCyan.withValues(
-        alpha: 0.10 + ((i % 5) * 0.06),
-      );
-      canvas.drawCircle(Offset(x, y), 1.1, dot);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_StudentScenePainter oldDelegate) => false;
+  Widget build(BuildContext context) => SizedBox(
+    height: 58,
+    child: Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(14),
+      child: Ink(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF18B4A4), AppColors.emeraldGreen],
+          ),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onPressed,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Text(
+                'Continue',
+                style: AppTypography.headlineSmall.copyWith(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Positioned(
+                right: AppSpacing.x2l,
+                child: Icon(
+                  Icons.arrow_forward_rounded,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
+
+TextStyle _descriptionStyle(BuildContext context) =>
+    AppTypography.bodyLarge.copyWith(
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+      fontSize: 11,
+      height: 1.45,
+      letterSpacing: 0,
+    );
+
+InputDecoration _fieldDecoration(
+  BuildContext context, {
+  required String hint,
+  required IconData icon,
+  String? errorText,
+}) => InputDecoration(
+  hintText: hint,
+  errorText: errorText,
+  prefixIcon: Icon(
+    icon,
+    color: Theme.of(context).colorScheme.onSurfaceVariant,
+    size: 24,
+  ),
+  hintStyle: AppTypography.bodyLarge.copyWith(
+    color: Theme.of(
+      context,
+    ).colorScheme.onSurfaceVariant.withValues(alpha: .62),
+    fontSize: 14,
+    letterSpacing: 0,
+  ),
+  contentPadding: const EdgeInsets.symmetric(
+    horizontal: AppSpacing.x2l,
+    vertical: 13,
+  ),
+  enabledBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+    borderSide: const BorderSide(color: AppColors.borderLight, width: 1.4),
+  ),
+  focusedBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+    borderSide: const BorderSide(color: AppColors.emeraldGreen, width: 1.8),
+  ),
+  errorBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+    borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
+  ),
+  focusedErrorBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+    borderSide: BorderSide(
+      color: Theme.of(context).colorScheme.error,
+      width: 1.8,
+    ),
+  ),
+);

@@ -19,17 +19,37 @@ import 'school_detail_screen.dart';
 import 'school_application_review_screen.dart';
 
 class SchoolManagementScreen extends StatefulWidget {
-  const SchoolManagementScreen({super.key});
+  const SchoolManagementScreen({super.key, this.initialQuery});
+
+  final String? initialQuery;
 
   @override
   State<SchoolManagementScreen> createState() => _SchoolManagementScreenState();
 }
 
 class _SchoolManagementScreenState extends State<SchoolManagementScreen> {
-  String _searchQuery = '';
+  late String _searchQuery = widget.initialQuery ?? '';
+  late final _searchController = TextEditingController(text: _searchQuery);
+
+  @override
+  void didUpdateWidget(covariant SchoolManagementScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialQuery != null &&
+        widget.initialQuery != oldWidget.initialQuery) {
+      setState(() => _searchQuery = widget.initialQuery!);
+      _searchController.text = _searchQuery;
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final wide = isSuperAdminWide(context);
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -38,19 +58,31 @@ class _SchoolManagementScreenState extends State<SchoolManagementScreen> {
           bottom: false,
           child: Column(
             children: [
-              _SchoolsHeader(
-                onRefresh: () => context.read<SuperAdminBloc>().add(
-                  LoadSuperAdminDashboard(),
+              if (wide)
+                _DesktopSchoolsHeader(
+                  onRefresh: () => context.read<SuperAdminBloc>().add(
+                    LoadSuperAdminDashboard(),
+                  ),
+                )
+              else
+                _SchoolsHeader(
+                  onRefresh: () => context.read<SuperAdminBloc>().add(
+                    LoadSuperAdminDashboard(),
+                  ),
                 ),
-              ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x2l),
-                child: _SchoolsSegmentedTabs(),
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpacing.x2l,
+                  vertical: wide ? AppSpacing.l : 0,
+                ),
+                child: wide
+                    ? const _DesktopSchoolsSegmentedTabs()
+                    : _SchoolsSegmentedTabs(),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.x2l,
-                  AppSpacing.xl,
+                  0,
                   AppSpacing.x2l,
                   AppSpacing.l,
                 ),
@@ -85,6 +117,7 @@ class _SchoolManagementScreenState extends State<SchoolManagementScreen> {
                     ),
                     const SizedBox(height: 14),
                     _SchoolSearchField(
+                      controller: _searchController,
                       onChanged: (value) =>
                           setState(() => _searchQuery = value),
                     ),
@@ -362,14 +395,132 @@ class _SchoolsSegmentedTabs extends StatelessWidget {
   }
 }
 
-class _SchoolSearchField extends StatelessWidget {
-  const _SchoolSearchField({required this.onChanged});
+/// Flat desktop page header matching the reference: plain title + a
+/// bordered refresh icon button, no gradient/blob decoration.
+class _DesktopSchoolsHeader extends StatelessWidget {
+  const _DesktopSchoolsHeader({required this.onRefresh});
 
+  final VoidCallback onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.x2l,
+        AppSpacing.xl,
+        AppSpacing.x2l,
+        0,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Schools',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.headlineMedium.copyWith(
+                color: AppColors.textPrimary(context),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          Tooltip(
+            message: 'Refresh',
+            child: Material(
+              color: AppColors.surfaceElevated(context),
+              shape: RoundedRectangleBorder(
+                borderRadius: AppRadius.medium,
+                side: BorderSide(color: AppColors.border(context)),
+              ),
+              child: InkWell(
+                borderRadius: AppRadius.medium,
+                onTap: onRefresh,
+                child: const SizedBox(
+                  width: 42,
+                  height: 42,
+                  child: Icon(Icons.refresh_rounded, size: 20),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Flat desktop segmented tabs matching the reference: three equal-width
+/// pill buttons in a single bordered container, no icon-above-label mobile
+/// styling.
+class _DesktopSchoolsSegmentedTabs extends StatelessWidget {
+  const _DesktopSchoolsSegmentedTabs();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainer(context),
+        borderRadius: AppRadius.medium,
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: TabBar(
+        indicatorSize: TabBarIndicatorSize.tab,
+        indicatorPadding: EdgeInsets.zero,
+        dividerColor: Colors.transparent,
+        indicator: BoxDecoration(
+          color: AppColors.surfaceElevated(context),
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.shadow(context),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        labelColor: AppColors.primary(context),
+        unselectedLabelColor: AppColors.textSecondary(context),
+        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+        unselectedLabelStyle: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+        ),
+        tabs: const [
+          Tab(
+            height: 44,
+            icon: Icon(Icons.account_balance_outlined, size: 16),
+            iconMargin: EdgeInsets.only(right: 6),
+            text: 'Active Schools',
+          ),
+          Tab(
+            height: 44,
+            icon: Icon(Icons.description_outlined, size: 16),
+            iconMargin: EdgeInsets.only(right: 6),
+            text: 'Applications',
+          ),
+          Tab(
+            height: 44,
+            icon: Icon(Icons.block_outlined, size: 16),
+            iconMargin: EdgeInsets.only(right: 6),
+            text: 'Suspended',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SchoolSearchField extends StatelessWidget {
+  const _SchoolSearchField({required this.controller, required this.onChanged});
+
+  final TextEditingController controller;
   final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
     return TextField(
+      controller: controller,
       onChanged: onChanged,
       style: AppTypography.bodyMedium.copyWith(
         color: AppColors.textPrimary(context),

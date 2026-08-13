@@ -9,6 +9,7 @@ import 'package:school_pulse/features/auth/domain/usecases/complete_parent_pin_s
 import 'package:school_pulse/features/auth/domain/usecases/enter_support_mode.dart';
 import 'package:school_pulse/features/auth/domain/usecases/exit_support_mode.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_current_user.dart';
+import 'package:school_pulse/features/auth/domain/usecases/login_owner.dart';
 import 'package:school_pulse/features/auth/domain/usecases/login_parent.dart';
 import 'package:school_pulse/features/auth/domain/usecases/login_with_email.dart';
 import 'package:school_pulse/features/auth/data/datasources/remembered_login_store.dart';
@@ -22,6 +23,10 @@ import 'package:school_pulse/features/branding/presentation/bloc/branding_event.
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final LoginWithEmail loginWithEmail;
+  final LoginOwnerWithEmail loginOwnerWithEmail;
+  final LoginOwnerWithGoogle loginOwnerWithGoogle;
+  final LoginOwnerWithApple loginOwnerWithApple;
+  final VerifyOwnerSession verifyOwnerSession;
   final LoginParent loginParent;
   final CompleteParentPinSetup completeParentPinSetup;
   final Logout logout;
@@ -34,6 +39,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   AuthBloc({
     required this.loginWithEmail,
+    required this.loginOwnerWithEmail,
+    required this.loginOwnerWithGoogle,
+    required this.loginOwnerWithApple,
+    required this.verifyOwnerSession,
     required this.loginParent,
     required this.completeParentPinSetup,
     required this.logout,
@@ -45,6 +54,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }) : super(AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<LoginWithEmailPressed>(_onLoginWithEmail);
+    on<LoginOwnerWithEmailPressed>(_onLoginOwnerWithEmail);
+    on<LoginOwnerWithGooglePressed>(_onLoginOwnerWithGoogle);
+    on<LoginOwnerWithApplePressed>(_onLoginOwnerWithApple);
     on<LoginParentPressed>(_onLoginParent);
     on<CompleteParentPinSetupRequested>(_onCompleteParentPinSetup);
     on<LogoutPressed>(_onLogout);
@@ -59,10 +71,29 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     final result = await getCurrentUser(NoParams());
-    result.fold((failure) => emit(AuthUnauthenticated()), (user) {
-      if (user != null) _syncNotifications(user);
-      emit(user != null ? AuthAuthenticated(user) : AuthUnauthenticated());
-    });
+    final resolved = await result.fold<Future<UserEntity?>>(
+      (failure) async => null,
+      (user) async => user,
+    );
+    if (resolved == null) {
+      emit(AuthUnauthenticated());
+      return;
+    }
+    // A superAdmin profile can reach this point via a path that never ran
+    // the dedicated owner login (an MFA-resolved sign-in, or Firebase
+    // restoring a persisted session on app restart/web reload) - re-assert
+    // server-side owner authorization here so the check still gates every
+    // such session, not just the Platform Owner Access screen's own logins.
+    if (resolved.roles.contains(UserRole.superAdmin)) {
+      final ownerCheck = await verifyOwnerSession(NoParams());
+      final denied = ownerCheck.fold((failure) => true, (_) => false);
+      if (denied) {
+        emit(AuthUnauthenticated());
+        return;
+      }
+    }
+    _syncNotifications(resolved);
+    emit(AuthAuthenticated(resolved));
   }
 
   Future<void> _onLoginWithEmail(
@@ -74,6 +105,56 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final result = await loginWithEmail(
         LoginParams(email: event.email, password: event.password),
       );
+      result.fold((failure) => emit(AuthFailureState(failure.message)), (user) {
+        _syncNotifications(user);
+        emit(AuthAuthenticated(user));
+      });
+    } on FirebaseAuthMultiFactorException catch (e) {
+      emit(AuthMfaChallengeRequired(e.resolver));
+    }
+  }
+
+  Future<void> _onLoginOwnerWithEmail(
+    LoginOwnerWithEmailPressed event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    try {
+      final result = await loginOwnerWithEmail(
+        LoginOwnerParams(email: event.email, password: event.password),
+      );
+      result.fold((failure) => emit(AuthFailureState(failure.message)), (user) {
+        _syncNotifications(user);
+        emit(AuthAuthenticated(user));
+      });
+    } on FirebaseAuthMultiFactorException catch (e) {
+      emit(AuthMfaChallengeRequired(e.resolver));
+    }
+  }
+
+  Future<void> _onLoginOwnerWithGoogle(
+    LoginOwnerWithGooglePressed event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    try {
+      final result = await loginOwnerWithGoogle(NoParams());
+      result.fold((failure) => emit(AuthFailureState(failure.message)), (user) {
+        _syncNotifications(user);
+        emit(AuthAuthenticated(user));
+      });
+    } on FirebaseAuthMultiFactorException catch (e) {
+      emit(AuthMfaChallengeRequired(e.resolver));
+    }
+  }
+
+  Future<void> _onLoginOwnerWithApple(
+    LoginOwnerWithApplePressed event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    try {
+      final result = await loginOwnerWithApple(NoParams());
       result.fold((failure) => emit(AuthFailureState(failure.message)), (user) {
         _syncNotifications(user);
         emit(AuthAuthenticated(user));
@@ -195,9 +276,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     ) {
       if (kDebugMode) print('Notification sync failed: $e');
     });
-
-    // Also trigger branding update
-    brandingBloc.add(FetchBrandingForSchool(user.schoolId));
 
     // --- Additive: SaaS owner sign-in event logging (security feature) ---
     // Fire-and-forget call to the `logOwnerSignIn` Cloud Function so the

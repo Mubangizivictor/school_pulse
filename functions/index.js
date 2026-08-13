@@ -3,6 +3,7 @@ const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { randomBytes, randomUUID } = require("crypto");
 const admin = require("firebase-admin");
+const { requirePlatformOwner, OwnerAuthorizationError } = require("./vendor/owner-auth");
 
 admin.initializeApp();
 
@@ -31,6 +32,42 @@ async function enqueueTransactionalEmail({ eventId, templateId, to, data = {} })
     resendId: null,
     error: null,
   }, { merge: true });
+}
+
+/**
+ * Thin wrapper around the canonical owner-auth package (shared/owner-auth/index.js) -
+ * the ONE authoritative implementation of "is this authenticated UID the
+ * School Pulse SaaS Owner", consumed identically here and in
+ * public_functions/owner_auth.js via a committed copy at
+ * vendor/owner-auth/index.js in each codebase (kept byte-identical to
+ * shared/owner-auth/index.js - see that package's tests for the drift
+ * guard). A plain npm `file:../shared/owner-auth` dependency doesn't work
+ * here: Cloud Functions deploy packaging ignores node_modules entirely, so
+ * a local file: dependency resolves to a path that doesn't exist in the
+ * remote build (only this codebase's own directory gets uploaded, not its
+ * sibling shared/ directory) and crashes every function in the codebase at
+ * container startup. This file and public_functions/ are SEPARATE Cloud
+ * Functions codebases (see firebase.json's two `codebase` entries) with no
+ * shared require() graph between them at the source level, which is why
+ * this goes through a vendored copy instead of two hand-maintained,
+ * independently-drifting copies of the same check (which is what existed
+ * here previously - see git history).
+ *
+ * Also fixes a known inconsistency from an earlier security pass:
+ * enterSupportMode previously checked only `callerData.role !== "superAdmin"`
+ * on the caller's own profile doc - weaker than every other owner-gated
+ * path, which also requires the caller's UID to match
+ * `platform_config/owner_seed.ownerUid` and the profile to still be active.
+ */
+async function requireOwner(request) {
+  try {
+    return await requirePlatformOwner(request, { db: admin.firestore() });
+  } catch (error) {
+    if (error instanceof OwnerAuthorizationError) {
+      throw new HttpsError(error.code, error.message);
+    }
+    throw error;
+  }
 }
 
 // ... existing roles and helper functions ...
@@ -460,10 +497,8 @@ exports.revokeAllSessions = onCall(async (request) => {
 const SUPPORT_MODE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
 exports.enterSupportMode = onCall(async (request) => {
+  const owner = await requireOwner(request);
   const auth = request.auth;
-  if (!auth) {
-    throw new HttpsError("unauthenticated", "You must be signed in.");
-  }
 
   const { schoolId, reason } = request.data || {};
   if (typeof schoolId !== "string" || !schoolId.trim()) {
@@ -474,12 +509,6 @@ exports.enterSupportMode = onCall(async (request) => {
   }
 
   const db = admin.firestore();
-
-  const callerDoc = await db.collection("users").doc(auth.uid).get();
-  const callerData = callerDoc.exists ? callerDoc.data() : {};
-  if (callerData.role !== "superAdmin") {
-    throw new HttpsError("permission-denied", "Only the platform owner can enter support mode.");
-  }
 
   const schoolDoc = await db.collection("schools").doc(schoolId).get();
   if (!schoolDoc.exists) {

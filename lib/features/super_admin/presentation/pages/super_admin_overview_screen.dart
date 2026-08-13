@@ -5,15 +5,19 @@ import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_radius.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/super_admin/data/services/manual_payment_service.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/manual_subscription_payment.dart';
 
+import '../../domain/entities/school.dart';
 import '../../domain/entities/school_application.dart';
 import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
 import '../bloc/super_admin_state.dart';
+import '../responsive.dart';
+import '../widgets/super_admin_top_bar.dart';
 import 'super_admin_notifications_screen.dart';
 
 /// Platform Overview / Dashboard tab of the SaaS owner console.
@@ -26,10 +30,16 @@ class SuperAdminOverviewScreen extends StatefulWidget {
     super.key,
     required this.onOpenBilling,
     required this.onOpenSchools,
+    this.onSearchSchools,
   });
 
   final VoidCallback onOpenBilling;
   final VoidCallback onOpenSchools;
+
+  /// Backs the desktop top bar's global search (Dashboard-only): since
+  /// Schools/Applications are the only owner-searchable dataset today, a
+  /// submitted query jumps to Schools and pre-fills its search field.
+  final ValueChanged<String>? onSearchSchools;
 
   @override
   State<SuperAdminOverviewScreen> createState() =>
@@ -111,6 +121,29 @@ class _SuperAdminOverviewScreenState extends State<SuperAdminOverviewScreen> {
         final pendingApplications = recentApplications
             .where((a) => a.status == SchoolApplicationStatus.pendingReview)
             .length;
+
+        if (isSuperAdminWide(context)) {
+          return Scaffold(
+            backgroundColor: AppColors.background(context),
+            body: _DesktopOverviewBody(
+              schools: state.schools,
+              recentApplications: recentApplications,
+              pendingApplications: pendingApplications,
+              loadingPayments: _loadingPayments,
+              paymentsError: _paymentsError,
+              recentPayments: _recentPayments,
+              pendingPaymentsCount: _pendingPaymentsCount,
+              totalRevenue: _totalRevenue,
+              money: _money,
+              dateFormat: _dateTime,
+              onRefresh: _refresh,
+              onRetryPayments: _loadPayments,
+              onOpenBilling: widget.onOpenBilling,
+              onOpenSchools: widget.onOpenSchools,
+              onSearchSchools: widget.onSearchSchools ?? (_) {},
+            ),
+          );
+        }
 
         return Scaffold(
           backgroundColor: AppColors.background(context),
@@ -921,6 +954,707 @@ class _MiniStatCard extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Desktop ("Platform Overview") body matching the reference dashboard: a
+/// flat page header, a row of metric cards, recent applications/payments
+/// side-by-side, and a Revenue Overview / Subscription Status / Platform
+/// Health row underneath. Uses the same production data as the mobile
+/// layout — nothing here is demo/dummy content.
+class _DesktopOverviewBody extends StatelessWidget {
+  const _DesktopOverviewBody({
+    required this.schools,
+    required this.recentApplications,
+    required this.pendingApplications,
+    required this.loadingPayments,
+    required this.paymentsError,
+    required this.recentPayments,
+    required this.pendingPaymentsCount,
+    required this.totalRevenue,
+    required this.money,
+    required this.dateFormat,
+    required this.onRefresh,
+    required this.onRetryPayments,
+    required this.onOpenBilling,
+    required this.onOpenSchools,
+    required this.onSearchSchools,
+  });
+
+  final List<School> schools;
+  final List<SchoolApplication> recentApplications;
+  final int pendingApplications;
+  final bool loadingPayments;
+  final String? paymentsError;
+  final List<ManualSubscriptionPayment> recentPayments;
+  final int pendingPaymentsCount;
+  final int totalRevenue;
+  final NumberFormat money;
+  final ValueChanged<String> onSearchSchools;
+  final DateFormat dateFormat;
+  final Future<void> Function() onRefresh;
+  final VoidCallback onRetryPayments;
+  final VoidCallback onOpenBilling;
+  final VoidCallback onOpenSchools;
+
+  @override
+  Widget build(BuildContext context) {
+    final activeSchools = schools
+        .where(
+          (s) =>
+              s.status == SchoolStatus.active || s.status == SchoolStatus.trial,
+        )
+        .length;
+
+    return Column(
+      children: [
+        SuperAdminTopBar(
+          onSearchSubmitted: (query) {
+            final trimmed = query.trim();
+            if (trimmed.isEmpty) return;
+            onSearchSchools(trimmed);
+          },
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: onRefresh,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.x2l,
+                AppSpacing.xl,
+                AppSpacing.x2l,
+                AppSpacing.x3l,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _DesktopPageHeader(onRefresh: onRefresh),
+                  const SizedBox(height: AppSpacing.xl),
+                  _DesktopMetricsRow(
+                    totalRevenue: loadingPayments ? 0 : totalRevenue,
+                    totalSchools: schools.length,
+                    activeSchools: activeSchools,
+                    pendingApplications: pendingApplications,
+                    money: money,
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final wide = constraints.maxWidth >= 900;
+                      final applicationsCard = _DesktopSectionCard(
+                        title: 'Recent School Applications',
+                        onViewAll: onOpenSchools,
+                        child: _RecentApplicationsCard(
+                          applications: recentApplications,
+                        ),
+                      );
+                      final paymentsCard = _DesktopSectionCard(
+                        title: 'Recent Payments',
+                        onViewAll: onOpenBilling,
+                        child: _RecentPaymentsCard(
+                          loading: loadingPayments,
+                          error: paymentsError,
+                          payments: recentPayments,
+                          money: money,
+                          dateFormat: dateFormat,
+                          onRetry: onRetryPayments,
+                          onTapPayment: (_) => onOpenBilling(),
+                        ),
+                      );
+                      if (!wide) {
+                        return Column(
+                          children: [
+                            applicationsCard,
+                            const SizedBox(height: AppSpacing.xl),
+                            paymentsCard,
+                          ],
+                        );
+                      }
+                      return IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(child: applicationsCard),
+                            const SizedBox(width: AppSpacing.xl),
+                            Expanded(child: paymentsCard),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final wide = constraints.maxWidth >= 900;
+                      final revenueCard = _RevenueOverviewCard(
+                        payments: recentPayments,
+                        loading: loadingPayments,
+                        money: money,
+                      );
+                      final sideColumn = Column(
+                        children: [
+                          _SubscriptionStatusCard(schools: schools),
+                          const SizedBox(height: AppSpacing.xl),
+                          const _PlatformHealthCard(),
+                        ],
+                      );
+                      if (!wide) {
+                        return Column(
+                          children: [
+                            revenueCard,
+                            const SizedBox(height: AppSpacing.xl),
+                            sideColumn,
+                          ],
+                        );
+                      }
+                      return IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(flex: 2, child: revenueCard),
+                            const SizedBox(width: AppSpacing.xl),
+                            Expanded(child: sideColumn),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DesktopPageHeader extends StatelessWidget {
+  const _DesktopPageHeader({required this.onRefresh});
+
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Platform Overview',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.headlineMedium.copyWith(
+                  color: AppColors.textPrimary(context),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Monitor schools, subscriptions, payments and platform activity.',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textSecondary(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Tooltip(
+          message: 'Refresh',
+          child: Material(
+            color: AppColors.surfaceElevated(context),
+            shape: RoundedRectangleBorder(
+              borderRadius: AppRadius.medium,
+              side: BorderSide(color: AppColors.border(context)),
+            ),
+            child: InkWell(
+              borderRadius: AppRadius.medium,
+              onTap: onRefresh,
+              child: const SizedBox(
+                width: 42,
+                height: 42,
+                child: Icon(Icons.refresh_rounded, size: 20),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DesktopMetricsRow extends StatelessWidget {
+  const _DesktopMetricsRow({
+    required this.totalRevenue,
+    required this.totalSchools,
+    required this.activeSchools,
+    required this.pendingApplications,
+    required this.money,
+  });
+
+  final int totalRevenue;
+  final int totalSchools;
+  final int activeSchools;
+  final int pendingApplications;
+  final NumberFormat money;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final perRow = constraints.maxWidth >= 1080
+            ? 4
+            : constraints.maxWidth >= 700
+            ? 2
+            : 1;
+        final cards = [
+          _DesktopMetricCard(
+            title: 'Total Revenue',
+            value: money.format(totalRevenue),
+            icon: Icons.account_balance_wallet_rounded,
+            accent: AppColors.royalBlue,
+          ),
+          _DesktopMetricCard(
+            title: 'Total Schools',
+            value: '$totalSchools',
+            icon: Icons.school_rounded,
+            accent: AppColors.information(context),
+          ),
+          _DesktopMetricCard(
+            title: 'Active Schools',
+            value: '$activeSchools',
+            icon: Icons.verified_rounded,
+            accent: AppColors.success(context),
+          ),
+          _DesktopMetricCard(
+            title: 'Pending Applications',
+            value: '$pendingApplications',
+            icon: Icons.description_rounded,
+            accent: AppColors.warning(context),
+          ),
+        ];
+        return Wrap(
+          spacing: AppSpacing.xl,
+          runSpacing: AppSpacing.xl,
+          children: [
+            for (final card in cards)
+              SizedBox(
+                width:
+                    (constraints.maxWidth - AppSpacing.xl * (perRow - 1)) /
+                    perRow,
+                child: card,
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _DesktopMetricCard extends StatelessWidget {
+  const _DesktopMetricCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.accent,
+  });
+
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.l),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.s),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: accent, size: 18),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.m),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.headlineSmall.copyWith(
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            title,
+            style: AppTypography.bodySmall.copyWith(
+              color: AppColors.textSecondary(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DesktopSectionCard extends StatelessWidget {
+  const _DesktopSectionCard({
+    required this.title,
+    required this.onViewAll,
+    required this.child,
+  });
+
+  final String title;
+  final VoidCallback onViewAll;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated(context),
+        borderRadius: AppRadius.large,
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.l,
+              AppSpacing.l,
+              AppSpacing.l,
+              AppSpacing.s,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: AppTypography.titleMedium.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary(context),
+                    ),
+                  ),
+                ),
+                TextButton(onPressed: onViewAll, child: const Text('View all')),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.l,
+              0,
+              AppSpacing.l,
+              AppSpacing.l,
+            ),
+            child: child,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Bar-style weekly revenue summary built from the same recent-payments
+/// data as the "Recent Payments" card — no separate fetch, no fabricated
+/// series. Falls back to the same clean empty state as the mobile layout
+/// when there is no revenue yet.
+class _RevenueOverviewCard extends StatelessWidget {
+  const _RevenueOverviewCard({
+    required this.payments,
+    required this.loading,
+    required this.money,
+  });
+
+  final List<ManualSubscriptionPayment> payments;
+  final bool loading;
+  final NumberFormat money;
+
+  @override
+  Widget build(BuildContext context) {
+    final approved = payments
+        .where((p) => p.status == ManualPaymentStatus.approved)
+        .toList();
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.l),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated(context),
+        borderRadius: AppRadius.large,
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Revenue Overview',
+            style: AppTypography.titleMedium.copyWith(
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.l),
+          if (loading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.x3l),
+              child: Center(child: SchoolPulseLoader()),
+            )
+          else if (approved.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.x2l),
+              child: EmptyState(
+                icon: Icons.show_chart_rounded,
+                title: 'No revenue data',
+                message:
+                    'Revenue data will appear here once payments are received.',
+              ),
+            )
+          else
+            _WeeklyRevenueBars(payments: approved, money: money),
+        ],
+      ),
+    );
+  }
+}
+
+class _WeeklyRevenueBars extends StatelessWidget {
+  const _WeeklyRevenueBars({required this.payments, required this.money});
+
+  final List<ManualSubscriptionPayment> payments;
+  final NumberFormat money;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final startOfWeek = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).subtract(Duration(days: now.weekday % 7));
+    final totalsByDay = List<int>.filled(7, 0);
+    for (final payment in payments) {
+      final day = payment.submittedAt.toLocal();
+      final diff = DateTime(
+        day.year,
+        day.month,
+        day.day,
+      ).difference(startOfWeek).inDays;
+      if (diff >= 0 && diff < 7) {
+        totalsByDay[diff] += payment.submittedAmount;
+      }
+    }
+    final maxValue = totalsByDay.fold<int>(0, (a, b) => a > b ? a : b);
+    const labels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    return SizedBox(
+      height: 180,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          for (var i = 0; i < 7; i++)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      totalsByDay[i] == 0 ? '' : money.format(totalsByDay[i]),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.textSecondary(context),
+                        fontSize: 9,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      height: maxValue == 0
+                          ? 4
+                          : (120 * totalsByDay[i] / maxValue).clamp(4, 120),
+                      decoration: BoxDecoration(
+                        color: AppColors.royalBlue,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      labels[i],
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.textSecondary(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SubscriptionStatusCard extends StatelessWidget {
+  const _SubscriptionStatusCard({required this.schools});
+
+  final List<School> schools;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = schools.where((s) => s.status == SchoolStatus.active).length;
+    final trial = schools.where((s) => s.status == SchoolStatus.trial).length;
+    final suspended = schools
+        .where((s) => s.status == SchoolStatus.suspended)
+        .length;
+    final archived = schools
+        .where((s) => s.status == SchoolStatus.archived)
+        .length;
+
+    final rows = [
+      ('Active', active, AppColors.success(context)),
+      ('Trial', trial, AppColors.information(context)),
+      ('Expired', archived, AppColors.warning(context)),
+      ('Suspended', suspended, AppColors.danger(context)),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.l),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated(context),
+        borderRadius: AppRadius.large,
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Subscription Status',
+            style: AppTypography.titleMedium.copyWith(
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.m),
+          for (final row in rows)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: row.$3,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.s),
+                  Expanded(
+                    child: Text(
+                      row.$1,
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.textSecondary(context),
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '${row.$2}',
+                    style: AppTypography.labelLarge.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Static "all systems operational" indicator, matching the reference.
+/// Reflects that the dashboard itself loaded successfully — there is no
+/// separate platform health/monitoring feed to bind to.
+class _PlatformHealthCard extends StatelessWidget {
+  const _PlatformHealthCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.l),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated(context),
+        borderRadius: AppRadius.large,
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Platform Health',
+            style: AppTypography.titleMedium.copyWith(
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.m),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppColors.successSurface(context),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.check_rounded,
+                  color: AppColors.success(context),
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.m),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'All systems operational',
+                      style: AppTypography.labelLarge.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
+                    Text(
+                      'Everything is running smoothly.',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textSecondary(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),

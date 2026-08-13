@@ -138,6 +138,33 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
                 ),
               ),
             ),
+          PopupMenuButton<String>(
+            tooltip: 'More actions',
+            onSelected: (value) {
+              if (value == 'delete') deleteSchoolDialog(context, school);
+            },
+            itemBuilder: (menuContext) => [
+              PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.delete_outline_rounded,
+                      size: 18,
+                      color: Theme.of(menuContext).colorScheme.error,
+                    ),
+                    const SizedBox(width: AppSpacing.m),
+                    Text(
+                      'Delete School',
+                      style: TextStyle(
+                        color: Theme.of(menuContext).colorScheme.error,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
       body: SingleChildScrollView(

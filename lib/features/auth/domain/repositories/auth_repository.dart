@@ -8,6 +8,26 @@ abstract class AuthRepository {
     String password,
   );
 
+  /// Platform Owner Access first factor (email/password). See
+  /// [AuthRemoteDataSource.loginOwnerWithEmail] for the server-side
+  /// authorization contract - a Firebase sign-in alone never grants access.
+  Future<Either<Failure, UserEntity>> loginOwnerWithEmail(
+    String email,
+    String password,
+  );
+
+  /// Platform Owner Access first factor (Google). Same server-side owner
+  /// verification contract as [loginOwnerWithEmail].
+  Future<Either<Failure, UserEntity>> loginOwnerWithGoogle();
+
+  /// Platform Owner Access first factor (Apple). Same server-side owner
+  /// verification contract as [loginOwnerWithEmail].
+  Future<Either<Failure, UserEntity>> loginOwnerWithApple();
+
+  /// Re-asserts server-side owner authorization for the already-signed-in
+  /// session. See [AuthRemoteDataSource.verifyOwnerSession].
+  Future<Either<Failure, void>> verifyOwnerSession();
+
   /// Authenticates a parent using their special access code, phone number, and PIN.
   Future<Either<Failure, UserEntity>> loginParent({
     required String code,

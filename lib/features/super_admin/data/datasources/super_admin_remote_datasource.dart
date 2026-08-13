@@ -44,8 +44,17 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
 
   SuperAdminRemoteDataSourceImpl({required this.firestore, required this.auth});
 
+  // public_functions/ (codebase "publicwebsite") - getSchoolApplicationsForOwner,
+  // approveSchoolApplication, rejectSchoolApplication.
   FirebaseFunctions get _ownerFunctions =>
       FirebaseFunctions.instanceFor(region: 'europe-west1');
+
+  // functions/ (codebase "default") - enterSupportMode/exitSupportMode live
+  // here, not on the publicwebsite codebase above, so they need the
+  // default-region instance or they resolve to a callable that doesn't
+  // exist in europe-west1 (surfaces as FirebaseFunctionsException
+  // code: not-found).
+  FirebaseFunctions get _defaultCodebaseFunctions => FirebaseFunctions.instance;
 
   @override
   Future<List<AuditLogModel>> getAuditLogs({String? schoolId}) async {
@@ -237,7 +246,7 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
     required String schoolId,
     required String reason,
   }) async {
-    final callable = _ownerFunctions.httpsCallable('enterSupportMode');
+    final callable = _defaultCodebaseFunctions.httpsCallable('enterSupportMode');
     final result = await callable.call<Map<String, dynamic>>({
       'schoolId': schoolId,
       'reason': reason,
@@ -259,7 +268,7 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
     required String ownerId,
     String? schoolId,
   }) async {
-    final callable = _ownerFunctions.httpsCallable('exitSupportMode');
+    final callable = _defaultCodebaseFunctions.httpsCallable('exitSupportMode');
     await callable.call<Map<String, dynamic>>({
       'ownerId': ownerId,
       if (schoolId != null) 'schoolId': schoolId,

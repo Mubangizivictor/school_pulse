@@ -123,6 +123,16 @@ async function seed() {
         // No accessMode field - the fail-open default case: a school this
         // rules deploy hasn't touched yet must still be fully writable.
       }),
+      setDoc(doc(db, 'schools', 'schoolB'), {
+        name: 'School B', status: 'active', enabledFeatures: [],
+        contactEmail: 'admin@schoolb.example', subscription: { price: 4200 },
+      }),
+      // teacherA switched into School B as a secondary institution via
+      // institution_switcher_sheet - a real, active membership distinct
+      // from users/teacherA.schoolId (which stays schoolA).
+      setDoc(doc(db, 'institution_memberships', 'teacherA_schoolB'), {
+        userId: 'teacherA', institutionId: 'schoolB', status: 'active',
+      }),
       setDoc(doc(db, 'schools', 'schoolReadOnly'), {
         name: 'School Read Only', status: 'active', enabledFeatures: [], accessMode: 'readOnly',
       }),
@@ -553,6 +563,31 @@ describe('SaaS owner / platform layer', () => {
         },
       ));
     });
+  });
+});
+
+describe('schools/{schoolId} read isolation', () => {
+  test('a staff member can read their own school document', async () => {
+    await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'schools', 'schoolA')));
+  });
+
+  test('a staff member cannot read another school\'s document by id '
+    + '(billing/PII fields live on this doc, not just branding)', async () => {
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'schools', 'schoolA')));
+  });
+
+  test('a user with an active secondary institution membership can read '
+    + 'that school\'s document', async () => {
+    await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'schools', 'schoolB')));
+  });
+
+  test('a user with no membership in the target school cannot read it '
+    + 'even with a guessed/known schoolId', async () => {
+    await assertFails(getDoc(doc(dbFor('nurseA'), 'schools', 'schoolB')));
+  });
+
+  test('superAdmin can read any school document', async () => {
+    await assertSucceeds(getDoc(doc(dbFor('ownerA'), 'schools', 'schoolB')));
   });
 });
 

@@ -32,8 +32,7 @@ class ClassTeacherLocalDataSourceWeb implements ClassTeacherLocalDataSource {
   }) async => [];
 
   @override
-  Future<ClassStudentSummary?> getClassStudent(String studentId) async =>
-      null;
+  Future<ClassStudentSummary?> getClassStudent(String studentId) async => null;
 
   @override
   Future<void> cacheClassStudents(

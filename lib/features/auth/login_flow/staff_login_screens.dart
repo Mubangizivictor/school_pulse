@@ -67,7 +67,7 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
                 : '/auth/force-setup';
             context.go(route, extra: state.user);
           } else {
-            context.go('/school-splash', extra: state.user);
+            context.go('/school-bootstrap');
           }
         } else if (state is AuthMfaChallengeRequired) {
           context.go('/auth/mfa-challenge', extra: state.resolver);
@@ -84,47 +84,60 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
       builder: (context, state) {
         final isLoading = state is AuthLoading;
         final colorScheme = Theme.of(context).colorScheme;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
 
         return AuthPortalScaffold(
           accent: _accent,
+          alignToTop: true,
+          backgroundColor: isDark
+              ? Theme.of(context).scaffoldBackgroundColor
+              : AppColors.surfaceLight,
           children: [
-            const AuthHeroScene(
-              accent: _accent,
-              badgeIcon: Icons.badge_outlined,
-            ),
-            const SizedBox(height: AppSpacing.l),
-            Text(
-              'Staff Portal',
+            const SizedBox(height: AppSpacing.x3l),
+            const _StaffPortalHero(),
+            const SizedBox(height: AppSpacing.x3l),
+            RichText(
               textAlign: TextAlign.center,
-              style: AppTypography.headlineMedium.copyWith(
-                color: colorScheme.onSurface,
-                fontWeight: FontWeight.w800,
+              text: TextSpan(
+                style: AppTypography.headlineLarge.copyWith(
+                  color: colorScheme.onSurface,
+                  fontSize: 30,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.8,
+                ),
+                children: const [
+                  TextSpan(text: 'Staff '),
+                  TextSpan(
+                    text: 'Portal',
+                    style: TextStyle(color: _accent),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: AppSpacing.m),
+            const SizedBox(height: AppSpacing.xl),
             Text(
               'Enter your credentials to continue\naccessing the staff portal.',
               textAlign: TextAlign.center,
               style: AppTypography.bodyMedium.copyWith(
                 color: colorScheme.onSurfaceVariant,
-                height: 1.4,
+                fontSize: 14,
+                height: 1.45,
+                letterSpacing: 0.1,
               ),
             ),
-            const SizedBox(height: AppSpacing.x2l),
-            AuthField(
+            const SizedBox(height: AppSpacing.x6l),
+            _StaffPortalField(
               label: 'Email Address',
               hint: 'name@school.com',
               icon: Icons.mail_outline_rounded,
-              accent: _accent,
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
             ),
-            const SizedBox(height: AppSpacing.xl),
-            AuthField(
+            const SizedBox(height: AppSpacing.x3l),
+            _StaffPortalField(
               label: 'Password',
               hint: '••••••••',
               icon: Icons.lock_outline_rounded,
-              accent: _accent,
               controller: _passwordController,
               isPassword: _obscure,
               suffix: IconButton(
@@ -137,7 +150,7 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
                 onPressed: () => setState(() => _obscure = !_obscure),
               ),
             ),
-            const SizedBox(height: AppSpacing.l),
+            const SizedBox(height: AppSpacing.x2l),
             Row(
               children: [
                 SizedBox(
@@ -158,6 +171,7 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
                   'Remember me',
                   style: AppTypography.bodyMedium.copyWith(
                     color: colorScheme.onSurface,
+                    fontSize: 14,
                   ),
                 ),
                 const Spacer(),
@@ -167,26 +181,295 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
                     'Forgot Password?',
                     style: AppTypography.bodyMedium.copyWith(
                       color: _accent,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: AppSpacing.x3l),
             AuthCtaButton(
               label: 'Sign In',
               gradient: const [Color(0xFFEF4A17), Color(0xFFFFB020)],
               isLoading: isLoading,
               onPressed: isLoading ? null : _handleLogin,
             ),
-            const SizedBox(height: AppSpacing.xl),
-            const AuthTrustStrip(accent: _accent),
-            const SizedBox(height: AppSpacing.xl),
-            const AuthPrivacyNote(accent: _accent),
+            const SizedBox(height: AppSpacing.x3l),
+            const _StaffTrustStrip(),
+            const SizedBox(height: AppSpacing.x3l),
+            const _StaffPrivacyNote(),
           ],
         );
       },
+    );
+  }
+}
+
+/// The staff portal's clean, focused badge treatment.  It deliberately stays
+/// local to this page so the Parent and Platform Owner entry screens retain
+/// their existing presentation.
+class _StaffPortalHero extends StatelessWidget {
+  const _StaffPortalHero();
+
+  @override
+  Widget build(BuildContext context) {
+    final surface = Theme.of(context).colorScheme.surface;
+    return Center(
+      child: Container(
+        width: 96,
+        height: 96,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: surface,
+          boxShadow: [
+            BoxShadow(
+              color: _StaffCredentialsScreenState._accent.withValues(
+                alpha: .15,
+              ),
+              blurRadius: 32,
+              spreadRadius: 9,
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: .045),
+              blurRadius: 13,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: const Icon(
+          Icons.badge_outlined,
+          color: _StaffCredentialsScreenState._accent,
+          size: 44,
+        ),
+      ),
+    );
+  }
+}
+
+class _StaffPortalField extends StatelessWidget {
+  final String label;
+  final String hint;
+  final IconData icon;
+  final TextEditingController controller;
+  final bool isPassword;
+  final TextInputType keyboardType;
+  final Widget? suffix;
+
+  const _StaffPortalField({
+    required this.label,
+    required this.hint,
+    required this.icon,
+    required this.controller,
+    this.isPassword = false,
+    this.keyboardType = TextInputType.text,
+    this.suffix,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    const accent = _StaffCredentialsScreenState._accent;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTypography.titleMedium.copyWith(
+            color: colors.onSurface,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.l),
+        Container(
+          height: 56,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: accent.withValues(alpha: .8),
+              width: 1.25,
+            ),
+          ),
+          child: TextField(
+            controller: controller,
+            obscureText: isPassword,
+            keyboardType: keyboardType,
+            cursorColor: accent,
+            autofillHints: isPassword
+                ? const [AutofillHints.password]
+                : const [AutofillHints.username, AutofillHints.email],
+            style: AppTypography.bodyLarge.copyWith(
+              color: colors.onSurface,
+              fontSize: 15,
+              letterSpacing: .1,
+            ),
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              disabledBorder: InputBorder.none,
+              errorBorder: InputBorder.none,
+              focusedErrorBorder: InputBorder.none,
+              fillColor: Colors.transparent,
+              filled: true,
+              hintText: hint,
+              hintStyle: AppTypography.bodyLarge.copyWith(
+                color: colors.onSurfaceVariant.withValues(alpha: .65),
+                fontSize: 15,
+              ),
+              contentPadding: const EdgeInsets.symmetric(vertical: 15),
+              prefixIcon: Padding(
+                padding: const EdgeInsets.only(left: 12, right: 14),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: .09),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Icon(icon, color: accent, size: 23),
+                  ),
+                ),
+              ),
+              prefixIconConstraints: const BoxConstraints.tightFor(
+                width: 64,
+                height: 56,
+              ),
+              suffixIcon: suffix,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StaffTrustStrip extends StatelessWidget {
+  const _StaffTrustStrip();
+
+  static const _items = [
+    (Icons.verified_user_outlined, 'Secure', 'Your data is\nprotected'),
+    (Icons.cloud_sync_outlined, 'Sync', 'Works online\n& offline'),
+    (Icons.speed_outlined, 'Fast', 'Built for\nperformance'),
+    (Icons.headset_mic_outlined, 'Support', 'We are here\nto help'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    const accent = _StaffCredentialsScreenState._accent;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(23),
+        border: Border.all(color: colors.outlineVariant.withValues(alpha: .55)),
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            for (var index = 0; index < _items.length; index++) ...[
+              if (index != 0)
+                VerticalDivider(
+                  width: 1,
+                  thickness: 1,
+                  color: colors.outlineVariant.withValues(alpha: .45),
+                ),
+              Expanded(
+                child: Column(
+                  children: [
+                    Icon(_items[index].$1, color: accent, size: 28),
+                    const SizedBox(height: 8),
+                    Text(
+                      _items[index].$2,
+                      style: AppTypography.titleMedium.copyWith(
+                        color: colors.onSurface,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      _items[index].$3,
+                      textAlign: TextAlign.center,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: colors.onSurfaceVariant,
+                        fontSize: 10.5,
+                        height: 1.45,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StaffPrivacyNote extends StatelessWidget {
+  const _StaffPrivacyNote();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    const accent = _StaffCredentialsScreenState._accent;
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: colors.outlineVariant.withValues(alpha: .55)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: accent.withValues(alpha: .11),
+            ),
+            child: const Icon(
+              Icons.lock_outline_rounded,
+              color: accent,
+              size: 26,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Your data is secure with us',
+                  style: AppTypography.titleMedium.copyWith(
+                    color: colors.onSurface,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'We value your privacy and protect your information.',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: colors.onSurfaceVariant,
+                    fontSize: 12,
+                    height: 1.35,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

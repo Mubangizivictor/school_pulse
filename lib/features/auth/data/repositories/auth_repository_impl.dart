@@ -29,6 +29,66 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<Either<Failure, UserEntity>> loginOwnerWithEmail(
+    String email,
+    String password,
+  ) async {
+    try {
+      final userModel = await remoteDataSource.loginOwnerWithEmail(
+        email,
+        password,
+      );
+      return Right(userModel);
+    } on FirebaseAuthMultiFactorException {
+      rethrow;
+    } on AuthFailure catch (e) {
+      return Left(e);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, UserEntity>> loginOwnerWithGoogle() async {
+    try {
+      final userModel = await remoteDataSource.loginOwnerWithGoogle();
+      return Right(userModel);
+    } on FirebaseAuthMultiFactorException {
+      rethrow;
+    } on AuthFailure catch (e) {
+      return Left(e);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, UserEntity>> loginOwnerWithApple() async {
+    try {
+      final userModel = await remoteDataSource.loginOwnerWithApple();
+      return Right(userModel);
+    } on FirebaseAuthMultiFactorException {
+      rethrow;
+    } on AuthFailure catch (e) {
+      return Left(e);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> verifyOwnerSession() async {
+    try {
+      await remoteDataSource.verifyOwnerSession();
+      return const Right(null);
+    } on AuthFailure catch (e) {
+      return Left(e);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, UserEntity>> loginParent({
     required String code,
     required String phoneNumber,

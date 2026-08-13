@@ -117,9 +117,7 @@ void main() {
 
   test('pushes a queued register and clears it from the queue', () async {
     queueContains([_queued()]);
-    when(
-      () => local.getAttendance('l1'),
-    ).thenAnswer((_) async => _register());
+    when(() => local.getAttendance('l1')).thenAnswer((_) async => _register());
     when(
       () => remote.getLessonAttendance(
         schoolId: any(named: 'schoolId'),
@@ -159,9 +157,7 @@ void main() {
 
   test('refuses to overwrite a register the office has locked', () async {
     queueContains([_queued()]);
-    when(
-      () => local.getAttendance('l1'),
-    ).thenAnswer((_) async => _register());
+    when(() => local.getAttendance('l1')).thenAnswer((_) async => _register());
     when(
       () => remote.getLessonAttendance(
         schoolId: any(named: 'schoolId'),
@@ -203,8 +199,7 @@ void main() {
   test('flags two devices submitting the same register', () async {
     queueContains([_queued()]);
     when(() => local.getAttendance('l1')).thenAnswer(
-      (_) async => _register(submittedAt: DateTime(2026, 6, 1, 10, 5),
-      ),
+      (_) async => _register(submittedAt: DateTime(2026, 6, 1, 10, 5)),
     );
     when(
       () => remote.getLessonAttendance(
@@ -232,9 +227,7 @@ void main() {
 
   test('keeps a failed operation queued and counts the retry', () async {
     queueContains([_queued()]);
-    when(
-      () => local.getAttendance('l1'),
-    ).thenAnswer((_) async => _register());
+    when(() => local.getAttendance('l1')).thenAnswer((_) async => _register());
     when(
       () => remote.getLessonAttendance(
         schoolId: any(named: 'schoolId'),
@@ -254,9 +247,7 @@ void main() {
 
   test('replays audit rows only after the actions they describe', () async {
     queueContains([_queued()]);
-    when(
-      () => local.getAttendance('l1'),
-    ).thenAnswer((_) async => _register());
+    when(() => local.getAttendance('l1')).thenAnswer((_) async => _register());
     when(
       () => remote.getLessonAttendance(
         schoolId: any(named: 'schoolId'),

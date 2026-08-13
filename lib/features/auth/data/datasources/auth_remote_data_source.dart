@@ -5,12 +5,48 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:school_pulse/core/error/failures.dart';
+import 'package:school_pulse/features/auth/data/datasources/apple_nonce.dart';
+import 'package:school_pulse/features/auth/data/datasources/google_sign_in_config.dart';
 import 'package:school_pulse/features/auth/data/models/user_model.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 
 abstract class AuthRemoteDataSource {
   Future<UserModel> loginWithEmail(String email, String password);
+
+  /// Platform Owner Access first factor: email/password. Distinct from
+  /// [loginWithEmail] because a successful Firebase sign-in here is NOT
+  /// sufficient on its own - this also calls the server-side
+  /// `assertPlatformOwnerAccess` callable, and immediately signs back out
+  /// (throwing a generic [AuthFailure]) if the authenticated UID isn't the
+  /// seeded platform owner. Never reached from the Staff Gateway.
+  Future<UserModel> loginOwnerWithEmail(String email, String password);
+
+  /// Platform Owner Access first factor: Google. Same server-side owner
+  /// check and same-UID-only guarantee as [loginOwnerWithEmail]; a Google
+  /// account that authenticates successfully but isn't the linked owner
+  /// identity is signed out before this returns.
+  Future<UserModel> loginOwnerWithGoogle();
+
+  /// Platform Owner Access first factor: Apple. Same server-side owner
+  /// check and same-UID-only guarantee as [loginOwnerWithGoogle]; an Apple
+  /// identity that authenticates successfully but isn't the linked owner
+  /// identity is signed out before this returns. Never authorizes by the
+  /// Apple-supplied name/email (including private relay addresses) - only
+  /// the resulting Firebase UID is ever checked.
+  Future<UserModel> loginOwnerWithApple();
+
+  /// Re-runs the server-side `assertPlatformOwnerAccess` check for the
+  /// already-signed-in Firebase user, without re-authenticating. Used
+  /// whenever a session reaches [AuthAuthenticated] through a path that
+  /// didn't already go through [loginOwnerWithEmail]/[loginOwnerWithGoogle]
+  /// - namely an MFA-resolved sign-in, and a restored session on app
+  /// restart - for any profile whose role is `superAdmin`. Signs the
+  /// session out and throws [AuthFailure] on denial, same as the login
+  /// paths above.
+  Future<void> verifyOwnerSession();
 
   /// Authenticates a parent using their special access code, phone number, and PIN.
   Future<UserModel> loginParent({
@@ -120,10 +156,25 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   final FirebaseFirestore firestore;
   final FirebaseFunctions functions;
 
+  /// The `publicwebsite` Cloud Functions codebase (public_functions/) - and
+  /// every owner-auth callable on it, including `assertPlatformOwnerAccess` -
+  /// is deployed to europe-west1, while [functions] (the plain
+  /// `FirebaseFunctions.instance` default region) is what the `default`
+  /// codebase's callables actually live in (loginParent, createStaffAccount,
+  /// enterSupportMode, etc). Calling an europe-west1-only callable through
+  /// the default-region instance resolves to a function that doesn't exist
+  /// there, which Firebase reports as `not-found` - surfaced generically as
+  /// "Access denied" by this file's existing catch blocks, indistinguishable
+  /// from a real owner-authorization denial. This field exists so
+  /// owner-authorization calls always reach the region they're actually
+  /// deployed in.
+  final FirebaseFunctions ownerFunctions;
+
   AuthRemoteDataSourceImpl({
     required this.firebaseAuth,
     required this.firestore,
     required this.functions,
+    required this.ownerFunctions,
   });
 
   @override
@@ -142,6 +193,159 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     } on FirebaseAuthException catch (e) {
       throw AuthFailure(e.message ?? 'Authentication failed');
     }
+  }
+
+  @override
+  Future<UserModel> loginOwnerWithEmail(String email, String password) async {
+    try {
+      final credential = await firebaseAuth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      return await _assertOwnerAndGetUser(credential.user!.uid);
+    } on FirebaseAuthMultiFactorException {
+      rethrow;
+    } on FirebaseAuthException catch (e) {
+      throw AuthFailure(e.message ?? 'Authentication failed');
+    }
+  }
+
+  @override
+  Future<UserModel> loginOwnerWithGoogle() async {
+    final googleSignIn = ownerGoogleSignIn();
+    try {
+      final googleUser = await googleSignIn.signIn();
+      if (googleUser == null) {
+        throw const AuthFailure('Sign-in cancelled.');
+      }
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      final userCredential = await firebaseAuth.signInWithCredential(
+        credential,
+      );
+      return await _assertOwnerAndGetUser(userCredential.user!.uid);
+    } on FirebaseAuthMultiFactorException {
+      rethrow;
+    } on FirebaseAuthException catch (e) {
+      await _denyAndSignOut(googleSignIn);
+      throw AuthFailure(e.message ?? 'Authentication failed');
+    } on AuthFailure {
+      await _denyAndSignOut(googleSignIn);
+      rethrow;
+    }
+  }
+
+  /// Calls the server-side `assertPlatformOwnerAccess` callable, which is
+  /// the actual authorization boundary: it checks the authenticated UID
+  /// against `platform_config/owner_seed.ownerUid` plus an active owner
+  /// role on the profile, never trusting anything the client asserts. A
+  /// denial signs the (non-owner) Firebase session back out immediately -
+  /// this method never returns a user for a UID the server rejected - and
+  /// surfaces the same generic message the spec requires regardless of
+  /// *why* the caller isn't the owner.
+  Future<UserModel> _assertOwnerAndGetUser(String uid) async {
+    try {
+      await ownerFunctions
+          .httpsCallable('assertPlatformOwnerAccess')
+          .call<Map<String, dynamic>>();
+    } on FirebaseFunctionsException catch (e) {
+      _logOwnerCallableFailure('assertPlatformOwnerAccess', e);
+      await firebaseAuth.signOut();
+      throw const AuthFailure('Access denied.');
+    }
+    return await _getUser(uid);
+  }
+
+  Future<void> _denyAndSignOut(GoogleSignIn googleSignIn) async {
+    await firebaseAuth.signOut();
+    await googleSignIn.signOut();
+  }
+
+  @override
+  Future<UserModel> loginOwnerWithApple() async {
+    try {
+      // Web uses Firebase Auth's own OAuth popup flow: the Service ID and
+      // redirect URI are configured directly in the Firebase Console's
+      // Apple provider settings, so no Service ID/nonce handling is needed
+      // client-side here (unlike native, where this app mints its own
+      // nonce and talks to Apple's SDK directly).
+      final userCredential = kIsWeb
+          ? await firebaseAuth.signInWithPopup(
+              OAuthProvider('apple.com')
+                ..addScope('email')
+                ..addScope('name'),
+            )
+          : await _signInWithAppleNative();
+      return await _assertOwnerAndGetUser(userCredential.user!.uid);
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) {
+        throw const AuthFailure('Sign-in cancelled.');
+      }
+      throw const AuthFailure('Apple sign-in failed.');
+    } on FirebaseAuthMultiFactorException {
+      rethrow;
+    } on FirebaseAuthException catch (e) {
+      await firebaseAuth.signOut();
+      throw AuthFailure(e.message ?? 'Authentication failed');
+    } on AuthFailure {
+      await firebaseAuth.signOut();
+      rethrow;
+    }
+  }
+
+  Future<UserCredential> _signInWithAppleNative() async {
+    final nonce = AppleNonce.generate();
+    final appleCredential = await SignInWithApple.getAppleIDCredential(
+      scopes: const [
+        AppleIDAuthorizationScopes.email,
+        AppleIDAuthorizationScopes.fullName,
+      ],
+      nonce: nonce.hashed,
+    );
+    final oauthCredential = OAuthProvider('apple.com').credential(
+      idToken: appleCredential.identityToken,
+      rawNonce: nonce.raw,
+      accessToken: appleCredential.authorizationCode,
+    );
+    return firebaseAuth.signInWithCredential(oauthCredential);
+  }
+
+  @override
+  Future<void> verifyOwnerSession() async {
+    final uid = firebaseAuth.currentUser?.uid;
+    if (uid == null) return;
+    try {
+      await ownerFunctions
+          .httpsCallable('assertPlatformOwnerAccess')
+          .call<Map<String, dynamic>>();
+    } on FirebaseFunctionsException catch (e) {
+      _logOwnerCallableFailure('assertPlatformOwnerAccess', e);
+      await firebaseAuth.signOut();
+      throw const AuthFailure('Access denied.');
+    }
+  }
+
+  /// Logs enough to diagnose a failed owner-auth callable (which callable,
+  /// which region it was configured for, and Firebase's error code) without
+  /// ever touching anything sensitive - never the password, ID token, TOTP
+  /// code, Apple/Google token, or recovery code involved in the same flow.
+  void _logOwnerCallableFailure(String callableName, FirebaseFunctionsException e) {
+    debugPrint(
+      'OwnerCallableFailure callable=$callableName '
+      'region=${ownerFunctions.app.name}:${_ownerFunctionsRegion()} '
+      'code=${e.code}',
+    );
+  }
+
+  String _ownerFunctionsRegion() {
+    // FirebaseFunctions has no public region getter, but this data source
+    // always constructs `ownerFunctions` via instanceFor(region: ...) - see
+    // injection_container.dart - so the region is fixed and known here for
+    // logging purposes without reflecting into the SDK's internals.
+    return 'europe-west1';
   }
 
   @override
@@ -194,7 +398,17 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   @override
   Future<UserModel?> getCurrentUser() async {
-    final user = firebaseAuth.currentUser;
+    var user = firebaseAuth.currentUser;
+    // On web, Firebase Auth restores a persisted session from IndexedDB
+    // asynchronously - right after page load `currentUser` is reliably
+    // null for a brief window even when the browser still holds a valid
+    // session. Reading it synchronously here (as on native, where
+    // Firebase.initializeApp already guarantees it's settled) would
+    // intermittently sign a still-logged-in owner/user out on refresh.
+    // authStateChanges()'s first emission reflects the restored session.
+    if (user == null && kIsWeb) {
+      user = await firebaseAuth.authStateChanges().first;
+    }
     if (user == null) return null;
 
     final doc = await firestore.collection('users').doc(user.uid).get();

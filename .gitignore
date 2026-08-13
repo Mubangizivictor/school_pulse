@@ -60,3 +60,6 @@ firebase-debug.*.log
 
 # Cleanup script manifests contain user emails/PII - never commit
 /cleanup_backups/
+
+# Local backups of Firebase config files - never commit
+/.config_backups/

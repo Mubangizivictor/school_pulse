@@ -193,12 +193,12 @@ void main() {
           () => localDataSource.getPermissionSnapshot(ordinaryTeacher.id),
         ).thenAnswer(
           (_) async => OperatorPermissionSnapshot(
-      operatorId: ordinaryTeacher.id,
-      schoolId: ordinaryTeacher.schoolId,
-      permissionIds: [Permission.securityIdentityVerify],
-      version: 2,
-      expiresAt: DateTime.now().add(const Duration(hours: 1)),
-    )
+            operatorId: ordinaryTeacher.id,
+            schoolId: ordinaryTeacher.schoolId,
+            permissionIds: [Permission.securityIdentityVerify],
+            version: 2,
+            expiresAt: DateTime.now().add(const Duration(hours: 1)),
+          ),
         );
 
         final result = await evaluator.can(
@@ -217,12 +217,12 @@ void main() {
           () => localDataSource.getPermissionSnapshot(gatekeeper.id),
         ).thenAnswer(
           (_) async => OperatorPermissionSnapshot(
-      operatorId: gatekeeper.id,
-      schoolId: gatekeeper.schoolId,
-      permissionIds: <String>[],
-      version: 1,
-      expiresAt: DateTime.now().subtract(const Duration(hours: 1)),
-    )
+            operatorId: gatekeeper.id,
+            schoolId: gatekeeper.schoolId,
+            permissionIds: <String>[],
+            version: 1,
+            expiresAt: DateTime.now().subtract(const Duration(hours: 1)),
+          ),
         );
 
         final result = await evaluator.can(

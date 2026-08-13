@@ -87,7 +87,7 @@ class OnboardingFlowScreen extends StatelessWidget {
                   );
                 case OnboardingStep.completed:
                   WidgetsBinding.instance.addPostFrameCallback((_) {
-                    context.go('/school-splash', extra: user);
+                    context.go('/school-bootstrap');
                   });
                   return const Scaffold(
                     body: Center(child: SchoolPulseLoader()),

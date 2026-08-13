@@ -504,10 +504,7 @@ class StoresAssetsRepositoryImpl implements StoresAssetsRepository {
           await remoteDataSource.createProcurementRequest(
             ProcurementRequestModel.fromEntity(request),
           );
-          await localDataSource.saveProcurementRequest(
-            request,
-            isSynced: true,
-          );
+          await localDataSource.saveProcurementRequest(request, isSynced: true);
         } catch (_) {}
       }
     }

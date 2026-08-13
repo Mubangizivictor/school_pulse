@@ -5,20 +5,18 @@ import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
-import 'package:school_pulse/design_system/theme/app_radius.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
-import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/super_admin/data/services/manual_payment_service.dart';
 import 'package:school_pulse/features/super_admin/data/services/owner_notification_service.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/owner_notification.dart';
-import 'package:school_pulse/features/super_admin/domain/entities/owner_notification_preferences.dart';
 
+import '../responsive.dart';
 import 'payment_review_screen.dart';
 import 'school_management_screen.dart';
 
-/// SaaS Owner "Notifications" overview: category on/off switches, a Quiet
-/// Hours shortcut, and the most recent alerts from the realtime feed with a
-/// link into the full history.
+/// SaaS Owner "Notifications" overview: recent alerts from the realtime feed
+/// front and center, with a settings action in the app bar for channel and
+/// scheduling preferences.
 ///
 /// New school applications and payment proofs are written by the Cloud
 /// notification engine to `super_admin_notifications`. Push/email delivery is
@@ -43,7 +41,6 @@ class _SuperAdminNotificationsScreenState
   final DateFormat _dateTime = DateFormat('MMM d, yyyy • h:mm a');
 
   String? _openingNotificationId;
-  bool _savingPreferences = false;
 
   String? get _ownerId => _notifications.currentOwnerId;
 
@@ -78,43 +75,6 @@ class _SuperAdminNotificationsScreenState
     }
   }
 
-  Future<void> _togglePreference(
-    OwnerNotificationPreferences current,
-    OwnerNotificationPreferences updated,
-  ) async {
-    if (_savingPreferences) return;
-    setState(() => _savingPreferences = true);
-    try {
-      await _notifications.savePreferences(updated);
-    } catch (error) {
-      if (mounted) _showSnack(_friendlyError(error), isError: true);
-    } finally {
-      if (mounted) setState(() => _savingPreferences = false);
-    }
-  }
-
-  Future<void> _pickQuietHours(OwnerNotificationPreferences prefs) async {
-    final start = await showTimePicker(
-      context: context,
-      initialTime:
-          prefs.quietHoursStart ?? const TimeOfDay(hour: 21, minute: 0),
-      helpText: 'Quiet hours start',
-    );
-    if (start == null || !mounted) return;
-
-    final end = await showTimePicker(
-      context: context,
-      initialTime: prefs.quietHoursEnd ?? const TimeOfDay(hour: 6, minute: 0),
-      helpText: 'Quiet hours end',
-    );
-    if (end == null || !mounted) return;
-
-    await _togglePreference(
-      prefs,
-      prefs.copyWith(quietHoursStart: start, quietHoursEnd: end),
-    );
-  }
-
   void _showSnack(String text, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -138,218 +98,104 @@ class _SuperAdminNotificationsScreenState
     return value.replaceFirst(RegExp(r'^Exception:\s*'), '');
   }
 
+  void _openSettings() {
+    context.push('/super-admin/settings/notifications/preferences');
+  }
+
   @override
   Widget build(BuildContext context) {
     final ownerId = _ownerId;
+    final wide = isSuperAdminWide(context);
+    // As a sidebar destination (desktop, root of its own nested Navigator)
+    // there is nothing to pop back to, and the persistent SuperAdminTopBar
+    // already sits above this content, so the flat in-page header below is
+    // used instead of a redundant AppBar. When pushed on top of another
+    // screen (e.g. from the top bar bell or the mobile overview header) it
+    // keeps its own AppBar with a back button.
+    final showAppBar = !wide || Navigator.canPop(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Notifications')),
+      appBar: showAppBar
+          ? AppBar(
+              title: const Text('Notifications'),
+              actions: [
+                IconButton(
+                  tooltip: 'Notification settings',
+                  icon: const Icon(Icons.settings_outlined),
+                  onPressed: _openSettings,
+                ),
+              ],
+            )
+          : null,
       body: ownerId == null
           ? const Center(child: Text('Sign in to manage notifications'))
-          : StreamBuilder<OwnerNotificationPreferences>(
-              stream: _notifications.watchPreferences(ownerId),
-              builder: (context, prefsSnapshot) {
-                final prefs =
-                    prefsSnapshot.data ??
-                    OwnerNotificationPreferences.defaults(ownerId);
-                return StreamBuilder<List<OwnerNotification>>(
-                  stream: _notifications.watchNotifications(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting &&
-                        !snapshot.hasData) {
-                      return const Center(child: SchoolPulseLoader());
-                    }
-                    if (snapshot.hasError) {
-                      return _ErrorState(
-                        message: _friendlyError(snapshot.error!),
-                        onRetry: () => setState(() {}),
-                      );
-                    }
+          : StreamBuilder<List<OwnerNotification>>(
+              stream: _notifications.watchNotifications(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting &&
+                    !snapshot.hasData) {
+                  return const Center(child: SchoolPulseLoader());
+                }
+                if (snapshot.hasError) {
+                  return _ErrorState(
+                    message: _friendlyError(snapshot.error!),
+                    onRetry: () => setState(() {}),
+                  );
+                }
 
-                    final items = snapshot.data ?? const <OwnerNotification>[];
-                    final recent = items.take(5).toList();
+                final items = snapshot.data ?? const <OwnerNotification>[];
 
-                    return ListView(
-                      padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.xl,
-                        AppSpacing.xl,
-                        AppSpacing.xl,
-                        AppSpacing.x3l,
-                      ),
-                      children: [
-                        _header(context, items),
-                        const SizedBox(height: AppSpacing.xl),
-                        _categoriesSection(context, prefs),
-                        const SizedBox(height: AppSpacing.x3l),
-                        _recentSection(context, recent),
-                      ],
-                    );
-                  },
+                final list = ListView(
+                  padding: EdgeInsets.fromLTRB(
+                    wide ? AppSpacing.x2l : AppSpacing.xl,
+                    AppSpacing.xl,
+                    wide ? AppSpacing.x2l : AppSpacing.xl,
+                    AppSpacing.x3l,
+                  ),
+                  children: [
+                    _header(context, items, showSettingsButton: !showAppBar),
+                    const SizedBox(height: AppSpacing.xl),
+                    _recentSection(context, items),
+                  ],
+                );
+                if (!wide) return list;
+                return Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 900),
+                    child: list,
+                  ),
                 );
               },
             ),
     );
   }
 
-  Widget _header(BuildContext context, List<OwnerNotification> items) {
-    final unread = items.where((item) => item.isUnread).length;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Owner alerts',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-            if (unread > 0)
-              StatusBadge(
-                label: '$unread new',
-                color: AppColors.warning(context),
-              ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.s),
-        Text(
-          'Applications, payments and critical School Pulse platform activity.',
-          style: AppTypography.bodyMedium.copyWith(
-            color: AppColors.textSecondary(context),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _categoriesSection(
+  Widget _header(
     BuildContext context,
-    OwnerNotificationPreferences prefs,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    List<OwnerNotification> items, {
+    required bool showSettingsButton,
+  }) {
+    final unread = items.where((item) => item.isUnread).length;
+    return Row(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Categories',
-                style: AppTypography.titleMedium.copyWith(
-                  color: AppColors.textPrimary(context),
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => context.push(
-                '/super-admin/settings/notifications/preferences',
-              ),
-              child: const Text('More settings'),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.m),
-        _CategoryToggleRow(
-          icon: Icons.notifications_active_outlined,
-          title: 'Push Notifications',
-          subtitle: 'Deliver alerts to this device',
-          value: prefs.pushEnabled,
-          enabled: !_savingPreferences,
-          onChanged: (value) =>
-              _togglePreference(prefs, prefs.copyWith(pushEnabled: value)),
-        ),
-        _CategoryToggleRow(
-          icon: Icons.email_outlined,
-          title: 'Email Alerts',
-          subtitle: 'Send a copy to the owner email',
-          value: prefs.emailEnabled,
-          enabled: !_savingPreferences,
-          onChanged: (value) =>
-              _togglePreference(prefs, prefs.copyWith(emailEnabled: value)),
-        ),
-        _CategoryToggleRow(
-          icon: Icons.account_balance_wallet_outlined,
-          title: 'Billing Alerts',
-          subtitle: 'Subscription and invoice changes',
-          value: prefs.billingAlerts,
-          enabled: !_savingPreferences,
-          onChanged: (value) =>
-              _togglePreference(prefs, prefs.copyWith(billingAlerts: value)),
-        ),
-        _CategoryToggleRow(
-          icon: Icons.school_outlined,
-          title: 'School Application Alerts',
-          subtitle: 'New schools requesting onboarding',
-          value: prefs.schoolApplicationAlerts,
-          enabled: !_savingPreferences,
-          onChanged: (value) => _togglePreference(
-            prefs,
-            prefs.copyWith(schoolApplicationAlerts: value),
+        Expanded(
+          child: Text(
+            'Recent Notifications',
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
           ),
         ),
-        _CategoryToggleRow(
-          icon: Icons.payments_outlined,
-          title: 'Payment Alerts',
-          subtitle: 'Manual payment proofs to review',
-          value: prefs.paymentAlerts,
-          enabled: !_savingPreferences,
-          onChanged: (value) =>
-              _togglePreference(prefs, prefs.copyWith(paymentAlerts: value)),
-        ),
-        _CategoryToggleRow(
-          icon: Icons.insights_outlined,
-          title: 'Platform Activity',
-          subtitle: 'General platform and audit events',
-          value: prefs.platformActivityAlerts,
-          enabled: !_savingPreferences,
-          onChanged: (value) => _togglePreference(
-            prefs,
-            prefs.copyWith(platformActivityAlerts: value),
+        if (unread > 0) ...[
+          StatusBadge(label: '$unread new', color: AppColors.warning(context)),
+          const SizedBox(width: AppSpacing.s),
+        ],
+        if (showSettingsButton)
+          IconButton(
+            tooltip: 'Notification settings',
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: _openSettings,
           ),
-        ),
-        AppCard(
-          margin: const EdgeInsets.only(top: 2),
-          onTap: () => _pickQuietHours(prefs),
-          child: Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: AppColors.primarySoft(context),
-                  borderRadius: BorderRadius.circular(AppRadius.m),
-                ),
-                child: Icon(
-                  Icons.bedtime_outlined,
-                  color: AppColors.primary(context),
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.l),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Quiet Hours',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      prefs.quietHoursConfigured
-                          ? '${_formatTime(prefs.quietHoursStart!)} – ${_formatTime(prefs.quietHoursEnd!)}'
-                          : 'Off',
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.textSecondary(context),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right_rounded),
-            ],
-          ),
-        ),
       ],
     );
   }
@@ -358,24 +204,6 @@ class _SuperAdminNotificationsScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Recent Notifications',
-                style: AppTypography.titleMedium.copyWith(
-                  color: AppColors.textPrimary(context),
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () =>
-                  context.push('/super-admin/settings/notifications/history'),
-              child: const Text('View all'),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.m),
         if (recent.isEmpty)
           const EmptyState(
             icon: Icons.notifications_none_rounded,
@@ -399,71 +227,6 @@ class _SuperAdminNotificationsScreenState
             ),
           ),
       ],
-    );
-  }
-
-  static String _formatTime(TimeOfDay time) {
-    final hour = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
-    final minute = time.minute.toString().padLeft(2, '0');
-    final period = time.period == DayPeriod.am ? 'AM' : 'PM';
-    return '$hour:$minute $period';
-  }
-}
-
-class _CategoryToggleRow extends StatelessWidget {
-  const _CategoryToggleRow({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.value,
-    required this.onChanged,
-    this.enabled = true,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final bool value;
-  final bool enabled;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: AppColors.primarySoft(context),
-              borderRadius: BorderRadius.circular(AppRadius.m),
-            ),
-            child: Icon(icon, color: AppColors.primary(context), size: 20),
-          ),
-          const SizedBox(width: AppSpacing.l),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textSecondary(context),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch(value: value, onChanged: enabled ? onChanged : null),
-        ],
-      ),
     );
   }
 }

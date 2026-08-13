@@ -1,8 +1,8 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
-const { isOwnerData } = require('./owner_notification_engine');
 const { RESEND_API_KEY } = require('./email/email_service');
 const { enqueueTemplatedEmail } = require('./email/transactional_queue');
+const { requirePlatformOwner, OwnerAuthorizationError } = require('./vendor/owner-auth');
 
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
@@ -13,16 +13,20 @@ function text(value, max = 200) {
   return String(value ?? '').trim().slice(0, max);
 }
 
+// Thin wrapper over the canonical @school-pulse/owner-auth package -
+// replaces a previous local implementation that never cross-checked
+// `platform_config/owner_seed.ownerUid`, the actual authorization
+// boundary. Gates owner sign-in event logging and session revocation, so
+// this was a real gap: see shared/owner-auth/index.js.
 async function requireOwner(request) {
-  if (!request.auth?.uid) {
-    throw new HttpsError('unauthenticated', 'Sign in as the School Pulse SaaS Owner first.');
+  try {
+    return await requirePlatformOwner(request, { db });
+  } catch (error) {
+    if (error instanceof OwnerAuthorizationError) {
+      throw new HttpsError(error.code, error.message);
+    }
+    throw error;
   }
-  const snap = await db.collection('users').doc(request.auth.uid).get();
-  const user = snap.data() || {};
-  if (user.isActive === false || !isOwnerData(user)) {
-    throw new HttpsError('permission-denied', 'Only the School Pulse SaaS Owner can perform this action.');
-  }
-  return { uid: request.auth.uid, user };
 }
 
 /**
@@ -144,6 +148,22 @@ exports.revokeOwnerSessions = onCall({ region: 'europe-west1' }, async (request)
   const owner = await requireOwner(request);
 
   await admin.auth().revokeRefreshTokens(owner.uid);
+
+  // A revoked session state must not leave a still-valid recovery
+  // challenge redeemable - see owner_recovery_codes.js's
+  // invalidateOutstandingChallenges. Lazily required to avoid a circular
+  // module load (owner_recovery_codes.js requires owner_auth.js, not this
+  // file, so there's no actual cycle here, but the lazy require keeps this
+  // file's own load order independent of that module's).
+  const { invalidateOutstandingChallenges } = require('./owner_recovery_codes');
+  await invalidateOutstandingChallenges(owner.uid);
+
+  // Same reasoning: a revoked Firebase session must not leave a still-live
+  // OwnerSecuritySession - route protection and step-up checks both
+  // consult that record, so it needs to be revoked here too, not just
+  // Firebase's own refresh tokens.
+  const { revokeAllOwnerSecuritySessions } = require('./owner_security_session');
+  await revokeAllOwnerSecuritySessions(owner.uid);
 
   const auditRef = db.collection('super_admin_audit_logs').doc();
   const serverTime = admin.firestore.FieldValue.serverTimestamp();

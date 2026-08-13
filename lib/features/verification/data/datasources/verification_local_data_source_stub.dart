@@ -38,8 +38,7 @@ class _VerificationLocalDataSourceStub implements VerificationLocalDataSource {
   Future<AuthorizedDevice?> findDevice(String deviceId, String schoolId) =>
       _unsupported();
   @override
-  Future<void> saveVerificationEvent(VerificationEvent event) =>
-      _unsupported();
+  Future<void> saveVerificationEvent(VerificationEvent event) => _unsupported();
   @override
   Future<List<VerificationEvent>> getUnsyncedEvents() => _unsupported();
   @override

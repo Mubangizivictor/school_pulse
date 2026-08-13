@@ -144,16 +144,14 @@ class StructureLocalDataSourceWeb implements StructureLocalDataSource {
   ) async {}
 
   @override
-  Future<List<AnnouncementCategoryDef>>
-  getAnnouncementCategories() async => [];
+  Future<List<AnnouncementCategoryDef>> getAnnouncementCategories() async => [];
   @override
   Future<void> cacheAnnouncementCategories(
     List<AnnouncementCategoryDef> categories,
   ) async {}
 
   @override
-  Future<List<NotificationCategoryDef>>
-  getNotificationCategories() async => [];
+  Future<List<NotificationCategoryDef>> getNotificationCategories() async => [];
   @override
   Future<void> cacheNotificationCategories(
     List<NotificationCategoryDef> categories,

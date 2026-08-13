@@ -5,10 +5,9 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_gradients.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/design_system/components/pulse_logo.dart';
-import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
-import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/core/user_roles.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -28,7 +27,7 @@ class _SplashScreenState extends State<SplashScreen>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 900),
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -50,8 +49,9 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _checkAuth() async {
-    // Wait for minimum splash duration
-    await Future.delayed(const Duration(seconds: 3));
+    // Keep the platform identity quick while the auth restoration is already
+    // running in parallel.
+    await Future.delayed(const Duration(milliseconds: 900));
     if (!mounted) return;
 
     final authBloc = context.read<AuthBloc>();
@@ -83,7 +83,20 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _navigate(AuthAuthenticated state) {
-    context.go(UserRoleRouting.dashboardPath(state.user.role));
+    // superAdmin is the SaaS platform owner, not a school tenant - they have
+    // no schoolId to resolve and must never enter the tenant-bootstrap
+    // pipeline. The router's own redirect already exempts every superAdmin
+    // route from the tenant check (see router.dart), but /school-bootstrap
+    // has no such exemption and no way back out once landed on, so a
+    // superAdmin sent there was stuck on "Preparing your school workspace"
+    // indefinitely. Route them straight to the owner console instead.
+    if (state.user.role == UserRole.superAdmin) {
+      context.go(UserRoleRouting.dashboardPath(UserRole.superAdmin));
+      return;
+    }
+    // Tenant membership and Structure-owned branding must resolve before any
+    // protected dashboard is allowed to build.
+    context.go('/school-bootstrap');
   }
 
   @override
@@ -94,18 +107,23 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.bgDark : AppColors.bgLight;
-    final taglineColor = isDark
-        ? AppColors.iceBlue.withValues(alpha: 0.7)
-        : AppColors.textSecondaryLight;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final backgroundGradient = isDark
+        ? AppGradients.premiumDark
+        : LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppColors.iceBlue,
+              theme.colorScheme.primaryContainer.withValues(alpha: 0.7),
+              AppColors.bgLight,
+            ],
+          );
 
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          gradient: isDark ? AppGradients.premiumDark : null,
-        ),
+        decoration: BoxDecoration(gradient: backgroundGradient),
         child: Stack(
           children: [
             // Background Pulse Effect (Subtle)
@@ -142,32 +160,13 @@ class _SplashScreenState extends State<SplashScreen>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       PulseLogo(
-                        variant: PulseLogoVariant.vertical,
-                        width: 240,
+                        variant: PulseLogoVariant.splash,
+                        width: 220,
                         isDark: isDark,
                       ),
-                      const SizedBox(height: 48),
-                      const SchoolPulseLoader.small(),
+                      const SizedBox(height: 20),
+                      Text('School Pulse', style: AppTypography.titleLarge),
                     ],
-                  ),
-                ),
-              ),
-            ),
-
-            // Tagline at the bottom
-            Positioned(
-              bottom: 64,
-              left: 0,
-              right: 0,
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: Center(
-                  child: Text(
-                    'Modern Education Innovation',
-                    style: AppTypography.labelMedium.copyWith(
-                      color: taglineColor,
-                      letterSpacing: 2.0,
-                    ),
                   ),
                 ),
               ),

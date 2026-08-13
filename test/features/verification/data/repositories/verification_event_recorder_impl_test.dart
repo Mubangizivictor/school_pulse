@@ -216,19 +216,19 @@ void main() {
       );
 
       final pendingEvent = VerificationEvent(
-      eventId: 'evt-1',
-      schoolId: 'school-1',
-      gateId: 'gate-1',
-      operatorId: 'op-1',
-      credentialKind: 'qr',
-      identityId: 'student-1',
-      identityType: 'student',
-      outcome: 'allowed',
-      direction: 'In',
-      timestamp: DateTime.now(),
-      deviceId: 'device-1',
-      isSynced: false,
-    );
+        eventId: 'evt-1',
+        schoolId: 'school-1',
+        gateId: 'gate-1',
+        operatorId: 'op-1',
+        credentialKind: 'qr',
+        identityId: 'student-1',
+        identityType: 'student',
+        outcome: 'allowed',
+        direction: 'In',
+        timestamp: DateTime.now(),
+        deviceId: 'device-1',
+        isSynced: false,
+      );
 
       when(
         () => localDataSource.getUnsyncedEvents(),

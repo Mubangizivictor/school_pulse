@@ -1459,12 +1459,17 @@ service cloud.firestore {
     // touch them; no school-scoped role gets any access, by design - this
     // is the layer that must stay isolated from every tenant.
     match /schools/{schoolId} {
-      // Read stays app-wide (isSignedIn only) because every tenant module
-      // (branding, biometrics config, identity codes, ...) resolves its own
-      // school doc by id - same tenant-isolation posture the rest of this
-      // file already relies on. Only the owner may create/suspend/edit a
-      // school or change its subscription/enabledFeatures.
-      allow read: if isSignedIn();
+      // This document mixes public branding (name/motto/badge/colors) with
+      // billing/subscription and contact PII (subscription.price,
+      // activeStudentCount, contactEmail/Phone, metadata.lastPaymentId,
+      // ...), so read access is scoped to the caller's own tenant -
+      // isSameSchool covers the normal case, isActiveMembership covers a
+      // director/consultant who has switched into a secondary institution
+      // via institution_switcher_sheet, and isSuperAdmin covers the SaaS
+      // owner console's school registry. Only the owner may
+      // create/suspend/edit a school or change its subscription/
+      // enabledFeatures.
+      allow read: if isSameSchool(schoolId) || isActiveMembership(schoolId) || isSuperAdmin();
       allow write: if isSuperAdmin();
     }
     // Deprecated as of Phase 1 institution model - schools/{id} is now the
@@ -1542,6 +1547,41 @@ service cloud.firestore {
       // Admin SDK; the dashboard may read it, never write it directly.
       allow read: if isSuperAdmin();
       allow write: if false;
+    }
+    match /owner_recovery_codes/{ownerId} {
+      // TOTP recovery-code hashes (owner_recovery_codes.js). Never
+      // client-readable - even a hash of a high-entropy code is more than
+      // the client needs, and the owner-console UI only ever learns the
+      // plaintext codes once, synchronously, from the
+      // generateOwnerRecoveryCodes callable's response. Admin SDK only.
+      allow read, write: if false;
+    }
+    match /owner_recovery_challenges/{challengeId} {
+      // Short-lived, single-use proof that a caller reached the owner
+      // account's MFA-required stage via a real first-factor login, before
+      // verifyOwnerRecoveryCode will accept a recovery code
+      // (owner_recovery_codes.js: beginOwnerRecoveryChallenge /
+      // verifyOwnerRecoveryCode). Never client-readable or writable - the
+      // challenge ID itself is the only thing the client ever sees, as the
+      // synchronous return value of beginOwnerRecoveryChallenge. Admin SDK
+      // only.
+      allow read, write: if false;
+    }
+    match /owner_security_sessions/{sessionId} {
+      // The unified elevated-session record every owner authentication
+      // path (password+TOTP, Google+TOTP, recovery code) converges into
+      // (owner_security_session.js: establishOwnerSecuritySession /
+      // validateOwnerSecuritySession). The client only ever learns the
+      // opaque sessionId as a callable return value and asks the server to
+      // validate it - it never reads this collection directly. Admin SDK
+      // only.
+      allow read, write: if false;
+    }
+    match /_owner_rate_limits/{bucketId} {
+      // Transactional per-owner-per-bucket-per-hour counters
+      // (owner_rate_limit.js). Admin SDK only; nothing here is ever
+      // client-relevant.
+      allow read, write: if false;
     }
     match /super_admin_sign_in_events/{eventId} {
       // Server-written only, by the logOwnerSignIn callable (Admin SDK,

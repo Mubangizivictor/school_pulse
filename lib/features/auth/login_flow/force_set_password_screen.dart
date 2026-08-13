@@ -100,7 +100,7 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
       return;
     }
 
-    context.go('/school-splash', extra: widget.user);
+    context.go('/school-bootstrap');
   }
 
   @override

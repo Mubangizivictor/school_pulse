@@ -19,6 +19,28 @@ class LoginWithEmailPressed extends AuthEvent {
   List<Object?> get props => [email, password];
 }
 
+/// Platform Owner Access first factor: email/password. Only fired from the
+/// dedicated owner login screen reached via the hidden long-press gesture -
+/// never from the ordinary Staff Gateway.
+class LoginOwnerWithEmailPressed extends AuthEvent {
+  final String email;
+  final String password;
+
+  const LoginOwnerWithEmailPressed({
+    required this.email,
+    required this.password,
+  });
+
+  @override
+  List<Object?> get props => [email, password];
+}
+
+/// Platform Owner Access first factor: Google.
+class LoginOwnerWithGooglePressed extends AuthEvent {}
+
+/// Platform Owner Access first factor: Apple.
+class LoginOwnerWithApplePressed extends AuthEvent {}
+
 class LoginParentPressed extends AuthEvent {
   final String code;
   final String phoneNumber;

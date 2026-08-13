@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
@@ -56,11 +59,28 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     setState(() => _saving = false);
 
     result.fold((failure) => setState(() => _error = failure.message), (_) {
+      // Best-effort: burns any outstanding owner recovery challenge, since
+      // a challenge issued against the OLD password must not remain
+      // redeemable after it changes. This screen is shared by every role,
+      // so for a non-owner the callable's own requireOwner() check simply
+      // denies it - harmless, swallowed below.
+      unawaited(_invalidateOwnerRecoveryChallenges());
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Password changed successfully')),
       );
       context.pop();
     });
+  }
+
+  Future<void> _invalidateOwnerRecoveryChallenges() async {
+    try {
+      await FirebaseFunctions.instanceFor(
+        region: 'europe-west1',
+      ).httpsCallable('invalidateOwnerRecoveryChallenges').call();
+    } catch (_) {
+      // Not the owner account, or best-effort cleanup failed - never
+      // blocks the already-completed password change.
+    }
   }
 
   @override

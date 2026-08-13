@@ -31,9 +31,7 @@ abstract class VerificationLocalDataSource {
   Future<void> saveRevocation(RevokedCredential revocation);
   Future<void> deleteRevocation(String credentialValue, String schoolId);
 
-  Future<OperatorPermissionSnapshot?> getPermissionSnapshot(
-    String operatorId,
-  );
+  Future<OperatorPermissionSnapshot?> getPermissionSnapshot(String operatorId);
   Future<void> savePermissionSnapshot(OperatorPermissionSnapshot snapshot);
 
   Future<AuthorizedDevice?> findDevice(String deviceId, String schoolId);

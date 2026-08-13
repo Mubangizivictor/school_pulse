@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
-const { isOwnerData } = require('./owner_notification_engine');
+const { requirePlatformOwner, OwnerAuthorizationError } = require('./vendor/owner-auth');
 
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
@@ -10,16 +10,17 @@ function text(value, max = 500) {
   return String(value ?? '').trim().slice(0, max);
 }
 
+// Thin wrapper over the canonical @school-pulse/owner-auth package - see
+// shared/owner-auth/index.js.
 async function requireOwner(request) {
-  if (!request.auth?.uid) {
-    throw new HttpsError('unauthenticated', 'Sign in as the School Pulse SaaS Owner first.');
+  try {
+    return await requirePlatformOwner(request, { db });
+  } catch (error) {
+    if (error instanceof OwnerAuthorizationError) {
+      throw new HttpsError(error.code, error.message);
+    }
+    throw error;
   }
-  const snap = await db.collection('users').doc(request.auth.uid).get();
-  const user = snap.data() || {};
-  if (user.isActive === false || !isOwnerData(user)) {
-    throw new HttpsError('permission-denied', 'Only the School Pulse SaaS Owner can manage owner notifications.');
-  }
-  return { uid: request.auth.uid, user };
 }
 
 function tokenId(token) {

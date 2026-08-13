@@ -11,11 +11,10 @@ class _AttendanceQrRepositoryStub implements AttendanceQrRepository {
   Future<Either<Failure, void>> saveAttendance(QrAttendanceRecord record) =>
       _unsupported();
   @override
-  Future<Either<Failure, List<QrAttendanceRecord>>>
-  getPendingSyncRecords() => _unsupported();
-  @override
-  Future<Either<Failure, void>> markAsSynced(String recordId) =>
+  Future<Either<Failure, List<QrAttendanceRecord>>> getPendingSyncRecords() =>
       _unsupported();
+  @override
+  Future<Either<Failure, void>> markAsSynced(String recordId) => _unsupported();
   @override
   Future<Either<Failure, void>> syncWithFirebase() => _unsupported();
   @override

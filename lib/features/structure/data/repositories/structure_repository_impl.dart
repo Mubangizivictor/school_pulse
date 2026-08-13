@@ -31,9 +31,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<EducationalLevel>> watchLevels(String schoolId) {
     return remoteDataSource.watchLevels(schoolId).map((levels) {
-      localDataSource.cacheLevels(
-        levels,
-      );
+      localDataSource.cacheLevels(levels);
       return levels;
     });
   }
@@ -61,9 +59,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<AcademicYear>> watchAcademicYears(String schoolId) {
     return remoteDataSource.watchAcademicYears(schoolId).map((years) {
-      localDataSource.cacheAcademicYears(
-        years,
-      );
+      localDataSource.cacheAcademicYears(years);
       return years;
     });
   }
@@ -95,9 +91,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<AcademicTerm>> watchAcademicTerms(String schoolId) {
     return remoteDataSource.watchAcademicTerms(schoolId).map((terms) {
-      localDataSource.cacheAcademicTerms(
-        terms,
-      );
+      localDataSource.cacheAcademicTerms(terms);
       return terms;
     });
   }
@@ -129,9 +123,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<SchoolClass>> watchClasses(String schoolId) {
     return remoteDataSource.watchClasses(schoolId).map((classes) {
-      localDataSource.cacheClasses(
-        classes,
-      );
+      localDataSource.cacheClasses(classes);
       return classes;
     });
   }
@@ -159,9 +151,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<ClassStream>> watchStreams(String schoolId) {
     return remoteDataSource.watchStreams(schoolId).map((streams) {
-      localDataSource.cacheStreams(
-        streams,
-      );
+      localDataSource.cacheStreams(streams);
       return streams;
     });
   }
@@ -189,9 +179,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<Subject>> watchSubjects(String schoolId) {
     return remoteDataSource.watchSubjects(schoolId).map((subjects) {
-      localDataSource.cacheSubjects(
-        subjects,
-      );
+      localDataSource.cacheSubjects(subjects);
       return subjects;
     });
   }
@@ -211,9 +199,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<Department>> watchDepartments(String schoolId) {
     return remoteDataSource.watchDepartments(schoolId).map((departments) {
-      localDataSource.cacheDepartments(
-        departments,
-      );
+      localDataSource.cacheDepartments(departments);
       return departments;
     });
   }
@@ -237,9 +223,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<StaffDesignation>> watchDesignations(String schoolId) {
     return remoteDataSource.watchDesignations(schoolId).map((designations) {
-      localDataSource.cacheDesignations(
-        designations,
-      );
+      localDataSource.cacheDesignations(designations);
       return designations;
     });
   }
@@ -259,9 +243,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<StaffRole>> watchStaffRoles(String schoolId) {
     return remoteDataSource.watchStaffRoles(schoolId).map((roles) {
-      localDataSource.cacheStaffRoles(
-        roles,
-      );
+      localDataSource.cacheStaffRoles(roles);
       return roles;
     });
   }
@@ -299,9 +281,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<Campus>> watchCampuses(String schoolId) {
     return remoteDataSource.watchCampuses(schoolId).map((campuses) {
-      localDataSource.cacheCampuses(
-        campuses,
-      );
+      localDataSource.cacheCampuses(campuses);
       return campuses;
     });
   }
@@ -324,9 +304,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<House>> watchHouses(String schoolId) {
     return remoteDataSource.watchHouses(schoolId).map((houses) {
-      localDataSource.cacheHouses(
-        houses,
-      );
+      localDataSource.cacheHouses(houses);
       return houses;
     });
   }
@@ -344,9 +322,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<Club>> watchClubs(String schoolId) {
     return remoteDataSource.watchClubs(schoolId).map((clubs) {
-      localDataSource.cacheClubs(
-        clubs,
-      );
+      localDataSource.cacheClubs(clubs);
       return clubs;
     });
   }
@@ -363,9 +339,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<Facility>> watchFacilities(String schoolId) {
     return remoteDataSource.watchFacilities(schoolId).map((facilities) {
-      localDataSource.cacheFacilities(
-        facilities,
-      );
+      localDataSource.cacheFacilities(facilities);
       return facilities;
     });
   }
@@ -385,9 +359,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<Hostel>> watchHostels(String schoolId) {
     return remoteDataSource.watchHostels(schoolId).map((hostels) {
-      localDataSource.cacheHostels(
-        hostels,
-      );
+      localDataSource.cacheHostels(hostels);
       return hostels;
     });
   }
@@ -406,9 +378,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<HostelRoom>> watchHostelRooms(String schoolId) {
     return remoteDataSource.watchHostelRooms(schoolId).map((rooms) {
-      localDataSource.cacheHostelRooms(
-        rooms,
-      );
+      localDataSource.cacheHostelRooms(rooms);
       return rooms;
     });
   }
@@ -428,9 +398,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<TransportRoute>> watchTransportRoutes(String schoolId) {
     return remoteDataSource.watchTransportRoutes(schoolId).map((routes) {
-      localDataSource.cacheTransportRoutes(
-        routes,
-      );
+      localDataSource.cacheTransportRoutes(routes);
       return routes;
     });
   }
@@ -450,9 +418,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<TransportStop>> watchTransportStops(String schoolId) {
     return remoteDataSource.watchTransportStops(schoolId).map((stops) {
-      localDataSource.cacheTransportStops(
-        stops,
-      );
+      localDataSource.cacheTransportStops(stops);
       return stops;
     });
   }
@@ -472,9 +438,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<TransportVehicle>> watchTransportVehicles(String schoolId) {
     return remoteDataSource.watchTransportVehicles(schoolId).map((vehicles) {
-      localDataSource.cacheTransportVehicles(
-        vehicles,
-      );
+      localDataSource.cacheTransportVehicles(vehicles);
       return vehicles;
     });
   }
@@ -494,9 +458,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<FeeCategory>> watchFeeCategories(String schoolId) {
     return remoteDataSource.watchFeeCategories(schoolId).map((categories) {
-      localDataSource.cacheFeeCategories(
-        categories,
-      );
+      localDataSource.cacheFeeCategories(categories);
       return categories;
     });
   }
@@ -516,9 +478,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<AssessmentTypeDef>> watchAssessmentTypes(String schoolId) {
     return remoteDataSource.watchAssessmentTypes(schoolId).map((types) {
-      localDataSource.cacheAssessmentTypes(
-        types,
-      );
+      localDataSource.cacheAssessmentTypes(types);
       return types;
     });
   }
@@ -538,9 +498,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<GradingSystemDef>> watchGradingSystems(String schoolId) {
     return remoteDataSource.watchGradingSystems(schoolId).map((systems) {
-      localDataSource.cacheGradingSystems(
-        systems,
-      );
+      localDataSource.cacheGradingSystems(systems);
       return systems;
     });
   }
@@ -560,9 +518,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<GradeBand>> watchGradeBands(String schoolId) {
     return remoteDataSource.watchGradeBands(schoolId).map((bands) {
-      localDataSource.cacheGradeBands(
-        bands,
-      );
+      localDataSource.cacheGradeBands(bands);
       return bands;
     });
   }
@@ -590,9 +546,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<AttendanceTypeDef>> watchAttendanceTypes(String schoolId) {
     return remoteDataSource.watchAttendanceTypes(schoolId).map((types) {
-      localDataSource.cacheAttendanceTypes(
-        types,
-      );
+      localDataSource.cacheAttendanceTypes(types);
       return types;
     });
   }
@@ -612,9 +566,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<AttendanceSessionDef>> watchAttendanceSessions(String schoolId) {
     return remoteDataSource.watchAttendanceSessions(schoolId).map((sessions) {
-      localDataSource.cacheAttendanceSessions(
-        sessions,
-      );
+      localDataSource.cacheAttendanceSessions(sessions);
       return sessions;
     });
   }
@@ -682,9 +634,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<MessageTemplateDef>> watchMessageTemplates(String schoolId) {
     return remoteDataSource.watchMessageTemplates(schoolId).map((templates) {
-      localDataSource.cacheMessageTemplates(
-        templates,
-      );
+      localDataSource.cacheMessageTemplates(templates);
       return templates;
     });
   }
@@ -704,9 +654,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<DocumentTemplateDef>> watchDocumentTemplates(String schoolId) {
     return remoteDataSource.watchDocumentTemplates(schoolId).map((templates) {
-      localDataSource.cacheDocumentTemplates(
-        templates,
-      );
+      localDataSource.cacheDocumentTemplates(templates);
       return templates;
     });
   }
@@ -726,9 +674,7 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<CustomFieldDef>> watchCustomFields(String schoolId) {
     return remoteDataSource.watchCustomFields(schoolId).map((fields) {
-      localDataSource.cacheCustomFields(
-        fields,
-      );
+      localDataSource.cacheCustomFields(fields);
       return fields;
     });
   }

@@ -140,7 +140,8 @@ class NotificationService {
       badge: true,
       sound: true,
     );
-    final granted = settings.authorizationStatus == AuthorizationStatus.authorized;
+    final granted =
+        settings.authorizationStatus == AuthorizationStatus.authorized;
     if (granted) {
       try {
         final token = await _fcm.getToken();

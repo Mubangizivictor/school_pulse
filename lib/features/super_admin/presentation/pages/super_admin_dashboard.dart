@@ -193,15 +193,21 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     _popToRoot(_mobileNavigatorKeys[2]);
   }
 
-  void _goToSchools() {
+  void _goToSchools({String? query}) {
     setState(() {
       _selectedIndex = 1;
       _mobileNavIndex = 1;
+      if (query != null) _schoolsSearchQuery = query;
     });
     _syncRouteToSection(_kSectionPaths[1]);
     _popToRoot(_desktopNavigatorKeys[1]);
     _popToRoot(_mobileNavigatorKeys[1]);
   }
+
+  // Backs the top bar's global search: since Schools/Applications are the
+  // only owner-searchable dataset today, a submitted query jumps there and
+  // pre-fills its search field rather than pretending to search everything.
+  String? _schoolsSearchQuery;
 
   @override
   Widget build(BuildContext context) {
@@ -210,8 +216,9 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
         onOpenBilling: () =>
             _goToBilling(filter: ManualPaymentStatus.pendingVerification),
         onOpenSchools: _goToSchools,
+        onSearchSchools: (query) => _goToSchools(query: query),
       ),
-      const SchoolManagementScreen(),
+      SchoolManagementScreen(initialQuery: _schoolsSearchQuery),
       BillingPage(
         key: ValueKey(_billingPageKey),
         initialFilter: _billingInitialFilter,

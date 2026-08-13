@@ -128,6 +128,7 @@ import 'package:school_pulse/features/academic/presentation/bloc/academic_bloc.d
 import 'package:school_pulse/features/auth/domain/repositories/auth_repository.dart';
 import 'package:school_pulse/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:school_pulse/features/auth/data/datasources/auth_remote_data_source.dart';
+import 'package:school_pulse/features/auth/domain/usecases/login_owner.dart';
 import 'package:school_pulse/features/auth/domain/usecases/login_with_email.dart';
 import 'package:school_pulse/features/auth/domain/usecases/login_parent.dart';
 import 'package:school_pulse/features/auth/domain/usecases/enter_support_mode.dart';
@@ -739,9 +740,17 @@ Future<void> init() async {
   );
 
   // Features - Auth
-  sl.registerFactory(
+  // Singleton, not a factory: this bloc represents the one app-wide auth
+  // session, and GoRouter's redirect logic (see app/router.dart) needs to
+  // read/listen to that same instance rather than a fresh, disconnected
+  // one each time di.sl<AuthBloc>() is called.
+  sl.registerLazySingleton(
     () => AuthBloc(
       loginWithEmail: sl(),
+      loginOwnerWithEmail: sl(),
+      loginOwnerWithGoogle: sl(),
+      loginOwnerWithApple: sl(),
+      verifyOwnerSession: sl(),
       loginParent: sl(),
       completeParentPinSetup: sl(),
       logout: sl(),
@@ -754,6 +763,10 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton(() => LoginWithEmail(sl()));
+  sl.registerLazySingleton(() => LoginOwnerWithEmail(sl()));
+  sl.registerLazySingleton(() => LoginOwnerWithGoogle(sl()));
+  sl.registerLazySingleton(() => LoginOwnerWithApple(sl()));
+  sl.registerLazySingleton(() => VerifyOwnerSession(sl()));
   sl.registerLazySingleton(() => LoginParent(sl()));
   sl.registerLazySingleton(() => CompleteParentPinSetup(sl()));
   sl.registerLazySingleton(() => Logout(sl()));
@@ -770,6 +783,11 @@ Future<void> init() async {
       firebaseAuth: sl(),
       firestore: sl(),
       functions: sl(),
+      // assertPlatformOwnerAccess and the rest of the publicwebsite Cloud
+      // Functions codebase are deployed to europe-west1, not the default
+      // region `sl<FirebaseFunctions>()` resolves to - see
+      // AuthRemoteDataSourceImpl.ownerFunctions' doc comment.
+      ownerFunctions: FirebaseFunctions.instanceFor(region: 'europe-west1'),
     ),
   );
 

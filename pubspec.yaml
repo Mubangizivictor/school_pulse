@@ -23,6 +23,8 @@ dependencies:
   firebase_storage: ^12.3.7
   firebase_messaging: ^15.2.2
   firebase_analytics: ^11.3.8
+  google_sign_in: ^6.2.2
+  sign_in_with_apple: ^6.1.4
   go_router: ^14.2.0
   google_fonts: ^6.2.1
   shared_preferences: ^2.2.3
@@ -79,16 +81,19 @@ dev_dependencies:
   flutter_native_splash: ^2.4.3
 
 flutter_native_splash:
-  color: "#ffffff"
+  # Keep the native hand-off visually consistent with the app's blue palette.
+  # The OS selects the dark variant before Flutter has restored the saved
+  # in-app theme preference.
+  color: "#EAF3FF"
   image: assets/splash/splash_light_mode.png
-  color_dark: "#121212"
+  color_dark: "#020B2D"
   image_dark: assets/splash/splash_dark_mode.png
 
   android_12:
     image: assets/splash/android12/splash_light_mode.png
-    icon_background_color: "#ffffff"
+    icon_background_color: "#EAF3FF"
     image_dark: assets/splash/android12/splash_dark_mode.png
-    icon_background_color_dark: "#121212"
+    icon_background_color_dark: "#020B2D"
 
 flutter_launcher_icons:
   android: "ic_launcher"
@@ -112,3 +117,5 @@ flutter:
     - assets/loading_icon/loading_icon.png
     - assets/logos/
     - assets/launcher_icons/
+    - assets/splash/splash_dark_mode.png
+    - assets/splash/splash_light_mode.png

@@ -100,14 +100,14 @@ void main() {
       'is idempotent when the card is already actively assigned to the same identity',
       () async {
         final existing = CachedCredential(
-      credentialValue: cardUid,
-      credentialType: 'nfc',
-      identityId: 'SP-STUDENT-1',
-      identityType: 'student',
-      schoolId: schoolId,
-      status: 'active',
-      updatedAt: DateTime(2026),
-    );
+          credentialValue: cardUid,
+          credentialType: 'nfc',
+          identityId: 'SP-STUDENT-1',
+          identityType: 'student',
+          schoolId: schoolId,
+          status: 'active',
+          updatedAt: DateTime(2026),
+        );
         when(
           () => localDataSource.findCredential(cardUid, schoolId),
         ).thenAnswer((_) async => existing);
@@ -128,14 +128,14 @@ void main() {
       'fails without writing anything when the card is actively assigned to a different identity',
       () async {
         final existing = CachedCredential(
-      credentialValue: cardUid,
-      credentialType: 'nfc',
-      identityId: 'SP-STUDENT-OTHER',
-      identityType: 'student',
-      schoolId: schoolId,
-      status: 'active',
-      updatedAt: DateTime(2026),
-    );
+          credentialValue: cardUid,
+          credentialType: 'nfc',
+          identityId: 'SP-STUDENT-OTHER',
+          identityType: 'student',
+          schoolId: schoolId,
+          status: 'active',
+          updatedAt: DateTime(2026),
+        );
         when(
           () => localDataSource.findCredential(cardUid, schoolId),
         ).thenAnswer((_) async => existing);
@@ -157,14 +157,14 @@ void main() {
       'reuse: reassigns a previously-revoked card to a new identity and clears the denylist',
       () async {
         final existing = CachedCredential(
-      credentialValue: cardUid,
-      credentialType: 'nfc',
-      identityId: 'SP-STUDENT-OLD',
-      identityType: 'student',
-      schoolId: schoolId,
-      status: 'revoked',
-      updatedAt: DateTime(2026),
-    );
+          credentialValue: cardUid,
+          credentialType: 'nfc',
+          identityId: 'SP-STUDENT-OLD',
+          identityType: 'student',
+          schoolId: schoolId,
+          status: 'revoked',
+          updatedAt: DateTime(2026),
+        );
         when(
           () => localDataSource.findCredential(cardUid, schoolId),
         ).thenAnswer((_) async => existing);
@@ -196,14 +196,14 @@ void main() {
       'marks the cached mapping revoked and adds a denylist entry',
       () async {
         final existing = CachedCredential(
-      credentialValue: cardUid,
-      credentialType: 'nfc',
-      identityId: 'SP-STUDENT-1',
-      identityType: 'student',
-      schoolId: schoolId,
-      status: 'active',
-      updatedAt: DateTime(2026),
-    );
+          credentialValue: cardUid,
+          credentialType: 'nfc',
+          identityId: 'SP-STUDENT-1',
+          identityType: 'student',
+          schoolId: schoolId,
+          status: 'active',
+          updatedAt: DateTime(2026),
+        );
         when(
           () => localDataSource.findCredential(cardUid, schoolId),
         ).thenAnswer((_) async => existing);
@@ -248,14 +248,14 @@ void main() {
       'clears the denylist entry and restores the cached mapping to active',
       () async {
         final existing = CachedCredential(
-      credentialValue: cardUid,
-      credentialType: 'nfc',
-      identityId: 'SP-STUDENT-1',
-      identityType: 'student',
-      schoolId: schoolId,
-      status: 'revoked',
-      updatedAt: DateTime(2026),
-    );
+          credentialValue: cardUid,
+          credentialType: 'nfc',
+          identityId: 'SP-STUDENT-1',
+          identityType: 'student',
+          schoolId: schoolId,
+          status: 'revoked',
+          updatedAt: DateTime(2026),
+        );
         when(
           () => localDataSource.findCredential(cardUid, schoolId),
         ).thenAnswer((_) async => existing);
@@ -296,14 +296,14 @@ void main() {
       () async {
         when(() => localDataSource.findCredential('OLD', schoolId)).thenAnswer(
           (_) async => CachedCredential(
-      credentialValue: 'OLD',
-      credentialType: 'nfc',
-      identityId: 'SP-STUDENT-1',
-      identityType: 'student',
-      schoolId: schoolId,
-      status: 'active',
-      updatedAt: DateTime(2026),
-    )
+            credentialValue: 'OLD',
+            credentialType: 'nfc',
+            identityId: 'SP-STUDENT-1',
+            identityType: 'student',
+            schoolId: schoolId,
+            status: 'active',
+            updatedAt: DateTime(2026),
+          ),
         );
         when(
           () => localDataSource.findCredential('NEW', schoolId),
@@ -349,14 +349,14 @@ void main() {
           ),
         ).thenAnswer(
           (_) async => CachedCredential(
-      credentialValue: cardUid,
-      credentialType: 'nfc',
-      identityId: 'SP-STUDENT-1',
-      identityType: 'student',
-      schoolId: schoolId,
-      status: 'revoked',
-      updatedAt: DateTime(2026),
-    )
+            credentialValue: cardUid,
+            credentialType: 'nfc',
+            identityId: 'SP-STUDENT-1',
+            identityType: 'student',
+            schoolId: schoolId,
+            status: 'revoked',
+            updatedAt: DateTime(2026),
+          ),
         );
 
         final result = await repository.findAssignedCredential(
@@ -460,14 +460,14 @@ void main() {
           () => localDataSource.findCredential(cardUid, schoolId),
         ).thenAnswer(
           (_) async => CachedCredential(
-      credentialValue: cardUid,
-      credentialType: 'nfc',
-      identityId: 'SP-STUDENT-OLD',
-      identityType: 'student',
-      schoolId: schoolId,
-      status: 'revoked',
-      updatedAt: DateTime(2026),
-    )
+            credentialValue: cardUid,
+            credentialType: 'nfc',
+            identityId: 'SP-STUDENT-OLD',
+            identityType: 'student',
+            schoolId: schoolId,
+            status: 'revoked',
+            updatedAt: DateTime(2026),
+          ),
         );
 
         await repository.assign(

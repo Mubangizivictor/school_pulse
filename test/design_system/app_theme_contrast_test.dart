@@ -80,7 +80,8 @@ void main() {
       expect(
         onPrimary,
         greaterThanOrEqualTo(wcagAALargeTextOrIcon),
-        reason: 'onPrimary (e.g. white nav-bar-selected icon) vs primary: '
+        reason:
+            'onPrimary (e.g. white nav-bar-selected icon) vs primary: '
             '$onPrimary',
       );
     });
@@ -176,82 +177,96 @@ void main() {
     });
   });
 
-  group('AppColors raw constant pairs (as documented, not runtime-derived)', () {
-    test('light: textPrimaryLight vs surfaceLight/bgLight', () {
-      final onSurface = contrastRatio(
-        AppColors.textPrimaryLight,
-        AppColors.surfaceLight,
-      );
-      final onBg = contrastRatio(AppColors.textPrimaryLight, AppColors.bgLight);
-      expect(onSurface, greaterThanOrEqualTo(wcagAANormalText));
-      expect(onBg, greaterThanOrEqualTo(wcagAANormalText));
-    });
+  group(
+    'AppColors raw constant pairs (as documented, not runtime-derived)',
+    () {
+      test('light: textPrimaryLight vs surfaceLight/bgLight', () {
+        final onSurface = contrastRatio(
+          AppColors.textPrimaryLight,
+          AppColors.surfaceLight,
+        );
+        final onBg = contrastRatio(
+          AppColors.textPrimaryLight,
+          AppColors.bgLight,
+        );
+        expect(onSurface, greaterThanOrEqualTo(wcagAANormalText));
+        expect(onBg, greaterThanOrEqualTo(wcagAANormalText));
+      });
 
-    test('light: textSecondaryLight/textMutedLight vs surfaceLight', () {
-      final secondary = contrastRatio(
-        AppColors.textSecondaryLight,
-        AppColors.surfaceLight,
-      );
-      final muted = contrastRatio(
-        AppColors.textMutedLight,
-        AppColors.surfaceLight,
-      );
-      expect(secondary, greaterThanOrEqualTo(wcagAANormalText));
-      expect(
-        muted,
-        greaterThanOrEqualTo(wcagAALargeTextOrIcon),
-        reason: 'textMutedLight vs surfaceLight: $muted '
-            '(muted text should still clear the large-text/icon floor)',
-      );
-    });
+      test('light: textSecondaryLight/textMutedLight vs surfaceLight', () {
+        final secondary = contrastRatio(
+          AppColors.textSecondaryLight,
+          AppColors.surfaceLight,
+        );
+        final muted = contrastRatio(
+          AppColors.textMutedLight,
+          AppColors.surfaceLight,
+        );
+        expect(secondary, greaterThanOrEqualTo(wcagAANormalText));
+        expect(
+          muted,
+          greaterThanOrEqualTo(wcagAALargeTextOrIcon),
+          reason:
+              'textMutedLight vs surfaceLight: $muted '
+              '(muted text should still clear the large-text/icon floor)',
+        );
+      });
 
-    test('dark: textPrimaryDark vs surfaceDark/bgDark/elevatedSurfaceDark', () {
-      final onSurface = contrastRatio(
-        AppColors.textPrimaryDark,
-        AppColors.surfaceDark,
+      test(
+        'dark: textPrimaryDark vs surfaceDark/bgDark/elevatedSurfaceDark',
+        () {
+          final onSurface = contrastRatio(
+            AppColors.textPrimaryDark,
+            AppColors.surfaceDark,
+          );
+          final onBg = contrastRatio(
+            AppColors.textPrimaryDark,
+            AppColors.bgDark,
+          );
+          final onElevated = contrastRatio(
+            AppColors.textPrimaryDark,
+            AppColors.elevatedSurfaceDark,
+          );
+          expect(onSurface, greaterThanOrEqualTo(wcagAANormalText));
+          expect(onBg, greaterThanOrEqualTo(wcagAANormalText));
+          expect(onElevated, greaterThanOrEqualTo(wcagAANormalText));
+        },
       );
-      final onBg = contrastRatio(AppColors.textPrimaryDark, AppColors.bgDark);
-      final onElevated = contrastRatio(
-        AppColors.textPrimaryDark,
-        AppColors.elevatedSurfaceDark,
-      );
-      expect(onSurface, greaterThanOrEqualTo(wcagAANormalText));
-      expect(onBg, greaterThanOrEqualTo(wcagAANormalText));
-      expect(onElevated, greaterThanOrEqualTo(wcagAANormalText));
-    });
 
-    test('dark: textSecondaryDark/textMutedDark vs surfaceDark', () {
-      final secondary = contrastRatio(
-        AppColors.textSecondaryDark,
-        AppColors.surfaceDark,
-      );
-      final muted = contrastRatio(
-        AppColors.textMutedDark,
-        AppColors.surfaceDark,
-      );
-      expect(secondary, greaterThanOrEqualTo(wcagAANormalText));
-      expect(
-        muted,
-        greaterThanOrEqualTo(wcagAALargeTextOrIcon),
-        reason: 'textMutedDark vs surfaceDark: $muted '
-            '(the dedicated constant, even though onSurfaceVariant currently '
-            'resolves to textSecondaryDark instead at runtime)',
-      );
-    });
+      test('dark: textSecondaryDark/textMutedDark vs surfaceDark', () {
+        final secondary = contrastRatio(
+          AppColors.textSecondaryDark,
+          AppColors.surfaceDark,
+        );
+        final muted = contrastRatio(
+          AppColors.textMutedDark,
+          AppColors.surfaceDark,
+        );
+        expect(secondary, greaterThanOrEqualTo(wcagAANormalText));
+        expect(
+          muted,
+          greaterThanOrEqualTo(wcagAALargeTextOrIcon),
+          reason:
+              'textMutedDark vs surfaceDark: $muted '
+              '(the dedicated constant, even though onSurfaceVariant currently '
+              'resolves to textSecondaryDark instead at runtime)',
+        );
+      });
 
-    test('borders are visible (not identical to surface) in both themes', () {
-      final lightBorderVsSurface = contrastRatio(
-        AppColors.borderLight,
-        AppColors.surfaceLight,
-      );
-      final darkBorderVsSurface = contrastRatio(
-        AppColors.borderDark,
-        AppColors.surfaceDark,
-      );
-      // Borders are intentionally subtle (spec section 37), so this is a
-      // low floor just to catch a border becoming literally invisible.
-      expect(lightBorderVsSurface, greaterThan(1.05));
-      expect(darkBorderVsSurface, greaterThan(1.05));
-    });
-  });
+      test('borders are visible (not identical to surface) in both themes', () {
+        final lightBorderVsSurface = contrastRatio(
+          AppColors.borderLight,
+          AppColors.surfaceLight,
+        );
+        final darkBorderVsSurface = contrastRatio(
+          AppColors.borderDark,
+          AppColors.surfaceDark,
+        );
+        // Borders are intentionally subtle (spec section 37), so this is a
+        // low floor just to catch a border becoming literally invisible.
+        expect(lightBorderVsSurface, greaterThan(1.05));
+        expect(darkBorderVsSurface, greaterThan(1.05));
+      });
+    },
+  );
 }

@@ -1,5 +1,6 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
+const { requirePlatformOwner, OwnerAuthorizationError } = require("./vendor/owner-auth");
 
 // Mirrors isStaff() in firestore.rules: any non-parent, non-student role.
 // The Admin SDK bypasses Firestore rules entirely, so this check is the
@@ -194,13 +195,14 @@ exports.updateStudentStatusWithCapacityAdjustment = onCall(async (request) => {
  * reality on its own. Owner-only; run once manually, not on a schedule.
  */
 exports.backfillActiveStudentCounts = onCall(async (request) => {
-  const auth = request.auth;
-  if (!auth) throw new HttpsError("unauthenticated", "You must be signed in.");
   const db = admin.firestore();
-  const callerDoc = await db.collection("users").doc(auth.uid).get();
-  const callerData = callerDoc.exists ? callerDoc.data() : {};
-  if (callerData.role !== "superAdmin") {
-    throw new HttpsError("permission-denied", "Only the platform owner can run this backfill.");
+  try {
+    await requirePlatformOwner(request, { db });
+  } catch (error) {
+    if (error instanceof OwnerAuthorizationError) {
+      throw new HttpsError(error.code, error.message);
+    }
+    throw error;
   }
 
   const schoolsSnap = await db.collection("schools").get();

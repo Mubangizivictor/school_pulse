@@ -126,8 +126,10 @@ class VerificationLocalDataSourceWeb implements VerificationLocalDataSource {
   ) async {}
 
   @override
-  Future<AuthorizedDevice?> findDevice(String deviceId, String schoolId) async =>
-      null;
+  Future<AuthorizedDevice?> findDevice(
+    String deviceId,
+    String schoolId,
+  ) async => null;
 
   @override
   Future<void> saveVerificationEvent(VerificationEvent event) async {

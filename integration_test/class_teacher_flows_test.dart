@@ -100,7 +100,11 @@ void main() {
           .doc(sessionId);
 
       final before = await sessionRef.get();
-      expect(before.exists, isFalse, reason: "today's register must start unmarked");
+      expect(
+        before.exists,
+        isFalse,
+        reason: "today's register must start unmarked",
+      );
 
       final freshContext = tester.element(find.byType(Scaffold).first);
       GoRouter.of(freshContext).push('/staff/roll-call');
@@ -109,7 +113,10 @@ void main() {
 
       await tester.tap(find.text('Mark all present'));
       await tester.pumpAndSettle();
-      expect(find.text('All students marked. Ready to submit.'), findsOneWidget);
+      expect(
+        find.text('All students marked. Ready to submit.'),
+        findsOneWidget,
+      );
 
       await tester.tap(find.text('Submit Attendance'));
       await tester.pumpAndSettle(const Duration(seconds: 2));
@@ -188,10 +195,8 @@ void main() {
 
 /// Scoped to the bottom [NavigationBar] so a same-named dashboard metric
 /// label (e.g. "Students") is never the one that gets tapped.
-Finder _navItem(String label) => find.descendant(
-      of: find.byType(NavigationBar),
-      matching: find.text(label),
-    );
+Finder _navItem(String label) =>
+    find.descendant(of: find.byType(NavigationBar), matching: find.text(label));
 
 String _todaySessionId() {
   final now = DateTime.now();

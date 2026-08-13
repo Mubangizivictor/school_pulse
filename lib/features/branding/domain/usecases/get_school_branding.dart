@@ -19,17 +19,27 @@ class GetSchoolBranding implements UseCase<SchoolBranding, String> {
       }
 
       final data = doc.data()!;
-      final brandingData = data['branding'] as Map<String, dynamic>?;
-
-      if (brandingData == null) {
-        return Left(ServerFailure('Branding data is missing for this school'));
+      // Structure owns this document. Branding is optional presentation data,
+      // not a second configuration source, so a valid school can still open
+      // with safe platform defaults while its admin finishes setup.
+      final brandingData =
+          (data['branding'] as Map<String, dynamic>?) ??
+          const <String, dynamic>{};
+      final schoolName = (data['name'] ?? data['schoolName'])
+          ?.toString()
+          .trim();
+      if (schoolName == null || schoolName.isEmpty) {
+        return Left(ServerFailure('School identity is incomplete'));
       }
 
       return Right(
         SchoolBranding(
           schoolId: schoolId,
-          schoolName: data['name'] ?? 'School Name',
+          schoolName: schoolName,
+          schoolInitials: (data['initials'] ?? data['schoolInitials'] ?? '')
+              .toString(),
           schoolMotto: brandingData['motto'] ?? '',
+          schoolType: data['schoolType']?.toString(),
           logoUrl: brandingData['logoUrl'],
           badgeUrl: brandingData['badgeUrl'],
           primaryColor: brandingData['primaryColor'],

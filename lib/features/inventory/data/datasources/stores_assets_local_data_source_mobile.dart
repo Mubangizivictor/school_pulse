@@ -202,7 +202,9 @@ class StoresAssetsLocalDataSourceImpl implements StoresAssetsLocalDataSource {
   Future<void> cacheRepairRecords(List<RepairRecord> records) async {
     await isar.writeTxn(() async {
       await isar.repairIsars.clear();
-      await isar.repairIsars.putAll(records.map(RepairIsar.fromEntity).toList());
+      await isar.repairIsars.putAll(
+        records.map(RepairIsar.fromEntity).toList(),
+      );
     });
   }
 
@@ -213,9 +215,7 @@ class StoresAssetsLocalDataSourceImpl implements StoresAssetsLocalDataSource {
   }
 
   @override
-  Future<void> cacheMaintenanceSchedule(
-    List<MaintenanceRecord> records,
-  ) async {
+  Future<void> cacheMaintenanceSchedule(List<MaintenanceRecord> records) async {
     await isar.writeTxn(() async {
       await isar.maintenanceIsars.clear();
       await isar.maintenanceIsars.putAll(

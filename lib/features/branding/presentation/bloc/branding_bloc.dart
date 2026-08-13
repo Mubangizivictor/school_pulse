@@ -20,8 +20,9 @@ class BrandingBloc extends Bloc<BrandingEvent, BrandingState> {
     InitializeBranding event,
     Emitter<BrandingState> emit,
   ) async {
-    final cached = await localCache.get();
-    emit(BrandingLoaded(cached));
+    // A cache is only a presentation optimisation after membership has been
+    // checked.  Never paint an arbitrary previous tenant at platform start.
+    emit(PlatformBranding());
   }
 
   Future<void> _onBrandingUpdateRequested(
@@ -36,10 +37,18 @@ class BrandingBloc extends Bloc<BrandingEvent, BrandingState> {
     FetchBrandingForSchool event,
     Emitter<BrandingState> emit,
   ) async {
+    emit(BrandingLoading());
+    final cached = await localCache.get();
     final result = await getSchoolBranding(event.schoolId);
     await result.fold(
       (failure) async {
-        // Handle failure if needed, maybe keep current state
+        // Offline fallback is deliberately tenant-bound. A cache for School A
+        // must never be used while bootstrapping School B.
+        if (cached != null && cached.schoolId == event.schoolId) {
+          emit(BrandingLoaded(cached));
+        } else {
+          emit(BrandingError(failure.message));
+        }
       },
       (branding) async {
         await localCache.save(branding);
@@ -53,6 +62,6 @@ class BrandingBloc extends Bloc<BrandingEvent, BrandingState> {
     Emitter<BrandingState> emit,
   ) async {
     await localCache.clear();
-    emit(const BrandingLoaded(null));
+    emit(PlatformBranding());
   }
 }

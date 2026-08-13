@@ -14,8 +14,7 @@ class _GateOpsLocalDataSourceStub implements GateOpsLocalDataSource {
   @override
   Future<void> cacheGate(Gate gate) => _unsupported();
   @override
-  Stream<List<Gate>> watchCachedGates(String schoolId) =>
-      _unsupportedStream();
+  Stream<List<Gate>> watchCachedGates(String schoolId) => _unsupportedStream();
 
   @override
   Future<void> cacheMovementEvent(MovementEvent event) => _unsupported();
@@ -68,6 +67,7 @@ class _GateOpsLocalDataSourceStub implements GateOpsLocalDataSource {
 
   Never _unsupported() =>
       throw UnimplementedError('No GateOpsLocalDataSource for this platform');
-  Stream<Never> _unsupportedStream() =>
-      Stream.error(UnimplementedError('No GateOpsLocalDataSource for this platform'));
+  Stream<Never> _unsupportedStream() => Stream.error(
+    UnimplementedError('No GateOpsLocalDataSource for this platform'),
+  );
 }

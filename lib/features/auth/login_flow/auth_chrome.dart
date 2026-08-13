@@ -485,17 +485,22 @@ class AuthField extends StatelessWidget {
 class AuthPortalScaffold extends StatelessWidget {
   final Color accent;
   final List<Widget> children;
+  final bool alignToTop;
+  final Color? backgroundColor;
 
   const AuthPortalScaffold({
     super.key,
     required this.accent,
     required this.children,
+    this.alignToTop = false,
+    this.backgroundColor,
   });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor:
+          backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -512,6 +517,28 @@ class AuthPortalScaffold extends StatelessWidget {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, viewport) {
+            if (alignToTop) {
+              return SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.x2l,
+                  AppSpacing.m,
+                  AppSpacing.x2l,
+                  AppSpacing.x2l,
+                ),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 460),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: children,
+                    ),
+                  ),
+                ),
+              );
+            }
             return SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(
                 parent: BouncingScrollPhysics(),
@@ -526,7 +553,8 @@ class AuthPortalScaffold extends StatelessWidget {
                 constraints: BoxConstraints(
                   minHeight: viewport.maxHeight - AppSpacing.x3l,
                 ),
-                child: Center(
+                child: Align(
+                  alignment: Alignment.center,
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 460),
                     child: Column(

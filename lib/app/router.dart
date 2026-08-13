@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +8,7 @@ import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/login_flow/welcome_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/parent_login_screens.dart';
 import 'package:school_pulse/features/auth/login_flow/staff_login_screens.dart';
+import 'package:school_pulse/features/auth/login_flow/platform_owner_access_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/mfa_challenge_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:school_pulse/features/auth/login_flow/student_login_screen.dart';
@@ -186,6 +189,7 @@ import 'package:school_pulse/features/director/presentation/screens/director_rep
 import 'package:school_pulse/features/student_identity/presentation/screens/student_id_card_screen.dart';
 import 'package:school_pulse/features/student_identity/presentation/screens/batch_id_card_screen.dart';
 import 'package:school_pulse/features/student/domain/entities/student.dart';
+import 'package:school_pulse/features/super_admin/domain/owner_security_session_service.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/super_admin_dashboard.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/super_admin_notifications_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/owner_notification_preferences_screen.dart';
@@ -224,7 +228,9 @@ import 'package:school_pulse/features/attendance/presentation/screens/attendance
 import 'package:school_pulse/features/attendance/presentation/screens/attendance_list_screen.dart';
 import 'package:school_pulse/features/branding/presentation/screens/splash_screen.dart'
     as pulse_splash;
-import 'package:school_pulse/features/branding/presentation/screens/branded_splash_screen.dart';
+import 'package:school_pulse/features/branding/presentation/screens/authenticated_bootstrap_screen.dart';
+import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.dart';
+import 'package:school_pulse/features/branding/presentation/bloc/branding_state.dart';
 
 import 'package:school_pulse/features/student/presentation/student_shell.dart';
 import 'package:school_pulse/features/student/presentation/screens/student_dashboard_screen.dart';
@@ -335,16 +341,73 @@ import 'package:school_pulse/features/teacher/presentation/screens/resources/rec
 import 'package:school_pulse/features/teacher/presentation/screens/resources/offline_resources_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/resources/storage_usage_screen.dart';
 
+/// Adapts a [Stream] (here, [AuthBloc]'s state stream) into the
+/// [Listenable] GoRouter's `refreshListenable` expects, so a `redirect`
+/// re-evaluation is triggered every time auth state changes - not just on
+/// navigation. Without this, a still-resolving `AuthCheckRequested` (e.g.
+/// web's async session restore) can strand the router on whatever it
+/// evaluated first, since nothing else tells it to check again once the
+/// real Authenticated/Unauthenticated state lands.
+class GoRouterRefreshStream extends ChangeNotifier {
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    notifyListeners();
+    _subscription = stream.asBroadcastStream().listen((_) => notifyListeners());
+  }
+
+  late final StreamSubscription<dynamic> _subscription;
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
+
 final router = GoRouter(
   initialLocation: '/',
-  redirect: (context, state) {
+  // di.sl<AuthBloc>() is a lazy singleton (see injection_container.dart),
+  // so this is the exact same instance main.dart's BlocProvider supplies
+  // via context - not a second, disconnected AuthBloc.
+  refreshListenable: GoRouterRefreshStream(di.sl<AuthBloc>().stream),
+  redirect: (context, state) async {
     final authState = context.read<AuthBloc>().state;
     final isLoggingIn =
         state.uri.path.contains('/login') ||
         state.uri.path.contains('/welcome') ||
+        state.uri.path == '/owner-login' ||
+        state.uri.path == '/owner/mfa-setup' ||
         state.uri.path == '/';
 
-    if (authState is AuthInitial && !isLoggingIn) return '/welcome';
+    if (authState is AuthInitial && !isLoggingIn) return '/';
+
+    // While AuthCheckRequested is still resolving (e.g. on web, where
+    // restoring a persisted Firebase session from IndexedDB is async),
+    // stay put instead of bouncing a still-logged-in user to /welcome —
+    // the redirect re-evaluates automatically once AuthBloc emits its
+    // real Authenticated/Unauthenticated state.
+    if (authState is AuthLoading) return null;
+
+    // A Firebase session alone is never enough to render a tenant route.
+    // The branding state is loaded only by /school-bootstrap after the
+    // authenticated profile has supplied a trusted schoolId.
+    final path = state.uri.path;
+    final isPipelineRoute =
+        path == '/' ||
+        path == '/welcome' ||
+        path == '/school-bootstrap' ||
+        path == '/school-splash' ||
+        path.startsWith('/auth') ||
+        path.startsWith('/owner') ||
+        path == '/institution-suspended';
+    if (authState is AuthAuthenticated &&
+        authState.user.role != UserRole.superAdmin &&
+        !isPipelineRoute) {
+      final branding = context.read<BrandingBloc>().state;
+      if (branding is! BrandingLoaded ||
+          branding.branding?.schoolId != authState.user.schoolId) {
+        return '/school-bootstrap';
+      }
+    }
 
     // Protect Super Admin routes
     if (state.uri.path.startsWith('/super-admin')) {
@@ -352,6 +415,40 @@ final router = GoRouter(
         if (authState.user.role != UserRole.superAdmin) {
           return UserRoleRouting.dashboardPath(authState.user.role);
         }
+        // Mandatory TOTP: Firebase only *enforces* an MFA challenge at
+        // sign-in for a user who already has a factor enrolled
+        // (FirebaseAuthMultiFactorException gates AuthAuthenticated from
+        // ever emitting in that case). It does not require enrollment to
+        // exist in the first place, so an owner who never set up an
+        // authenticator app reaches here on the first factor alone.
+        // Force enrollment before the console ever renders.
+        final currentUser = FirebaseAuth.instance.currentUser;
+        if (currentUser != null) {
+          final factors = await currentUser.multiFactor.getEnrolledFactors();
+          if (factors.isEmpty) return '/owner/mfa-setup';
+        }
+
+        // The unified elevated session every owner login path converges
+        // into (password+TOTP, Google+TOTP, recovery code) - re-validated
+        // live against the server on every navigation into /super-admin,
+        // never trusted from AuthBloc's client-side role state alone. A
+        // session explicitly revoked (Revoke All Sessions) fails closed
+        // here even though the underlying Firebase session is still valid -
+        // that's the whole point of a separate revocation surface.
+        //
+        // The in-memory sessionId does not survive an app restart (by
+        // design - never persisted to SharedPreferences/localStorage), so
+        // a restart re-establishes a fresh session here rather than
+        // bouncing an otherwise-fully-authenticated owner back to
+        // /owner-login: Firebase's own persisted session plus a still-live
+        // `currentUser.multiFactor` enrollment already prove the owner
+        // completed both factors previously, and requireOwner() gates the
+        // establish call itself, so this is not a weaker check - it is the
+        // same guarantee the original login already gave, just re-derived
+        // instead of re-proven.
+        final session = await OwnerSecuritySessionService.instance
+            .validateOrReestablish();
+        if (session == null) return '/owner-login';
       } else {
         return '/welcome';
       }
@@ -388,12 +485,27 @@ final router = GoRouter(
       builder: (context, state) => const pulse_splash.SplashScreen(),
     ),
     GoRoute(
-      path: '/branded-splash',
-      builder: (context, state) => const BrandedSplashScreen(),
-    ),
-    GoRoute(
       path: '/welcome',
       builder: (context, state) => const WelcomeScreen(),
+    ),
+    GoRoute(
+      path: '/school-bootstrap',
+      redirect: (context, state) {
+        final authState = context.read<AuthBloc>().state;
+        if (authState is! AuthAuthenticated) return '/welcome';
+        // superAdmin is the SaaS platform owner, not a school tenant - they
+        // have no schoolId to resolve and every other route in this file
+        // already exempts them from the tenant pipeline (see the top-level
+        // redirect above). AuthenticatedBootstrapScreen has no exit of its
+        // own once landed on, so without this a superAdmin routed here from
+        // any login/session-restore path was stuck indefinitely on
+        // "Preparing your school workspace".
+        if (authState.user.role == UserRole.superAdmin) {
+          return UserRoleRouting.dashboardPath(UserRole.superAdmin);
+        }
+        return null;
+      },
+      builder: (context, state) => const AuthenticatedBootstrapScreen(),
     ),
     GoRoute(
       path: '/institution-suspended',
@@ -406,7 +518,13 @@ final router = GoRouter(
           state.extra,
           context.read<AuthBloc>().state,
         );
-        return user == null ? '/welcome' : null;
+        final branding = context.read<BrandingBloc>().state;
+        return user == null
+            ? '/welcome'
+            : branding is BrandingLoaded &&
+                  branding.branding?.schoolId == user.schoolId
+            ? null
+            : '/school-bootstrap';
       },
       builder: (context, state) {
         final user = resolveSchoolSplashUser(
@@ -498,6 +616,14 @@ final router = GoRouter(
     GoRoute(
       path: '/staff/login',
       builder: (context, state) => const StaffCredentialsScreen(),
+    ),
+    GoRoute(
+      path: '/owner-login',
+      builder: (context, state) => const PlatformOwnerAccessScreen(),
+    ),
+    GoRoute(
+      path: '/owner/mfa-setup',
+      builder: (context, state) => const TwoFactorAuthScreen(),
     ),
     GoRoute(
       path: '/auth/mfa-challenge',

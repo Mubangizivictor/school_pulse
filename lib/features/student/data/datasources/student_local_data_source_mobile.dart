@@ -23,7 +23,9 @@ class StudentLocalDataSourceImpl implements StudentLocalDataSource {
   @override
   Future<void> cacheStudent(Student student) async {
     await isar.writeTxn(() async {
-      await isar.studentProfileIsars.put(StudentProfileIsar.fromEntity(student));
+      await isar.studentProfileIsars.put(
+        StudentProfileIsar.fromEntity(student),
+      );
     });
   }
 

@@ -16,27 +16,30 @@ CachedCredential _credentialToPlain(CachedCredentialIsar c) => CachedCredential(
   updatedAt: c.updatedAt,
 );
 
-CachedCredentialIsar _credentialToIsar(CachedCredential c) => CachedCredentialIsar()
-  ..credentialValue = c.credentialValue
-  ..credentialType = c.credentialType
-  ..identityId = c.identityId
-  ..identityType = c.identityType
-  ..schoolId = c.schoolId
-  ..status = c.status
-  ..updatedAt = c.updatedAt;
+CachedCredentialIsar _credentialToIsar(CachedCredential c) =>
+    CachedCredentialIsar()
+      ..credentialValue = c.credentialValue
+      ..credentialType = c.credentialType
+      ..identityId = c.identityId
+      ..identityType = c.identityType
+      ..schoolId = c.schoolId
+      ..status = c.status
+      ..updatedAt = c.updatedAt;
 
-RevokedCredential _revocationToPlain(RevokedCredentialIsar r) => RevokedCredential(
-  credentialValue: r.credentialValue,
-  schoolId: r.schoolId,
-  revokedAt: r.revokedAt,
-  reason: r.reason,
-);
+RevokedCredential _revocationToPlain(RevokedCredentialIsar r) =>
+    RevokedCredential(
+      credentialValue: r.credentialValue,
+      schoolId: r.schoolId,
+      revokedAt: r.revokedAt,
+      reason: r.reason,
+    );
 
-RevokedCredentialIsar _revocationToIsar(RevokedCredential r) => RevokedCredentialIsar()
-  ..credentialValue = r.credentialValue
-  ..schoolId = r.schoolId
-  ..revokedAt = r.revokedAt
-  ..reason = r.reason;
+RevokedCredentialIsar _revocationToIsar(RevokedCredential r) =>
+    RevokedCredentialIsar()
+      ..credentialValue = r.credentialValue
+      ..schoolId = r.schoolId
+      ..revokedAt = r.revokedAt
+      ..reason = r.reason;
 
 OperatorPermissionSnapshot _snapshotToPlain(OperatorPermissionSnapshotIsar s) =>
     OperatorPermissionSnapshot(
@@ -80,20 +83,21 @@ VerificationEvent _eventToPlain(VerificationEventIsar e) => VerificationEvent(
   isSynced: e.isSynced,
 );
 
-VerificationEventIsar _eventToIsar(VerificationEvent e) => VerificationEventIsar()
-  ..eventId = e.eventId
-  ..schoolId = e.schoolId
-  ..gateId = e.gateId
-  ..operatorId = e.operatorId
-  ..credentialKind = e.credentialKind
-  ..identityId = e.identityId
-  ..identityType = e.identityType
-  ..outcome = e.outcome
-  ..reasonCode = e.reasonCode
-  ..direction = e.direction
-  ..timestamp = e.timestamp
-  ..deviceId = e.deviceId
-  ..isSynced = e.isSynced;
+VerificationEventIsar _eventToIsar(VerificationEvent e) =>
+    VerificationEventIsar()
+      ..eventId = e.eventId
+      ..schoolId = e.schoolId
+      ..gateId = e.gateId
+      ..operatorId = e.operatorId
+      ..credentialKind = e.credentialKind
+      ..identityId = e.identityId
+      ..identityType = e.identityType
+      ..outcome = e.outcome
+      ..reasonCode = e.reasonCode
+      ..direction = e.direction
+      ..timestamp = e.timestamp
+      ..deviceId = e.deviceId
+      ..isSynced = e.isSynced;
 
 class VerificationLocalDataSourceImpl implements VerificationLocalDataSource {
   final Isar isar;

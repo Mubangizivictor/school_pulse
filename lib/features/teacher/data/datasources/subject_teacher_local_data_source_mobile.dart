@@ -77,7 +77,9 @@ class SubjectTeacherLocalDataSourceImpl
 
     final filtered = (streamId == null || streamId.isEmpty)
         ? rows
-        : rows.where((e) => e.streamId == null || e.streamId == streamId).toList();
+        : rows
+              .where((e) => e.streamId == null || e.streamId == streamId)
+              .toList();
     return filtered.map((e) => e.toEntity()).toList();
   }
 

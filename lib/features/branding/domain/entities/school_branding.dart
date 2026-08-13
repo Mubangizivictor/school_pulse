@@ -3,7 +3,11 @@ import 'package:equatable/equatable.dart';
 class SchoolBranding extends Equatable {
   final String schoolId;
   final String schoolName;
+
+  /// Structure-provided initials, or a deterministic name-derived fallback.
+  final String schoolInitials;
   final String schoolMotto;
+  final String? schoolType;
   final String? logoUrl;
   final String? badgeUrl;
   final String? primaryColor;
@@ -17,7 +21,9 @@ class SchoolBranding extends Equatable {
   const SchoolBranding({
     required this.schoolId,
     required this.schoolName,
+    this.schoolInitials = '',
     required this.schoolMotto,
+    this.schoolType,
     this.logoUrl,
     this.badgeUrl,
     this.primaryColor,
@@ -29,11 +35,24 @@ class SchoolBranding extends Equatable {
     this.version = 1,
   });
 
+  String get effectiveInitials {
+    if (schoolInitials.trim().isNotEmpty) return schoolInitials.trim();
+    return schoolName
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .take(3)
+        .map((part) => part[0].toUpperCase())
+        .join();
+  }
+
   @override
   List<Object?> get props => [
     schoolId,
     schoolName,
+    schoolInitials,
     schoolMotto,
+    schoolType,
     logoUrl,
     badgeUrl,
     primaryColor,
@@ -47,7 +66,9 @@ class SchoolBranding extends Equatable {
 
   SchoolBranding copyWith({
     String? schoolName,
+    String? schoolInitials,
     String? schoolMotto,
+    String? schoolType,
     String? logoUrl,
     String? badgeUrl,
     String? primaryColor,
@@ -61,7 +82,9 @@ class SchoolBranding extends Equatable {
     return SchoolBranding(
       schoolId: schoolId,
       schoolName: schoolName ?? this.schoolName,
+      schoolInitials: schoolInitials ?? this.schoolInitials,
       schoolMotto: schoolMotto ?? this.schoolMotto,
+      schoolType: schoolType ?? this.schoolType,
       logoUrl: logoUrl ?? this.logoUrl,
       badgeUrl: badgeUrl ?? this.badgeUrl,
       primaryColor: primaryColor ?? this.primaryColor,

@@ -127,7 +127,8 @@ class NotificationLocalDataSourceWeb implements NotificationLocalDataSource {
   Future<void> clearPendingFlags(List<String> notificationIds) async {}
 
   @override
-  Future<void> deleteById(String notificationId) => remote.delete(notificationId);
+  Future<void> deleteById(String notificationId) =>
+      remote.delete(notificationId);
 
   @override
   Future<int> clearTransientForSource({

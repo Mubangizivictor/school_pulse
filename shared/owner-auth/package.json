@@ -1,0 +1,13 @@
+{
+  "name": "@school-pulse/owner-auth",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "description": "Canonical, single-source-of-truth Platform Owner authorization for School Pulse Cloud Functions. Consumed as a local file: dependency by BOTH Firebase Functions codebases (functions/ and public_functions/ - see repo-root firebase.json's two `codebase` entries) so there is exactly one implementation of \"is this authenticated UID the seeded SaaS Owner\" in the entire backend, never two independently-maintained copies that can drift apart.",
+  "scripts": {
+    "test": "node __tests__/requirePlatformOwner.test.js"
+  },
+  "peerDependencies": {
+    "firebase-admin": ">=12.0.0"
+  }
+}

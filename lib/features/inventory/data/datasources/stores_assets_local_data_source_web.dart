@@ -107,6 +107,5 @@ class StoresAssetsLocalDataSourceWeb implements StoresAssetsLocalDataSource {
   @override
   Future<List<StockMovement>> getUnsyncedMovements() async => [];
   @override
-  Future<List<ProcurementRequest>> getUnsyncedProcurementRequests() async =>
-      [];
+  Future<List<ProcurementRequest>> getUnsyncedProcurementRequests() async => [];
 }

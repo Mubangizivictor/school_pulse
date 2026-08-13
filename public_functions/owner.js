@@ -1,5 +1,6 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
+const { requirePlatformOwner, OwnerAuthorizationError } = require('./vendor/owner-auth');
 
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
@@ -59,16 +60,20 @@ function schoolClassification(category) {
   return 'other';
 }
 
+// Thin wrapper over the canonical @school-pulse/owner-auth package -
+// replaces a previous local implementation that only checked the
+// singular `role` field (ignoring `roles[]`/`platformRole`/`isSuperAdmin`)
+// and never cross-checked `platform_config/owner_seed.ownerUid`, the
+// actual authorization boundary. See shared/owner-auth/index.js.
 async function requireOwner(request) {
-  if (!request.auth?.uid) {
-    throw new HttpsError('unauthenticated', 'You must be signed in as the School Pulse owner.');
+  try {
+    return await requirePlatformOwner(request, { db });
+  } catch (error) {
+    if (error instanceof OwnerAuthorizationError) {
+      throw new HttpsError(error.code, error.message);
+    }
+    throw error;
   }
-  const ownerDoc = await db.collection('users').doc(request.auth.uid).get();
-  const owner = ownerDoc.exists ? ownerDoc.data() : null;
-  if (!owner || owner.role !== 'superAdmin' || owner.isActive === false) {
-    throw new HttpsError('permission-denied', 'Only the seeded School Pulse platform owner can review school applications.');
-  }
-  return { uid: request.auth.uid, profile: owner };
 }
 
 function applicationForClient(doc) {

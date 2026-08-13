@@ -1,6 +1,7 @@
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
 const crypto = require('crypto');
+const { requirePlatformOwner, OwnerAuthorizationError } = require('./vendor/owner-auth');
 
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
@@ -123,16 +124,21 @@ async function verifiedIdentity(req) {
   }
 }
 
+// Thin wrapper over the canonical @school-pulse/owner-auth package -
+// replaces a previous local implementation that only checked the
+// singular `role` field and never cross-checked
+// `platform_config/owner_seed.ownerUid`, the actual authorization
+// boundary. Gates payments/billing-config/plan-pricing endpoints, so this
+// was a real gap: see shared/owner-auth/index.js.
 async function requireOwner(request) {
-  if (!request.auth?.uid) {
-    throw new HttpsError('unauthenticated', 'You must be signed in as the School Pulse owner.');
+  try {
+    return await requirePlatformOwner(request, { db });
+  } catch (error) {
+    if (error instanceof OwnerAuthorizationError) {
+      throw new HttpsError(error.code, error.message);
+    }
+    throw error;
   }
-  const ownerDoc = await db.collection('users').doc(request.auth.uid).get();
-  const owner = ownerDoc.exists ? ownerDoc.data() : null;
-  if (!owner || owner.role !== 'superAdmin' || owner.isActive === false) {
-    throw new HttpsError('permission-denied', 'Only the seeded School Pulse platform owner can perform this action.');
-  }
-  return { uid: request.auth.uid, profile: owner };
 }
 
 async function ensureBillingDefaults() {

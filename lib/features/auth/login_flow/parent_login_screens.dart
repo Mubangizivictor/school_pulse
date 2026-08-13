@@ -192,99 +192,400 @@ class _ChildIdScreenState extends State<ChildIdScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const accent = AppColors.electricBlue;
-
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return AuthPortalScaffold(
-      accent: accent,
+      accent: AppColors.emeraldGreen,
+      alignToTop: true,
+      backgroundColor: isDark ? AppColors.bgDark : Colors.white,
       children: [
-        const AuthHeroScene(
-          accent: accent,
-          badgeIcon: Icons.family_restroom_rounded,
-        ),
-        const SizedBox(height: AppSpacing.l),
-        Text(
-          'Parent Portal',
-          textAlign: TextAlign.center,
-          style: AppTypography.headlineMedium.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.m),
-        Text(
-          "Enter the code provided by the school office\nto access your child's records.",
-          textAlign: TextAlign.center,
-          style: AppTypography.bodyMedium.copyWith(
-            color: AppColors.textSecondaryDark,
-            height: 1.4,
-          ),
-        ),
+        // The back affordance stays at the top; the portal identity starts
+        // below it at the same visual position as the access-screen reference.
+        const SizedBox(height: 92),
+        const _ParentPortalBadge(),
         const SizedBox(height: AppSpacing.x2l),
-        AuthField(
+        const _ParentPortalTitle(),
+        const SizedBox(height: AppSpacing.m),
+        const _ParentPortalIntroduction(),
+        const SizedBox(height: AppSpacing.x5l),
+        _ParentAccessCodeField(
           label: 'Access Code',
           hint: 'e.g. KHA1234',
-          icon: Icons.vpn_key_outlined,
-          accent: accent,
           controller: _controller,
           textCapitalization: TextCapitalization.characters,
           errorText: _error,
         ),
-        const SizedBox(height: AppSpacing.xl),
-        Container(
-          padding: const EdgeInsets.all(AppSpacing.l),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: accent.withValues(alpha: 0.45)),
+        const SizedBox(height: AppSpacing.x2l),
+        const _ParentPortalHelpCard(),
+        const SizedBox(height: AppSpacing.x2l),
+        _ParentContinueButton(
+          isLoading: _isLooking,
+          onPressed: _isValid && !_isLooking ? _continue : null,
+        ),
+        const SizedBox(height: AppSpacing.x3l),
+        const _ParentPortalPrivacyNote(),
+      ],
+    );
+  }
+}
+
+class _ParentPortalBadge extends StatelessWidget {
+  const _ParentPortalBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const accent = AppColors.emeraldGreen;
+
+    return Center(
+      child: Container(
+        width: 96,
+        height: 96,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: isDark ? AppColors.elevatedSurfaceDark : Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: accent.withValues(alpha: isDark ? 0.20 : 0.25),
+              blurRadius: 28,
+              spreadRadius: 4,
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.045),
+              blurRadius: 12,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: const Icon(
+          Icons.family_restroom_rounded,
+          color: accent,
+          size: 47,
+        ),
+      ),
+    );
+  }
+}
+
+class _ParentPortalTitle extends StatelessWidget {
+  const _ParentPortalTitle();
+
+  @override
+  Widget build(BuildContext context) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    return RichText(
+      textAlign: TextAlign.center,
+      text: TextSpan(
+        style: AppTypography.headlineLarge.copyWith(
+          color: onSurface,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -1.1,
+        ),
+        children: const [
+          TextSpan(text: 'Parent '),
+          TextSpan(
+            text: 'Portal',
+            style: TextStyle(color: AppColors.emeraldGreen),
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.info_outline,
-                color: AppColors.brightCyan,
-                size: 26,
-              ),
-              const SizedBox(width: AppSpacing.l),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Don't have a code?",
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: AppColors.brightCyan,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      "Please contact your school's\nadministration office.",
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.textSecondaryDark,
-                        height: 1.35,
-                      ),
-                    ),
-                  ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ParentPortalIntroduction extends StatelessWidget {
+  const _ParentPortalIntroduction();
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 360),
+        child: Text(
+          "Enter the code provided by the school office to access your child's records.",
+          textAlign: TextAlign.center,
+          style: AppTypography.bodyMedium.copyWith(
+            color: textColor,
+            fontWeight: FontWeight.w400,
+            height: 1.45,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ParentAccessCodeField extends StatelessWidget {
+  final String label;
+  final String hint;
+  final TextEditingController controller;
+  final TextCapitalization textCapitalization;
+  final String? errorText;
+
+  const _ParentAccessCodeField({
+    required this.label,
+    required this.hint,
+    required this.controller,
+    required this.textCapitalization,
+    this.errorText,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    const accent = AppColors.emeraldGreen;
+    final radius = BorderRadius.circular(16);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTypography.titleLarge.copyWith(
+            color: theme.colorScheme.onSurface,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.l),
+        TextField(
+          controller: controller,
+          keyboardType: TextInputType.text,
+          textCapitalization: textCapitalization,
+          style: AppTypography.bodyLarge.copyWith(
+            color: theme.colorScheme.onSurface,
+            fontWeight: FontWeight.w500,
+          ),
+          decoration: InputDecoration(
+            hintText: hint,
+            errorText: errorText,
+            errorMaxLines: 2,
+            hintStyle: AppTypography.bodyLarge.copyWith(
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: .65),
+              fontWeight: FontWeight.w400,
+            ),
+            prefixIcon: const Icon(
+              Icons.vpn_key_outlined,
+              color: accent,
+              size: 29,
+            ),
+            filled: true,
+            fillColor: isDark ? AppColors.elevatedSurfaceDark : Colors.white,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xl,
+              vertical: AppSpacing.xl,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: radius,
+              borderSide: BorderSide(color: accent.withValues(alpha: .9)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: radius,
+              borderSide: const BorderSide(color: accent, width: 2),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: radius,
+              borderSide: BorderSide(color: theme.colorScheme.error),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: radius,
+              borderSide: BorderSide(color: theme.colorScheme.error, width: 2),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ParentPortalHelpCard extends StatelessWidget {
+  const _ParentPortalHelpCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    const accent = AppColors.emeraldGreen;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.x3l,
+        vertical: AppSpacing.x2l,
+      ),
+      decoration: BoxDecoration(
+        color: isDark
+            ? accent.withValues(alpha: .13)
+            : accent.withValues(alpha: .075),
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline_rounded, color: accent, size: 34),
+          const SizedBox(width: AppSpacing.x2l),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Don't have a code?",
+                  style: AppTypography.bodyLarge.copyWith(
+                    color: accent,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.m),
-              const Icon(
-                Icons.support_agent_rounded,
-                color: AppColors.brightCyan,
-                size: 32,
+                const SizedBox(height: AppSpacing.s),
+                Text(
+                  "Please contact your school's\nadministration office.",
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.l),
+          const Icon(Icons.support_agent_rounded, color: accent, size: 36),
+        ],
+      ),
+    );
+  }
+}
+
+class _ParentContinueButton extends StatelessWidget {
+  final bool isLoading;
+  final VoidCallback? onPressed;
+
+  const _ParentContinueButton({required this.isLoading, this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null && !isLoading;
+    const green = AppColors.emeraldGreen;
+    final disabled = Theme.of(
+      context,
+    ).colorScheme.onSurface.withValues(alpha: .20);
+
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: 'Continue',
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          onTap: enabled ? onPressed : null,
+          borderRadius: BorderRadius.circular(18),
+          child: Ink(
+            height: 64,
+            decoration: BoxDecoration(
+              color: enabled ? null : disabled,
+              gradient: enabled
+                  ? const LinearGradient(
+                      colors: [AppColors.successGreen, green],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    )
+                  : null,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: enabled
+                  ? [
+                      BoxShadow(
+                        color: green.withValues(alpha: .22),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                if (isLoading)
+                  const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      valueColor: AlwaysStoppedAnimation(Colors.white),
+                    ),
+                  )
+                else ...[
+                  Text(
+                    'Continue',
+                    style: AppTypography.titleLarge.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const Positioned(
+                    right: AppSpacing.x3l,
+                    child: Icon(
+                      Icons.arrow_forward_rounded,
+                      color: Colors.white,
+                      size: 31,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ParentPortalPrivacyNote extends StatelessWidget {
+  const _ParentPortalPrivacyNote();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    const accent = AppColors.emeraldGreen;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 58,
+          height: 58,
+          decoration: BoxDecoration(
+            color: accent.withValues(alpha: .11),
+            shape: BoxShape.circle,
+          ),
+          child: const Stack(
+            alignment: Alignment.center,
+            children: [
+              Icon(Icons.shield_outlined, color: accent, size: 34),
+              Positioned(
+                top: 23,
+                child: Icon(Icons.lock_rounded, color: accent, size: 13),
               ),
             ],
           ),
         ),
-        const SizedBox(height: AppSpacing.x2l),
-        AuthCtaButton(
-          label: 'Continue',
-          gradient: const [AppColors.royalBlue, AppColors.brightCyan],
-          isLoading: _isLooking,
-          onPressed: _isValid && !_isLooking ? _continue : null,
+        const SizedBox(width: AppSpacing.xl),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Your data is secure with us',
+                style: AppTypography.bodyLarge.copyWith(
+                  color: theme.colorScheme.onSurface,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.s),
+              Text(
+                'We value your privacy and protect your information.',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: AppSpacing.x2l),
-        const AuthPrivacyNote(accent: accent),
       ],
     );
   }
@@ -435,7 +736,7 @@ class _ParentPinScreenState extends State<ParentPinScreen> {
             code: widget.accessCode.parentCode,
             phone: widget.phoneNumber,
           );
-          context.go('/school-splash', extra: state.user);
+          context.go('/school-bootstrap');
         } else if (state is AuthFailureState) {
           setState(() => _error = state.message);
         }

@@ -230,14 +230,14 @@ void main() {
           () => localDataSource.findCredential('UID123', 'school-1'),
         ).thenAnswer(
           (_) async => CachedCredential(
-      credentialValue: 'UID123',
-      credentialType: 'nfc',
-      identityId: 'SP-0001',
-      identityType: 'student',
-      schoolId: 'school-1',
-      status: 'active',
-      updatedAt: DateTime.now(),
-    )
+            credentialValue: 'UID123',
+            credentialType: 'nfc',
+            identityId: 'SP-0001',
+            identityType: 'student',
+            schoolId: 'school-1',
+            status: 'active',
+            updatedAt: DateTime.now(),
+          ),
         );
         when(
           () => studentIdentityRepository.getStudentByUniqueId('SP-0001'),
@@ -260,11 +260,11 @@ void main() {
           () => localDataSource.findRevocation('UID999', 'school-1'),
         ).thenAnswer(
           (_) async => RevokedCredential(
-      credentialValue: 'UID999',
-      schoolId: 'school-1',
-      revokedAt: DateTime.now(),
-      reason: 'lost card',
-    )
+            credentialValue: 'UID999',
+            schoolId: 'school-1',
+            revokedAt: DateTime.now(),
+            reason: 'lost card',
+          ),
         );
 
         final result = await resolver.resolve(

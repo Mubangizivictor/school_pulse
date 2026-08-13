@@ -141,7 +141,11 @@ void main() {
       final mathsP6 = await assignments.doc('victor-subject-maths-p6').get();
       final mathsP7 = await assignments.doc('victor-subject-maths-p7').get();
 
-      expect(classDoc.exists, isTrue, reason: 'this is what was entirely missing before');
+      expect(
+        classDoc.exists,
+        isTrue,
+        reason: 'this is what was entirely missing before',
+      );
       expect(mathsP6.exists, isTrue);
       expect(mathsP7.exists, isTrue);
 
@@ -160,8 +164,8 @@ void main() {
       for (final doc in [mathsP6, mathsP7]) {
         final data = doc.data()!;
         expect(data['roleType'], 'subjectTeacher');
-        final permissions =
-            (data['permissionScope']['permissions'] as List).cast<String>();
+        final permissions = (data['permissionScope']['permissions'] as List)
+            .cast<String>();
         expect(
           permissions.where((p) => p.startsWith('class.')),
           isEmpty,
@@ -201,7 +205,8 @@ void main() {
       // The one that must NOT exist: today's register is left unwritten so
       // Roll Call is a live flow rather than an already-closed one.
       final now = DateTime.now();
-      final todayId = '${AdminSeeder.classTeacherClassId}_all_daily_'
+      final todayId =
+          '${AdminSeeder.classTeacherClassId}_all_daily_'
           '${now.year}-${now.month.toString().padLeft(2, '0')}'
           '-${now.day.toString().padLeft(2, '0')}';
       expect(
@@ -226,7 +231,9 @@ void main() {
           .get();
       expect(classes.docs, isNotEmpty, reason: 'class dropdown would be empty');
 
-      final p7 = classes.docs.where((d) => d.data()['name'] == AdminSeeder.classTeacherClassId);
+      final p7 = classes.docs.where(
+        (d) => d.data()['name'] == AdminSeeder.classTeacherClassId,
+      );
       expect(p7, hasLength(1));
 
       final roster = await db

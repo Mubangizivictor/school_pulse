@@ -14,7 +14,8 @@ SubjectTeacherLocalDataSource create({dynamic isar, dynamic remote}) =>
 /// StructureLocalDataSourceWeb's reasoning), so they return empty and
 /// cache* is a no-op. There is no offline use case on web for the generic
 /// operation queue, so enqueueOperation/etc. are no-ops/empty too.
-class SubjectTeacherLocalDataSourceWeb implements SubjectTeacherLocalDataSource {
+class SubjectTeacherLocalDataSourceWeb
+    implements SubjectTeacherLocalDataSource {
   const SubjectTeacherLocalDataSourceWeb();
 
   @override

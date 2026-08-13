@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
+import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:async';
 import 'dart:ui';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
-import 'package:school_pulse/design_system/components/pulse_logo.dart';
 import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
 
 class WelcomeScreen extends StatefulWidget {
@@ -20,9 +21,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   late AnimationController _entranceController;
   late AnimationController _pulseController;
 
-  late Animation<double> _logoScale;
-  late Animation<double> _logoOpacity;
-  late Animation<double> _logoFloat;
   late Animation<double> _headerOpacity;
   late Animation<Offset> _headerSlide;
 
@@ -50,24 +48,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
         .disableAnimations) {
       _pulseController.repeat(reverse: true);
     }
-
-    _logoScale = Tween<double>(begin: 0.85, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _entranceController,
-        curve: const Interval(0.0, 0.5, curve: Curves.easeOutBack),
-      ),
-    );
-
-    _logoOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _entranceController,
-        curve: const Interval(0.0, 0.4, curve: Curves.easeIn),
-      ),
-    );
-
-    _logoFloat = Tween<double>(begin: -6.0, end: 6.0).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOutSine),
-    );
 
     _headerOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
@@ -155,7 +135,10 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                 final isMobile = layout == ResponsiveLayout.mobile;
                 final contentWidth = isDesktop ? 600.0 : 480.0;
 
-                final headerGap = isMobile ? AppSpacing.x2l : AppSpacing.x3l;
+                // The reference layout uses generous but deliberate vertical
+                // rhythm: the brand sits above a compact welcome message,
+                // followed by the three large portal choices.
+                final headerGap = isMobile ? AppSpacing.m : AppSpacing.l;
 
                 // minHeight ties the content to the viewport height, so the
                 // column centres itself on a tall screen and simply scrolls -
@@ -171,11 +154,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       ),
                       padding: EdgeInsets.symmetric(
                         horizontal: horizontalPad,
-                        vertical: AppSpacing.m,
+                        vertical: AppSpacing.l,
                       ),
                       child: ConstrainedBox(
                         constraints: BoxConstraints(
-                          minHeight: viewport.maxHeight - (AppSpacing.m * 2),
+                          minHeight: viewport.maxHeight - (AppSpacing.l * 2),
                         ),
                         child: Center(
                           child: Container(
@@ -184,34 +167,22 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                               mainAxisSize: MainAxisSize.min,
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                // Brand Identity Section - the horizontal logo asset
+                                // Brand Identity Section - the splash mark
                                 // already carries the shield, its surrounding icons
                                 // and the SCHOOL PULSE wordmark with tagline.
-                                FadeTransition(
-                                  opacity: _logoOpacity,
-                                  child: ScaleTransition(
-                                    scale: _logoScale,
-                                    child: AnimatedBuilder(
-                                      animation: _logoFloat,
-                                      builder: (context, child) {
-                                        return Transform.translate(
-                                          offset: Offset(0, _logoFloat.value),
-                                          child: child,
-                                        );
-                                      },
-                                      // The asset carries a transparent margin.
-                                      // Clipping it back keeps the mark large without
-                                      // the empty space pushing the page down.
-                                      child: ClipRect(
-                                        child: Align(
-                                          alignment: Alignment.center,
-                                          heightFactor: 0.84,
-                                          child: PulseLogo(
-                                            width: isMobile ? 190 : 220,
-                                            variant: PulseLogoVariant.vertical,
-                                          ),
-                                        ),
-                                      ),
+                                // Intentionally static: only the visual entrance
+                                // treatment was removed. _WelcomeLogo retains its
+                                // concealed long-press owner access behaviour.
+                                ClipRect(
+                                  child: Align(
+                                    alignment: Alignment.topCenter,
+                                    // The light and dark splash assets place
+                                    // their wordmarks at slightly different
+                                    // vertical positions. Keep a little extra
+                                    // room so neither wordmark is clipped.
+                                    heightFactor: 0.82,
+                                    child: _WelcomeLogo(
+                                      size: isMobile ? 190 : 220,
                                     ),
                                   ),
                                 ),
@@ -279,7 +250,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                   onTap: () => context.push('/student/login'),
                                 ),
 
-                                SizedBox(height: headerGap),
+                                const SizedBox(height: AppSpacing.x2l),
                                 const _BottomFeatures(),
                                 const SizedBox(height: AppSpacing.x2l),
 
@@ -400,6 +371,43 @@ class _BackgroundPainter extends CustomPainter {
               ),
             ),
     );
+
+    // Fine electric-blue orbital lines add the distinctive sweeping motion of
+    // the reference without adding a bitmap that would blur on large screens.
+    final orbitPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.75
+      ..color = const Color(0xFF176BFF).withValues(alpha: 0.40);
+    for (var i = 0; i < 10; i++) {
+      final offset = i * 4.2;
+      final path = Path()
+        ..moveTo(size.width * 0.58 + offset, size.height * 0.045)
+        ..cubicTo(
+          size.width * 1.00 + offset,
+          size.height * 0.07,
+          size.width * 0.78 + offset,
+          size.height * 0.19,
+          size.width * 1.04 + offset,
+          size.height * 0.27,
+        );
+      canvas.drawPath(path, orbitPaint);
+    }
+
+    final lowerOrbit = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0
+      ..color = const Color(0xFF176BFF).withValues(alpha: 0.38);
+    final lowerPath = Path()
+      ..moveTo(-size.width * 0.1, size.height * 0.96)
+      ..cubicTo(
+        size.width * 0.38,
+        size.height * 0.87,
+        size.width * 0.76,
+        size.height * 0.89,
+        size.width * 1.08,
+        size.height * 0.98,
+      );
+    canvas.drawPath(lowerPath, lowerOrbit);
   }
 
   @override
@@ -419,7 +427,7 @@ class _WelcomeCarousel extends StatefulWidget {
 
 class _WelcomeCarouselState extends State<_WelcomeCarousel> {
   static const _slides = [
-    (title: 'Welcome to School Pulse', body: 'Choose how you want to continue'),
+    (title: 'Welcome to School Pulse', body: 'Select your portal to continue'),
     (
       title: 'One School, One Pulse',
       body: 'Parents, staff and students in a single place',
@@ -484,7 +492,7 @@ class _WelcomeCarouselState extends State<_WelcomeCarousel> {
     return Column(
       children: [
         SizedBox(
-          height: 84,
+          height: 68,
           // A manual swipe should not fight the timer, so any touch restarts
           // the countdown from zero.
           child: NotificationListener<ScrollNotification>(
@@ -514,19 +522,22 @@ class _WelcomeCarouselState extends State<_WelcomeCarousel> {
                         Text(
                           slide.title,
                           textAlign: TextAlign.center,
-                          style: AppTypography.headlineSmall.copyWith(
+                          style: GoogleFonts.manrope(
                             color: AppColors.textPrimaryDark,
                             fontWeight: FontWeight.w800,
-                            letterSpacing: 1.2,
+                            fontSize: 21,
+                            letterSpacing: -0.35,
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 6),
                         Text(
                           slide.body,
                           textAlign: TextAlign.center,
-                          style: AppTypography.bodyMedium.copyWith(
-                            color: AppColors.textSecondaryDark,
-                            letterSpacing: 0.5,
+                          style: GoogleFonts.manrope(
+                            fontSize: 15,
+                            color: const Color(0xFFB4C2DF),
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 0,
                           ),
                         ),
                       ],
@@ -537,46 +548,8 @@ class _WelcomeCarouselState extends State<_WelcomeCarousel> {
             ),
           ),
         ),
-        const SizedBox(height: AppSpacing.m),
-        _PageIndicator(count: _slides.length, page: _page),
-      ],
-    );
-  }
-}
-
-/// Dots that stretch into a pill for the active slide, interpolated against
-/// the live page offset so the transition follows the drag.
-class _PageIndicator extends StatelessWidget {
-  final int count;
-  final double page;
-
-  const _PageIndicator({required this.count, required this.page});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        for (var i = 0; i < count; i++) ...[
-          if (i > 0) const SizedBox(width: 8),
-          Builder(
-            builder: (context) {
-              final t = (1.0 - (page - i).abs()).clamp(0.0, 1.0);
-              return Container(
-                width: 5 + (27 * t),
-                height: 5,
-                decoration: BoxDecoration(
-                  color: Color.lerp(
-                    Colors.white.withValues(alpha: 0.22),
-                    AppColors.electricBlue,
-                    t,
-                  ),
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              );
-            },
-          ),
-        ],
+        // Keep the swipe/auto-advance behaviour, without visible pagination
+        // so the welcome panel matches the clean reference composition.
       ],
     );
   }
@@ -633,14 +606,14 @@ class _RoleCardState extends State<_RoleCard> {
               scale: _isPressed ? 0.98 : (_isHovered ? 1.01 : 1.0),
               duration: const Duration(milliseconds: 150),
               child: Container(
-                height: 110,
+                height: 100,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
                     color: widget.color.withValues(
                       alpha: _isHovered ? 0.85 : 0.55,
                     ),
-                    width: 1.5,
+                    width: 1.35,
                   ),
                   boxShadow: [
                     // Accent halo in the card's own colour.
@@ -648,7 +621,7 @@ class _RoleCardState extends State<_RoleCard> {
                       color: widget.color.withValues(
                         alpha: _isHovered ? 0.30 : 0.18,
                       ),
-                      blurRadius: _isHovered ? 30 : 20,
+                      blurRadius: _isHovered ? 32 : 24,
                       spreadRadius: 1,
                     ),
                     // Depth shadow so the glass lifts off the background.
@@ -672,18 +645,26 @@ class _RoleCardState extends State<_RoleCard> {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            Colors.white.withValues(alpha: 0.16),
-                            widget.color.withValues(alpha: 0.16),
-                            Colors.white.withValues(alpha: 0.03),
-                            widget.color.withValues(alpha: 0.10),
+                            widget.color.withValues(alpha: 0.20),
+                            const Color(0xFF07122C).withValues(alpha: 0.86),
+                            const Color(0xFF071027).withValues(alpha: 0.94),
                           ],
-                          stops: const [0.0, 0.35, 0.62, 1.0],
+                          stops: const [0.0, 0.50, 1.0],
                         ),
                       ),
                       child: LayoutBuilder(
                         builder: (context, constraints) {
                           return Stack(
                             children: [
+                              Positioned.fill(
+                                child: IgnorePointer(
+                                  child: CustomPaint(
+                                    painter: _CardWavePainter(
+                                      color: widget.color,
+                                    ),
+                                  ),
+                                ),
+                              ),
                               // Decorative watermark icons sitting behind the
                               // text on the right of the card. Positioned
                               // relative to the card width so they stay inside
@@ -691,7 +672,7 @@ class _RoleCardState extends State<_RoleCard> {
                               // pushed off by fixed offsets.
                               Positioned(
                                 right: constraints.maxWidth * 0.13,
-                                top: 14,
+                                top: 10,
                                 child: Icon(
                                   widget.bgIcons[0],
                                   size: 30,
@@ -700,7 +681,7 @@ class _RoleCardState extends State<_RoleCard> {
                               ),
                               Positioned(
                                 right: constraints.maxWidth * 0.20,
-                                bottom: 12,
+                                bottom: 8,
                                 child: Icon(
                                   widget.bgIcons[1],
                                   size: 34,
@@ -710,14 +691,14 @@ class _RoleCardState extends State<_RoleCard> {
                               // Content Layout
                               Padding(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.xl,
+                                  horizontal: AppSpacing.l,
                                 ),
                                 child: Row(
                                   children: [
                                     // Left Icon Container
                                     Container(
-                                      width: 68,
-                                      height: 68,
+                                      width: 62,
+                                      height: 62,
                                       decoration: BoxDecoration(
                                         gradient: LinearGradient(
                                           begin: Alignment.topLeft,
@@ -750,10 +731,10 @@ class _RoleCardState extends State<_RoleCard> {
                                       child: Icon(
                                         widget.icon,
                                         color: Colors.white,
-                                        size: 36,
+                                        size: 33,
                                       ),
                                     ),
-                                    const SizedBox(width: AppSpacing.xl),
+                                    const SizedBox(width: AppSpacing.l),
                                     // Text info
                                     Expanded(
                                       child: Column(
@@ -764,32 +745,32 @@ class _RoleCardState extends State<_RoleCard> {
                                         children: [
                                           Text(
                                             widget.title,
-                                            style: AppTypography.titleLarge
-                                                .copyWith(
-                                                  color:
-                                                      AppColors.textPrimaryDark,
-                                                  fontWeight: FontWeight.bold,
-                                                  letterSpacing: 0.5,
-                                                ),
+                                            style: GoogleFonts.manrope(
+                                              color: AppColors.textPrimaryDark,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 19,
+                                              letterSpacing: -0.25,
+                                            ),
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
                                             widget.subtitle,
-                                            style: AppTypography.bodySmall
-                                                .copyWith(
-                                                  color: AppColors
-                                                      .textSecondaryDark
-                                                      .withValues(alpha: 0.8),
-                                                  letterSpacing: 0.3,
-                                                ),
+                                            style: GoogleFonts.manrope(
+                                              color: AppColors.textSecondaryDark
+                                                  .withValues(alpha: 0.8),
+                                              fontSize: 12.5,
+                                              height: 1.25,
+                                              fontWeight: FontWeight.w500,
+                                              letterSpacing: 0,
+                                            ),
                                           ),
                                         ],
                                       ),
                                     ),
                                     // Action Button
                                     Container(
-                                      width: 42,
-                                      height: 42,
+                                      width: 44,
+                                      height: 44,
                                       decoration: BoxDecoration(
                                         color: widget.color,
                                         shape: BoxShape.circle,
@@ -797,7 +778,7 @@ class _RoleCardState extends State<_RoleCard> {
                                       child: const Icon(
                                         Icons.chevron_right_rounded,
                                         color: Colors.white,
-                                        size: 28,
+                                        size: 30,
                                       ),
                                     ),
                                   ],
@@ -819,6 +800,39 @@ class _RoleCardState extends State<_RoleCard> {
   }
 }
 
+/// Delicate nested curves that make each portal feel like part of the same
+/// system while retaining its own blue, orange or green identity.
+class _CardWavePainter extends CustomPainter {
+  final Color color;
+  const _CardWavePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.7
+      ..color = color.withValues(alpha: 0.33);
+    for (var i = 0; i < 7; i++) {
+      final offset = i * 5.5;
+      final path = Path()
+        ..moveTo(size.width * 0.54, size.height + 10 - offset)
+        ..cubicTo(
+          size.width * 0.72,
+          size.height * 0.73 - offset,
+          size.width * 0.75,
+          size.height * 0.12 + offset,
+          size.width + 10,
+          size.height * 0.20 + offset,
+        );
+      canvas.drawPath(path, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _CardWavePainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
 class _BottomFeatures extends StatelessWidget {
   const _BottomFeatures();
 
@@ -826,17 +840,17 @@ class _BottomFeatures extends StatelessWidget {
   Widget build(BuildContext context) {
     const items = [
       _FeatureItem(
-        icon: Icons.shield_outlined,
+        icon: Icons.verified_user_outlined,
         label: "Secure",
         desc: "Your data is\nprotected",
       ),
       _FeatureItem(
-        icon: Icons.cloud_sync_outlined,
-        label: "Sync",
+        icon: Icons.cloud_sync_rounded,
+        label: "Reliable",
         desc: "Works online\n& offline",
       ),
       _FeatureItem(
-        icon: Icons.speed_outlined,
+        icon: Icons.rocket_launch_outlined,
         label: "Fast",
         desc: "Built for\nperformance",
       ),
@@ -847,44 +861,52 @@ class _BottomFeatures extends StatelessWidget {
       ),
     ];
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withValues(alpha: 0.10),
-                Colors.white.withValues(alpha: 0.03),
-              ],
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Divider(
+                color: AppColors.electricBlue.withValues(alpha: 0.24),
+              ),
             ),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
-          ),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (var i = 0; i < items.length; i++) ...[
-                  if (i > 0)
-                    Container(
-                      width: 1,
-                      margin: const EdgeInsets.symmetric(
-                        vertical: AppSpacing.xs,
-                      ),
-                      color: Colors.white.withValues(alpha: 0.10),
-                    ),
-                  Expanded(child: items[i]),
-                ],
-              ],
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                '•  W H Y   S C H O O L   P U L S E ?  •',
+                style: TextStyle(
+                  color: Color(0xFFB4C2DF),
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 2.1,
+                ),
+              ),
             ),
+            Expanded(
+              child: Divider(
+                color: AppColors.electricBlue.withValues(alpha: 0.24),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < items.length; i++) ...[
+                if (i > 0)
+                  Container(
+                    width: 1,
+                    margin: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                    color: Colors.white.withValues(alpha: 0.17),
+                  ),
+                Expanded(child: items[i]),
+              ],
+            ],
           ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -904,29 +926,108 @@ class _FeatureItem extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.start,
       children: [
-        Icon(icon, color: AppColors.electricBlue, size: 28),
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(
+              colors: [
+                AppColors.electricBlue.withValues(alpha: 0.34),
+                const Color(0xFF172264).withValues(alpha: 0.32),
+              ],
+            ),
+            border: Border.all(
+              color: AppColors.electricBlue.withValues(alpha: 0.40),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.electricBlue.withValues(alpha: 0.16),
+                blurRadius: 15,
+              ),
+            ],
+          ),
+          child: Icon(icon, color: AppColors.brightCyan, size: 26),
+        ),
         const SizedBox(height: 12),
         Text(
           label,
-          style: AppTypography.labelLarge.copyWith(
+          style: GoogleFonts.manrope(
             color: AppColors.textPrimaryDark,
             fontWeight: FontWeight.bold,
-            fontSize: 12,
-            letterSpacing: 0.5,
+            fontSize: 12.5,
+            letterSpacing: -0.1,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           desc,
           textAlign: TextAlign.center,
-          style: AppTypography.labelSmall.copyWith(
+          style: GoogleFonts.manrope(
             color: AppColors.textSecondaryDark.withValues(alpha: 0.7),
-            fontSize: 9,
+            fontSize: 9.5,
             height: 1.3,
-            letterSpacing: 0.2,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0,
           ),
         ),
       ],
+    );
+  }
+}
+
+/// The brand mark, rendered from the theme-appropriate splash asset. Wraps a
+/// concealed long-press gesture that opens Platform Owner Access - deliberately
+/// undecorated (no highlight, no hint text, no icon change) so a normal user
+/// has no visual indication the gesture does anything. A short tap is a no-op,
+/// matching every other logo placement in the app.
+class _WelcomeLogo extends StatefulWidget {
+  final double size;
+  const _WelcomeLogo({required this.size});
+
+  @override
+  State<_WelcomeLogo> createState() => _WelcomeLogoState();
+}
+
+class _WelcomeLogoState extends State<_WelcomeLogo> {
+  static const _holdDuration = Duration(seconds: 3);
+  Timer? _holdTimer;
+
+  void _armHold() {
+    _holdTimer?.cancel();
+    _holdTimer = Timer(_holdDuration, () {
+      if (!mounted) return;
+      HapticFeedback.mediumImpact();
+      context.push('/owner-login');
+    });
+  }
+
+  void _cancelHold() {
+    _holdTimer?.cancel();
+    _holdTimer = null;
+  }
+
+  @override
+  void dispose() {
+    _holdTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final asset = isDark
+        ? 'assets/splash/splash_dark_mode.png'
+        : 'assets/splash/splash_light_mode.png';
+
+    return GestureDetector(
+      onLongPressStart: (_) => _armHold(),
+      onLongPressEnd: (_) => _cancelHold(),
+      onLongPressCancel: _cancelHold,
+      child: Semantics(
+        label: 'School Pulse',
+        child: Image.asset(asset, width: widget.size, fit: BoxFit.contain),
+      ),
     );
   }
 }

@@ -1,6 +1,9 @@
 const existing = require('./index');
 const draft = require('./draft');
 const owner = require('./owner');
+const ownerAuth = require('./owner_auth');
+const ownerRecoveryCodes = require('./owner_recovery_codes');
+const ownerSecuritySession = require('./owner_security_session');
 const payments = require('./payments');
 const paymentNotifications = require('./payment_notifications');
 const applicationNotifications = require('./application_notifications');
@@ -22,6 +25,9 @@ module.exports = {
   ...existing,
   ...draft,
   ...owner,
+  ...ownerAuth,
+  ...ownerRecoveryCodes,
+  ...ownerSecuritySession,
   ...payments,
   ...paymentNotifications,
   ...applicationNotifications,

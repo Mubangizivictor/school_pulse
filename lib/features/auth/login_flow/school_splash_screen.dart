@@ -1,212 +1,156 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/core/user_roles.dart';
-import 'package:school_pulse/features/admin/presentation/bloc/system_config_bloc.dart';
-import 'package:school_pulse/features/admin/presentation/bloc/system_config_state.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
-import 'package:school_pulse/design_system/theme/app_colors.dart';
-import 'package:school_pulse/design_system/theme/app_spacing.dart';
-import 'package:school_pulse/design_system/theme/app_typography.dart';
-import 'package:school_pulse/design_system/components/pulse_logo.dart';
+import 'package:school_pulse/features/branding/domain/entities/school_branding.dart';
+import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.dart';
+import 'package:school_pulse/features/branding/presentation/bloc/branding_state.dart';
+import 'package:school_pulse/features/branding/presentation/widgets/school_badge.dart';
 
+/// The second identity moment. It is reachable only after tenant bootstrap.
 class SchoolSplashScreen extends StatefulWidget {
-  final UserEntity user;
   const SchoolSplashScreen({super.key, required this.user});
+  final UserEntity user;
 
   @override
   State<SchoolSplashScreen> createState() => _SchoolSplashScreenState();
 }
 
 class _SchoolSplashScreenState extends State<SchoolSplashScreen>
-    with TickerProviderStateMixin {
-  late AnimationController _mainController;
-  late Animation<double> _logoScale;
-  late Animation<double> _logoOpacity;
-  late Animation<double> _contentOpacity;
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  bool _routed = false;
 
   @override
   void initState() {
     super.initState();
-    _mainController = AnimationController(
+    _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2500),
-    );
-
-    _logoScale = TweenSequence<double>([
-      TweenSequenceItem(
-        tween: Tween(
-          begin: 0.0,
-          end: 1.1,
-        ).chain(CurveTween(curve: Curves.easeOutBack)),
-        weight: 40,
-      ),
-      TweenSequenceItem(
-        tween: Tween(
-          begin: 1.1,
-          end: 1.0,
-        ).chain(CurveTween(curve: Curves.easeInOut)),
-        weight: 20,
-      ),
-      TweenSequenceItem(tween: ConstantTween<double>(1.0), weight: 40),
-    ]).animate(_mainController);
-
-    _logoOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _mainController,
-        curve: const Interval(0.0, 0.3, curve: Curves.easeIn),
-      ),
-    );
-
-    _contentOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _mainController,
-        curve: const Interval(0.4, 0.8, curve: Curves.easeIn),
-      ),
-    );
-
-    _mainController.forward();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        final state = context.read<SystemConfigBloc>().state;
-        if (state is SystemConfigLoaded || state is SystemConfigError) {
-          _scheduleNavigation();
-        }
-      }
-    });
-
-    _fallbackTimer = Timer(const Duration(seconds: 8), _scheduleNavigation);
+      duration: const Duration(milliseconds: 850),
+    )..forward();
+    // The bootstrap and this recognition moment overlap: this is a maximum,
+    // not a stacked delay after branding has already been loaded.
+    Timer(const Duration(milliseconds: 1800), _routeToWorkspace);
   }
 
-  Timer? _fallbackTimer;
-  bool _navigationScheduled = false;
-
-  void _scheduleNavigation() {
-    if (_navigationScheduled) return;
-    _navigationScheduled = true;
-
-    Future.delayed(const Duration(milliseconds: 3000), () {
-      if (mounted) {
-        _navigateToHome();
-      }
-    });
+  void _routeToWorkspace() {
+    if (!mounted || _routed) return;
+    _routed = true;
+    final user = widget.user;
+    context.go(
+      user.roles.length > 1 && user.role != UserRole.parent
+          ? '/staff/hub'
+          : UserRoleRouting.dashboardPath(user.role),
+    );
   }
 
   @override
   void dispose() {
-    _fallbackTimer?.cancel();
-    _mainController.dispose();
+    _controller.dispose();
     super.dispose();
-  }
-
-  void _navigateToHome() {
-    final user = widget.user;
-    if (user.role == UserRole.parent) {
-      context.go('/parent/home');
-    } else if (user.roles.length > 1) {
-      context.go('/staff/hub');
-    } else {
-      context.go(UserRoleRouting.dashboardPath(user.role));
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return BlocListener<SystemConfigBloc, SystemConfigState>(
-      listener: (context, state) {
-        if (state is SystemConfigLoaded || state is SystemConfigError) {
-          _scheduleNavigation();
+    return BlocBuilder<BrandingBloc, BrandingState>(
+      builder: (context, state) {
+        final branding = state is BrandingLoaded ? state.branding : null;
+        if (branding == null || branding.schoolId != widget.user.schoolId) {
+          return const Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          );
         }
+        return _SchoolIdentity(branding: branding, animation: _controller);
       },
-      child: Scaffold(
-        backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
-        body: BlocBuilder<SystemConfigBloc, SystemConfigState>(
-          builder: (context, state) {
-            final config = state is SystemConfigLoaded
-                ? state.config
-                : (state is SystemConfigError ? state.config : null);
+    );
+  }
+}
 
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.x4l),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    AnimatedBuilder(
-                      animation: _mainController,
-                      builder: (context, child) => Opacity(
-                        opacity: _logoOpacity.value,
-                        child: Transform.scale(
-                          scale: _logoScale.value,
-                          child: child,
-                        ),
-                      ),
-                      child: const PulseLogo(
-                        size: 100,
-                        variant: PulseLogoVariant.vertical,
-                      ),
+class _SchoolIdentity extends StatelessWidget {
+  const _SchoolIdentity({required this.branding, required this.animation});
+  final SchoolBranding branding;
+  final Animation<double> animation;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [scheme.primaryContainer, scheme.surface],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: FadeTransition(
+                opacity: CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOut,
+                ),
+                child: ScaleTransition(
+                  scale: Tween<double>(begin: .94, end: 1).animate(
+                    CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOutCubic,
                     ),
-                    const SizedBox(height: AppSpacing.x6l),
-                    if (config != null)
-                      FadeTransition(
-                        opacity: _contentOpacity,
-                        child: Column(
-                          children: [
-                            Text(
-                              config.schoolName.toUpperCase(),
-                              textAlign: TextAlign.center,
-                              style: AppTypography.headlineMedium.copyWith(
-                                color: isDark
-                                    ? AppColors.textPrimaryDark
-                                    : AppColors.textPrimaryLight,
-                                letterSpacing: 4,
-                              ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SchoolBadge(
+                        badgeUrl: branding.badgeUrl ?? branding.logoUrl,
+                        size: 120,
+                      ),
+                      const SizedBox(height: 28),
+                      Text(
+                        branding.schoolName.toUpperCase(),
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.2,
                             ),
-                            const SizedBox(height: AppSpacing.m),
-                            Container(
-                              height: 2,
-                              width: 60,
-                              color: AppColors.electricBlue.withValues(
-                                alpha: 0.5,
-                              ),
-                            ),
-                            const SizedBox(height: AppSpacing.m),
-                            Text(
-                              config.schoolMotto,
-                              textAlign: TextAlign.center,
-                              style: AppTypography.bodyMedium.copyWith(
+                      ),
+                      if (branding.schoolMotto.trim().isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          branding.schoolMotto,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(
                                 fontStyle: FontStyle.italic,
-                                color: isDark
-                                    ? AppColors.textMutedDark
-                                    : AppColors.textMutedLight,
+                                color: scheme.onSurfaceVariant,
                               ),
-                            ),
-                            const SizedBox(height: AppSpacing.x7l),
-                            Text(
-                              "Welcome back,",
-                              style: AppTypography.bodyLarge,
-                            ),
-                            Text(
-                              widget.user.name,
-                              style: AppTypography.titleLarge.copyWith(
-                                fontSize: 24,
-                              ),
-                            ),
-                          ],
                         ),
-                      )
-                    else
-                      const SchoolPulseLoader(),
-                  ],
+                      ],
+                      const SizedBox(height: 36),
+                      Text(
+                        'Powered by School Pulse',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            );
-          },
+            ),
+          ),
         ),
       ),
     );
