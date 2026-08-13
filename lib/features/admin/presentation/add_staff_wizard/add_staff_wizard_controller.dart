@@ -367,6 +367,7 @@ class AddStaffWizardController extends ChangeNotifier {
 
   Future<void> logAudit() async {
     await di.sl<AuditRepository>().logAction(
+      schoolId: schoolId,
       title: 'Staff Account Created',
       description:
           '${draft.fullName} was added as ${draft.selectedRoles.map(UserRoleDisplay.name).join(', ')}.',

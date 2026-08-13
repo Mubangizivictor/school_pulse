@@ -57,6 +57,7 @@ class AppointmentActionBloc
             '${appointment.requesterName} requested a ${appointment.appointmentTypeName} meeting.',
       );
       auditRepository.logAction(
+        schoolId: appointment.schoolId,
         title: 'Appointment Requested',
         description:
             '${appointment.requesterName} requested a meeting with ${appointment.staffName}.',
@@ -110,6 +111,7 @@ class AppointmentActionBloc
         body: body,
       );
       auditRepository.logAction(
+        schoolId: event.appointment.schoolId,
         title: title,
         description:
             '${event.respondedBy} ${event.status.label.toLowerCase()} an appointment for '
@@ -146,6 +148,7 @@ class AppointmentActionBloc
             '${event.appointment.scheduledStart.toLocal()} was cancelled.',
       );
       auditRepository.logAction(
+        schoolId: event.appointment.schoolId,
         title: 'Appointment Cancelled',
         description:
             'Appointment for ${event.appointment.requesterName} with '
@@ -179,6 +182,7 @@ class AppointmentActionBloc
             '${event.appointment.appointmentTypeName} meeting.',
       );
       auditRepository.logAction(
+        schoolId: event.appointment.schoolId,
         title: 'Appointment Checked In',
         description:
             '${event.appointment.requesterName} checked in for their appointment.',
@@ -200,6 +204,7 @@ class AppointmentActionBloc
       _,
     ) {
       auditRepository.logAction(
+        schoolId: event.appointment.schoolId,
         title: 'Appointment Completed',
         description:
             'Meeting between ${event.appointment.requesterName} and '
