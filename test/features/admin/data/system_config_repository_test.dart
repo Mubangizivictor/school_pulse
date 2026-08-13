@@ -57,10 +57,21 @@ void main() {
                 .collection('schools')
                 .doc('school-a')
                 .collection('config')
+                .doc('institution_profile')
+                .get())
+            .data()?['name'],
+        'School A',
+      );
+      expect(
+        (await firestore
+                .collection('schools')
+                .doc('school-a')
+                .collection('config')
                 .doc('system')
                 .get())
-            .data()?['schoolName'],
-        'School A',
+            .data()
+            ?.containsKey('schoolName'),
+        false,
       );
       expect(
         (await firestore.collection('config').doc('system').get()).exists,
@@ -83,4 +94,42 @@ void main() {
         .get();
     expect(history.docs, hasLength(1));
   });
+
+  test(
+    'reads institution identity from the canonical profile document',
+    () async {
+      await firestore
+          .collection('schools')
+          .doc('school-a')
+          .collection('config')
+          .doc('system')
+          .set({
+            'schoolName': 'Stale name',
+            'schoolMotto': 'Stale motto',
+            'currentTerm': 'Term 1',
+            'academicYear': '2026',
+            'termStart': DateTime(2026, 1, 1).toIso8601String(),
+            'termEnd': DateTime(2026, 4, 1).toIso8601String(),
+          });
+      await firestore
+          .collection('schools')
+          .doc('school-a')
+          .collection('config')
+          .doc('institution_profile')
+          .set({
+            'name': 'Canonical Academy',
+            'motto': 'One source of truth',
+            'logoUrl': 'https://example.test/logo.png',
+            'colors': ['4278190335', '4294901760'],
+          });
+
+      final config = await repository.getConfig();
+
+      expect(config.schoolName, 'Canonical Academy');
+      expect(config.schoolMotto, 'One source of truth');
+      expect(config.schoolLogoUrl, 'https://example.test/logo.png');
+      expect(config.primaryColor, '4278190335');
+      expect(config.secondaryColor, '4294901760');
+    },
+  );
 }

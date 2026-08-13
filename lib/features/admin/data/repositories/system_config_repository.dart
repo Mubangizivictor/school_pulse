@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -38,13 +39,22 @@ class SystemConfigRepository {
     return schoolId;
   }
 
-  Future<DocumentReference<Map<String, dynamic>>> _configDoc() async {
+  Future<
+    ({
+      DocumentReference<Map<String, dynamic>> system,
+      DocumentReference<Map<String, dynamic>> profile,
+    })
+  >
+  _configDocs() async {
     final schoolId = await _requireSchoolId();
-    return _firestore
+    final config = _firestore
         .collection('schools')
         .doc(schoolId)
-        .collection('config')
-        .doc('system');
+        .collection('config');
+    return (
+      system: config.doc('system'),
+      profile: config.doc('institution_profile'),
+    );
   }
 
   SystemConfig _defaultConfig() {
@@ -74,46 +84,141 @@ class SystemConfigRepository {
   /// permanent "failed to load" screen with no way to create one - the
   /// default is only persisted once the admin hits Save.
   Future<SystemConfig> getConfig() async {
-    final doc = await (await _configDoc()).get();
-    if (doc.exists) {
-      return SystemConfig.fromMap(doc.data()!);
-    }
-    return _defaultConfig();
+    final docs = await _configDocs();
+    final snapshots = await Future.wait([
+      docs.system.get(),
+      docs.profile.get(),
+    ]);
+    return _configFromMaps(snapshots[0].data(), snapshots[1].data());
   }
 
   Future<void> updateConfig(SystemConfig config) async {
-    final configDoc = await _configDoc();
-    final existing = await configDoc.get();
+    final docs = await _configDocs();
+    final existing = await docs.system.get();
     if (existing.exists) {
       final old = SystemConfig.fromMap(existing.data()!);
       if (old.currentTerm != config.currentTerm ||
           old.academicYear != config.academicYear) {
-        await configDoc.collection('history').add({
+        await docs.system.collection('history').add({
           ...old.toMap(),
           'archivedAt': FieldValue.serverTimestamp(),
         });
       }
     }
-    await configDoc.set(config.toMap());
+    final batch = _firestore.batch();
+    // Institution identity is canonical in institution_profile. The System
+    // Configuration screen intentionally remains available, but writes its
+    // overlapping identity fields there rather than maintaining a second
+    // competing source of truth.
+    batch.set(docs.system, _operationalConfigMap(config));
+    batch.set(
+      docs.profile,
+      _institutionProfileMap(config),
+      SetOptions(merge: true),
+    );
+    await batch.commit();
   }
 
   Stream<SystemConfig> watchConfig() async* {
-    final configDoc = await _configDoc();
-    yield* configDoc.snapshots().map(
-      (doc) => doc.data() == null
-          ? _defaultConfig()
-          : SystemConfig.fromMap(doc.data()!),
-    );
+    final docs = await _configDocs();
+    final controller = StreamController<SystemConfig>();
+    Map<String, dynamic>? system;
+    Map<String, dynamic>? profile;
+
+    void publish() {
+      if (system != null && profile != null && !controller.isClosed) {
+        controller.add(_configFromMaps(system, profile));
+      }
+    }
+
+    final systemSubscription = docs.system.snapshots().listen((snapshot) {
+      system = snapshot.data() ?? const <String, dynamic>{};
+      publish();
+    }, onError: controller.addError);
+    final profileSubscription = docs.profile.snapshots().listen((snapshot) {
+      profile = snapshot.data() ?? const <String, dynamic>{};
+      publish();
+    }, onError: controller.addError);
+
+    try {
+      yield* controller.stream;
+    } finally {
+      await systemSubscription.cancel();
+      await profileSubscription.cancel();
+      await controller.close();
+    }
   }
 
   Stream<List<Map<String, dynamic>>> watchPastSessions() async* {
-    final configDoc = await _configDoc();
-    yield* configDoc
+    final docs = await _configDocs();
+    yield* docs.system
         .collection('history')
         .orderBy('archivedAt', descending: true)
         .snapshots()
         .map((s) => s.docs.map((d) => d.data()).toList());
   }
+
+  SystemConfig _configFromMaps(
+    Map<String, dynamic>? system,
+    Map<String, dynamic>? profile,
+  ) {
+    final data = <String, dynamic>{..._defaultConfig().toMap(), ...?system};
+    final identity = profile ?? const <String, dynamic>{};
+    String? nonEmpty(Object? value) {
+      final text = value?.toString().trim();
+      return text == null || text.isEmpty ? null : text;
+    }
+
+    void overlay(String target, String source) {
+      final value = nonEmpty(identity[source]);
+      if (value != null) data[target] = value;
+    }
+
+    overlay('schoolName', 'name');
+    overlay('schoolCode', 'shortName');
+    overlay('schoolMotto', 'motto');
+    overlay('schoolLogoUrl', 'logoUrl');
+    overlay('schoolAddress', 'address');
+    overlay('schoolEmail', 'email');
+    overlay('schoolPhone', 'phone');
+    final colors = List<String>.from(identity['colors'] ?? const <String>[]);
+    if (colors.isNotEmpty) data['primaryColor'] = colors.first;
+    if (colors.length > 1) data['secondaryColor'] = colors[1];
+    return SystemConfig.fromMap(data);
+  }
+
+  Map<String, dynamic> _operationalConfigMap(SystemConfig config) {
+    final data = config.toMap();
+    data.removeWhere(
+      (key, _) => <String>{
+        'schoolName',
+        'schoolCode',
+        'schoolMotto',
+        'schoolLogoUrl',
+        'schoolAddress',
+        'schoolEmail',
+        'schoolPhone',
+        'primaryColor',
+        'secondaryColor',
+      }.contains(key),
+    );
+    return data;
+  }
+
+  Map<String, dynamic> _institutionProfileMap(SystemConfig config) => {
+    'name': config.schoolName.trim(),
+    'shortName': config.schoolCode?.trim() ?? '',
+    'motto': config.schoolMotto.trim(),
+    'logoUrl': config.schoolLogoUrl?.trim() ?? '',
+    'address': config.schoolAddress?.trim() ?? '',
+    'email': config.schoolEmail?.trim() ?? '',
+    'phone': config.schoolPhone?.trim() ?? '',
+    'colors': [
+      if (config.primaryColor?.trim().isNotEmpty ?? false) config.primaryColor,
+      if (config.secondaryColor?.trim().isNotEmpty ?? false)
+        config.secondaryColor,
+    ],
+  };
 
   Future<String> uploadLogo(File file) async {
     try {

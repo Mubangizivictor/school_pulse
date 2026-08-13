@@ -205,9 +205,7 @@ class SchoolPulseApp extends StatelessWidget {
         BlocProvider(create: (_) => di.sl<MatronBloc>()),
         BlocProvider(create: (_) => di.sl<PatronBloc>()),
         BlocProvider(create: (_) => di.sl<HrBloc>()),
-        BlocProvider(
-          create: (_) => di.sl<SystemConfigBloc>()..add(WatchSystemConfig()),
-        ),
+        BlocProvider(create: (_) => di.sl<SystemConfigBloc>()),
         BlocProvider(create: (_) => di.sl<BiometricsBloc>()),
         BlocProvider(create: (_) => di.sl<SuperAdminBloc>()),
       ],
@@ -233,6 +231,11 @@ class SchoolPulseAppView extends StatelessWidget {
         BlocListener<AuthBloc, AuthState>(
           listener: (context, state) {
             if (state is AuthAuthenticated) {
+              // System configuration is tenant-scoped and needs the
+              // authenticated profile to resolve that tenant. Starting this
+              // stream before authentication used to leave the global bloc
+              // in an avoidable error state on every cold launch.
+              context.read<SystemConfigBloc>().add(WatchSystemConfig());
               NotificationService().syncToken(state.user.id);
               // Registers this device, starts the badge stream, drains any
               // offline read/acknowledge queue, and replays a deep link that
