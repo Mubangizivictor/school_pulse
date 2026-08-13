@@ -58,6 +58,7 @@ class _NotificationBellButtonState extends State<NotificationBellButton> {
       );
     }
     final uid = authState.user.id;
+    final schoolId = authState.user.schoolId;
     final role = authState.user.role;
     // Parents also belong to a 'Class:<X>' group per child, which
     // NotificationGroups.forRole can't know about - match the groups the
@@ -92,7 +93,11 @@ class _NotificationBellButtonState extends State<NotificationBellButton> {
     }
 
     return StreamBuilder<List<StaffAlert>>(
-      stream: repository.watchAllForUser(uid: uid, groups: groups),
+      stream: repository.watchAllForUser(
+        schoolId: schoolId,
+        uid: uid,
+        groups: groups,
+      ),
       builder: (context, snapshot) {
         final unread = (snapshot.data ?? const [])
             .where((a) => !a.isReadBy(uid))

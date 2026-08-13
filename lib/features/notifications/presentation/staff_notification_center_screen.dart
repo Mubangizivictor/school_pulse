@@ -28,13 +28,18 @@ class _StaffNotificationCenterScreenState
       return const Scaffold(body: Center(child: SchoolPulseLoader()));
     }
     final uid = authState.user.id;
+    final schoolId = authState.user.schoolId;
     final groups = NotificationGroups.forRole(authState.user.role);
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
       appBar: AppBar(title: const Text('Notifications')),
       body: StreamBuilder<List<StaffAlert>>(
-        stream: _repository.watchAllForUser(uid: uid, groups: groups),
+        stream: _repository.watchAllForUser(
+          schoolId: schoolId,
+          uid: uid,
+          groups: groups,
+        ),
         initialData: const [],
         builder: (context, snapshot) {
           // Only show skeletons if we are truly waiting and have no data at all

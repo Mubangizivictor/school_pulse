@@ -10,9 +10,10 @@ import '../models/staff_alert.dart';
 class StaffAlertsRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  Stream<List<StaffAlert>> _watchDirect(String uid) {
+  Stream<List<StaffAlert>> _watchDirect(String schoolId, String uid) {
     return _firestore
         .collection('alerts')
+        .where('schoolId', isEqualTo: schoolId)
         .where('userId', isEqualTo: uid)
         .orderBy('timestamp', descending: true)
         .limit(50)
@@ -20,10 +21,14 @@ class StaffAlertsRepository {
         .map((s) => s.docs.map(StaffAlert.fromDoc).toList());
   }
 
-  Stream<List<StaffAlert>> _watchBroadcasts(List<String> groups) {
+  Stream<List<StaffAlert>> _watchBroadcasts(
+    String schoolId,
+    List<String> groups,
+  ) {
     if (groups.isEmpty) return Stream.value(const []);
     return _firestore
         .collection('alerts')
+        .where('schoolId', isEqualTo: schoolId)
         .where('targets', arrayContainsAny: groups)
         .orderBy('timestamp', descending: true)
         .limit(50)
@@ -35,6 +40,7 @@ class StaffAlertsRepository {
   /// re-emits the merged, de-duped, timestamp-sorted list whenever either
   /// source stream updates.
   Stream<List<StaffAlert>> watchAllForUser({
+    required String schoolId,
     required String uid,
     required List<String> groups,
   }) {
@@ -68,7 +74,7 @@ class StaffAlertsRepository {
         // before we emit the initial empty state.
         Future.delayed(const Duration(milliseconds: 100), () => emit());
 
-        subDirect = _watchDirect(uid).listen(
+        subDirect = _watchDirect(schoolId, uid).listen(
           (data) {
             direct = data;
             emit();
@@ -85,7 +91,7 @@ class StaffAlertsRepository {
         );
 
         if (groups.isNotEmpty) {
-          subBroadcast = _watchBroadcasts(groups).listen(
+          subBroadcast = _watchBroadcasts(schoolId, groups).listen(
             (data) {
               broadcasts = data;
               emit();

@@ -1090,6 +1090,27 @@ describe('Phase 5 attendance security gate', () => {
     await assertFails(setDoc(doc(dbFor('teacherA'), 'config', 'appointment_policy'), { value: 'changed' }));
   });
 
+  test('alerts: staff notification queries must carry the active school scope', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(doc(db, 'alerts', 'alertA'), {
+        schoolId: 'schoolA', targets: ['Teachers'], timestamp: new Date(),
+      });
+      await setDoc(doc(db, 'alerts', 'alertB'), {
+        schoolId: 'schoolB', targets: ['Teachers'], timestamp: new Date(),
+      });
+    });
+    await assertSucceeds(getDocs(query(
+      collection(dbFor('teacherA'), 'alerts'),
+      where('schoolId', '==', 'schoolA'),
+      where('targets', 'array-contains-any', ['Teachers']),
+    )));
+    await assertFails(getDocs(query(
+      collection(dbFor('teacherA'), 'alerts'),
+      where('targets', 'array-contains-any', ['Teachers']),
+    )));
+  });
+
   test('parent_access_codes: list and mutation are tenant-scoped while direct resolution remains public', async () => {
     const ref = doc(dbFor('adminA'), 'parent_access_codes', 'PA1');
     await assertSucceeds(setDoc(ref, {

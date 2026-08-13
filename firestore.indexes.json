@@ -315,6 +315,24 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
+          "fieldPath": "schoolId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "targets",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "alerts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
           "fieldPath": "targets",
           "arrayConfig": "CONTAINS"
         },
