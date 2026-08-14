@@ -67,10 +67,14 @@ class BroadcastHistoryScreen extends StatelessWidget {
               final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
               final statusColor = switch (status) {
                 'failed' => semantic.error,
+                'not_configured' => semantic.error,
                 'scheduled' => semantic.info,
                 'pending' => semantic.warning,
                 _ => semantic.success,
               };
+              final statusLabel = status == 'not_configured'
+                  ? 'Not sent — no SMS provider'
+                  : status;
 
               return AppCard(
                 child: Column(
@@ -95,7 +99,7 @@ class BroadcastHistoryScreen extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        StatusBadge(label: status, color: statusColor),
+                        StatusBadge(label: statusLabel, color: statusColor),
                       ],
                     ),
                     const SizedBox(height: 6),

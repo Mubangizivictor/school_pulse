@@ -1732,16 +1732,32 @@ function previewForPush(message) {
 }
 
 /**
- * Placeholder for SMS delivery. In a real app, this would call
- * Twilio or Africa's Talking API.
+ * No SMS provider is wired up yet (no Twilio/Africa's Talking call exists
+ * anywhere in this codebase). BroadcastSmsScreen's composer UI already
+ * disables the SMS channel and never lets it be selected, so this should be
+ * unreachable today - but if that guard is ever removed without wiring a
+ * real provider here, this must not report success. "not_configured"
+ * (rather than "sent"/"processed_placeholder") keeps the alerts audit doc
+ * that Broadcast History reads from lying about whether anything was
+ * actually dispatched.
  */
 exports.processSmsQueue = onDocumentCreated("sms_queue/{id}", async (event) => {
   const data = event.data.data();
   if (data.status !== "pending") return;
 
-  // Implementation depends on your SMS provider
-  console.log("SMS Queue triggered for:", data.targets);
-  await event.data.ref.update({ status: "processed_placeholder" });
+  console.warn("SMS Queue triggered but no provider is configured:", data.targets);
+  await event.data.ref.update({ status: "not_configured" });
+
+  const matchingAlerts = await admin.firestore()
+    .collection("alerts")
+    .where("type", "==", "SMS")
+    .where("status", "==", "sent")
+    .where("body", "==", data.body)
+    .limit(5)
+    .get();
+  await Promise.all(
+    matchingAlerts.docs.map((doc) => doc.ref.update({ status: "not_configured" }))
+  );
 });
 
 /**
@@ -1785,19 +1801,22 @@ exports.processScheduledBroadcasts = onSchedule("every 5 minutes", async () => {
     .where("scheduledAt", "<=", now)
     .get();
   for (const doc of dueSms.docs) {
-    console.log("Scheduled SMS queue triggered for:", doc.data().targets);
-    await doc.ref.update({ status: "processed_placeholder" });
+    console.warn("Scheduled SMS queue triggered but no provider is configured:", doc.data().targets);
+    await doc.ref.update({ status: "not_configured" });
   }
 
   // Keep the matching 'alerts' audit doc (Recent Broadcasts list) in sync
-  // so its status badge doesn't stay stuck on "scheduled" forever.
+  // so its status badge doesn't stay stuck on "scheduled" forever. SMS
+  // alerts are marked separately since no provider actually dispatched them
+  // (see processSmsQueue) - only Push alerts get a genuine "sent".
   const dueAlerts = await admin.firestore()
     .collection("alerts")
     .where("status", "==", "scheduled")
     .where("scheduledAt", "<=", now)
     .get();
   for (const doc of dueAlerts.docs) {
-    await doc.ref.update({ status: "sent" });
+    const isSms = doc.data().type === "SMS";
+    await doc.ref.update({ status: isSms ? "not_configured" : "sent" });
   }
 });
 

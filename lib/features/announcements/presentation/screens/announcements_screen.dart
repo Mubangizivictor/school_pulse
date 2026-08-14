@@ -120,7 +120,13 @@ class _AnnouncementsBodyState extends State<_AnnouncementsBody>
             return const SizedBox.shrink();
           }
           return FloatingActionButton(
-            onPressed: () => context.push('/staff/more/announcements/new'),
+            // AnnouncementEditorScreen (the old .../announcements/new route)
+            // has no audience-targeting UI and nothing on the recipient side
+            // ever reads schools/{schoolId}/announcements - it created posts
+            // no parent/student/staff would ever see. add-announcement is
+            // the real delivery pathway (notification_requests -> Cloud
+            // Function fan-out) with working role/class/school targeting.
+            onPressed: () => context.push('/staff/more/add-announcement'),
             child: const Icon(Icons.add),
           );
         },

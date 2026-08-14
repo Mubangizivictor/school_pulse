@@ -11,6 +11,8 @@ import 'package:school_pulse/features/admin/data/repositories/audit_repository.d
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
+import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -339,6 +341,10 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
   }
 
   Future<void> _handleSend() async {
+    final schoolId = context.read<AuthBloc>().state is AuthAuthenticated
+        ? (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId
+        : null;
+
     if (_isScheduled && _scheduledDateTime == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -395,6 +401,7 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
       if (isPush) {
         await NotificationService()
             .sendBroadcast(
+              schoolId: schoolId,
               title: title,
               body: body,
               targetGroups: targets,
@@ -407,6 +414,7 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
       if (isSms) {
         await NotificationService()
             .sendBroadcast(
+              schoolId: schoolId,
               title: title,
               body: body,
               targetGroups: targets,
@@ -417,6 +425,7 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
       }
 
       di.sl<AuditRepository>().logAction(
+        schoolId: schoolId,
         title: _isScheduled ? 'Broadcast Scheduled' : 'Broadcast Sent',
         description:
             '"$title" sent to ${targets.join(', ')} via ${_selectedChannels.join(' & ')}.',
@@ -531,28 +540,57 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: ['P.1', 'P.2', 'P.3', 'P.4', 'P.5', 'P.6', 'P.7'].map((
-                c,
-              ) {
-                return ChoiceChip(
-                  label: Text(c, style: const TextStyle(fontSize: 12)),
-                  selected: _selectedClasses.contains(c),
-                  onSelected: (v) => setState(() {
-                    if (v) {
-                      _selectedClasses.add(c);
-                    } else {
-                      _selectedClasses.remove(c);
-                    }
-                  }),
-                );
-              }).toList(),
-            ),
+            _buildClassChips(),
           ],
         ],
       ),
+    );
+  }
+
+  Widget _buildClassChips() {
+    final schoolId = context.read<AuthBloc>().state is AuthAuthenticated
+        ? (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId
+        : null;
+    if (schoolId == null) return const SizedBox.shrink();
+
+    // Real classes from Structure, not a hardcoded P.1-P.7 list - a school
+    // using secondary (S.1-S.6) or another naming scheme was previously
+    // offered classes that don't exist for them.
+    return StreamBuilder<List<SchoolClass>>(
+      stream: di.sl<StructureRepository>().watchClasses(schoolId),
+      builder: (context, snapshot) {
+        final classes = snapshot.data ?? const [];
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            classes.isEmpty) {
+          return const SizedBox(
+            height: 32,
+            child: Center(child: SchoolPulseLoader()),
+          );
+        }
+        if (classes.isEmpty) {
+          return const Text(
+            'No classes configured yet.',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          );
+        }
+        return Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: classes.where((c) => c.isActive).map((c) {
+            return ChoiceChip(
+              label: Text(c.name, style: const TextStyle(fontSize: 12)),
+              selected: _selectedClasses.contains(c.name),
+              onSelected: (v) => setState(() {
+                if (v) {
+                  _selectedClasses.add(c.name);
+                } else {
+                  _selectedClasses.remove(c.name);
+                }
+              }),
+            );
+          }).toList(),
+        );
+      },
     );
   }
 
