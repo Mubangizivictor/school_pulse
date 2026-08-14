@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:school_pulse/app/router.dart';
 import 'package:school_pulse/core/notification/local_notification_service.dart';
 import 'package:school_pulse/core/user_roles.dart';
@@ -214,20 +215,48 @@ class NotificationService {
         });
   }
 
+  static const _kSubscribedTopicsPrefKey = 'fcm_subscribed_topics';
+
   /// Subscribes this device to the FCM topics needed to receive broadcasts
   /// addressed to one of these groups - the counterpart to the group names
   /// BroadcastSmsScreen writes to `targets` (e.g. 'Parents', 'Class:P.1').
   /// Without this, processBroadcastQueue's admin.messaging().send({topic})
   /// calls succeed but reach zero devices.
+  ///
+  /// Every topic subscribed here is recorded in SharedPreferences so
+  /// unsubscribeAllTopics() (called on logout) can undo exactly this,
+  /// without FirebaseMessaging exposing any "list my subscriptions" API of
+  /// its own.
   Future<void> subscribeToGroups(List<String> groups) async {
+    final prefs = await SharedPreferences.getInstance();
+    final tracked = (prefs.getStringList(_kSubscribedTopicsPrefKey) ?? [])
+        .toSet();
     for (final group in groups) {
       final topic = _topicNameFor(group);
       try {
         await _fcm.subscribeToTopic(topic);
+        tracked.add(topic);
       } catch (e) {
         if (kDebugMode) debugPrint('Error subscribing to topic $topic: $e');
       }
     }
+    await prefs.setStringList(_kSubscribedTopicsPrefKey, tracked.toList());
+  }
+
+  /// Undoes every subscribeToGroups() call this device has made - call this
+  /// on logout so a device re-logged-in as a different user doesn't keep
+  /// receiving broadcasts addressed to the previous user's roles/groups.
+  Future<void> unsubscribeAllTopics() async {
+    final prefs = await SharedPreferences.getInstance();
+    final tracked = prefs.getStringList(_kSubscribedTopicsPrefKey) ?? [];
+    for (final topic in tracked) {
+      try {
+        await _fcm.unsubscribeFromTopic(topic);
+      } catch (e) {
+        if (kDebugMode) debugPrint('Error unsubscribing from topic $topic: $e');
+      }
+    }
+    await prefs.remove(_kSubscribedTopicsPrefKey);
   }
 
   /// Mirrors the Cloud Function's topic sanitization (functions/index.js

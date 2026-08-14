@@ -15,6 +15,7 @@ import 'package:school_pulse/features/auth/domain/usecases/login_with_email.dart
 import 'package:school_pulse/features/auth/data/datasources/remembered_login_store.dart';
 import 'package:school_pulse/features/auth/domain/usecases/logout.dart';
 import 'package:school_pulse/features/student/domain/usecases/resolve_parent_access_code.dart';
+import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
@@ -35,6 +36,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final EnterSupportMode enterSupportMode;
   final ExitSupportMode exitSupportMode;
   final BrandingBloc brandingBloc;
+  final VerificationLocalDataSource verificationLocalDataSource;
   final RememberedLoginStore _rememberedLoginStore = RememberedLoginStore();
 
   AuthBloc({
@@ -51,6 +53,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required this.enterSupportMode,
     required this.exitSupportMode,
     required this.brandingBloc,
+    required this.verificationLocalDataSource,
   }) : super(AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<LoginWithEmailPressed>(_onLoginWithEmail);
@@ -208,10 +211,29 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onLogout(LogoutPressed event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
+    final previousUser = state is AuthAuthenticated
+        ? (state as AuthAuthenticated).user
+        : null;
+
     await logout(NoParams());
     await _rememberedLoginStore.setStaffEmail(null);
     await _rememberedLoginStore.setParentIdentity();
     brandingBloc.add(ClearBranding());
+
+    // Best-effort: the Firebase Auth sign-out above is what actually ends
+    // the session, so a failure clearing on-device caches shouldn't block
+    // logout - it would just mean stale data lingers on this device.
+    if (previousUser != null) {
+      try {
+        await verificationLocalDataSource.clearPermissionSnapshot(
+          previousUser.id,
+        );
+      } catch (_) {}
+    }
+    try {
+      await NotificationService().unsubscribeAllTopics();
+    } catch (_) {}
+
     emit(AuthUnauthenticated());
   }
 

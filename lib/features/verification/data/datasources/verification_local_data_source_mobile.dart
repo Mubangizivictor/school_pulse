@@ -192,6 +192,18 @@ class VerificationLocalDataSourceImpl implements VerificationLocalDataSource {
   }
 
   @override
+  Future<void> clearPermissionSnapshot(String operatorId) async {
+    final found = await isar.operatorPermissionSnapshotIsars
+        .filter()
+        .operatorIdEqualTo(operatorId)
+        .findFirst();
+    if (found == null) return;
+    await isar.writeTxn(() async {
+      await isar.operatorPermissionSnapshotIsars.delete(found.id);
+    });
+  }
+
+  @override
   Future<AuthorizedDevice?> findDevice(String deviceId, String schoolId) async {
     final found = await isar.authorizedDeviceIsars
         .filter()

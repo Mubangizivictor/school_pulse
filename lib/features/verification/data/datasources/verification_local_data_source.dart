@@ -33,6 +33,7 @@ abstract class VerificationLocalDataSource {
 
   Future<OperatorPermissionSnapshot?> getPermissionSnapshot(String operatorId);
   Future<void> savePermissionSnapshot(OperatorPermissionSnapshot snapshot);
+  Future<void> clearPermissionSnapshot(String operatorId);
 
   Future<AuthorizedDevice?> findDevice(String deviceId, String schoolId);
 

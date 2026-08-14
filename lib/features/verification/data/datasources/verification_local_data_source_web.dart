@@ -126,6 +126,9 @@ class VerificationLocalDataSourceWeb implements VerificationLocalDataSource {
   ) async {}
 
   @override
+  Future<void> clearPermissionSnapshot(String operatorId) async {}
+
+  @override
   Future<AuthorizedDevice?> findDevice(
     String deviceId,
     String schoolId,

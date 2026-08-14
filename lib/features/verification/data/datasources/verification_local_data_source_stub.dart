@@ -35,6 +35,8 @@ class _VerificationLocalDataSourceStub implements VerificationLocalDataSource {
   Future<void> savePermissionSnapshot(OperatorPermissionSnapshot snapshot) =>
       _unsupported();
   @override
+  Future<void> clearPermissionSnapshot(String operatorId) => _unsupported();
+  @override
   Future<AuthorizedDevice?> findDevice(String deviceId, String schoolId) =>
       _unsupported();
   @override

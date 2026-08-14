@@ -30,53 +30,49 @@ class HelpCenterScreen extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 16),
-                AppSearchField(
-                  hintText: 'Search for help articles...',
-                  onChanged: (v) {},
-                ),
               ],
             ),
           ),
           const SizedBox(height: 24),
           const Text(
-            'Quick Help',
+            'Common Topics',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'In-app help articles aren\'t available yet - mention a topic '
+            'below when you contact support and we\'ll help directly.',
+            style: TextStyle(fontSize: 12, color: AppColors.textMuted(context)),
           ),
           const SizedBox(height: 12),
           AppCard(
             padding: EdgeInsets.zero,
             child: Column(
-              children: [
-                _SupportTile(
+              children: const [
+                _SupportTopic(
                   icon: Icons.lightbulb_outline,
                   title: 'Getting Started',
-                  onTap: () {},
                 ),
-                _SupportTile(
+                _SupportTopic(
                   icon: Icons.speed_rounded,
                   title: 'Using Class Performance',
-                  onTap: () {},
                 ),
-                _SupportTile(
+                _SupportTopic(
                   icon: Icons.checklist_rtl_rounded,
                   title: 'Taking Attendance',
-                  onTap: () {},
                 ),
-                _SupportTile(
+                _SupportTopic(
                   icon: Icons.edit_note_rounded,
                   title: 'Entering Marks',
-                  onTap: () {},
                 ),
-                _SupportTile(
+                _SupportTopic(
                   icon: Icons.assignment_outlined,
                   title: 'Creating Homework',
-                  onTap: () {},
                 ),
-                _SupportTile(
+                _SupportTopic(
                   icon: Icons.bar_chart_rounded,
                   title: 'Generating Reports',
-                  onTap: () {},
+                  isLast: true,
                 ),
               ],
             ),
@@ -98,15 +94,15 @@ class HelpCenterScreen extends StatelessWidget {
   }
 }
 
-class _SupportTile extends StatelessWidget {
+class _SupportTopic extends StatelessWidget {
   final IconData icon;
   final String title;
-  final VoidCallback onTap;
+  final bool isLast;
 
-  const _SupportTile({
+  const _SupportTopic({
     required this.icon,
     required this.title,
-    required this.onTap,
+    this.isLast = false,
   });
 
   @override
@@ -119,16 +115,15 @@ class _SupportTile extends StatelessWidget {
             title,
             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
           ),
-          trailing: const Icon(Icons.chevron_right_rounded, size: 20),
-          onTap: onTap,
           dense: true,
         ),
-        Divider(
-          height: 1,
-          indent: 56,
-          endIndent: 16,
-          color: AppColors.border(context).withValues(alpha: 0.5),
-        ),
+        if (!isLast)
+          Divider(
+            height: 1,
+            indent: 56,
+            endIndent: 16,
+            color: AppColors.border(context).withValues(alpha: 0.5),
+          ),
       ],
     );
   }

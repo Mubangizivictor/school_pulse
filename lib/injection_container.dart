@@ -755,6 +755,7 @@ Future<void> init() async {
       enterSupportMode: sl(),
       exitSupportMode: sl(),
       brandingBloc: sl(),
+      verificationLocalDataSource: sl(),
     ),
   );
 
