@@ -69,6 +69,20 @@ class AdmissionBloc extends Bloc<AdmissionEvent, AdmissionState> {
     ReviewApplicationRequested event,
     Emitter<AdmissionState> emit,
   ) async {
+    final permissionResult = await permissionEvaluator.can(
+      Permission.admissionApplicationReview,
+      event.operatorUser,
+    );
+    final allowed = permissionResult.fold((failure) => false, (value) => value);
+    if (!allowed) {
+      emit(
+        const AdmissionActionDenied(
+          'You do not have permission to review applications.',
+        ),
+      );
+      return;
+    }
+
     final result = await admissionService.reviewApplication(
       event.applicationId,
       reviewerId: event.reviewerId,

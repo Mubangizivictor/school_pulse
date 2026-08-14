@@ -172,28 +172,11 @@ void main() {
       'emits ActionSuccess with an approval message when approve is true',
       build: () {
         when(
-          () => repository.updateApplicationStatus(
-            any(),
-            any(),
-            reviewerId: any(named: 'reviewerId'),
-            comments: any(named: 'comments'),
+          () => permissionEvaluator.can(
+            Permission.admissionApplicationReview,
+            operatorUser,
           ),
-        ).thenAnswer((_) async => const Right(null));
-        return bloc;
-      },
-      act: (bloc) => bloc.add(
-        const ReviewApplicationRequested(
-          applicationId: 'app-1',
-          reviewerId: 'staff-1',
-          approve: true,
-        ),
-      ),
-      expect: () => [const AdmissionActionSuccess('Application approved')],
-    );
-
-    blocTest<AdmissionBloc, AdmissionState>(
-      'emits ActionSuccess with a rejection message when approve is false',
-      build: () {
+        ).thenAnswer((_) async => const Right(true));
         when(
           () => repository.updateApplicationStatus(
             any(),
@@ -206,12 +189,79 @@ void main() {
       },
       act: (bloc) => bloc.add(
         const ReviewApplicationRequested(
+          operatorUser: operatorUser,
+          applicationId: 'app-1',
+          reviewerId: 'staff-1',
+          approve: true,
+        ),
+      ),
+      expect: () => [const AdmissionActionSuccess('Application approved')],
+    );
+
+    blocTest<AdmissionBloc, AdmissionState>(
+      'emits ActionSuccess with a rejection message when approve is false',
+      build: () {
+        when(
+          () => permissionEvaluator.can(
+            Permission.admissionApplicationReview,
+            operatorUser,
+          ),
+        ).thenAnswer((_) async => const Right(true));
+        when(
+          () => repository.updateApplicationStatus(
+            any(),
+            any(),
+            reviewerId: any(named: 'reviewerId'),
+            comments: any(named: 'comments'),
+          ),
+        ).thenAnswer((_) async => const Right(null));
+        return bloc;
+      },
+      act: (bloc) => bloc.add(
+        const ReviewApplicationRequested(
+          operatorUser: operatorUser,
           applicationId: 'app-1',
           reviewerId: 'staff-1',
           approve: false,
         ),
       ),
       expect: () => [const AdmissionActionSuccess('Application rejected')],
+    );
+
+    blocTest<AdmissionBloc, AdmissionState>(
+      'emits ActionDenied and never touches the repository when the operator lacks admission.application.review',
+      build: () {
+        when(
+          () => permissionEvaluator.can(
+            Permission.admissionApplicationReview,
+            operatorUser,
+          ),
+        ).thenAnswer((_) async => const Right(false));
+        return bloc;
+      },
+      act: (bloc) => bloc.add(
+        const ReviewApplicationRequested(
+          operatorUser: operatorUser,
+          applicationId: 'app-1',
+          reviewerId: 'staff-1',
+          approve: true,
+        ),
+      ),
+      expect: () => [
+        const AdmissionActionDenied(
+          'You do not have permission to review applications.',
+        ),
+      ],
+      verify: (_) {
+        verifyNever(
+          () => repository.updateApplicationStatus(
+            any(),
+            any(),
+            reviewerId: any(named: 'reviewerId'),
+            comments: any(named: 'comments'),
+          ),
+        );
+      },
     );
   });
 

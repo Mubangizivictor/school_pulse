@@ -13,7 +13,9 @@ import 'package:school_pulse/injection_container.dart' as di;
 /// the same repositories already backing User Management and the roster -
 /// no separate search index needed at this data scale.
 class AdminSearchDelegate extends SearchDelegate<void> {
-  AdminSearchDelegate()
+  final String schoolId;
+
+  AdminSearchDelegate({required this.schoolId})
     : super(searchFieldLabel: 'Search staff, students, settings...');
 
   @override
@@ -46,7 +48,7 @@ class AdminSearchDelegate extends SearchDelegate<void> {
     return FutureBuilder(
       future: Future.wait([
         di.sl<GetStaffMembers>()(NoParams()),
-        di.sl<GetAllStudents>()(),
+        di.sl<GetAllStudents>()(schoolId: schoolId),
       ]),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {

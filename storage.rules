@@ -67,15 +67,19 @@ service firebase.storage {
     }
 
     // Student admission/profile documents (birth certificates, prior
-    // reports, IDs). Storage rules can't read Firestore to check the
-    // caller's schoolId against the student's, so - same reasoning as
-    // class_resources above - this layer enforces size/type only; the
-    // download URL is only reachable via the students/{studentId} document,
-    // which firestore.rules already scopes to staff of the same school (or
-    // the student's own linked parent/self).
+    // reports, IDs). Cross-references the student's own schoolId via
+    // isSameSchool (same firestore.get() pattern used by
+    // /schools/{schoolId}/school_assets above) so a staff member from
+    // another tenant who obtains or guesses a studentId/fileName can't
+    // read, overwrite, or delete another school's student documents -
+    // previously any authenticated user passed this rule outright.
     match /schools/students/{studentId}/documents/{fileName} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null
+      allow read: if isSameSchool(
+        firestore.get(/databases/(default)/documents/students/$(studentId)).data.schoolId
+      );
+      allow write: if isSameSchool(
+        firestore.get(/databases/(default)/documents/students/$(studentId)).data.schoolId
+      )
         && request.resource.size < 25 * 1024 * 1024
         && (
           request.resource.contentType.matches('image/.*')
@@ -84,7 +88,9 @@ service firebase.storage {
           || request.resource.contentType.matches('application/vnd.oasis.opendocument.*')
           || request.resource.contentType == 'application/msword'
         );
-      allow delete: if request.auth != null;
+      allow delete: if isSameSchool(
+        firestore.get(/databases/(default)/documents/students/$(studentId)).data.schoolId
+      );
     }
 
     // Subscription payment proof is private to the submitting administrator.
@@ -102,6 +108,18 @@ service firebase.storage {
           || request.resource.contentType == 'application/pdf'
         );
       allow update, delete: if false;
+    }
+
+    // School Calendar event attachments. Tenant-scoped like school_assets;
+    // size/type enforced here since Storage rules can't check
+    // calendar.manage against Firestore role_permission_overrides - the
+    // write path from the app already gates on that permission before
+    // upload, this is a defense-in-depth backstop.
+    match /schools/{schoolId}/calendar_events/{eventId}/attachments/{fileName} {
+      allow read: if isSameSchool(schoolId);
+      allow write: if isSameSchool(schoolId)
+        && request.resource.size < 10 * 1024 * 1024;
+      allow delete: if isSameSchool(schoolId);
     }
 
     match /{allPaths=**} {

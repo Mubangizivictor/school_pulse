@@ -1617,6 +1617,27 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'batch-id-cards',
+              // Deep-linkable and otherwise ungated - any authenticated
+              // staff member could reach ID card issuance before this,
+              // unlike every other admin/{...} route with this class of
+              // access. Same permitted set as admissions below.
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                const permitted = {
+                  UserRole.schoolAdmin,
+                  UserRole.director,
+                  UserRole.headTeacher,
+                  UserRole.deputyHead,
+                  UserRole.deanOfStudies,
+                  UserRole.receptionist,
+                  UserRole.hrOfficer,
+                };
+                if (!auth.user.roles.any(permitted.contains)) {
+                  return UserRoleRouting.dashboardPath(auth.user.role);
+                }
+                return null;
+              },
               builder: (context, state) => const BatchIdCardScreen(),
             ),
             GoRoute(

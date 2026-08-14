@@ -39,7 +39,20 @@ class AdminDashboardScreen extends StatelessWidget {
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
-                SliverToBoxAdapter(child: _DashboardHeader()),
+                // Keep the school-admin identity, search, alerts, and account
+                // actions available while the dashboard content scrolls. Other
+                // admin pages use [AdminAppBar], which is scaffold-pinned by
+                // default; the dashboard needs a pinned sliver because it owns
+                // its scroll view directly.
+                SliverAppBar(
+                  pinned: true,
+                  automaticallyImplyLeading: false,
+                  toolbarHeight: 88,
+                  backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                  surfaceTintColor: Colors.transparent,
+                  titleSpacing: 0,
+                  title: _DashboardHeader(),
+                ),
                 SliverToBoxAdapter(
                   child: Center(
                     child: ConstrainedBox(
@@ -87,76 +100,89 @@ class _DashboardHeader extends StatelessWidget {
         ? brandingState.branding
         : null;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.xl,
-        AppSpacing.l,
-        AppSpacing.xl,
-        AppSpacing.l,
-      ),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
-          child: Row(
-            children: [
-              SchoolBadge(
-                badgeUrl: branding?.badgeUrl ?? branding?.logoUrl,
-                size: 56,
-              ),
-              const SizedBox(width: AppSpacing.l),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            'School Admin',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 19,
-                              fontWeight: FontWeight.w800,
-                              color: Theme.of(context).colorScheme.onSurface,
+    return SafeArea(
+      bottom: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl,
+          AppSpacing.s,
+          AppSpacing.xl,
+          AppSpacing.s,
+        ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: Row(
+              children: [
+                SchoolBadge(
+                  badgeUrl: branding?.badgeUrl ?? branding?.logoUrl,
+                  size: 56,
+                ),
+                const SizedBox(width: AppSpacing.l),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              'School Admin',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 19,
+                                fontWeight: FontWeight.w800,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
                             ),
                           ),
-                        ),
-                        Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          size: 20,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ],
-                    ),
-                    Text(
-                      branding?.schoolName ?? 'School Pulse',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.w600,
+                          Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            size: 20,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                      Text(
+                        branding?.schoolName ?? 'School Pulse',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              IconButton(
-                tooltip: 'Search',
-                icon: const Icon(Icons.search_rounded),
-                onPressed: () => showSearch(
-                  context: context,
-                  delegate: AdminSearchDelegate(),
+                IconButton(
+                  tooltip: 'Search',
+                  icon: const Icon(Icons.search_rounded),
+                  onPressed: () {
+                    final authState = context.read<AuthBloc>().state;
+                    if (authState is! AuthAuthenticated) return;
+                    showSearch(
+                      context: context,
+                      delegate: AdminSearchDelegate(
+                        schoolId: authState.user.schoolId,
+                      ),
+                    );
+                  },
                 ),
-              ),
-              NotificationBellButton(
-                backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-              ),
-              const SizedBox(width: AppSpacing.s),
-              _ProfileButton(),
-            ],
+                NotificationBellButton(
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainer,
+                ),
+                const SizedBox(width: AppSpacing.s),
+                _ProfileButton(),
+              ],
+            ),
           ),
         ),
       ),
@@ -899,6 +925,7 @@ class _PendingApprovalsCard extends StatelessWidget {
       builder: (context, state) {
         final loading =
             state is AdminDashboardLoading || state is AdminDashboardInitial;
+        final error = state is AdminDashboardError;
         final count = state is AdminDashboardLoaded
             ? state.stats.pendingExpenditureRequestsCount
             : 0;
@@ -916,6 +943,28 @@ class _PendingApprovalsCard extends StatelessWidget {
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: AppSpacing.s),
                   child: Skeleton(height: 56),
+                )
+              else if (error)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.error_outline_rounded,
+                        color: Theme.of(
+                          context,
+                        ).extension<SemanticColors>()!.error,
+                        size: 18,
+                      ),
+                      const SizedBox(width: AppSpacing.m),
+                      Expanded(
+                        child: Text(
+                          'Couldn\'t load approvals. Pull to refresh.',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                    ],
+                  ),
                 )
               else if (count == 0)
                 Padding(
@@ -1036,6 +1085,7 @@ class _RecentActivityCard extends StatelessWidget {
             : const <AuditLog>[];
         final loading =
             state is AdminDashboardLoading || state is AdminDashboardInitial;
+        final error = state is AdminDashboardError;
 
         return AppCard(
           child: Column(
@@ -1050,6 +1100,14 @@ class _RecentActivityCard extends StatelessWidget {
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: AppSpacing.s),
                   child: Skeleton(height: 56),
+                )
+              else if (error)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
+                  child: Text(
+                    'Couldn\'t load recent activity. Pull to refresh.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 )
               else if (logs.isEmpty)
                 Padding(

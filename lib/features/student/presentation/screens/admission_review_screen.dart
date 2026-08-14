@@ -73,6 +73,7 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
     setState(() => _busy = true);
     context.read<AdmissionBloc>().add(
       ReviewApplicationRequested(
+        operatorUser: authState.user,
         applicationId: widget.application.id,
         reviewerId: authState.user.id,
         approve: approve,

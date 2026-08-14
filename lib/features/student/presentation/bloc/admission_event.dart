@@ -42,12 +42,14 @@ class CheckDuplicatesRequested extends AdmissionEvent {
 }
 
 class ReviewApplicationRequested extends AdmissionEvent {
+  final UserEntity operatorUser;
   final String applicationId;
   final String reviewerId;
   final bool approve;
   final String? comments;
 
   const ReviewApplicationRequested({
+    required this.operatorUser,
     required this.applicationId,
     required this.reviewerId,
     required this.approve,
@@ -55,7 +57,13 @@ class ReviewApplicationRequested extends AdmissionEvent {
   });
 
   @override
-  List<Object?> get props => [applicationId, reviewerId, approve, comments];
+  List<Object?> get props => [
+    operatorUser,
+    applicationId,
+    reviewerId,
+    approve,
+    comments,
+  ];
 }
 
 // `operatorUser` is the signed-in staff member attempting the enroll action
