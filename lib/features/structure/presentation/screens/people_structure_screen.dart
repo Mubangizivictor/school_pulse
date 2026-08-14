@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/core/usecases/usecase.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
+import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
+import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 import '../bloc/structure_bloc.dart';
 import '../bloc/structure_state.dart';
 import '../widgets/structure_empty_hint.dart';
@@ -23,13 +27,16 @@ class PeopleStructureScreen extends StatefulWidget {
 }
 
 class _PeopleStructureScreenState extends State<PeopleStructureScreen> {
-  static const _sections = ['Departments', 'Staff roles & designations'];
+  static const _sections = ['Departments', 'Staff Roles & Designations'];
   late int _selectedIndex;
+  List<UserEntity> _staff = const [];
+  bool _staffLoaded = false;
 
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialTab.clamp(0, _sections.length - 1);
+    _loadStaff();
   }
 
   @override
@@ -38,6 +45,15 @@ class _PeopleStructureScreenState extends State<PeopleStructureScreen> {
     if (oldWidget.initialTab != widget.initialTab) {
       _selectedIndex = widget.initialTab.clamp(0, _sections.length - 1);
     }
+  }
+
+  Future<void> _loadStaff() async {
+    final result = await di.sl<GetStaffMembers>()(NoParams());
+    if (!mounted) return;
+    setState(() {
+      _staff = result.getOrElse(() => const []);
+      _staffLoaded = true;
+    });
   }
 
   @override
@@ -54,8 +70,16 @@ class _PeopleStructureScreenState extends State<PeopleStructureScreen> {
         Expanded(
           child: BlocBuilder<StructureBloc, StructureState>(
             builder: (_, state) => _selectedIndex == 0
-                ? _DepartmentsList(departments: state.departments)
-                : _DesignationsList(designations: state.designations),
+                ? _DepartmentsList(
+                    departments: state.departments,
+                    staff: _staff,
+                    staffLoaded: _staffLoaded,
+                  )
+                : _DesignationsList(
+                    designations: state.designations,
+                    staff: _staff,
+                    staffLoaded: _staffLoaded,
+                  ),
           ),
         ),
       ],
@@ -64,8 +88,14 @@ class _PeopleStructureScreenState extends State<PeopleStructureScreen> {
 }
 
 class _DepartmentsList extends StatefulWidget {
-  const _DepartmentsList({required this.departments});
+  const _DepartmentsList({
+    required this.departments,
+    required this.staff,
+    required this.staffLoaded,
+  });
   final List<Department> departments;
+  final List<UserEntity> staff;
+  final bool staffLoaded;
   @override
   State<_DepartmentsList> createState() => _DepartmentsListState();
 }
@@ -84,7 +114,9 @@ class _DepartmentsListState extends State<_DepartmentsList> {
                   d.code.toLowerCase().contains(_query.toLowerCase()),
             )
             .toList()
-          ..sort((a, b) => a.name.compareTo(b.name));
+          ..sort((a, b) => a.displayOrder != b.displayOrder
+              ? a.displayOrder.compareTo(b.displayOrder)
+              : a.name.compareTo(b.name));
     return Scaffold(
       body: Column(
         children: [
@@ -101,24 +133,34 @@ class _DepartmentsListState extends State<_DepartmentsList> {
                 : ListView.builder(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
                     itemCount: items.length,
-                    itemBuilder: (_, i) => _OrganisationCard(
-                      icon: Icons.account_balance_outlined,
-                      color: Colors.blue,
-                      title: items[i].name,
-                      code: items[i].code,
-                      active: items[i].isActive,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => BlocProvider.value(
-                            value: context.read<StructureBloc>(),
-                            child: DepartmentFormScreen(
-                              schoolId: schoolId,
-                              existing: items[i],
+                    itemBuilder: (_, i) {
+                      final department = items[i];
+                      final staffCount = widget.staff
+                          .where((s) => s.departmentId == department.id)
+                          .length;
+                      return StructureRecordCard(
+                        icon: Icons.account_balance_outlined,
+                        color: Colors.blue,
+                        title: department.name,
+                        subtitle: [
+                          if (department.code.isNotEmpty) department.code,
+                          if (widget.staffLoaded)
+                            '$staffCount ${staffCount == 1 ? 'Staff' : 'Staff'}',
+                        ].join(' - '),
+                        isActive: department.isActive,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => BlocProvider.value(
+                              value: context.read<StructureBloc>(),
+                              child: DepartmentDetailsScreen(
+                                schoolId: schoolId,
+                                department: department,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
           ),
         ],
@@ -139,8 +181,14 @@ class _DepartmentsListState extends State<_DepartmentsList> {
 }
 
 class _DesignationsList extends StatefulWidget {
-  const _DesignationsList({required this.designations});
+  const _DesignationsList({
+    required this.designations,
+    required this.staff,
+    required this.staffLoaded,
+  });
   final List<StaffDesignation> designations;
+  final List<UserEntity> staff;
+  final bool staffLoaded;
   @override
   State<_DesignationsList> createState() => _DesignationsListState();
 }
@@ -155,7 +203,9 @@ class _DesignationsListState extends State<_DesignationsList> {
         widget.designations
             .where((r) => r.name.toLowerCase().contains(_query.toLowerCase()))
             .toList()
-          ..sort((a, b) => a.name.compareTo(b.name));
+          ..sort((a, b) => a.displayOrder != b.displayOrder
+              ? a.displayOrder.compareTo(b.displayOrder)
+              : a.name.compareTo(b.name));
     return Scaffold(
       body: Column(
         children: [
@@ -174,25 +224,34 @@ class _DesignationsListState extends State<_DesignationsList> {
                 : ListView.builder(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
                     itemCount: items.length,
-                    itemBuilder: (_, i) => _OrganisationCard(
-                      icon: Icons.person_outline_rounded,
-                      color: Colors.deepPurple,
-                      title: items[i].name,
-                      code: 'Designation',
-                      active: items[i].isActive,
-                      subtitle: items[i].description,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => BlocProvider.value(
-                            value: context.read<StructureBloc>(),
-                            child: DesignationFormScreen(
-                              schoolId: schoolId,
-                              existing: items[i],
+                    itemBuilder: (_, i) {
+                      final designation = items[i];
+                      final staffCount = widget.staff
+                          .where((s) => s.designationId == designation.id)
+                          .length;
+                      return StructureRecordCard(
+                        icon: Icons.person_outline_rounded,
+                        color: Colors.deepPurple,
+                        title: designation.name,
+                        subtitle: [
+                          if (designation.category.isNotEmpty)
+                            designation.category,
+                          if (widget.staffLoaded) '$staffCount Staff',
+                        ].join(' - '),
+                        isActive: designation.isActive,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => BlocProvider.value(
+                              value: context.read<StructureBloc>(),
+                              child: DesignationDetailsScreen(
+                                schoolId: schoolId,
+                                designation: designation,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
           ),
         ],
@@ -204,94 +263,6 @@ class _DesignationsListState extends State<_DesignationsList> {
             builder: (_) => BlocProvider.value(
               value: context.read<StructureBloc>(),
               child: DesignationFormScreen(schoolId: schoolId),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _OrganisationCard extends StatelessWidget {
-  const _OrganisationCard({
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.code,
-    required this.active,
-    required this.onTap,
-    this.subtitle,
-  });
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String code;
-  final bool active;
-  final String? subtitle;
-  final VoidCallback onTap;
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 9),
-      child: Material(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: colors.outline.withValues(alpha: .18)),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: .10),
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: Icon(icon, color: color, size: 19),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          decoration: active
-                              ? null
-                              : TextDecoration.lineThrough,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle?.isNotEmpty == true
-                            ? subtitle!
-                            : (code.isEmpty ? 'No code' : code),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: colors.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (!active)
-                  const StructureStatusBadge(
-                    label: 'Inactive',
-                    isActive: false,
-                  ),
-                const SizedBox(width: 6),
-                Icon(Icons.chevron_right_rounded, color: colors.primary),
-              ],
             ),
           ),
         ),
