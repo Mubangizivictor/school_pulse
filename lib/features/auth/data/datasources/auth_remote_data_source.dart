@@ -573,6 +573,19 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       'isActive': isActive,
     }, SetOptions(merge: true));
     await batch.commit();
+
+    // Mirror the disabled state onto the actual Firebase Auth account so a
+    // deactivated staff member's credentials stop working outright, not just
+    // this app's own profile-fetch gate. Best-effort: the Firestore flag is
+    // the source of truth and already blocks this app's own login path, so a
+    // sync failure here shouldn't roll back the deactivation itself.
+    try {
+      final callable = functions.httpsCallable('setStaffAuthDisabled');
+      await callable.call({'userId': userId, 'disabled': !isActive});
+    } catch (_) {
+      // Swallowed: Firestore-side deactivation already succeeded and is
+      // enforced by this app's own login checks.
+    }
   }
 
   @override

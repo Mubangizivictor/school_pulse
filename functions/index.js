@@ -449,6 +449,67 @@ exports.adminResetStaffPassword = onCall(async (request) => {
   return { temporaryPassword };
 });
 
+// Deactivating a staff member only ever flipped the Firestore `isActive`
+// flag; the Firebase Auth account itself stayed enabled indefinitely, so a
+// deactivated staff member's existing credentials remained valid for
+// anything that doesn't go through this app's own profile-fetch gate (e.g.
+// direct Firestore/Auth SDK usage). This mirrors the disabled state onto the
+// actual Auth account server-side, same admin/tenant guard shape as
+// adminResetStaffPassword.
+exports.setStaffAuthDisabled = onCall(async (request) => {
+  const auth = request.auth;
+  if (!auth) {
+    throw new HttpsError("unauthenticated", "You must be signed in.");
+  }
+
+  const { userId, disabled } = request.data || {};
+  if (typeof userId !== "string" || !userId.trim()) {
+    throw new HttpsError("invalid-argument", "userId is required.");
+  }
+  if (typeof disabled !== "boolean") {
+    throw new HttpsError("invalid-argument", "disabled must be a boolean.");
+  }
+
+  const db = admin.firestore();
+
+  const callerDoc = await db.collection("users").doc(auth.uid).get();
+  const callerData = callerDoc.exists ? callerDoc.data() : {};
+  const callerRoles = Array.isArray(callerData.roles)
+    ? callerData.roles
+    : (callerData.role ? [callerData.role] : []);
+  if (!callerRoles.some((r) => ADMIN_ROLES.includes(r))) {
+    throw new HttpsError("permission-denied", "Only school administrators can change staff account status.");
+  }
+  const callerSchoolId = callerData.schoolId || null;
+  if (!callerSchoolId) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Your administrator account is not assigned to a school."
+    );
+  }
+
+  const targetDoc = await db.collection("users").doc(userId).get();
+  if (!targetDoc.exists) {
+    throw new HttpsError("not-found", "Staff member not found.");
+  }
+  const targetData = targetDoc.data();
+  if (targetData.schoolId !== callerSchoolId) {
+    throw new HttpsError("permission-denied", "That staff member belongs to a different school.");
+  }
+
+  try {
+    await admin.auth().updateUser(userId, { disabled });
+  } catch (err) {
+    if (err.code === "auth/user-not-found") {
+      // Firestore-only profile with no Auth account yet - nothing to sync.
+      return { ok: true };
+    }
+    throw new HttpsError("internal", err.message || "Failed to update the account status.");
+  }
+
+  return { ok: true };
+});
+
 // Revokes every refresh token for the caller. Firebase Auth does not expose
 // individual-device sessions to clients, so a server-side revoke is the only
 // reliable way to remove access from a lost or untrusted device. The caller is
