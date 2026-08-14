@@ -61,6 +61,7 @@ abstract class FinanceRepository {
     ExpenditureRequest request,
   );
   Future<Either<Failure, void>> updateExpenditureStatus(
+    String schoolId,
     String requestId,
     ExpenditureStatus status,
     String approverId,

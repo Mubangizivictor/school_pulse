@@ -58,6 +58,7 @@ abstract class FinanceRemoteDataSource {
   Future<List<ExpenditureRequestModel>> getExpenditureRequests(String schoolId);
   Future<void> createExpenditureRequest(ExpenditureRequestModel request);
   Future<void> updateExpenditureStatus(
+    String schoolId,
     String requestId,
     ExpenditureStatus status,
     String approverId,
@@ -333,6 +334,7 @@ class FinanceRemoteDataSourceImpl implements FinanceRemoteDataSource {
 
   @override
   Future<void> updateExpenditureStatus(
+    String schoolId,
     String requestId,
     ExpenditureStatus status,
     String approverId,
@@ -340,9 +342,19 @@ class FinanceRemoteDataSourceImpl implements FinanceRemoteDataSource {
     String approverRole,
     String? comment,
   ) async {
-    // This needs to find the schoolId first, or pass it in. Assuming requestId is unique or we have context.
-    // For brevity, assuming we have a top-level collection or similar.
-    // In a real multi-tenant app, we'd need the schoolId.
+    await firestore
+        .collection('schools')
+        .doc(schoolId)
+        .collection('expenditures')
+        .doc(requestId)
+        .update({
+          'status': status.name,
+          'approverId': approverId,
+          'approverName': approverName,
+          'approverRole': approverRole,
+          'approvalComment': comment,
+          'approvedAt': FieldValue.serverTimestamp(),
+        });
   }
 
   @override

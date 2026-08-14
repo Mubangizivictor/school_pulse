@@ -220,6 +220,7 @@ class FinanceBloc extends Bloc<FinanceEvent, FinanceState> {
     Emitter<FinanceState> emit,
   ) async {
     final result = await repository.updateExpenditureStatus(
+      event.schoolId,
       event.requestId,
       event.status,
       event.approverId,

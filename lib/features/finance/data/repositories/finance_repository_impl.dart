@@ -358,6 +358,7 @@ class FinanceRepositoryImpl implements FinanceRepository {
 
   @override
   Future<Either<Failure, void>> updateExpenditureStatus(
+    String schoolId,
     String requestId,
     ExpenditureStatus status,
     String approverId,
@@ -367,6 +368,7 @@ class FinanceRepositoryImpl implements FinanceRepository {
   ) async {
     try {
       await remoteDataSource.updateExpenditureStatus(
+        schoolId,
         requestId,
         status,
         approverId,

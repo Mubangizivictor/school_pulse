@@ -77,13 +77,11 @@ class AdminAttendanceRepositoryImpl implements AdminAttendanceRepository {
         }
       }
 
-      final average = daysWithData > 0 ? totalSum / daysWithData : 0.0;
-
-      // Fallback if no data at all to make dashboard look "alive" during initial setup
-      if (weeklyStats.every((v) => v == 0.0)) {
-        return const Right((0.0, [0.0, 0.0, 0.0, 0.0, 0.0]));
+      if (daysWithData == 0) {
+        return const Left(ServerFailure('No attendance data recorded yet'));
       }
 
+      final average = totalSum / daysWithData;
       return Right((average, weeklyStats));
     } catch (e) {
       return Left(ServerFailure(e.toString()));

@@ -65,6 +65,7 @@ class SubmitExpenditureRequest extends FinanceEvent {
 }
 
 class UpdateExpenditureApproval extends FinanceEvent {
+  final String schoolId;
   final String requestId;
   final ExpenditureStatus status;
   final String approverId;
@@ -73,6 +74,7 @@ class UpdateExpenditureApproval extends FinanceEvent {
   final String? comment;
 
   const UpdateExpenditureApproval({
+    required this.schoolId,
     required this.requestId,
     required this.status,
     required this.approverId,
