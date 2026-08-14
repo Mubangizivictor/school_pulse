@@ -51,6 +51,7 @@ async function seed() {
       bursarB: { role: 'bursar', roles: ['bursar'], schoolId: 'schoolB', studentIds: [] },
       ownerA: { role: 'superAdmin', roles: ['superAdmin'], schoolId: null, studentIds: [] },
       matronA: { role: 'boardingMatron', roles: ['boardingMatron'], schoolId: 'schoolA', studentIds: [] },
+      patronA: { role: 'boardingPatron', roles: ['boardingPatron'], schoolId: 'schoolA', studentIds: [] },
       parentA: { role: 'parent', roles: ['parent'], schoolId: 'schoolA', studentIds: ['studentA'] },
       parentOtherA: { role: 'parent', roles: ['parent'], schoolId: 'schoolA', studentIds: ['studentOther'] },
       parentWithInjectedNurseRole: {
@@ -107,10 +108,10 @@ async function seed() {
         schoolId: 'schoolA', requestedBy: 'nurseA', status: 'SupplyRequestStatus.pending',
       }),
       setDoc(doc(db, 'welfare_records', 'publicA'), {
-        schoolId: 'schoolA', studentId: 'studentA', isPrivate: false, note: 'Doing well',
+        schoolId: 'schoolA', studentId: 'studentA', isPrivate: false, note: 'Doing well', gender: 'Female',
       }),
       setDoc(doc(db, 'welfare_records', 'privateA'), {
-        schoolId: 'schoolA', studentId: 'studentA', isPrivate: true, note: 'Private',
+        schoolId: 'schoolA', studentId: 'studentA', isPrivate: true, note: 'Private', gender: 'Female',
       }),
       setDoc(doc(db, 'school_contacts', 'nurseA'), {
         schoolId: 'schoolA', name: 'Nurse A', role: 'nurse', roles: ['nurse'], isActive: true,
@@ -330,12 +331,22 @@ describe('welfare records', () => {
 
   test('boarding staff can manage same-school records but cannot delete them', async () => {
     await assertSucceeds(setDoc(doc(dbFor('matronA'), 'welfare_records', 'newRecord'), {
-      schoolId: 'schoolA', studentId: 'studentA', isPrivate: false, note: 'Settled',
+      schoolId: 'schoolA', studentId: 'studentA', isPrivate: false, note: 'Settled', gender: 'Female',
     }));
     await assertSucceeds(updateDoc(doc(dbFor('matronA'), 'welfare_records', 'publicA'), {
       note: 'Updated',
     }));
     await assertFails(deleteDoc(doc(dbFor('matronA'), 'welfare_records', 'publicA')));
+  });
+
+  test('patron cannot read or write matron-side (opposite gender) welfare records', async () => {
+    await assertFails(getDoc(doc(dbFor('patronA'), 'welfare_records', 'privateA')));
+    await assertFails(updateDoc(doc(dbFor('patronA'), 'welfare_records', 'publicA'), {
+      note: 'Should not be allowed',
+    }));
+    await assertFails(setDoc(doc(dbFor('patronA'), 'welfare_records', 'newMaleRecordFromPatron'), {
+      schoolId: 'schoolA', studentId: 'studentA', isPrivate: false, note: 'Wrong gender', gender: 'Female',
+    }));
   });
 });
 

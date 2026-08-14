@@ -88,6 +88,24 @@ service cloud.firestore {
         (schoolAccessMode(schoolId) != 'readOnly' && schoolAccessMode(schoolId) != 'blocked');
     }
 
+    // Patron (boys') / Matron (girls') boarding modules are gender-scoped
+    // by client-side query convention only (`_kGender` in each module's own
+    // data source) - a Patron account using the Firestore SDK directly could
+    // otherwise read/write the opposite gender's boarding records. This
+    // enforces that same scoping server-side for the boarding-domain
+    // collections that carry a `gender` field directly (dormitories,
+    // welfare_records), while schoolAdmin/headTeacher/director keep full
+    // cross-gender access since they legitimately oversee both sides.
+    // Deliberately NOT applied to /students - that collection is read/
+    // written broadly by every staff module (teachers, bursar, etc.), and a
+    // gender gate there would incorrectly restrict non-boarding staff whose
+    // account happens to also hold a boardingPatron/boardingMatron role.
+    function canAccessBoardingGender(gender) {
+      return hasAnyRole(['schoolAdmin', 'headTeacher', 'director']) ||
+        (hasAnyRole(['boardingPatron']) && gender == 'Male') ||
+        (hasAnyRole(['boardingMatron']) && gender == 'Female');
+    }
+
     function canManageAppointments() {
       return isStaff() && (
         hasAnyRole(['schoolAdmin', 'director', 'headTeacher', 'deputyHead', 'receptionist', 'securityHead']) ||
@@ -484,15 +502,15 @@ service cloud.firestore {
 
     match /welfare_records/{docId} {
       allow read: if isSameSchool(resource.data.schoolId) && (
-        hasAnyRole(['boardingMatron', 'boardingPatron', 'schoolAdmin', 'headTeacher']) ||
+        canAccessBoardingGender(resource.data.get('gender', null)) ||
         (resource.data.isPrivate == false && (
           hasAnyRole(['nurse']) || isParentOf(resource.data.studentId) ||
           isMe(resource.data.studentId)
         ))
       );
-      allow create: if hasAnyRole(['boardingMatron', 'boardingPatron']) &&
+      allow create: if canAccessBoardingGender(request.resource.data.get('gender', null)) &&
         isSameSchool(request.resource.data.schoolId);
-      allow update: if hasAnyRole(['boardingMatron', 'boardingPatron']) &&
+      allow update: if canAccessBoardingGender(resource.data.get('gender', null)) &&
         isSameSchool(resource.data.schoolId) &&
         request.resource.data.schoolId == resource.data.schoolId;
       allow delete: if false;
@@ -1216,7 +1234,13 @@ service cloud.firestore {
     }
     match /dormitories/{id} {
       allow read: if isSignedIn();
-      allow write: if isStaff();
+      // Gender-gated so a Patron/Matron account can't write the opposite
+      // gender's dormitory via a direct SDK call, mirroring the app's own
+      // query-level convention. NOTE: these docs carry no schoolId field
+      // today (addDormitory never sets one), so this rule - like the prior
+      // isStaff()-only one - still can't enforce tenant isolation; that
+      // needs a schema backfill before it can be added here.
+      allow write: if canAccessBoardingGender(resource.data.get('gender', request.resource.data.get('gender', null)));
 
       // Per-bed allocation state, owned by the Patron/Matron boarding
       // modules - not touched by any other feature.
