@@ -164,8 +164,6 @@ import 'package:school_pulse/features/student_identity/domain/services/nfc_crede
 // Admin Dashboard
 import 'package:school_pulse/features/admin/domain/usecases/get_admin_dashboard_stats.dart';
 import 'package:school_pulse/features/admin/data/repositories/audit_repository.dart';
-import 'package:school_pulse/features/admin/data/repositories/appointment_repository.dart'
-    as admin_appointment;
 import 'package:school_pulse/features/admin/presentation/bloc/admin_dashboard_bloc.dart';
 
 // Calendar
@@ -811,7 +809,6 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton(() => AuditRepository());
-  sl.registerLazySingleton(() => admin_appointment.AppointmentRepository());
 
   // Features - School Calendar
   sl.registerFactory(

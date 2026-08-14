@@ -1373,3 +1373,102 @@ describe('MTN Mobile Money payment tenant isolation', () => {
     await assertFails(deleteDoc(doc(dbFor('ownerA'), 'mtn_payments', 'payA')));
   });
 });
+
+describe('Appointments module tenant isolation', () => {
+  async function seedAppointmentsFixtures() {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await Promise.all([
+        setDoc(doc(db, 'appointment_types', 'typeA'), {
+          schoolId: 'schoolA', name: 'Parent-Teacher Meeting',
+        }),
+        setDoc(doc(db, 'staff_availability', 'teacherA'), {
+          schoolId: 'schoolA', mondaySlots: ['09:00-10:00'],
+        }),
+      ]);
+    });
+  }
+
+  test('appointment_types: same-school staff and parents can read, cross-school cannot', async () => {
+    await seedAppointmentsFixtures();
+    await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'appointment_types', 'typeA')));
+    await assertSucceeds(getDoc(doc(dbFor('parentA'), 'appointment_types', 'typeA')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'appointment_types', 'typeA')));
+  });
+
+  test('appointment_types: only same-school staff can create/update, never cross-school', async () => {
+    await seedAppointmentsFixtures();
+    await assertSucceeds(setDoc(doc(dbFor('teacherA'), 'appointment_types', 'newType'), {
+      schoolId: 'schoolA', name: 'Bursar Meeting',
+    }));
+    await assertFails(setDoc(doc(dbFor('teacherB'), 'appointment_types', 'crossSchoolType'), {
+      schoolId: 'schoolA', name: 'Forged',
+    }));
+    await assertFails(updateDoc(doc(dbFor('teacherB'), 'appointment_types', 'typeA'), {
+      name: 'Hijacked',
+    }));
+  });
+
+  test('staff_availability: same-school staff/parents can read, cross-school cannot', async () => {
+    await seedAppointmentsFixtures();
+    await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'staff_availability', 'teacherA')));
+    await assertSucceeds(getDoc(doc(dbFor('parentA'), 'staff_availability', 'teacherA')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'staff_availability', 'teacherA')));
+  });
+
+  test('staff_availability: the owning staff member can write their own row, a cross-school admin cannot', async () => {
+    await seedAppointmentsFixtures();
+    await assertSucceeds(setDoc(doc(dbFor('teacherA'), 'staff_availability', 'teacherA'), {
+      schoolId: 'schoolA', mondaySlots: ['10:00-11:00'],
+    }, { merge: true }));
+    await assertFails(setDoc(doc(dbFor('bursarB'), 'staff_availability', 'teacherA'), {
+      schoolId: 'schoolA', mondaySlots: ['forged'],
+    }, { merge: true }));
+  });
+});
+
+describe('Gate ops visitors and movement events', () => {
+  test('visitors: same-school staff can read/write, cross-school staff cannot', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'schools', 'schoolA', 'visitors', 'visitor1'), {
+        schoolId: 'schoolA', fullName: 'Jane Guest', status: 'checkedIn',
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'schools', 'schoolA', 'visitors', 'visitor1')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'schools', 'schoolA', 'visitors', 'visitor1')));
+    await assertSucceeds(setDoc(doc(dbFor('teacherA'), 'schools', 'schoolA', 'visitors', 'visitor2'), {
+      schoolId: 'schoolA', fullName: 'New Guest', status: 'checkedIn',
+    }));
+    await assertFails(setDoc(doc(dbFor('teacherB'), 'schools', 'schoolA', 'visitors', 'visitor3'), {
+      schoolId: 'schoolA', fullName: 'Forged Guest', status: 'checkedIn',
+    }));
+  });
+
+  test('movement_events: append-only for same-school staff, unreadable cross-school, never editable/deletable', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'schools', 'schoolA', 'movement_events', 'evt1'), {
+        schoolId: 'schoolA', personId: 'studentA', direction: 'in',
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'schools', 'schoolA', 'movement_events', 'evt1')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'schools', 'schoolA', 'movement_events', 'evt1')));
+    await assertSucceeds(setDoc(doc(dbFor('teacherA'), 'schools', 'schoolA', 'movement_events', 'evt2'), {
+      schoolId: 'schoolA', personId: 'studentA', direction: 'out',
+    }));
+    await assertFails(updateDoc(doc(dbFor('teacherA'), 'schools', 'schoolA', 'movement_events', 'evt1'), {
+      direction: 'out',
+    }));
+    await assertFails(deleteDoc(doc(dbFor('teacherA'), 'schools', 'schoolA', 'movement_events', 'evt1')));
+  });
+
+  test('movement_events: the linked student and their parent can read their own event', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'schools', 'schoolA', 'movement_events', 'evtStudentA'), {
+        schoolId: 'schoolA', personId: 'studentA', direction: 'in',
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('studentUserA'), 'schools', 'schoolA', 'movement_events', 'evtStudentA')));
+    await assertSucceeds(getDoc(doc(dbFor('parentA'), 'schools', 'schoolA', 'movement_events', 'evtStudentA')));
+    await assertFails(getDoc(doc(dbFor('parentOtherA'), 'schools', 'schoolA', 'movement_events', 'evtStudentA')));
+  });
+});

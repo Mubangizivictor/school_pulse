@@ -1591,22 +1591,36 @@ class AdminSeeder {
     ]);
 
     for (var v in visitors) {
-      // VisitorRepository (used by both the live Visitor Log screen and the
-      // Admin Dashboard stats) reads from 'visitors' with checkIn/checkOut -
-      // this used to write to a 'visitor_logs' collection nothing reads.
-      await _db.collection('visitors').add({
-        'schoolId': demoSchoolId,
-        'name': v['name'],
-        'purpose': v['purpose'],
-        'contact': '',
-        'checkIn': Timestamp.fromDate(
-          now.add(Duration(minutes: v['entry'] as int)),
-        ),
-        'checkOut': v['exit'] != null
-            ? Timestamp.fromDate(now.add(Duration(minutes: v['exit'] as int)))
-            : null,
-        'signedInBy': '',
-      });
+      // GateOpsRemoteDataSourceImpl (the Gatekeeper's real, live Visitor
+      // desk screen) reads schools/{schoolId}/visitors with the Visitor
+      // entity's field names - this used to write a different shape to a
+      // top-level 'visitors' collection nothing in the app reads or has
+      // rules for, so this demo data was never actually visible anywhere.
+      final arrival = now.add(Duration(minutes: v['entry'] as int));
+      final departure = v['exit'] != null
+          ? now.add(Duration(minutes: v['exit'] as int))
+          : null;
+      await _db
+          .collection('schools')
+          .doc(demoSchoolId)
+          .collection('visitors')
+          .add({
+            'schoolId': demoSchoolId,
+            'fullName': v['name'],
+            'phone': null,
+            'photoUrl': null,
+            'purpose': v['purpose'],
+            'hostId': null,
+            'hostName': null,
+            'gateId': 'main-gate',
+            'arrivalTime': Timestamp.fromDate(arrival),
+            'departureTime': departure != null
+                ? Timestamp.fromDate(departure)
+                : null,
+            'status': departure != null ? 'checkedOut' : 'checkedIn',
+            'isQuickEntry': true,
+            'badgeNumber': null,
+          });
     }
   }
 

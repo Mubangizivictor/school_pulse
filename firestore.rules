@@ -753,33 +753,20 @@ service cloud.firestore {
       allow read: if isSignedIn() && request.auth.uid in resource.data.participantIds;
     }
 
-    // Front-desk visitor log and appointment scheduling. Real isSameSchool()
-    // tenant isolation - client queries already filter by schoolId
-    // (VisitorRemoteDataSource.getVisitors), so this is safe to tighten.
-    match /visitors/{id} {
-      allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
-      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
-    }
-    match /appointments/{id} {
-      allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
-      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
-    }
-
-    // Appointments & Meeting Management module - distinct from the
-    // front-desk `appointments` collection above (that's the visitor
-    // quick-scheduler). Real schoolId ownership is enforced via
+    // Appointments & Meeting Management module. Real schoolId ownership is enforced via
     // isSameSchool() rather than relying on client-side query filters.
     match /appointment_types/{id} {
-      allow read: if isSignedIn();
+      allow read: if isSameSchool(resource.data.schoolId);
       allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
       allow update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
-    // Keyed by the staff member's own uid. Any signed-in user can read (so
-    // parents can compute booking slots); only the staff member themselves
+    // Keyed by the staff member's own uid. Any same-school signed-in user
+    // can read (so parents can compute booking slots); only the staff
+    // member themselves
     // or an admin-console role can write it.
     match /staff_availability/{staffId} {
-      allow read: if isSignedIn();
-      allow write: if isStaff() && (
+      allow read: if isSameSchool(resource.data.schoolId);
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId) && (
         request.auth.uid == staffId ||
         myRole() in ['schoolAdmin', 'director', 'headTeacher', 'deputyHead']
       );
@@ -882,6 +869,22 @@ service cloud.firestore {
       allow update, delete: if false;
     }
     match /schools/{schoolId}/security_incidents/{id} {
+      allow read, write: if isStaff() && isSameSchool(schoolId);
+    }
+    // GateOpsRemoteDataSourceImpl has read/written these two paths since the
+    // gate_ops rebuild shipped, but no match block existed for either -
+    // every visitor check-in/out and movement-event write was silently
+    // rejected by Firestore's default-deny (the Gatekeeper's visitor desk
+    // screen is the one live gate_ops UI, so this broke it end-to-end).
+    // personId on a movement event may be a studentId (gate entry/exit),
+    // hence the parent/self read branch, matching student_movements above.
+    match /schools/{schoolId}/movement_events/{id} {
+      allow read: if (isStaff() && isSameSchool(schoolId)) ||
+        isParentOf(resource.data.personId) || isMe(resource.data.personId);
+      allow create: if isStaff() && isSameSchool(schoolId);
+      allow update, delete: if false;
+    }
+    match /schools/{schoolId}/visitors/{id} {
       allow read, write: if isStaff() && isSameSchool(schoolId);
     }
     match /schools/{schoolId}/emergency_events/{id} {
