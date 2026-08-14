@@ -819,7 +819,10 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<SchoolCalendarRepository>(
-    () => SchoolCalendarRepositoryImpl(remoteDataSource: sl()),
+    () => SchoolCalendarRepositoryImpl(
+      remoteDataSource: sl(),
+      structureRepository: sl(),
+    ),
   );
 
   sl.registerLazySingleton<SchoolCalendarRemoteDataSource>(
@@ -1588,6 +1591,8 @@ Future<void> init() async {
     () => SubjectSyncServiceImpl(
       remoteDataSource: sl(),
       localDataSource: sl(),
+      classRemoteDataSource: sl(),
+      classLocalDataSource: sl(),
       auditService: sl(),
       networkInfo: sl(),
     ),

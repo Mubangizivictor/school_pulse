@@ -261,7 +261,6 @@ import 'package:school_pulse/features/teacher/teacher_student_communications_scr
 import 'package:school_pulse/features/teacher/teacher_classes_list_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/classes/class_details_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/classes/class_students_list_screen.dart';
-import 'package:school_pulse/features/teacher/presentation/screens/classes/class_attendance_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/classes/class_timetable_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/classes/class_assignments_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/classes/class_performance_screen.dart';
@@ -905,10 +904,12 @@ final router = GoRouter(
                   ),
                 ),
                 GoRoute(
+                  // ClassAttendanceScreen used to render here but was a fully
+                  // mocked shell (hardcoded roster/percentages, no-op Save) -
+                  // /staff/roll-call is the real ClassAttendanceBloc-backed
+                  // register, so route there instead of showing fake data.
                   path: 'attendance',
-                  builder: (context, state) => ClassAttendanceScreen(
-                    classId: state.pathParameters['classId']!,
-                  ),
+                  redirect: (context, state) => '/staff/roll-call',
                 ),
                 GoRoute(
                   path: 'timetable',
@@ -1512,8 +1513,7 @@ final router = GoRouter(
                     ),
                     GoRoute(
                       path: 'classes-streams',
-                      builder: (context, state) =>
-                          const ClassesStreamsScreen(),
+                      builder: (context, state) => const ClassesStreamsScreen(),
                     ),
                     GoRoute(
                       path: 'subjects',
@@ -1525,8 +1525,7 @@ final router = GoRouter(
                     ),
                     GoRoute(
                       path: 'grading-systems',
-                      builder: (context, state) =>
-                          const GradingSystemsScreen(),
+                      builder: (context, state) => const GradingSystemsScreen(),
                     ),
                     GoRoute(
                       path: 'assessment-types',

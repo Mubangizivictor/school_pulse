@@ -1,9 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:school_pulse/core/network/network_info.dart';
+import 'package:school_pulse/features/teacher/data/datasources/class_teacher_local_data_source.dart';
+import 'package:school_pulse/features/teacher/data/datasources/class_teacher_remote_data_source.dart';
 import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_local_data_source.dart';
 import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_remote_data_source.dart';
 import 'package:school_pulse/features/teacher/data/services/subject_sync_service_impl.dart';
+import 'package:school_pulse/features/teacher/domain/entities/class_attendance.dart';
 import 'package:school_pulse/features/teacher/domain/entities/lesson_attendance.dart';
 import 'package:school_pulse/features/teacher/domain/entities/offline_operation.dart';
 import 'package:school_pulse/features/teacher/domain/services/subject_audit_service.dart';
@@ -12,11 +15,17 @@ class _MockRemote extends Mock implements SubjectTeacherRemoteDataSource {}
 
 class _MockLocal extends Mock implements SubjectTeacherLocalDataSource {}
 
+class _MockClassRemote extends Mock implements ClassTeacherRemoteDataSource {}
+
+class _MockClassLocal extends Mock implements ClassTeacherLocalDataSource {}
+
 class _MockAudit extends Mock implements SubjectAuditService {}
 
 class _MockNetwork extends Mock implements NetworkInfo {}
 
 class _FakeAttendance extends Fake implements LessonAttendance {}
+
+class _FakeClassAttendance extends Fake implements ClassAttendanceSession {}
 
 class _FakeOperationIsar extends Fake implements OfflineOperation {}
 
@@ -61,26 +70,47 @@ OfflineOperation _queued({
   );
 }
 
+ClassAttendanceSession _classSession({
+  ClassAttendanceSessionStatus status = ClassAttendanceSessionStatus.draft,
+}) {
+  return ClassAttendanceSession(
+    id: 'sess1',
+    schoolId: 'school1',
+    classId: 'g10a',
+    academicYearId: '2026',
+    date: DateTime(2026, 6, 1),
+    status: status,
+    roleAssignmentId: 'a1',
+  );
+}
+
 void main() {
   late _MockRemote remote;
   late _MockLocal local;
+  late _MockClassRemote classRemote;
+  late _MockClassLocal classLocal;
   late _MockAudit audit;
   late _MockNetwork network;
   late SubjectSyncServiceImpl service;
 
   setUpAll(() {
     registerFallbackValue(_FakeAttendance());
+    registerFallbackValue(_FakeClassAttendance());
     registerFallbackValue(_FakeOperationIsar());
   });
 
   setUp(() {
     remote = _MockRemote();
     local = _MockLocal();
+    classRemote = _MockClassRemote();
+    classLocal = _MockClassLocal();
     audit = _MockAudit();
     network = _MockNetwork();
     service = SubjectSyncServiceImpl(
       remoteDataSource: remote,
       localDataSource: local,
+      classRemoteDataSource: classRemote,
+      classLocalDataSource: classLocal,
       auditService: audit,
       networkInfo: network,
     );
@@ -272,4 +302,67 @@ void main() {
     expect(result.synced, 1);
     verify(() => local.deleteOperation(any())).called(1);
   });
+
+  test(
+    'replays a queued class register instead of silently discarding it',
+    () async {
+      // Regression test: classAttendanceDraft/Submit used to fall into the
+      // "unknown type" default branch and get deleted from the queue without
+      // ever reaching Firestore, silently losing a class teacher's offline
+      // roll call.
+      queueContains([
+        _queued(
+          type: OfflineOperationType.classAttendanceSubmit,
+          entityId: 'sess1',
+        ),
+      ]);
+      when(
+        () => classLocal.getAttendanceDraft('sess1'),
+      ).thenAnswer((_) async => _classSession());
+      when(
+        () => classRemote.getAttendanceSession(
+          schoolId: any(named: 'schoolId'),
+          sessionId: any(named: 'sessionId'),
+        ),
+      ).thenAnswer((_) async => null);
+      when(
+        () => classRemote.saveAttendanceSession(any()),
+      ).thenAnswer((_) async {});
+
+      final result = await service.drain();
+
+      expect(result.synced, 1);
+      verify(() => classRemote.saveAttendanceSession(any())).called(1);
+      verify(() => local.deleteOperation('attendance_sess1')).called(1);
+    },
+  );
+
+  test(
+    'refuses to overwrite a class register the office has locked',
+    () async {
+      queueContains([
+        _queued(
+          type: OfflineOperationType.classAttendanceDraft,
+          entityId: 'sess1',
+        ),
+      ]);
+      when(
+        () => classLocal.getAttendanceDraft('sess1'),
+      ).thenAnswer((_) async => _classSession());
+      when(
+        () => classRemote.getAttendanceSession(
+          schoolId: any(named: 'schoolId'),
+          sessionId: any(named: 'sessionId'),
+        ),
+      ).thenAnswer(
+        (_) async =>
+            _classSession(status: ClassAttendanceSessionStatus.locked),
+      );
+
+      final result = await service.drain();
+
+      expect(result.conflicted, 1);
+      verifyNever(() => classRemote.saveAttendanceSession(any()));
+    },
+  );
 }

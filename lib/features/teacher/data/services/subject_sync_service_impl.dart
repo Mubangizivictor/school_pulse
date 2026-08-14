@@ -2,16 +2,21 @@ import 'dart:async';
 
 import 'package:school_pulse/core/network/network_info.dart';
 
+import '../../domain/entities/class_attendance.dart';
 import '../../domain/entities/lesson_attendance.dart';
 import '../../domain/entities/offline_operation.dart';
 import '../../domain/services/subject_audit_service.dart';
 import '../../domain/services/subject_sync_service.dart';
+import '../datasources/class_teacher_local_data_source.dart';
+import '../datasources/class_teacher_remote_data_source.dart';
 import '../datasources/subject_teacher_local_data_source.dart';
 import '../datasources/subject_teacher_remote_data_source.dart';
 
 class SubjectSyncServiceImpl implements SubjectSyncService {
   final SubjectTeacherRemoteDataSource remoteDataSource;
   final SubjectTeacherLocalDataSource localDataSource;
+  final ClassTeacherRemoteDataSource classRemoteDataSource;
+  final ClassTeacherLocalDataSource classLocalDataSource;
   final SubjectAuditService auditService;
   final NetworkInfo networkInfo;
 
@@ -26,6 +31,8 @@ class SubjectSyncServiceImpl implements SubjectSyncService {
   SubjectSyncServiceImpl({
     required this.remoteDataSource,
     required this.localDataSource,
+    required this.classRemoteDataSource,
+    required this.classLocalDataSource,
     required this.auditService,
     required this.networkInfo,
   });
@@ -105,6 +112,10 @@ class SubjectSyncServiceImpl implements SubjectSyncService {
       case OfflineOperationType.attendanceSubmit:
         return _replayAttendance(operation);
 
+      case OfflineOperationType.classAttendanceDraft:
+      case OfflineOperationType.classAttendanceSubmit:
+        return _replayClassAttendance(operation);
+
       case OfflineOperationType.auditLog:
         // Handled by the audit service's own flush, which knows the payload.
         return _ReplayOutcome.done;
@@ -152,6 +163,36 @@ class SubjectSyncServiceImpl implements SubjectSyncService {
     }
 
     await remoteDataSource.saveLessonAttendance(register);
+    return _ReplayOutcome.done;
+  }
+
+  Future<_ReplayOutcome> _replayClassAttendance(
+    OfflineOperation operation,
+  ) async {
+    // Mirrors _replayAttendance: read the newest local register rather than
+    // a snapshot taken when the operation was queued, and defer to the
+    // server once it has moved past what this device knows about.
+    final register = await classLocalDataSource.getAttendanceDraft(
+      operation.entityId,
+    );
+    if (register == null) return _ReplayOutcome.gone;
+
+    final server = await classRemoteDataSource.getAttendanceSession(
+      schoolId: operation.schoolId,
+      sessionId: register.id,
+    );
+
+    if (server != null) {
+      if (server.status == ClassAttendanceSessionStatus.locked) {
+        return _ReplayOutcome.conflict;
+      }
+      if (server.status == ClassAttendanceSessionStatus.submitted &&
+          register.status != ClassAttendanceSessionStatus.submitted) {
+        return _ReplayOutcome.conflict;
+      }
+    }
+
+    await classRemoteDataSource.saveAttendanceSession(register);
     return _ReplayOutcome.done;
   }
 
