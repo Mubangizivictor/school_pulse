@@ -79,4 +79,16 @@ class StructureDependencyService {
         .get();
     return snap.count ?? 0;
   }
+
+  /// Terms carry their parent academic year's ID. Guards against deleting a
+  /// year that still has terms configured under it.
+  Future<int> countTermsInYear(String schoolId, String academicYearId) async {
+    final snap = await firestore
+        .collection('academic_terms')
+        .where('schoolId', isEqualTo: schoolId)
+        .where('academicYearId', isEqualTo: academicYearId)
+        .count()
+        .get();
+    return snap.count ?? 0;
+  }
 }

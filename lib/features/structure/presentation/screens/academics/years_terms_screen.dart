@@ -5,7 +5,9 @@ import 'package:uuid/uuid.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 import '../../../domain/entities/structure_entities.dart';
+import '../../../domain/services/structure_dependency_service.dart';
 import '../../bloc/structure_bloc.dart';
 import '../../bloc/structure_event.dart';
 import '../../bloc/structure_state.dart';
@@ -506,6 +508,22 @@ class _YearFormScreenState extends State<_YearFormScreen> {
                 const SizedBox(height: 8),
                 TextButton.icon(
                   onPressed: () async {
+                    final termCount = await di
+                        .sl<StructureDependencyService>()
+                        .countTermsInYear(widget.schoolId, widget.existing!.id);
+                    if (termCount > 0) {
+                      if (mounted) {
+                        await showDeleteConfirmDialog(
+                          context,
+                          title: 'Can\'t Delete Year',
+                          message:
+                              '"${widget.existing!.name}" still has $termCount '
+                              'term(s) configured under it. Delete those '
+                              'terms first.',
+                        );
+                      }
+                      return;
+                    }
                     final confirmed = await showDeleteConfirmDialog(
                       context,
                       title: 'Delete Year',
