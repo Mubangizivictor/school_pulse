@@ -7,10 +7,10 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
-import 'package:school_pulse/features/student_identity/domain/repositories/student_identity_repository.dart';
-import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source.dart';
+import 'package:school_pulse/features/verification/domain/entities/resolved_identity.dart';
 import 'package:school_pulse/features/verification/domain/entities/scan_credential.dart';
 import 'package:school_pulse/features/verification/domain/entities/verification_context.dart';
+import 'package:school_pulse/features/verification/domain/repositories/identity_resolver.dart';
 import 'package:school_pulse/features/gate_ops/domain/entities/gate.dart';
 import 'package:school_pulse/core/services/nfc/nfc_credential_reader_adapter.dart';
 import 'package:school_pulse/injection_container.dart' as di;
@@ -50,6 +50,7 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
   String? _photoUrl;
   DateTime? _scannedAt;
   String _deniedMessage = '';
+  VerificationContext? _verificationContext;
 
   @override
   void dispose() {
@@ -98,80 +99,72 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
     final deviceId = await DeviceIdProvider().getDeviceId();
 
     // start()'s implementation never reads context.gate/purpose - only
-    // IdentityResolver (deliberately bypassed here, see _resolveCard) does -
-    // so this placeholder Gate never influences the actual hardware read.
-    await _adapter.start(
-      VerificationContext(
-        gate: Gate(
-          id: '',
-          name: '',
-          type: '',
-          location: '',
-          assignedOfficerIds: const [],
-          operatingHours: const {},
-          allowedUserRoles: const [],
-          requiredVerificationMethods: const [],
-          schoolId: user.schoolId,
-        ),
-        operatorUser: user,
-        purpose: 'attendance.nfc.scan',
-        deviceId: deviceId,
-        requestedAt: DateTime.now(),
+    // IdentityResolver (used in _resolveCard) does - so this placeholder
+    // Gate never influences the actual hardware read. schoolId is real
+    // since that's what IdentityResolver._resolveNfc scopes the lookup by.
+    _verificationContext = VerificationContext(
+      gate: Gate(
+        id: '',
+        name: '',
+        type: '',
+        location: '',
+        assignedOfficerIds: const [],
+        operatingHours: const {},
+        allowedUserRoles: const [],
+        requiredVerificationMethods: const [],
+        schoolId: user.schoolId,
       ),
+      operatorUser: user,
+      purpose: 'attendance.nfc.scan',
+      deviceId: deviceId,
+      requestedAt: DateTime.now(),
     );
+    await _adapter.start(_verificationContext!);
   }
 
   Future<void> _resolveCard(String cardUid) async {
     setState(() => _state = _ScanState.resolving);
 
-    final authState = context.read<AuthBloc>().state;
-    if (authState is! AuthAuthenticated) return;
-    final user = authState.user;
+    final verificationContext = _verificationContext;
+    if (verificationContext == null) return;
 
-    final localDataSource = di.sl<VerificationLocalDataSource>();
-    final cached = await localDataSource.findCredential(cardUid, user.schoolId);
+    // Routes through the shared IdentityResolver rather than reading the
+    // local credential cache directly: the resolver also checks revocation
+    // (a lost/stolen card must not still mark attendance) and falls back to
+    // Firestore on a cache miss (a card assigned on a different device
+    // resolves here too, not just "invalid" until this device happens to
+    // sync some other way).
+    final resolverResult = await di.sl<IdentityResolver>().resolve(
+      NfcScanCredential(cardUid: cardUid, scannedAt: DateTime.now()),
+      verificationContext,
+    );
     if (!mounted) return;
 
-    if (cached == null || cached.status != 'active') {
-      setState(() => _state = _ScanState.invalid);
-      return;
-    }
-
-    if (cached.identityType != 'student') {
-      // Staff NFC attendance has no roster/lookup path yet (see plan) -
-      // surfaced as invalid rather than silently marking the wrong flow.
-      setState(() => _state = _ScanState.invalid);
-      return;
-    }
-
-    final identityRepo = di.sl<StudentIdentityRepository>();
-    final result = await identityRepo.getStudentByUniqueId(cached.identityId);
-    if (!mounted) return;
-    final student = result.fold((failure) => null, (s) => s);
-
-    if (student == null) {
+    final identity = resolverResult.fold((failure) => null, (r) => r);
+    if (identity is! StudentResolvedIdentity) {
       setState(() => _state = _ScanState.invalid);
       return;
     }
 
     setState(() {
-      _name = student.name;
-      _subtitle = student.studentCode;
-      _photoUrl = student.photoUrl;
+      _name = identity.name;
+      _subtitle = identity.studentCode;
+      _photoUrl = identity.photoUrl;
       _scannedAt = DateTime.now();
     });
 
+    final user = verificationContext.operatorUser;
     final deviceId = await DeviceIdProvider().getDeviceId();
     if (!mounted) return;
     final record = AttendanceRecord(
       id: '',
       schoolId: user.schoolId,
       category: AttendanceCategory.students,
-      scopeId: student.classId,
-      scopeName: student.classId,
+      scopeId: identity.classId,
+      scopeName: identity.classId,
       date: _scannedAt!,
-      personId: student.id,
-      personName: student.name,
+      personId: identity.id,
+      personName: identity.name,
       status: AttendanceStatus.present,
       method: AttendanceMethod.nfc,
       markedBy: user.name,
