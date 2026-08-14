@@ -30,81 +30,87 @@ class AuditLogScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
       appBar: const AdminAppBar(title: 'Audit Log'),
-      body: StreamBuilder<List<AuditLog>>(
-        stream: repository.watchRecentLogs(limit: 200, schoolId: schoolId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: SchoolPulseLoader());
-          }
-          if (snapshot.hasError) {
-            return const EmptyState(
-              icon: Icons.error_outline_rounded,
-              title: 'Couldn\'t load the audit log',
-              message:
-                  'Something went wrong on our end. Pull to refresh or check back shortly.',
-            );
-          }
-          final logs = snapshot.data ?? const [];
-          if (logs.isEmpty) {
-            return const EmptyState(
-              icon: Icons.history_rounded,
-              title: 'No activity yet',
-              message: 'Staff and system actions will be recorded here.',
-            );
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: logs.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 8),
-            itemBuilder: (context, index) {
-              final log = logs[index];
-              final color = _parseColor(log.colorHex);
-              return AppCard(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                child: ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      _iconMap[log.iconName] ?? Icons.info,
-                      size: 16,
-                      color: color,
-                    ),
-                  ),
-                  title: Text(
-                    log.title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
-                  subtitle: Text(
-                    log.description,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
-                  ),
-                  trailing: Text(
-                    _formatFull(log.timestamp),
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
+      body: schoolId == null
+          ? const Center(child: SchoolPulseLoader())
+          : StreamBuilder<List<AuditLog>>(
+              stream: repository.watchRecentLogs(
+                limit: 200,
+                schoolId: schoolId,
+              ),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: SchoolPulseLoader());
+                }
+                if (snapshot.hasError) {
+                  return const EmptyState(
+                    icon: Icons.error_outline_rounded,
+                    title: 'Couldn\'t load the audit log',
+                    message:
+                        'Something went wrong on our end. Pull to refresh or check back shortly.',
+                  );
+                }
+                final logs = snapshot.data ?? const [];
+                if (logs.isEmpty) {
+                  return const EmptyState(
+                    icon: Icons.history_rounded,
+                    title: 'No activity yet',
+                    message: 'Staff and system actions will be recorded here.',
+                  );
+                }
+                return ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: logs.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final log = logs[index];
+                    final color = _parseColor(log.colorHex);
+                    return AppCard(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            _iconMap[log.iconName] ?? Icons.info,
+                            size: 16,
+                            color: color,
+                          ),
+                        ),
+                        title: Text(
+                          log.title,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                        subtitle: Text(
+                          log.description,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                        ),
+                        trailing: Text(
+                          _formatFull(log.timestamp),
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
     );
   }
 

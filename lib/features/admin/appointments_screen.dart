@@ -22,6 +22,11 @@ class AppointmentsScreen extends StatefulWidget {
 class _AppointmentsScreenState extends State<AppointmentsScreen> {
   final _repository = di.sl<admin_appointment.AppointmentRepository>();
 
+  String _schoolId(BuildContext context) {
+    final state = context.read<AuthBloc>().state;
+    return state is AuthAuthenticated ? state.user.schoolId : '';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -37,7 +42,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         ],
       ),
       body: StreamBuilder<List<Appointment>>(
-        stream: _repository.getAppointments(),
+        stream: _repository.getAppointments(_schoolId(context)),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: SchoolPulseLoader());
@@ -162,6 +167,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                     status: 'pending',
                     hostStaffId: hostId,
                   ),
+                  _schoolId(context),
                 );
                 if (dialogContext.mounted) Navigator.pop(dialogContext);
               },

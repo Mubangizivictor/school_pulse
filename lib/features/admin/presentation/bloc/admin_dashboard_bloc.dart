@@ -30,8 +30,10 @@ class AdminDashboardBloc
     });
 
     on<WatchAuditLogs>((event, emit) async {
+      final schoolId = event.schoolId;
+      if (schoolId == null || schoolId.isEmpty) return;
       await emit.forEach(
-        auditRepository.watchRecentLogs(schoolId: event.schoolId),
+        auditRepository.watchRecentLogs(schoolId: schoolId),
         onData: (logs) {
           if (state is AdminDashboardLoaded) {
             return (state as AdminDashboardLoaded).copyWith(recentLogs: logs);

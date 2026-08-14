@@ -5,9 +5,10 @@ class AppointmentRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Appointment Logic
-  Stream<List<Appointment>> getAppointments() {
+  Stream<List<Appointment>> getAppointments(String schoolId) {
     return _firestore
         .collection('appointments')
+        .where('schoolId', isEqualTo: schoolId)
         .orderBy('scheduledTime', descending: false)
         .snapshots()
         .map(
@@ -17,8 +18,14 @@ class AppointmentRepository {
         );
   }
 
-  Future<void> createAppointment(Appointment appointment) async {
-    await _firestore.collection('appointments').add(appointment.toMap());
+  Future<void> createAppointment(
+    Appointment appointment,
+    String schoolId,
+  ) async {
+    await _firestore.collection('appointments').add({
+      ...appointment.toMap(),
+      'schoolId': schoolId,
+    });
   }
 
   Future<void> updateAppointmentStatus(String id, String status) async {

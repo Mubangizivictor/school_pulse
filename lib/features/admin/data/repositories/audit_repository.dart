@@ -4,12 +4,13 @@ import '../models/audit_log.dart';
 class AuditRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  Stream<List<AuditLog>> watchRecentLogs({int limit = 10, String? schoolId}) {
-    Query<Map<String, dynamic>> query = _firestore.collection('audit_logs');
-    if (schoolId != null && schoolId.isNotEmpty) {
-      query = query.where('schoolId', isEqualTo: schoolId);
-    }
-    return query
+  Stream<List<AuditLog>> watchRecentLogs({
+    int limit = 10,
+    required String schoolId,
+  }) {
+    return _firestore
+        .collection('audit_logs')
+        .where('schoolId', isEqualTo: schoolId)
         .orderBy('timestamp', descending: true)
         .limit(limit)
         .snapshots()

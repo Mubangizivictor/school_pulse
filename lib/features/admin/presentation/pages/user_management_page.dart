@@ -99,10 +99,12 @@ class UsersOverviewView extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         StreamBuilder<List<AuditLog>>(
-          stream: di.sl<AuditRepository>().watchRecentLogs(
-            limit: 5,
-            schoolId: schoolId,
-          ),
+          stream: schoolId == null
+              ? const Stream.empty()
+              : di.sl<AuditRepository>().watchRecentLogs(
+                  limit: 5,
+                  schoolId: schoolId,
+                ),
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
               return const Center(
