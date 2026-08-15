@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:school_pulse/core/notification/notification_service.dart';
 import 'package:school_pulse/features/admin/data/repositories/audit_repository.dart';
@@ -123,6 +124,20 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
     required this.firestore,
     required this.auditRepository,
   });
+
+  // Dormitory documents carry no schoolId field of their own (a
+  // pre-existing gap - see the dormitories Firestore rule), so
+  // dormitory-only mutations (add/update/delete/leadership) resolve it from
+  // the signed-in operator's own profile instead, same source of truth the
+  // app already uses to scope Matron/Patron to one school. Without this,
+  // their audit_logs entries wrote schoolId: '' and were silently invisible
+  // to every schoolId-filtered query (Admin Dashboard, Audit Log screen).
+  Future<String> _operatorSchoolId() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return '';
+    final doc = await firestore.collection('users').doc(uid).get();
+    return doc.data()?['schoolId'] as String? ?? '';
+  }
 
   Future<String?> _parentUidForStudent(String studentId) async {
     final snap = await firestore
@@ -308,7 +323,7 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
       'location': dormitory.location,
     });
     await auditRepository.logAction(
-      schoolId: '',
+      schoolId: await _operatorSchoolId(),
       title: 'Dormitory created',
       description:
           '${dormitory.name} was added (capacity ${dormitory.capacity}).',
@@ -329,7 +344,7 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
       'location': dormitory.location,
     });
     await auditRepository.logAction(
-      schoolId: '',
+      schoolId: await _operatorSchoolId(),
       title: 'Dormitory updated',
       description: '${dormitory.name} details were changed.',
       iconName: 'hotel',
@@ -341,7 +356,7 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
   Future<void> deleteDormitory(String id) async {
     await firestore.collection('dormitories').doc(id).delete();
     await auditRepository.logAction(
-      schoolId: '',
+      schoolId: await _operatorSchoolId(),
       title: 'Dormitory deleted',
       description: 'Dormitory $id was removed.',
       iconName: 'hotel',
@@ -417,7 +432,7 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
     batch.update(firestore.collection('dormitories').doc(dormitoryId), update);
     await batch.commit();
     await auditRepository.logAction(
-      schoolId: '',
+      schoolId: await _operatorSchoolId(),
       title: 'Dorm leadership updated',
       description: 'Leadership roles updated for dormitory $dormitoryId.',
       iconName: 'star',
@@ -808,7 +823,7 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
     await batch.commit();
 
     await auditRepository.logAction(
-      schoolId: '',
+      schoolId: records.isNotEmpty ? records.first.schoolId : '',
       title: 'Roll call submitted',
       description:
           '${records.length} ${records.isNotEmpty ? records.first.type : ''} attendance records saved.',
@@ -889,7 +904,7 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
     });
 
     await auditRepository.logAction(
-      schoolId: '',
+      schoolId: studentDoc.data()?['schoolId'] as String? ?? '',
       title: 'Leave requested',
       description: '${request.studentName}: ${request.reason}',
       iconName: 'exit_to_app',
@@ -1102,10 +1117,14 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
       'schoolId': studentDoc.data()?['schoolId'],
     });
 
+    // The referral reason is sensitive wellbeing detail and belongs only in
+    // boarding_counseling_referrals (read by counseling/boarding staff), not
+    // in the general-purpose audit_logs feed every admin with dashboard
+    // access can see.
     await auditRepository.logAction(
       schoolId: studentDoc.data()?['schoolId'] as String? ?? '',
       title: 'Counseling referral logged',
-      description: '${referral.studentName} referred: ${referral.reason}',
+      description: 'A counseling referral was logged for a student.',
       iconName: 'psychology',
       colorHex: '#673AB7',
       userId: referral.referredBy,
@@ -1174,11 +1193,13 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
       'schoolId': studentDoc.data()?['schoolId'],
     });
 
+    // Free-text behaviour detail stays in boarding_behaviour_observations
+    // (boarding-staff-only); the shared audit feed only needs to know an
+    // observation of this type was logged, not its contents.
     await auditRepository.logAction(
       schoolId: studentDoc.data()?['schoolId'] as String? ?? '',
       title: 'Behaviour observation logged',
-      description:
-          '${observation.type}: ${observation.studentName} - ${observation.description}',
+      description: '${observation.type} observation logged for a student.',
       iconName: 'visibility',
       colorHex: observation.type == 'Positive' ? '#4CAF50' : '#FF9800',
       userId: observation.recordedBy,
@@ -1250,11 +1271,16 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
       'gender': studentDoc.data()?['gender'] ?? _kGender,
     });
 
+    // A private incident (the default, per DisciplineIncident.isPrivate)
+    // must not name the student or reveal its category/severity in the
+    // shared audit feed - the full record already lives in
+    // boarding_discipline, scoped to boarding staff.
     await auditRepository.logAction(
       schoolId: studentDoc.data()?['schoolId'] as String? ?? '',
       title: 'Discipline incident logged',
-      description:
-          '${incident.studentName}: ${incident.category} (${incident.severity})',
+      description: incident.isPrivate
+          ? 'A private discipline incident was logged.'
+          : '${incident.studentName}: ${incident.category} (${incident.severity})',
       iconName: 'gavel',
       colorHex: '#F44336',
       userId: incident.recordedBy,
@@ -1275,12 +1301,13 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
     String status,
     String actionTaken,
   ) async {
-    await firestore.collection('boarding_discipline').doc(incidentId).update({
-      'status': status,
-      'actionTaken': actionTaken,
-    });
+    final incidentRef = firestore
+        .collection('boarding_discipline')
+        .doc(incidentId);
+    final incidentDoc = await incidentRef.get();
+    await incidentRef.update({'status': status, 'actionTaken': actionTaken});
     await auditRepository.logAction(
-      schoolId: '',
+      schoolId: incidentDoc.data()?['schoolId'] as String? ?? '',
       title: 'Discipline case updated',
       description: 'Case $incidentId marked $status.',
       iconName: 'gavel',
@@ -1316,6 +1343,7 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
 
   @override
   Future<void> postAnnouncement(BoardingAnnouncement announcement) async {
+    final schoolId = await _operatorSchoolId();
     await firestore.collection('boarding_announcements').add({
       'title': announcement.title,
       'content': announcement.content,
@@ -1328,7 +1356,7 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
 
     if (announcement.targetGroups.isNotEmpty) {
       await NotificationService().sendBroadcast(
-        schoolId: '',
+        schoolId: schoolId,
         title: announcement.title,
         body: announcement.content,
         targetGroups: announcement.targetGroups,
@@ -1336,7 +1364,7 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
     }
 
     await auditRepository.logAction(
-      schoolId: '',
+      schoolId: schoolId,
       title: 'Boarding announcement posted',
       description: announcement.title,
       iconName: 'campaign',

@@ -159,6 +159,7 @@ class LibraryRepositoryImpl implements LibraryRepository {
     );
 
     await auditRepository.logAction(
+      schoolId: borrowing.schoolId,
       title: 'Resource Issued',
       description:
           'Librarian ${borrowing.issuedBy} issued "${borrowing.resourceTitle}" to ${borrowing.borrowerName}',
@@ -247,6 +248,7 @@ class LibraryRepositoryImpl implements LibraryRepository {
     }
 
     await auditRepository.logAction(
+      schoolId: schoolId,
       title: 'Resource Returned',
       description:
           'Resource "${borrowingModel.resourceTitle}" returned by ${borrowingModel.borrowerName}. Fine: ${fineAmount ?? 0}',
