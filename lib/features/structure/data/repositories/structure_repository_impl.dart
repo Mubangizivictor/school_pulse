@@ -17,10 +17,13 @@ import '../../domain/repositories/structure_repository.dart';
 import '../datasources/structure_remote_data_source.dart';
 import '../datasources/structure_local_data_source.dart';
 
-/// Streams read live from Firestore (which already persists its own
-/// offline cache) and side-effect write through to the Isar cache on
-/// every emission, so a synchronous last-known-good copy is always on
-/// disk for any future offline-only read path.
+/// Streams read live from Firestore and side-effect write through to the
+/// Isar cache on every emission. [_cached] additionally emits that cache
+/// first (when non-empty) before the live stream's own emissions, so a
+/// Structure screen opened offline shows the last-known-good data
+/// immediately instead of an indefinite loading skeleton while the
+/// `.snapshots()` listener waits for connectivity - the cache existed but
+/// had no read path until now.
 class StructureRepositoryImpl implements StructureRepository {
   final StructureRemoteDataSource remoteDataSource;
   final StructureLocalDataSource localDataSource;
@@ -30,13 +33,25 @@ class StructureRepositoryImpl implements StructureRepository {
     required this.localDataSource,
   });
 
-  @override
-  Stream<List<EducationalLevel>> watchLevels(String schoolId) {
-    return remoteDataSource.watchLevels(schoolId).map((levels) {
-      localDataSource.cacheLevels(levels);
-      return levels;
-    });
+  Stream<List<T>> _cached<T>(
+    Future<List<T>> Function() readCache,
+    Stream<List<T>> live,
+    Future<void> Function(List<T>) writeCache,
+  ) async* {
+    final cached = await readCache();
+    if (cached.isNotEmpty) yield cached;
+    await for (final value in live) {
+      await writeCache(value);
+      yield value;
+    }
   }
+
+  @override
+  Stream<List<EducationalLevel>> watchLevels(String schoolId) => _cached(
+    localDataSource.getLevels,
+    remoteDataSource.watchLevels(schoolId),
+    localDataSource.cacheLevels,
+  );
 
   @override
   Future<void> addLevel(EducationalLevel level) =>
@@ -59,12 +74,11 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.restoreLevel(levelId);
 
   @override
-  Stream<List<AcademicYear>> watchAcademicYears(String schoolId) {
-    return remoteDataSource.watchAcademicYears(schoolId).map((years) {
-      localDataSource.cacheAcademicYears(years);
-      return years;
-    });
-  }
+  Stream<List<AcademicYear>> watchAcademicYears(String schoolId) => _cached(
+    localDataSource.getAcademicYears,
+    remoteDataSource.watchAcademicYears(schoolId),
+    localDataSource.cacheAcademicYears,
+  );
 
   @override
   Future<void> addAcademicYear(AcademicYear year) =>
@@ -91,12 +105,11 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.restoreAcademicYear(yearId);
 
   @override
-  Stream<List<AcademicTerm>> watchAcademicTerms(String schoolId) {
-    return remoteDataSource.watchAcademicTerms(schoolId).map((terms) {
-      localDataSource.cacheAcademicTerms(terms);
-      return terms;
-    });
-  }
+  Stream<List<AcademicTerm>> watchAcademicTerms(String schoolId) => _cached(
+    localDataSource.getAcademicTerms,
+    remoteDataSource.watchAcademicTerms(schoolId),
+    localDataSource.cacheAcademicTerms,
+  );
 
   @override
   Future<void> addAcademicTerm(AcademicTerm term) =>
@@ -123,12 +136,11 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.restoreAcademicTerm(termId);
 
   @override
-  Stream<List<SchoolClass>> watchClasses(String schoolId) {
-    return remoteDataSource.watchClasses(schoolId).map((classes) {
-      localDataSource.cacheClasses(classes);
-      return classes;
-    });
-  }
+  Stream<List<SchoolClass>> watchClasses(String schoolId) => _cached(
+    localDataSource.getClasses,
+    remoteDataSource.watchClasses(schoolId),
+    localDataSource.cacheClasses,
+  );
 
   @override
   Future<void> addClass(SchoolClass schoolClass) =>
@@ -151,12 +163,11 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.restoreClass(classId);
 
   @override
-  Stream<List<ClassStream>> watchStreams(String schoolId) {
-    return remoteDataSource.watchStreams(schoolId).map((streams) {
-      localDataSource.cacheStreams(streams);
-      return streams;
-    });
-  }
+  Stream<List<ClassStream>> watchStreams(String schoolId) => _cached(
+    localDataSource.getStreams,
+    remoteDataSource.watchStreams(schoolId),
+    localDataSource.cacheStreams,
+  );
 
   @override
   Future<void> addStream(ClassStream stream) =>
@@ -179,12 +190,11 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.restoreStream(streamId);
 
   @override
-  Stream<List<Subject>> watchSubjects(String schoolId) {
-    return remoteDataSource.watchSubjects(schoolId).map((subjects) {
-      localDataSource.cacheSubjects(subjects);
-      return subjects;
-    });
-  }
+  Stream<List<Subject>> watchSubjects(String schoolId) => _cached(
+    localDataSource.getSubjects,
+    remoteDataSource.watchSubjects(schoolId),
+    localDataSource.cacheSubjects,
+  );
 
   @override
   Future<void> addSubject(Subject subject) =>
@@ -199,12 +209,11 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.deleteSubject(subjectId);
 
   @override
-  Stream<List<Department>> watchDepartments(String schoolId) {
-    return remoteDataSource.watchDepartments(schoolId).map((departments) {
-      localDataSource.cacheDepartments(departments);
-      return departments;
-    });
-  }
+  Stream<List<Department>> watchDepartments(String schoolId) => _cached(
+    localDataSource.getDepartments,
+    remoteDataSource.watchDepartments(schoolId),
+    localDataSource.cacheDepartments,
+  );
 
   @override
   Future<void> addDepartment(Department department) =>
@@ -223,12 +232,11 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.archiveDepartment(departmentId);
 
   @override
-  Stream<List<StaffDesignation>> watchDesignations(String schoolId) {
-    return remoteDataSource.watchDesignations(schoolId).map((designations) {
-      localDataSource.cacheDesignations(designations);
-      return designations;
-    });
-  }
+  Stream<List<StaffDesignation>> watchDesignations(String schoolId) => _cached(
+    localDataSource.getDesignations,
+    remoteDataSource.watchDesignations(schoolId),
+    localDataSource.cacheDesignations,
+  );
 
   @override
   Future<void> addDesignation(StaffDesignation designation) =>
@@ -243,12 +251,11 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.deleteDesignation(designationId);
 
   @override
-  Stream<List<StaffRole>> watchStaffRoles(String schoolId) {
-    return remoteDataSource.watchStaffRoles(schoolId).map((roles) {
-      localDataSource.cacheStaffRoles(roles);
-      return roles;
-    });
-  }
+  Stream<List<StaffRole>> watchStaffRoles(String schoolId) => _cached(
+    localDataSource.getStaffRoles,
+    remoteDataSource.watchStaffRoles(schoolId),
+    localDataSource.cacheStaffRoles,
+  );
 
   @override
   Future<void> addStaffRole(StaffRole role) =>
@@ -281,12 +288,11 @@ class StructureRepositoryImpl implements StructureRepository {
   ) => remoteDataSource.updateInstitutionProfile(profile, schoolId);
 
   @override
-  Stream<List<Campus>> watchCampuses(String schoolId) {
-    return remoteDataSource.watchCampuses(schoolId).map((campuses) {
-      localDataSource.cacheCampuses(campuses);
-      return campuses;
-    });
-  }
+  Stream<List<Campus>> watchCampuses(String schoolId) => _cached(
+    localDataSource.getCampuses,
+    remoteDataSource.watchCampuses(schoolId),
+    localDataSource.cacheCampuses,
+  );
 
   @override
   Future<void> addCampus(Campus campus) => remoteDataSource.saveCampus(campus);
@@ -304,12 +310,11 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.archiveCampus(campusId);
 
   @override
-  Stream<List<House>> watchHouses(String schoolId) {
-    return remoteDataSource.watchHouses(schoolId).map((houses) {
-      localDataSource.cacheHouses(houses);
-      return houses;
-    });
-  }
+  Stream<List<House>> watchHouses(String schoolId) => _cached(
+    localDataSource.getHouses,
+    remoteDataSource.watchHouses(schoolId),
+    localDataSource.cacheHouses,
+  );
 
   @override
   Future<void> addHouse(House house) => remoteDataSource.saveHouse(house);
@@ -322,12 +327,11 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.deleteHouse(houseId);
 
   @override
-  Stream<List<Club>> watchClubs(String schoolId) {
-    return remoteDataSource.watchClubs(schoolId).map((clubs) {
-      localDataSource.cacheClubs(clubs);
-      return clubs;
-    });
-  }
+  Stream<List<Club>> watchClubs(String schoolId) => _cached(
+    localDataSource.getClubs,
+    remoteDataSource.watchClubs(schoolId),
+    localDataSource.cacheClubs,
+  );
 
   @override
   Future<void> addClub(Club club) => remoteDataSource.saveClub(club);
@@ -339,12 +343,11 @@ class StructureRepositoryImpl implements StructureRepository {
   Future<void> deleteClub(String clubId) => remoteDataSource.deleteClub(clubId);
 
   @override
-  Stream<List<Facility>> watchFacilities(String schoolId) {
-    return remoteDataSource.watchFacilities(schoolId).map((facilities) {
-      localDataSource.cacheFacilities(facilities);
-      return facilities;
-    });
-  }
+  Stream<List<Facility>> watchFacilities(String schoolId) => _cached(
+    localDataSource.getFacilities,
+    remoteDataSource.watchFacilities(schoolId),
+    localDataSource.cacheFacilities,
+  );
 
   @override
   Future<void> addFacility(Facility facility) =>
@@ -359,12 +362,11 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.deleteFacility(facilityId);
 
   @override
-  Stream<List<Hostel>> watchHostels(String schoolId) {
-    return remoteDataSource.watchHostels(schoolId).map((hostels) {
-      localDataSource.cacheHostels(hostels);
-      return hostels;
-    });
-  }
+  Stream<List<Hostel>> watchHostels(String schoolId) => _cached(
+    localDataSource.getHostels,
+    remoteDataSource.watchHostels(schoolId),
+    localDataSource.cacheHostels,
+  );
 
   @override
   Future<void> addHostel(Hostel hostel) => remoteDataSource.saveHostel(hostel);
@@ -378,12 +380,11 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.deleteHostel(hostelId);
 
   @override
-  Stream<List<HostelRoom>> watchHostelRooms(String schoolId) {
-    return remoteDataSource.watchHostelRooms(schoolId).map((rooms) {
-      localDataSource.cacheHostelRooms(rooms);
-      return rooms;
-    });
-  }
+  Stream<List<HostelRoom>> watchHostelRooms(String schoolId) => _cached(
+    localDataSource.getHostelRooms,
+    remoteDataSource.watchHostelRooms(schoolId),
+    localDataSource.cacheHostelRooms,
+  );
 
   @override
   Future<void> addHostelRoom(HostelRoom room) =>
@@ -398,12 +399,11 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.deleteHostelRoom(roomId);
 
   @override
-  Stream<List<TransportRoute>> watchTransportRoutes(String schoolId) {
-    return remoteDataSource.watchTransportRoutes(schoolId).map((routes) {
-      localDataSource.cacheTransportRoutes(routes);
-      return routes;
-    });
-  }
+  Stream<List<TransportRoute>> watchTransportRoutes(String schoolId) => _cached(
+    localDataSource.getTransportRoutes,
+    remoteDataSource.watchTransportRoutes(schoolId),
+    localDataSource.cacheTransportRoutes,
+  );
 
   @override
   Future<void> addTransportRoute(TransportRoute route) =>
@@ -418,12 +418,11 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.deleteTransportRoute(routeId);
 
   @override
-  Stream<List<TransportStop>> watchTransportStops(String schoolId) {
-    return remoteDataSource.watchTransportStops(schoolId).map((stops) {
-      localDataSource.cacheTransportStops(stops);
-      return stops;
-    });
-  }
+  Stream<List<TransportStop>> watchTransportStops(String schoolId) => _cached(
+    localDataSource.getTransportStops,
+    remoteDataSource.watchTransportStops(schoolId),
+    localDataSource.cacheTransportStops,
+  );
 
   @override
   Future<void> addTransportStop(TransportStop stop) =>
@@ -438,12 +437,12 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.deleteTransportStop(stopId);
 
   @override
-  Stream<List<TransportVehicle>> watchTransportVehicles(String schoolId) {
-    return remoteDataSource.watchTransportVehicles(schoolId).map((vehicles) {
-      localDataSource.cacheTransportVehicles(vehicles);
-      return vehicles;
-    });
-  }
+  Stream<List<TransportVehicle>> watchTransportVehicles(String schoolId) =>
+      _cached(
+        localDataSource.getTransportVehicles,
+        remoteDataSource.watchTransportVehicles(schoolId),
+        localDataSource.cacheTransportVehicles,
+      );
 
   @override
   Future<void> addTransportVehicle(TransportVehicle vehicle) =>
@@ -458,12 +457,11 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.deleteTransportVehicle(vehicleId);
 
   @override
-  Stream<List<FeeCategory>> watchFeeCategories(String schoolId) {
-    return remoteDataSource.watchFeeCategories(schoolId).map((categories) {
-      localDataSource.cacheFeeCategories(categories);
-      return categories;
-    });
-  }
+  Stream<List<FeeCategory>> watchFeeCategories(String schoolId) => _cached(
+    localDataSource.getFeeCategories,
+    remoteDataSource.watchFeeCategories(schoolId),
+    localDataSource.cacheFeeCategories,
+  );
 
   @override
   Future<void> addFeeCategory(FeeCategory category) =>
@@ -478,12 +476,12 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.deleteFeeCategory(categoryId);
 
   @override
-  Stream<List<AssessmentTypeDef>> watchAssessmentTypes(String schoolId) {
-    return remoteDataSource.watchAssessmentTypes(schoolId).map((types) {
-      localDataSource.cacheAssessmentTypes(types);
-      return types;
-    });
-  }
+  Stream<List<AssessmentTypeDef>> watchAssessmentTypes(String schoolId) =>
+      _cached(
+        localDataSource.getAssessmentTypes,
+        remoteDataSource.watchAssessmentTypes(schoolId),
+        localDataSource.cacheAssessmentTypes,
+      );
 
   @override
   Future<void> addAssessmentType(AssessmentTypeDef type) =>
@@ -498,12 +496,12 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.deleteAssessmentType(typeId);
 
   @override
-  Stream<List<GradingSystemDef>> watchGradingSystems(String schoolId) {
-    return remoteDataSource.watchGradingSystems(schoolId).map((systems) {
-      localDataSource.cacheGradingSystems(systems);
-      return systems;
-    });
-  }
+  Stream<List<GradingSystemDef>> watchGradingSystems(String schoolId) =>
+      _cached(
+        localDataSource.getGradingSystems,
+        remoteDataSource.watchGradingSystems(schoolId),
+        localDataSource.cacheGradingSystems,
+      );
 
   @override
   Future<void> addGradingSystem(GradingSystemDef system) =>
@@ -518,12 +516,11 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.deleteGradingSystem(systemId);
 
   @override
-  Stream<List<GradeBand>> watchGradeBands(String schoolId) {
-    return remoteDataSource.watchGradeBands(schoolId).map((bands) {
-      localDataSource.cacheGradeBands(bands);
-      return bands;
-    });
-  }
+  Stream<List<GradeBand>> watchGradeBands(String schoolId) => _cached(
+    localDataSource.getGradeBands,
+    remoteDataSource.watchGradeBands(schoolId),
+    localDataSource.cacheGradeBands,
+  );
 
   @override
   Future<void> addGradeBand(GradeBand band) =>
@@ -568,12 +565,12 @@ class StructureRepositoryImpl implements StructureRepository {
   ) => remoteDataSource.updateCommunicationDefaultsConfig(config, schoolId);
 
   @override
-  Stream<List<AttendanceTypeDef>> watchAttendanceTypes(String schoolId) {
-    return remoteDataSource.watchAttendanceTypes(schoolId).map((types) {
-      localDataSource.cacheAttendanceTypes(types);
-      return types;
-    });
-  }
+  Stream<List<AttendanceTypeDef>> watchAttendanceTypes(String schoolId) =>
+      _cached(
+        localDataSource.getAttendanceTypes,
+        remoteDataSource.watchAttendanceTypes(schoolId),
+        localDataSource.cacheAttendanceTypes,
+      );
 
   @override
   Future<void> addAttendanceType(AttendanceTypeDef type) =>
@@ -588,12 +585,12 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.deleteAttendanceType(typeId);
 
   @override
-  Stream<List<AttendanceSessionDef>> watchAttendanceSessions(String schoolId) {
-    return remoteDataSource.watchAttendanceSessions(schoolId).map((sessions) {
-      localDataSource.cacheAttendanceSessions(sessions);
-      return sessions;
-    });
-  }
+  Stream<List<AttendanceSessionDef>> watchAttendanceSessions(String schoolId) =>
+      _cached(
+        localDataSource.getAttendanceSessions,
+        remoteDataSource.watchAttendanceSessions(schoolId),
+        localDataSource.cacheAttendanceSessions,
+      );
 
   @override
   Future<void> addAttendanceSession(AttendanceSessionDef session) =>
@@ -610,14 +607,11 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<AnnouncementCategoryDef>> watchAnnouncementCategories(
     String schoolId,
-  ) {
-    return remoteDataSource.watchAnnouncementCategories(schoolId).map((
-      categories,
-    ) {
-      localDataSource.cacheAnnouncementCategories(categories);
-      return categories;
-    });
-  }
+  ) => _cached(
+    localDataSource.getAnnouncementCategories,
+    remoteDataSource.watchAnnouncementCategories(schoolId),
+    localDataSource.cacheAnnouncementCategories,
+  );
 
   @override
   Future<void> addAnnouncementCategory(AnnouncementCategoryDef category) =>
@@ -634,14 +628,11 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Stream<List<NotificationCategoryDef>> watchNotificationCategories(
     String schoolId,
-  ) {
-    return remoteDataSource.watchNotificationCategories(schoolId).map((
-      categories,
-    ) {
-      localDataSource.cacheNotificationCategories(categories);
-      return categories;
-    });
-  }
+  ) => _cached(
+    localDataSource.getNotificationCategories,
+    remoteDataSource.watchNotificationCategories(schoolId),
+    localDataSource.cacheNotificationCategories,
+  );
 
   @override
   Future<void> addNotificationCategory(NotificationCategoryDef category) =>
@@ -656,12 +647,12 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.deleteNotificationCategory(categoryId);
 
   @override
-  Stream<List<MessageTemplateDef>> watchMessageTemplates(String schoolId) {
-    return remoteDataSource.watchMessageTemplates(schoolId).map((templates) {
-      localDataSource.cacheMessageTemplates(templates);
-      return templates;
-    });
-  }
+  Stream<List<MessageTemplateDef>> watchMessageTemplates(String schoolId) =>
+      _cached(
+        localDataSource.getMessageTemplates,
+        remoteDataSource.watchMessageTemplates(schoolId),
+        localDataSource.cacheMessageTemplates,
+      );
 
   @override
   Future<void> addMessageTemplate(MessageTemplateDef template) =>
@@ -676,12 +667,12 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.deleteMessageTemplate(templateId);
 
   @override
-  Stream<List<DocumentTemplateDef>> watchDocumentTemplates(String schoolId) {
-    return remoteDataSource.watchDocumentTemplates(schoolId).map((templates) {
-      localDataSource.cacheDocumentTemplates(templates);
-      return templates;
-    });
-  }
+  Stream<List<DocumentTemplateDef>> watchDocumentTemplates(String schoolId) =>
+      _cached(
+        localDataSource.getDocumentTemplates,
+        remoteDataSource.watchDocumentTemplates(schoolId),
+        localDataSource.cacheDocumentTemplates,
+      );
 
   @override
   Future<void> addDocumentTemplate(DocumentTemplateDef template) =>
@@ -696,12 +687,11 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.deleteDocumentTemplate(templateId);
 
   @override
-  Stream<List<CustomFieldDef>> watchCustomFields(String schoolId) {
-    return remoteDataSource.watchCustomFields(schoolId).map((fields) {
-      localDataSource.cacheCustomFields(fields);
-      return fields;
-    });
-  }
+  Stream<List<CustomFieldDef>> watchCustomFields(String schoolId) => _cached(
+    localDataSource.getCustomFields,
+    remoteDataSource.watchCustomFields(schoolId),
+    localDataSource.cacheCustomFields,
+  );
 
   @override
   Future<void> addCustomField(CustomFieldDef field) =>
