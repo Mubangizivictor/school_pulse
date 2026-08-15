@@ -8,7 +8,10 @@ class GetHomeworkForStudent {
 
   GetHomeworkForStudent(this.repository);
 
-  Future<Either<Failure, List<Homework>>> call(String className) async {
-    return await repository.getHomeworkForStudent(className);
+  Future<Either<Failure, List<Homework>>> call(
+    String schoolId,
+    String className,
+  ) async {
+    return await repository.getHomeworkForStudent(schoolId, className);
   }
 }

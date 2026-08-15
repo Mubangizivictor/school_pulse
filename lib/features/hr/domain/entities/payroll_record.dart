@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 
 class PayrollRecord extends Equatable {
   final String id;
+  final String schoolId;
   final String staffId;
   final String staffName;
   final String month; // e.g., "October 2023"
@@ -17,6 +18,7 @@ class PayrollRecord extends Equatable {
 
   const PayrollRecord({
     required this.id,
+    required this.schoolId,
     required this.staffId,
     required this.staffName,
     required this.month,
@@ -34,6 +36,7 @@ class PayrollRecord extends Equatable {
   @override
   List<Object?> get props => [
     id,
+    schoolId,
     staffId,
     staffName,
     month,

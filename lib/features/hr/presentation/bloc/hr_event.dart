@@ -8,7 +8,13 @@ abstract class HrEvent extends Equatable {
   List<Object> get props => [];
 }
 
-class LoadPayrollRecords extends HrEvent {}
+class LoadPayrollRecords extends HrEvent {
+  final String schoolId;
+  const LoadPayrollRecords(this.schoolId);
+
+  @override
+  List<Object> get props => [schoolId];
+}
 
 class GeneratePayroll extends HrEvent {
   final PayrollRecord record;

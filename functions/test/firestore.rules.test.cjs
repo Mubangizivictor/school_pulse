@@ -1472,3 +1472,62 @@ describe('Gate ops visitors and movement events', () => {
     await assertFails(getDoc(doc(dbFor('parentOtherA'), 'schools', 'schoolA', 'movement_events', 'evtStudentA')));
   });
 });
+
+describe('Phase 14 IDOR fixes: payroll, discipline/counseling, homework', () => {
+  test('payroll: same-school staff can read/write, cross-school staff cannot', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'payroll', 'pay1'), {
+        schoolId: 'schoolA', staffId: 'teacherA', netPay: 100000,
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('adminA'), 'payroll', 'pay1')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'payroll', 'pay1')));
+    await assertSucceeds(setDoc(doc(dbFor('adminA'), 'payroll', 'pay2'), {
+      schoolId: 'schoolA', staffId: 'teacherA', netPay: 200000,
+    }));
+    await assertFails(setDoc(doc(dbFor('teacherB'), 'payroll', 'pay3'), {
+      schoolId: 'schoolA', staffId: 'teacherA', netPay: 999999,
+    }));
+  });
+
+  test('discipline_incidents and counseling_sessions: cross-referenced against the linked student\'s own school', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(doc(db, 'students', 'studentIdorA'), { schoolId: 'schoolA' });
+      await setDoc(doc(db, 'discipline_incidents', 'incidentA'), {
+        studentId: 'studentIdorA', studentName: 'Student A', category: 'Late', severity: 'Low',
+      });
+      await setDoc(doc(db, 'counseling_sessions', 'sessionA'), {
+        studentId: 'studentIdorA', counselorId: 'staffA', reason: 'Check-in',
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'discipline_incidents', 'incidentA')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'discipline_incidents', 'incidentA')));
+    await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'counseling_sessions', 'sessionA')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'counseling_sessions', 'sessionA')));
+
+    await assertSucceeds(setDoc(doc(dbFor('teacherA'), 'discipline_incidents', 'incidentNew'), {
+      studentId: 'studentIdorA', studentName: 'Student A', category: 'Late', severity: 'Low',
+    }));
+    await assertFails(setDoc(doc(dbFor('teacherB'), 'discipline_incidents', 'incidentForged'), {
+      studentId: 'studentIdorA', studentName: 'Student A', category: 'Forged', severity: 'High',
+    }));
+  });
+
+  test('homework: same-school signed-in users can read, cross-school cannot; only same-school staff can write', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'homework', 'hw1'), {
+        schoolId: 'schoolA', className: 'P.1', teacherId: 'teacherA',
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('parentA'), 'homework', 'hw1')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'homework', 'hw1')));
+    await assertFails(getDoc(doc(dbFor('nurseB'), 'homework', 'hw1')));
+    await assertSucceeds(setDoc(doc(dbFor('teacherA'), 'homework', 'hw2'), {
+      schoolId: 'schoolA', className: 'P.1', teacherId: 'teacherA',
+    }));
+    await assertFails(setDoc(doc(dbFor('teacherB'), 'homework', 'hw3'), {
+      schoolId: 'schoolA', className: 'P.1', teacherId: 'teacherB',
+    }));
+  });
+});

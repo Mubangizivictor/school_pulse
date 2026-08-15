@@ -572,10 +572,14 @@ class StudentRepositoryImpl implements StudentRepository {
 
   @override
   Future<Either<Failure, List<Homework>>> getHomeworkForStudent(
+    String schoolId,
     String className,
   ) async {
     try {
-      final homework = await remoteDataSource.getHomeworkForStudent(className);
+      final homework = await remoteDataSource.getHomeworkForStudent(
+        schoolId,
+        className,
+      );
       return Right(homework);
     } catch (e) {
       return Left(ServerFailure(e.toString()));

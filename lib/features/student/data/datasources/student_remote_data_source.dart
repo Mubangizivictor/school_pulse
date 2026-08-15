@@ -91,7 +91,10 @@ abstract class StudentRemoteDataSource {
   Future<void> deleteAccessCode(String code);
 
   // Homework
-  Future<List<Homework>> getHomeworkForStudent(String className);
+  Future<List<Homework>> getHomeworkForStudent(
+    String schoolId,
+    String className,
+  );
 }
 
 class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
@@ -488,9 +491,13 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
   }
 
   @override
-  Future<List<Homework>> getHomeworkForStudent(String className) async {
+  Future<List<Homework>> getHomeworkForStudent(
+    String schoolId,
+    String className,
+  ) async {
     final snapshot = await firestore
         .collection('homework')
+        .where('schoolId', isEqualTo: schoolId)
         .where('className', isEqualTo: className)
         .orderBy('dueDate', descending: false)
         .get();
@@ -499,6 +506,7 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
       final data = doc.data();
       return Homework(
         id: doc.id,
+        schoolId: data['schoolId'] ?? '',
         title: data['title'] ?? '',
         description: data['description'] ?? '',
         className: data['className'] ?? '',

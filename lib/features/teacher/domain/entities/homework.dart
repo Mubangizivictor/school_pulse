@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 
 class Homework extends Equatable {
   final String id;
+  final String schoolId;
   final String title;
   final String description;
   final String className;
@@ -13,6 +14,7 @@ class Homework extends Equatable {
 
   const Homework({
     required this.id,
+    required this.schoolId,
     required this.title,
     required this.description,
     required this.className,
@@ -26,6 +28,7 @@ class Homework extends Equatable {
   @override
   List<Object?> get props => [
     id,
+    schoolId,
     title,
     description,
     className,
@@ -38,6 +41,7 @@ class Homework extends Equatable {
 
   Homework copyWith({
     String? id,
+    String? schoolId,
     String? title,
     String? description,
     String? className,
@@ -49,6 +53,7 @@ class Homework extends Equatable {
   }) {
     return Homework(
       id: id ?? this.id,
+      schoolId: schoolId ?? this.schoolId,
       title: title ?? this.title,
       description: description ?? this.description,
       className: className ?? this.className,

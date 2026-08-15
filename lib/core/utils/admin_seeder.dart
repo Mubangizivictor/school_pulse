@@ -2162,6 +2162,7 @@ class AdminSeeder {
       final netPay = base + allowances + bonuses - nssfEmployee - paye;
 
       await _db.collection('payroll').add({
+        'schoolId': demoSchoolId,
         'staffId': staffId,
         'staffName': e['name'],
         'month': monthLabel,

@@ -39,7 +39,10 @@ abstract class TeacherRepository {
   );
 
   // Homework
-  Future<Either<Failure, List<Homework>>> getHomework(String teacherId);
+  Future<Either<Failure, List<Homework>>> getHomework(
+    String schoolId,
+    String teacherId,
+  );
   Future<Either<Failure, void>> createHomework(Homework homework);
   Future<Either<Failure, void>> updateHomework(Homework homework);
   Future<Either<Failure, void>> deleteHomework(String homeworkId);

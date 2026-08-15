@@ -6,8 +6,10 @@ import '../repositories/teacher_repository.dart';
 class GetHomework {
   final TeacherRepository repository;
   GetHomework(this.repository);
-  Future<Either<Failure, List<Homework>>> call(String teacherId) async =>
-      await repository.getHomework(teacherId);
+  Future<Either<Failure, List<Homework>>> call(
+    String schoolId,
+    String teacherId,
+  ) async => await repository.getHomework(schoolId, teacherId);
 }
 
 class CreateHomework {

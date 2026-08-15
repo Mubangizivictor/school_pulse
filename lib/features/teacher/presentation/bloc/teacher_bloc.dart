@@ -63,7 +63,7 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
     Emitter<TeacherState> emit,
   ) async {
     emit(TeacherLoading());
-    final result = await getHomework(event.teacherId);
+    final result = await getHomework(event.schoolId, event.teacherId);
     result.fold(
       (failure) => emit(TeacherError(failure.message)),
       (homeworkList) => emit(TeacherHomeworkLoaded(homeworkList)),
@@ -78,7 +78,12 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
     final result = await createHomework(event.homework);
     result.fold((failure) => emit(TeacherError(failure.message)), (_) {
       emit(const TeacherOperationSuccess('Homework created successfully'));
-      add(TeacherHomeworkRequested(event.homework.teacherId));
+      add(
+        TeacherHomeworkRequested(
+          event.homework.schoolId,
+          event.homework.teacherId,
+        ),
+      );
     });
   }
 
@@ -90,7 +95,12 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
     final result = await updateHomework(event.homework);
     result.fold((failure) => emit(TeacherError(failure.message)), (_) {
       emit(const TeacherOperationSuccess('Homework updated successfully'));
-      add(TeacherHomeworkRequested(event.homework.teacherId));
+      add(
+        TeacherHomeworkRequested(
+          event.homework.schoolId,
+          event.homework.teacherId,
+        ),
+      );
     });
   }
 

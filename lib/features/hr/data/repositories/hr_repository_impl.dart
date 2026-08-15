@@ -8,8 +8,8 @@ class HrRepositoryImpl implements HrRepository {
   HrRepositoryImpl({required this.remoteDataSource});
 
   @override
-  Future<List<PayrollRecord>> getPayrollRecords() async {
-    return await remoteDataSource.getPayrollRecords();
+  Future<List<PayrollRecord>> getPayrollRecords(String schoolId) async {
+    return await remoteDataSource.getPayrollRecords(schoolId);
   }
 
   @override

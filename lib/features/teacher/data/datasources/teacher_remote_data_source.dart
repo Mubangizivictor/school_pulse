@@ -26,7 +26,7 @@ abstract class TeacherRemoteDataSource {
   Future<TeacherDashboardStats> getTeacherDashboardStats(String teacherId);
 
   // Homework
-  Future<List<Homework>> getHomework(String teacherId);
+  Future<List<Homework>> getHomework(String schoolId, String teacherId);
   Future<void> createHomework(Homework homework);
   Future<void> updateHomework(Homework homework);
   Future<void> deleteHomework(String homeworkId);
@@ -259,9 +259,10 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
   }
 
   @override
-  Future<List<Homework>> getHomework(String teacherId) async {
+  Future<List<Homework>> getHomework(String schoolId, String teacherId) async {
     final snapshot = await firestore
         .collection('homework')
+        .where('schoolId', isEqualTo: schoolId)
         .where('teacherId', isEqualTo: teacherId)
         .orderBy('dueDate', descending: false)
         .get();
@@ -270,6 +271,7 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
       final data = doc.data();
       return Homework(
         id: doc.id,
+        schoolId: data['schoolId'] ?? '',
         title: data['title'] ?? '',
         description: data['description'] ?? '',
         className: data['className'] ?? '',
@@ -287,6 +289,7 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
   @override
   Future<void> createHomework(Homework homework) async {
     await firestore.collection('homework').add({
+      'schoolId': homework.schoolId,
       'title': homework.title,
       'description': homework.description,
       'className': homework.className,

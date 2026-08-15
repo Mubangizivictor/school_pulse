@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:school_pulse/features/hr/domain/entities/payroll_record.dart';
 
 abstract class HrRemoteDataSource {
-  Future<List<PayrollRecord>> getPayrollRecords();
+  Future<List<PayrollRecord>> getPayrollRecords(String schoolId);
   Future<void> generatePayroll(PayrollRecord record);
 }
 
@@ -12,9 +12,10 @@ class HrRemoteDataSourceImpl implements HrRemoteDataSource {
   HrRemoteDataSourceImpl({required this.firestore});
 
   @override
-  Future<List<PayrollRecord>> getPayrollRecords() async {
+  Future<List<PayrollRecord>> getPayrollRecords(String schoolId) async {
     final snapshot = await firestore
         .collection('payroll')
+        .where('schoolId', isEqualTo: schoolId)
         .orderBy('createdAt', descending: true)
         .get();
 
@@ -22,6 +23,7 @@ class HrRemoteDataSourceImpl implements HrRemoteDataSource {
       final data = doc.data();
       return PayrollRecord(
         id: doc.id,
+        schoolId: data['schoolId'] ?? '',
         staffId: data['staffId'] ?? '',
         staffName: data['staffName'] ?? '',
         month: data['month'] ?? '',
@@ -41,6 +43,7 @@ class HrRemoteDataSourceImpl implements HrRemoteDataSource {
   @override
   Future<void> generatePayroll(PayrollRecord record) async {
     await firestore.collection('payroll').doc(record.id).set({
+      'schoolId': record.schoolId,
       'staffId': record.staffId,
       'staffName': record.staffName,
       'month': record.month,

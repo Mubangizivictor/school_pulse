@@ -17,7 +17,7 @@ class HrBloc extends Bloc<HrEvent, HrState> {
   ) async {
     emit(HrLoading());
     try {
-      final records = await repository.getPayrollRecords();
+      final records = await repository.getPayrollRecords(event.schoolId);
       emit(PayrollRecordsLoaded(records));
     } catch (e) {
       emit(HrError(e.toString()));
@@ -31,7 +31,7 @@ class HrBloc extends Bloc<HrEvent, HrState> {
     try {
       await repository.generatePayroll(event.record);
       emit(PayrollGenerated());
-      add(LoadPayrollRecords());
+      add(LoadPayrollRecords(event.record.schoolId));
     } catch (e) {
       emit(HrError(e.toString()));
     }

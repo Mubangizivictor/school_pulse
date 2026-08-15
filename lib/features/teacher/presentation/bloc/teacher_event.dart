@@ -99,10 +99,11 @@ class TeacherAttendanceSubmitted extends TeacherEvent {
 
 // Homework Events
 class TeacherHomeworkRequested extends TeacherEvent {
+  final String schoolId;
   final String teacherId;
-  const TeacherHomeworkRequested(this.teacherId);
+  const TeacherHomeworkRequested(this.schoolId, this.teacherId);
   @override
-  List<Object?> get props => [teacherId];
+  List<Object?> get props => [schoolId, teacherId];
 }
 
 class TeacherHomeworkCreated extends TeacherEvent {

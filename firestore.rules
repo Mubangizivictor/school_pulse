@@ -377,6 +377,18 @@ service cloud.firestore {
       return isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId);
     }
 
+    // Cross-references the linked student's own schoolId for records that
+    // carry a studentId but no schoolId field of their own (discipline
+    // incidents, counseling sessions) - same firestore.get() pattern used
+    // for storage.rules' student documents. isStudentRecordReadable() alone
+    // never checked tenancy, so any staff member at any school could read
+    // every school's discipline/counseling records.
+    function isSameSchoolAsStudent(studentId) {
+      return isSameSchool(
+        get(/databases/$(database)/documents/students/$(studentId)).data.schoolId
+      );
+    }
+
     match /academic_records/{docId} {
       allow read: if isStudentRecordReadable();
       allow write: if isStaff();
@@ -580,8 +592,9 @@ service cloud.firestore {
       allow write: if isStaff();
     }
     match /discipline_incidents/{docId} {
-      allow read: if isStudentRecordReadable();
-      allow write: if isStaff();
+      allow read: if isStudentRecordReadable() && isSameSchoolAsStudent(resource.data.studentId);
+      allow create: if isStaff() && isSameSchoolAsStudent(request.resource.data.studentId);
+      allow update, delete: if isStaff() && isSameSchoolAsStudent(resource.data.studentId);
     }
     match /transport/{docId} {
       allow read: if isStudentRecordReadable();
@@ -1261,14 +1274,28 @@ service cloud.firestore {
       allow read, write: if isStaff();
     }
     match /counseling_sessions/{id} {
-      allow read, write: if isStaff();
+      allow read: if isStaff() && isSameSchoolAsStudent(resource.data.studentId);
+      allow create: if isStaff() && isSameSchoolAsStudent(request.resource.data.studentId);
+      allow update, delete: if isStaff() && isSameSchoolAsStudent(resource.data.studentId);
     }
+    // homework previously had no schoolId field (client filtered reads by
+    // className alone, and class names like "P.1" plausibly collide across
+    // schools) - backfilled the field client-side and locked this down.
+    // Existing docs written before this fix have no schoolId and will fail
+    // isSameSchool() until re-saved.
     match /homework/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
+    // Payroll previously had no schoolId field at all (client never set
+    // one), so any staff member at any school could read/write every
+    // school's salary data via a bare isStaff() check. Backfilled the field
+    // client-side and locked this down; existing docs written before this
+    // fix have no schoolId and will fail isSameSchool() until re-saved.
     match /payroll/{id} {
-      allow read, write: if isStaff();
+      allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /pickup_logs/{id} {
       allow read, write: if isStaff();

@@ -17,7 +17,7 @@ class StudentHomeworkBloc
     Emitter<StudentHomeworkState> emit,
   ) async {
     emit(StudentHomeworkLoading());
-    final result = await getHomeworkForStudent(event.className);
+    final result = await getHomeworkForStudent(event.schoolId, event.className);
     result.fold(
       (failure) => emit(StudentHomeworkError(failure.message)),
       (homeworkList) => emit(StudentHomeworkLoaded(homeworkList)),

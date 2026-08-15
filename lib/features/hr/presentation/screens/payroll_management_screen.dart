@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/core/payroll_calculator.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/hr/domain/entities/payroll_record.dart';
 import 'package:school_pulse/features/hr/presentation/bloc/hr_bloc.dart';
 import 'package:school_pulse/features/hr/presentation/bloc/hr_event.dart';
@@ -23,10 +25,15 @@ class _PayrollManagementScreenState extends State<PayrollManagementScreen> {
     decimalDigits: 0,
   );
 
+  String get _schoolId {
+    final state = context.read<AuthBloc>().state;
+    return state is AuthAuthenticated ? state.user.schoolId : '';
+  }
+
   @override
   void initState() {
     super.initState();
-    context.read<HrBloc>().add(LoadPayrollRecords());
+    context.read<HrBloc>().add(LoadPayrollRecords(_schoolId));
   }
 
   @override
@@ -150,6 +157,7 @@ class _PayrollManagementScreenState extends State<PayrollManagementScreen> {
 
               final record = PayrollRecord(
                 id: DateTime.now().millisecondsSinceEpoch.toString(),
+                schoolId: _schoolId,
                 staffId: 'STF-${DateTime.now().millisecondsSinceEpoch}',
                 staffName: staffNameController.text,
                 month: DateFormat('MMMM yyyy').format(DateTime.now()),

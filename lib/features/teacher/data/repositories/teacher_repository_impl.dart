@@ -96,9 +96,15 @@ class TeacherRepositoryImpl implements TeacherRepository {
   }
 
   @override
-  Future<Either<Failure, List<Homework>>> getHomework(String teacherId) async {
+  Future<Either<Failure, List<Homework>>> getHomework(
+    String schoolId,
+    String teacherId,
+  ) async {
     try {
-      final homeworkList = await remoteDataSource.getHomework(teacherId);
+      final homeworkList = await remoteDataSource.getHomework(
+        schoolId,
+        teacherId,
+      );
       return Right(homeworkList);
     } catch (e) {
       return Left(ServerFailure(e.toString()));

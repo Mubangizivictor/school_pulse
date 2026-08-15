@@ -107,6 +107,7 @@ abstract class StudentRepository {
 
   // Homework
   Future<Either<Failure, List<Homework>>> getHomeworkForStudent(
+    String schoolId,
     String className,
   );
 

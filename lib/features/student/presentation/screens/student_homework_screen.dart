@@ -49,9 +49,8 @@ class StudentHomeworkScreen extends StatelessWidget {
         final student = snapshot.data!;
 
         return BlocProvider(
-          create: (context) =>
-              sl<StudentHomeworkBloc>()
-                ..add(LoadStudentHomework(student.classId)),
+          create: (context) => sl<StudentHomeworkBloc>()
+            ..add(LoadStudentHomework(student.schoolId, student.classId)),
           child: Scaffold(
             backgroundColor: AppColors.background(context),
             appBar: AppBar(
