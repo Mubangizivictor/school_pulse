@@ -22,6 +22,17 @@ function officialDate(value) { const p = kampalaParts(value); return `${p.day} $
 function documentKey(type, entityId) { return crypto.createHash('sha256').update(`${type}:${entityId}`).digest('hex').slice(0, 40); }
 function clean(value, max = 180) { return String(value ?? '').replace(/[\r\n]+/g, ' ').trim().slice(0, max); }
 function amount(value, currency = 'UGX') { const n = Number(value); return Number.isFinite(n) ? `${clean(currency, 8) || 'UGX'} ${Math.round(n).toLocaleString('en-US')}` : ''; }
+// Firestore forbids arrays nested inside arrays. The renderer accepts either
+// shape for backwards compatibility, but persisted official snapshots use
+// objects so an event can never fail while writing its immutable record.
+function firestoreSafeSnapshot(snapshot) {
+  return {
+    ...snapshot,
+    rows: Array.isArray(snapshot?.rows)
+      ? snapshot.rows.map((row) => Array.isArray(row) ? { label: clean(row[0], 100), value: clean(row[1], 500) } : row)
+      : [],
+  };
+}
 
 async function issueOfficialDocument({ type, entityId, schoolId, effectiveAt, sourceEventId, snapshot }) {
   const config = TYPE_CONFIG[type];
@@ -41,11 +52,12 @@ async function issueOfficialDocument({ type, entityId, schoolId, effectiveAt, so
     tx.set(counterRef, { lastNumber: number, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
     const storageScope = clean(schoolId, 180) || 'platform-applications';
     const storagePath = `official_documents/${storageScope}/${year}/${type}/${documentNumber}.pdf`;
+    const issuedSnapshot = firestoreSafeSnapshot(snapshot);
     const issued = {
       schoolId: clean(schoolId, 180) || null, documentType: type, documentNumber, businessEntityId: clean(entityId, 220),
       sourceEventId: clean(sourceEventId, 260), issuedAt: admin.firestore.FieldValue.serverTimestamp(), effectiveDate: effective,
       status: 'generating', storagePath, templateVersion: 1, stampApplied: true, stampDate: officialDate(effective),
-      snapshot: { ...snapshot, effectiveDate: officialDate(effective), documentNumber }, createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      snapshot: { ...issuedSnapshot, effectiveDate: officialDate(effective), documentNumber }, createdAt: admin.firestore.FieldValue.serverTimestamp(),
     };
     tx.create(ref, issued); return issued;
   });
@@ -93,4 +105,4 @@ function subscriptionDocument(paymentId, payment, effectiveAt) {
 }
 
 function attachmentFor(document) { return { filename: `${document.documentNumber}.pdf`, storagePath: document.storagePath, contentType: 'application/pdf', documentId: document.id }; }
-module.exports = { DOCUMENT_TYPES, officialDate, kampalaParts, applicationApproval, paymentAcknowledgement, paymentReceipt, subscriptionDocument, attachmentFor, issueOfficialDocument };
+module.exports = { DOCUMENT_TYPES, officialDate, kampalaParts, firestoreSafeSnapshot, applicationApproval, paymentAcknowledgement, paymentReceipt, subscriptionDocument, attachmentFor, issueOfficialDocument };

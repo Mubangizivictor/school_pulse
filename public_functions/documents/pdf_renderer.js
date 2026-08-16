@@ -19,7 +19,8 @@ function renderOfficialPdf(snapshot) {
       .text(`Issued: ${snapshot.issuedLabel}`);
     pdf.moveDown(1.5).strokeColor('#D7DCE8').lineWidth(1).moveTo(54, pdf.y).lineTo(541, pdf.y).stroke();
     pdf.moveDown(1);
-    for (const [label, value] of snapshot.rows) {
+    for (const row of snapshot.rows) {
+      const [label, value] = Array.isArray(row) ? row : [row?.label, row?.value];
       if (!value) continue;
       const rowY = pdf.y;
       pdf.fillColor('#667085').font('Helvetica-Bold').fontSize(9).text(label.toUpperCase(), 54, rowY, { width: 155 });

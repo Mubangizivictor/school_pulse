@@ -4,7 +4,7 @@ const path = require('node:path');
 const admin = require('firebase-admin');
 if (!admin.apps.length) admin.initializeApp({ projectId: 'school-pulse-test' });
 const { STAMP_PATH, STAMP_ASPECT_RATIO, assertStampAsset } = require('../stamp_renderer');
-const { officialDate, paymentReceipt } = require('../official_document_service');
+const { officialDate, paymentReceipt, firestoreSafeSnapshot } = require('../official_document_service');
 const { renderOfficialPdf } = require('../pdf_renderer');
 const { __test__: emailTest } = require('../../email/email_service');
 
@@ -30,6 +30,11 @@ async function test(name, fn) {
     for (const status of ['pending_verification', 'rejected', 'failed']) {
       assert.throws(() => paymentReceipt('internal-payment-id', { status }, new Date()), /non-verified/);
     }
+  });
+  await test('issued snapshots contain no Firestore-invalid nested arrays', () => {
+    const snapshot = firestoreSafeSnapshot({ rows: [['School', 'Kampala Junior School'], ['Status', 'APPROVED']] });
+    assert.deepEqual(snapshot.rows, [{ label: 'School', value: 'Kampala Junior School' }, { label: 'Status', value: 'APPROVED' }]);
+    assert.ok(snapshot.rows.every((row) => !Array.isArray(row)));
   });
   await test('attachments are passed through to the existing Resend payload and omitted for normal mail', () => {
     const hosted = { template: { id: 'published-template', variables: {} } };
