@@ -1899,7 +1899,47 @@ service cloud.firestore {
       allow read: if isSameSchool(schoolId);
       allow create: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId) &&
         request.resource.data.schoolId == schoolId;
-      allow update, delete: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId);
+      // A calendar event can never be moved to a different tenant through an
+      // update. This protects historical links, reminders and audit records.
+      allow update: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId &&
+        request.resource.data.schoolId == schoolId;
+      allow delete: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId);
+    }
+
+    // Calendar-control-centre records are separate from the legacy global
+    // Structure collections. They are intentionally tenant-scoped, and each
+    // update keeps the record inside the tenant and its original owner year.
+    match /schools/{schoolId}/academic_periods/{periodId} {
+      allow read: if isSameSchool(schoolId);
+      allow create: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId) &&
+        request.resource.data.institutionId == schoolId;
+      allow update: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId) &&
+        request.resource.data.institutionId == resource.data.institutionId &&
+        request.resource.data.institutionId == schoolId &&
+        request.resource.data.academicYearId == resource.data.academicYearId;
+      allow delete: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId);
+    }
+
+    match /schools/{schoolId}/calendar_rules/{ruleId} {
+      allow read: if isSameSchool(schoolId);
+      allow create: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId) && request.resource.data.institutionId == schoolId;
+      allow update: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId) && request.resource.data.institutionId == resource.data.institutionId && request.resource.data.institutionId == schoolId;
+      allow delete: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId);
+    }
+
+    match /schools/{schoolId}/exam_windows/{windowId} {
+      allow read: if isSameSchool(schoolId);
+      allow create: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId) && request.resource.data.institutionId == schoolId;
+      allow update: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId) && request.resource.data.institutionId == resource.data.institutionId && request.resource.data.institutionId == schoolId;
+      allow delete: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId);
+    }
+
+    match /schools/{schoolId}/reporting_deadlines/{deadlineId} {
+      allow read: if isSameSchool(schoolId);
+      allow create: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId) && request.resource.data.institutionId == schoolId;
+      allow update: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId) && request.resource.data.institutionId == resource.data.institutionId && request.resource.data.institutionId == schoolId;
+      allow delete: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId);
     }
 
     match /schools/{schoolId}/calendar_settings/{settingId} {

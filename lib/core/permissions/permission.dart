@@ -232,6 +232,28 @@ class Permission {
   // explicit per-school `role_permission_overrides` grant. Every other role
   // has read-only calendar access without this permission.
   static const calendarManage = 'calendar.manage';
+  static const calendarView = 'calendar.view';
+  static const calendarCreate = 'calendar.create';
+  static const calendarEdit = 'calendar.edit';
+  static const calendarPublish = 'calendar.publish';
+  static const calendarCancel = 'calendar.cancel';
+  static const calendarArchive = 'calendar.archive';
+  static const calendarManageHolidays = 'calendar.manage_holidays';
+  static const calendarManageExamWindows = 'calendar.manage_exam_windows';
+  static const calendarManageDeadlines = 'calendar.manage_deadlines';
+  static const calendarExport = 'calendar.export';
+  static const academicYearView = 'academic_year.view';
+  static const academicYearCreate = 'academic_year.create';
+  static const academicYearEdit = 'academic_year.edit';
+  static const academicYearActivate = 'academic_year.activate';
+  static const academicYearClose = 'academic_year.close';
+  static const academicYearReopen = 'academic_year.reopen';
+  static const academicPeriodView = 'academic_period.view';
+  static const academicPeriodCreate = 'academic_period.create';
+  static const academicPeriodEdit = 'academic_period.edit';
+  static const academicPeriodActivate = 'academic_period.activate';
+  static const academicPeriodClose = 'academic_period.close';
+  static const academicPeriodReopen = 'academic_period.reopen';
 
   // Announcements - governs create/edit/publish/delete of school-wide
   // announcements. Granted to School Administrator, Head Teacher and

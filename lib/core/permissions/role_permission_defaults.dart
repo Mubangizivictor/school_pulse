@@ -138,6 +138,35 @@ class RolePermissionDefaults {
     Permission.attendanceOverride,
   };
 
+  /// Calendar administration is granular for future custom roles, while the
+  /// existing broad calendar.manage grant remains compatible with deployed
+  /// role overrides and Firestore rules.
+  static const Set<String> _calendarAdminPermissions = {
+    Permission.calendarManage,
+    Permission.calendarView,
+    Permission.calendarCreate,
+    Permission.calendarEdit,
+    Permission.calendarPublish,
+    Permission.calendarCancel,
+    Permission.calendarArchive,
+    Permission.calendarManageHolidays,
+    Permission.calendarManageExamWindows,
+    Permission.calendarManageDeadlines,
+    Permission.calendarExport,
+    Permission.academicYearView,
+    Permission.academicYearCreate,
+    Permission.academicYearEdit,
+    Permission.academicYearActivate,
+    Permission.academicYearClose,
+    Permission.academicYearReopen,
+    Permission.academicPeriodView,
+    Permission.academicPeriodCreate,
+    Permission.academicPeriodEdit,
+    Permission.academicPeriodActivate,
+    Permission.academicPeriodClose,
+    Permission.academicPeriodReopen,
+  };
+
   static const Map<UserRole, Set<String>> defaults = {
     UserRole.gatekeeper: {
       ..._gatekeeperPermissions,
@@ -162,7 +191,7 @@ class RolePermissionDefaults {
       ..._admissionsPermissions,
       ..._notificationAdminPermissions,
       ..._attendanceAdminPermissions,
-      Permission.calendarManage,
+      ..._calendarAdminPermissions,
       Permission.announcementManage,
       Permission.structureGradingView,
       Permission.structureGradingManage,
