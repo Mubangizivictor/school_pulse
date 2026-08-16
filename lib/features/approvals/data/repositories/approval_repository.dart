@@ -132,7 +132,8 @@ class ApprovalRepository {
     String? idempotencyKey,
     String? correlationId,
   }) async {
-    final result = await _functions.httpsCallable('submitApprovalRequest')
+    final result = await _functions
+        .httpsCallable('submitApprovalRequest')
         .call({
           'institutionId': schoolId,
           'moduleKey': moduleKey,

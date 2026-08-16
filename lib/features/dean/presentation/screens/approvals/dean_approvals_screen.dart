@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
-import 'package:school_pulse/features/dean/presentation/screens/approvals/report_approval_screen.dart';
+import 'package:school_pulse/features/approvals/presentation/screens/approval_center_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/qa/marks_qa_screen.dart';
-import 'package:school_pulse/injection_container.dart';
 
 class DeanApprovalsScreen extends StatefulWidget {
   const DeanApprovalsScreen({super.key});
@@ -24,23 +21,20 @@ class _DeanApprovalsScreenState extends State<DeanApprovalsScreen>
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => sl<DeanBloc>(),
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Academic Approvals'),
-          bottom: TabBar(
-            controller: _tabController,
-            tabs: const [
-              Tab(text: 'Report Cards'),
-              Tab(text: 'Assessments'),
-            ],
-          ),
-        ),
-        body: TabBarView(
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Academic Approvals'),
+        bottom: TabBar(
           controller: _tabController,
-          children: [_ReportCardApprovals(), _AssessmentApprovals()],
+          tabs: const [
+            Tab(text: 'Report Cards'),
+            Tab(text: 'Assessments'),
+          ],
         ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [_ReportCardApprovals(), _AssessmentApprovals()],
       ),
     );
   }
@@ -49,7 +43,10 @@ class _DeanApprovalsScreenState extends State<DeanApprovalsScreen>
 class _ReportCardApprovals extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return const ReportApprovalScreen();
+    return const ApprovalCenterScreen(
+      moduleKeyFilter: 'academics',
+      title: 'Report Card Approvals',
+    );
   }
 }
 

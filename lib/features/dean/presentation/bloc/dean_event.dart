@@ -97,24 +97,6 @@ class RejectAssessmentMarksRequested extends DeanEvent {
   List<Object?> get props => [assessmentId, reason];
 }
 
-// Report Card Approval
-class PendingReportApprovalsRequested extends DeanEvent {}
-
-class ApproveReportCardsRequested extends DeanEvent {
-  final List<String> reportCardIds;
-  const ApproveReportCardsRequested(this.reportCardIds);
-  @override
-  List<Object?> get props => [reportCardIds];
-}
-
-class RejectReportCardsRequested extends DeanEvent {
-  final List<String> reportCardIds;
-  final String reason;
-  const RejectReportCardsRequested(this.reportCardIds, this.reason);
-  @override
-  List<Object?> get props => [reportCardIds, reason];
-}
-
 // Performance Analytics
 class PerformanceAnalyticsRequested extends DeanEvent {
   final String type;

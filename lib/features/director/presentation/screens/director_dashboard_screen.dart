@@ -287,7 +287,7 @@ class DirectorDashboardScreen extends StatelessWidget {
         'icon': Icons.fact_check,
         'label': 'Approval Center',
         'color': Colors.blue,
-        'route': '/director/approvals',
+        'route': '/staff/director/approvals',
       },
       {
         'icon': Icons.insights,

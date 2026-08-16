@@ -7,7 +7,6 @@ import '../../domain/entities/academic_intervention.dart';
 import '../../domain/entities/class_observation.dart';
 import '../../domain/entities/curriculum.dart';
 import '../../domain/entities/assessment_moderation.dart';
-import '../../domain/entities/report_card_approval.dart';
 
 abstract class DeanRemoteDataSource {
   Future<DeanStatsModel> getDeanDashboardStats();
@@ -45,9 +44,6 @@ abstract class DeanRemoteDataSource {
   Future<void> approveAssessmentMarks(String assessmentId);
   Future<void> rejectAssessmentMarks(String assessmentId, String reason);
   Future<List<AssessmentModeration>> getPendingModerationAssessments();
-  Future<void> approveReportCards(List<String> reportCardIds);
-  Future<void> rejectReportCards(List<String> reportCardIds, String reason);
-  Future<List<ReportCardApproval>> getPendingReportApprovals();
   Future<Map<String, dynamic>> getPerformanceAnalytics({
     required String type,
     String? id,
@@ -391,39 +387,6 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
         totalStudents: 45,
         averageScore: 68.2,
         createdAt: DateTime.now().subtract(const Duration(hours: 5)),
-      ),
-    ];
-  }
-
-  @override
-  Future<void> approveReportCards(List<String> reportCardIds) async {}
-
-  @override
-  Future<void> rejectReportCards(
-    List<String> reportCardIds,
-    String reason,
-  ) async {}
-
-  @override
-  Future<List<ReportCardApproval>> getPendingReportApprovals() async {
-    return [
-      const ReportCardApproval(
-        id: "rc1",
-        studentId: "st1",
-        studentName: "Namono Grace",
-        className: "P.7 Blue",
-        averageScore: 88.5,
-        term: "Term 3",
-        year: "2024",
-      ),
-      const ReportCardApproval(
-        id: "rc2",
-        studentId: "st2",
-        studentName: "Musa Kevin",
-        className: "P.7 Blue",
-        averageScore: 72.1,
-        term: "Term 3",
-        year: "2024",
       ),
     ];
   }

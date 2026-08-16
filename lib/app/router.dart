@@ -221,7 +221,6 @@ import 'package:school_pulse/features/super_admin/presentation/pages/contact_abo
 import 'package:school_pulse/features/super_admin/presentation/pages/privacy_policy_screen.dart';
 import 'package:school_pulse/features/games/presentation/screens/games_dashboard_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/dean_dashboard_screen.dart';
-import 'package:school_pulse/features/dean/presentation/screens/approvals/report_approval_screen.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
@@ -346,6 +345,7 @@ import 'package:school_pulse/features/teacher/presentation/screens/more/teacher_
 import 'package:school_pulse/features/teacher/presentation/screens/more/teacher_reports_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/more/teacher_downloads_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/more/teacher_leave_requests_screen.dart';
+import 'package:school_pulse/features/teacher/domain/entities/class_resource.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/resources/resources_home_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/resources/my_resources_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/resources/upload_resource_screen.dart';
@@ -1415,7 +1415,10 @@ final router = GoRouter(
               routes: [
                 GoRoute(
                   path: 'reports',
-                  builder: (context, state) => const ReportApprovalScreen(),
+                  builder: (context, state) => const ApprovalCenterScreen(
+                    moduleKeyFilter: 'academics',
+                    title: 'Report Card Approvals',
+                  ),
                 ),
               ],
             ),
@@ -1564,8 +1567,7 @@ final router = GoRouter(
                 ),
                 GoRoute(
                   path: 'devices',
-                  builder: (context, state) =>
-                      const IntegrationDevicesScreen(),
+                  builder: (context, state) => const IntegrationDevicesScreen(),
                 ),
                 GoRoute(
                   path: 'webhooks',
@@ -2389,11 +2391,14 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'details',
-              builder: (context, state) => const ResourceDetailsScreen(),
+              builder: (context, state) => ResourceDetailsScreen(
+                resource: state.extra as ClassResource?,
+              ),
             ),
             GoRoute(
               path: 'share',
-              builder: (context, state) => const ShareResourceScreen(),
+              builder: (context, state) =>
+                  ShareResourceScreen(resource: state.extra as ClassResource?),
             ),
             GoRoute(
               path: 'folders',

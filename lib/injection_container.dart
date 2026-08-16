@@ -368,6 +368,7 @@ import 'package:school_pulse/features/teacher/presentation/bloc/class_performanc
 import 'package:school_pulse/features/teacher/presentation/bloc/class_reports/class_reports_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_tasks/class_tasks_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_work/class_work_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_resources/class_resource_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_dashboard/subject_teacher_dashboard_bloc.dart';
@@ -938,7 +939,7 @@ Future<void> init() async {
   );
 
   // Director
-  sl.registerFactory(() => DirectorBloc(auditRepository: sl()));
+  sl.registerFactory(() => DirectorBloc());
 
   // Features - Discipline
   sl.registerFactory(
@@ -1482,6 +1483,8 @@ Future<void> init() async {
       networkInfo: sl(),
     ),
   );
+
+  sl.registerLazySingleton(() => ClassResourceBloc(repository: sl()));
 
   sl.registerLazySingleton<ClassAttendanceRepository>(
     () => ClassAttendanceRepositoryImpl(

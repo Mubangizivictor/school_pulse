@@ -32,11 +32,6 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
     on<ApproveAssessmentMarksRequested>(_onApproveAssessmentMarksRequested);
     on<RejectAssessmentMarksRequested>(_onRejectAssessmentMarksRequested);
 
-    // Report Card Approval
-    on<PendingReportApprovalsRequested>(_onPendingReportApprovalsRequested);
-    on<ApproveReportCardsRequested>(_onApproveReportCardsRequested);
-    on<RejectReportCardsRequested>(_onRejectReportCardsRequested);
-
     // Performance Analytics
     on<PerformanceAnalyticsRequested>(_onPerformanceAnalyticsRequested);
 
@@ -218,47 +213,6 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
       (_) => emit(
         const DeanOperationSuccess('Assessment marks returned for correction'),
       ),
-    );
-  }
-
-  Future<void> _onPendingReportApprovalsRequested(
-    PendingReportApprovalsRequested event,
-    Emitter<DeanState> emit,
-  ) async {
-    emit(DeanLoading());
-    final result = await repository.getPendingReportApprovals();
-    result.fold(
-      (failure) => emit(DeanError(failure.message)),
-      (approvals) => emit(PendingReportApprovalsLoaded(approvals)),
-    );
-  }
-
-  Future<void> _onApproveReportCardsRequested(
-    ApproveReportCardsRequested event,
-    Emitter<DeanState> emit,
-  ) async {
-    emit(DeanLoading());
-    final result = await repository.approveReportCards(event.reportCardIds);
-    result.fold(
-      (failure) => emit(DeanError(failure.message)),
-      (_) => emit(
-        const DeanOperationSuccess('Report cards approved for publication'),
-      ),
-    );
-  }
-
-  Future<void> _onRejectReportCardsRequested(
-    RejectReportCardsRequested event,
-    Emitter<DeanState> emit,
-  ) async {
-    emit(DeanLoading());
-    final result = await repository.rejectReportCards(
-      event.reportCardIds,
-      event.reason,
-    );
-    result.fold(
-      (failure) => emit(DeanError(failure.message)),
-      (_) => emit(const DeanOperationSuccess('Report cards rejected')),
     );
   }
 

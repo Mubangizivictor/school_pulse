@@ -7,7 +7,13 @@ import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
 
 class ApprovalCenterScreen extends StatefulWidget {
-  const ApprovalCenterScreen({super.key});
+  /// When set, scopes this screen to a single [ApprovalRequest.moduleKey]
+  /// (e.g. `'academics'`) so a domain-specific entry point (Dean report-card
+  /// approvals, exam moderation) can reuse the one real inbox/decide flow
+  /// instead of maintaining its own mock screen against the same data.
+  final String? moduleKeyFilter;
+  final String? title;
+  const ApprovalCenterScreen({super.key, this.moduleKeyFilter, this.title});
   @override
   State<ApprovalCenterScreen> createState() => _ApprovalCenterScreenState();
 }
@@ -25,7 +31,7 @@ class _ApprovalCenterScreenState extends State<ApprovalCenterScreen> {
         body: Center(child: Text('Sign in to view approvals.')),
       );
     return Scaffold(
-      appBar: AppBar(title: const Text('Approval Center')),
+      appBar: AppBar(title: Text(widget.title ?? 'Approval Center')),
       body: StreamBuilder<List<ApprovalRequest>>(
         stream: _repository.watchInbox(auth.user.schoolId),
         builder: (context, snapshot) {
@@ -40,6 +46,8 @@ class _ApprovalCenterScreenState extends State<ApprovalCenterScreen> {
           final visible = requests
               .where(
                 (r) =>
+                    (widget.moduleKeyFilter == null ||
+                        r.moduleKey == widget.moduleKeyFilter) &&
                     (_status == null || r.currentStatus == _status) &&
                     (_priority == null || r.priority == _priority) &&
                     (_query.isEmpty ||
