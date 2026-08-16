@@ -48,9 +48,6 @@ void main() {
       () => repository.watchDesignations(any()),
     ).thenAnswer((_) => const Stream.empty());
     when(
-      () => repository.watchStaffRoles(any()),
-    ).thenAnswer((_) => const Stream.empty());
-    when(
       () => repository.watchFeatureToggles(any()),
     ).thenAnswer((_) => const Stream.empty());
     when(

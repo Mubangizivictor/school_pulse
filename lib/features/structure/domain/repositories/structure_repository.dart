@@ -66,6 +66,7 @@ abstract class StructureRepository {
   Future<void> addSubject(Subject subject);
   Future<void> updateSubject(Subject subject);
   Future<void> deleteSubject(String subjectId);
+  Future<void> archiveSubject(String subjectId);
 
   // Departments
   Stream<List<Department>> watchDepartments(String schoolId);
@@ -74,17 +75,13 @@ abstract class StructureRepository {
   Future<void> deleteDepartment(String departmentId);
   Future<void> archiveDepartment(String departmentId);
 
-  // Staff Designations
+  // Staff Designations / Role Definitions
   Stream<List<StaffDesignation>> watchDesignations(String schoolId);
   Future<void> addDesignation(StaffDesignation designation);
   Future<void> updateDesignation(StaffDesignation designation);
   Future<void> deleteDesignation(String designationId);
-
-  // Staff Roles
-  Stream<List<StaffRole>> watchStaffRoles(String schoolId);
-  Future<void> addStaffRole(StaffRole role);
-  Future<void> updateStaffRole(StaffRole role);
-  Future<void> deleteStaffRole(String roleId);
+  Future<void> archiveDesignation(String designationId);
+  Future<void> restoreDesignation(String designationId);
 
   // Feature Toggles
   Stream<FeatureToggles> watchFeatureToggles(String schoolId);

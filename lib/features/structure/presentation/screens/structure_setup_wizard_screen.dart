@@ -168,7 +168,7 @@ class _StructureSetupWizardScreenState
           color: Colors.orange,
           items: [
             '${state.departments.length} Department(s)',
-            '${state.staffRoles.length} Staff Role(s)',
+            '${state.designations.length} Staff Role(s)',
           ],
           isComplete: state.departments.isNotEmpty,
         ),

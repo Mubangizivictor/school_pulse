@@ -58,7 +58,6 @@ Future<Isar> open() async {
     SubjectIsarSchema,
     DepartmentIsarSchema,
     StaffDesignationIsarSchema,
-    StaffRoleIsarSchema,
     IsarAssessmentMarkSchema,
     LibraryResourceIsarSchema,
     LibraryBorrowingIsarSchema,

@@ -11,6 +11,7 @@ class EducationalLevel extends Equatable {
   final String code;
   final int order;
   final String description;
+
   final bool isActive;
 
   const EducationalLevel({
@@ -64,6 +65,7 @@ class AcademicYear extends Equatable {
   final String name;
   final DateTime startDate;
   final DateTime endDate;
+  final String description;
   final bool isCurrent;
   final bool isArchived;
 
@@ -73,6 +75,7 @@ class AcademicYear extends Equatable {
     required this.name,
     required this.startDate,
     required this.endDate,
+    this.description = '',
     this.isCurrent = false,
     this.isArchived = false,
   });
@@ -83,6 +86,7 @@ class AcademicYear extends Equatable {
     String? name,
     DateTime? startDate,
     DateTime? endDate,
+    String? description,
     bool? isCurrent,
     bool? isArchived,
   }) {
@@ -92,6 +96,7 @@ class AcademicYear extends Equatable {
       name: name ?? this.name,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
+      description: description ?? this.description,
       isCurrent: isCurrent ?? this.isCurrent,
       isArchived: isArchived ?? this.isArchived,
     );
@@ -104,6 +109,7 @@ class AcademicYear extends Equatable {
     name,
     startDate,
     endDate,
+    description,
     isCurrent,
     isArchived,
   ];
@@ -309,6 +315,10 @@ class Subject extends Equatable {
   final String departmentId;
   final String color;
   final String description;
+
+  /// School-configured category, retained with [isElective] for compatibility
+  /// with consumers that still use the older boolean.
+  final String subjectType;
   final bool isElective;
   final bool isPractical;
   final int creditUnits;
@@ -324,6 +334,7 @@ class Subject extends Equatable {
     this.departmentId = '',
     this.color = '',
     this.description = '',
+    this.subjectType = 'Core',
     this.isElective = false,
     this.isPractical = false,
     this.creditUnits = 0,
@@ -340,6 +351,7 @@ class Subject extends Equatable {
     String? departmentId,
     String? color,
     String? description,
+    String? subjectType,
     bool? isElective,
     bool? isPractical,
     int? creditUnits,
@@ -355,6 +367,7 @@ class Subject extends Equatable {
       departmentId: departmentId ?? this.departmentId,
       color: color ?? this.color,
       description: description ?? this.description,
+      subjectType: subjectType ?? this.subjectType,
       isElective: isElective ?? this.isElective,
       isPractical: isPractical ?? this.isPractical,
       creditUnits: creditUnits ?? this.creditUnits,
@@ -373,6 +386,7 @@ class Subject extends Equatable {
     departmentId,
     color,
     description,
+    subjectType,
     isElective,
     isPractical,
     creditUnits,
@@ -441,10 +455,14 @@ class Department extends Equatable {
   ];
 }
 
-/// A job title a staff member can hold (Principal, Bursar, Librarian,
-/// Driver, ...). Distinct from the app's fixed permission-bearing
-/// UserRole enum (lib/core/user_roles.dart) - this is admin-editable
-/// descriptive metadata, not wired into auth/permissions.
+/// A school-owned role definition.  It describes a responsibility, not a
+/// person: people receive one or more `StaffRoleAssignment` rows elsewhere.
+/// It deliberately remains distinct from the fixed, permission-bearing
+/// `UserRole` enum; category and label never grant access on their own.
+/// [permissions] is the tenant-configurable permission set this role grants
+/// through `EffectiveAccessResolver`/`PermissionEvaluator` — every id in it
+/// must exist in `Permission.all`; unknown ids are simply never checked for
+/// by any `can()` call, so they grant nothing even if written directly.
 class StaffDesignation extends Equatable {
   final String id;
   final String schoolId;
@@ -454,6 +472,17 @@ class StaffDesignation extends Equatable {
   final String description;
   final int displayOrder;
   final bool isActive;
+  final String scopeType;
+  final String roleNature;
+  final bool requiresScope;
+  final bool allowMultipleStaff;
+  final bool allowConcurrentAssignments;
+  final bool allowTemporaryAssignments;
+  final bool isSystemPreset;
+  final bool isArchived;
+  final String iconName;
+  final String colorHex;
+  final Set<String> permissions;
 
   const StaffDesignation({
     required this.id,
@@ -464,6 +493,17 @@ class StaffDesignation extends Equatable {
     this.description = '',
     this.displayOrder = 0,
     this.isActive = true,
+    this.scopeType = 'wholeSchool',
+    this.roleNature = 'Standard',
+    this.requiresScope = false,
+    this.allowMultipleStaff = true,
+    this.allowConcurrentAssignments = true,
+    this.allowTemporaryAssignments = true,
+    this.isSystemPreset = false,
+    this.isArchived = false,
+    this.iconName = 'badge_outlined',
+    this.colorHex = '#6366F1',
+    this.permissions = const {},
   });
 
   StaffDesignation copyWith({
@@ -475,6 +515,17 @@ class StaffDesignation extends Equatable {
     String? description,
     int? displayOrder,
     bool? isActive,
+    String? scopeType,
+    String? roleNature,
+    bool? requiresScope,
+    bool? allowMultipleStaff,
+    bool? allowConcurrentAssignments,
+    bool? allowTemporaryAssignments,
+    bool? isSystemPreset,
+    bool? isArchived,
+    String? iconName,
+    String? colorHex,
+    Set<String>? permissions,
   }) {
     return StaffDesignation(
       id: id ?? this.id,
@@ -485,6 +536,19 @@ class StaffDesignation extends Equatable {
       description: description ?? this.description,
       displayOrder: displayOrder ?? this.displayOrder,
       isActive: isActive ?? this.isActive,
+      scopeType: scopeType ?? this.scopeType,
+      roleNature: roleNature ?? this.roleNature,
+      requiresScope: requiresScope ?? this.requiresScope,
+      allowMultipleStaff: allowMultipleStaff ?? this.allowMultipleStaff,
+      allowConcurrentAssignments:
+          allowConcurrentAssignments ?? this.allowConcurrentAssignments,
+      allowTemporaryAssignments:
+          allowTemporaryAssignments ?? this.allowTemporaryAssignments,
+      isSystemPreset: isSystemPreset ?? this.isSystemPreset,
+      isArchived: isArchived ?? this.isArchived,
+      iconName: iconName ?? this.iconName,
+      colorHex: colorHex ?? this.colorHex,
+      permissions: permissions ?? this.permissions,
     );
   }
 
@@ -498,54 +562,20 @@ class StaffDesignation extends Equatable {
     description,
     displayOrder,
     isActive,
+    scopeType,
+    roleNature,
+    requiresScope,
+    allowMultipleStaff,
+    allowConcurrentAssignments,
+    allowTemporaryAssignments,
+    isSystemPreset,
+    isArchived,
+    iconName,
+    colorHex,
+    permissions,
   ];
 }
 
-/// A functional role a staff member performs (Class Teacher, Exam Officer,
-/// Discipline Teacher, ...), separate from their Designation. A "Teacher"
-/// designation might hold several such roles at once.
-class StaffRole extends Equatable {
-  final String id;
-  final String schoolId;
-  final String name;
-  final String designationId;
-  final String description;
-  final bool isActive;
-
-  const StaffRole({
-    required this.id,
-    required this.schoolId,
-    required this.name,
-    this.designationId = '',
-    this.description = '',
-    this.isActive = true,
-  });
-
-  StaffRole copyWith({
-    String? id,
-    String? schoolId,
-    String? name,
-    String? designationId,
-    String? description,
-    bool? isActive,
-  }) {
-    return StaffRole(
-      id: id ?? this.id,
-      schoolId: schoolId ?? this.schoolId,
-      name: name ?? this.name,
-      designationId: designationId ?? this.designationId,
-      description: description ?? this.description,
-      isActive: isActive ?? this.isActive,
-    );
-  }
-
-  @override
-  List<Object?> get props => [
-    id,
-    schoolId,
-    name,
-    designationId,
-    description,
-    isActive,
-  ];
-}
+/// Alias so new code can read naturally as `RoleDefinition` — this IS the
+/// role definition entity; there is deliberately no separate type.
+typedef RoleDefinition = StaffDesignation;

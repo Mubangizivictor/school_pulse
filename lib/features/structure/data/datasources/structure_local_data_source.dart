@@ -38,9 +38,6 @@ abstract class StructureLocalDataSource {
   Future<List<StaffDesignation>> getDesignations();
   Future<void> cacheDesignations(List<StaffDesignation> designations);
 
-  Future<List<StaffRole>> getStaffRoles();
-  Future<void> cacheStaffRoles(List<StaffRole> roles);
-
   Future<List<Campus>> getCampuses();
   Future<void> cacheCampuses(List<Campus> campuses);
 

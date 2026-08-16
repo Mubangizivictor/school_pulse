@@ -93,13 +93,6 @@ class DesignationsUpdated extends StructureEvent {
   List<Object?> get props => [designations];
 }
 
-class StaffRolesUpdated extends StructureEvent {
-  final List<StaffRole> roles;
-  const StaffRolesUpdated(this.roles);
-  @override
-  List<Object?> get props => [roles];
-}
-
 class FeatureTogglesUpdated extends StructureEvent {
   final FeatureToggles toggles;
   const FeatureTogglesUpdated(this.toggles);
@@ -383,6 +376,13 @@ class DeleteStreamRequested extends StructureEvent {
   List<Object?> get props => [streamId];
 }
 
+class ArchiveStreamRequested extends StructureEvent {
+  final String streamId;
+  const ArchiveStreamRequested(this.streamId);
+  @override
+  List<Object?> get props => [streamId];
+}
+
 class SaveSubjectRequested extends StructureEvent {
   final Subject subject;
   const SaveSubjectRequested(this.subject);
@@ -393,6 +393,13 @@ class SaveSubjectRequested extends StructureEvent {
 class DeleteSubjectRequested extends StructureEvent {
   final String subjectId;
   const DeleteSubjectRequested(this.subjectId);
+  @override
+  List<Object?> get props => [subjectId];
+}
+
+class ArchiveSubjectRequested extends StructureEvent {
+  final String subjectId;
+  const ArchiveSubjectRequested(this.subjectId);
   @override
   List<Object?> get props => [subjectId];
 }
@@ -432,18 +439,18 @@ class DeleteDesignationRequested extends StructureEvent {
   List<Object?> get props => [designationId];
 }
 
-class SaveStaffRoleRequested extends StructureEvent {
-  final StaffRole role;
-  const SaveStaffRoleRequested(this.role);
+class ArchiveDesignationRequested extends StructureEvent {
+  final String designationId;
+  const ArchiveDesignationRequested(this.designationId);
   @override
-  List<Object?> get props => [role];
+  List<Object?> get props => [designationId];
 }
 
-class DeleteStaffRoleRequested extends StructureEvent {
-  final String roleId;
-  const DeleteStaffRoleRequested(this.roleId);
+class RestoreDesignationRequested extends StructureEvent {
+  final String designationId;
+  const RestoreDesignationRequested(this.designationId);
   @override
-  List<Object?> get props => [roleId];
+  List<Object?> get props => [designationId];
 }
 
 class UpdateFeatureTogglesRequested extends StructureEvent {

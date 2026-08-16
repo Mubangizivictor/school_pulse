@@ -149,22 +149,6 @@ class StructureLocalDataSourceImpl implements StructureLocalDataSource {
   }
 
   @override
-  Future<List<StaffRole>> getStaffRoles() async {
-    final cached = await isar.staffRoleIsars.where().findAll();
-    return cached.map((c) => c.toEntity()).toList();
-  }
-
-  @override
-  Future<void> cacheStaffRoles(List<StaffRole> roles) async {
-    await isar.writeTxn(() async {
-      await isar.staffRoleIsars.clear();
-      await isar.staffRoleIsars.putAll(
-        roles.map(StaffRoleIsar.fromEntity).toList(),
-      );
-    });
-  }
-
-  @override
   Future<List<Campus>> getCampuses() async {
     final cached = await isar.campusIsars.where().findAll();
     return cached.map((c) => c.toEntity()).toList();

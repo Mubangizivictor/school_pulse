@@ -86,14 +86,9 @@ class StructureSetupProgressCalculator {
         isConfigured: state.departments.isNotEmpty,
       ),
       StructureProgressSection(
-        title: 'Staff Designations',
+        title: 'Staff Roles',
         route: '/staff/admin/structure/people?tab=1',
         isConfigured: state.designations.isNotEmpty,
-      ),
-      StructureProgressSection(
-        title: 'Staff Roles',
-        route: '/staff/admin/structure/people?tab=2',
-        isConfigured: state.staffRoles.isNotEmpty,
       ),
       StructureProgressSection(
         title: 'Campuses',

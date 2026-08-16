@@ -62,11 +62,6 @@ class StructureLocalDataSourceWeb implements StructureLocalDataSource {
   Future<void> cacheDesignations(List<StaffDesignation> designations) async {}
 
   @override
-  Future<List<StaffRole>> getStaffRoles() async => [];
-  @override
-  Future<void> cacheStaffRoles(List<StaffRole> roles) async {}
-
-  @override
   Future<List<Campus>> getCampuses() async => [];
   @override
   Future<void> cacheCampuses(List<Campus> campuses) async {}

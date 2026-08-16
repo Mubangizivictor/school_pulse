@@ -51,6 +51,7 @@ abstract class StructureRemoteDataSource {
   Stream<List<Subject>> watchSubjects(String schoolId);
   Future<void> saveSubject(Subject subject);
   Future<void> deleteSubject(String subjectId);
+  Future<void> archiveSubject(String subjectId);
 
   Stream<List<Department>> watchDepartments(String schoolId);
   Future<void> saveDepartment(Department department);
@@ -60,10 +61,8 @@ abstract class StructureRemoteDataSource {
   Stream<List<StaffDesignation>> watchDesignations(String schoolId);
   Future<void> saveDesignation(StaffDesignation designation);
   Future<void> deleteDesignation(String designationId);
-
-  Stream<List<StaffRole>> watchStaffRoles(String schoolId);
-  Future<void> saveStaffRole(StaffRole role);
-  Future<void> deleteStaffRole(String roleId);
+  Future<void> archiveDesignation(String designationId);
+  Future<void> restoreDesignation(String designationId);
 
   Stream<FeatureToggles> watchFeatureToggles(String schoolId);
   Future<void> updateFeatureToggles(FeatureToggles toggles, String schoolId);
@@ -200,8 +199,6 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       firestore.collection('departments');
   CollectionReference<Map<String, dynamic>> get _designations =>
       firestore.collection('staff_designations');
-  CollectionReference<Map<String, dynamic>> get _staffRoles =>
-      firestore.collection('staff_roles');
 
   CollectionReference<Map<String, dynamic>> get _campuses =>
       firestore.collection('campuses');
@@ -294,7 +291,7 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
 
   @override
   Future<void> saveLevel(EducationalLevel level) =>
-      _levels.doc(level.id).set(_levelToMap(level));
+      _levels.doc(level.id).set(_levelToMap(level), SetOptions(merge: true));
 
   @override
   Future<void> deleteLevel(String levelId) => _levels.doc(levelId).delete();
@@ -343,23 +340,44 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   }
 
   @override
-  Future<void> saveAcademicYear(AcademicYear year) =>
-      _years.doc(year.id).set(_yearToMap(year));
+  Future<void> saveAcademicYear(AcademicYear year) async {
+    // A current year is a school-wide singleton. Keep the writes in one
+    // batch so listeners never observe a partially-updated current state.
+    // years selected at once.
+    if (!year.isCurrent) {
+      await _years.doc(year.id).set(_yearToMap(year), SetOptions(merge: true));
+      return;
+    }
+    final current = await _years
+        .where('schoolId', isEqualTo: year.schoolId)
+        .where('isCurrent', isEqualTo: true)
+        .get();
+    final batch = firestore.batch();
+    for (final doc in current.docs) {
+      if (doc.id != year.id) batch.update(doc.reference, {'isCurrent': false});
+    }
+    batch.set(_years.doc(year.id), _yearToMap(year));
+    await batch.commit();
+  }
 
   @override
   Future<void> deleteAcademicYear(String yearId) => _years.doc(yearId).delete();
 
   @override
   Future<void> setCurrentAcademicYear(String yearId, String schoolId) async {
-    final batch = firestore.batch();
+    final target = await _years.doc(yearId).get();
+    if (!target.exists || target.data()?['schoolId'] != schoolId) {
+      throw StateError('Academic year is not available for this school.');
+    }
     final existingCurrent = await _years
         .where('schoolId', isEqualTo: schoolId)
         .where('isCurrent', isEqualTo: true)
         .get();
+    final batch = firestore.batch();
     for (final doc in existingCurrent.docs) {
       batch.update(doc.reference, {'isCurrent': false});
     }
-    batch.update(_years.doc(yearId), {'isCurrent': true});
+    batch.update(target.reference, {'isCurrent': true, 'isArchived': false});
     await batch.commit();
   }
 
@@ -378,6 +396,7 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       name: map['name'] ?? '',
       startDate: (map['startDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
       endDate: (map['endDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      description: map['description'] ?? '',
       isCurrent: map['isCurrent'] ?? false,
       isArchived: map['isArchived'] ?? false,
     );
@@ -388,6 +407,7 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     'name': e.name,
     'startDate': Timestamp.fromDate(e.startDate),
     'endDate': Timestamp.fromDate(e.endDate),
+    'description': e.description,
     'isCurrent': e.isCurrent,
     'isArchived': e.isArchived,
   };
@@ -405,23 +425,64 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   }
 
   @override
-  Future<void> saveAcademicTerm(AcademicTerm term) =>
-      _terms.doc(term.id).set(_termToMap(term));
+  Future<void> saveAcademicTerm(AcademicTerm term) async {
+    if (!term.isCurrent) {
+      await _terms.doc(term.id).set(_termToMap(term), SetOptions(merge: true));
+      return;
+    }
+    await _setCurrentTermTransaction(term.id, term.schoolId, term: term);
+  }
 
   @override
   Future<void> deleteAcademicTerm(String termId) => _terms.doc(termId).delete();
 
   @override
   Future<void> setCurrentAcademicTerm(String termId, String schoolId) async {
-    final batch = firestore.batch();
-    final existingCurrent = await _terms
+    await _setCurrentTermTransaction(termId, schoolId);
+  }
+
+  Future<void> _setCurrentTermTransaction(
+    String termId,
+    String schoolId, {
+    AcademicTerm? term,
+  }) async {
+    final target = _terms.doc(termId);
+    final targetSnapshot = await target.get();
+    final targetData = targetSnapshot.data();
+    if (term == null &&
+        (!targetSnapshot.exists || targetData?['schoolId'] != schoolId)) {
+      throw StateError('Term is not available for this school.');
+    }
+    final yearId =
+        term?.academicYearId ?? targetData!['academicYearId'] as String;
+    final year = _years.doc(yearId);
+    final yearSnapshot = await year.get();
+    if (!yearSnapshot.exists || yearSnapshot.data()?['schoolId'] != schoolId) {
+      throw StateError(
+        'The selected academic year is not available for this school.',
+      );
+    }
+    final currentTerms = await _terms
         .where('schoolId', isEqualTo: schoolId)
         .where('isCurrent', isEqualTo: true)
         .get();
-    for (final doc in existingCurrent.docs) {
-      batch.update(doc.reference, {'isCurrent': false});
+    final currentYears = await _years
+        .where('schoolId', isEqualTo: schoolId)
+        .where('isCurrent', isEqualTo: true)
+        .get();
+    final batch = firestore.batch();
+    for (final doc in currentTerms.docs) {
+      if (doc.id != termId) batch.update(doc.reference, {'isCurrent': false});
     }
-    batch.update(_terms.doc(termId), {'isCurrent': true});
+    for (final doc in currentYears.docs) {
+      if (doc.id != yearId) batch.update(doc.reference, {'isCurrent': false});
+    }
+    batch.update(year, {'isCurrent': true, 'isArchived': false});
+    if (term == null) {
+      batch.update(target, {'isCurrent': true, 'isArchived': false});
+    } else {
+      batch.set(target, _termToMap(term));
+    }
     await batch.commit();
   }
 
@@ -577,12 +638,24 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   }
 
   @override
-  Future<void> saveSubject(Subject subject) =>
-      _subjects.doc(subject.id).set(_subjectToMap(subject));
+  Future<void> saveSubject(Subject subject) async {
+    final ref = _subjects.doc(subject.id);
+    final existing = await ref.get();
+    await ref.set({
+      ..._subjectToMap(subject),
+      'codeLower': subject.code.trim().toLowerCase(),
+      'updatedAt': FieldValue.serverTimestamp(),
+      if (!existing.exists) 'createdAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
 
   @override
   Future<void> deleteSubject(String subjectId) =>
       _subjects.doc(subjectId).delete();
+
+  @override
+  Future<void> archiveSubject(String subjectId) =>
+      _subjects.doc(subjectId).update({'isActive': false});
 
   Subject _subjectFromMap(String id, Map<String, dynamic> map) {
     return Subject(
@@ -593,6 +666,9 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       departmentId: map['departmentId'] ?? '',
       color: map['color'] ?? '',
       description: map['description'] ?? '',
+      subjectType:
+          map['subjectType'] ??
+          ((map['isElective'] ?? false) ? 'Elective' : 'Core'),
       isElective: map['isElective'] ?? false,
       isPractical: map['isPractical'] ?? false,
       creditUnits: map['creditUnits'] ?? 0,
@@ -609,6 +685,7 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     'departmentId': e.departmentId,
     'color': e.color,
     'description': e.description,
+    'subjectType': e.subjectType,
     'isElective': e.isElective,
     'isPractical': e.isPractical,
     'creditUnits': e.creditUnits,
@@ -685,61 +762,58 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   Future<void> deleteDesignation(String designationId) =>
       _designations.doc(designationId).delete();
 
+  @override
+  Future<void> archiveDesignation(String designationId) =>
+      _designations.doc(designationId).update({'isArchived': true});
+
+  @override
+  Future<void> restoreDesignation(String designationId) =>
+      _designations.doc(designationId).update({'isArchived': false});
+
   StaffDesignation _designationFromMap(String id, Map<String, dynamic> map) {
     return StaffDesignation(
       id: id,
       schoolId: map['schoolId'] ?? '',
       name: map['name'] ?? '',
+      code: map['code'] ?? '',
+      category: map['category'] ?? '',
       description: map['description'] ?? '',
+      displayOrder: (map['displayOrder'] as num?)?.toInt() ?? 0,
       isActive: map['isActive'] ?? true,
+      scopeType: map['scopeType'] ?? 'wholeSchool',
+      roleNature: map['roleNature'] ?? 'Standard',
+      requiresScope: map['requiresScope'] ?? false,
+      allowMultipleStaff: map['allowMultipleStaff'] ?? true,
+      allowConcurrentAssignments: map['allowConcurrentAssignments'] ?? true,
+      allowTemporaryAssignments: map['allowTemporaryAssignments'] ?? true,
+      isSystemPreset: map['isSystemPreset'] ?? false,
+      isArchived: map['isArchived'] ?? false,
+      iconName: map['iconName'] ?? 'badge_outlined',
+      colorHex: map['colorHex'] ?? '#6366F1',
+      permissions:
+          (map['permissions'] as List?)?.cast<String>().toSet() ?? const {},
     );
   }
 
   Map<String, dynamic> _designationToMap(StaffDesignation e) => {
     'schoolId': e.schoolId,
     'name': e.name,
+    'code': e.code,
+    'category': e.category,
     'description': e.description,
+    'displayOrder': e.displayOrder,
     'isActive': e.isActive,
-  };
-
-  // Staff Roles
-  @override
-  Stream<List<StaffRole>> watchStaffRoles(String schoolId) {
-    return _staffRoles
-        .where('schoolId', isEqualTo: schoolId)
-        .orderBy('name')
-        .snapshots()
-        .map(
-          (snap) =>
-              snap.docs.map((d) => _staffRoleFromMap(d.id, d.data())).toList(),
-        );
-  }
-
-  @override
-  Future<void> saveStaffRole(StaffRole role) =>
-      _staffRoles.doc(role.id).set(_staffRoleToMap(role));
-
-  @override
-  Future<void> deleteStaffRole(String roleId) =>
-      _staffRoles.doc(roleId).delete();
-
-  StaffRole _staffRoleFromMap(String id, Map<String, dynamic> map) {
-    return StaffRole(
-      id: id,
-      schoolId: map['schoolId'] ?? '',
-      name: map['name'] ?? '',
-      designationId: map['designationId'] ?? '',
-      description: map['description'] ?? '',
-      isActive: map['isActive'] ?? true,
-    );
-  }
-
-  Map<String, dynamic> _staffRoleToMap(StaffRole e) => {
-    'schoolId': e.schoolId,
-    'name': e.name,
-    'designationId': e.designationId,
-    'description': e.description,
-    'isActive': e.isActive,
+    'scopeType': e.scopeType,
+    'roleNature': e.roleNature,
+    'requiresScope': e.requiresScope,
+    'allowMultipleStaff': e.allowMultipleStaff,
+    'allowConcurrentAssignments': e.allowConcurrentAssignments,
+    'allowTemporaryAssignments': e.allowTemporaryAssignments,
+    'isSystemPreset': e.isSystemPreset,
+    'isArchived': e.isArchived,
+    'iconName': e.iconName,
+    'colorHex': e.colorHex,
+    'permissions': e.permissions.toList(),
   };
 
   // Feature Toggles
@@ -1354,8 +1428,38 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   }
 
   @override
-  Future<void> saveGradingSystem(GradingSystemDef system) =>
-      _gradingSystems.doc(system.id).set(_gradingSystemToMap(system));
+  Future<void> saveGradingSystem(GradingSystemDef system) async {
+    // Defaults are scoped by the exact applicability definition.  Updating
+    // them in one transaction avoids two simultaneous school-wide defaults.
+    if (!system.isDefault) {
+      await _gradingSystems.doc(system.id).set(_gradingSystemToMap(system));
+      return;
+    }
+    final current = await _gradingSystems
+        .where('schoolId', isEqualTo: system.schoolId)
+        .get();
+    final batch = firestore.batch();
+    for (final doc in current.docs) {
+      final data = doc.data();
+      if (doc.id != system.id &&
+          data['isDefault'] == true &&
+          _sameApplicability(data, system)) {
+        batch.update(doc.reference, {'isDefault': false});
+      }
+    }
+    batch.set(_gradingSystems.doc(system.id), _gradingSystemToMap(system));
+    await batch.commit();
+  }
+
+  bool _sameApplicability(Map<String, dynamic> data, GradingSystemDef system) {
+    List<String> values(String key) => List<String>.from(data[key] ?? const []);
+    bool sameList(List<String> a, List<String> b) =>
+        a.length == b.length && a.toSet().containsAll(b);
+    return (data['appliesTo'] ?? 'school') == system.appliesTo &&
+        sameList(values('levelIds'), system.levelIds) &&
+        sameList(values('classIds'), system.classIds) &&
+        sameList(values('academicYearIds'), system.academicYearIds);
+  }
 
   @override
   Future<void> deleteGradingSystem(String systemId) =>
@@ -1369,6 +1473,18 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
         type: map['type'] ?? '',
         isDefault: map['isDefault'] ?? false,
         isActive: map['isActive'] ?? true,
+        description: map['description'] ?? '',
+        scaleType: map['scaleType'] ?? 'Range Based',
+        gradeFormat: map['gradeFormat'] ?? 'Letter',
+        decimalPlaces: map['decimalPlaces'] ?? 2,
+        passingScore: (map['passingScore'] as num?)?.toDouble(),
+        passingGradeCode: map['passingGradeCode'],
+        allowIncomplete: map['allowIncomplete'] ?? false,
+        appliesTo: map['appliesTo'] ?? 'school',
+        levelIds: List<String>.from(map['levelIds'] ?? const []),
+        classIds: List<String>.from(map['classIds'] ?? const []),
+        academicYearIds: List<String>.from(map['academicYearIds'] ?? const []),
+        version: map['version'] ?? 1,
       );
 
   Map<String, dynamic> _gradingSystemToMap(GradingSystemDef e) => {
@@ -1377,6 +1493,18 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     'type': e.type,
     'isDefault': e.isDefault,
     'isActive': e.isActive,
+    'description': e.description,
+    'scaleType': e.scaleType,
+    'gradeFormat': e.gradeFormat,
+    'decimalPlaces': e.decimalPlaces,
+    'passingScore': e.passingScore,
+    'passingGradeCode': e.passingGradeCode,
+    'allowIncomplete': e.allowIncomplete,
+    'appliesTo': e.appliesTo,
+    'levelIds': e.levelIds,
+    'classIds': e.classIds,
+    'academicYearIds': e.academicYearIds,
+    'version': e.version,
   };
 
   // Grade Bands
@@ -1409,6 +1537,11 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     maxScore: (map['maxScore'] as num?)?.toDouble() ?? 0,
     remarks: map['remarks'] ?? '',
     order: map['order'] ?? 0,
+    label: map['label'] ?? '',
+    gradePoint: (map['gradePoint'] as num?)?.toDouble(),
+    isPassing: map['isPassing'] ?? true,
+    colorHex: map['colorHex'] ?? '',
+    hasNumericBoundary: map['hasNumericBoundary'] ?? true,
   );
 
   Map<String, dynamic> _gradeBandToMap(GradeBand e) => {
@@ -1419,6 +1552,11 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     'maxScore': e.maxScore,
     'remarks': e.remarks,
     'order': e.order,
+    'label': e.label,
+    'gradePoint': e.gradePoint,
+    'isPassing': e.isPassing,
+    'colorHex': e.colorHex,
+    'hasNumericBoundary': e.hasNumericBoundary,
   };
 
   // Timetable Config
@@ -1439,39 +1577,114 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     return TimetableConfig(
       teachingDays: List<String>.from(map['teachingDays'] ?? const []),
       weekendDays: List<String>.from(map['weekendDays'] ?? const []),
+      defaultPeriodDurationMinutes:
+          (map['defaultPeriodDurationMinutes'] as num?)?.toInt() ?? 0,
       periodsPerDay: map['periodsPerDay'] ?? 0,
       schoolStartTime: map['schoolStartTime'] ?? '',
       schoolEndTime: map['schoolEndTime'] ?? '',
       slots: ((map['slots'] as List?) ?? const [])
           .map(
             (s) => TimetableSlot(
+              id: s['id'] ?? '',
               name: s['name'] ?? '',
               startTime: s['startTime'] ?? '',
               endTime: s['endTime'] ?? '',
               type: s['type'] ?? 'period',
               displayOrder: s['displayOrder'] ?? 0,
               isActive: s['isActive'] ?? true,
+              days: List<String>.from(s['days'] ?? const []),
+              colorHex: s['colorHex'] ?? '',
+              notes: s['notes'] ?? '',
             ),
           )
           .toList(),
+      specialSchedules: ((map['specialSchedules'] as List?) ?? const []).map((
+        schedule,
+      ) {
+        final start = schedule['effectiveStartDate'];
+        final end = schedule['effectiveEndDate'];
+        return TimetableSpecialSchedule(
+          id: schedule['id'] ?? '',
+          name: schedule['name'] ?? '',
+          effectiveStartDate: start is Timestamp
+              ? start.toDate()
+              : DateTime.tryParse(start?.toString() ?? '') ?? DateTime(2000),
+          effectiveEndDate: end is Timestamp
+              ? end.toDate()
+              : DateTime.tryParse(end?.toString() ?? '') ?? DateTime(2000),
+          defaultPeriodDurationMinutes:
+              (schedule['defaultPeriodDurationMinutes'] as num?)?.toInt(),
+          slots: ((schedule['slots'] as List?) ?? const [])
+              .map(
+                (s) => TimetableSlot(
+                  id: s['id'] ?? '',
+                  name: s['name'] ?? '',
+                  startTime: s['startTime'] ?? '',
+                  endTime: s['endTime'] ?? '',
+                  type: s['type'] ?? 'period',
+                  displayOrder: s['displayOrder'] ?? 0,
+                  isActive: s['isActive'] ?? true,
+                  days: List<String>.from(s['days'] ?? const []),
+                  colorHex: s['colorHex'] ?? '',
+                  notes: s['notes'] ?? '',
+                ),
+              )
+              .toList(),
+        );
+      }).toList(),
     );
   }
 
   Map<String, dynamic> _timetableConfigToMap(TimetableConfig e) => {
     'teachingDays': e.teachingDays,
     'weekendDays': e.weekendDays,
+    'defaultPeriodDurationMinutes': e.defaultPeriodDurationMinutes,
     'periodsPerDay': e.periodsPerDay,
     'schoolStartTime': e.schoolStartTime,
     'schoolEndTime': e.schoolEndTime,
     'slots': e.slots
         .map(
           (s) => {
+            'id': s.id,
             'name': s.name,
             'startTime': s.startTime,
             'endTime': s.endTime,
             'type': s.type,
             'displayOrder': s.displayOrder,
             'isActive': s.isActive,
+            'days': s.days,
+            'colorHex': s.colorHex,
+            'notes': s.notes,
+          },
+        )
+        .toList(),
+    'specialSchedules': e.specialSchedules
+        .map(
+          (schedule) => {
+            'id': schedule.id,
+            'name': schedule.name,
+            'effectiveStartDate': Timestamp.fromDate(
+              schedule.effectiveStartDate,
+            ),
+            'effectiveEndDate': Timestamp.fromDate(schedule.effectiveEndDate),
+            'defaultPeriodDurationMinutes':
+                schedule.defaultPeriodDurationMinutes,
+            'slots': schedule.slots
+                .map(
+                  (s) => {
+                    'id': s.id,
+                    'name': s.name,
+                    'startTime': s.startTime,
+                    'endTime': s.endTime,
+                    'type': s.type,
+                    'displayOrder': s.displayOrder,
+                    'isActive': s.isActive,
+                    'days': s.days,
+                    'colorHex': s.colorHex,
+                    'notes': s.notes,
+                  },
+                )
+                .toList(),
           },
         )
         .toList(),

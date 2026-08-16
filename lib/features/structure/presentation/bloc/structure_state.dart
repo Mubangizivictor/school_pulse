@@ -26,7 +26,6 @@ class StructureState extends Equatable {
   final List<Subject> subjects;
   final List<Department> departments;
   final List<StaffDesignation> designations;
-  final List<StaffRole> staffRoles;
   final FeatureToggles featureToggles;
   final InstitutionProfile institutionProfile;
   final List<Campus> campuses;
@@ -64,7 +63,6 @@ class StructureState extends Equatable {
     this.subjects = const [],
     this.departments = const [],
     this.designations = const [],
-    this.staffRoles = const [],
     this.featureToggles = const FeatureToggles(),
     this.institutionProfile = const InstitutionProfile(),
     this.campuses = const [],
@@ -103,7 +101,6 @@ class StructureState extends Equatable {
     List<Subject>? subjects,
     List<Department>? departments,
     List<StaffDesignation>? designations,
-    List<StaffRole>? staffRoles,
     FeatureToggles? featureToggles,
     InstitutionProfile? institutionProfile,
     List<Campus>? campuses,
@@ -141,7 +138,6 @@ class StructureState extends Equatable {
       subjects: subjects ?? this.subjects,
       departments: departments ?? this.departments,
       designations: designations ?? this.designations,
-      staffRoles: staffRoles ?? this.staffRoles,
       featureToggles: featureToggles ?? this.featureToggles,
       institutionProfile: institutionProfile ?? this.institutionProfile,
       campuses: campuses ?? this.campuses,
@@ -186,7 +182,6 @@ class StructureState extends Equatable {
     subjects,
     departments,
     designations,
-    staffRoles,
     featureToggles,
     institutionProfile,
     campuses,

@@ -209,6 +209,10 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.deleteSubject(subjectId);
 
   @override
+  Future<void> archiveSubject(String subjectId) =>
+      remoteDataSource.archiveSubject(subjectId);
+
+  @override
   Stream<List<Department>> watchDepartments(String schoolId) => _cached(
     localDataSource.getDepartments,
     remoteDataSource.watchDepartments(schoolId),
@@ -251,23 +255,12 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.deleteDesignation(designationId);
 
   @override
-  Stream<List<StaffRole>> watchStaffRoles(String schoolId) => _cached(
-    localDataSource.getStaffRoles,
-    remoteDataSource.watchStaffRoles(schoolId),
-    localDataSource.cacheStaffRoles,
-  );
+  Future<void> archiveDesignation(String designationId) =>
+      remoteDataSource.archiveDesignation(designationId);
 
   @override
-  Future<void> addStaffRole(StaffRole role) =>
-      remoteDataSource.saveStaffRole(role);
-
-  @override
-  Future<void> updateStaffRole(StaffRole role) =>
-      remoteDataSource.saveStaffRole(role);
-
-  @override
-  Future<void> deleteStaffRole(String roleId) =>
-      remoteDataSource.deleteStaffRole(roleId);
+  Future<void> restoreDesignation(String designationId) =>
+      remoteDataSource.restoreDesignation(designationId);
 
   @override
   Stream<FeatureToggles> watchFeatureToggles(String schoolId) =>
