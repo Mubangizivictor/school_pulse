@@ -1,153 +1,290 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/features/teacher/domain/entities/subject_assessment.dart';
+import 'package:school_pulse/features/teacher/domain/policies/marks_entry_policy.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/marks/marks_bloc.dart';
 
 class ReviewSubmitScreen extends StatelessWidget {
   const ReviewSubmitScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = const Color(0xFF0F172A);
+    final theme = Theme.of(context);
 
-    return Scaffold(
-      backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.chevron_left, color: Colors.white),
-          onPressed: () => context.pop(),
-        ),
-        title: Column(
-          children: [
-            const Text(
-              'Review & Submit',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+    return BlocConsumer<MarksBloc, MarksState>(
+      listenWhen: (previous, current) =>
+          previous.successMessage != current.successMessage ||
+          previous.errorMessage != current.errorMessage,
+      listener: (context, state) {
+        if (state.successMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.successMessage!),
+              backgroundColor: Colors.green,
             ),
-            const Text(
-              'Mid Term Test • Section A',
-              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+          );
+          context.go('/staff/marks');
+          return;
+        }
+        if (state.errorMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.errorMessage!)),
+          );
+        }
+      },
+      builder: (context, state) {
+        final assessment = state.selectedAssessment;
+        final component = state.selectedComponent;
+        final review = state.review;
+
+        if (assessment == null || component == null) {
+          return Scaffold(
+            backgroundColor: theme.scaffoldBackgroundColor,
+            appBar: AppBar(title: const Text('Review & Submit')),
+            body: const Center(child: Text('Nothing to review.')),
+          );
+        }
+
+        final entries = state.entries.values.toList();
+        final named = [
+          for (final entry in entries)
+            (
+              name: state.students
+                      .where((s) => s.studentId == entry.studentId)
+                      .firstOrNull
+                      ?.name ??
+                  'Unknown',
+              entry: entry,
             ),
-          ],
-        ),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Summary',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+        ]..sort((a, b) => a.name.compareTo(b.name));
+
+        return Scaffold(
+          backgroundColor: theme.scaffoldBackgroundColor,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: Icon(
+                Icons.chevron_left,
+                color: theme.colorScheme.onSurface,
               ),
+              onPressed: () => context.pop(),
             ),
-            const SizedBox(height: 12),
-            _buildSummaryRow('Total Students', '28'),
-            _buildSummaryRow('Marks Entered', '8', valueColor: Colors.white),
-            _buildSummaryRow('Marks Pending', '20', valueColor: Colors.orange),
-            _buildSummaryRow('Maximum Mark', '20'),
-            const SizedBox(height: 32),
-            const Text(
-              'Quick Preview',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildPreviewItem('1', 'Akena Brian', '16/20'),
-            _buildPreviewItem('2', 'Nanyonga Faith', '14/20'),
-            _buildPreviewItem('3', 'Odhiambo James', '9/20'),
-            const Padding(
-              padding: EdgeInsets.only(left: 32, top: 8),
-              child: Text(
-                '... and 25 more students',
-                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
-              ),
-            ),
-            const SizedBox(height: 40),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF334155).withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white10),
-              ),
-              child: const Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.info_outline, color: Color(0xFF818CF8), size: 20),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Once submitted, marks will be locked for editing.',
-                      style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 40),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Marks submitted successfully!'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                  context.go('/staff/marks');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4338CA),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'Submit Marks',
+            title: Column(
+              children: [
+                Text(
+                  'Review & Submit',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: theme.colorScheme.onSurface,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
+                Text(
+                  '${assessment.title.isEmpty ? assessment.assessmentTypeName : assessment.title} • ${component.name}',
+                  style: TextStyle(color: theme.hintColor, fontSize: 12),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+            centerTitle: true,
+          ),
+          body: state.isSaving && review == null
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Summary',
+                        style: TextStyle(
+                          color: theme.colorScheme.onSurface,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildSummaryRow(
+                        theme,
+                        'Total Students',
+                        '${review?.totalStudents ?? state.students.length}',
+                      ),
+                      _buildSummaryRow(
+                        theme,
+                        'Marks Entered',
+                        '${review?.entered ?? state.enteredCount}',
+                      ),
+                      _buildSummaryRow(
+                        theme,
+                        'Marks Pending',
+                        '${review?.pending ?? 0}',
+                        valueColor: Colors.orange,
+                      ),
+                      _buildSummaryRow(
+                        theme,
+                        'Maximum Mark',
+                        component.maximumMark.toStringAsFixed(0),
+                      ),
+                      const SizedBox(height: 32),
+                      Text(
+                        'Quick Preview',
+                        style: TextStyle(
+                          color: theme.colorScheme.onSurface,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      for (final row in named.take(3))
+                        _buildPreviewItem(
+                          theme,
+                          named.indexOf(row) + 1,
+                          row.name,
+                          row.entry,
+                          component,
+                        ),
+                      if (named.length > 3)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 32, top: 8),
+                          child: Text(
+                            '... and ${named.length - 3} more students',
+                            style: TextStyle(
+                              color: theme.hintColor,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 40),
+                      if (review?.refusal != null)
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.red.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  _refusalMessage(review!.refusal!),
+                                  style: const TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: theme.dividerColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: theme.dividerColor),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                color: theme.colorScheme.primary,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  assessment.requiresApproval
+                                      ? 'Once submitted, marks go to the '
+                                            'academic office for approval.'
+                                      : 'Once submitted, marks will be '
+                                            'locked for editing.',
+                                  style: TextStyle(
+                                    color: theme.hintColor,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 40),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed:
+                              (review?.canSubmit ?? false) && !state.isSaving
+                              ? () => context.read<MarksBloc>().add(
+                                  const MarksSubmitted(),
+                                )
+                              : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: theme.colorScheme.primary,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'Submit Marks',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+        );
+      },
     );
   }
 
+  static String _refusalMessage(SubmissionRefusal refusal) => switch (refusal) {
+    SubmissionRefusal.noPermission =>
+      'You do not have permission to submit marks for this assessment.',
+    SubmissionRefusal.outsideScope =>
+      'This assessment is outside your current teaching assignment.',
+    SubmissionRefusal.assessmentNotOpen =>
+      'This assessment is not open for entry yet.',
+    SubmissionRefusal.assessmentLocked =>
+      'This assessment has been locked and can no longer accept marks.',
+    SubmissionRefusal.entryNotOpenYet =>
+      'Entry for this component has not opened yet.',
+    SubmissionRefusal.missingMarks =>
+      'Some students still need a mark or a status before you can submit.',
+    SubmissionRefusal.invalidMarks =>
+      'One or more marks are outside the valid range for this component.',
+    SubmissionRefusal.noStudents =>
+      'There are no students to submit marks for.',
+  };
+
   Widget _buildSummaryRow(
+    ThemeData theme,
     String label,
     String value, {
-    Color valueColor = Colors.white,
+    Color? valueColor,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
-          ),
+          Text(label, style: TextStyle(color: theme.hintColor, fontSize: 14)),
           Text(
             value,
             style: TextStyle(
-              color: valueColor,
+              color: valueColor ?? theme.colorScheme.onSurface,
               fontSize: 14,
               fontWeight: FontWeight.bold,
             ),
@@ -157,26 +294,33 @@ class ReviewSubmitScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPreviewItem(String rank, String name, String score) {
+  Widget _buildPreviewItem(
+    ThemeData theme,
+    int rank,
+    String name,
+    StudentMarkEntry entry,
+    AssessmentComponent component,
+  ) {
+    final score = entry.status == MarkEntryStatus.scored
+        ? '${entry.score?.toStringAsFixed(0) ?? '--'}/${component.maximumMark.toStringAsFixed(0)}'
+        : entry.status.label;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Text(
-            '$rank.',
-            style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
-          ),
+          Text('$rank.', style: TextStyle(color: theme.hintColor, fontSize: 12)),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               name,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 14),
             ),
           ),
           Text(
             score,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: theme.colorScheme.onSurface,
               fontSize: 14,
               fontWeight: FontWeight.bold,
             ),

@@ -1,137 +1,134 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/features/teacher/domain/entities/subject_assessment.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/marks/marks_bloc.dart';
 
-class SelectAssessmentScreen extends StatelessWidget {
+class SelectAssessmentScreen extends StatefulWidget {
   const SelectAssessmentScreen({super.key});
 
   @override
+  State<SelectAssessmentScreen> createState() =>
+      _SelectAssessmentScreenState();
+}
+
+class _SelectAssessmentScreenState extends State<SelectAssessmentScreen> {
+  String _typeFilter = 'All';
+
+  @override
   Widget build(BuildContext context) {
-    final bgColor = const Color(0xFF0F172A);
-    final surfaceColor = const Color(0xFF1E293B);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final bg = theme.scaffoldBackgroundColor;
+    final surface = isDark
+        ? const Color(0xFF1E293B)
+        : theme.colorScheme.surface;
 
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: bg,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.chevron_left, color: Colors.white),
+          icon: Icon(Icons.chevron_left, color: theme.colorScheme.onSurface),
           onPressed: () => context.pop(),
         ),
-        title: const Text(
+        title: Text(
           'Select Assessment',
           style: TextStyle(
-            color: Colors.white,
+            color: theme.colorScheme.onSurface,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
         ),
         centerTitle: true,
       ),
-      body: Column(
-        children: [
-          _buildTabs(surfaceColor),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                _buildAssessmentCard(
-                  context,
-                  'Mid Term Test',
-                  'Test • 40 Marks',
-                  '20 May 2025',
-                  'Completed',
-                  Colors.green,
-                  surfaceColor,
-                ),
-                _buildAssessmentCard(
-                  context,
-                  'End Term Test',
-                  'Test • 60 Marks',
-                  '15 Jan 2025',
-                  'Upcoming',
-                  Colors.blue,
-                  surfaceColor,
-                ),
-                _buildAssessmentCard(
-                  context,
-                  'Chapter 3 Test',
-                  'Test • 20 Marks',
-                  'Not scheduled',
-                  'Draft',
-                  Colors.grey,
-                  surfaceColor,
-                ),
-                _buildAssessmentCard(
-                  context,
-                  'Chapter 5 Test',
-                  'Test • 20 Marks',
-                  'Not scheduled',
-                  'Draft',
-                  Colors.grey,
-                  surfaceColor,
-                ),
-                _buildAssessmentCard(
-                  context,
-                  'Surprise Test',
-                  'Test • 10 Marks',
-                  'Not scheduled',
-                  'Draft',
-                  Colors.grey,
-                  surfaceColor,
-                ),
-                const SizedBox(height: 20),
-                OutlinedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.add, color: Colors.white),
-                  label: const Text(
-                    'Create New Assessment',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFF4338CA)),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+      body: BlocBuilder<MarksBloc, MarksState>(
+        builder: (context, state) {
+          final types = <String>{
+            'All',
+            for (final a in state.assessments) a.assessmentTypeName,
+          }.where((t) => t.isNotEmpty).toList();
+
+          final visible = state.assessments
+              .where(
+                (a) =>
+                    _typeFilter == 'All' ||
+                    a.assessmentTypeName == _typeFilter,
+              )
+              .toList();
+
+          return Column(
+            children: [
+              _buildTabs(context, types, surface),
+              Expanded(
+                child: state.isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : visible.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No assessments are open for entry right now.',
+                          style: TextStyle(color: theme.hintColor),
+                        ),
+                      )
+                    : ListView(
+                        padding: const EdgeInsets.all(20),
+                        children: [
+                          for (final assessment in visible)
+                            _buildAssessmentCard(
+                              context,
+                              assessment,
+                              surface,
+                              theme,
+                            ),
+                        ],
+                      ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildTabs(Color surfaceColor) {
-    return Padding(
+  Widget _buildTabs(BuildContext context, List<String> types, Color surface) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Row(
         children: [
-          _buildTab('All', true),
-          _buildTab('Tests', false),
-          _buildTab('Quizzes', false),
-          _buildTab('Assignments', false),
+          for (final type in types)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: _buildTab(context, type, type == _typeFilter),
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildTab(String label, bool isSelected) {
-    return Container(
-      margin: const EdgeInsets.only(right: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: isSelected ? const Color(0xFF312E81) : Colors.transparent,
-        borderRadius: BorderRadius.circular(20),
-        border: isSelected ? null : Border.all(color: Colors.white10),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: isSelected ? Colors.white : Colors.grey,
-          fontSize: 12,
+  Widget _buildTab(BuildContext context, String label, bool isSelected) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: () => setState(() => _typeFilter = label),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? theme.colorScheme.primary
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: isSelected
+              ? null
+              : Border.all(color: theme.dividerColor),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : theme.hintColor,
+            fontSize: 12,
+          ),
         ),
       ),
     );
@@ -139,22 +136,31 @@ class SelectAssessmentScreen extends StatelessWidget {
 
   Widget _buildAssessmentCard(
     BuildContext context,
-    String title,
-    String subtitle,
-    String date,
-    String status,
-    Color statusColor,
+    SubjectAssessment assessment,
     Color surfaceColor,
+    ThemeData theme,
   ) {
+    final statusColor = switch (assessment.status) {
+      AssessmentAvailability.approved ||
+      AssessmentAvailability.published ||
+      AssessmentAvailability.submitted => Colors.green,
+      AssessmentAvailability.locked ||
+      AssessmentAvailability.archived => Colors.grey,
+      _ => Colors.blue,
+    };
+
     return InkWell(
-      onTap: () => context.push('/staff/marks/select-component'),
+      onTap: () {
+        context.read<MarksBloc>().add(MarksAssessmentSelected(assessment));
+        context.push('/staff/marks/select-component');
+      },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: surfaceColor,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+          border: Border.all(color: theme.dividerColor.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
@@ -163,29 +169,29 @@ class SelectAssessmentScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    assessment.title.isEmpty
+                        ? assessment.assessmentTypeName
+                        : assessment.title,
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    subtitle,
-                    style: const TextStyle(
-                      color: Color(0xFF94A3B8),
-                      fontSize: 12,
-                    ),
+                    '${assessment.assessmentTypeName} • '
+                    '${assessment.maximumMark.toStringAsFixed(0)} Marks',
+                    style: TextStyle(color: theme.hintColor, fontSize: 12),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    date,
-                    style: const TextStyle(
-                      color: Color(0xFF64748B),
-                      fontSize: 11,
+                  if (assessment.assessmentDate != null)
+                    Text(
+                      _formatDate(assessment.assessmentDate!),
+                      style: TextStyle(
+                        color: theme.hintColor.withValues(alpha: 0.7),
+                        fontSize: 11,
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -195,7 +201,7 @@ class SelectAssessmentScreen extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      status,
+                      assessment.status.label,
                       style: TextStyle(
                         color: statusColor,
                         fontSize: 10,
@@ -203,11 +209,7 @@ class SelectAssessmentScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    const Icon(
-                      Icons.chevron_right,
-                      color: Colors.grey,
-                      size: 16,
-                    ),
+                    Icon(Icons.chevron_right, color: theme.hintColor, size: 16),
                   ],
                 ),
               ],
@@ -216,5 +218,13 @@ class SelectAssessmentScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  static String _formatDate(DateTime date) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 }

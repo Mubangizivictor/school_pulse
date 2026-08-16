@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/features/teacher/domain/entities/subject_assessment.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/marks/marks_bloc.dart';
 
 class StudentMarksDetailScreen extends StatelessWidget {
   final String studentId;
@@ -8,67 +11,114 @@ class StudentMarksDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.chevron_left, color: AppColors.textPrimary(context)),
-          onPressed: () => context.pop(),
-        ),
-        title: Text(
-          'Student Marks Detail',
-          style: TextStyle(
-            color: AppColors.textPrimary(context),
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            const CircleAvatar(
-              radius: 40,
-              backgroundImage: NetworkImage('https://placeholder.com/150'),
+    return BlocBuilder<MarksBloc, MarksState>(
+      builder: (context, state) {
+        final student = state.students
+            .where((s) => s.studentId == studentId)
+            .firstOrNull;
+        final assessment = state.selectedAssessment;
+
+        if (student == null || assessment == null) {
+          return Scaffold(
+            backgroundColor: AppColors.background(context),
+            appBar: AppBar(title: const Text('Student Marks Detail')),
+            body: const Center(child: Text('No marks to show.')),
+          );
+        }
+
+        final components = assessment.markableComponents;
+        final entry = state.entries[studentId];
+        final scored = entry?.status == MarkEntryStatus.scored
+            ? entry!.score
+            : null;
+        final maxMark = components.isEmpty
+            ? assessment.maximumMark
+            : (state.selectedComponent?.maximumMark ?? assessment.maximumMark);
+        final percentage = scored == null || maxMark <= 0
+            ? null
+            : (scored / maxMark * 100);
+
+        return Scaffold(
+          backgroundColor: AppColors.background(context),
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: Icon(
+                Icons.chevron_left,
+                color: AppColors.textPrimary(context),
+              ),
+              onPressed: () => context.pop(),
             ),
-            const SizedBox(height: 12),
-            Text(
-              'Akena Brian',
+            title: Text(
+              'Student Marks Detail',
               style: TextStyle(
                 color: AppColors.textPrimary(context),
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            Text(
-              'ADM/2022/001',
-              style: TextStyle(
-                color: AppColors.textSecondary(context),
-                fontSize: 12,
-              ),
+            centerTitle: true,
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                CircleAvatar(
+                  radius: 40,
+                  backgroundImage: (student.photoUrl?.isNotEmpty ?? false)
+                      ? NetworkImage(student.photoUrl!)
+                      : null,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  student.name,
+                  style: TextStyle(
+                    color: AppColors.textPrimary(context),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  student.admissionNumber,
+                  style: TextStyle(
+                    color: AppColors.textSecondary(context),
+                    fontSize: 12,
+                  ),
+                ),
+                Text(
+                  student.className,
+                  style: TextStyle(
+                    color: AppColors.textSecondary(context),
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                _buildAssessmentSummary(
+                  context,
+                  assessment,
+                  scored,
+                  maxMark,
+                  percentage,
+                ),
+                const SizedBox(height: 24),
+                if (components.length > 1)
+                  _buildComponentBreakdown(context, components, state),
+              ],
             ),
-            Text(
-              'Grade 10A',
-              style: TextStyle(
-                color: AppColors.textSecondary(context),
-                fontSize: 12,
-              ),
-            ),
-            const SizedBox(height: 32),
-            _buildAssessmentSummary(context),
-            const SizedBox(height: 24),
-            _buildComponentBreakdown(context),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildAssessmentSummary(BuildContext context) {
+  Widget _buildAssessmentSummary(
+    BuildContext context,
+    SubjectAssessment assessment,
+    double? scored,
+    double maxMark,
+    double? percentage,
+  ) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -81,7 +131,9 @@ class StudentMarksDetailScreen extends StatelessWidget {
       child: Column(
         children: [
           Text(
-            'Mid Term Test',
+            assessment.title.isEmpty
+                ? assessment.assessmentTypeName
+                : assessment.title,
             style: TextStyle(
               color: AppColors.textPrimary(context),
               fontSize: 16,
@@ -99,7 +151,9 @@ class StudentMarksDetailScreen extends StatelessWidget {
                     width: 80,
                     height: 80,
                     child: CircularProgressIndicator(
-                      value: 16 / 40,
+                      value: scored == null || maxMark <= 0
+                          ? 0
+                          : (scored / maxMark).clamp(0, 1),
                       strokeWidth: 8,
                       backgroundColor: AppColors.border(context),
                       color: AppColors.success(context),
@@ -109,7 +163,7 @@ class StudentMarksDetailScreen extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        '16',
+                        scored?.toStringAsFixed(0) ?? '—',
                         style: TextStyle(
                           color: AppColors.textPrimary(context),
                           fontSize: 20,
@@ -117,7 +171,7 @@ class StudentMarksDetailScreen extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '/ 40',
+                        '/ ${maxMark.toStringAsFixed(0)}',
                         style: TextStyle(
                           color: AppColors.textSecondary(context),
                           fontSize: 10,
@@ -133,15 +187,10 @@ class StudentMarksDetailScreen extends StatelessWidget {
                   _buildStatItem(
                     context,
                     'Percentage',
-                    '40%',
+                    percentage == null
+                        ? '—'
+                        : '${percentage.toStringAsFixed(0)}%',
                     AppColors.success(context),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildStatItem(
-                    context,
-                    'Grade',
-                    'C',
-                    AppColors.warning(context),
                   ),
                 ],
               ),
@@ -180,7 +229,11 @@ class StudentMarksDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildComponentBreakdown(BuildContext context) {
+  Widget _buildComponentBreakdown(
+    BuildContext context,
+    List<AssessmentComponent> components,
+    MarksState state,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -193,34 +246,23 @@ class StudentMarksDetailScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        _buildComponentItem(
-          context,
-          'Section A',
-          '16 / 20',
-          AppColors.success(context),
-        ),
-        _buildComponentItem(
-          context,
-          'Section B',
-          '-- / 10',
-          AppColors.textMuted(context),
-        ),
-        _buildComponentItem(
-          context,
-          'Section C',
-          '-- / 10',
-          AppColors.textMuted(context),
-        ),
+        for (final component in components)
+          _buildComponentItem(context, component, state),
       ],
     );
   }
 
   Widget _buildComponentItem(
     BuildContext context,
-    String name,
-    String score,
-    Color scoreColor,
+    AssessmentComponent component,
+    MarksState state,
   ) {
+    final isSelected = state.selectedComponent?.id == component.id;
+    final entry = isSelected ? state.entries[studentId] : null;
+    final scoreLabel = entry?.status == MarkEntryStatus.scored
+        ? '${entry!.score?.toStringAsFixed(0) ?? '--'} / ${component.maximumMark.toStringAsFixed(0)}'
+        : '-- / ${component.maximumMark.toStringAsFixed(0)}';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -235,16 +277,15 @@ class StudentMarksDetailScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            name,
-            style: TextStyle(
-              color: AppColors.textPrimary(context),
-              fontSize: 14,
-            ),
+            component.name,
+            style: TextStyle(color: AppColors.textPrimary(context), fontSize: 14),
           ),
           Text(
-            score,
+            scoreLabel,
             style: TextStyle(
-              color: scoreColor,
+              color: entry?.status == MarkEntryStatus.scored
+                  ? AppColors.success(context)
+                  : AppColors.textMuted(context),
               fontSize: 14,
               fontWeight: FontWeight.bold,
             ),

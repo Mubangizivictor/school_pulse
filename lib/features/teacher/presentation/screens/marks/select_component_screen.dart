@@ -1,107 +1,110 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/features/teacher/domain/entities/subject_assessment.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/marks/marks_bloc.dart';
 
 class SelectComponentScreen extends StatelessWidget {
   const SelectComponentScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = const Color(0xFF0F172A);
-    final surfaceColor = const Color(0xFF1E293B);
+    final theme = Theme.of(context);
 
-    return Scaffold(
-      backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.chevron_left, color: Colors.white),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text(
-          'Select Component',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            const Text(
-              'Mid Term Test',
+    return BlocBuilder<MarksBloc, MarksState>(
+      builder: (context, state) {
+        final assessment = state.selectedAssessment;
+
+        if (assessment == null) {
+          return Scaffold(
+            backgroundColor: theme.scaffoldBackgroundColor,
+            appBar: AppBar(title: const Text('Select Component')),
+            body: const Center(child: Text('No assessment selected.')),
+          );
+        }
+
+        final components = assessment.markableComponents;
+
+        return Scaffold(
+          backgroundColor: theme.scaffoldBackgroundColor,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: Icon(
+                Icons.chevron_left,
+                color: theme.colorScheme.onSurface,
+              ),
+              onPressed: () => context.pop(),
+            ),
+            title: Text(
+              'Select Component',
               style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
+                color: theme.colorScheme.onSurface,
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const Text(
-              'Total: 40 Marks',
-              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
-            ),
-            const SizedBox(height: 24),
-            _buildComponentCard(context, 'Section A', '20 Marks', surfaceColor),
-            _buildComponentCard(context, 'Section B', '10 Marks', surfaceColor),
-            _buildComponentCard(context, 'Section C', '10 Marks', surfaceColor),
-            const Spacer(),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => context.push('/staff/marks/enter'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4338CA),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'Continue',
+            centerTitle: true,
+          ),
+          body: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                Text(
+                  assessment.title.isEmpty
+                      ? assessment.assessmentTypeName
+                      : assessment.title,
                   style: TextStyle(
-                    color: Colors.white,
+                    color: theme.colorScheme.onSurface,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
+                Text(
+                  'Total: ${assessment.maximumMark.toStringAsFixed(0)} Marks',
+                  style: TextStyle(color: theme.hintColor, fontSize: 12),
+                ),
+                const SizedBox(height: 24),
+                for (final component in components)
+                  _buildComponentCard(context, component, theme),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
   Widget _buildComponentCard(
     BuildContext context,
-    String title,
-    String marks,
-    Color surfaceColor,
+    AssessmentComponent component,
+    ThemeData theme,
   ) {
     return InkWell(
-      onTap: () => context.push('/staff/marks/enter'),
+      onTap: () {
+        context.read<MarksBloc>().add(MarksComponentSelected(component));
+        context.push('/staff/marks/enter');
+      },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: surfaceColor,
+          color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+          border: Border.all(color: theme.dividerColor.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFF312E81).withValues(alpha: 0.5),
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.description_outlined,
-                color: Color(0xFF818CF8),
+                color: theme.colorScheme.primary,
                 size: 20,
               ),
             ),
@@ -111,23 +114,20 @@ class SelectComponentScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    component.name,
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
-                    marks,
-                    style: const TextStyle(
-                      color: Color(0xFF94A3B8),
-                      fontSize: 12,
-                    ),
+                    '${component.maximumMark.toStringAsFixed(0)} Marks',
+                    style: TextStyle(color: theme.hintColor, fontSize: 12),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+            Icon(Icons.chevron_right, color: theme.hintColor, size: 20),
           ],
         ),
       ),

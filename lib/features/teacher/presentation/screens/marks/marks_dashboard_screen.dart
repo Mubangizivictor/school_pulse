@@ -1,88 +1,133 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/features/teacher/domain/entities/active_responsibility_context.dart';
+import 'package:school_pulse/features/teacher/domain/entities/subject_assessment.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/marks/marks_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_state.dart';
 
-class MarksDashboardScreen extends StatelessWidget {
+class MarksDashboardScreen extends StatefulWidget {
   const MarksDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  State<MarksDashboardScreen> createState() => _MarksDashboardScreenState();
+}
 
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
-              _buildHeader(context),
-              const SizedBox(height: 24),
-              _buildClassSelector(context),
-              const SizedBox(height: 16),
-              _buildSubjectCard(context, theme),
-              const SizedBox(height: 24),
-              Text(
-                'Quick Actions',
-                style: TextStyle(
-                  color: AppColors.textPrimary(context),
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              _buildQuickActions(context),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Recent Assessments',
-                    style: TextStyle(
-                      color: AppColors.textPrimary(context),
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+class _MarksDashboardScreenState extends State<MarksDashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    final active = context.read<SubjectTeacherContextBloc>().state.active;
+    if (active != null) {
+      context.read<MarksBloc>().add(MarksRequested(active));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<SubjectTeacherContextBloc, SubjectTeacherContextState>(
+      builder: (context, contextState) {
+        final active = contextState.active;
+
+        return Scaffold(
+          backgroundColor: AppColors.background(context),
+          body: SafeArea(
+            child: active == null
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Text(
+                        'You are not currently assigned to teach a subject, '
+                        'so there are no marks to enter.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: AppColors.textMuted(context)),
+                      ),
                     ),
+                  )
+                : BlocBuilder<MarksBloc, MarksState>(
+                    builder: (context, state) {
+                      if (state.isLoading) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      return SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 20),
+                            _buildHeader(context, active),
+                            const SizedBox(height: 24),
+                            _buildSubjectCard(context, active, state),
+                            const SizedBox(height: 24),
+                            Text(
+                              'Quick Actions',
+                              style: TextStyle(
+                                color: AppColors.textPrimary(context),
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            _buildQuickActions(context),
+                            const SizedBox(height: 24),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Assessments',
+                                  style: TextStyle(
+                                    color: AppColors.textPrimary(context),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () =>
+                                      context.push('/staff/marks/history'),
+                                  child: Text(
+                                    'View All',
+                                    style: TextStyle(
+                                      color: AppColors.primary(context),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            _buildAssessmentsList(context, state.assessments),
+                            const SizedBox(height: 100),
+                          ],
+                        ),
+                      );
+                    },
                   ),
-                  TextButton(
-                    onPressed: () => context.push('/staff/marks/history'),
-                    child: Text(
-                      'View All',
-                      style: TextStyle(color: AppColors.primary(context)),
-                    ),
-                  ),
-                ],
-              ),
-              _buildRecentAssessments(context),
-              const SizedBox(height: 100), // Bottom nav space
-            ],
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, ActiveResponsibilityContext active) {
     return Row(
       children: [
-        const AvatarInitials(name: 'MJ', size: 48),
+        AvatarInitials(name: _initialsOf(active.staffId), size: 48),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Good Afternoon,',
+                'Marks',
                 style: TextStyle(
                   color: AppColors.textSecondary(context),
                   fontSize: 12,
                 ),
               ),
               Text(
-                'Mr. Okot John',
+                active.subjectName ?? 'Subject',
                 style: TextStyle(
                   color: AppColors.textPrimary(context),
                   fontSize: 18,
@@ -90,7 +135,10 @@ class MarksDashboardScreen extends StatelessWidget {
                 ),
               ),
               Text(
-                'Subject Teacher • Mathematics',
+                [
+                  active.className,
+                  active.streamName,
+                ].where((e) => e != null && e.isNotEmpty).join(' '),
                 style: TextStyle(
                   color: AppColors.primary(context),
                   fontSize: 12,
@@ -99,82 +147,24 @@ class MarksDashboardScreen extends StatelessWidget {
             ],
           ),
         ),
-        IconButton(
-          icon: Icon(
-            Icons.chat_bubble_outline,
-            color: AppColors.textPrimary(context),
-          ),
-          onPressed: () {},
-        ),
-        Stack(
-          children: [
-            IconButton(
-              icon: Icon(
-                Icons.notifications_none,
-                color: AppColors.textPrimary(context),
-              ),
-              onPressed: () {},
-            ),
-            Positioned(
-              right: 8,
-              top: 8,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: AppColors.danger(context),
-                  shape: BoxShape.circle,
-                ),
-                child: const Text(
-                  '1',
-                  style: TextStyle(color: Colors.white, fontSize: 8),
-                ),
-              ),
-            ),
-          ],
-        ),
       ],
     );
   }
 
-  Widget _buildClassSelector(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceElevated(context),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.border(context).withValues(alpha: 0.5),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Text(
-                'Class: ',
-                style: TextStyle(color: AppColors.textSecondary(context)),
-              ),
-              Text(
-                'Grade 10A (Science)',
-                style: TextStyle(
-                  color: AppColors.textPrimary(context),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          Icon(
-            Icons.keyboard_arrow_down,
-            color: AppColors.textPrimary(context),
-          ),
-        ],
-      ),
-    );
-  }
+  static String _initialsOf(String value) =>
+      value.isEmpty ? '?' : value.substring(0, 1).toUpperCase();
 
-  Widget _buildSubjectCard(BuildContext context, ThemeData theme) {
+  Widget _buildSubjectCard(
+    BuildContext context,
+    ActiveResponsibilityContext active,
+    MarksState state,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final total = state.assessments.length;
+    final pending = state.assessments
+        .where((a) => a.status.acceptsEntry)
+        .length;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -193,66 +183,16 @@ class MarksDashboardScreen extends StatelessWidget {
           color: AppColors.border(context).withValues(alpha: 0.5),
         ),
       ),
-      child: Column(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.primary(context).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.functions,
-                  color: AppColors.primary(context),
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Mathematics',
-                      style: TextStyle(
-                        color: AppColors.textPrimary(context),
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      'Term 2, 2024/2025',
-                      style: TextStyle(
-                        color: AppColors.textSecondary(context),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildMetric(context, '5', 'Assessments'),
-              _buildMetric(context, '18', 'Marks Entered'),
-              _buildMetric(
-                context,
-                '84%',
-                'Average Score',
-                valueColor: AppColors.goldenYellow,
-              ),
-              _buildMetric(
-                context,
-                '2',
-                'Pending',
-                valueColor: AppColors.deepOrange,
-              ),
-            ],
+          _buildMetric(context, '$total', 'Assessments'),
+          _buildMetric(context, '${state.students.length}', 'Students'),
+          _buildMetric(
+            context,
+            '$pending',
+            'Open for entry',
+            valueColor: AppColors.goldenYellow,
           ),
         ],
       ),
@@ -303,7 +243,7 @@ class MarksDashboardScreen extends StatelessWidget {
         const SizedBox(width: 12),
         _buildActionItem(
           context,
-          'Mark Analytics',
+          'Analytics',
           Icons.bar_chart,
           '/staff/marks/analytics',
         ),
@@ -348,41 +288,41 @@ class MarksDashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRecentAssessments(BuildContext context) {
+  Widget _buildAssessmentsList(
+    BuildContext context,
+    List<SubjectAssessment> assessments,
+  ) {
+    if (assessments.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Text(
+          'No assessments have been set up for this subject yet.',
+          style: TextStyle(color: AppColors.textMuted(context)),
+        ),
+      );
+    }
+
     return Column(
       children: [
-        _buildAssessmentItem(
-          context,
-          'Mid Term Test',
-          'Test',
-          'Completed',
-          AppColors.success(context),
-        ),
-        _buildAssessmentItem(
-          context,
-          'Assignment 2',
-          'Assignment',
-          'Pending',
-          AppColors.warning(context),
-        ),
-        _buildAssessmentItem(
-          context,
-          'Quiz 1',
-          'Quiz',
-          'Completed',
-          AppColors.success(context),
-        ),
+        for (final assessment in assessments.take(5))
+          _buildAssessmentItem(context, assessment),
       ],
     );
   }
 
   Widget _buildAssessmentItem(
     BuildContext context,
-    String title,
-    String type,
-    String status,
-    Color statusColor,
+    SubjectAssessment assessment,
   ) {
+    final statusColor = switch (assessment.status) {
+      AssessmentAvailability.approved ||
+      AssessmentAvailability.published ||
+      AssessmentAvailability.submitted => AppColors.success(context),
+      AssessmentAvailability.locked ||
+      AssessmentAvailability.archived => AppColors.textMuted(context),
+      _ => AppColors.warning(context),
+    };
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -393,51 +333,59 @@ class MarksDashboardScreen extends StatelessWidget {
           color: AppColors.border(context).withValues(alpha: 0.5),
         ),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: AppColors.textPrimary(context),
-                    fontWeight: FontWeight.bold,
+      child: InkWell(
+        onTap: () {
+          context.read<MarksBloc>().add(MarksAssessmentSelected(assessment));
+          context.push('/staff/marks/select-component');
+        },
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    assessment.title.isEmpty
+                        ? assessment.assessmentTypeName
+                        : assessment.title,
+                    style: TextStyle(
+                      color: AppColors.textPrimary(context),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                Text(
-                  type,
-                  style: TextStyle(
-                    color: AppColors.textSecondary(context),
-                    fontSize: 12,
+                  Text(
+                    assessment.assessmentTypeName,
+                    style: TextStyle(
+                      color: AppColors.textSecondary(context),
+                      fontSize: 12,
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              status,
-              style: TextStyle(
-                color: statusColor,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
+                ],
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Icon(
-            Icons.chevron_right,
-            color: AppColors.textMuted(context),
-            size: 16,
-          ),
-        ],
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                assessment.status.label,
+                style: TextStyle(
+                  color: statusColor,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              Icons.chevron_right,
+              color: AppColors.textMuted(context),
+              size: 16,
+            ),
+          ],
+        ),
       ),
     );
   }
