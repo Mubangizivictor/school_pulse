@@ -50,6 +50,7 @@ import 'package:school_pulse/features/structure/presentation/screens/academics/l
 import 'package:school_pulse/features/structure/presentation/screens/academics/years_terms_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/classes_streams_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/subjects_screen.dart';
+import 'package:school_pulse/features/structure/presentation/screens/academics/subject_class_assignments_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/departments_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/grading_systems_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/assessment_types_screen.dart';
@@ -62,6 +63,8 @@ import 'package:school_pulse/features/structure/presentation/screens/structure_s
 import 'package:school_pulse/features/structure/presentation/screens/setup_progress_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/structure_validation_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/timetable_config_screen.dart';
+import 'package:school_pulse/features/structure/presentation/screens/timetables/timetables_list_screen.dart';
+import 'package:school_pulse/features/structure/presentation/screens/timetables/timetable_builder_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/attendance_config_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/communication_config_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/document_templates_screen.dart';
@@ -1509,7 +1512,9 @@ final router = GoRouter(
                     ),
                     GoRoute(
                       path: 'years-terms',
-                      builder: (context, state) => const YearsTermsScreen(),
+                      builder: (context, state) => YearsTermsScreen(
+                        showTerms: state.uri.queryParameters['mode'] == 'terms',
+                      ),
                     ),
                     GoRoute(
                       path: 'classes-streams',
@@ -1518,6 +1523,11 @@ final router = GoRouter(
                     GoRoute(
                       path: 'subjects',
                       builder: (context, state) => const SubjectsScreen(),
+                    ),
+                    GoRoute(
+                      path: 'subject-class-assignments',
+                      builder: (context, state) =>
+                          const SubjectClassAssignmentsScreen(),
                     ),
                     GoRoute(
                       path: 'departments',
@@ -1593,13 +1603,32 @@ final router = GoRouter(
                   builder: (context, state) => const TimetableConfigScreen(),
                 ),
                 GoRoute(
+                  path: 'timetables',
+                  builder: (context, state) => const TimetablesListScreen(),
+                  routes: [
+                    GoRoute(
+                      path: ':timetableId',
+                      builder: (context, state) => TimetableBuilderScreen(
+                        timetableId: state.pathParameters['timetableId']!,
+                      ),
+                    ),
+                  ],
+                ),
+                GoRoute(
                   path: 'attendance-config',
-                  builder: (context, state) => const AttendanceConfigScreen(),
+                  builder: (context, state) => AttendanceConfigScreen(
+                    initialTab:
+                        int.tryParse(state.uri.queryParameters['tab'] ?? '0') ??
+                        0,
+                  ),
                 ),
                 GoRoute(
                   path: 'communication-config',
-                  builder: (context, state) =>
-                      const CommunicationConfigScreen(),
+                  builder: (context, state) => CommunicationConfigScreen(
+                    initialTab:
+                        int.tryParse(state.uri.queryParameters['tab'] ?? '0') ??
+                        0,
+                  ),
                 ),
                 GoRoute(
                   path: 'document-templates',

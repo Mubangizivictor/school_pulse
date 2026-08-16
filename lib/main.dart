@@ -48,6 +48,7 @@ import 'package:school_pulse/features/inventory/presentation/bloc/inventory_bloc
 import 'package:school_pulse/features/inventory/presentation/bloc/inventory_event.dart';
 import 'package:school_pulse/features/inventory/presentation/bloc/stores_assets_bloc.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/structure_bloc.dart';
+import 'package:school_pulse/features/structure/presentation/bloc/timetable_bloc.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/structure_event.dart';
 import 'package:school_pulse/features/hr/presentation/bloc/hr_bloc.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
@@ -197,6 +198,7 @@ class SchoolPulseApp extends StatelessWidget {
         ),
         BlocProvider(create: (_) => di.sl<StoresAssetsBloc>()),
         BlocProvider(create: (_) => di.sl<StructureBloc>()),
+        BlocProvider(create: (_) => di.sl<TimetableBloc>()),
         BlocProvider(create: (_) => di.sl<DeanBloc>()),
         BlocProvider(create: (_) => di.sl<ReligionBloc>()),
         BlocProvider(create: (_) => di.sl<ExamsBloc>()),

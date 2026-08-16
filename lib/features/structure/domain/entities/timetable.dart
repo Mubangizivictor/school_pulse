@@ -191,6 +191,12 @@ class TimetableLesson extends Equatable {
   final String id;
   final String schoolId;
   final String timetableId;
+
+  /// Denormalized from the parent [Timetable] so a school-wide conflict scan
+  /// can query lessons directly by year/term without joining every
+  /// timetable first.
+  final String academicYearId;
+  final String termId;
   final String classId;
   final String className;
   final String streamId;
@@ -213,6 +219,8 @@ class TimetableLesson extends Equatable {
     required this.id,
     required this.schoolId,
     required this.timetableId,
+    this.academicYearId = '',
+    this.termId = '',
     required this.classId,
     this.className = '',
     this.streamId = '',
@@ -243,6 +251,8 @@ class TimetableLesson extends Equatable {
     String? id,
     String? schoolId,
     String? timetableId,
+    String? academicYearId,
+    String? termId,
     String? classId,
     String? className,
     String? streamId,
@@ -265,6 +275,8 @@ class TimetableLesson extends Equatable {
       id: id ?? this.id,
       schoolId: schoolId ?? this.schoolId,
       timetableId: timetableId ?? this.timetableId,
+      academicYearId: academicYearId ?? this.academicYearId,
+      termId: termId ?? this.termId,
       classId: classId ?? this.classId,
       className: className ?? this.className,
       streamId: streamId ?? this.streamId,
@@ -290,6 +302,8 @@ class TimetableLesson extends Equatable {
     id,
     schoolId,
     timetableId,
+    academicYearId,
+    termId,
     classId,
     className,
     streamId,
