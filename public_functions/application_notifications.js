@@ -3,6 +3,7 @@ const admin = require('firebase-admin');
 const { notifyOwners } = require('./owner_notification_engine');
 const { RESEND_API_KEY } = require('./email/email_service');
 const { enqueueTemplatedEmail } = require('./email/transactional_queue');
+const { applicationApproval, attachmentFor } = require('./documents/official_document_service');
 
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
@@ -84,11 +85,13 @@ exports.notifyOwnerOfSchoolApplication = onDocumentWritten(
     }
 
     if (afterStatus === 'approved' && beforeStatus !== 'approved') {
+      const officialDocument = await applicationApproval(applicationId, application);
       await enqueueTemplatedEmail({
         eventId: `application_approved_${applicationId}`,
         templateId: 'application_approved',
         to: applicantEmail,
         data: { schoolName, applicationId, adminName },
+        attachments: [attachmentFor(officialDocument)],
       });
 
       // Push, alongside the email above, to any device the applicant has

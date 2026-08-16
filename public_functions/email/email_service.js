@@ -33,7 +33,7 @@ const RESEND_API_KEY = defineSecret('RESEND_API_KEY');
  * @param {object} [params.data] - template-specific data (will be escaped where rendered)
  * @param {object} [params.schoolBranding] - optional display branding override
  */
-async function sendTemplatedEmail({ eventId, templateId, to, data = {}, schoolBranding = null }) {
+async function sendTemplatedEmail({ eventId, templateId, to, data = {}, schoolBranding = null, attachments = [] }) {
   if (!eventId) throw new Error('sendTemplatedEmail: eventId is required.');
   if (!isValidTemplateId(templateId)) throw new Error(`sendTemplatedEmail: unknown templateId "${templateId}".`);
 
@@ -65,6 +65,8 @@ async function sendTemplatedEmail({ eventId, templateId, to, data = {}, schoolBr
   const sendPayload = hosted
     ? buildHostedPayload(templateId, hosted, data, recipient)
     : buildLocalPayload(templateId, data, recipient, schoolBranding);
+  const resolvedAttachments = await resolveAttachments(attachments);
+  applyAttachments(sendPayload, resolvedAttachments);
 
   const base = {
     eventId,
@@ -73,6 +75,7 @@ async function sendTemplatedEmail({ eventId, templateId, to, data = {}, schoolBr
     subject: sendPayload.subject || null,
     provider,
     hostedTemplateAlias: hosted ? hosted.alias : null,
+    attachments: resolvedAttachments.map((attachment) => ({ filename: attachment.filename, contentType: attachment.contentType })),
     startedAt,
     completed: false,
   };
@@ -107,6 +110,7 @@ async function sendTemplatedEmail({ eventId, templateId, to, data = {}, schoolBr
     }));
 
     const localPayload = buildLocalPayload(templateId, data, recipient, schoolBranding);
+    applyAttachments(localPayload, resolvedAttachments);
     const fallbackOutcome = await attemptSend(localPayload);
     fallback = {
       ...hostedFailure,
@@ -133,6 +137,26 @@ async function sendTemplatedEmail({ eventId, templateId, to, data = {}, schoolBr
     status: outcome.status, resendId: outcome.resendId, error: outcome.error,
   });
   return { ...base, ...completed };
+}
+
+async function resolveAttachments(attachments) {
+  if (!Array.isArray(attachments) || !attachments.length) return [];
+  const result = [];
+  for (const attachment of attachments) {
+    const storagePath = text(attachment?.storagePath, 800);
+    const filename = text(attachment?.filename, 180);
+    if (!storagePath || !filename || !storagePath.startsWith('official_documents/')) {
+      throw new Error('Invalid server-generated attachment descriptor.');
+    }
+    const [content] = await admin.storage().bucket().file(storagePath).download();
+    result.push({ filename, content, contentType: text(attachment?.contentType, 80) || 'application/pdf' });
+  }
+  return result;
+}
+
+function applyAttachments(payload, attachments) {
+  if (Array.isArray(attachments) && attachments.length) payload.attachments = attachments;
+  return payload;
 }
 
 function buildHostedPayload(templateId, hosted, data, recipient) {
@@ -219,5 +243,5 @@ function logResult({ eventId, templateId, recipient, provider, status, resendId,
 module.exports = {
   sendTemplatedEmail,
   RESEND_API_KEY,
-  __test__: { buildHostedPayload, buildLocalPayload, attemptSend },
+  __test__: { buildHostedPayload, buildLocalPayload, attemptSend, resolveAttachments, applyAttachments },
 };

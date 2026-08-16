@@ -3,6 +3,7 @@ const admin = require('firebase-admin');
 const { notifyOwners } = require('./owner_notification_engine');
 const { RESEND_API_KEY } = require('./email/email_service');
 const { enqueueTemplatedEmail } = require('./email/transactional_queue');
+const { paymentAcknowledgement, paymentReceipt, subscriptionDocument, attachmentFor, officialDate } = require('./documents/official_document_service');
 
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
@@ -95,6 +96,7 @@ exports.notifyOwnerOfManualPayment = onDocumentWritten(
     const beforeStatus = String(before.status || '').toLowerCase();
 
     if (reviewable(payment) && !reviewable(before)) {
+      const acknowledgement = await paymentAcknowledgement(paymentId, payment);
       const amount = Math.max(0, Math.round(Number(payment.submittedAmount || payment.amount || 0)));
       const method = paymentMethod(payment.method);
       const ownerAmountLabel = `UGX ${amount.toLocaleString('en-US')}`;
@@ -132,6 +134,7 @@ exports.notifyOwnerOfManualPayment = onDocumentWritten(
         templateId: 'payment_proof_received',
         to: await applicantEmailFor(payment),
         data: { schoolName, paymentId, amountLabel: amountLabel(payment), methodLabel: methodLabel(payment) },
+        attachments: [attachmentFor(acknowledgement)],
       });
 
       await notifyOwners({
@@ -157,6 +160,10 @@ exports.notifyOwnerOfManualPayment = onDocumentWritten(
     }
 
     if (afterStatus === 'approved' && beforeStatus !== 'approved') {
+      // `reviewedAt` is the canonical verification event timestamp. It is
+      // written in the same trusted approval transaction as status=approved.
+      const receipt = await paymentReceipt(paymentId, payment, payment.reviewedAt);
+      const subscription = await subscriptionDocument(paymentId, payment, payment.reviewedAt);
       const expiryMs = Number(payment.subscriptionExpiry || 0);
       const expiryLabel = expiryMs > 0 ? new Date(expiryMs).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
       const recipient = await applicantEmailFor(payment);
@@ -173,6 +180,7 @@ exports.notifyOwnerOfManualPayment = onDocumentWritten(
           planLabel: text(payment.planId, 60),
           expiryLabel,
         },
+        attachments: [attachmentFor(receipt)],
       });
 
       await enqueueTemplatedEmail({
@@ -184,8 +192,9 @@ exports.notifyOwnerOfManualPayment = onDocumentWritten(
           paymentId,
           amountLabel: amountLabel(payment),
           methodLabel: methodLabel(payment),
-          dateLabel: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
+          dateLabel: officialDate(payment.reviewedAt),
         },
+        attachments: [attachmentFor(receipt)],
       });
 
       // subscription_activated on first-ever activation, subscription_renewed
@@ -202,6 +211,7 @@ exports.notifyOwnerOfManualPayment = onDocumentWritten(
           planLabel: text(payment.planId, 60),
           expiryLabel,
         },
+        attachments: [attachmentFor(subscription)],
       });
       return;
     }

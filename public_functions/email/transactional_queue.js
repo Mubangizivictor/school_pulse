@@ -28,7 +28,7 @@ const MAX_ATTEMPTS = RETRY_DELAYS_MS.length + 1;
  * the underlying email_deliveries doc id, so re-enqueuing the same eventId
  * after a successful send is a safe no-op.
  */
-async function enqueueTemplatedEmail({ eventId, templateId, to, data = {}, schoolBranding = null }) {
+async function enqueueTemplatedEmail({ eventId, templateId, to, data = {}, schoolBranding = null, attachments = [] }) {
   if (!eventId) throw new Error('enqueueTemplatedEmail: eventId is required.');
   const ref = db.collection(COLLECTION).doc(eventId);
   await ref.set({
@@ -37,6 +37,14 @@ async function enqueueTemplatedEmail({ eventId, templateId, to, data = {}, schoo
     to: String(to || '').trim().toLowerCase(),
     data,
     schoolBranding: schoolBranding || null,
+    // Store descriptors only. PDF bytes stay in private Cloud Storage and are
+    // loaded by the trusted sender immediately before the Resend call.
+    attachments: Array.isArray(attachments) ? attachments.map((attachment) => ({
+      filename: String(attachment?.filename || '').slice(0, 180),
+      storagePath: String(attachment?.storagePath || '').slice(0, 800),
+      contentType: String(attachment?.contentType || 'application/pdf').slice(0, 80),
+      documentId: String(attachment?.documentId || '').slice(0, 180),
+    })).filter((attachment) => attachment.filename && attachment.storagePath) : [],
     status: 'queued',
     attempts: 0,
     scheduledAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -65,6 +73,7 @@ async function attemptDelivery(snap) {
       to: queueDoc.to,
       data: queueDoc.data || {},
       schoolBranding: queueDoc.schoolBranding || null,
+      attachments: queueDoc.attachments || [],
     });
 
     if (result.status === 'sent' || result.status === 'no_recipient') {

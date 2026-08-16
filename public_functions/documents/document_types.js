@@ -1,0 +1,15 @@
+const DOCUMENT_TYPES = Object.freeze({
+  APPLICATION_APPROVAL: 'application_approval',
+  PAYMENT_ACKNOWLEDGEMENT: 'payment_acknowledgement',
+  PAYMENT_RECEIPT: 'payment_receipt',
+  SUBSCRIPTION: 'subscription',
+});
+
+const TYPE_CONFIG = Object.freeze({
+  [DOCUMENT_TYPES.APPLICATION_APPROVAL]: { prefix: 'APP', title: 'APPLICATION APPROVAL' },
+  [DOCUMENT_TYPES.PAYMENT_ACKNOWLEDGEMENT]: { prefix: 'PAY', title: 'PAYMENT SUBMISSION ACKNOWLEDGEMENT' },
+  [DOCUMENT_TYPES.PAYMENT_RECEIPT]: { prefix: 'RCP', title: 'OFFICIAL PAYMENT RECEIPT' },
+  [DOCUMENT_TYPES.SUBSCRIPTION]: { prefix: 'SUB', title: 'SUBSCRIPTION ACTIVATION / RENEWAL' },
+});
+
+module.exports = { DOCUMENT_TYPES, TYPE_CONFIG };

@@ -6,6 +6,7 @@ const { mtnRequestToPay, mtnGetStatus, mapMtnStatus, newReferenceId } = require(
 const { notifyOwners } = require('./owner_notification_engine');
 const { enqueueTemplatedEmail } = require('./email/transactional_queue');
 const { RESEND_API_KEY } = require('./email/email_service');
+const { paymentReceipt, subscriptionDocument, attachmentFor, officialDate } = require('./documents/official_document_service');
 const { text, resolveSubscriber, schoolAdminEmail } = require('./payments').__internal;
 
 if (!admin.apps.length) admin.initializeApp();
@@ -321,6 +322,10 @@ async function checkAndSettle(paymentId) {
   // Notifications are network calls that must not hold the Firestore
   // transaction open - fired after commit, best-effort.
   const { schoolId, expiryMs, startMs, payment } = settlement;
+  const settledSnap = await db.collection('mtn_payments').doc(paymentId).get();
+  const settledPayment = settledSnap.data() || payment;
+  const receipt = await paymentReceipt(paymentId, settledPayment, settledPayment.settledAt);
+  const subscription = await subscriptionDocument(paymentId, settledPayment, settledPayment.settledAt);
   const amountLabel = `UGX ${Number(payment.realPlanPriceUgx || 0).toLocaleString('en-US')}`;
   const expiryLabel = new Date(expiryMs).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
   const startLabel = new Date(startMs).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -363,6 +368,14 @@ async function checkAndSettle(paymentId) {
         startLabel,
         expiryLabel,
       },
+      attachments: [attachmentFor(receipt)],
+    });
+    await enqueueTemplatedEmail({
+      eventId: `${payment.paymentType === 'renewal' ? 'subscription_renewed' : 'subscription_activated'}_${paymentId}`,
+      templateId: payment.paymentType === 'renewal' ? 'subscription_renewed' : 'subscription_activated',
+      to: recipient,
+      data: { schoolName: text(payment.schoolName, 160), paymentId, amountLabel, methodLabel: 'MTN Mobile Money', planLabel: text(payment.planName, 80), startLabel: officialDate(settledPayment.settledAt), expiryLabel },
+      attachments: [attachmentFor(subscription)],
     });
   } catch (error) {
     console.error('MTN payment success email failed', paymentId, error);
