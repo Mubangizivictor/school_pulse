@@ -73,6 +73,23 @@ class _ManualAttendanceScreenState extends State<ManualAttendanceScreen> {
   }
 
   Future<void> _addPersonManually() async {
+    // A student register is a closed roster.  Letting an operator type an
+    // arbitrary name here would make manual attendance less safe than NFC or
+    // QR: a Class Teacher could create a record for a learner in a different
+    // class instead of selecting them from the assignment-scoped roster.
+    // Other attendance categories deliberately retain this escape hatch for
+    // walk-ins and unregistered visitors.
+    if (widget.category == AttendanceCategory.students) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Student attendance can only be recorded for students on the '
+            'selected class roster.',
+          ),
+        ),
+      );
+      return;
+    }
     final nameController = TextEditingController();
     final idController = TextEditingController();
     final added = await showDialog<bool>(
@@ -241,7 +258,9 @@ class _ManualAttendanceScreenState extends State<ManualAttendanceScreen> {
                   ),
                   const SizedBox(width: AppSpacing.m),
                   OutlinedButton.icon(
-                    onPressed: _addPersonManually,
+                    onPressed: widget.category == AttendanceCategory.students
+                        ? null
+                        : _addPersonManually,
                     icon: const Icon(Icons.person_add_alt_1),
                     label: const Text('Add'),
                   ),

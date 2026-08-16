@@ -2079,8 +2079,30 @@ service cloud.firestore {
     // permissionForCategory() in attendance_category_permission.dart. Read is
     // staff-wide within the same school; writes are never permitted from
     // parents/students.
+    // PermissionEvaluator uses role defaults unless a school has an override
+    // document. Firestore needs the same defaults spelled out: requiring an
+    // override document here made normal Class Teachers unable to submit a
+    // QR/NFC/manual mark even though the app correctly granted them
+    // attendance.class.scan. Keep this mapping in lockstep with
+    // role_permission_defaults.dart.
+    function hasAttendanceDefaultPermission(permissionId) {
+      return (permissionId == 'attendance.class.scan' && hasAnyRole([
+          'classTeacher', 'subjectTeacher', 'deanOfStudies'
+        ])) ||
+        (permissionId == 'attendance.staff.scan' && hasAnyRole(['hrOfficer'])) ||
+        (permissionId == 'attendance.gate.scan' && hasAnyRole(['gatekeeper'])) ||
+        (permissionId == 'attendance.visitors.scan' && hasAnyRole(['receptionist'])) ||
+        (permissionId == 'attendance.library.scan' && hasAnyRole(['librarian'])) ||
+        (permissionId == 'attendance.transport.scan' && hasAnyRole(['transportCoordinator'])) ||
+        (permissionId == 'attendance.meals.scan' && hasAnyRole(['cateringManager'])) ||
+        (permissionId == 'attendance.boarding.scan' && hasAnyRole([
+          'boardingMatron', 'boardingPatron'
+        ]));
+    }
+
     function hasAttendancePermission(schoolId, permissionId) {
-      return hasAnyRole(['schoolAdmin', 'director', 'headTeacher', 'deputyHead']) || (
+      return hasAnyRole(['schoolAdmin', 'director', 'headTeacher', 'deputyHead']) ||
+        hasAttendanceDefaultPermission(permissionId) || (
         isStaff() && exists(/databases/$(database)/documents/schools/$(schoolId)/role_permission_overrides/$(myRole())) &&
         (
           permissionId in get(/databases/$(database)/documents/schools/$(schoolId)/role_permission_overrides/$(myRole())).data.permissions ||
