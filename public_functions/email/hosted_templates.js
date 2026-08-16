@@ -62,9 +62,10 @@ const HOSTED_TEMPLATES = {
     }),
   },
 
-  // Three local ids (manual approval, MTN auto-settlement, receipt) all
-  // represent the same business fact — "payment verified, subscription
-  // active" — which is the one hosted template School Pulse published.
+  // Five local ids (manual approval, MTN auto-settlement, receipt,
+  // subscription activation, payment receipt) all represent the same
+  // business fact — "payment verified, subscription active" — which is the
+  // one hosted template School Pulse published.
   manual_payment_approved: {
     alias: 'payment-verified-1',
     variables: (data) => ({
@@ -110,6 +111,31 @@ const HOSTED_TEMPLATES = {
       payment_method: 'MTN Mobile Money',
       payment_reference: humanReference('payment', data.paymentId),
       rejection_reason: text(data.reason, 500) || 'No reason provided.',
+    }),
+  },
+
+  subscription_activated: {
+    alias: 'payment-verified-1',
+    variables: (data) => ({
+      school_name: text(data.schoolName, 160) || 'A school',
+      amount: text(data.amountLabel, 60) || formatAmount(data.amount),
+      payment_method: text(data.methodLabel, 60) || 'Unknown',
+      payment_reference: humanReference('receipt', data.paymentId),
+      plan_name: text(data.planLabel, 80) || 'School Pulse',
+      subscription_start: text(data.startLabel, 60) || 'Today',
+      subscription_end: text(data.expiryLabel, 60) || 'N/A',
+    }),
+  },
+  payment_receipt: {
+    alias: 'payment-verified-1',
+    variables: (data) => ({
+      school_name: text(data.schoolName, 160) || 'A school',
+      amount: text(data.amountLabel, 60) || formatAmount(data.amount),
+      payment_method: text(data.methodLabel, 60) || 'Unknown',
+      payment_reference: humanReference('receipt', data.paymentId),
+      plan_name: text(data.planLabel, 80) || 'School Pulse',
+      subscription_start: text(data.startLabel, 60) || 'Today',
+      subscription_end: text(data.expiryLabel, 60) || 'N/A',
     }),
   },
 

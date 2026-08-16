@@ -156,8 +156,8 @@ const PRODUCTION_CALL_SITES = {
   payment_proof_received: 'HOSTED_RESEND_TEMPLATE',
   manual_payment_approved: 'HOSTED_RESEND_TEMPLATE',
   manual_payment_rejected: 'HOSTED_RESEND_TEMPLATE',
-  payment_receipt: 'LOCAL_TEMPLATE_FALLBACK', // no published "receipt" template distinct from payment-verified
-  subscription_activated: 'LOCAL_TEMPLATE_FALLBACK', // no published "activated" template; only renewed/expiring/expired
+  payment_receipt: 'HOSTED_RESEND_TEMPLATE', // shares payment-verified-1, same "payment verified" business fact
+  subscription_activated: 'HOSTED_RESEND_TEMPLATE', // shares payment-verified-1, same "payment verified" business fact
   subscription_renewed: 'HOSTED_RESEND_TEMPLATE',
   subscription_expiring: 'HOSTED_RESEND_TEMPLATE',
   subscription_expired: 'HOSTED_RESEND_TEMPLATE',
