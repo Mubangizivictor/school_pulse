@@ -5,6 +5,14 @@ service firebase.storage {
       return request.auth != null &&
         firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.schoolId == schoolId;
     }
+    function canManageInstitutionBranding(schoolId) {
+      return request.auth != null && isSameSchool(schoolId) &&
+        (firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role
+          in ['schoolAdmin', 'headTeacher', 'deputyHead', 'director'] ||
+         ('roles' in firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data &&
+          firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.roles.hasAny(
+            ['schoolAdmin', 'headTeacher', 'deputyHead', 'director'])));
+    }
 
     match /school_assets/{fileName} {
       allow read: if true;
@@ -19,6 +27,17 @@ service firebase.storage {
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
       allow delete: if isSameSchool(schoolId);
+    }
+    // Institution Settings uploads use a deliberately narrow, tenant-scoped
+    // namespace.  This prevents one tenant's branding from being addressed
+    // through another tenant's conventional school-assets folder.
+    match /institutions/{institutionId}/branding/{assetType}/{fileName} {
+      allow read: if isSameSchool(institutionId);
+      allow write: if canManageInstitutionBranding(institutionId)
+        && assetType in ['logo', 'badge', 'splash', 'banners']
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/(png|jpeg|webp)');
+      allow delete: if canManageInstitutionBranding(institutionId);
     }
     match /profile_photos/{uid}/{fileName} {
       allow read: if request.auth != null;

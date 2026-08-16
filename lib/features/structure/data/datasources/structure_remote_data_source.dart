@@ -882,10 +882,36 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   Future<void> updateInstitutionProfile(
     InstitutionProfile profile,
     String schoolId,
-  ) => _institutionProfileDoc(schoolId).set(_institutionProfileToMap(profile));
+  ) async {
+    final doc = _institutionProfileDoc(schoolId);
+    await firestore.runTransaction((transaction) async {
+      final current = await transaction.get(doc);
+      final currentData = current.data() ?? const <String, dynamic>{};
+      final existingColors = List<String>.from(
+        currentData['colors'] ?? const <String>[],
+      );
+      final brandingChanged =
+          currentData['logoUrl'] != profile.logoUrl ||
+          currentData['badgeUrl'] != profile.badgeUrl ||
+          existingColors.join('|') != profile.colors.join('|');
+      transaction.set(doc, {
+        ..._institutionProfileToMap(profile, institutionId: schoolId),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'createdAt': currentData['createdAt'] ?? FieldValue.serverTimestamp(),
+        'version': ((currentData['version'] as num?)?.toInt() ?? 0) + 1,
+        'brandingVersion': brandingChanged
+            ? ((currentData['brandingVersion'] as num?)?.toInt() ?? 0) + 1
+            : ((currentData['brandingVersion'] as num?)?.toInt() ?? 1),
+      }, SetOptions(merge: true));
+    });
+  }
 
   InstitutionProfile _institutionProfileFromMap(Map<String, dynamic> map) {
     return InstitutionProfile(
+      institutionId: map['institutionId'] ?? '',
+      displayName: map['displayName'] ?? '',
+      displayLabel: map['displayLabel'] ?? '',
+      initials: map['initials'] ?? '',
       name: map['name'] ?? '',
       shortName: map['shortName'] ?? '',
       motto: map['motto'] ?? '',
@@ -906,7 +932,10 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       gpsLat: (map['gpsLat'] as num?)?.toDouble(),
       gpsLng: (map['gpsLng'] as num?)?.toDouble(),
       phone: map['phone'] ?? '',
+      secondaryPhone: map['secondaryPhone'] ?? '',
+      whatsappNumber: map['whatsappNumber'] ?? '',
       email: map['email'] ?? '',
+      supportEmail: map['supportEmail'] ?? '',
       website: map['website'] ?? '',
       socialMedia: Map<String, String>.from(map['socialMedia'] ?? const {}),
       timeZone: map['timeZone'] ?? '',
@@ -914,10 +943,23 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       language: map['language'] ?? '',
       dateFormat: map['dateFormat'] ?? '',
       timeFormat: map['timeFormat'] ?? '',
+      postalAddress: map['postalAddress'] ?? '',
+      legalEntityName: map['legalEntityName'] ?? '',
+      ownershipType: map['ownershipType'] ?? '',
+      foundingYear: (map['foundingYear'] as num?)?.toInt(),
+      brandingVersion: (map['brandingVersion'] as num?)?.toInt() ?? 1,
+      version: (map['version'] as num?)?.toInt() ?? 1,
     );
   }
 
-  Map<String, dynamic> _institutionProfileToMap(InstitutionProfile e) => {
+  Map<String, dynamic> _institutionProfileToMap(
+    InstitutionProfile e, {
+    required String institutionId,
+  }) => {
+    'institutionId': institutionId,
+    'displayName': e.displayName,
+    'displayLabel': e.displayLabel,
+    'initials': e.initials,
     'name': e.name,
     'shortName': e.shortName,
     'motto': e.motto,
@@ -938,7 +980,10 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     'gpsLat': e.gpsLat,
     'gpsLng': e.gpsLng,
     'phone': e.phone,
+    'secondaryPhone': e.secondaryPhone,
+    'whatsappNumber': e.whatsappNumber,
     'email': e.email,
+    'supportEmail': e.supportEmail,
     'website': e.website,
     'socialMedia': e.socialMedia,
     'timeZone': e.timeZone,
@@ -946,6 +991,10 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     'language': e.language,
     'dateFormat': e.dateFormat,
     'timeFormat': e.timeFormat,
+    'postalAddress': e.postalAddress,
+    'legalEntityName': e.legalEntityName,
+    'ownershipType': e.ownershipType,
+    'foundingYear': e.foundingYear,
   };
 
   // Campuses

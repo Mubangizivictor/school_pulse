@@ -57,6 +57,7 @@ import 'package:school_pulse/features/structure/presentation/screens/academics/a
 import 'package:school_pulse/features/structure/presentation/screens/people_structure_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/assessment_grading_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/campus_facilities_screen.dart';
+import 'package:school_pulse/features/structure/presentation/screens/institution_settings_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/operations_config_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/feature_toggles_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/structure_setup_wizard_screen.dart';
@@ -1493,6 +1494,11 @@ final router = GoRouter(
                     state.uri.queryParameters['section'] ?? 'overview',
               ),
               routes: [
+                GoRoute(
+                  path: 'institution',
+                  builder: (context, state) =>
+                      const InstitutionSettingsScreen(),
+                ),
                 GoRoute(
                   path: 'academic',
                   builder: (context, state) {

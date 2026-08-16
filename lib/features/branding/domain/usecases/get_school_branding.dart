@@ -38,6 +38,7 @@ class GetSchoolBranding implements UseCase<SchoolBranding, String> {
       }
 
       final schoolName =
+          nonEmpty(profileData['displayName']) ??
           nonEmpty(profileData['name']) ??
           nonEmpty(data['name']) ??
           nonEmpty(data['schoolName']);
@@ -63,6 +64,7 @@ class GetSchoolBranding implements UseCase<SchoolBranding, String> {
           schoolId: schoolId,
           schoolName: schoolName,
           schoolInitials:
+              nonEmpty(profileData['initials']) ??
               nonEmpty(profileData['shortName']) ??
               (data['initials'] ?? data['schoolInitials'] ?? '').toString(),
           schoolMotto:
@@ -84,7 +86,10 @@ class GetSchoolBranding implements UseCase<SchoolBranding, String> {
           welcomeMessage: brandingData['welcomeMessage'],
           dashboardBannerUrl: brandingData['dashboardBannerUrl'],
           loginBackgroundUrl: brandingData['loginBackgroundUrl'],
-          version: brandingData['version'] ?? 1,
+          version:
+              (profileData['brandingVersion'] as num?)?.toInt() ??
+              (brandingData['version'] as num?)?.toInt() ??
+              1,
         ),
       );
     } catch (e) {

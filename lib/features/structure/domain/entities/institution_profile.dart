@@ -5,6 +5,12 @@ import 'package:equatable/equatable.dart';
 /// fields already on admin's SystemConfig (name, motto, logo, colors) -
 /// this is Structure's own richer copy per spec; SystemConfig is untouched.
 class InstitutionProfile extends Equatable {
+  /// Tenant identity is deliberately kept with the editable profile, rather
+  /// than duplicated in feature-specific configuration documents.
+  final String institutionId;
+  final String displayName;
+  final String displayLabel;
+  final String initials;
   final String name;
   final String shortName;
   final String motto;
@@ -25,7 +31,10 @@ class InstitutionProfile extends Equatable {
   final double? gpsLat;
   final double? gpsLng;
   final String phone;
+  final String secondaryPhone;
+  final String whatsappNumber;
   final String email;
+  final String supportEmail;
   final String website;
   final Map<String, String> socialMedia;
   final String timeZone;
@@ -33,8 +42,18 @@ class InstitutionProfile extends Equatable {
   final String language;
   final String dateFormat;
   final String timeFormat;
+  final String postalAddress;
+  final String legalEntityName;
+  final String ownershipType;
+  final int? foundingYear;
+  final int brandingVersion;
+  final int version;
 
   const InstitutionProfile({
+    this.institutionId = '',
+    this.displayName = '',
+    this.displayLabel = '',
+    this.initials = '',
     this.name = '',
     this.shortName = '',
     this.motto = '',
@@ -55,7 +74,10 @@ class InstitutionProfile extends Equatable {
     this.gpsLat,
     this.gpsLng,
     this.phone = '',
+    this.secondaryPhone = '',
+    this.whatsappNumber = '',
     this.email = '',
+    this.supportEmail = '',
     this.website = '',
     this.socialMedia = const {},
     this.timeZone = '',
@@ -63,9 +85,19 @@ class InstitutionProfile extends Equatable {
     this.language = '',
     this.dateFormat = '',
     this.timeFormat = '',
+    this.postalAddress = '',
+    this.legalEntityName = '',
+    this.ownershipType = '',
+    this.foundingYear,
+    this.brandingVersion = 1,
+    this.version = 1,
   });
 
   InstitutionProfile copyWith({
+    String? institutionId,
+    String? displayName,
+    String? displayLabel,
+    String? initials,
     String? name,
     String? shortName,
     String? motto,
@@ -86,7 +118,10 @@ class InstitutionProfile extends Equatable {
     double? gpsLat,
     double? gpsLng,
     String? phone,
+    String? secondaryPhone,
+    String? whatsappNumber,
     String? email,
+    String? supportEmail,
     String? website,
     Map<String, String>? socialMedia,
     String? timeZone,
@@ -94,8 +129,18 @@ class InstitutionProfile extends Equatable {
     String? language,
     String? dateFormat,
     String? timeFormat,
+    String? postalAddress,
+    String? legalEntityName,
+    String? ownershipType,
+    int? foundingYear,
+    int? brandingVersion,
+    int? version,
   }) {
     return InstitutionProfile(
+      institutionId: institutionId ?? this.institutionId,
+      displayName: displayName ?? this.displayName,
+      displayLabel: displayLabel ?? this.displayLabel,
+      initials: initials ?? this.initials,
       name: name ?? this.name,
       shortName: shortName ?? this.shortName,
       motto: motto ?? this.motto,
@@ -117,7 +162,10 @@ class InstitutionProfile extends Equatable {
       gpsLat: gpsLat ?? this.gpsLat,
       gpsLng: gpsLng ?? this.gpsLng,
       phone: phone ?? this.phone,
+      secondaryPhone: secondaryPhone ?? this.secondaryPhone,
+      whatsappNumber: whatsappNumber ?? this.whatsappNumber,
       email: email ?? this.email,
+      supportEmail: supportEmail ?? this.supportEmail,
       website: website ?? this.website,
       socialMedia: socialMedia ?? this.socialMedia,
       timeZone: timeZone ?? this.timeZone,
@@ -125,11 +173,21 @@ class InstitutionProfile extends Equatable {
       language: language ?? this.language,
       dateFormat: dateFormat ?? this.dateFormat,
       timeFormat: timeFormat ?? this.timeFormat,
+      postalAddress: postalAddress ?? this.postalAddress,
+      legalEntityName: legalEntityName ?? this.legalEntityName,
+      ownershipType: ownershipType ?? this.ownershipType,
+      foundingYear: foundingYear ?? this.foundingYear,
+      brandingVersion: brandingVersion ?? this.brandingVersion,
+      version: version ?? this.version,
     );
   }
 
   @override
   List<Object?> get props => [
+    institutionId,
+    displayName,
+    displayLabel,
+    initials,
     name,
     shortName,
     motto,
@@ -150,7 +208,10 @@ class InstitutionProfile extends Equatable {
     gpsLat,
     gpsLng,
     phone,
+    secondaryPhone,
+    whatsappNumber,
     email,
+    supportEmail,
     website,
     socialMedia,
     timeZone,
@@ -158,5 +219,11 @@ class InstitutionProfile extends Equatable {
     language,
     dateFormat,
     timeFormat,
+    postalAddress,
+    legalEntityName,
+    ownershipType,
+    foundingYear,
+    brandingVersion,
+    version,
   ];
 }

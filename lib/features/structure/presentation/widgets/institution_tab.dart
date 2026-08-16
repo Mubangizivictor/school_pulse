@@ -1,12 +1,16 @@
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart' as file_picker;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/branding/domain/entities/school_branding.dart';
+import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.dart';
+import 'package:school_pulse/features/branding/presentation/bloc/branding_event.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 import '../../domain/entities/institution_profile.dart';
 import '../bloc/structure_bloc.dart';
@@ -73,6 +77,9 @@ class _InstitutionFormState extends State<_InstitutionForm> {
   late final TextEditingController _motto;
   late final TextEditingController _vision;
   late final TextEditingController _mission;
+  late final TextEditingController _primaryColor;
+  late final TextEditingController _secondaryColor;
+  late final TextEditingController _accentColor;
   late String _logoUrl;
   late String _badgeUrl;
   bool _isUploadingLogo = false;
@@ -128,6 +135,15 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     _motto = TextEditingController(text: p.motto);
     _vision = TextEditingController(text: p.vision);
     _mission = TextEditingController(text: p.mission);
+    _primaryColor = TextEditingController(
+      text: p.colors.isNotEmpty ? p.colors[0] : '',
+    );
+    _secondaryColor = TextEditingController(
+      text: p.colors.length > 1 ? p.colors[1] : '',
+    );
+    _accentColor = TextEditingController(
+      text: p.colors.length > 2 ? p.colors[2] : '',
+    );
     _logoUrl = p.logoUrl;
     _badgeUrl = p.badgeUrl;
     _schoolType = p.schoolType;
@@ -158,6 +174,9 @@ class _InstitutionFormState extends State<_InstitutionForm> {
       _motto,
       _vision,
       _mission,
+      _primaryColor,
+      _secondaryColor,
+      _accentColor,
       _registrationNumber,
       _ministryRegistrationNumber,
       _taxNumber,
@@ -191,6 +210,9 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     _motto.text = p.motto;
     _vision.text = p.vision;
     _mission.text = p.mission;
+    _primaryColor.text = p.colors.isNotEmpty ? p.colors[0] : '';
+    _secondaryColor.text = p.colors.length > 1 ? p.colors[1] : '';
+    _accentColor.text = p.colors.length > 2 ? p.colors[2] : '';
     _registrationNumber.text = p.registrationNumber;
     _ministryRegistrationNumber.text = p.ministryRegistrationNumber;
     _taxNumber.text = p.taxNumber;
@@ -236,7 +258,10 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     mission: _mission.text.trim(),
     logoUrl: _logoUrl,
     badgeUrl: _badgeUrl,
-    colors: widget.profile.colors,
+    colors: [_primaryColor.text, _secondaryColor.text, _accentColor.text]
+        .map((color) => color.trim().toUpperCase())
+        .where((color) => color.isNotEmpty)
+        .toList(),
     schoolType: _schoolType,
     schoolCategory: _schoolCategory,
     registrationNumber: _registrationNumber.text.trim(),
@@ -266,12 +291,43 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     if (authState is! AuthAuthenticated) return;
     setState(() => _isSaving = true);
     try {
+      final profile = _buildProfile();
       context.read<StructureBloc>().add(
-        UpdateInstitutionProfileRequested(
-          _buildProfile(),
-          authState.user.schoolId,
-        ),
+        UpdateInstitutionProfileRequested(profile, authState.user.schoolId),
       );
+      // The profile stream remains the durable source of truth. This local
+      // event gives the active tenant theme an immediate, safe refresh while
+      // the Firestore acknowledgement and branding-version update arrive.
+      try {
+        context.read<BrandingBloc>().add(
+          BrandingUpdateRequested(
+            SchoolBranding(
+              schoolId: authState.user.schoolId,
+              schoolName: profile.displayName.isNotEmpty
+                  ? profile.displayName
+                  : profile.name,
+              schoolInitials: profile.initials.isNotEmpty
+                  ? profile.initials
+                  : profile.shortName,
+              schoolMotto: profile.motto,
+              schoolType: profile.schoolType,
+              logoUrl: profile.logoUrl,
+              badgeUrl: profile.badgeUrl,
+              primaryColor: profile.colors.isNotEmpty
+                  ? profile.colors[0]
+                  : null,
+              secondaryColor: profile.colors.length > 1
+                  ? profile.colors[1]
+                  : null,
+              accentColor: profile.colors.length > 2 ? profile.colors[2] : null,
+              version: widget.profile.brandingVersion + 1,
+            ),
+          ),
+        );
+      } on FlutterError {
+        // InstitutionTab is also embedded in isolated setup/test shells that
+        // intentionally do not provide the application-level branding bloc.
+      }
       // The write is fire-and-forget from the bloc's perspective (it relies
       // on the live stream to reconcile state), so give the UI a brief,
       // deliberate pause before flipping back to a clean/save-disabled
@@ -377,12 +433,102 @@ class _InstitutionFormState extends State<_InstitutionForm> {
   }
 
   Future<void> _pickBrandingImage({required bool isLogo}) async {
-    final image = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 88,
-      maxWidth: 1600,
-    );
+    XFile? image;
+    try {
+      if (Theme.of(context).platform == TargetPlatform.android ||
+          Theme.of(context).platform == TargetPlatform.iOS) {
+        final source = await showModalBottomSheet<ImageSource>(
+          context: context,
+          builder: (sheetContext) => SafeArea(
+            child: Wrap(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.photo_library_outlined),
+                  title: const Text('Choose from gallery'),
+                  onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_camera_outlined),
+                  title: const Text('Take a photo'),
+                  onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
+                ),
+              ],
+            ),
+          ),
+        );
+        if (source == null) return;
+        image = await ImagePicker().pickImage(
+          source: source,
+          imageQuality: 88,
+          maxWidth: 1600,
+        );
+      } else {
+        final result = await file_picker.FilePicker.pickFiles(
+          type: file_picker.FileType.custom,
+          allowedExtensions: const ['png', 'jpg', 'jpeg', 'webp'],
+          withData: true,
+        );
+        final file = result?.files.single;
+        if (file == null) return;
+        image = XFile.fromData(
+          file.bytes ?? await XFile(file.path!).readAsBytes(),
+          name: file.name,
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open the image picker.')),
+        );
+      }
+      return;
+    }
     if (image == null || !mounted) return;
+
+    final bytes = await image.readAsBytes();
+    final extension = image.name.split('.').last.toLowerCase();
+    const supported = {'png', 'jpg', 'jpeg', 'webp'};
+    final maxBytes = 5 * 1024 * 1024;
+    if (!supported.contains(extension) ||
+        bytes.isEmpty ||
+        bytes.length > maxBytes) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              !supported.contains(extension)
+                  ? 'Use a PNG, JPG, JPEG, or WEBP image.'
+                  : 'The ${isLogo ? 'logo' : 'badge'} must be 5 MB or smaller.',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    if (!mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Use this ${isLogo ? 'logo' : 'badge'}?'),
+        content: SizedBox(
+          width: 260,
+          height: 180,
+          child: Image.memory(bytes, fit: BoxFit.contain),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Upload'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
 
     final authState = context.read<AuthBloc>().state;
     if (authState is! AuthAuthenticated) return;
@@ -397,14 +543,13 @@ class _InstitutionFormState extends State<_InstitutionForm> {
 
     try {
       final schoolId = authState.user.schoolId;
-      final imageBytes = await image.readAsBytes();
       final kind = isLogo ? 'logo' : 'badge';
       final reference = di.sl<FirebaseStorage>().ref(
-        'schools/$schoolId/school_assets/${kind}_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        'institutions/$schoolId/branding/$kind/${kind}_${DateTime.now().millisecondsSinceEpoch}.$extension',
       );
       await reference.putData(
-        imageBytes,
-        SettableMetadata(contentType: 'image/jpeg'),
+        bytes,
+        SettableMetadata(contentType: 'image/$extension'),
       );
       final url = await reference.getDownloadURL();
       if (!mounted) return;
@@ -475,6 +620,21 @@ class _InstitutionFormState extends State<_InstitutionForm> {
                       controller: _mission,
                       label: 'Mission',
                       maxLines: 3,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _TwoCol(
+                    isNarrow: isNarrow,
+                    left: _colorField(_primaryColor, 'Primary colour'),
+                    right: _colorField(_secondaryColor, 'Secondary colour'),
+                  ),
+                  const SizedBox(height: 10),
+                  _colorField(_accentColor, 'Accent colour'),
+                  const Padding(
+                    padding: EdgeInsets.only(top: 6),
+                    child: Text(
+                      'Use #RRGGBB values. Colours update tenant headers and buttons after saving.',
+                      style: TextStyle(fontSize: 12),
                     ),
                   ),
                 ],
@@ -835,6 +995,23 @@ class _InstitutionFormState extends State<_InstitutionForm> {
           vertical: 12,
         ),
       ),
+    );
+  }
+
+  Widget _colorField(TextEditingController controller, String label) {
+    return _field(
+      controller: controller,
+      label: label,
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'#[0-9a-fA-F]{0,6}')),
+      ],
+      validator: (value) {
+        final color = value?.trim() ?? '';
+        if (color.isEmpty) return null;
+        return RegExp(r'^#[0-9A-Fa-f]{6}$').hasMatch(color)
+            ? null
+            : 'Use a 6-digit hex colour';
+      },
     );
   }
 

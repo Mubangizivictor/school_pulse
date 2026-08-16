@@ -1083,7 +1083,14 @@ service cloud.firestore {
     // not resource.data, since these are nested tenant subdocuments.
     match /schools/{schoolId}/config/{document} {
       allow read: if isSignedIn() && isSameSchool(schoolId);
-      allow write: if isStaff() && isSameSchool(schoolId);
+      // The institution profile controls tenant identity, contact details and
+      // branding. It is intentionally stricter than operational config so a
+      // general staff account cannot impersonate the institution.
+      allow write: if isSameSchool(schoolId) && (
+        (document == 'institution_profile' &&
+          hasAnyRole(['schoolAdmin', 'headTeacher', 'deputyHead', 'director'])) ||
+        (document != 'institution_profile' && isStaff())
+      );
     }
     match /campuses/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
