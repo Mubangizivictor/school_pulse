@@ -6,11 +6,14 @@ import '../bloc/assessment_bloc.dart';
 import '../bloc/assessment_event.dart';
 import '../bloc/assessment_state.dart';
 import '../../domain/entities/assessment_type.dart';
-import '../../domain/entities/grading_system.dart';
 import '../../../../design_system/app_components.dart';
 import '../../data/models/assessment_type_model.dart';
-import '../../data/models/grading_system_model.dart';
 
+// Grading-system configuration is owned exclusively by Structure's
+// GradingSystemsScreen (lib/features/structure/.../grading_systems_screen.dart)
+// against GradingSystemDef/GradeBand - this screen used to duplicate that
+// with its own thinner GradingSystem model, which has been removed to keep
+// a single source of truth for grading configuration.
 class AssessmentConfigScreen extends StatefulWidget {
   final String schoolId;
   const AssessmentConfigScreen({super.key, required this.schoolId});
@@ -19,63 +22,33 @@ class AssessmentConfigScreen extends StatefulWidget {
   State<AssessmentConfigScreen> createState() => _AssessmentConfigScreenState();
 }
 
-class _AssessmentConfigScreenState extends State<AssessmentConfigScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
+class _AssessmentConfigScreenState extends State<AssessmentConfigScreen> {
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     context.read<AssessmentBloc>().add(LoadAssessmentConfig(widget.schoolId));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Assessment Configuration'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Assessment Types'),
-            Tab(text: 'Grading Systems'),
-          ],
-        ),
-      ),
+      appBar: AppBar(title: const Text('Assessment Types')),
       body: BlocBuilder<AssessmentBloc, AssessmentState>(
         builder: (context, state) {
           if (state.status == AssessmentStatus.loading) {
             return const Center(child: SchoolPulseLoader());
           }
-          return TabBarView(
-            controller: _tabController,
-            children: [
-              _AssessmentTypesTab(
-                types: state.assessmentTypes,
-                schoolId: widget.schoolId,
-              ),
-              _GradingSystemsTab(
-                systems: state.gradingSystems,
-                schoolId: widget.schoolId,
-              ),
-            ],
+          return _AssessmentTypesTab(
+            types: state.assessmentTypes,
+            schoolId: widget.schoolId,
           );
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddDialog(),
+        onPressed: () => _showAddAssessmentTypeDialog(),
         child: const Icon(Icons.add),
       ),
     );
-  }
-
-  void _showAddDialog() {
-    if (_tabController.index == 0) {
-      _showAddAssessmentTypeDialog();
-    } else {
-      _showAddGradingSystemDialog();
-    }
   }
 
   void _showAddAssessmentTypeDialog() {
@@ -147,61 +120,6 @@ class _AssessmentConfigScreenState extends State<AssessmentConfigScreen>
       ),
     );
   }
-
-  void _showAddGradingSystemDialog() {
-    final nameController = TextEditingController();
-    GradingType selectedType = GradingType.percentage;
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Add Grading System'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'System Name'),
-              ),
-              const SizedBox(height: 16),
-              DropdownButton<GradingType>(
-                value: selectedType,
-                isExpanded: true,
-                items: GradingType.values
-                    .map((t) => DropdownMenuItem(value: t, child: Text(t.name)))
-                    .toList(),
-                onChanged: (v) => setDialogState(() => selectedType = v!),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (nameController.text.isEmpty) return;
-                final system = GradingSystemModel(
-                  id: const Uuid().v4(),
-                  schoolId: widget.schoolId,
-                  name: nameController.text,
-                  type: selectedType,
-                  ranges: const [], // Ranges would be added in a detail view
-                );
-                context.read<AssessmentBloc>().add(
-                  AddGradingSystem(widget.schoolId, system),
-                );
-                Navigator.pop(context);
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class _AssessmentTypesTab extends StatelessWidget {
@@ -235,50 +153,6 @@ class _AssessmentTypesTab extends StatelessWidget {
               icon: const Icon(Icons.edit_outlined),
               onPressed: () {},
             ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _GradingSystemsTab extends StatelessWidget {
-  final List<GradingSystem> systems;
-  final String schoolId;
-  const _GradingSystemsTab({required this.systems, required this.schoolId});
-
-  @override
-  Widget build(BuildContext context) {
-    if (systems.isEmpty) {
-      return const EmptyState(
-        icon: Icons.grade,
-        title: 'No Grading Systems',
-        message: 'Configure grading scales for your school.',
-      );
-    }
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: systems.length,
-      itemBuilder: (context, index) {
-        final system = systems[index];
-        return AppCard(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: ExpansionTile(
-            title: Text(
-              system.name,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text('Type: ${system.type.name}'),
-            children: system.ranges
-                .map(
-                  (range) => ListTile(
-                    title: Text(
-                      '${range.grade}: ${range.minScore} - ${range.maxScore}',
-                    ),
-                    subtitle: Text(range.remarks),
-                  ),
-                )
-                .toList(),
           ),
         );
       },

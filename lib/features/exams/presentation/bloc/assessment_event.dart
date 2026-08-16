@@ -1,6 +1,5 @@
 import 'package:equatable/equatable.dart';
 import '../../domain/entities/assessment_type.dart';
-import '../../domain/entities/grading_system.dart';
 
 abstract class AssessmentEvent extends Equatable {
   const AssessmentEvent();
@@ -52,15 +51,6 @@ class AddAssessmentType extends AssessmentEvent {
 
   @override
   List<Object?> get props => [schoolId, assessmentType];
-}
-
-class AddGradingSystem extends AssessmentEvent {
-  final String schoolId;
-  final GradingSystem gradingSystem;
-  const AddGradingSystem(this.schoolId, this.gradingSystem);
-
-  @override
-  List<Object?> get props => [schoolId, gradingSystem];
 }
 
 class ModerateMarks extends AssessmentEvent {

@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/assessment_type_model.dart';
-import '../models/grading_system_model.dart';
 import '../models/assessment_mark_model.dart';
 import '../models/report_template_model.dart';
 import '../models/report_release_policy_model.dart';
@@ -12,9 +11,6 @@ abstract class AssessmentRemoteDataSource {
     String schoolId,
     AssessmentTypeModel assessmentType,
   );
-
-  Future<List<GradingSystemModel>> getGradingSystems(String schoolId);
-  Future<void> createGradingSystem(GradingSystemModel gradingSystem);
 
   Future<List<AssessmentMarkModel>> getMarks({
     required String schoolId,
@@ -146,28 +142,6 @@ class AssessmentRemoteDataSourceImpl implements AssessmentRemoteDataSource {
       batch.update(collection.doc(id), data);
     }
     await batch.commit();
-  }
-
-  @override
-  Future<void> createGradingSystem(GradingSystemModel gradingSystem) async {
-    await firestore
-        .collection('schools')
-        .doc(gradingSystem.schoolId)
-        .collection('grading_systems')
-        .doc(gradingSystem.id.isEmpty ? null : gradingSystem.id)
-        .set(gradingSystem.toMap());
-  }
-
-  @override
-  Future<List<GradingSystemModel>> getGradingSystems(String schoolId) async {
-    final snapshot = await firestore
-        .collection('schools')
-        .doc(schoolId)
-        .collection('grading_systems')
-        .get();
-    return snapshot.docs
-        .map((doc) => GradingSystemModel.fromMap(doc.data(), doc.id))
-        .toList();
   }
 
   @override

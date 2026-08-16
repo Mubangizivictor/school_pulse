@@ -3,14 +3,12 @@ import '../../../../core/error/failures.dart';
 import '../../../../core/network/network_info.dart';
 import '../../domain/entities/assessment_mark.dart';
 import '../../domain/entities/assessment_type.dart';
-import '../../domain/entities/grading_system.dart';
 import '../../domain/entities/report_release_policy.dart';
 import '../../domain/entities/report_template.dart';
 import '../../domain/repositories/assessment_repository.dart';
 import '../datasources/assessment_remote_data_source.dart';
 import '../models/assessment_mark_model.dart';
 import '../models/assessment_type_model.dart';
-import '../models/grading_system_model.dart';
 import '../models/report_release_policy_model.dart';
 import '../models/report_template_model.dart';
 
@@ -57,32 +55,6 @@ class AssessmentRepositoryImpl implements AssessmentRepository {
   ) async {
     // Implementation...
     return const Right(null);
-  }
-
-  @override
-  Future<Either<Failure, List<GradingSystem>>> getGradingSystems(
-    String schoolId,
-  ) async {
-    try {
-      final systems = await remoteDataSource.getGradingSystems(schoolId);
-      return Right(systems);
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
-  }
-
-  @override
-  Future<Either<Failure, void>> createGradingSystem(
-    GradingSystem gradingSystem,
-  ) async {
-    try {
-      await remoteDataSource.createGradingSystem(
-        gradingSystem as GradingSystemModel,
-      );
-      return const Right(null);
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
   }
 
   @override

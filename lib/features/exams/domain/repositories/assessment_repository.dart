@@ -1,11 +1,15 @@
 import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
 import '../entities/assessment_type.dart';
-import '../entities/grading_system.dart';
 import '../entities/assessment_mark.dart';
 import '../entities/report_template.dart';
 import '../entities/report_release_policy.dart';
 
+// Grading-system configuration lives solely in
+// lib/features/structure/domain/entities/assessment_grading_entities.dart
+// (GradingSystemDef/GradeBand) and is resolved via
+// lib/features/structure/domain/services/grade_resolver.dart - this
+// repository no longer duplicates that model.
 abstract class AssessmentRepository {
   // Assessment Configuration
   Future<Either<Failure, List<AssessmentType>>> getAssessmentTypes(
@@ -17,14 +21,6 @@ abstract class AssessmentRepository {
   );
   Future<Either<Failure, void>> updateAssessmentType(
     AssessmentType assessmentType,
-  );
-
-  // Grading Systems
-  Future<Either<Failure, List<GradingSystem>>> getGradingSystems(
-    String schoolId,
-  );
-  Future<Either<Failure, void>> createGradingSystem(
-    GradingSystem gradingSystem,
   );
 
   // Marks Entry

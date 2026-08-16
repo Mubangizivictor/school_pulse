@@ -2,7 +2,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/repositories/assessment_repository.dart';
 import '../../domain/entities/assessment_mark.dart';
 import '../../domain/entities/assessment_type.dart';
-import '../../domain/entities/grading_system.dart';
 import 'assessment_event.dart';
 import 'assessment_state.dart';
 
@@ -16,7 +15,6 @@ class AssessmentBloc extends Bloc<AssessmentEvent, AssessmentState> {
     on<SaveMarksEvent>(_onSaveMarksEvent);
     on<SubmitMarksEvent>(_onSubmitMarksEvent);
     on<AddAssessmentType>(_onAddAssessmentType);
-    on<AddGradingSystem>(_onAddGradingSystem);
     on<ModerateMarks>(_onModerateMarks);
     on<ApproveMarks>(_onApproveMarks);
   }
@@ -118,32 +116,6 @@ class AssessmentBloc extends Bloc<AssessmentEvent, AssessmentState> {
     );
   }
 
-  Future<void> _onAddGradingSystem(
-    AddGradingSystem event,
-    Emitter<AssessmentState> emit,
-  ) async {
-    emit(state.copyWith(status: AssessmentStatus.saving));
-    final result = await repository.createGradingSystem(event.gradingSystem);
-    result.fold(
-      (failure) => emit(
-        state.copyWith(
-          status: AssessmentStatus.failure,
-          errorMessage: failure.message,
-        ),
-      ),
-      (_) {
-        final updatedSystems = List<GradingSystem>.from(state.gradingSystems)
-          ..add(event.gradingSystem);
-        emit(
-          state.copyWith(
-            status: AssessmentStatus.success,
-            gradingSystems: updatedSystems,
-          ),
-        );
-      },
-    );
-  }
-
   Future<void> _onLoadAssessmentConfig(
     LoadAssessmentConfig event,
     Emitter<AssessmentState> emit,
@@ -151,7 +123,6 @@ class AssessmentBloc extends Bloc<AssessmentEvent, AssessmentState> {
     emit(state.copyWith(status: AssessmentStatus.loading));
 
     final typesResult = await repository.getAssessmentTypes(event.schoolId);
-    final systemsResult = await repository.getGradingSystems(event.schoolId);
 
     typesResult.fold(
       (failure) => emit(
@@ -160,23 +131,9 @@ class AssessmentBloc extends Bloc<AssessmentEvent, AssessmentState> {
           errorMessage: failure.message,
         ),
       ),
-      (types) {
-        systemsResult.fold(
-          (failure) => emit(
-            state.copyWith(
-              status: AssessmentStatus.failure,
-              errorMessage: failure.message,
-            ),
-          ),
-          (systems) => emit(
-            state.copyWith(
-              status: AssessmentStatus.loaded,
-              assessmentTypes: types,
-              gradingSystems: systems,
-            ),
-          ),
-        );
-      },
+      (types) => emit(
+        state.copyWith(status: AssessmentStatus.loaded, assessmentTypes: types),
+      ),
     );
   }
 
