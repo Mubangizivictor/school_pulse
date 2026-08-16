@@ -223,6 +223,67 @@ exports.reportApprovalExecutionResult = onCall(async (request) => {
   return { ok: true };
 });
 
+// Pure so the stage-cleaning/validation rules can be unit-tested without the
+// emulator. Throws a plain Error with a human message on invalid input;
+// callers translate that into an HttpsError.
+function validatePolicyStages(stages) {
+  if (!Array.isArray(stages) || !stages.length) throw new Error("At least one stage is required.");
+  const seenIds = new Set();
+  return stages.map((s, i) => {
+    const stageId = String(s.stageId || "").trim();
+    if (!stageId) throw new Error(`Stage ${i + 1} needs a stageId.`);
+    if (seenIds.has(stageId)) throw new Error(`Duplicate stageId "${stageId}".`);
+    seenIds.add(stageId);
+    const minimumApprovals = s.minimumApprovals == null ? 1 : Number(s.minimumApprovals);
+    if (!(minimumApprovals >= 1)) throw new Error(`Stage "${stageId}" needs minimumApprovals >= 1.`);
+    return {
+      stageId, order: Number(s.order) || i, name: String(s.name || stageId),
+      requiredPermission: String(s.requiredPermission || "approvals.approve"),
+      requiredRoleTemplate: s.requiredRoleTemplate || null,
+      minimumApprovals, parallel: s.parallel === true,
+      allowReturn: s.allowReturn !== false, allowReject: s.allowReject !== false, allowComment: s.allowComment !== false,
+      requiresMfa: s.requiresMfa === true, requiresReauth: s.requiresReauth === true,
+      escalationTimeoutMinutes: s.escalationTimeoutMinutes ? Number(s.escalationTimeoutMinutes) : null,
+    };
+  }).sort((a, b) => a.order - b.order);
+}
+
+// Policy authoring is deliberately admin-only and server-validated: a
+// malformed stage list (missing stageId/order, non-positive minimumApprovals)
+// would otherwise silently break decideApprovalRequest's transaction above.
+exports.saveApprovalPolicy = onCall(async (request) => {
+  const d = request.data || {}; const schoolId = String(d.institutionId || ""); const user = await approvalCaller(request, schoolId);
+  if (!(user.permissions || []).includes("approvals.manage_policies") && !isApprovalAdmin(user)) throw new HttpsError("permission-denied", "You cannot manage approval policies.");
+  for (const key of ["name", "moduleKey", "requestType"]) if (!String(d[key] || "").trim()) throw new HttpsError("invalid-argument", `${key} is required.`);
+  let cleanStages;
+  try {
+    cleanStages = validatePolicyStages(d.stages);
+  } catch (e) {
+    throw new HttpsError("invalid-argument", e.message);
+  }
+  const db = admin.firestore();
+  const policyId = String(d.approvalPolicyId || "").trim() || db.collection(`schools/${schoolId}/approval_policies`).doc().id;
+  const ref = db.doc(`schools/${schoolId}/approval_policies/${policyId}`);
+  await db.runTransaction(async (tx) => {
+    const existing = await tx.get(ref);
+    const version = existing.exists ? (existing.data().version || 1) + 1 : 1;
+    tx.set(ref, {
+      approvalPolicyId: policyId, institutionId: schoolId, name: String(d.name).trim(),
+      moduleKey: String(d.moduleKey).trim(), requestType: String(d.requestType).trim(),
+      stages: cleanStages, status: d.status === "archived" ? "archived" : "active",
+      minimumApprovals: cleanStages[0]?.minimumApprovals || 1, version,
+      sequential: d.sequential !== false, delegationAllowed: d.delegationAllowed === true,
+      selfApprovalAllowed: d.selfApprovalAllowed === true, escalationAllowed: d.escalationAllowed !== false,
+      requiresMfa: d.requiresMfa === true, requiresReauth: d.requiresReauth === true,
+      dueTimeMinutes: d.dueTimeMinutes ? Number(d.dueTimeMinutes) : null,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedBy: request.auth.uid,
+      createdAt: existing.exists ? existing.data().createdAt : admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: false });
+  });
+  return { policyId };
+});
+
 exports.createApprovalDelegation = onCall(async (request) => {
   const d = request.data || {}; const schoolId = String(d.institutionId || ""); const user = await approvalCaller(request, schoolId); if (!isApprovalAdmin(user)) throw new HttpsError("permission-denied", "Only an active approver may delegate."); const start = new Date(d.startsAt), end = new Date(d.endsAt); if (!(start < end) || end <= new Date()) throw new HttpsError("invalid-argument", "Delegation dates are invalid."); const delegate = await admin.firestore().doc(`users/${d.delegateId}`).get(); if (!delegate.exists || delegate.data().schoolId !== schoolId || delegate.data().isActive === false) throw new HttpsError("failed-precondition", "Delegate must be an active member of this institution."); await admin.firestore().collection(`schools/${schoolId}/approval_delegations`).add({ institutionId: schoolId, delegatorId: request.auth.uid, delegateId: d.delegateId, modules: d.modules || [], requestTypes: d.requestTypes || [], permissions: ["approvals.approve"], start: admin.firestore.Timestamp.fromDate(start), end: admin.firestore.Timestamp.fromDate(end), reason: String(d.reason || ""), status: "active", createdAt: admin.firestore.FieldValue.serverTimestamp() }); return { ok: true };
 });
@@ -2269,6 +2330,7 @@ exports.saveCommunicationDraft = communicationCampaignFunctions.saveCommunicatio
 exports.publishCommunicationCampaign = communicationCampaignFunctions.publishCommunicationCampaign;
 exports.cancelCommunicationCampaign = communicationCampaignFunctions.cancelCommunicationCampaign;
 exports.supersedeCommunicationCampaign = communicationCampaignFunctions.supersedeCommunicationCampaign;
+exports.previewCommunicationAudience = communicationCampaignFunctions.previewCommunicationAudience;
 exports.saveCommunicationTemplate = communicationCampaignFunctions.saveCommunicationTemplate;
 exports.deleteCommunicationTemplate = communicationCampaignFunctions.deleteCommunicationTemplate;
 exports.acknowledgeCommunicationCampaign = communicationCampaignFunctions.acknowledgeCommunicationCampaign;
@@ -2806,7 +2868,7 @@ exports.requestDataOperation = onCall(async (request) => {
   return { jobId: job.id, correlationId, status: base.status };
 });
 
-exports.__test__ = { reportAvailableEventId, chunkIds, notifyParentsOfPublishedReports, isDelegationValid };
+exports.__test__ = { reportAvailableEventId, chunkIds, notifyParentsOfPublishedReports, isDelegationValid, validatePolicyStages };
 
 // Support and audit are isolated in their own module so source business
 // modules only need to emit their existing events, never duplicate tickets.

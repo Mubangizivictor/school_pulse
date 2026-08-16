@@ -1,7 +1,7 @@
 // Plain Node test runner (no framework dependency), matching the convention
 // in appointments.test.js. Run with: node approvals.test.js
 const assert = require('node:assert/strict');
-const { isDelegationValid } = require('./index').__test__;
+const { isDelegationValid, validatePolicyStages } = require('./index').__test__;
 
 let passed = 0;
 let failed = 0;
@@ -57,6 +57,47 @@ test('Firestore Timestamp-shaped start/end (with toMillis()) are handled the sam
     requestTypes: [],
   };
   assert.equal(isDelegationValid(tsShaped, 'finance', 'expenditure', now), true);
+});
+
+console.log('\nvalidatePolicyStages()');
+
+test('rejects an empty stage list - a policy with nothing to approve against is meaningless', () => {
+  assert.throws(() => validatePolicyStages([]), /at least one stage/i);
+});
+
+test('rejects a stage missing a stageId', () => {
+  assert.throws(() => validatePolicyStages([{ name: 'Bursar' }]), /needs a stageId/i);
+});
+
+test('rejects duplicate stageIds - decideApprovalRequest looks up the current stage by id', () => {
+  assert.throws(
+    () => validatePolicyStages([{ stageId: 'bursar', order: 0 }, { stageId: 'bursar', order: 1 }]),
+    /duplicate stageid/i,
+  );
+});
+
+test('rejects minimumApprovals below 1', () => {
+  assert.throws(
+    () => validatePolicyStages([{ stageId: 'bursar', order: 0, minimumApprovals: 0 }]),
+    /minimumapprovals >= 1/i,
+  );
+});
+
+test('fills in defaults (name from stageId, requiredPermission, minimumApprovals=1) for a minimal stage', () => {
+  const [stage] = validatePolicyStages([{ stageId: 'bursar', order: 0 }]);
+  assert.equal(stage.name, 'bursar');
+  assert.equal(stage.requiredPermission, 'approvals.approve');
+  assert.equal(stage.minimumApprovals, 1);
+  assert.equal(stage.parallel, false);
+});
+
+test('sorts stages by order regardless of input order - decideApprovalRequest walks the array by index', () => {
+  const stages = validatePolicyStages([
+    { stageId: 'head', order: 2 },
+    { stageId: 'bursar', order: 0 },
+    { stageId: 'director', order: 1 },
+  ]);
+  assert.deepEqual(stages.map((s) => s.stageId), ['bursar', 'director', 'head']);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

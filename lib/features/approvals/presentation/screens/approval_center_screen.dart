@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../data/repositories/approval_repository.dart';
 import '../../domain/entities/approval_models.dart';
@@ -31,7 +32,34 @@ class _ApprovalCenterScreenState extends State<ApprovalCenterScreen> {
         body: Center(child: Text('Sign in to view approvals.')),
       );
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title ?? 'Approval Center')),
+      appBar: AppBar(
+        title: Text(widget.title ?? 'Approval Center'),
+        actions: widget.moduleKeyFilter != null
+            ? null
+            : [
+                IconButton(
+                  icon: const Icon(Icons.add_task),
+                  tooltip: 'Submit request',
+                  onPressed: () => context.push(
+                    '${GoRouterState.of(context).uri.path}/submit',
+                  ),
+                ),
+                PopupMenuButton<String>(
+                  onSelected: (v) =>
+                      context.push('${GoRouterState.of(context).uri.path}/$v'),
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(
+                      value: 'policies',
+                      child: Text('Manage policies'),
+                    ),
+                    PopupMenuItem(
+                      value: 'delegations',
+                      child: Text('Manage delegations'),
+                    ),
+                  ],
+                ),
+              ],
+      ),
       body: StreamBuilder<List<ApprovalRequest>>(
         stream: _repository.watchInbox(auth.user.schoolId),
         builder: (context, snapshot) {

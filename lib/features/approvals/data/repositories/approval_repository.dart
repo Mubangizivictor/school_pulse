@@ -20,6 +20,45 @@ class ApprovalRepository {
           .doc(schoolId)
           .collection('approval_requests');
 
+  CollectionReference<Map<String, dynamic>> _policies(String schoolId) =>
+      _firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('approval_policies');
+
+  CollectionReference<Map<String, dynamic>> _delegations(String schoolId) =>
+      _firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('approval_delegations');
+
+  Stream<List<ApprovalPolicy>> watchPolicies(String schoolId) =>
+      _policies(schoolId).snapshots().map(
+        (s) => s.docs
+            .map(
+              (d) => ApprovalPolicy.fromMap({
+                ...d.data(),
+                'approvalPolicyId': d.id,
+              }),
+            )
+            .toList(),
+      );
+
+  Stream<List<ApprovalDelegation>> watchDelegations(String schoolId) =>
+      _delegations(schoolId)
+          .orderBy('createdAt', descending: true)
+          .snapshots()
+          .map(
+            (s) => s.docs
+                .map(
+                  (d) => ApprovalDelegation.fromMap({
+                    ...d.data(),
+                    'delegationId': d.id,
+                  }),
+                )
+                .toList(),
+          );
+
   Stream<List<ApprovalRequest>> watchInbox(String schoolId) =>
       _requests(schoolId)
           .orderBy('createdAt', descending: true)
@@ -172,4 +211,41 @@ class ApprovalRepository {
     'result': succeeded ? 'executed' : 'executionFailed',
     'errorReference': errorReference,
   });
+
+  /// Creates a new policy, or updates an existing one (bumping its version)
+  /// when [approvalPolicyId] is passed. Returns the policy id.
+  Future<String> savePolicy({
+    required String schoolId,
+    required String name,
+    required String moduleKey,
+    required String requestType,
+    required List<ApprovalStage> stages,
+    String? approvalPolicyId,
+    bool sequential = true,
+    bool delegationAllowed = false,
+    bool selfApprovalAllowed = false,
+    bool escalationAllowed = true,
+    bool requiresMfa = false,
+    bool requiresReauth = false,
+    Duration? dueTime,
+    String status = 'active',
+  }) async {
+    final result = await _functions.httpsCallable('saveApprovalPolicy').call({
+      'institutionId': schoolId,
+      'approvalPolicyId': approvalPolicyId,
+      'name': name,
+      'moduleKey': moduleKey,
+      'requestType': requestType,
+      'stages': stages.map((s) => s.toMap()).toList(),
+      'sequential': sequential,
+      'delegationAllowed': delegationAllowed,
+      'selfApprovalAllowed': selfApprovalAllowed,
+      'escalationAllowed': escalationAllowed,
+      'requiresMfa': requiresMfa,
+      'requiresReauth': requiresReauth,
+      'dueTimeMinutes': dueTime?.inMinutes,
+      'status': status,
+    });
+    return (result.data as Map)['policyId'] as String;
+  }
 }

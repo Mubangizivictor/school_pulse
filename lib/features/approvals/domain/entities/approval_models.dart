@@ -347,6 +347,68 @@ class ApprovalRequest extends Equatable {
   ];
 }
 
+class ApprovalDelegation extends Equatable {
+  final String delegationId,
+      institutionId,
+      delegatorId,
+      delegateId,
+      reason,
+      status;
+  final List<String> modules, requestTypes;
+  final DateTime start, end;
+  const ApprovalDelegation({
+    required this.delegationId,
+    required this.institutionId,
+    required this.delegatorId,
+    required this.delegateId,
+    required this.reason,
+    required this.status,
+    required this.start,
+    required this.end,
+    this.modules = const [],
+    this.requestTypes = const [],
+  });
+  bool get isActive =>
+      status == 'active' &&
+      start.isBefore(DateTime.now()) &&
+      end.isAfter(DateTime.now());
+  factory ApprovalDelegation.fromMap(Map<String, dynamic> map) {
+    DateTime date(Object? v) {
+      if (v is DateTime) return v;
+      try {
+        final converted = (v as dynamic).toDate();
+        if (converted is DateTime) return converted;
+      } catch (_) {}
+      return DateTime.tryParse(v?.toString() ?? '') ?? DateTime.now();
+    }
+
+    return ApprovalDelegation(
+      delegationId: map['delegationId'] as String? ?? '',
+      institutionId: map['institutionId'] as String? ?? '',
+      delegatorId: map['delegatorId'] as String? ?? '',
+      delegateId: map['delegateId'] as String? ?? '',
+      reason: map['reason'] as String? ?? '',
+      status: map['status'] as String? ?? 'active',
+      start: date(map['start']),
+      end: date(map['end']),
+      modules: List<String>.from(map['modules'] ?? const []),
+      requestTypes: List<String>.from(map['requestTypes'] ?? const []),
+    );
+  }
+  @override
+  List<Object?> get props => [
+    delegationId,
+    institutionId,
+    delegatorId,
+    delegateId,
+    status,
+    start,
+    end,
+    modules,
+    requestTypes,
+  ];
+}
+
 class ApprovalAction extends Equatable {
   final String actionId, requestId, actorId, action, stage, comment;
   final DateTime timestamp;
