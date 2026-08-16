@@ -249,7 +249,7 @@ void main() {
     await tester.tap(find.text('Change Class/Subject'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Switch responsibility'), findsOneWidget);
+    expect(find.text('Switch Active Role'), findsOneWidget);
     expect(find.text('My subjects'.toUpperCase()), findsOneWidget);
     expect(find.text('ICT - Grade 10'), findsOneWidget);
     expect(find.text('Other responsibilities'.toUpperCase()), findsOneWidget);

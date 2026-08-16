@@ -3,18 +3,28 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import 'package:school_pulse/core/permissions/permission.dart';
 import 'package:school_pulse/core/usecases/usecase.dart';
+import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/features/admin/data/models/audit_log.dart';
+import 'package:school_pulse/features/admin/data/repositories/audit_repository.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
+import 'package:school_pulse/features/structure/domain/services/structure_dependency_service.dart';
+import 'package:school_pulse/features/teacher/domain/entities/staff_role_assignment.dart';
 import 'package:school_pulse/injection_container.dart' as di;
+import '../bloc/role_assignment_cubit.dart';
+import '../bloc/role_assignment_state.dart';
 import '../bloc/structure_bloc.dart';
 import '../bloc/structure_event.dart';
 import '../bloc/structure_state.dart';
 import '../widgets/structure_dialogs.dart'
     show showDeleteConfirmDialog, kSubjectColorSwatches;
 import '../widgets/structure_ui_kit.dart';
+import 'assign_staff_role_screen.dart';
 
 /// Curated icon set for staff designations - a fixed catalog (rather than a
 /// free icon-font picker) keeps `iconName` values stable and renderable
@@ -420,8 +430,7 @@ class _DesignationFormScreenState extends State<DesignationFormScreen> {
           isSystemPreset: widget.existing?.isSystemPreset ?? false,
           isArchived: widget.existing?.isArchived ?? false,
           iconName: _iconName,
-          colorHex:
-              '#${_color.toARGB32().toRadixString(16).substring(2)}',
+          colorHex: '#${_color.toARGB32().toRadixString(16).substring(2)}',
           permissions: _permissions,
         ),
       ),
@@ -469,9 +478,7 @@ class _DesignationFormScreenState extends State<DesignationFormScreen> {
                             title: Text(id),
                             value: selected.contains(id),
                             onChanged: (v) => set(
-                              () => v!
-                                  ? selected.add(id)
-                                  : selected.remove(id),
+                              () => v! ? selected.add(id) : selected.remove(id),
                             ),
                           ),
                         ),
@@ -591,10 +598,7 @@ class _DesignationFormScreenState extends State<DesignationFormScreen> {
         helper: 'Lower numbers appear first',
         keyboardType: TextInputType.number,
       ),
-      const Padding(
-        padding: EdgeInsets.only(bottom: 6),
-        child: Text('Icon'),
-      ),
+      const Padding(padding: EdgeInsets.only(bottom: 6), child: Text('Icon')),
       Wrap(
         spacing: 12,
         runSpacing: 12,
@@ -622,10 +626,7 @@ class _DesignationFormScreenState extends State<DesignationFormScreen> {
         }).toList(),
       ),
       const SizedBox(height: 16),
-      const Padding(
-        padding: EdgeInsets.only(bottom: 6),
-        child: Text('Color'),
-      ),
+      const Padding(padding: EdgeInsets.only(bottom: 6), child: Text('Color')),
       Wrap(
         spacing: 12,
         children: kSubjectColorSwatches.map((swatch) {
@@ -731,86 +732,312 @@ class DesignationDetailsScreen extends StatelessWidget {
   final StaffDesignation designation;
 
   @override
-  Widget build(
-    BuildContext context,
-  ) => BlocBuilder<StructureBloc, StructureState>(
-    builder: (context, state) {
-      final current = state.designations.firstWhere(
-        (d) => d.id == designation.id,
-        orElse: () => designation,
-      );
-      return _RecordDetailsShell(
-        title: current.name,
-        icon: staffDesignationIcon(current.iconName),
-        color: staffDesignationColor(current.colorHex),
-        isActive: current.isActive,
-        onEdit: () => Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => BlocProvider.value(
-              value: context.read<StructureBloc>(),
-              child: DesignationFormScreen(
-                schoolId: schoolId,
-                existing: current,
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) =>
+          di.sl<RoleAssignmentCubit>()..loadForRole(schoolId, designation.id),
+      child: BlocBuilder<StructureBloc, StructureState>(
+        builder: (context, state) {
+          final current = state.designations.firstWhere(
+            (d) => d.id == designation.id,
+            orElse: () => designation,
+          );
+          return _RecordDetailsShell(
+            title: current.name,
+            icon: staffDesignationIcon(current.iconName),
+            color: staffDesignationColor(current.colorHex),
+            isActive: current.isActive,
+            onEdit: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => BlocProvider.value(
+                  value: context.read<StructureBloc>(),
+                  child: DesignationFormScreen(
+                    schoolId: schoolId,
+                    existing: current,
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-        onToggleActive: () => context.read<StructureBloc>().add(
-          SaveDesignationRequested(
-            current.copyWith(isActive: !current.isActive),
-          ),
-        ),
-        onDelete: () async {
-          if (current.isArchived) {
-            context.read<StructureBloc>().add(
-              RestoreDesignationRequested(current.id),
-            );
-            return;
-          }
-          final confirmed = await showDeleteConfirmDialog(
-            context,
-            title: 'Archive Staff Role',
-            message:
-                'Archive "${current.name}"? Existing assignment history is retained and no new assignments can be made.',
+            onToggleActive: () => context.read<StructureBloc>().add(
+              SaveDesignationRequested(
+                current.copyWith(isActive: !current.isActive),
+              ),
+            ),
+            onDelete: () async {
+              if (current.isArchived) {
+                context.read<StructureBloc>().add(
+                  RestoreDesignationRequested(current.id),
+                );
+                return;
+              }
+              final activeAssignments = await di
+                  .sl<StructureDependencyService>()
+                  .countAssignmentsForDesignation(schoolId, current.id);
+              if (!context.mounted) return;
+              final confirmed = await showDeleteConfirmDialog(
+                context,
+                title: 'Archive Staff Role',
+                message:
+                    'Archive "${current.name}"? Existing assignment history is retained and no new assignments can be made.',
+                impactMessage: activeAssignments > 0
+                    ? '$activeAssignments active assignment${activeAssignments == 1 ? '' : 's'} reference this role.'
+                    : null,
+              );
+              if (confirmed == true && context.mounted) {
+                context.read<StructureBloc>().add(
+                  ArchiveDesignationRequested(current.id),
+                );
+                Navigator.of(context).pop();
+              }
+            },
+            deleteLabel: current.isArchived ? 'Restore' : 'Archive',
+            rows: [
+              if (current.isArchived)
+                const _DetailRow('Status', 'Archived — read only history'),
+              _DetailRow(
+                'Code',
+                current.code.isEmpty ? 'Not set' : current.code,
+              ),
+              _DetailRow(
+                'Category',
+                current.category.isEmpty ? 'Not set' : current.category,
+              ),
+              _DetailRow('Scope model', _scopeLabel(current.scopeType)),
+              _DetailRow('Role nature', current.roleNature),
+              _RoleRulesRow(current),
+              _DetailRow(
+                'Description',
+                current.description.isEmpty ? 'Not set' : current.description,
+              ),
+              _DetailRow(
+                'Permissions',
+                current.permissions.isEmpty
+                    ? 'No permissions granted — role label does not grant access on its own.'
+                    : current.permissions.join(', '),
+              ),
+              _StaffCountRow(
+                label: 'Assigned Staff',
+                filterId: current.id,
+                byDepartment: false,
+              ),
+            ],
+            footer: _RoleAssignmentsSection(role: current),
+            floatingActionButton: current.isActive && !current.isArchived
+                ? FloatingActionButton.extended(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => MultiBlocProvider(
+                          providers: [
+                            BlocProvider.value(
+                              value: context.read<RoleAssignmentCubit>(),
+                            ),
+                            BlocProvider.value(
+                              value: context.read<StructureBloc>(),
+                            ),
+                          ],
+                          child: AssignStaffRoleScreen(
+                            preselectedRole: current,
+                          ),
+                        ),
+                      ),
+                    ),
+                    icon: const Icon(Icons.person_add_alt_1_outlined),
+                    label: const Text('Assign to Staff'),
+                    backgroundColor: AppColors.primary(context),
+                    foregroundColor: Colors.white,
+                  )
+                : null,
           );
-          if (confirmed == true && context.mounted) {
-            context.read<StructureBloc>().add(
-              ArchiveDesignationRequested(current.id),
-            );
-            Navigator.of(context).pop();
-          }
         },
-        deleteLabel: current.isArchived ? 'Restore' : 'Archive',
-        rows: [
-          if (current.isArchived)
-            const _DetailRow('Status', 'Archived — read only history'),
-          _DetailRow('Code', current.code.isEmpty ? 'Not set' : current.code),
-          _DetailRow(
-            'Category',
-            current.category.isEmpty ? 'Not set' : current.category,
+      ),
+    );
+  }
+}
+
+/// Assignments tab-equivalent content: every staff member currently holding
+/// this role, plus its audit history. Rendered as a footer section on the
+/// details page rather than a separate tabbed screen, since the existing
+/// Structure details shell is single-scroll for every other entity type.
+class _RoleAssignmentsSection extends StatelessWidget {
+  const _RoleAssignmentsSection({required this.role});
+  final StaffDesignation role;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'ASSIGNMENTS',
+          style: TextStyle(
+            color: AppColors.primary(context),
+            fontWeight: FontWeight.w700,
+            fontSize: 12,
+            letterSpacing: .6,
           ),
-          _DetailRow('Scope model', _scopeLabel(current.scopeType)),
-          _DetailRow('Role nature', current.roleNature),
-          _RoleRulesRow(current),
-          _DetailRow(
-            'Description',
-            current.description.isEmpty ? 'Not set' : current.description,
+        ),
+        const SizedBox(height: 8),
+        BlocBuilder<RoleAssignmentCubit, RoleAssignmentState>(
+          builder: (context, state) {
+            if (state is RoleAssignmentLoading ||
+                state is RoleAssignmentInitial) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: LinearProgressIndicator(),
+              );
+            }
+            if (state is RoleAssignmentError) {
+              return Text(
+                'Could not load assignments: ${state.message}',
+                style: Theme.of(context).textTheme.labelSmall,
+              );
+            }
+            final assignments = (state as RoleAssignmentLoaded).assignments;
+            if (assignments.isEmpty) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Text('No staff currently hold this role.'),
+              );
+            }
+            return Column(
+              children: assignments
+                  .map(
+                    (a) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _AssignmentRow(assignment: a, role: role),
+                    ),
+                  )
+                  .toList(),
+            );
+          },
+        ),
+        const SizedBox(height: 22),
+        Text(
+          'HISTORY',
+          style: TextStyle(
+            color: AppColors.primary(context),
+            fontWeight: FontWeight.w700,
+            fontSize: 12,
+            letterSpacing: .6,
           ),
-          _DetailRow(
-            'Permissions',
-            current.permissions.isEmpty
-                ? 'No permissions granted — role label does not grant access on its own.'
-                : current.permissions.join(', '),
+        ),
+        const SizedBox(height: 8),
+        StreamBuilder<List<AuditLog>>(
+          stream: di.sl<AuditRepository>().watchLogsForEntity(
+            schoolId: role.schoolId,
+            relatedEntityId: role.id,
           ),
-          _StaffCountRow(
-            label: 'Assigned Staff',
-            filterId: current.id,
-            byDepartment: false,
+          builder: (context, snapshot) {
+            final logs = snapshot.data ?? const [];
+            if (logs.isEmpty) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Text('No history recorded yet.'),
+              );
+            }
+            return Column(
+              children: logs
+                  .map(
+                    (log) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      leading: Icon(
+                        staffDesignationIcon(log.iconName),
+                        color: staffDesignationColor(log.colorHex),
+                        size: 20,
+                      ),
+                      title: Text(log.title),
+                      subtitle: Text(log.description),
+                      trailing: Text(
+                        '${log.timestamp.day}/${log.timestamp.month}/${log.timestamp.year}',
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                    ),
+                  )
+                  .toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _AssignmentRow extends StatelessWidget {
+  const _AssignmentRow({required this.assignment, required this.role});
+  final StaffRoleAssignment assignment;
+  final StaffDesignation role;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<UserEntity>>(
+      future: di.sl<GetStaffMembers>()(NoParams()).then(
+        (r) => r.getOrElse(() => const []),
+      ),
+      builder: (context, snapshot) {
+        final staff = snapshot.data ?? const [];
+        final match = staff
+            .where((s) => s.id == assignment.staffId)
+            .firstOrNull;
+        final scope = assignment.scopeSummaryLabel;
+        return AppCard(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              AvatarInitials(name: match?.name ?? 'Staff member', size: 32),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      match?.name ?? assignment.staffId,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      [
+                        if (scope.isNotEmpty) scope,
+                        assignment.status.name,
+                      ].join(' • '),
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                  ],
+                ),
+              ),
+              if (assignment.status == AssignmentStatus.active)
+                TextButton(
+                  onPressed: () {
+                    final authState = context.read<AuthBloc>().state;
+                    if (authState is AuthAuthenticated) {
+                      context.read<RoleAssignmentCubit>().endAssignment(
+                        assignment: assignment,
+                        role: role,
+                        actor: authState.user,
+                      );
+                    }
+                  },
+                  child: const Text('End'),
+                )
+              else if (assignment.status == AssignmentStatus.suspended)
+                TextButton(
+                  onPressed: () {
+                    final authState = context.read<AuthBloc>().state;
+                    if (authState is AuthAuthenticated) {
+                      context.read<RoleAssignmentCubit>().reactivateAssignment(
+                        assignment: assignment,
+                        role: role,
+                        actor: authState.user,
+                      );
+                    }
+                  },
+                  child: const Text('Reactivate'),
+                ),
+            ],
           ),
-        ],
-      );
-    },
-  );
+        );
+      },
+    );
+  }
 }
 
 class _RecordFormShell extends StatelessWidget {
@@ -876,6 +1103,8 @@ class _RecordDetailsShell extends StatelessWidget {
     required this.onDelete,
     required this.rows,
     this.deleteLabel = 'Delete',
+    this.footer,
+    this.floatingActionButton,
   });
   final String title;
   final IconData icon;
@@ -886,6 +1115,10 @@ class _RecordDetailsShell extends StatelessWidget {
   final VoidCallback onDelete;
   final List<Widget> rows;
   final String deleteLabel;
+
+  /// Extra content appended below the rows card (e.g. an Assignments list).
+  final Widget? footer;
+  final Widget? floatingActionButton;
 
   @override
   Widget build(BuildContext context) {
@@ -962,8 +1195,10 @@ class _RecordDetailsShell extends StatelessWidget {
             ),
             child: Column(children: rows),
           ),
+          if (footer != null) ...[const SizedBox(height: 22), footer!],
         ],
       ),
+      floatingActionButton: floatingActionButton,
     );
   }
 }

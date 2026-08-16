@@ -5,13 +5,18 @@ import 'package:school_pulse/design_system/theme/app_spacing.dart';
 
 import '../../domain/entities/staff_role_assignment.dart';
 
-/// The sheet behind the dashboard's "Change Class/Subject" control.
+/// The "Switch Active Role" sheet behind the dashboard's responsibility
+/// control.
 ///
-/// Lists only responsibilities the teacher actually holds - the caller passes
-/// assignments already filtered to active, in-date rows - so there is nothing
-/// here to select that would then be refused. Styled from the existing
-/// AppColors tokens so it reads as part of the approved dashboard rather than
-/// a new surface.
+/// Lists every responsibility type the teacher holds - Subject/Class Teacher
+/// via [subjectAssignments], everything else (Patron, HOD, Bursar, ...) via
+/// [otherResponsibilities] - the caller passes assignments already filtered
+/// to active, in-date rows, so there is nothing here to select that would
+/// then be refused. Rendering is generic over [StaffResponsibilityType]: it
+/// does not special-case any role beyond the subject-teacher icon/section
+/// split, so no change is needed here as new responsibility types are
+/// assigned elsewhere in the app. Styled from the existing AppColors tokens
+/// so it reads as part of the approved dashboard rather than a new surface.
 class ResponsibilitySwitcherSheet extends StatelessWidget {
   final List<StaffRoleAssignment> subjectAssignments;
   final List<StaffRoleAssignment> otherResponsibilities;
@@ -74,7 +79,7 @@ class ResponsibilitySwitcherSheet extends StatelessWidget {
                 child: Row(
                   children: [
                     Text(
-                      'Switch responsibility',
+                      'Switch Active Role',
                       style: TextStyle(
                         color: AppColors.textPrimary(context),
                         fontSize: 16,
@@ -157,10 +162,20 @@ class ResponsibilitySwitcherSheet extends StatelessWidget {
         style: TextStyle(color: AppColors.textSecondary(context), fontSize: 11),
       ),
       trailing: isActive
-          ? Icon(
-              Icons.check_circle,
-              color: AppColors.primary(context),
-              size: 20,
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.primary(context).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                'Current Role',
+                style: TextStyle(
+                  color: AppColors.primary(context),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             )
           : null,
     );
