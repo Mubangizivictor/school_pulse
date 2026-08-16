@@ -410,9 +410,15 @@ import 'package:school_pulse/features/structure/data/repositories/structure_repo
 import 'package:school_pulse/features/structure/data/datasources/structure_remote_data_source.dart';
 import 'package:school_pulse/features/structure/data/datasources/structure_local_data_source.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/structure_bloc.dart';
+import 'package:school_pulse/features/structure/presentation/bloc/role_assignment_cubit.dart';
 import 'package:school_pulse/features/structure/data/datasources/structure_local_data_source_factory.dart';
 import 'package:school_pulse/features/structure/domain/services/structure_configuration_service.dart';
 import 'package:school_pulse/features/structure/data/services/structure_configuration_service_impl.dart';
+import 'package:school_pulse/features/structure/domain/repositories/timetable_repository.dart';
+import 'package:school_pulse/features/structure/data/repositories/timetable_repository_impl.dart';
+import 'package:school_pulse/features/structure/data/datasources/timetable_remote_data_source.dart';
+import 'package:school_pulse/features/structure/domain/services/timetable_conflict_resolver.dart';
+import 'package:school_pulse/features/structure/presentation/bloc/timetable_bloc.dart';
 
 // Finance - additional usecases
 import 'package:school_pulse/features/finance/domain/usecases/get_all_fees.dart';
@@ -1718,6 +1724,17 @@ Future<void> init() async {
   // Features - Structure
   sl.registerFactory(() => StructureBloc(repository: sl()));
 
+  // Assigns/ends/reactivates StaffRoleAssignment rows. Wraps the teacher
+  // feature's StaffAssignmentRepository since the screens that use this
+  // (Assign Role, Role Details, staff profile Roles tab) are Structure-side.
+  sl.registerFactory(
+    () => RoleAssignmentCubit(
+      repository: sl(),
+      auditRepository: sl(),
+      notificationSender: sl(),
+    ),
+  );
+
   sl.registerLazySingleton<StructureRepository>(
     () =>
         StructureRepositoryImpl(remoteDataSource: sl(), localDataSource: sl()),
@@ -1735,6 +1752,20 @@ Future<void> init() async {
 
   sl.registerLazySingleton<StructureConfigurationService>(
     () => StructureConfigurationServiceImpl(repository: sl()),
+  );
+
+  sl.registerFactory(
+    () => TimetableBloc(repository: sl(), conflictResolver: sl()),
+  );
+
+  sl.registerLazySingleton(() => const TimetableConflictResolver());
+
+  sl.registerLazySingleton<TimetableRepository>(
+    () => TimetableRepositoryImpl(remoteDataSource: sl()),
+  );
+
+  sl.registerLazySingleton<TimetableRemoteDataSource>(
+    () => TimetableRemoteDataSourceImpl(firestore: sl()),
   );
 
   // Finance - additional usecases (FinanceRepository already registered above)
