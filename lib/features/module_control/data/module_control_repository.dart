@@ -47,6 +47,11 @@ class ModuleControlRepository {
           .collection('schools')
           .doc(schoolId)
           .collection('institution_policies');
+  CollectionReference<Map<String, dynamic>> _audit(String schoolId) =>
+      firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('module_policy_audit');
   Stream<Map<String, ModuleConfiguration>> watchModules(String schoolId) =>
       _modules(schoolId).snapshots().map(
         (snap) => {
@@ -88,26 +93,73 @@ class ModuleControlRepository {
         else
           'disabledAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
+      transaction.set(_audit(schoolId).doc(), {
+        'action': enabled ? 'module_enabled' : 'module_disabled',
+        'moduleKey': moduleKey,
+        'actorId': actorId,
+        'reason': reason,
+        'previousValue': data['enabled'] == true,
+        'newValue': enabled,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
     });
   }
 
-  Future<void> savePolicy(InstitutionPolicy policy) async {
+  /// Persists a new policy version. Pass [previousVersion] (from the last
+  /// loaded policy, or null when creating) so the audit trail records what
+  /// changed without re-reading inside the transaction — callers already
+  /// hold the current value from `watchPolicies`.
+  Future<void> savePolicy(
+    InstitutionPolicy policy, {
+    InstitutionPolicy? previousVersion,
+  }) async {
     final ref = _policies(policy.institutionId).doc(policy.id);
     await firestore.runTransaction((transaction) async {
       final existing = await transaction.get(ref);
       final oldVersion = (existing.data()?['version'] as num?)?.toInt() ?? 0;
+      final newVersion = oldVersion + 1;
       transaction.set(ref, {
         ...policy.toMap(),
-        'version': oldVersion + 1,
+        'version': newVersion,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-      transaction.set(ref.collection('versions').doc('${oldVersion + 1}'), {
+      transaction.set(ref.collection('versions').doc('$newVersion'), {
         ...policy.toMap(),
-        'version': oldVersion + 1,
+        'version': newVersion,
         'createdAt': FieldValue.serverTimestamp(),
+      });
+      transaction.set(_audit(policy.institutionId).doc(), {
+        'action': 'policy_${policy.status.name}',
+        'policyId': policy.id,
+        'policyType': policy.type.name,
+        'actorId': policy.updatedBy,
+        'reason': policy.changeReason,
+        'previousStatus': previousVersion?.status.name,
+        'newStatus': policy.status.name,
+        'version': newVersion,
+        'timestamp': FieldValue.serverTimestamp(),
       });
     });
   }
+
+  Stream<List<Map<String, dynamic>>> watchAudit(
+    String schoolId, {
+    int limit = 100,
+  }) => _audit(
+    schoolId,
+  ).orderBy('timestamp', descending: true).limit(limit).snapshots().map(
+    (snap) => snap.docs.map((d) => {'id': d.id, ...d.data()}).toList(),
+  );
+
+  Stream<List<InstitutionPolicy>> watchPolicyVersions(
+    String schoolId,
+    String policyId,
+  ) => _policies(schoolId)
+      .doc(policyId)
+      .collection('versions')
+      .orderBy('version', descending: true)
+      .snapshots()
+      .map((snap) => snap.docs.map((d) => _policy(policyId, d.data())).toList());
 
   InstitutionPolicy _policy(String id, Map<String, dynamic> d) =>
       InstitutionPolicy(

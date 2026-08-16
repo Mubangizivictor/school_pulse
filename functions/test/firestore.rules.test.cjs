@@ -1606,3 +1606,88 @@ describe('Support + Audit Center: tenant isolation and append-only', () => {
     await assertFails(deleteDoc(doc(dbFor('adminA'), 'institutions/schoolA/audit_events/event1')));
   });
 });
+
+describe('Module Control Center + Institution Policy Engine', () => {
+  test('module_configuration: entitlement is server-owned, admin cannot forge it, cannot re-parent, non-admin cannot enable', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'schools/schoolA/module_configuration/attendance'), {
+        institutionId: 'schoolA', moduleKey: 'attendance', entitled: true, enabled: false,
+        configurationVersion: 1,
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('adminA'), 'schools/schoolA/module_configuration/attendance')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'schools/schoolA/module_configuration/attendance')));
+    await assertSucceeds(updateDoc(doc(dbFor('adminA'), 'schools/schoolA/module_configuration/attendance'), {
+      institutionId: 'schoolA', moduleKey: 'attendance', entitled: true, enabled: true,
+      configurationVersion: 2, updatedBy: 'adminA', reason: 'enable for term',
+    }));
+    await assertFails(updateDoc(doc(dbFor('adminA'), 'schools/schoolA/module_configuration/attendance'), {
+      institutionId: 'schoolA', moduleKey: 'attendance', entitled: false, enabled: true,
+      configurationVersion: 3, updatedBy: 'adminA', reason: 'forge entitlement',
+    }));
+    await assertFails(updateDoc(doc(dbFor('teacherA'), 'schools/schoolA/module_configuration/attendance'), {
+      institutionId: 'schoolA', moduleKey: 'attendance', entitled: true, enabled: false,
+      configurationVersion: 3, updatedBy: 'teacherA', reason: 'unauthorized',
+    }));
+  });
+
+  test('module_configuration: create is always denied for clients (entitlement is server-written only)', async () => {
+    await assertFails(setDoc(doc(dbFor('adminA'), 'schools/schoolA/module_configuration/boarding'), {
+      institutionId: 'schoolA', moduleKey: 'boarding', entitled: true, enabled: false, configurationVersion: 1,
+    }));
+  });
+
+  test('institution_policies: same-school admin can create/update, cross-school denied, non-admin denied, cannot re-parent institutionId', async () => {
+    await assertSucceeds(setDoc(doc(dbFor('adminA'), 'schools/schoolA/institution_policies/policy1'), {
+      institutionId: 'schoolA', policyType: 'attendance', policyName: 'Attendance Policy',
+      scope: { type: 'institution' }, configuration: {}, status: 'active', version: 1,
+      effectiveFrom: new Date(), createdBy: 'adminA', updatedBy: 'adminA', changeReason: 'initial',
+    }));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'schools/schoolA/institution_policies/policy1')));
+    await assertFails(setDoc(doc(dbFor('teacherA'), 'schools/schoolA/institution_policies/policy2'), {
+      institutionId: 'schoolA', policyType: 'attendance', policyName: 'Unauthorized', scope: { type: 'institution' },
+      configuration: {}, status: 'draft', version: 1, effectiveFrom: new Date(), createdBy: 'teacherA',
+      updatedBy: 'teacherA', changeReason: 'unauthorized',
+    }));
+    await assertFails(setDoc(doc(dbFor('adminA'), 'schools/schoolB/institution_policies/policy3'), {
+      institutionId: 'schoolA', policyType: 'attendance', policyName: 'Cross-tenant re-parent',
+      scope: { type: 'institution' }, configuration: {}, status: 'draft', version: 1,
+      effectiveFrom: new Date(), createdBy: 'adminA', updatedBy: 'adminA', changeReason: 'attempt',
+    }));
+    await assertFails(updateDoc(doc(dbFor('adminA'), 'schools/schoolA/institution_policies/policy1'), {
+      institutionId: 'schoolB',
+    }));
+  });
+
+  test('institution_policies versions: append-only history, no update or delete', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'schools/schoolA/institution_policies/policy1'), {
+        institutionId: 'schoolA', policyType: 'attendance', policyName: 'Attendance Policy',
+        scope: { type: 'institution' }, configuration: {}, status: 'active', version: 1,
+        effectiveFrom: new Date(), createdBy: 'adminA', updatedBy: 'adminA', changeReason: 'initial',
+      });
+    });
+    await assertSucceeds(setDoc(doc(dbFor('adminA'), 'schools/schoolA/institution_policies/policy1/versions/1'), {
+      institutionId: 'schoolA', policyType: 'attendance', version: 1, createdAt: new Date(),
+    }));
+    await assertFails(updateDoc(doc(dbFor('adminA'), 'schools/schoolA/institution_policies/policy1/versions/1'), {
+      version: 2,
+    }));
+    await assertFails(deleteDoc(doc(dbFor('adminA'), 'schools/schoolA/institution_policies/policy1/versions/1')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'schools/schoolA/institution_policies/policy1/versions/1')));
+  });
+
+  test('module_policy_audit: readable only by same-school admin roles, never client-writable', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'schools/schoolA/module_policy_audit/audit1'), {
+        action: 'module_enabled', moduleKey: 'attendance', actorId: 'adminA',
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('adminA'), 'schools/schoolA/module_policy_audit/audit1')));
+    await assertFails(getDoc(doc(dbFor('teacherA'), 'schools/schoolA/module_policy_audit/audit1')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'schools/schoolA/module_policy_audit/audit1')));
+    await assertFails(setDoc(doc(dbFor('adminA'), 'schools/schoolA/module_policy_audit/audit2'), {
+      action: 'forged',
+    }));
+  });
+});

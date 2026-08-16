@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
@@ -21,7 +22,16 @@ class ModuleControlCenterScreen extends StatelessWidget {
     }
     final repository = ModuleControlRepository();
     return Scaffold(
-      appBar: const AdminAppBar(title: 'Module Control Center'),
+      appBar: AdminAppBar(
+        title: 'Module Control Center',
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.policy_outlined),
+            tooltip: 'Policy Center',
+            onPressed: () => context.push('/staff/admin/policies'),
+          ),
+        ],
+      ),
       body: StreamBuilder<Map<String, ModuleConfiguration>>(
         stream: repository.watchModules(auth.user.schoolId),
         builder: (context, snapshot) {

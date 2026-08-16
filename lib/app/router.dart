@@ -45,6 +45,9 @@ import 'package:school_pulse/features/admin/broadcast_sms_screen.dart';
 import 'package:school_pulse/features/admin/system_config_screen.dart';
 import 'package:school_pulse/features/integrations/presentation/integrations_center_screen.dart';
 import 'package:school_pulse/features/integrations/presentation/integration_detail_screen.dart';
+import 'package:school_pulse/features/integrations/presentation/integration_health_screen.dart';
+import 'package:school_pulse/features/integrations/presentation/integration_devices_screen.dart';
+import 'package:school_pulse/features/integrations/presentation/integration_webhooks_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/structure_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/levels_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/years_terms_screen.dart';
@@ -61,6 +64,7 @@ import 'package:school_pulse/features/structure/presentation/screens/institution
 import 'package:school_pulse/features/structure/presentation/screens/operations_config_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/feature_toggles_screen.dart';
 import 'package:school_pulse/features/module_control/presentation/module_control_center_screen.dart';
+import 'package:school_pulse/features/module_control/presentation/policy_center_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/structure_validation_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/timetable_config_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/timetables/timetables_list_screen.dart';
@@ -1534,8 +1538,40 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'integrations',
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                // Integrations Center exposes provider connection lifecycle
+                // and (masked) configuration for the whole institution - the
+                // same School Admin/Head Teacher/Director subset that holds
+                // Permission.integrationsView by default, never ordinary
+                // staff even though they can reach the shared admin shell.
+                const allowedRoles = [
+                  UserRole.schoolAdmin,
+                  UserRole.headTeacher,
+                  UserRole.director,
+                ];
+                if (!auth.user.roles.any(allowedRoles.contains)) {
+                  return UserRoleRouting.dashboardPath(auth.user.role);
+                }
+                return null;
+              },
               builder: (context, state) => const IntegrationsCenterScreen(),
               routes: [
+                GoRoute(
+                  path: 'health',
+                  builder: (context, state) => const IntegrationHealthScreen(),
+                ),
+                GoRoute(
+                  path: 'devices',
+                  builder: (context, state) =>
+                      const IntegrationDevicesScreen(),
+                ),
+                GoRoute(
+                  path: 'webhooks',
+                  builder: (context, state) =>
+                      const IntegrationWebhooksScreen(),
+                ),
                 GoRoute(
                   path: ':integrationKey',
                   builder: (context, state) => IntegrationDetailScreen(
@@ -1661,6 +1697,23 @@ final router = GoRouter(
                   },
                   builder: (context, state) =>
                       const ModuleControlCenterScreen(),
+                ),
+                GoRoute(
+                  path: 'policies',
+                  redirect: (context, state) {
+                    final auth = context.read<AuthBloc>().state;
+                    if (auth is! AuthAuthenticated) return '/welcome';
+                    const roles = {
+                      UserRole.schoolAdmin,
+                      UserRole.director,
+                      UserRole.headTeacher,
+                      UserRole.deputyHead,
+                    };
+                    return auth.user.roles.any(roles.contains)
+                        ? null
+                        : UserRoleRouting.dashboardPath(auth.user.role);
+                  },
+                  builder: (context, state) => const PolicyCenterScreen(),
                 ),
                 GoRoute(
                   path: 'wizard',
