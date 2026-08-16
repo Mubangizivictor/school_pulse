@@ -131,4 +131,54 @@ void main() {
       expect(await service.countCampusReferences('school-1', 'campus-1'), 1);
     });
   });
+
+  group('countAssignmentsForDesignation', () {
+    test('returns 0 when no assignments reference the role', () async {
+      final count = await service.countAssignmentsForDesignation(
+        'school-1',
+        'role-1',
+      );
+      expect(count, 0);
+    });
+
+    test(
+      'counts only active assignments in the given school and role',
+      () async {
+        final schoolAssignments = firestore
+            .collection('schools')
+            .doc('school-1')
+            .collection('staff_role_assignments');
+        await schoolAssignments.add({
+          'roleDefinitionId': 'role-1',
+          'status': 'active',
+        });
+        await schoolAssignments.add({
+          'roleDefinitionId': 'role-1',
+          'status': 'active',
+        });
+        // Different role - should not count.
+        await schoolAssignments.add({
+          'roleDefinitionId': 'role-2',
+          'status': 'active',
+        });
+        // Same role but ended - should not count.
+        await schoolAssignments.add({
+          'roleDefinitionId': 'role-1',
+          'status': 'removed',
+        });
+        // Same role, active, but a different school - should not count.
+        await firestore
+            .collection('schools')
+            .doc('school-2')
+            .collection('staff_role_assignments')
+            .add({'roleDefinitionId': 'role-1', 'status': 'active'});
+
+        final count = await service.countAssignmentsForDesignation(
+          'school-1',
+          'role-1',
+        );
+        expect(count, 2);
+      },
+    );
+  });
 }
