@@ -1127,6 +1127,20 @@
       ]
     },
     {
+      "collectionGroup": "staff_role_assignments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "roleDefinitionId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "timetables",
       "queryScope": "COLLECTION",
       "fields": [
@@ -1594,6 +1608,24 @@
       "fields": [
         {
           "fieldPath": "schoolId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "audit_logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "schoolId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "relatedEntityId",
           "order": "ASCENDING"
         },
         {
