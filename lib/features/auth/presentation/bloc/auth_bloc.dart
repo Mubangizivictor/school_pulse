@@ -16,6 +16,9 @@ import 'package:school_pulse/features/auth/data/datasources/remembered_login_sto
 import 'package:school_pulse/features/auth/domain/usecases/logout.dart';
 import 'package:school_pulse/features/student/domain/usecases/resolve_parent_access_code.dart';
 import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source.dart';
+import 'package:school_pulse/core/utils/device_id_service.dart';
+import 'package:school_pulse/core/utils/device_info_service.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 import 'auth_event.dart';
 import 'auth_state.dart';
 
@@ -108,10 +111,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final result = await loginWithEmail(
         LoginParams(email: event.email, password: event.password),
       );
-      result.fold((failure) => emit(AuthFailureState(failure.message)), (user) {
-        _syncNotifications(user);
-        emit(AuthAuthenticated(user));
-      });
+      result.fold(
+        (failure) {
+          _recordSecurityLoginFailure(event.email);
+          emit(AuthFailureState(failure.message));
+        },
+        (user) {
+          _syncNotifications(user);
+          emit(AuthAuthenticated(user));
+        },
+      );
     } on FirebaseAuthMultiFactorException catch (e) {
       emit(AuthMfaChallengeRequired(e.resolver));
     }
@@ -306,8 +315,39 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     // never block or break the normal login flow for any user.
     if (user.roles.contains(UserRole.superAdmin)) {
       _logOwnerSignIn();
+    } else {
+      _registerInstitutionSecuritySession(user);
     }
     // --- End additive block ---
+  }
+
+  /// Best-effort registry heartbeat. It never carries an Auth token or blocks
+  /// sign-in; the callable resolves tenant ownership from the authenticated
+  /// server-side profile rather than trusting client-supplied school data.
+  Future<void> _registerInstitutionSecuritySession(UserEntity user) async {
+    try {
+      final deviceId = await di.sl<DeviceIdService>().getDeviceId();
+      final info = di.sl<DeviceInfoService>();
+      await FirebaseFunctions.instance
+          .httpsCallable('registerSecuritySession')
+          .call({
+            'deviceId': deviceId,
+            'deviceName': await info.deviceName(),
+            'platform': await info.platformLabel(),
+          });
+    } catch (e) {
+      if (kDebugMode) print('Security session registration failed: $e');
+    }
+  }
+
+  Future<void> _recordSecurityLoginFailure(String identifier) async {
+    try {
+      await FirebaseFunctions.instance
+          .httpsCallable('recordSecurityLoginFailure')
+          .call({'identifier': identifier});
+    } catch (_) {
+      // Login errors must remain private and must never be masked by logging.
+    }
   }
 
   Future<void> _logOwnerSignIn() async {

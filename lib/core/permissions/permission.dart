@@ -11,6 +11,15 @@
 class Permission {
   const Permission._();
 
+  // Central reporting. Kept separate from source-module permissions: viewing
+  // a finance screen, for example, must never implicitly permit exporting it.
+  static const reportsView = 'reports.view';
+  static const reportsExport = 'reports.export';
+  static const reportsPrint = 'reports.print';
+  static const reportsSchedule = 'reports.schedule';
+  static const reportsShare = 'reports.share';
+  static const reportsViewSensitive = 'reports.view_sensitive';
+
   // Appointments & schedule
   static const appointmentsView = 'appointments.view';
   static const appointmentsManage = 'appointments.manage';
@@ -74,6 +83,24 @@ class Permission {
   static const securityEntryRecord = 'security.entry.record';
   static const securityExitRecord = 'security.exit.record';
   static const securityOverride = 'security.override';
+
+  // School Admin Security Center. These are deliberately separate from the
+  // gate-operation permissions above: viewing a gate log must never imply
+  // authority to inspect or terminate another person's authenticated session.
+  static const securityView = 'security.view';
+  static const securityViewSessions = 'security.view_sessions';
+  static const securityRevokeSession = 'security.revoke_session';
+  static const securityRevokeAllSessions = 'security.revoke_all_sessions';
+  static const securityViewDevices = 'security.view_devices';
+  static const securityManageDeviceTrust = 'security.manage_device_trust';
+  static const securityViewFailedLogins = 'security.view_failed_logins';
+  static const securityLockAccount = 'security.lock_account';
+  static const securityUnlockAccount = 'security.unlock_account';
+  static const securityForcePasswordReset = 'security.force_password_reset';
+  static const securityViewEvents = 'security.view_security_events';
+  static const securityResolveAlerts = 'security.resolve_alerts';
+  static const securityExport = 'security.export';
+  static const securityManagePolicy = 'security.manage_policy';
 
   // Admissions / enrollment (enforced) - gates AdmissionBloc's
   // EnrollStudentRequested handler, per the product requirement that

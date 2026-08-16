@@ -567,6 +567,13 @@ final Map<String, _QuickAccessItem> _quickAccessCatalog = {
     color: Colors.indigoAccent,
     route: '/staff/calendar',
   ),
+  'security': const _QuickAccessItem(
+    id: 'security',
+    label: 'Security',
+    icon: Icons.shield_rounded,
+    color: Colors.deepOrange,
+    route: '/staff/admin/security',
+  ),
 };
 
 class _QuickAccessSection extends StatefulWidget {

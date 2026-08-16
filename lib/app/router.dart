@@ -70,6 +70,7 @@ import 'package:school_pulse/features/structure/presentation/screens/custom_fiel
 import 'package:school_pulse/features/admin/admin_staff_attendance_screen.dart';
 import 'package:school_pulse/features/appointments/presentation/screens/appointments_workspace_screen.dart';
 import 'package:school_pulse/features/admin/audit_log_screen.dart';
+import 'package:school_pulse/features/admin/security_center_screen.dart';
 import 'package:school_pulse/features/admin/broadcast_history_screen.dart';
 import 'package:school_pulse/features/admin/subscription_screen.dart';
 import 'package:school_pulse/features/student/domain/entities/parent_access_code.dart';
@@ -1751,6 +1752,22 @@ final router = GoRouter(
             GoRoute(
               path: 'audit-log',
               builder: (context, state) => const AuditLogScreen(),
+            ),
+            GoRoute(
+              path: 'security',
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                const permitted = {
+                  UserRole.director,
+                  UserRole.headTeacher,
+                  UserRole.schoolAdmin,
+                };
+                return auth.user.roles.any(permitted.contains)
+                    ? null
+                    : UserRoleRouting.dashboardPath(auth.user.role);
+              },
+              builder: (context, state) => const AdminSecurityCenterScreen(),
             ),
             GoRoute(
               path: 'broadcast-history',

@@ -2466,3 +2466,28 @@ service cloud.firestore {
     }
   }
 }
+
+    // Institution Security Center. Registry and event history are written
+    // only by privileged Cloud Functions. A school security administrator
+    // may read its own tenant\x27s records; ordinary staff, parents and
+    // students cannot enumerate another person\x27s sessions or devices.
+    match /schools/{schoolId}/security_sessions/{sessionId} {
+      allow read: if isSameSchool(schoolId) && hasAnyRole([\x27director\x27, \x27headTeacher\x27, \x27schoolAdmin\x27]);
+      allow write: if false;
+    }
+    match /schools/{schoolId}/trusted_devices/{deviceId} {
+      allow read: if isSameSchool(schoolId) && hasAnyRole([\x27director\x27, \x27headTeacher\x27, \x27schoolAdmin\x27]);
+      allow write: if false;
+    }
+    match /schools/{schoolId}/security_events/{eventId} {
+      allow read: if isSameSchool(schoolId) && hasAnyRole([\x27director\x27, \x27headTeacher\x27, \x27schoolAdmin\x27]);
+      allow write: if false;
+    }
+    match /schools/{schoolId}/security_alerts/{alertId} {
+      allow read: if isSameSchool(schoolId) && hasAnyRole([\x27director\x27, \x27headTeacher\x27, \x27schoolAdmin\x27]);
+      allow write: if false;
+    }
+    match /schools/{schoolId}/security_policy/{policyId} {
+      allow read: if isSameSchool(schoolId) && hasAnyRole([\x27director\x27, \x27headTeacher\x27, \x27schoolAdmin\x27]);
+      allow write: if false;
+    }

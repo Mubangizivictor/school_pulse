@@ -1,7 +1,7 @@
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
-const { randomBytes, randomUUID } = require("crypto");
+const { randomBytes, randomUUID, createHash } = require("crypto");
 const admin = require("firebase-admin");
 const { requirePlatformOwner, OwnerAuthorizationError } = require("./vendor/owner-auth");
 
@@ -583,6 +583,228 @@ exports.revokeAllSessions = onCall(async (request) => {
       err.message || "Unable to revoke active sessions.",
     );
   }
+});
+
+// ---------------------------------------------------------------------------
+// Institution Security Center
+// ---------------------------------------------------------------------------
+// Firebase Auth deliberately does not expose per-device refresh-token
+// revocation.  The records below are therefore an institution-scoped security
+// registry and every destructive action revokes the target user's refresh
+// tokens server-side as well as recording why it happened. No token, OTP or
+// device fingerprint is ever stored here.
+const SECURITY_ADMIN_ROLES = ["director", "headTeacher", "schoolAdmin"];
+
+function securityError(code, message) {
+  throw new HttpsError(code, message);
+}
+
+async function securityActor(request) {
+  if (!request.auth) securityError("unauthenticated", "You must be signed in.");
+  const ref = admin.firestore().collection("users").doc(request.auth.uid);
+  const snap = await ref.get();
+  if (!snap.exists) securityError("permission-denied", "Your account profile is unavailable.");
+  const data = snap.data();
+  const roles = Array.isArray(data.roles) ? data.roles : [data.role].filter(Boolean);
+  const permissions = Array.isArray(data.permissions) ? data.permissions : [];
+  if (!data.schoolId || !data.isActive) securityError("permission-denied", "Your institution access is not active.");
+  return { uid: request.auth.uid, data, roles, permissions, schoolId: data.schoolId };
+}
+
+function canSecurity(actor, permission) {
+  return SECURITY_ADMIN_ROLES.some((role) => actor.roles.includes(role)) || actor.permissions.includes(permission);
+}
+
+async function requireSecurity(actor, permission) {
+  if (!canSecurity(actor, permission)) securityError("permission-denied", "You do not have this security permission.");
+}
+
+function requireReason(value) {
+  if (typeof value !== "string" || value.trim().length < 3) {
+    securityError("invalid-argument", "A reason of at least 3 characters is required.");
+  }
+  return value.trim().slice(0, 500);
+}
+
+async function auditSecurity({ schoolId, actorId, type, targetUserId = null, targetId = null, reason = null, riskLevel = "informational", metadata = {} }) {
+  const db = admin.firestore();
+  const event = {
+    institutionId: schoolId, schoolId, actorId, targetUserId, targetId, type,
+    reason, riskLevel, metadata, timestamp: admin.firestore.FieldValue.serverTimestamp(),
+  };
+  await Promise.all([
+    db.collection("schools").doc(schoolId).collection("security_events").add(event),
+    db.collection("audit_logs").add({
+      schoolId, title: type, description: reason || type,
+      iconName: "gpp_maybe", colorHex: "FFB3261E", timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      userId: actorId, relatedEntityId: targetId || targetUserId,
+    }),
+  ]);
+}
+
+exports.registerSecuritySession = onCall(async (request) => {
+  const actor = await securityActor(request);
+  const data = request.data || {};
+  const deviceId = typeof data.deviceId === "string" ? data.deviceId.trim() : "";
+  if (!deviceId || deviceId.length > 160) securityError("invalid-argument", "A valid device ID is required.");
+  const db = admin.firestore();
+  const sessionRef = db.collection("schools").doc(actor.schoolId).collection("security_sessions").doc(deviceId);
+  const deviceRef = db.collection("schools").doc(actor.schoolId).collection("trusted_devices").doc(deviceId);
+  const now = admin.firestore.FieldValue.serverTimestamp();
+  await db.runTransaction(async (tx) => {
+    const previous = await tx.get(deviceRef);
+    const previousStatus = previous.exists ? previous.data().trustStatus : null;
+    if (previousStatus === "blocked") {
+      securityError("permission-denied", "This device has been blocked. Contact your institution administrator.");
+    }
+    const trusted = previousStatus === "trusted";
+    tx.set(deviceRef, {
+      deviceId, institutionId: actor.schoolId, userId: actor.uid,
+      deviceName: String(data.deviceName || "Unknown device").slice(0, 120),
+      platform: String(data.platform || "Unknown").slice(0, 60),
+      appVersion: String(data.appVersion || "Unknown").slice(0, 60),
+      firstSeenAt: previous.exists ? previous.data().firstSeenAt : now,
+      // A revoked device stays revoked until an administrator explicitly
+      // changes its state; a routine sign-in heartbeat must never silently
+      // restore trust or erase lost-device history.
+      lastSeenAt: now, trustStatus: previousStatus || "unknown",
+      riskLevel: trusted ? "low" : "medium", revokedAt: null,
+    }, { merge: true });
+    tx.set(sessionRef, {
+      sessionId: deviceId, institutionId: actor.schoolId, userId: actor.uid,
+      accountType: actor.roles[0] || "unknown", activeWorkspace: "school",
+      deviceId, deviceName: String(data.deviceName || "Unknown device").slice(0, 120),
+      platform: String(data.platform || "Unknown").slice(0, 60),
+      appVersion: String(data.appVersion || "Unknown").slice(0, 60),
+      createdAt: now, lastActivityAt: now, expiresAt: null,
+      trustedDevice: trusted, sessionStatus: "active", revokedAt: null, revokedBy: null,
+      revokeReason: null, riskLevel: trusted ? "low" : "medium",
+      authenticationMethod: "firebase_auth", mfaVerified: !!actor.data.mfaEnabled,
+    }, { merge: true });
+  });
+  return { registered: true };
+});
+
+// Intentionally callable before authentication: it records only a one-way
+// identifier hash and coarse failure category. It never reveals whether an
+// account exists. The deterministic five failures/15 minutes rule is simple,
+// explainable and creates a high-risk alert rather than claiming AI detection.
+exports.recordSecurityLoginFailure = onCall(async (request) => {
+  const identifier = typeof request.data?.identifier === "string" ? request.data.identifier.trim().toLowerCase() : "";
+  if (!identifier || identifier.length > 320) return { recorded: false };
+  const db = admin.firestore();
+  const hash = createHash("sha256").update(identifier).digest("hex");
+  const matches = await db.collection("users").where("email", "==", identifier).limit(1).get();
+  if (matches.empty) return { recorded: true };
+  const user = matches.docs[0];
+  const schoolId = user.data().schoolId;
+  if (!schoolId) return { recorded: true };
+  const events = db.collection("schools").doc(schoolId).collection("security_events");
+  await events.add({ institutionId: schoolId, schoolId, userId: user.id, loginIdentifierHash: hash, success: false, failureReasonCategory: "authentication_failed", type: "Login failure", riskLevel: "low", timestamp: admin.firestore.FieldValue.serverTimestamp() });
+  const since = admin.firestore.Timestamp.fromMillis(Date.now() - 15 * 60 * 1000);
+  const recent = await events.where("userId", "==", user.id).where("type", "==", "Login failure").where("timestamp", ">=", since).get();
+  if (recent.size >= 5) {
+    await admin.auth().updateUser(user.id, { disabled: true });
+    await user.ref.set({ isActive: false, securityStatus: "locked", lockedAt: admin.firestore.FieldValue.serverTimestamp(), lockReason: "Repeated failed login attempts" }, { merge: true });
+    await events.add({ institutionId: schoolId, schoolId, userId: user.id, type: "Account locked", riskLevel: "high", reason: "Five failed logins within 15 minutes", timestamp: admin.firestore.FieldValue.serverTimestamp() });
+  }
+  return { recorded: true };
+});
+
+async function targetInSchool(db, schoolId, userId) {
+  if (typeof userId !== "string" || !userId) securityError("invalid-argument", "A target user is required.");
+  const target = await db.collection("users").doc(userId).get();
+  if (!target.exists || target.data().schoolId !== schoolId) securityError("permission-denied", "The target does not belong to your institution.");
+  const roles = Array.isArray(target.data().roles) ? target.data().roles : [target.data().role].filter(Boolean);
+  if (roles.includes("superAdmin")) securityError("permission-denied", "School administrators cannot manage platform-owner sessions.");
+  return target;
+}
+
+async function revokeTargetSessions({ actor, targetUserId, reason, sessionId = null, type = "Session revoked" }) {
+  const db = admin.firestore();
+  await targetInSchool(db, actor.schoolId, targetUserId);
+  // Token invalidation is intentionally server-side. It invalidates all of
+  // the target's Firebase refresh tokens, which is the strongest behavior
+  // Firebase Auth supports for a lost/untrusted device.
+  await admin.auth().revokeRefreshTokens(targetUserId);
+  const sessions = await db.collection("schools").doc(actor.schoolId)
+    .collection("security_sessions").where("userId", "==", targetUserId).get();
+  const batch = db.batch();
+  for (const doc of sessions.docs) {
+    // Firebase Auth can only revoke the user's refresh-token set, so every
+    // registry entry must be marked revoked even when the action began from
+    // one device row. Leaving sibling rows active would be misleading.
+    batch.set(doc.ref, { sessionStatus: "revoked", revokedAt: admin.firestore.FieldValue.serverTimestamp(), revokedBy: actor.uid, revokeReason: reason }, { merge: true });
+  }
+  batch.set(db.collection("users").doc(targetUserId), { sessionVersion: admin.firestore.FieldValue.increment(1) }, { merge: true });
+  await batch.commit();
+  await auditSecurity({ schoolId: actor.schoolId, actorId: actor.uid, type, targetUserId, targetId: sessionId, reason, riskLevel: "high" });
+}
+
+exports.revokeInstitutionSession = onCall(async (request) => {
+  const actor = await securityActor(request);
+  await requireSecurity(actor, "security.revoke_session");
+  const data = request.data || {};
+  const reason = requireReason(data.reason);
+  if (data.targetUserId === actor.uid && data.confirmSelf !== true) {
+    securityError("failed-precondition", "Confirm self-revocation before signing yourself out.");
+  }
+  await revokeTargetSessions({ actor, targetUserId: data.targetUserId, sessionId: data.sessionId, reason });
+  return { revoked: true, scope: "all_target_sessions" };
+});
+
+exports.revokeAllInstitutionUserSessions = onCall(async (request) => {
+  const actor = await securityActor(request);
+  await requireSecurity(actor, "security.revoke_all_sessions");
+  const data = request.data || {};
+  const reason = requireReason(data.reason);
+  if (data.targetUserId === actor.uid && data.confirmSelf !== true) securityError("failed-precondition", "Confirm self-revocation before signing yourself out.");
+  await revokeTargetSessions({ actor, targetUserId: data.targetUserId, reason, type: "All sessions revoked" });
+  return { revoked: true };
+});
+
+exports.setTrustedDeviceStatus = onCall(async (request) => {
+  const actor = await securityActor(request);
+  await requireSecurity(actor, "security.manage_device_trust");
+  const data = request.data || {};
+  const reason = requireReason(data.reason);
+  const status = data.status;
+  if (!["trusted", "untrusted", "revoked", "blocked"].includes(status)) securityError("invalid-argument", "Invalid device trust status.");
+  const db = admin.firestore();
+  const ref = db.collection("schools").doc(actor.schoolId).collection("trusted_devices").doc(data.deviceId || "");
+  const snap = await ref.get();
+  if (!snap.exists) securityError("not-found", "Device not found.");
+  await ref.set({ trustStatus: status, trustedAt: status === "trusted" ? admin.firestore.FieldValue.serverTimestamp() : null, trustedBy: actor.uid, revokedAt: ["revoked", "blocked"].includes(status) ? admin.firestore.FieldValue.serverTimestamp() : null, revokeReason: reason }, { merge: true });
+  if (["untrusted", "revoked", "blocked"].includes(status)) await revokeTargetSessions({ actor, targetUserId: snap.data().userId, reason, sessionId: data.deviceId, type: "Device " + status });
+  else await auditSecurity({ schoolId: actor.schoolId, actorId: actor.uid, type: "Device trusted", targetUserId: snap.data().userId, targetId: data.deviceId, reason });
+  return { updated: true };
+});
+
+exports.setInstitutionAccountLock = onCall(async (request) => {
+  const actor = await securityActor(request);
+  const data = request.data || {};
+  await requireSecurity(actor, data.locked ? "security.lock_account" : "security.unlock_account");
+  const reason = requireReason(data.reason);
+  const db = admin.firestore();
+  await targetInSchool(db, actor.schoolId, data.targetUserId);
+  await admin.auth().updateUser(data.targetUserId, { disabled: !!data.locked });
+  await db.collection("users").doc(data.targetUserId).set({ isActive: !data.locked, securityStatus: data.locked ? "locked" : "active", lockedAt: data.locked ? admin.firestore.FieldValue.serverTimestamp() : null, lockReason: reason }, { merge: true });
+  if (data.locked) await revokeTargetSessions({ actor, targetUserId: data.targetUserId, reason, type: "Account locked" });
+  else await auditSecurity({ schoolId: actor.schoolId, actorId: actor.uid, type: "Account unlocked", targetUserId: data.targetUserId, reason, riskLevel: "medium" });
+  return { updated: true };
+});
+
+exports.requireInstitutionPasswordReset = onCall(async (request) => {
+  const actor = await securityActor(request);
+  await requireSecurity(actor, "security.force_password_reset");
+  const data = request.data || {};
+  const reason = requireReason(data.reason);
+  const db = admin.firestore();
+  await targetInSchool(db, actor.schoolId, data.targetUserId);
+  await db.collection("users").doc(data.targetUserId).set({ mustChangePassword: true, passwordResetRequiredAt: admin.firestore.FieldValue.serverTimestamp(), passwordResetInitiatedBy: actor.uid }, { merge: true });
+  if (data.revokeSessions !== false) await revokeTargetSessions({ actor, targetUserId: data.targetUserId, reason, type: "Password reset required" });
+  else await auditSecurity({ schoolId: actor.schoolId, actorId: actor.uid, type: "Password reset required", targetUserId: data.targetUserId, reason, riskLevel: "high" });
+  return { updated: true };
 });
 
 // ============================================================================
@@ -1958,6 +2180,14 @@ exports.sendAppointmentReminderEmails = appointmentFunctions.sendAppointmentRemi
 const attendanceSheetsFunctions = require("./attendance_sheets");
 exports.exportAttendanceRecordToSheets = attendanceSheetsFunctions.exportAttendanceRecordToSheets;
 exports.syncAttendanceToSheetsNow = attendanceSheetsFunctions.syncAttendanceToSheetsNow;
+
+// The integration control plane owns safe tenant configuration and audit
+// metadata. Provider credentials remain in server-side secret storage.
+const integrationCenterFunctions = require("./integration_center");
+exports.getIntegrationCenter = integrationCenterFunctions.getIntegrationCenter;
+exports.saveIntegrationMetadata = integrationCenterFunctions.saveIntegrationMetadata;
+exports.testIntegrationConnection = integrationCenterFunctions.testIntegrationConnection;
+exports.disconnectIntegration = integrationCenterFunctions.disconnectIntegration;
 
 /**
  * Student creation with transactional maxStudents cap enforcement. Kept in
